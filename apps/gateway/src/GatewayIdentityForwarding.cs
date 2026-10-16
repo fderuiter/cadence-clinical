@@ -94,6 +94,12 @@ public static class GatewayIdentityForwarding
             .Where(s => !string.IsNullOrWhiteSpace(s) && !s.Contains(','))
             .Distinct(StringComparer.Ordinal)
             .ToList();
+        // The studies the caller is assigned to (or "*"), as the sign-in token lists them; none means study-scoped routes
+        // are denied (ADR-2516).
+        var studies = user.FindAll(CadenceClaimTypes.StudyIds).Select(c => c.Value)
+            .Where(s => !string.IsNullOrWhiteSpace(s) && !s.Contains(','))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
         // The tenant comes from the sign-in token alone; a token without one forwards no tenant (#5038).
         string? tenant = user.FindFirst(CadenceClaimTypes.TenantId)?.Value is { } t && !string.IsNullOrWhiteSpace(t) ? t : null;
         bool unblinded = string.Equals(user.FindFirst(CadenceClaimTypes.UnblindedAccess)?.Value, "true", StringComparison.OrdinalIgnoreCase);
@@ -110,7 +116,8 @@ public static class GatewayIdentityForwarding
             UnblindedAccess: unblinded,
             TenantId: tenant,
             ChangeReason: changeReason,
-            SigToken: httpContext.Request.Headers[GatewayHeaders.SigToken].ToString());
+            SigToken: httpContext.Request.Headers[GatewayHeaders.SigToken].ToString(),
+            StudyIds: studies);
     }
 
     /// <summary>

@@ -91,6 +91,36 @@
           }
         },
         {
+          "name": "study assignments",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "study_ids",
+            "claim.name": "study_ids",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false"
+          }
+        },
+        {
+          "name": "site assignments",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "site_id",
+            "claim.name": "site_id",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false"
+          }
+        },
+        {
           "name": "tenant",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-usermodel-attribute-mapper",
@@ -135,7 +165,7 @@
         }
       ],
       "realmRoles": ["Sponsor Designer"],
-      "attributes": { "tenant_id": ["cadence-local"] }
+      "attributes": { "tenant_id": ["cadence-local"], "study_ids": ["*"] }
     },
     {
       "username": "designer.lead",
@@ -151,7 +181,7 @@
         }
       ],
       "realmRoles": ["Sponsor Designer", "Data Manager", "Sponsor Admin"],
-      "attributes": { "tenant_id": ["cadence-local"] }
+      "attributes": { "tenant_id": ["cadence-local"], "study_ids": ["*"] }
     },
     {
       "username": "crc.site101",
@@ -167,7 +197,7 @@
         }
       ],
       "realmRoles": ["Site Investigator"],
-      "attributes": { "tenant_id": ["cadence-local"] }
+      "attributes": { "tenant_id": ["cadence-local"], "study_ids": ["*"] }
     },
     {
       "username": "cra.monitor",
@@ -183,7 +213,7 @@
         }
       ],
       "realmRoles": ["CRA", "Monitor", "Sponsor Admin"],
-      "attributes": { "tenant_id": ["cadence-local"] }
+      "attributes": { "tenant_id": ["cadence-local"], "study_ids": ["*"] }
     },
     {
       "username": "dm.lead",
@@ -199,7 +229,7 @@
         }
       ],
       "realmRoles": ["Data Manager", "Sponsor Designer", "Sponsor Admin"],
-      "attributes": { "tenant_id": ["cadence-local"] }
+      "attributes": { "tenant_id": ["cadence-local"], "study_ids": ["*"] }
     },
     {
       "username": "safety.officer",
@@ -215,7 +245,7 @@
         }
       ],
       "realmRoles": ["Sponsor Admin"],
-      "attributes": { "tenant_id": ["cadence-local"] }
+      "attributes": { "tenant_id": ["cadence-local"], "study_ids": ["*"] }
     },
     {
       "username": "auditor.lead",
@@ -231,7 +261,7 @@
         }
       ],
       "realmRoles": ["Auditor", "Sponsor Admin"],
-      "attributes": { "tenant_id": ["cadence-local"] }
+      "attributes": { "tenant_id": ["cadence-local"], "study_ids": ["*"] }
     }
   ]
 }

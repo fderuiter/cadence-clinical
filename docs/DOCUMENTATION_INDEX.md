@@ -511,6 +511,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2610: Scaffold Services Become Kernel Modules or Merge](adr/2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md) | Current | Disposition of the 17 scaffold services (#4787): fourteen modules, three merges, nothing deleted |
 | [ADR-2620: The eCRF Correction Transaction Boundary](adr/2026-10-15-ecrf-correction-transaction-boundary.md) | Current | - Status: Accepted |
 | [ADR-2515: Step-Up Tokens Are Single Use Across Instances and Restarts](adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md) | Current | - Status: Accepted |
+| [ADR-2516: Routes Are Denied Unless They Declare Who May Call Them](adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md) | Current | - Status: Accepted |
 | [ADR-2531: Every Mapped Test Is Mandatory Evidence, and Reports Name What They Tested](adr/2026-10-15-every-mapped-test-is-mandatory-evidence.md) | Current | - Status: Accepted |
 ## Developing and running
 

@@ -50,7 +50,8 @@ public static class RuleBatchEndpoints
     /// </summary>
     public static void MapRuleBatchEndpoints(this IEndpointRouteBuilder routes)
     {
-        var api = routes.MapGroup("/api/v1/studies/{id}/rules");
+        // A caller reaches only the studies it is assigned to (ADR-2516).
+        var api = routes.MapGroup("/api/v1/studies/{id}/rules").RequireStudyScope("id");
 
         api.MapPost("/batch-validate", async Task<Ok<BatchValidationReport>> (
             string id,

@@ -6,6 +6,7 @@ using System.Security.Claims;
 using Cadence.Apps.AiGateway.Services;
 using Cadence.Contracts;
 using Cadence.Security.Authentication;
+using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -28,14 +29,18 @@ public static class IntentEndpoints
     /// <returns>The updated route builder.</returns>
     public static IEndpointRouteBuilder MapIntentEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/ai/intent").RequireAuthorization();
+        // Any signed-in caller: the router reads no record and writes nothing, and filters every recommendation by the
+        // caller's signed roles (ADR-2516).
+        var group = app.MapGroup("/api/v1/ai/intent")
+            .RequireSignedInCaller("Matches fixed patterns, reads and writes no record, and filters recommendations by the caller's signed roles.");
 
         group.MapPost("/route", RouteIntentAsync)
             .WithName("RouteAiIntent")
             .WithSummary("Match a command-palette query against fixed patterns and return the navigation targets the caller's roles allow.")
             .Produces<IntentRouteResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status401Unauthorized);
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
 
         return app;
     }

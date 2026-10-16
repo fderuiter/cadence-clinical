@@ -4,40 +4,27 @@ using System.Linq;
 namespace Cadence.Security.Rbac;
 
 /// <summary>
-/// Evaluates study-level scope access for study-restricted personas.
+/// Evaluates study-level scope from the studies the gateway signs for the caller (<c>X-Study-Ids</c>). It fails closed
+/// (ADR-2516): a blank study id, or a caller assigned to no study, is a denial; <c>*</c> stands for every study. The
+/// signed list is the interim source until the kernel's grants decide study scope for every module (#4781).
 /// @req:PRD-SYS-053
 /// </summary>
 public static class StudyAccessEvaluator
 {
-    /// <summary>
-    /// Checks if the principal has access to a specific study ID.
-    /// Study-scoped users are restricted to their assigned studies or wildcard "*".
-    /// </summary>
+    /// <summary>The assignment that covers every study.</summary>
+    public const string AllStudies = "*";
+
+    /// <summary>True when <paramref name="principal"/> is assigned to <paramref name="studyId"/> or to every study.</summary>
     public static bool CanAccessStudy(Principal? principal, string? studyId)
     {
-        if (principal == null) return false;
-
-        bool isExternalMonitor = principal.Roles.Any(r => string.Equals(r, RoleNormalization.ROLE_EXTERNAL_MONITOR, StringComparison.OrdinalIgnoreCase));
-
-        if (string.IsNullOrWhiteSpace(studyId))
+        if (principal is null || string.IsNullOrWhiteSpace(studyId))
         {
-            return !isExternalMonitor && principal.AssignedStudies.Count == 0;
+            return false;
         }
 
         string targetStudy = studyId.Trim();
-
-        if (isExternalMonitor)
-        {
-            return principal.AssignedStudies.Any(s =>
-                s.Trim() == "*" || string.Equals(s.Trim(), targetStudy, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (principal.AssignedStudies.Count > 0)
-        {
-            return principal.AssignedStudies.Any(s =>
-                s.Trim() == "*" || string.Equals(s.Trim(), targetStudy, StringComparison.OrdinalIgnoreCase));
-        }
-
-        return true;
+        return principal.AssignedStudies.Any(s =>
+            string.Equals(s.Trim(), AllStudies, StringComparison.Ordinal)
+            || string.Equals(s.Trim(), targetStudy, StringComparison.OrdinalIgnoreCase));
     }
 }

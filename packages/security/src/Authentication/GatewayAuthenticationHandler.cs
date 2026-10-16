@@ -71,6 +71,7 @@ public sealed class GatewayAuthenticationHandler(
 
         string rolesHeader = headers[GatewayHeaders.Roles].ToString();
         string siteHeader = headers[GatewayHeaders.SiteId].ToString();
+        string studyHeader = headers[GatewayHeaders.StudyIds].ToString();
         string sponsorId = headers[GatewayHeaders.SponsorId].ToString();
         string unblindedHeader = headers[GatewayHeaders.UnblindedAccess].ToString();
         bool unblindedAccess = string.Equals(unblindedHeader, "true", StringComparison.OrdinalIgnoreCase);
@@ -91,6 +92,7 @@ public sealed class GatewayAuthenticationHandler(
             secret: GatewayIdentity.EncodeSecret(Options.GatewaySecret ?? string.Empty),
             changeReason: GatewayIdentity.NullIfBlank(changeReason),
             siteId: GatewayIdentity.NullIfBlank(siteHeader),
+            studyIds: GatewayIdentity.NullIfBlank(studyHeader),
             sponsorId: GatewayIdentity.NullIfBlank(sponsorId),
             unblindedAccess: unblindedAccess,
             tenantId: tenantId,
@@ -104,6 +106,7 @@ public sealed class GatewayAuthenticationHandler(
         var rawRoles = GatewayIdentity.SplitList(rolesHeader);
         var normalizedRoles = RoleNormalization.GetNormalizedRoles(rawRoles);
         var sites = GatewayIdentity.SplitList(siteHeader);
+        var studies = GatewayIdentity.SplitList(studyHeader);
 
         Context.Items[PrincipalItemKey] = new Principal
         {
@@ -111,6 +114,7 @@ public sealed class GatewayAuthenticationHandler(
             Roles = normalizedRoles,
             RawRoles = rawRoles,
             AssignedSites = sites,
+            AssignedStudies = studies,
             UnblindedAccess = unblindedAccess,
             SponsorId = GatewayIdentity.NullIfBlank(sponsorId),
             ChangeReason = GatewayIdentity.NullIfBlank(changeReason),
@@ -128,6 +132,7 @@ public sealed class GatewayAuthenticationHandler(
 
         claims.AddRange(normalizedRoles.Select(role => new Claim(ClaimTypes.Role, role)));
         claims.AddRange(sites.Select(site => new Claim(CadenceClaimTypes.SiteId, site)));
+        claims.AddRange(studies.Select(study => new Claim(CadenceClaimTypes.StudyIds, study)));
         if (!string.IsNullOrWhiteSpace(sponsorId))
         {
             claims.Add(new Claim(CadenceClaimTypes.SponsorId, sponsorId));
@@ -163,6 +168,7 @@ public static class CadenceClaimTypes
     public const string Subject = "sub";
     public const string TenantId = "tenant_id";
     public const string SiteId = "site_id";
+    public const string StudyIds = "study_ids";
     public const string SponsorId = "sponsor_id";
     public const string UnblindedAccess = "unblinded_access";
 }

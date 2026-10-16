@@ -71,6 +71,8 @@ public static class CadenceSecurityServiceCollectionExtensions
         services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
         services.AddSingleton<IAuthorizationHandler, RoleAuthorizationHandler>();
         services.AddSingleton<IAuthorizationHandler, StudyScopeAuthorizationHandler>();
+        services.AddSingleton<IAuthorizationHandler, SiteScopeAuthorizationHandler>();
+        services.AddSingleton<IAuthorizationHandler, UndeclaredEndpointAuthorizationHandler>();
         services.AddSingleton<IAuthorizationHandler, ChangeJustificationAuthorizationHandler>();
         services.AddSingleton<IAuthorizationHandler, AuditorReadOnlyAuthorizationHandler>();
         // RequirePermission("resource:action") names a policy built on demand from the permission matrix (ADR-2510).
@@ -78,14 +80,27 @@ public static class CadenceSecurityServiceCollectionExtensions
 
         services.AddAuthorization(authOptions =>
         {
-            // Every endpoint needs an authenticated caller unless it opts out with AllowAnonymous()
-            // (health and status probes do).
+            // Deny by default (ADR-2516): an endpoint that declares no authorization answers 401 to an unsigned
+            // caller and 403 to every signed one. Each route opts in with RequirePermission, RequireSignedInCaller
+            // or, for health, status and development API documents only, AllowAnonymous().
             authOptions.FallbackPolicy = new AuthorizationPolicyBuilder(GatewayAuthenticationHandler.SchemeName)
                 .RequireAuthenticatedUser()
+                .AddRequirements(new UndeclaredEndpointRequirement())
                 .Build();
 
-            authOptions.AddPolicy("RequireStudyScope", policy =>
-                policy.Requirements.Add(new StudyScopeRequirement()));
+            authOptions.AddPolicy(CadencePolicies.SignedInCaller, policy => policy
+                .AddAuthenticationSchemes(GatewayAuthenticationHandler.SchemeName)
+                .RequireAuthenticatedUser());
+
+            authOptions.AddPolicy(CadencePolicies.StudyScope, policy => policy
+                .AddAuthenticationSchemes(GatewayAuthenticationHandler.SchemeName)
+                .RequireAuthenticatedUser()
+                .AddRequirements(new StudyScopeRequirement()));
+
+            authOptions.AddPolicy(CadencePolicies.SiteScope, policy => policy
+                .AddAuthenticationSchemes(GatewayAuthenticationHandler.SchemeName)
+                .RequireAuthenticatedUser()
+                .AddRequirements(new SiteScopeRequirement()));
 
             authOptions.AddPolicy("RequireChangeJustification", policy =>
                 policy.Requirements.Add(new ChangeJustificationRequirement()));
@@ -98,7 +113,7 @@ public static class CadenceSecurityServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds gateway-signature authentication, authorization (with the authenticated-caller fallback policy)
+    /// Adds gateway-signature authentication, authorization (with the deny-by-default fallback policy)
     /// and the auditor write guard to the pipeline.
     /// </summary>
     public static IApplicationBuilder UseCadenceSecurity(this IApplicationBuilder app)
@@ -120,11 +135,45 @@ public static class CadenceSecurityServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Minimal API extension asserting required study scope access.
+    /// Admits any signed-in caller, for a route whose handler decides access per object, or that reads or computes
+    /// nothing a signed-in caller may not see (ADR-2516). <paramref name="reason"/> says which, and is kept on the
+    /// endpoint as <see cref="SignedInCallerReason"/> so the route inventory and reviews can read it. Every such
+    /// route is also listed, with its reason, in the route authorization test, so a new one needs review.
     /// </summary>
-    public static TBuilder RequireStudyScope<TBuilder>(this TBuilder builder) where TBuilder : IEndpointConventionBuilder
+    public static TBuilder RequireSignedInCaller<TBuilder>(this TBuilder builder, string reason) where TBuilder : IEndpointConventionBuilder
     {
-        return builder.RequireAuthorization("RequireStudyScope");
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        return builder
+            .RequireAuthorization(CadencePolicies.SignedInCaller)
+            .WithMetadata(new SignedInCallerReason(reason));
+    }
+
+    /// <summary>
+    /// Requires the study named by the route value <paramref name="routeParameter"/> to be one the signed caller is
+    /// assigned to (<c>X-Study-Ids</c>, or <c>*</c> for every study). It fails closed: a route without that value, or a
+    /// caller with no assignment, gets <c>403</c>. The study id is never read from the query, body or an unsigned
+    /// header (ADR-2516). Combine it with <see cref="RequirePermission{TBuilder}"/>: scope narrows a permission and
+    /// never grants one.
+    /// </summary>
+    public static TBuilder RequireStudyScope<TBuilder>(this TBuilder builder, string routeParameter) where TBuilder : IEndpointConventionBuilder
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(routeParameter);
+        return builder
+            .RequireAuthorization(CadencePolicies.StudyScope)
+            .WithMetadata(new StudyScopeRouteParameter(routeParameter));
+    }
+
+    /// <summary>
+    /// Requires the site named by the route value <paramref name="routeParameter"/> to pass
+    /// <see cref="SiteAccessEvaluator.CanAccessSite"/> for the signed caller: a site-scoped role reaches only its signed
+    /// sites (ADR-2516). A route without that value gets <c>403</c>.
+    /// </summary>
+    public static TBuilder RequireSiteScope<TBuilder>(this TBuilder builder, string routeParameter) where TBuilder : IEndpointConventionBuilder
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(routeParameter);
+        return builder
+            .RequireAuthorization(CadencePolicies.SiteScope)
+            .WithMetadata(new SiteScopeRouteParameter(routeParameter));
     }
 
     /// <summary>
@@ -133,13 +182,5 @@ public static class CadenceSecurityServiceCollectionExtensions
     public static TBuilder RequireChangeJustification<TBuilder>(this TBuilder builder) where TBuilder : IEndpointConventionBuilder
     {
         return builder.RequireAuthorization("RequireChangeJustification");
-    }
-
-    /// <summary>
-    /// Minimal API extension asserting required role.
-    /// </summary>
-    public static TBuilder RequireRole<TBuilder>(this TBuilder builder, params string[] roles) where TBuilder : IEndpointConventionBuilder
-    {
-        return builder.RequireAuthorization(new AuthorizeAttribute { Roles = string.Join(",", roles) });
     }
 }

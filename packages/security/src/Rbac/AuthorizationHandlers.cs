@@ -1,8 +1,8 @@
 using System;
-using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
+
+using Cadence.Security.Authentication;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -97,61 +97,83 @@ public class RoleAuthorizationHandler : AuthorizationHandler<RoleRequirement>
     }
 }
 
+/// <summary>
+/// The fallback policy's requirement (ADR-2516): an endpoint that declares no authorization of its own is denied to
+/// every signed caller. Health, status and development API documents opt out with <c>AllowAnonymous()</c>.
+/// </summary>
+public sealed class UndeclaredEndpointRequirement : IAuthorizationRequirement;
+
+/// <summary>Never satisfies <see cref="UndeclaredEndpointRequirement"/>, so an undeclared endpoint answers 403.</summary>
+public sealed class UndeclaredEndpointAuthorizationHandler : AuthorizationHandler<UndeclaredEndpointRequirement>
+{
+    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, UndeclaredEndpointRequirement requirement)
+    {
+        context.Fail(new AuthorizationFailureReason(this, "The endpoint declares no authorization, so it is denied by default (ADR-2516)."));
+        return Task.CompletedTask;
+    }
+}
+
 public class StudyScopeRequirement : IAuthorizationRequirement { }
 
+/// <summary>
+/// Admits a caller to a route that names a study only when the signed principal is assigned to that study (ADR-2516).
+/// The study id comes from the route value the endpoint names with <see cref="StudyScopeRouteParameter"/>, never from
+/// the query, the body or an unsigned header. It fails closed: no route value, no principal or no assignment is a
+/// denial.
+/// </summary>
 public class StudyScopeAuthorizationHandler : AuthorizationHandler<StudyScopeRequirement>
 {
-    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, StudyScopeRequirement requirement)
+    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, StudyScopeRequirement requirement)
     {
-        if (context.Resource is HttpContext httpContext)
+        if (context.Resource is HttpContext httpContext
+            && httpContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] is Principal principal
+            && RouteValue<StudyScopeRouteParameter>(httpContext, p => p.Name) is { } studyId
+            && StudyAccessEvaluator.CanAccessStudy(principal, studyId))
         {
-            var principal = httpContext.Items["Principal"] as Principal;
-            if (principal == null)
-            {
-                context.Fail();
-                return;
-            }
-
-            string? studyId = httpContext.GetRouteValue("study_id")?.ToString()
-                ?? httpContext.GetRouteValue("studyId")?.ToString()
-                ?? httpContext.Request.Query["study_id"].FirstOrDefault()
-                ?? httpContext.Request.Query["studyId"].FirstOrDefault()
-                ?? httpContext.Request.Headers["X-Study-Id"].FirstOrDefault()
-                ?? httpContext.Request.Headers["x-study-id"].FirstOrDefault();
-
-            if (string.IsNullOrWhiteSpace(studyId) && httpContext.Request.HasJsonContentType())
-            {
-                try
-                {
-                    httpContext.Request.EnableBuffering();
-                    using var reader = new StreamReader(httpContext.Request.Body, leaveOpen: true);
-                    string body = await reader.ReadToEndAsync();
-                    httpContext.Request.Body.Position = 0;
-
-                    if (!string.IsNullOrWhiteSpace(body))
-                    {
-                        using var doc = JsonDocument.Parse(body);
-                        if (doc.RootElement.ValueKind == JsonValueKind.Object &&
-                            (doc.RootElement.TryGetProperty("study_id", out var p) || doc.RootElement.TryGetProperty("studyId", out p)))
-                        {
-                            studyId = p.GetString();
-                        }
-                    }
-                }
-                catch
-                {
-                    // Ignore JSON parse error during scope resolution
-                }
-            }
-
-            if (string.IsNullOrWhiteSpace(studyId) || StudyAccessEvaluator.CanAccessStudy(principal, studyId))
-            {
-                context.Succeed(requirement);
-                return;
-            }
+            context.Succeed(requirement);
+            return Task.CompletedTask;
         }
 
-        context.Fail();
+        context.Fail(new AuthorizationFailureReason(this, "The caller is not assigned to the study this route names."));
+        return Task.CompletedTask;
+    }
+
+    internal static string? RouteValue<TMetadata>(HttpContext httpContext, Func<TMetadata, string> name)
+        where TMetadata : class
+    {
+        var parameter = httpContext.GetEndpoint()?.Metadata.GetMetadata<TMetadata>();
+        if (parameter is null)
+        {
+            return null;
+        }
+
+        string? value = httpContext.GetRouteValue(name(parameter))?.ToString();
+        return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+}
+
+public sealed class SiteScopeRequirement : IAuthorizationRequirement;
+
+/// <summary>
+/// Admits a caller to a route that names a site only when <see cref="SiteAccessEvaluator.CanAccessSite"/> allows it for
+/// the signed principal (ADR-2516). The site id comes from the route value the endpoint names with
+/// <see cref="SiteScopeRouteParameter"/>; a route without it is a denial.
+/// </summary>
+public sealed class SiteScopeAuthorizationHandler : AuthorizationHandler<SiteScopeRequirement>
+{
+    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, SiteScopeRequirement requirement)
+    {
+        if (context.Resource is HttpContext httpContext
+            && httpContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] is Principal principal
+            && StudyScopeAuthorizationHandler.RouteValue<SiteScopeRouteParameter>(httpContext, p => p.Name) is { } siteId
+            && SiteAccessEvaluator.CanAccessSite(principal, siteId))
+        {
+            context.Succeed(requirement);
+            return Task.CompletedTask;
+        }
+
+        context.Fail(new AuthorizationFailureReason(this, "The caller may not reach the site this route names."));
+        return Task.CompletedTask;
     }
 }
 
