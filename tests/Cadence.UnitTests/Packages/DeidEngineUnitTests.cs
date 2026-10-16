@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Text.Json;
 
 using Cadence.Deid;
@@ -30,7 +31,7 @@ public class DeidEngineUnitTests
     {
         byte[] inputBytes = MinimalDicom();
 
-        var deidentifier = new DicomDeidentifier(SigningKey);
+        var deidentifier = new DicomDeidentifier(SigningKey, PseudonymKey);
         var result = deidentifier.Deidentify(
             dicomBytes: inputBytes,
             subjectId: "SUBJ-101",
@@ -150,17 +151,37 @@ public class DeidEngineUnitTests
     [InlineData(31)]
     public void DicomDeidentifier_RefusesAMissingOrShortSigningKey(int length)
     {
-        var missing = () => new DicomDeidentifier(null!);
-        var shortKey = () => new DicomDeidentifier(new byte[length]);
+        var missing = () => new DicomDeidentifier(null!, PseudonymKey);
+        var shortKey = () => new DicomDeidentifier(new byte[length], PseudonymKey);
+
+        missing.Should().Throw<ArgumentNullException>();
+        shortKey.Should().Throw<ArgumentException>().WithMessage("*at least 32 bytes*");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(31)]
+    public void DicomDeidentifier_RefusesAMissingOrShortPseudonymizationKey(int length)
+    {
+        var missing = () => new DicomDeidentifier(SigningKey, null!);
+        var shortKey = () => new DicomDeidentifier(SigningKey, new byte[length]);
 
         missing.Should().Throw<ArgumentNullException>();
         shortKey.Should().Throw<ArgumentException>().WithMessage("*at least 32 bytes*");
     }
 
     [Fact]
+    public void DicomDeidentifier_RefusesOneKeyForBothPurposes()
+    {
+        var shared = () => new DicomDeidentifier(SigningKey, [.. SigningKey]);
+
+        shared.Should().Throw<ArgumentException>().WithMessage("*must be different keys*");
+    }
+
+    [Fact]
     public void DicomDeidentifier_CertificateSignedWithOneKey_DoesNotVerifyWithAnother()
     {
-        var signer = new DicomDeidentifier(SigningKey);
+        var signer = new DicomDeidentifier(SigningKey, PseudonymKey);
         var result = signer.Deidentify(
             dicomBytes: MinimalDicom(),
             subjectId: "SUBJ-102",
@@ -171,7 +192,55 @@ public class DeidEngineUnitTests
             applyPixelMask: false);
 
         signer.VerifyCertificate(result.Certificate).Should().BeTrue();
-        new DicomDeidentifier(RandomNumberGenerator.GetBytes(32)).VerifyCertificate(result.Certificate).Should().BeFalse();
+        new DicomDeidentifier(RandomNumberGenerator.GetBytes(32), PseudonymKey).VerifyCertificate(result.Certificate).Should().BeFalse();
+    }
+
+    /// <summary>A payload (a host's batch manifest) signed under one key does not verify under another, or once altered.</summary>
+    [Fact]
+    public void DicomDeidentifier_PayloadSignedWithOneKey_DoesNotVerifyWithAnotherOrWhenAltered()
+    {
+        var signer = new DicomDeidentifier(SigningKey, PseudonymKey);
+        var payload = new Dictionary<string, object?> { ["manifest_id"] = "m-1", ["ingested_slice_count"] = 3 };
+        string signature = signer.SignPayload(payload);
+
+        signer.VerifyPayload(payload, signature).Should().BeTrue();
+        new DicomDeidentifier(RandomNumberGenerator.GetBytes(32), PseudonymKey).VerifyPayload(payload, signature).Should().BeFalse();
+        signer.VerifyPayload(new Dictionary<string, object?> { ["manifest_id"] = "m-1", ["ingested_slice_count"] = 4 }, signature)
+            .Should().BeFalse();
+        signer.VerifyPayload(payload, null).Should().BeFalse();
+    }
+
+    /// <summary>
+    /// The anonymized UIDs and original-UID hashes are keyed by the pseudonymization key (#5399): stable under one key,
+    /// different under another, and not the plain SHA-256 a holder of the original UID could recompute.
+    /// </summary>
+    [Fact]
+    public void DicomDeidentifier_AnonymizedUidsAndOriginalHashes_AreKeyedByThePseudonymizationKey()
+    {
+        var first = new DicomDeidentifier(SigningKey, PseudonymKey);
+        var again = new DicomDeidentifier(RandomNumberGenerator.GetBytes(32), PseudonymKey);
+        var otherKey = new DicomDeidentifier(SigningKey, RandomNumberGenerator.GetBytes(32));
+        DicomDeidResult Run(DicomDeidentifier d) => d.Deidentify(
+            MinimalDicom(), "SUBJ-103", "SITE-01", "STUDY-2026", FakeClock.DefaultStart, applyPixelMask: false);
+
+        var a = Run(first);
+        var b = Run(again);
+        var c = Run(otherKey);
+
+        b.AnonymizedStudyUid.Should().Be(a.AnonymizedStudyUid);
+        b.AnonymizedSopUid.Should().Be(a.AnonymizedSopUid);
+        b.Certificate.OriginalStudyInstanceUidHash.Should().Be(a.Certificate.OriginalStudyInstanceUidHash);
+
+        c.AnonymizedStudyUid.Should().NotBe(a.AnonymizedStudyUid);
+        c.AnonymizedSeriesUid.Should().NotBe(a.AnonymizedSeriesUid);
+        c.AnonymizedSopUid.Should().NotBe(a.AnonymizedSopUid);
+        c.Certificate.OriginalStudyInstanceUidHash.Should().NotBe(a.Certificate.OriginalStudyInstanceUidHash);
+        c.Certificate.OriginalSopInstanceUidHash.Should().NotBe(a.Certificate.OriginalSopInstanceUidHash);
+
+        const string originalStudyUid = "1.2.840.10008.5.1.4.1.1.6.1.2001"; // MinimalDicom's StudyInstanceUID
+        a.Certificate.OriginalStudyInstanceUidHash.Should()
+            .NotBe(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(originalStudyUid))));
+        a.Certificate.OriginalStudyInstanceUidHash.Should().Be(first.HashOriginalUid(originalStudyUid));
     }
 
     [Fact]
@@ -364,7 +433,7 @@ public class DeidEngineUnitTests
         byte[] corruptedBytes = UnsupportedCompressedDicom();
         using var ms = new MemoryStream(corruptedBytes);
         var dicomFile = DicomFile.Open(ms);
-        var deidentifier = new DicomDeidentifier(SigningKey);
+        var deidentifier = new DicomDeidentifier(SigningKey, PseudonymKey);
 
         Action act = () => deidentifier.MaskBurnedInPixels(dicomFile.Dataset, autoDetectHeaders: true);
 
@@ -377,7 +446,7 @@ public class DeidEngineUnitTests
     public void Deidentify_DoesNotGenerateOrSignCertificate_WhenPixelMaskingFails()
     {
         byte[] corruptedBytes = UnsupportedCompressedDicom();
-        var deidentifier = new DicomDeidentifier(SigningKey);
+        var deidentifier = new DicomDeidentifier(SigningKey, PseudonymKey);
 
         Action act = () => deidentifier.Deidentify(
             dicomBytes: corruptedBytes,

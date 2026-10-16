@@ -107,7 +107,8 @@ public sealed class GatewayRouteCoverageTests
             .UseTestPostgresConnectionString()
             .UseTestDemographicsKey()
             .UseTestFieldProtectionKeys()
-            .UseTestSceSigningKey());
+            .UseTestSceSigningKey()
+            .UseTestImagingDeidentificationKeys());
         return PathsOf(factory.Services);
     }
 

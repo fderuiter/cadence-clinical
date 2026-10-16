@@ -65,7 +65,10 @@ issuer never asks for the Keycloak admin):
 - `field-encryption-key`, passed to econsent and payments as `FIELD_ENCRYPTION_KEY`, and `field-lookup-hash-key`,
   passed to interop as `FIELD_LOOKUP_HASH_KEY` (base64 of 32 bytes each, ADR-2494);
 - `sce-signing-key`, passed to interop as `CADENCE_SCE_SIGNING_KEY` (base64 of 32 bytes; signs SCE database-lock
-  tokens, ADR-2515).
+  tokens, ADR-2515);
+- `imaging-deid-signing-key` and `imaging-deid-pseudonymization-key`, passed to imaging as
+  `CADENCE_IMAGING_DEID_SIGNING_KEY` and `CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY` (base64 of 32 bytes each, two
+  different keys; they sign de-identification certificates and key the anonymized DICOM UIDs, #5399).
 
 The gateway's `OIDC_AUTHORITY` is the Keycloak `cadence` realm. Set the parameters once with user secrets (choose your own values):
 
@@ -80,6 +83,8 @@ dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Param
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:field-encryption-key" "$(openssl rand -base64 32)"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:field-lookup-hash-key" "$(openssl rand -base64 32)"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:sce-signing-key" "$(openssl rand -base64 32)"
+dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:imaging-deid-signing-key" "$(openssl rand -base64 32)"
+dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:imaging-deid-pseudonymization-key" "$(openssl rand -base64 32)"
 ```
 
 Or set `Parameters__minio-root-user` (and so on) as environment variables. The names contain hyphens, which

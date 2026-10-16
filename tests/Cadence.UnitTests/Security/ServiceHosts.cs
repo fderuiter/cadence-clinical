@@ -61,7 +61,8 @@ internal static class ServiceHosts
                 .UseTestPostgresConnectionString()
                 .UseTestDemographicsKey()
                 .UseTestFieldProtectionKeys()
-                .UseTestSceSigningKey();
+                .UseTestSceSigningKey()
+                .UseTestImagingDeidentificationKeys();
             if (configure is not null)
             {
                 host.ConfigureTestServices(configure);

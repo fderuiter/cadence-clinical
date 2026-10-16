@@ -14,7 +14,6 @@ using Cadence.Apps.Imaging.Domain;
 using Cadence.Apps.Imaging.Infrastructure.Persistence;
 using Cadence.Deid;
 using Cadence.Kernel.Time;
-using Cadence.Security;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -84,16 +83,19 @@ public record BatchIngestionResult(
 
 public sealed class DicomIngestionService : IDicomIngestionService
 {
-    private static readonly byte[] DefaultSigningSecret = Encoding.UTF8.GetBytes("CadenceDeidSigningSecretKey32BytesLong!!");
     private readonly ImagingDbContext _dbContext;
     private readonly IClock _clock;
     private readonly DicomDeidentifier _deidentifier;
 
-    public DicomIngestionService(ImagingDbContext dbContext, IClock? clock = null)
+    /// <summary>
+    /// Creates the service. <paramref name="deidentifier"/> carries the configured signing and pseudonymization keys
+    /// (<c>AddImagingDeidentification</c>, #5399); certificates and batch manifests are signed with it.
+    /// </summary>
+    public DicomIngestionService(ImagingDbContext dbContext, DicomDeidentifier deidentifier, IClock? clock = null)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _deidentifier = deidentifier ?? throw new ArgumentNullException(nameof(deidentifier));
         _clock = clock ?? SystemClock.Instance;
-        _deidentifier = new DicomDeidentifier(DefaultSigningSecret);
     }
 
     public async Task<IngestionResult> IngestInstanceAsync(
@@ -129,7 +131,8 @@ public sealed class DicomIngestionService : IDicomIngestionService
 
         var certEntity = new DeidentificationCertificate
         {
-            Id = Guid.NewGuid().ToString(),
+            // The stored id is the signed certificate_id, so GET /certificates/{id} can verify the signature.
+            Id = deidResult.Certificate.CertificateId,
             SourceSha256 = deidResult.Certificate.SourceSha256,
             TargetSha256 = deidResult.Certificate.TargetSha256,
             StudyId = studyId,
@@ -362,7 +365,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
             };
 
             var emptyPayload = CreateBatchManifestPayloadWithoutSignature(emptyManifest);
-            emptyManifest.Signature = CanonicalSigner.GenerateCanonicalSignature(emptyPayload, DefaultSigningSecret);
+            emptyManifest.Signature = _deidentifier.SignPayload(emptyPayload);
 
             return new BatchIngestionResult(
                 StudyEnvelopeId: string.Empty,
@@ -516,7 +519,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
         };
 
         var manifestPayload = CreateBatchManifestPayloadWithoutSignature(manifest);
-        string signature = CanonicalSigner.GenerateCanonicalSignature(manifestPayload, DefaultSigningSecret);
+        string signature = _deidentifier.SignPayload(manifestPayload);
         manifest.Signature = signature;
 
         var certEntity = new DeidentificationCertificate
@@ -574,8 +577,10 @@ public sealed class DicomIngestionService : IDicomIngestionService
         return item.Content[0] == 0x50 && item.Content[1] == 0x4B && item.Content[2] == 0x03 && item.Content[3] == 0x04;
     }
 
-    private static object CreateBatchManifestPayloadWithoutSignature(BatchDeidentificationManifest manifest)
+    /// <summary>The canonical payload a batch manifest's signature covers: every field except the signature.</summary>
+    public static object CreateBatchManifestPayloadWithoutSignature(BatchDeidentificationManifest manifest)
     {
+        ArgumentNullException.ThrowIfNull(manifest);
         return new Dictionary<string, object?>
         {
             ["manifest_id"] = manifest.ManifestId,

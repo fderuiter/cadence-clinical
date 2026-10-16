@@ -19,6 +19,7 @@ public class DicomDeidentifier
     public const string CadenceDicomUidRoot = "1.2.826.0.1.3680043.10.99.";
 
     private readonly byte[] _signingSecret;
+    private readonly byte[] _pseudonymizationKey;
 
     private static readonly DicomTag[] TagsToRemove =
     [
@@ -103,33 +104,63 @@ public class DicomDeidentifier
     public const int MinimumSigningKeyLength = 32;
 
     /// <summary>
-    /// Creates a de-identifier that signs its certificates with <paramref name="signingSecret"/>, a secret from
-    /// configuration of at least <see cref="MinimumSigningKeyLength"/> bytes. There is no default key: a published
-    /// one would let anyone forge a certificate (#5016).
+    /// Creates a de-identifier. <paramref name="signingSecret"/> signs certificates and manifests;
+    /// <paramref name="pseudonymizationKey"/> keys the anonymized UIDs and the original-UID hashes, so nobody without it
+    /// can link a de-identified study back to a UID they hold (#5399). Both are secrets from configuration of at least
+    /// <see cref="MinimumSigningKeyLength"/> bytes, and they must differ. There is no default key: a published one would
+    /// let anyone forge a certificate (#5016).
     /// </summary>
-    public DicomDeidentifier(byte[] signingSecret)
+    public DicomDeidentifier(byte[] signingSecret, byte[] pseudonymizationKey)
     {
-        ArgumentNullException.ThrowIfNull(signingSecret);
-        if (signingSecret.Length < MinimumSigningKeyLength)
+        RequireKey(signingSecret, "certificate signing", nameof(signingSecret));
+        RequireKey(pseudonymizationKey, "UID pseudonymization", nameof(pseudonymizationKey));
+        if (CryptographicOperations.FixedTimeEquals(signingSecret, pseudonymizationKey))
         {
             throw new ArgumentException(
-                $"The de-identification certificate signing key must be at least {MinimumSigningKeyLength} bytes.",
-                nameof(signingSecret));
+                "The de-identification signing key and pseudonymization key must be different keys.", nameof(pseudonymizationKey));
         }
 
         _signingSecret = [.. signingSecret];
+        _pseudonymizationKey = [.. pseudonymizationKey];
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("SonarAnalyzer.CSharp", "S2325:Methods should be static", Justification = "Instance method API consistency")]
+    private static void RequireKey(byte[]? key, string purpose, string parameterName)
+    {
+        if (key is null) throw new ArgumentNullException(parameterName);
+        if (key.Length < MinimumSigningKeyLength)
+        {
+            throw new ArgumentException(
+                $"The de-identification {purpose} key must be at least {MinimumSigningKeyLength} bytes.", parameterName);
+        }
+    }
+
+    /// <summary>
+    /// A DICOM UID under <see cref="CadenceDicomUidRoot"/> derived from <paramref name="originalUid"/> with
+    /// HMAC-SHA256 under the pseudonymization key: stable for one key, unlinkable without it.
+    /// </summary>
     public string GenerateUid(string originalUid, string namespaceSalt)
     {
         string combined = $"{originalUid}:{namespaceSalt}";
-        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(combined));
+        byte[] hash = HMACSHA256.HashData(_pseudonymizationKey, Encoding.UTF8.GetBytes(combined));
         byte[] first16 = hash[..16];
         var num = new BigInteger(first16, isUnsigned: true, isBigEndian: true);
         string fullUid = $"{CadenceDicomUidRoot}{num}";
         return fullUid.Substring(0, Math.Min(64, fullUid.Length));
     }
+
+    /// <summary>The keyed hash of an original UID recorded on the certificate (HMAC-SHA256, lower-case hex).</summary>
+    public string HashOriginalUid(string originalUid)
+    {
+        ArgumentNullException.ThrowIfNull(originalUid);
+        return Convert.ToHexStringLower(HMACSHA256.HashData(_pseudonymizationKey, Encoding.UTF8.GetBytes($"original-uid:{originalUid}")));
+    }
+
+    /// <summary>Signs <paramref name="payload"/> (canonical JSON, HMAC-SHA256) with the certificate signing key.</summary>
+    public string SignPayload(object payload) => CanonicalSigner.GenerateCanonicalSignature(payload, _signingSecret);
+
+    /// <summary>Whether <paramref name="signature"/> is the certificate signing key's signature of <paramref name="payload"/>.</summary>
+    public bool VerifyPayload(object payload, string? signature) =>
+        !string.IsNullOrWhiteSpace(signature) && CanonicalSigner.VerifyCanonicalSignature(payload, signature, _signingSecret);
 
     private static string ShiftDicomDate(string dateStr, int days)
     {
@@ -264,8 +295,8 @@ public class DicomDeidentifier
         string origSopUid = dataset.GetSingleValueOrDefault(DicomTag.SOPInstanceUID, Guid.NewGuid().ToString());
         string origForUid = dataset.GetSingleValueOrDefault(DicomTag.FrameOfReferenceUID, "");
 
-        string origStudyHash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(origStudyUid)));
-        string origSopHash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(origSopUid)));
+        string origStudyHash = HashOriginalUid(origStudyUid);
+        string origSopHash = HashOriginalUid(origSopUid);
 
         string newStudyUid = GenerateUid(origStudyUid, $"study:{studyId}");
         string newSeriesUid = GenerateUid(origSeriesUid, $"series:{studyId}");
@@ -392,7 +423,7 @@ public class DicomDeidentifier
         };
 
         var certPayload = CreateCertPayloadWithoutSignature(cert);
-        cert.Signature = CanonicalSigner.GenerateCanonicalSignature(certPayload, _signingSecret);
+        cert.Signature = SignPayload(certPayload);
 
         return new DicomDeidResult(
             DeidentifiedBytes: outBytes,
@@ -442,7 +473,6 @@ public class DicomDeidentifier
             return false;
         }
 
-        var payload = CreateCertPayloadWithoutSignature(cert);
-        return CanonicalSigner.VerifyCanonicalSignature(payload, cert.Signature, _signingSecret);
+        return VerifyPayload(CreateCertPayloadWithoutSignature(cert), cert.Signature);
     }
 }

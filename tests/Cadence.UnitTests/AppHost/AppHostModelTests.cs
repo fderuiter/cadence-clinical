@@ -81,6 +81,8 @@ public sealed class AppHostModelTests
         (await EnvironmentNamesAsync(projects["econsent"])).Should().Contain("FIELD_ENCRYPTION_KEY");
         (await EnvironmentNamesAsync(projects["payments"])).Should().Contain("FIELD_ENCRYPTION_KEY");
         (await EnvironmentNamesAsync(projects["interop"])).Should().Contain(["FIELD_LOOKUP_HASH_KEY", "CADENCE_SCE_SIGNING_KEY"]);
+        (await EnvironmentNamesAsync(projects["imaging"]))
+            .Should().Contain(["CADENCE_IMAGING_DEID_SIGNING_KEY", "CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY"]);
     }
 
     [Fact]
