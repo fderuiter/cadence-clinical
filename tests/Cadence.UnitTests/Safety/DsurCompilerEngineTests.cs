@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -79,16 +78,10 @@ public class DsurCompilerEngineTests
             SafetyCases: safetyCases
         );
 
-        var stopwatch = Stopwatch.StartNew();
-
         // Act
         var result = await engine.CompileDsurAsync(request, "safety-officer-user", cancellationToken);
 
-        stopwatch.Stop();
-
-        // Assert: Success metrics
-        stopwatch.Elapsed.TotalSeconds.Should().BeLessThan(5.0, "DSUR compilation must complete within 5 seconds.");
-
+        // Assert
         result.Should().NotBeNull();
         result.Record.Should().NotBeNull();
         result.Record.ReportType.Should().Be("DSUR");

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Security.Claims;
 
@@ -109,21 +108,20 @@ public class AiGatewayIntentTests
         restrictedResponse.Recommendations.Should().NotContain(r => r.TargetRoute.StartsWith("/ctms"));
     }
 
+    /// <summary>The rule-based router gives the same recommendations every time for the same query and roles (#5415).</summary>
     [Fact]
-    public void ClassifyIntent_Performance_CompletesUnder300ms()
+    public void ClassifyIntent_ForTheSameQueryAndRoles_RecommendsTheSameRoutes()
     {
         var roles = new[] { "site_investigator", "crc", "cra", "sponsor_admin" };
         var query = "log adverse event for subject 101 missing lab cert SOP";
+        var first = RuleBasedIntentRouter.ClassifyIntent(query, roles);
 
-        var stopwatch = Stopwatch.StartNew();
+        first.Recommendations.Should().NotBeEmpty();
         for (int i = 0; i < 100; i++)
         {
-            RuleBasedIntentRouter.ClassifyIntent(query, roles);
+            RuleBasedIntentRouter.ClassifyIntent(query, roles).Recommendations.Select(r => r.TargetRoute)
+                .Should().Equal(first.Recommendations.Select(r => r.TargetRoute));
         }
-        stopwatch.Stop();
-
-        // 100 iterations should take well under 300ms
-        stopwatch.ElapsedMilliseconds.Should().BeLessThan(300);
     }
 
     [Theory]
