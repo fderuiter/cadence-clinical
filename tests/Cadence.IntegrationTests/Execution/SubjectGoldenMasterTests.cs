@@ -21,6 +21,8 @@ using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Core.Domain;
 using Cadence.Database;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
+using Cadence.Security.Rbac;
 using Cadence.Testing;
 using Cadence.Testing.GoldenMaster;
 using Cadence.Testing.Security;
@@ -224,7 +226,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionPostgresAp
             ? await CaptureSubjectPreStateAsync(scenario.Route!, ct)
             : null;
 
-        using HttpClient client = _testApi.CreateSignedClient();
+        using HttpClient client = CreateClientFor(scenario);
         HttpResponseMessage response = await scenario.SendAsync(client, ct);
         string rawBody = await response.Content.ReadAsStringAsync(ct);
 
@@ -615,7 +617,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionPostgresAp
         CancellationToken ct = TestContext.Current.CancellationToken;
         await ApplyPreconditionsAsync(scenario.Input, ct);
 
-        using HttpClient client = _testApi.CreateSignedClient();
+        using HttpClient client = CreateClientFor(scenario);
         HttpResponseMessage response = await scenario.SendAsync(client, ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest,
@@ -661,7 +663,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionPostgresAp
             await db.SaveChangesAsync(ct);
         }
 
-        using HttpClient client = _testApi.CreateSignedClient();
+        using HttpClient client = CreateClientFor(scenario);
         HttpResponseMessage response = await scenario.SendAsync(client, ct);
         response.StatusCode.Should().Be(HttpStatusCode.OK, $"scenario '{scenario.ScenarioId}' expected the transition to succeed");
 
@@ -724,7 +726,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionPostgresAp
     private async Task ReplaySiteIdEmptyStringAsync(GoldenMasterScenario scenario)
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using HttpClient client = _testApi.CreateSignedClient();
+        using HttpClient client = CreateClientFor(scenario);
         HttpResponseMessage response = await scenario.SendAsync(client, ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.InternalServerError,
@@ -886,10 +888,32 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionPostgresAp
         await ReplayHttpErrorScenarioAsync(scenario);
     }
 
+    /// <summary>
+    /// Signs the scenario as the caller a deployment would (ADR-2516, #5361): the eTMF completeness webhook as the eTMF
+    /// service, which alone holds <c>site_compliance:etmf_sync</c>; site activation and compliance reads, which name a
+    /// site, as the sponsor data manager, who certifies activation and is not site-scoped. Every other route uses the
+    /// default test identity.
+    /// </summary>
+    private HttpClient CreateClientFor(GoldenMasterScenario scenario)
+    {
+        string route = scenario.Route ?? string.Empty;
+        GatewayIdentity identity = TestSecurityContext.DefaultIdentity;
+        if (route.StartsWith("/api/v1/execution/webhooks/etmf", StringComparison.Ordinal))
+        {
+            identity = TestSecurityContext.Identity("etmf-service", PermissionMatrix.EtmfServiceRole);
+        }
+        else if (route.StartsWith("/api/v1/execution/sites/", StringComparison.Ordinal))
+        {
+            identity = TestSecurityContext.Identity("sponsor-dm", RoleNormalization.ROLE_SPONSOR_DM);
+        }
+
+        return _testApi.CreateSignedClient(identity);
+    }
+
     private async Task ReplayHttpErrorScenarioAsync(GoldenMasterScenario scenario)
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using HttpClient client = _testApi.CreateSignedClient();
+        using HttpClient client = CreateClientFor(scenario);
         HttpResponseMessage response = await scenario.SendAsync(client, ct);
 
         response.StatusCode.Should().Be((HttpStatusCode)scenario.ExpectedStatus!.Value,
@@ -1186,7 +1210,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionPostgresAp
         CancellationToken ct = TestContext.Current.CancellationToken;
         await ApplyPreconditionsAsync(scenario.Input, ct);
 
-        using HttpClient client = _testApi.CreateSignedClient();
+        using HttpClient client = CreateClientFor(scenario);
         HttpResponseMessage response = await scenario.SendAsync(client, ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.InternalServerError,
