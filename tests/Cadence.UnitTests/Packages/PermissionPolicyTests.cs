@@ -100,6 +100,7 @@ public sealed class PermissionPolicyTests : IAsyncLifetime
     [InlineData("Subject")]
     [InlineData("sysadmin")]
     [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-192")]
     public async Task RoutesThatDeclareNothing_AreDeniedByDefault(string role)
     {
         using var client = Client(role);
@@ -121,6 +122,7 @@ public sealed class PermissionPolicyTests : IAsyncLifetime
 
     /// <summary>A path that matches no route still answers 404 to a signed caller and 401 to an unsigned one.</summary>
     [Fact]
+    [GxPRequirement("PRD-SYS-192")]
     public async Task PathsThatMatchNoRoute_AnswerNotFoundOnlyAfterAuthentication()
     {
         using var signed = Client("sysadmin");
@@ -150,6 +152,7 @@ public sealed class PermissionPolicyTests : IAsyncLifetime
     [InlineData("STUDY-B", HttpStatusCode.Forbidden)]
     [InlineData(null, HttpStatusCode.Forbidden)]
     [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-192")]
     public async Task StudyScope_AdmitsOnlyCallersAssignedToTheRouteStudy(string? assignment, HttpStatusCode expected)
     {
         var identity = TestSecurityContext.Identity($"user-{Guid.NewGuid():N}", "Sponsor Designer")
