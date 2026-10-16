@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Payments.Domain;
@@ -8,6 +9,7 @@ using Cadence.Apps.Payments.Endpoints;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
 using Cadence.Security.FieldProtection;
+using Cadence.Testing.Security;
 
 using FluentAssertions;
 
@@ -20,6 +22,9 @@ namespace Cadence.UnitTests.Payments;
 
 public class ParticipantStipendDisbursementTests
 {
+    // The site coordinator who verified the visit, as the gateway signs them (#5361).
+    private static readonly ClaimsPrincipal SiteCoordinator = TestSecurityContext.CreatePrincipal("crc-1", "crc");
+
     private static string NewTempDbPath() => Path.Combine(Path.GetTempPath(), $"payments-test-{Guid.NewGuid():N}.db");
 
     private static DbContextOptions<PaymentsDbContext> FileOptions(string path) =>
@@ -64,14 +69,13 @@ public class ParticipantStipendDisbursementTests
             SiteId: "SITE-101",
             SubjectId: "SUBJ-2001",
             VisitCode: "V1_SCREENING",
-            EventId: "EVT-1001",
-            VerifiedBy: "coordinator_alice"
+            EventId: "EVT-1001"
         );
 
         // Act
         var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("IngestVisitVerifiedEvent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [evt, dbContext])!;
+            .Invoke(null, [evt, dbContext, SiteCoordinator])!;
 
         // Assert
         result.Should().BeOfType<Ok<VisitVerificationResponseDto>>();
@@ -128,19 +132,18 @@ public class ParticipantStipendDisbursementTests
             SiteId: "SITE-101",
             SubjectId: "SUBJ-2002",
             VisitCode: "V1_SCREENING",
-            EventId: "EVT-DUPLICATE-999",
-            VerifiedBy: "coordinator_alice"
+            EventId: "EVT-DUPLICATE-999"
         );
 
         // Act 1: First call
         await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("IngestVisitVerifiedEvent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [evt, dbContext])!;
+            .Invoke(null, [evt, dbContext, SiteCoordinator])!;
 
         // Act 2: Duplicate call with same EventId
         var dupResult = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("IngestVisitVerifiedEvent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [evt, dbContext])!;
+            .Invoke(null, [evt, dbContext, SiteCoordinator])!;
 
         // Assert
         dupResult.Should().BeOfType<Ok<VisitVerificationResponseDto>>();
@@ -210,14 +213,13 @@ public class ParticipantStipendDisbursementTests
             SiteId: "SITE-101",
             SubjectId: "SUBJ-2003",
             VisitCode: "V3_CYCLE_1",
-            EventId: "EVT-TAX-HOLD-01",
-            VerifiedBy: "coordinator_alice"
+            EventId: "EVT-TAX-HOLD-01"
         );
 
         // Act
         var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("IngestVisitVerifiedEvent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [evt, dbContext])!;
+            .Invoke(null, [evt, dbContext, SiteCoordinator])!;
 
         // Assert
         result.Should().BeOfType<Ok<VisitVerificationResponseDto>>();
@@ -267,14 +269,13 @@ public class ParticipantStipendDisbursementTests
             SiteId: "SITE-101",
             SubjectId: "SUBJ-2004",
             VisitCode: "V6_END_STUDY",
-            EventId: "EVT-CAP-EXCEEDED-01",
-            VerifiedBy: "coordinator_alice"
+            EventId: "EVT-CAP-EXCEEDED-01"
         );
 
         // Act
         var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("IngestVisitVerifiedEvent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [evt, dbContext])!;
+            .Invoke(null, [evt, dbContext, SiteCoordinator])!;
 
         // Assert
         result.Should().BeOfType<Ok<VisitVerificationResponseDto>>();
@@ -320,14 +321,13 @@ public class ParticipantStipendDisbursementTests
             SiteId: "SITE-101",
             SubjectId: "SUBJ-2005",
             VisitCode: "V_SPECIAL",
-            EventId: "EVT-THRESHOLD-EXCEEDED-01",
-            VerifiedBy: "coordinator_alice"
+            EventId: "EVT-THRESHOLD-EXCEEDED-01"
         );
 
         // Act
         var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("IngestVisitVerifiedEvent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [evt, dbContext])!;
+            .Invoke(null, [evt, dbContext, SiteCoordinator])!;
 
         // Assert
         result.Should().BeOfType<Ok<VisitVerificationResponseDto>>();
@@ -364,7 +364,7 @@ public class ParticipantStipendDisbursementTests
         // Act
         var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("DisburseStipendDirect", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [req, dbContext])!;
+            .Invoke(null, [req, dbContext, SiteCoordinator])!;
 
         // Assert
         result.Should().BeOfType<Ok<DisburseStipendResponse>>();
@@ -440,7 +440,7 @@ public class ParticipantStipendDisbursementTests
         // Act
         var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("ReviewExpenseClaim", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, ["claim-001", reviewReq, dbContext])!;
+            .Invoke(null, ["claim-001", reviewReq, dbContext, SiteCoordinator])!;
 
         // Assert
         result.Should().BeOfType<Ok<ParticipantExpenseClaim>>();

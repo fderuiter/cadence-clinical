@@ -31,6 +31,12 @@ public static class RoleNormalization
     public const string ROLE_EXTERNAL_MONITOR = "external_monitor";
     public const string ROLE_REVIEWER = "protocol_reviewer";
 
+    /// <summary>
+    /// Sponsor or CRO finance staff: compile, approve and settle site invoices and pay participants (Payments, #5361).
+    /// The local realm's "Grants Manager" maps here.
+    /// </summary>
+    public const string ROLE_FINANCE_OFFICER = "finance_officer";
+
     // RTSM roles
     public const string ROLE_PHARMACIST = "pharmacist";
     public const string ROLE_UNBLINDED_STATISTICIAN = "unblinded_statistician";
@@ -143,6 +149,14 @@ public static class RoleNormalization
         ["auditor"] = ROLE_AUDITOR_CANONICAL,
         ["inspector"] = ROLE_AUDITOR_CANONICAL,
         ["regulatory_inspector"] = ROLE_AUDITOR_CANONICAL,
+        ["finance_officer"] = ROLE_FINANCE_OFFICER,
+        ["finance officer"] = ROLE_FINANCE_OFFICER,
+        ["finance-officer"] = ROLE_FINANCE_OFFICER,
+        ["financeofficer"] = ROLE_FINANCE_OFFICER,
+        ["grants manager"] = ROLE_FINANCE_OFFICER,
+        ["grants_manager"] = ROLE_FINANCE_OFFICER,
+        ["grants-manager"] = ROLE_FINANCE_OFFICER,
+        ["grantsmanager"] = ROLE_FINANCE_OFFICER,
     };
 
     /// <summary>

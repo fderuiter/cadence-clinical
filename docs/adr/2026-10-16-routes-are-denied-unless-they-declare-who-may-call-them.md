@@ -124,3 +124,14 @@ service ever filled in assigned studies, so the check could not deny anyone.
     header being ignored, a tampered study assignment failing authentication, and an unknown permission being refused.
   - `CadenceSecurityUnitTests.StudyAccessEvaluator_FailsClosed` and `GatewayStudyAssignmentTests` cover the evaluator and
     the gateway's signed assignments.
+
+## 7. Module Notes
+
+- **Payments** (`PermissionMatrix.Payments.cs`): adds the canonical `finance_officer` role (aliases include the local
+  realm's "Grants Manager" and "finance officer") for moving and settling money: stipend and wallet payouts, stipend
+  rules, invoice compilation, approval, remittance signing, reconciliation and the ERP export. Site staff (`crc`,
+  `investigator`) record verified visits, issue cards, take and verify W-9s and submit and review expense claims;
+  `sponsor_dm` and auditors read; `sysadmin` reads invoices, rules and the payments audit log. Approval and remittance
+  signing share the finance role, so the handler refuses a signature from the invoice's approver. The `subject` role
+  holds no Payments permission until a participant's sign-in is bound to a wallet. Handlers record the actor from the
+  signed principal, never from the request body ([apps/payments/README.md](../../apps/payments/README.md)).

@@ -1,6 +1,6 @@
 # Payments service
 
-Site and participant payments scaffold. It holds the budget contract, fee schedule, payee split, payable, holdback, invoice, remittance and participant wallet model; no business endpoints are mapped yet.
+Site and participant payments scaffold. It holds the budget contract, fee schedule, payee split, payable, holdback, invoice, remittance and participant wallet model, and maps the participant wallet, stipend, expense and self-billing invoice routes under `/api/v1/payments` (`Endpoints/PaymentEndpoints.cs`).
 
 **Status:** a standalone ASP.NET Core 10 scaffold service. Under [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and the [clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map, §15 roadmap) it becomes an application module over the clinical kernel. The disposition of the scaffold services is tracked in issue #4787.
 
@@ -29,6 +29,54 @@ Site and participant payments scaffold. It holds the budget contract, fee schedu
 
 `Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md). Every route not marked anonymous requires the gateway-signed caller identity. `GATEWAY_SECRET` (at least 32 characters) is required at startup; see [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
 
+### Who may call what
+
+Routes are denied unless they declare a permission ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
+Every `/api/v1/payments` route calls `RequirePermission("resource:action")`, and
+[`PermissionMatrix.Payments.cs`](../../packages/security/src/Rbac/PermissionMatrix.Payments.cs) grants each permission to
+roles (#5361). `finance_officer` is the finance role; the local realm's "Grants Manager" and "finance officer" map to it
+(`RoleNormalization`). The principal investigator roles inherit the investigator's grants.
+
+| Permission                                 | Routes                                                                                                                                                                                                     | Roles                                                             |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `payments_stipend:disburse`                | `POST /disburse`, `POST /participant/wallets/disburse`                                                                                                                                                     | finance_officer                                                   |
+| `payments_wallet:disburse`                 | `POST /participant/wallets/{walletId}/disburse`                                                                                                                                                            | finance_officer                                                   |
+| `payments_wallet:issue_card`               | `POST /participant/wallets/{walletId}/issue-card`                                                                                                                                                          | finance_officer, crc, investigator                                |
+| `payments_wallet:read`                     | `GET /participant/wallets`, `/participant/wallets/subject/{subjectId}`, `/participant/wallets/{walletId}`, `.../tax-1099-status`, `.../balance`, `/participant/transactions`, `/participant/disbursements` | finance_officer, crc, investigator, sponsor_dm, auditor           |
+| `payments_w9:submit`, `payments_w9:verify` | `POST /participant/wallets/{walletId}/submit-w9`, `.../verify-w9`                                                                                                                                          | crc, investigator                                                 |
+| `payments_stipend_rule:configure`          | `POST /participant/stipend-rules`                                                                                                                                                                          | finance_officer                                                   |
+| `payments_stipend_rule:read`               | `GET /participant/stipend-rules`                                                                                                                                                                           | finance_officer, crc, investigator, sponsor_dm, auditor, sysadmin |
+| `payments_visit_event:record`              | `POST /participant/events/visit-verified`                                                                                                                                                                  | crc, investigator                                                 |
+| `payments_expense:submit`                  | `POST /participant/expenses`, `POST /participant/expenses/ocr-extract`                                                                                                                                     | crc, investigator                                                 |
+| `payments_expense:review`                  | `POST /participant/expenses/{claimId}/review`                                                                                                                                                              | crc, investigator                                                 |
+| `payments_expense:read`                    | `GET /participant/expenses`                                                                                                                                                                                | finance_officer, crc, investigator, sponsor_dm, auditor           |
+| `payments_audit_log:read`                  | `GET /audit-logs`                                                                                                                                                                                          | finance_officer, auditor, sysadmin                                |
+| `payments_invoice:read`                    | `GET /invoices`, `GET /invoices/{id}`, `GET /invoices/{id}/remittance-advice/pdf`                                                                                                                          | finance_officer, sponsor_dm, auditor, sysadmin                    |
+| `payments_invoice:compile`                 | `POST /invoices/compile`, `POST /invoices/batch-compile`                                                                                                                                                   | finance_officer                                                   |
+| `payments_invoice:approve`                 | `POST /invoices/{id}/approve`                                                                                                                                                                              | finance_officer                                                   |
+| `payments_invoice:sign_remittance`         | `POST /invoices/{id}/remittance-advice/sign`                                                                                                                                                               | finance_officer                                                   |
+| `payments_invoice:reconcile`               | `POST /invoices/{id}/reconcile`                                                                                                                                                                            | finance_officer                                                   |
+| `payments_invoice:export_erp`              | `POST /invoices/{id}/erp-export`                                                                                                                                                                           | finance_officer                                                   |
+
+- **Service callers.** `POST /participant/events/visit-verified` is called by the site coordinator who verified the visit
+  (or an EDC integration account holding the `crc` role). `POST /invoices/{id}/erp-export` is called by a finance officer
+  or an ERP integration account holding `finance_officer`. Both record that account as the actor.
+- **Separation of duties.** Approval and remittance signing share the finance role, so the handler refuses (`409`) a
+  remittance signature from the user who approved the invoice. Compiling with `auto_approve` also needs
+  `payments_invoice:approve`.
+- **Identity in records.** Handlers take the actor from the signed principal (`PaymentsCaller`): the `sub` claim as the
+  user id and the signed role claims (canonical names, so "Grants Manager" is recorded as `finance_officer`) as
+  `UserRoles`. Audit rows, `CreatedBy`, `ApprovedBy`, `ReviewedBy`,
+  `ReconciledBy`, `SignedBy` and `SignerRole` all come from it. Request bodies carry no actor: the remittance signature
+  takes only `signature_reason`, and the visit-verified event has no `verified_by`. Two system identities remain:
+  `svc:payments` on the demonstration stipend rules the service seeds on first read, and `svc:system_auto_approval` on
+  the rows the expense auto-approval policy writes (its details name the submitting caller). `SubjectId` on a wallet,
+  claim or transaction is the participant the row belongs to, not the actor.
+- **Participant self-service is not open.** A participant's sign-in is not bound to a wallet yet, so the `subject` role
+  holds no Payments permission; site staff submit W-9s and expense claims for the participant. Self-service needs that
+  binding first.
+- `GET /participant/wallets/subject/{subjectId}` no longer opens a wallet when none exists; it answers `404`.
+
 ## Persistence
 
 `AddCadencePostgresDbContext<PaymentsDbContext>()` from [packages/database](../../packages/database/README.md) connects to the shared `cadence` database with its search path set to the `payments` schema ([ADR-2447](../../docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)). The connection string comes from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only the Development environment falls back to `cadence` on `localhost:5432`, and other environments fail at startup. `docker/docker-compose.yml` points it at the compose PostgreSQL and sets `Database__MigrateOnStartup=true`, so the service applies its migrations when it starts.
@@ -40,8 +88,8 @@ Site and participant payments scaffold. It holds the budget contract, fee schedu
 
 ## Configuration and secrets at rest
 
-| Setting | Purpose |
-| --- | --- |
+| Setting                | Purpose                                                                                                                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `FIELD_ENCRYPTION_KEY` | **Required.** Base64 AES-256 key (`openssl rand -base64 32`) that encrypts payment processor references. The service refuses to start without a valid key; there is no default. |
 
 Participant wallets (`payments_participant_wallets`, #4770) never store card numbers, raw card tokens or bank
@@ -60,6 +108,7 @@ refuses to encrypt or decrypt.
 ## Tests
 
 - `tests/Cadence.UnitTests/Payments/ContractCalculationsTests.cs` and `PayableLedgerTests.cs`: the ledger, pinned to the Python reference's amounts and digests.
+- `tests/Cadence.UnitTests/Payments/PaymentsCallerAuthorizationTests.cs`: the host over SQLite; a caller without a write route's role gets `403` and no row changes, and audit rows record the signed caller.
 - `tests/Cadence.UnitTests/Payments/PaymentDecimalCalculationTests.cs`: `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Payments"`.
 - Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 

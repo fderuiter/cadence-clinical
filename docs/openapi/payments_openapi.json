@@ -1263,18 +1263,8 @@
         }
       },
       "Payments_SignRemittanceRequest": {
-        "required": [
-          "signer_name",
-          "signer_role"
-        ],
         "type": "object",
         "properties": {
-          "signer_name": {
-            "type": "string"
-          },
-          "signer_role": {
-            "type": "string"
-          },
           "signature_reason": {
             "type": [
               "null",
@@ -1414,13 +1404,6 @@
           },
           "eventId": {
             "type": "string"
-          },
-          "verifiedBy": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "default": "crc_coordinator"
           }
         }
       }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -11,6 +12,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
+using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -75,8 +77,7 @@ public record VisitVerificationEventDto(
     string SiteId,
     string SubjectId,
     string VisitCode,
-    string EventId,
-    string? VerifiedBy = "crc_coordinator"
+    string EventId
 );
 
 public record VisitVerificationResponseDto(
@@ -294,9 +295,10 @@ public record SelfBillingInvoiceResponse(
     [property: JsonPropertyName("remittance_advice")] RemittanceAdviceDto? RemittanceAdvice
 );
 
+/// <summary>
+/// A remittance signature. The signer is the signed-in caller; the body carries only the reason (#5361).
+/// </summary>
 public record SignRemittanceRequest(
-    [property: JsonPropertyName("signer_name")] string SignerName,
-    [property: JsonPropertyName("signer_role")] string SignerRole,
     [property: JsonPropertyName("signature_reason")] string? SignatureReason = null
 );
 
@@ -312,137 +314,173 @@ public static class PaymentEndpoints
 {
     public static IEndpointRouteBuilder MapPaymentEndpoints(this IEndpointRouteBuilder routes)
     {
+        // Every route names the permission it needs (ADR-2516, #5361); PermissionMatrix.Payments.cs says which roles
+        // hold each one. Handlers that write record the signed caller (PaymentsCaller), never an identity from the body.
         var group = routes.MapGroup("/api/v1/payments")
             .WithTags("Payments");
 
         // Legacy / Direct endpoints
         group.MapPost("/disburse", DisburseStipendDirect)
             .WithName("DisburseStipendDirect")
+            .RequirePermission("payments_stipend:disburse")
             .WithSummary("Direct disburse ePRO stipend to participant wallet with strict idempotency and audit trail.");
 
         group.MapPost("/participant/wallets/disburse", DisburseStipendDirect)
             .WithName("DisburseStipendWallet")
+            .RequirePermission("payments_stipend:disburse")
             .WithSummary("Disburse stipend to participant wallet.");
 
         // Participant Wallets Directory & Management
         group.MapGet("/participant/wallets", ListWallets)
             .WithName("ListWallets")
+            .RequirePermission("payments_wallet:read")
             .WithSummary("List all participant wallets.");
 
         group.MapGet("/participant/wallets/subject/{subjectId}", GetSubjectWallet)
             .WithName("GetSubjectWallet")
+            .RequirePermission("payments_wallet:read")
             .WithSummary("Retrieve participant wallet balance and details.");
 
         group.MapGet("/participant/wallets/{walletId}", GetWalletById)
             .WithName("GetWalletById")
+            .RequirePermission("payments_wallet:read")
             .WithSummary("Retrieve participant wallet details by wallet ID.");
 
         group.MapGet("/participant/wallets/{walletId}/tax-1099-status", GetTax1099Status)
             .WithName("GetTax1099Status")
+            .RequirePermission("payments_wallet:read")
             .WithSummary("Retrieve IRS 1099 tax status and threshold monitoring tracer.");
 
         group.MapGet("/participant/wallets/{walletId}/balance", GetBalanceInquiry)
             .WithName("GetBalanceInquiry")
+            .RequirePermission("payments_wallet:read")
             .WithSummary("Real-time balance inquiry for participant wallet.");
 
         group.MapPost("/participant/wallets/{walletId}/issue-card", IssueReloadableCard)
             .WithName("IssueReloadableCard")
+            .RequirePermission("payments_wallet:issue_card")
             .WithSummary("Issue or re-issue reloadable debit card for participant wallet.");
 
         group.MapPost("/participant/wallets/{walletId}/submit-w9", SubmitW9Form)
             .WithName("SubmitW9Form")
+            .RequirePermission("payments_w9:submit")
             .WithSummary("Submit Form W-9 taxpayer identification certification.");
 
         group.MapPost("/participant/wallets/{walletId}/verify-w9", VerifyW9Form)
             .WithName("VerifyW9Form")
+            .RequirePermission("payments_w9:verify")
             .WithSummary("Verify participant Form W-9 submission.");
 
         group.MapPost("/participant/wallets/{walletId}/disburse", DisburseParticipantFunds)
             .WithName("DisburseParticipantFunds")
+            .RequirePermission("payments_wallet:disburse")
             .WithSummary("Disburse digital funds from participant wallet to debit card or bank account.");
 
         // SoA Stipend Rules & Visit Verification Event Trigger
         group.MapGet("/participant/stipend-rules", ListStipendRules)
             .WithName("ListStipendRules")
+            .RequirePermission("payments_stipend_rule:read")
             .WithSummary("List SoA protocol visit stipend compensation rules.");
 
         group.MapPost("/participant/stipend-rules", CreateStipendRule)
             .WithName("CreateStipendRule")
+            .RequirePermission("payments_stipend_rule:configure")
             .WithSummary("Configure participant visit compensation rules linked to Schedule of Activities.");
 
         group.MapPost("/participant/events/visit-verified", IngestVisitVerifiedEvent)
             .WithName("IngestVisitVerifiedEvent")
+            .RequirePermission("payments_visit_event:record")
             .WithSummary("Receives verified eCRF visit completion event and evaluates automated stipend disbursement rules.");
 
         // Travel Expenses & OCR Scanner
         group.MapGet("/participant/expenses", ListExpenseClaims)
             .WithName("ListExpenseClaims")
+            .RequirePermission("payments_expense:read")
             .WithSummary("List travel and meal expense reimbursement claims.");
 
         group.MapPost("/participant/expenses", SubmitExpenseClaim)
             .WithName("SubmitExpenseClaim")
+            .RequirePermission("payments_expense:submit")
             .WithSummary("Submit travel/meal expense claim for coordinator review.");
 
         group.MapPost("/participant/expenses/ocr-extract", ExtractReceiptOcr)
             .WithName("ExtractReceiptOcr")
+            .RequirePermission("payments_expense:submit")
             .WithSummary("Extract metadata from receipt image/text using rule-based OCR engine.");
 
         group.MapPost("/participant/expenses/{claimId}/review", ReviewExpenseClaim)
             .WithName("ReviewExpenseClaim")
+            .RequirePermission("payments_expense:review")
             .WithSummary("Coordinator 1-click review and approval/rejection of expense claim.");
 
         // Transactions, Disbursements & Audit Logs
         group.MapGet("/participant/transactions", ListTransactions)
             .WithName("ListTransactions")
+            .RequirePermission("payments_wallet:read")
             .WithSummary("List participant wallet transactions ledger.");
 
         group.MapGet("/participant/disbursements", ListDisbursements)
             .WithName("ListDisbursements")
+            .RequirePermission("payments_wallet:read")
             .WithSummary("List digital disbursement dispatches.");
 
         group.MapGet("/audit-logs", GetAuditLogs)
             .WithName("GetPaymentAuditLogs")
+            .RequirePermission("payments_audit_log:read")
             .WithSummary("Retrieve payment audit ledger records.");
 
         // Self-Billing Invoices & Automated Batch Milestone Invoicing
         group.MapGet("/invoices", ListInvoices)
             .WithName("ListInvoices")
+            .RequirePermission("payments_invoice:read")
             .WithSummary("Lists compiled self-billing invoices matching filter criteria.");
 
         group.MapGet("/invoices/{id}", GetInvoiceById)
             .WithName("GetInvoiceById")
+            .RequirePermission("payments_invoice:read")
             .WithSummary("Retrieve single self-billing invoice details with line items.");
 
         group.MapPost("/invoices/compile", CompileBillingCycle)
             .WithName("CompileBillingCycle")
+            .RequirePermission("payments_invoice:compile")
             .WithSummary("Automates single-site billing cycle compilation into a self-billing invoice.");
 
         group.MapPost("/invoices/batch-compile", BatchCompileBillingCycles)
             .WithName("BatchCompileBillingCycles")
+            .RequirePermission("payments_invoice:compile")
             .WithSummary("Executes study-wide batch milestone invoice compilation across all active trial sites.");
 
         group.MapPost("/invoices/{id}/approve", ApproveInvoice)
             .WithName("ApproveInvoice")
+            .RequirePermission("payments_invoice:approve")
             .WithSummary("Approve draft self-billing invoice for ERP export and settlement.");
 
         group.MapPost("/invoices/{id}/remittance-advice/sign", SignRemittanceAdvice)
             .WithName("SignRemittanceAdvice")
+            .RequirePermission("payments_invoice:sign_remittance")
             .WithSummary("Applies 21 CFR Part 11 electronic signature to cryptographic remittance advice.");
 
         group.MapGet("/invoices/{id}/remittance-advice/pdf", DownloadRemittancePdf)
             .WithName("DownloadRemittancePdf")
+            .RequirePermission("payments_invoice:read")
             .WithSummary("Downloads cryptographic PDF remittance statement.");
 
         group.MapPost("/invoices/{id}/reconcile", ReconcileInvoice)
             .WithName("ReconcileInvoice")
+            .RequirePermission("payments_invoice:reconcile")
             .WithSummary("Reconciles invoice settlement against bank wire or ERP clearing statement.");
 
         group.MapPost("/invoices/{id}/erp-export", ExportInvoiceToErp)
             .WithName("ExportInvoiceToErp")
+            .RequirePermission("payments_invoice:export_erp")
             .WithSummary("Exports self-billing invoice to ERP gateway (e.g. SAP).");
 
         return routes;
     }
+
+    // Authorization has already required a signed caller, so this answers only a request that bypassed it.
+    private static IResult NoSignedCaller() =>
+        Results.Problem(statusCode: StatusCodes.Status401Unauthorized, detail: "The request carries no signed caller.");
 
     private static WalletResponse MapWalletToResponse(ParticipantWallet wallet) => new(
         Id: wallet.Id,
@@ -495,29 +533,11 @@ public static class PaymentEndpoints
         var wallet = await dbContext.ParticipantWallets
             .FirstOrDefaultAsync(w => w.SubjectId == subjectId);
 
+        // A read creates nothing (read-only roles call it): a wallet is opened by a verified visit, an expense claim or
+        // a stipend disbursement.
         if (wallet == null)
         {
-            DateTimeOffset now = SystemClock.Instance.UtcNow;
-            wallet = new ParticipantWallet
-            {
-                Id = Guid.NewGuid().ToString(),
-                SubjectId = subjectId,
-                StudyId = "STUDY-DCT-001",
-                SiteId = "SITE-101",
-                CurrentBalance = 0m,
-                LifetimeStipends = 0m,
-                LifetimeReimbursements = 0m,
-                LifetimeDisbursements = 0m,
-                Currency = "USD",
-                Status = "ACTIVE",
-                W9Status = "NOT_REQUIRED",
-                CreatedAt = now,
-                CreatedBy = subjectId,
-                UpdatedAt = now,
-                VersionIndex = 1
-            };
-            dbContext.ParticipantWallets.Add(wallet);
-            await dbContext.SaveChangesAsync();
+            return Results.NotFound(new { detail = $"No participant wallet for subject '{subjectId}'." });
         }
 
         return Results.Ok(MapWalletToResponse(wallet));
@@ -589,8 +609,13 @@ public static class PaymentEndpoints
         });
     }
 
-    private static async Task<IResult> IssueReloadableCard(string walletId, IssueCardRequestDto request, PaymentsDbContext dbContext)
+    private static async Task<IResult> IssueReloadableCard(string walletId, IssueCardRequestDto request, PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         var wallet = await dbContext.ParticipantWallets
             .FirstOrDefaultAsync(w => w.Id == walletId);
 
@@ -614,11 +639,11 @@ public static class PaymentEndpoints
             EntityType = "ParticipantWallet",
             EntityId = wallet.Id,
             Action = "RELOADABLE_CARD_ISSUED",
-            UserId = wallet.SubjectId,
-            UserRoles = "Subject",
+            UserId = caller.UserId,
+            UserRoles = caller.RolesText,
             Details = JsonSerializer.Serialize(new { card_type = wallet.CardType, mask = wallet.VirtualCardMask, expiry = wallet.VirtualCardExpiry }),
             CreatedAt = now,
-            CreatedBy = wallet.SubjectId,
+            CreatedBy = caller.UserId,
             ReasonForChange = "Reloadable debit card issued to participant",
             VersionIndex = wallet.VersionIndex
         };
@@ -628,8 +653,13 @@ public static class PaymentEndpoints
         return Results.Ok(MapWalletToResponse(wallet));
     }
 
-    private static async Task<IResult> SubmitW9Form(string walletId, SubmitW9RequestDto request, PaymentsDbContext dbContext)
+    private static async Task<IResult> SubmitW9Form(string walletId, SubmitW9RequestDto request, PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         var wallet = await dbContext.ParticipantWallets
             .FirstOrDefaultAsync(w => w.Id == walletId);
 
@@ -657,14 +687,14 @@ public static class PaymentEndpoints
             EntityType = "ParticipantWallet",
             EntityId = wallet.Id,
             Action = "W9_FORM_SUBMITTED",
-            UserId = wallet.SubjectId,
-            UserRoles = "Subject",
+            UserId = caller.UserId,
+            UserRoles = caller.RolesText,
             PreviousStateJson = JsonSerializer.Serialize(new { w9_status = priorStatus }),
             NewStateJson = JsonSerializer.Serialize(new { w9_status = wallet.W9Status, tax_id_last_four = request.TaxIdLastFour }),
             Details = JsonSerializer.Serialize(new { full_legal_name = request.FullLegalName, tax_id_last_four = request.TaxIdLastFour, address = request.Address }),
             CreatedAt = now,
-            CreatedBy = wallet.SubjectId,
-            ReasonForChange = "Participant submitted Form W-9 taxpayer identification certification",
+            CreatedBy = caller.UserId,
+            ReasonForChange = "Form W-9 taxpayer identification certification submitted for the participant",
             VersionIndex = wallet.VersionIndex
         };
         dbContext.PaymentAuditLogs.Add(audit);
@@ -673,8 +703,13 @@ public static class PaymentEndpoints
         return Results.Ok(MapWalletToResponse(wallet));
     }
 
-    private static async Task<IResult> VerifyW9Form(string walletId, VerifyW9RequestDto request, PaymentsDbContext dbContext)
+    private static async Task<IResult> VerifyW9Form(string walletId, VerifyW9RequestDto request, PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         var wallet = await dbContext.ParticipantWallets
             .FirstOrDefaultAsync(w => w.Id == walletId);
 
@@ -696,14 +731,14 @@ public static class PaymentEndpoints
             EntityType = "ParticipantWallet",
             EntityId = wallet.Id,
             Action = "W9_FORM_VERIFIED",
-            UserId = "coordinator_alice",
-            UserRoles = "Coordinator",
+            UserId = caller.UserId,
+            UserRoles = caller.RolesText,
             PreviousStateJson = JsonSerializer.Serialize(new { w9_status = priorStatus }),
             NewStateJson = JsonSerializer.Serialize(new { w9_status = wallet.W9Status }),
             Details = JsonSerializer.Serialize(new { notes = request.Notes ?? "TIN matched against verification registry." }),
             CreatedAt = now,
-            CreatedBy = "coordinator_alice",
-            ReasonForChange = "CRC coordinator validated Form W-9 taxpayer identification",
+            CreatedBy = caller.UserId,
+            ReasonForChange = "Site staff validated Form W-9 taxpayer identification",
             VersionIndex = wallet.VersionIndex
         };
         dbContext.PaymentAuditLogs.Add(audit);
@@ -712,8 +747,13 @@ public static class PaymentEndpoints
         return Results.Ok(MapWalletToResponse(wallet));
     }
 
-    private static async Task<IResult> DisburseParticipantFunds(string walletId, DisburseFundsRequestDto request, PaymentsDbContext dbContext)
+    private static async Task<IResult> DisburseParticipantFunds(string walletId, DisburseFundsRequestDto request, PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         var wallet = await dbContext.ParticipantWallets
             .FirstOrDefaultAsync(w => w.Id == walletId);
 
@@ -753,7 +793,7 @@ public static class PaymentEndpoints
             ReferenceNumber = refNumber,
             Status = "DISPATCHED",
             CreatedAt = now,
-            CreatedBy = wallet.SubjectId,
+            CreatedBy = caller.UserId,
             VersionIndex = 1
         };
         dbContext.ParticipantDisbursements.Add(disbursement);
@@ -770,7 +810,7 @@ public static class PaymentEndpoints
             ReferenceId = disbursement.Id,
             Description = $"Digital payout dispatch via {request.DisbursementType} ({refNumber})",
             CreatedAt = now,
-            CreatedBy = wallet.SubjectId,
+            CreatedBy = caller.UserId,
             VersionIndex = 1
         };
         dbContext.ParticipantTransactions.Add(tx);
@@ -781,11 +821,11 @@ public static class PaymentEndpoints
             EntityType = "ParticipantWallet",
             EntityId = wallet.Id,
             Action = "DIGITAL_DISBURSEMENT_DISPATCHED",
-            UserId = wallet.SubjectId,
-            UserRoles = "Subject",
+            UserId = caller.UserId,
+            UserRoles = caller.RolesText,
             Details = JsonSerializer.Serialize(new { disbursement_id = disbursement.Id, amount = payoutAmount, reference_number = refNumber, disbursement_type = request.DisbursementType, new_balance = wallet.CurrentBalance }),
             CreatedAt = now,
-            CreatedBy = wallet.SubjectId,
+            CreatedBy = caller.UserId,
             ReasonForChange = "Digital stipend payout funds dispatched to participant card/account",
             VersionIndex = wallet.VersionIndex
         };
@@ -808,15 +848,16 @@ public static class PaymentEndpoints
 
         if (rules.Count == 0 && (string.IsNullOrWhiteSpace(studyId) || studyId == "STUDY-DCT-001"))
         {
+            // Demonstration rules the service seeds itself on first read, so they carry its system identity.
             DateTimeOffset now = SystemClock.Instance.UtcNow;
             rules = new List<ParticipantStipendRule>
             {
-                new() { Id = Guid.NewGuid().ToString(), StudyId = "STUDY-DCT-001", VisitCode = "V1_SCREENING", VisitName = "Screening & Consent", Amount = 75.00m, Currency = "USD", Taxable = false, AntiCoercionCap = 100.00m, AutoDisbursementThreshold = 250.00m, IsMilestone = false, IsActive = true, CreatedAt = now, CreatedBy = "svc:payments", UpdatedAt = now, VersionIndex = 1 },
-                new() { Id = Guid.NewGuid().ToString(), StudyId = "STUDY-DCT-001", VisitCode = "V2_BASELINE", VisitName = "Baseline & Randomization", Amount = 100.00m, Currency = "USD", Taxable = false, AntiCoercionCap = 150.00m, AutoDisbursementThreshold = 250.00m, IsMilestone = false, IsActive = true, CreatedAt = now, CreatedBy = "svc:payments", UpdatedAt = now, VersionIndex = 1 },
-                new() { Id = Guid.NewGuid().ToString(), StudyId = "STUDY-DCT-001", VisitCode = "V3_CYCLE_1", VisitName = "Treatment Cycle 1 Visit", Amount = 150.00m, Currency = "USD", Taxable = true, AntiCoercionCap = 200.00m, AutoDisbursementThreshold = 250.00m, IsMilestone = false, IsActive = true, CreatedAt = now, CreatedBy = "svc:payments", UpdatedAt = now, VersionIndex = 1 },
-                new() { Id = Guid.NewGuid().ToString(), StudyId = "STUDY-DCT-001", VisitCode = "V4_CYCLE_2", VisitName = "Treatment Cycle 2 Visit", Amount = 150.00m, Currency = "USD", Taxable = true, AntiCoercionCap = 200.00m, AutoDisbursementThreshold = 250.00m, IsMilestone = false, IsActive = true, CreatedAt = now, CreatedBy = "svc:payments", UpdatedAt = now, VersionIndex = 1 },
-                new() { Id = Guid.NewGuid().ToString(), StudyId = "STUDY-DCT-001", VisitCode = "V5_CYCLE_3", VisitName = "Treatment Cycle 3 Visit", Amount = 150.00m, Currency = "USD", Taxable = true, AntiCoercionCap = 200.00m, AutoDisbursementThreshold = 250.00m, IsMilestone = false, IsActive = true, CreatedAt = now, CreatedBy = "svc:payments", UpdatedAt = now, VersionIndex = 1 },
-                new() { Id = Guid.NewGuid().ToString(), StudyId = "STUDY-DCT-001", VisitCode = "V6_END_STUDY", VisitName = "End of Study Milestone", Amount = 200.00m, Currency = "USD", Taxable = true, AntiCoercionCap = 250.00m, AutoDisbursementThreshold = 250.00m, IsMilestone = true, MilestoneCode = "MILESTONE_PRIMARY", IsActive = true, CreatedAt = now, CreatedBy = "svc:payments", UpdatedAt = now, VersionIndex = 1 }
+                new() { Id = Guid.NewGuid().ToString(), StudyId = "STUDY-DCT-001", VisitCode = "V1_SCREENING", VisitName = "Screening & Consent", Amount = 75.00m, Currency = "USD", Taxable = false, AntiCoercionCap = 100.00m, AutoDisbursementThreshold = 250.00m, IsMilestone = false, IsActive = true, CreatedAt = now, CreatedBy = PaymentsCaller.SeedSystemUser, UpdatedAt = now, VersionIndex = 1 },
+                new() { Id = Guid.NewGuid().ToString(), StudyId = "STUDY-DCT-001", VisitCode = "V2_BASELINE", VisitName = "Baseline & Randomization", Amount = 100.00m, Currency = "USD", Taxable = false, AntiCoercionCap = 150.00m, AutoDisbursementThreshold = 250.00m, IsMilestone = false, IsActive = true, CreatedAt = now, CreatedBy = PaymentsCaller.SeedSystemUser, UpdatedAt = now, VersionIndex = 1 },
+                new() { Id = Guid.NewGuid().ToString(), StudyId = "STUDY-DCT-001", VisitCode = "V3_CYCLE_1", VisitName = "Treatment Cycle 1 Visit", Amount = 150.00m, Currency = "USD", Taxable = true, AntiCoercionCap = 200.00m, AutoDisbursementThreshold = 250.00m, IsMilestone = false, IsActive = true, CreatedAt = now, CreatedBy = PaymentsCaller.SeedSystemUser, UpdatedAt = now, VersionIndex = 1 },
+                new() { Id = Guid.NewGuid().ToString(), StudyId = "STUDY-DCT-001", VisitCode = "V4_CYCLE_2", VisitName = "Treatment Cycle 2 Visit", Amount = 150.00m, Currency = "USD", Taxable = true, AntiCoercionCap = 200.00m, AutoDisbursementThreshold = 250.00m, IsMilestone = false, IsActive = true, CreatedAt = now, CreatedBy = PaymentsCaller.SeedSystemUser, UpdatedAt = now, VersionIndex = 1 },
+                new() { Id = Guid.NewGuid().ToString(), StudyId = "STUDY-DCT-001", VisitCode = "V5_CYCLE_3", VisitName = "Treatment Cycle 3 Visit", Amount = 150.00m, Currency = "USD", Taxable = true, AntiCoercionCap = 200.00m, AutoDisbursementThreshold = 250.00m, IsMilestone = false, IsActive = true, CreatedAt = now, CreatedBy = PaymentsCaller.SeedSystemUser, UpdatedAt = now, VersionIndex = 1 },
+                new() { Id = Guid.NewGuid().ToString(), StudyId = "STUDY-DCT-001", VisitCode = "V6_END_STUDY", VisitName = "End of Study Milestone", Amount = 200.00m, Currency = "USD", Taxable = true, AntiCoercionCap = 250.00m, AutoDisbursementThreshold = 250.00m, IsMilestone = true, MilestoneCode = "MILESTONE_PRIMARY", IsActive = true, CreatedAt = now, CreatedBy = PaymentsCaller.SeedSystemUser, UpdatedAt = now, VersionIndex = 1 }
             };
 
             dbContext.ParticipantStipendRules.AddRange(rules);
@@ -826,8 +867,13 @@ public static class PaymentEndpoints
         return Results.Ok(rules);
     }
 
-    private static async Task<IResult> CreateStipendRule(ParticipantStipendRuleCreateDto request, PaymentsDbContext dbContext)
+    private static async Task<IResult> CreateStipendRule(ParticipantStipendRuleCreateDto request, PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         if (request.AntiCoercionCap.HasValue && request.Amount > request.AntiCoercionCap.Value)
         {
             return Results.UnprocessableEntity(new { detail = $"Stipend amount (${request.Amount:F2}) cannot exceed IRB anti-coercion cap limit (${request.AntiCoercionCap.Value:F2})." });
@@ -858,11 +904,11 @@ public static class PaymentEndpoints
                 EntityType = "ParticipantStipendRule",
                 EntityId = existing.Id,
                 Action = "PARTICIPANT_STIPEND_RULE_CREATED",
-                UserId = "financial_admin",
-                UserRoles = "FinanceOfficer",
+                UserId = caller.UserId,
+                UserRoles = caller.RolesText,
                 Details = JsonSerializer.Serialize(new { study_id = request.StudyId, visit_code = request.VisitCode, amount = request.Amount }),
                 CreatedAt = now,
-                CreatedBy = "financial_admin",
+                CreatedBy = caller.UserId,
                 ReasonForChange = "SoA visit stipend compensation rule updated",
                 VersionIndex = existing.VersionIndex
             };
@@ -889,7 +935,7 @@ public static class PaymentEndpoints
             MilestoneCode = request.MilestoneCode,
             IsActive = true,
             CreatedAt = now,
-            CreatedBy = "financial_admin",
+            CreatedBy = caller.UserId,
             UpdatedAt = now,
             VersionIndex = 1
         };
@@ -901,11 +947,11 @@ public static class PaymentEndpoints
             EntityType = "ParticipantStipendRule",
             EntityId = rule.Id,
             Action = "PARTICIPANT_STIPEND_RULE_CREATED",
-            UserId = "financial_admin",
-            UserRoles = "FinanceOfficer",
+            UserId = caller.UserId,
+            UserRoles = caller.RolesText,
             Details = JsonSerializer.Serialize(new { study_id = request.StudyId, visit_code = request.VisitCode, amount = request.Amount }),
             CreatedAt = now,
-            CreatedBy = "financial_admin",
+            CreatedBy = caller.UserId,
             ReasonForChange = "SoA visit stipend compensation rule created",
             VersionIndex = 1
         };
@@ -916,8 +962,13 @@ public static class PaymentEndpoints
         return Results.Ok(rule);
     }
 
-    private static async Task<IResult> IngestVisitVerifiedEvent(VisitVerificationEventDto request, PaymentsDbContext dbContext)
+    private static async Task<IResult> IngestVisitVerifiedEvent(VisitVerificationEventDto request, PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         if (string.IsNullOrWhiteSpace(request.SubjectId) || string.IsNullOrWhiteSpace(request.VisitCode))
         {
             return Results.BadRequest(new { detail = "subject_id and visit_code are required." });
@@ -1005,7 +1056,7 @@ public static class PaymentEndpoints
                 Status = "ACTIVE",
                 W9Status = "NOT_REQUIRED",
                 CreatedAt = now,
-                CreatedBy = request.VerifiedBy ?? "crc_coordinator",
+                CreatedBy = caller.UserId,
                 UpdatedAt = now,
                 VersionIndex = 1
             };
@@ -1017,11 +1068,11 @@ public static class PaymentEndpoints
                 EntityType = "ParticipantWallet",
                 EntityId = wallet.Id,
                 Action = "PARTICIPANT_WALLET_CREATED",
-                UserId = request.VerifiedBy ?? "crc_coordinator",
-                UserRoles = "Coordinator",
+                UserId = caller.UserId,
+                UserRoles = caller.RolesText,
                 Details = JsonSerializer.Serialize(new { subject_id = request.SubjectId, study_id = request.StudyId, site_id = request.SiteId }),
                 CreatedAt = now,
-                CreatedBy = request.VerifiedBy ?? "crc_coordinator",
+                CreatedBy = caller.UserId,
                 ReasonForChange = "Initial wallet provisioned on eCRF visit verification",
                 VersionIndex = 1
             };
@@ -1046,11 +1097,11 @@ public static class PaymentEndpoints
                 EntityType = "ParticipantWallet",
                 EntityId = wallet.Id,
                 Action = "ANTI_COERCION_CAP_EXCEEDED",
-                UserId = request.VerifiedBy ?? "crc_coordinator",
-                UserRoles = "Coordinator",
+                UserId = caller.UserId,
+                UserRoles = caller.RolesText,
                 Details = JsonSerializer.Serialize(new { event_id = eventId, visit_code = request.VisitCode, amount = stipendAmount, anti_coercion_cap = effectiveCap, timestamp = now }),
                 CreatedAt = now,
-                CreatedBy = request.VerifiedBy ?? "crc_coordinator",
+                CreatedBy = caller.UserId,
                 ReasonForChange = "Stipend amount exceeds IRB anti-coercion cap limit",
                 VersionIndex = wallet.VersionIndex
             };
@@ -1086,11 +1137,11 @@ public static class PaymentEndpoints
                 EntityType = "ParticipantWallet",
                 EntityId = wallet.Id,
                 Action = "THRESHOLD_EXCEEDED_REVIEW_REQUIRED",
-                UserId = request.VerifiedBy ?? "crc_coordinator",
-                UserRoles = "Coordinator",
+                UserId = caller.UserId,
+                UserRoles = caller.RolesText,
                 Details = JsonSerializer.Serialize(new { event_id = eventId, visit_code = request.VisitCode, amount = stipendAmount, auto_disbursement_threshold = effectiveThreshold, timestamp = now }),
                 CreatedAt = now,
-                CreatedBy = request.VerifiedBy ?? "crc_coordinator",
+                CreatedBy = caller.UserId,
                 ReasonForChange = "Stipend amount exceeds auto-disbursement safety threshold",
                 VersionIndex = wallet.VersionIndex
             };
@@ -1129,11 +1180,11 @@ public static class PaymentEndpoints
                 EntityType = "ParticipantWallet",
                 EntityId = wallet.Id,
                 Action = "IRS_1099_THRESHOLD_EXCEEDED",
-                UserId = request.VerifiedBy ?? "crc_coordinator",
-                UserRoles = "Coordinator",
+                UserId = caller.UserId,
+                UserRoles = caller.RolesText,
                 Details = JsonSerializer.Serialize(new { event_id = eventId, visit_code = request.VisitCode, amount = stipendAmount, taxable_ytd = potentialTaxableYtd, w9_status = wallet.W9Status, timestamp = now }),
                 CreatedAt = now,
-                CreatedBy = request.VerifiedBy ?? "crc_coordinator",
+                CreatedBy = caller.UserId,
                 ReasonForChange = "Participant YTD taxable earnings reach or exceed $600.00 IRS 1099 threshold without verified W-9",
                 VersionIndex = wallet.VersionIndex
             };
@@ -1181,7 +1232,7 @@ public static class PaymentEndpoints
             ReferenceId = eventId,
             Description = $"Verified visit stipend credit for {rule.VisitName} ({rule.VisitCode})",
             CreatedAt = now,
-            CreatedBy = request.VerifiedBy ?? "crc_coordinator",
+            CreatedBy = caller.UserId,
             VersionIndex = 1
         };
         dbContext.ParticipantTransactions.Add(tx);
@@ -1192,8 +1243,8 @@ public static class PaymentEndpoints
             EntityType = "ParticipantWallet",
             EntityId = wallet.Id,
             Action = "PARTICIPANT_STIPEND_CREDITED",
-            UserId = request.VerifiedBy ?? "crc_coordinator",
-            UserRoles = "Coordinator",
+            UserId = caller.UserId,
+            UserRoles = caller.RolesText,
             Details = JsonSerializer.Serialize(new
             {
                 event_id = eventId,
@@ -1205,7 +1256,7 @@ public static class PaymentEndpoints
                 timestamp = now
             }),
             CreatedAt = now,
-            CreatedBy = request.VerifiedBy ?? "crc_coordinator",
+            CreatedBy = caller.UserId,
             ReasonForChange = $"EDC visit verification automated stipend payout for {rule.VisitCode}",
             VersionIndex = wallet.VersionIndex
         };
@@ -1245,8 +1296,13 @@ public static class PaymentEndpoints
         return Results.Ok(claims);
     }
 
-    private static async Task<IResult> SubmitExpenseClaim(SubmitExpenseClaimRequestDto request, PaymentsDbContext dbContext)
+    private static async Task<IResult> SubmitExpenseClaim(SubmitExpenseClaimRequestDto request, PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         if (string.IsNullOrWhiteSpace(request.SubjectId) || request.GrossAmount <= 0m)
         {
             return Results.BadRequest(new { detail = "subject_id and positive gross_amount are required." });
@@ -1273,7 +1329,7 @@ public static class PaymentEndpoints
                 Status = "ACTIVE",
                 W9Status = "NOT_REQUIRED",
                 CreatedAt = now,
-                CreatedBy = request.SubjectId,
+                CreatedBy = caller.UserId,
                 UpdatedAt = now,
                 VersionIndex = 1
             };
@@ -1345,11 +1401,11 @@ public static class PaymentEndpoints
             Status = initialStatus,
             ReceiptImageName = request.ReceiptImageName ?? "receipt.jpg",
             ReceiptOcrDataJson = request.ReceiptOcrData != null ? JsonSerializer.Serialize(request.ReceiptOcrData) : null,
-            ReviewedBy = canAutoApprove ? "svc:system_auto_approval" : null,
+            ReviewedBy = canAutoApprove ? PaymentsCaller.AutoApprovalSystemUser : null,
             ReviewedAt = canAutoApprove ? now : null,
             ReviewNotes = reviewNotes,
             CreatedAt = now,
-            CreatedBy = request.SubjectId,
+            CreatedBy = caller.UserId,
             UpdatedAt = now,
             VersionIndex = 1
         };
@@ -1374,11 +1430,13 @@ public static class PaymentEndpoints
                 ReferenceId = claim.Id,
                 Description = $"Auto-approved reimbursement credit for {claim.Category} expense ({claim.MerchantName})",
                 CreatedAt = now,
-                CreatedBy = "svc:system_auto_approval",
+                CreatedBy = PaymentsCaller.AutoApprovalSystemUser,
                 VersionIndex = 1
             };
             dbContext.ParticipantTransactions.Add(creditTx);
 
+            // The policy, not a person, approves and pays the claim, so these rows carry the auto-approval system
+            // identity; the submitting caller is recorded on the claim and in the details as who triggered it.
             // Dispatch Automated Direct ACH Transfer
             string achRef = $"DISB-ACH-{Guid.NewGuid():N}"[..18].ToUpperInvariant();
             claim.DisbursementReference = achRef;
@@ -1396,7 +1454,7 @@ public static class PaymentEndpoints
                 ReferenceNumber = achRef,
                 Status = "DISPATCHED",
                 CreatedAt = now,
-                CreatedBy = "svc:system_auto_approval",
+                CreatedBy = PaymentsCaller.AutoApprovalSystemUser,
                 VersionIndex = 1
             };
             dbContext.ParticipantDisbursements.Add(disbursement);
@@ -1413,7 +1471,7 @@ public static class PaymentEndpoints
                 ReferenceId = claim.Id,
                 Description = $"Automated direct ACH payout dispatch ({achRef})",
                 CreatedAt = now,
-                CreatedBy = "svc:system_auto_approval",
+                CreatedBy = PaymentsCaller.AutoApprovalSystemUser,
                 VersionIndex = 1
             };
             dbContext.ParticipantTransactions.Add(achTx);
@@ -1424,18 +1482,19 @@ public static class PaymentEndpoints
                 EntityType = "ParticipantExpenseClaim",
                 EntityId = claim.Id,
                 Action = "EXPENSE_CLAIM_AUTO_APPROVED",
-                UserId = request.SubjectId,
-                UserRoles = "Subject",
+                UserId = PaymentsCaller.AutoApprovalSystemUser,
+                UserRoles = string.Empty,
                 Details = JsonSerializer.Serialize(new
                 {
                     claim_id = claim.Id,
+                    submitted_by = caller.UserId,
                     gross_amount = gross,
                     net_amount = net,
                     ocr_confidence = ocrConfidence,
                     disbursement_reference = achRef
                 }),
                 CreatedAt = now,
-                CreatedBy = request.SubjectId,
+                CreatedBy = PaymentsCaller.AutoApprovalSystemUser,
                 ReasonForChange = "Automated OCR policy auto-approval and ACH payout dispatch",
                 VersionIndex = claim.VersionIndex
             };
@@ -1447,17 +1506,18 @@ public static class PaymentEndpoints
                 EntityType = "ParticipantWallet",
                 EntityId = wallet.Id,
                 Action = "DIGITAL_DISBURSEMENT_DISPATCHED",
-                UserId = request.SubjectId,
-                UserRoles = "Subject",
+                UserId = PaymentsCaller.AutoApprovalSystemUser,
+                UserRoles = string.Empty,
                 Details = JsonSerializer.Serialize(new
                 {
+                    submitted_by = caller.UserId,
                     disbursement_id = disbursement.Id,
                     amount = net,
                     reference_number = achRef,
                     disbursement_type = "DIRECT_ACH"
                 }),
                 CreatedAt = now,
-                CreatedBy = request.SubjectId,
+                CreatedBy = PaymentsCaller.AutoApprovalSystemUser,
                 ReasonForChange = "Automated direct ACH reimbursement dispatched to linked bank account",
                 VersionIndex = wallet.VersionIndex
             };
@@ -1471,8 +1531,8 @@ public static class PaymentEndpoints
                 EntityType = "ParticipantExpenseClaim",
                 EntityId = claim.Id,
                 Action = "EXPENSE_CLAIM_SUBMITTED",
-                UserId = request.SubjectId,
-                UserRoles = "Subject",
+                UserId = caller.UserId,
+                UserRoles = caller.RolesText,
                 Details = JsonSerializer.Serialize(new
                 {
                     category = request.Category,
@@ -1483,7 +1543,7 @@ public static class PaymentEndpoints
                     review_notes = reviewNotes
                 }),
                 CreatedAt = now,
-                CreatedBy = request.SubjectId,
+                CreatedBy = caller.UserId,
                 ReasonForChange = "Travel/meal expense claim submitted for coordinator review",
                 VersionIndex = 1
             };
@@ -1516,8 +1576,13 @@ public static class PaymentEndpoints
         return null;
     }
 
-    private static async Task<IResult> ExtractReceiptOcr(OcrExtractRequestDto request, PaymentsDbContext dbContext)
+    private static async Task<IResult> ExtractReceiptOcr(OcrExtractRequestDto request, PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         string text = request.RawText ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(text) && !string.IsNullOrWhiteSpace(request.ImageBase64))
@@ -1607,8 +1672,8 @@ public static class PaymentEndpoints
             EntityType = "ParticipantExpenseClaim",
             EntityId = "OCR_SCAN_" + Guid.NewGuid().ToString("N")[..8],
             Action = "OCR_RECEIPT_EXTRACTED",
-            UserId = "subject_participant",
-            UserRoles = "Subject",
+            UserId = caller.UserId,
+            UserRoles = caller.RolesText,
             Details = JsonSerializer.Serialize(new
             {
                 merchant_name = merchantName,
@@ -1620,7 +1685,7 @@ public static class PaymentEndpoints
                 confidence_score = confidenceScore
             }),
             CreatedAt = now,
-            CreatedBy = "subject_participant",
+            CreatedBy = caller.UserId,
             ReasonForChange = "Mobile receipt OCR initial extraction",
             VersionIndex = 1
         };
@@ -1640,8 +1705,13 @@ public static class PaymentEndpoints
         });
     }
 
-    private static async Task<IResult> ReviewExpenseClaim(string claimId, ReviewExpenseClaimRequestDto request, PaymentsDbContext dbContext)
+    private static async Task<IResult> ReviewExpenseClaim(string claimId, ReviewExpenseClaimRequestDto request, PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         var claim = await dbContext.ParticipantExpenseClaims
             .FirstOrDefaultAsync(c => c.Id == claimId);
 
@@ -1664,7 +1734,7 @@ public static class PaymentEndpoints
         }
 
         claim.Status = request.Status;
-        claim.ReviewedBy = "coordinator_alice";
+        claim.ReviewedBy = caller.UserId;
         claim.ReviewedAt = now;
         claim.ReviewNotes = request.ReviewNotes;
         claim.UpdatedAt = now;
@@ -1700,7 +1770,7 @@ public static class PaymentEndpoints
                     ReferenceId = claim.Id,
                     Description = $"Reimbursement approval for {claim.Category} expense ({claim.MerchantName})",
                     CreatedAt = now,
-                    CreatedBy = "coordinator_alice",
+                    CreatedBy = caller.UserId,
                     VersionIndex = 1
                 };
                 dbContext.ParticipantTransactions.Add(tx);
@@ -1712,11 +1782,11 @@ public static class PaymentEndpoints
                 EntityType = "ParticipantExpenseClaim",
                 EntityId = claim.Id,
                 Action = "EXPENSE_CLAIM_APPROVED",
-                UserId = "coordinator_alice",
-                UserRoles = "Coordinator",
+                UserId = caller.UserId,
+                UserRoles = caller.RolesText,
                 Details = JsonSerializer.Serialize(new { claim_id = claim.Id, net_amount = claim.NetAmount, status = claim.Status }),
                 CreatedAt = now,
-                CreatedBy = "coordinator_alice",
+                CreatedBy = caller.UserId,
                 ReasonForChange = "Expense claim approved by coordinator",
                 VersionIndex = claim.VersionIndex
             };
@@ -1730,11 +1800,11 @@ public static class PaymentEndpoints
                 EntityType = "ParticipantExpenseClaim",
                 EntityId = claim.Id,
                 Action = "EXPENSE_CLAIM_REJECTED",
-                UserId = "coordinator_alice",
-                UserRoles = "Coordinator",
+                UserId = caller.UserId,
+                UserRoles = caller.RolesText,
                 Details = JsonSerializer.Serialize(new { claim_id = claim.Id, status = claim.Status, notes = request.ReviewNotes }),
                 CreatedAt = now,
-                CreatedBy = "coordinator_alice",
+                CreatedBy = caller.UserId,
                 ReasonForChange = "Expense claim rejected by coordinator",
                 VersionIndex = claim.VersionIndex
             };
@@ -1788,8 +1858,13 @@ public static class PaymentEndpoints
         return Results.Ok(disbs);
     }
 
-    private static async Task<IResult> DisburseStipendDirect(DisburseStipendRequest request, PaymentsDbContext dbContext)
+    private static async Task<IResult> DisburseStipendDirect(DisburseStipendRequest request, PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         if (string.IsNullOrWhiteSpace(request.SubjectId))
         {
             return Results.BadRequest(new { detail = "subject_id is required for stipend disbursement." });
@@ -1844,7 +1919,7 @@ public static class PaymentEndpoints
                 Currency = "USD",
                 Status = "ACTIVE",
                 CreatedAt = now,
-                CreatedBy = request.SubjectId,
+                CreatedBy = caller.UserId,
                 UpdatedAt = now,
                 VersionIndex = 1
             };
@@ -1875,11 +1950,11 @@ public static class PaymentEndpoints
             EntityType = "ParticipantWallet",
             EntityId = wallet.Id,
             Action = "AUTO_STIPEND_DISBURSEMENT",
-            UserId = request.SubjectId,
-            UserRoles = "Subject",
+            UserId = caller.UserId,
+            UserRoles = caller.RolesText,
             Details = auditDetails,
             CreatedAt = now,
-            CreatedBy = request.SubjectId,
+            CreatedBy = caller.UserId,
             ReasonForChange = "Automatic ePRO survey completion stipend payout",
             VersionIndex = 1
         };
@@ -2125,10 +2200,11 @@ public static class PaymentEndpoints
         string periodStart,
         string periodEnd,
         bool autoApprove,
-        string userId,
+        PaymentsCaller caller,
         string? batchExecutionId = null)
     {
         DateTimeOffset now = clock.UtcNow;
+        string userId = caller.UserId;
 
         var contract = await dbContext.BudgetContracts.AsNoTracking()
             .FirstOrDefaultAsync(c => c.StudyId == studyId && c.SiteId == siteId && c.IsActive);
@@ -2257,7 +2333,7 @@ public static class PaymentEndpoints
             EntityId = invoice.Id,
             Action = batchExecutionId != null ? "BATCH_SITE_INVOICE_COMPILED" : "INVOICE_COMPILED",
             UserId = userId,
-            UserRoles = "StudyManager",
+            UserRoles = caller.RolesText,
             Details = JsonSerializer.Serialize(new
             {
                 invoice_id = invoice.Id,
@@ -2288,18 +2364,28 @@ public static class PaymentEndpoints
     private static async Task<IResult> CompileBillingCycle(
         BillingCycleCompilationRequest request,
         PaymentsDbContext dbContext,
-        [FromServices] IClock clock)
+        [FromServices] IClock clock,
+        ClaimsPrincipal user)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         if (string.IsNullOrWhiteSpace(request.StudyId) || string.IsNullOrWhiteSpace(request.SiteId))
         {
             return Results.BadRequest(new { detail = "Both 'study_id' and 'site_id' are required for single site invoice compilation." });
         }
 
+        // Compiling with auto_approve also approves, so the caller must hold the approval permission too.
+        if (request.AutoApprove && !caller.Holds("payments_invoice:approve"))
+        {
+            return Results.Problem(statusCode: StatusCodes.Status403Forbidden, detail: "Compiling with auto_approve needs payments_invoice:approve.");
+        }
+
         DateTimeOffset now = clock.UtcNow;
         string periodStart = request.PeriodStart ?? $"{now.Year}-{now.Month:D2}-01";
         string periodEnd = request.PeriodEnd ?? $"{now.Year}-{now.Month:D2}-{DateTime.DaysInMonth(now.Year, now.Month):D2}";
-        string userId = "study_manager";
-
         try
         {
             var (invoice, lineItems, remittance, _) = await CompileSiteInvoiceCoreAsync(
@@ -2311,7 +2397,7 @@ public static class PaymentEndpoints
                 periodStart,
                 periodEnd,
                 request.AutoApprove,
-                userId
+                caller
             );
 
             await dbContext.SaveChangesAsync();
@@ -2327,18 +2413,30 @@ public static class PaymentEndpoints
     private static async Task<IResult> BatchCompileBillingCycles(
         BatchBillingCycleCompilationRequest request,
         PaymentsDbContext dbContext,
-        [FromServices] IClock clock)
+        [FromServices] IClock clock,
+        ClaimsPrincipal user)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         if (string.IsNullOrWhiteSpace(request.StudyId))
         {
             return Results.BadRequest(new { detail = "Study Protocol ID ('study_id') is required for batch compilation." });
+        }
+
+        // Compiling with auto_approve also approves, so the caller must hold the approval permission too.
+        if (request.AutoApprove && !caller.Holds("payments_invoice:approve"))
+        {
+            return Results.Problem(statusCode: StatusCodes.Status403Forbidden, detail: "Compiling with auto_approve needs payments_invoice:approve.");
         }
 
         DateTimeOffset now = clock.UtcNow;
         string batchExecutionId = $"BATCH-EXEC-{Guid.NewGuid():N}"[..18].ToUpperInvariant();
         string periodStart = request.PeriodStart ?? $"{now.Year}-{now.Month:D2}-01";
         string periodEnd = request.PeriodEnd ?? $"{now.Year}-{now.Month:D2}-{DateTime.DaysInMonth(now.Year, now.Month):D2}";
-        string userId = "study_manager";
+        string userId = caller.UserId;
 
         List<string> targetSiteIds;
         if (request.SiteIds != null && request.SiteIds.Count > 0)
@@ -2385,7 +2483,7 @@ public static class PaymentEndpoints
                     periodStart,
                     periodEnd,
                     request.AutoApprove,
-                    userId,
+                    caller,
                     batchExecutionId
                 );
 
@@ -2446,7 +2544,7 @@ public static class PaymentEndpoints
             EntityId = batchExecutionId,
             Action = "BATCH_MILESTONE_INVOICE_COMPILED",
             UserId = userId,
-            UserRoles = "StudyManager",
+            UserRoles = caller.RolesText,
             Details = JsonSerializer.Serialize(new
             {
                 batch_execution_id = batchExecutionId,
@@ -2505,8 +2603,13 @@ public static class PaymentEndpoints
         return Results.Created($"/api/v1/payments/invoices?batch_execution_id={batchExecutionId}", response);
     }
 
-    private static async Task<IResult> ApproveInvoice(string id, PaymentsDbContext dbContext, [FromServices] IClock clock)
+    private static async Task<IResult> ApproveInvoice(string id, PaymentsDbContext dbContext, [FromServices] IClock clock, ClaimsPrincipal user)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         var inv = await dbContext.SelfBillingInvoices.FirstOrDefaultAsync(i => i.Id == id);
         if (inv == null)
         {
@@ -2515,7 +2618,7 @@ public static class PaymentEndpoints
 
         DateTimeOffset now = clock.UtcNow;
         inv.Status = "APPROVED";
-        inv.ApprovedBy = "study_manager";
+        inv.ApprovedBy = caller.UserId;
         inv.ApprovedAt = now;
         inv.UpdatedAt = now;
         inv.VersionIndex += 1;
@@ -2526,11 +2629,11 @@ public static class PaymentEndpoints
             EntityType = "SelfBillingInvoice",
             EntityId = inv.Id,
             Action = "INVOICE_APPROVED",
-            UserId = "study_manager",
-            UserRoles = "StudyManager",
+            UserId = caller.UserId,
+            UserRoles = caller.RolesText,
             Details = JsonSerializer.Serialize(new { invoice_id = inv.Id, invoice_number = inv.InvoiceNumber, status = inv.Status }),
             CreatedAt = now,
-            CreatedBy = "study_manager",
+            CreatedBy = caller.UserId,
             ReasonForChange = "Self-billing invoice approved for ERP sync and payment processing",
             VersionIndex = inv.VersionIndex
         };
@@ -2543,19 +2646,35 @@ public static class PaymentEndpoints
         return Results.Ok(MapInvoiceToResponse(inv, lineItems, remittance));
     }
 
-    private static async Task<IResult> SignRemittanceAdvice(string id, SignRemittanceRequest request, PaymentsDbContext dbContext, [FromServices] IClock clock)
+    private static async Task<IResult> SignRemittanceAdvice(string id, SignRemittanceRequest request, PaymentsDbContext dbContext, [FromServices] IClock clock, ClaimsPrincipal user)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         var remittance = await dbContext.RemittanceAdvices.FirstOrDefaultAsync(r => r.InvoiceId == id || r.Id == id);
         if (remittance == null)
         {
             return Results.NotFound(new { detail = $"Remittance advice statement for invoice '{id}' not found." });
         }
 
+        // Approval and remittance signing share the finance role, so two people must do them: the invoice's approver
+        // may not also sign its remittance (separation of duties, #5361).
+        string? approvedBy = await dbContext.SelfBillingInvoices.AsNoTracking()
+            .Where(i => i.Id == remittance.InvoiceId)
+            .Select(i => i.ApprovedBy)
+            .FirstOrDefaultAsync();
+        if (string.Equals(approvedBy, caller.UserId, StringComparison.Ordinal))
+        {
+            return Results.Conflict(new { detail = "The user who approved this invoice cannot also sign its remittance advice." });
+        }
+
         DateTimeOffset now = clock.UtcNow;
         remittance.IsSigned = true;
-        remittance.SignedBy = request.SignerName;
+        remittance.SignedBy = caller.UserId;
         remittance.SignedAt = now;
-        remittance.SignerRole = request.SignerRole;
+        remittance.SignerRole = caller.RolesText;
         remittance.DispatchStatus = "SIGNED_SEALED";
         remittance.UpdatedAt = now;
         remittance.VersionIndex += 1;
@@ -2566,11 +2685,11 @@ public static class PaymentEndpoints
             EntityType = "RemittanceAdvice",
             EntityId = remittance.Id,
             Action = "REMITTANCE_ADVICE_SIGNED",
-            UserId = request.SignerName,
-            UserRoles = request.SignerRole,
-            Details = JsonSerializer.Serialize(new { remittance_id = remittance.Id, invoice_id = remittance.InvoiceId, signer_name = request.SignerName, reason = request.SignatureReason }),
+            UserId = caller.UserId,
+            UserRoles = caller.RolesText,
+            Details = JsonSerializer.Serialize(new { remittance_id = remittance.Id, invoice_id = remittance.InvoiceId, signed_by = caller.UserId, reason = request.SignatureReason }),
             CreatedAt = now,
-            CreatedBy = request.SignerName,
+            CreatedBy = caller.UserId,
             ReasonForChange = request.SignatureReason ?? "21 CFR Part 11 electronic signature applied to remittance statement",
             VersionIndex = remittance.VersionIndex
         };
@@ -2615,8 +2734,13 @@ public static class PaymentEndpoints
         return Results.Bytes(bytes, contentType: "application/pdf", fileDownloadName: $"{remittance.RemittanceNumber}.pdf");
     }
 
-    private static async Task<IResult> ReconcileInvoice(string id, ReconcileInvoiceRequest request, PaymentsDbContext dbContext, [FromServices] IClock clock)
+    private static async Task<IResult> ReconcileInvoice(string id, ReconcileInvoiceRequest request, PaymentsDbContext dbContext, [FromServices] IClock clock, ClaimsPrincipal user)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         var inv = await dbContext.SelfBillingInvoices.FirstOrDefaultAsync(i => i.Id == id);
         if (inv == null)
         {
@@ -2625,7 +2749,7 @@ public static class PaymentEndpoints
 
         DateTimeOffset now = clock.UtcNow;
         inv.Status = "RECONCILED";
-        inv.ReconciledBy = "finance_lead";
+        inv.ReconciledBy = caller.UserId;
         inv.ReconciledAt = now;
         inv.ReconciliationReference = request.PaymentReference;
         inv.ReconciliationNotes = request.Notes;
@@ -2639,11 +2763,11 @@ public static class PaymentEndpoints
             EntityType = "SelfBillingInvoice",
             EntityId = inv.Id,
             Action = "INVOICE_SETTLEMENT_RECONCILED",
-            UserId = "finance_lead",
-            UserRoles = "FinanceLead",
+            UserId = caller.UserId,
+            UserRoles = caller.RolesText,
             Details = JsonSerializer.Serialize(new { invoice_id = inv.Id, reference = request.PaymentReference, amount_paid = request.AmountPaid ?? inv.TotalNetAmount }),
             CreatedAt = now,
-            CreatedBy = "finance_lead",
+            CreatedBy = caller.UserId,
             ReasonForChange = "Invoice settlement reconciled against bank wire statement",
             VersionIndex = inv.VersionIndex
         };
@@ -2656,8 +2780,13 @@ public static class PaymentEndpoints
         return Results.Ok(MapInvoiceToResponse(inv, lineItems, remittance));
     }
 
-    private static async Task<IResult> ExportInvoiceToErp(string id, PaymentsDbContext dbContext, [FromServices] IClock clock, string? erp_system = "SAP")
+    private static async Task<IResult> ExportInvoiceToErp(string id, PaymentsDbContext dbContext, [FromServices] IClock clock, ClaimsPrincipal user, string? erp_system = "SAP")
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         var inv = await dbContext.SelfBillingInvoices.FirstOrDefaultAsync(i => i.Id == id);
         if (inv == null)
         {
@@ -2685,7 +2814,7 @@ public static class PaymentEndpoints
             ExternalReference = erpRef,
             Reconciled = false,
             CreatedAt = now,
-            CreatedBy = "svc:erp-integration-service",
+            CreatedBy = caller.UserId,
             ReasonForChange = $"Self-billing invoice exported to {sys}",
             VersionIndex = 1
         };
@@ -2697,11 +2826,11 @@ public static class PaymentEndpoints
             EntityType = "SelfBillingInvoice",
             EntityId = inv.Id,
             Action = "INVOICE_ERP_EXPORTED",
-            UserId = "svc:erp-integration-service",
-            UserRoles = "IntegrationService",
+            UserId = caller.UserId,
+            UserRoles = caller.RolesText,
             Details = JsonSerializer.Serialize(new { invoice_id = inv.Id, erp_system = sys, erp_reference_id = erpRef }),
             CreatedAt = now,
-            CreatedBy = "svc:erp-integration-service",
+            CreatedBy = caller.UserId,
             ReasonForChange = $"Self-billing invoice synced to {sys} ERP gateway",
             VersionIndex = inv.VersionIndex
         };
