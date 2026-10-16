@@ -14,6 +14,7 @@ using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 
@@ -273,9 +274,10 @@ public static class DicomWebEndpoints
         return TypedResults.Bytes(frameBytes, contentType: "application/octet-stream");
     }
 
-    private static async Task<IResult> GetCertificateByIdAsync(
+    public static async Task<IResult> GetCertificateByIdAsync(
         string certificateId,
         ImagingDbContext dbContext,
+        [FromServices] DicomDeidentifier deidentifier,
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
@@ -288,7 +290,6 @@ public static class DicomWebEndpoints
             return TypedResults.NotFound(new { code = "CERTIFICATE_NOT_FOUND", message = $"Certificate '{certificateId}' not found." });
         }
 
-        var deidentifier = new DicomDeidentifier(System.Text.Encoding.UTF8.GetBytes("CadenceDeidSigningSecretKey32BytesLong!!"));
         var domainCert = new DicomDeidCertificate
         {
             CertificateId = cert.Id,

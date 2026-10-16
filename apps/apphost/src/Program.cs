@@ -138,6 +138,9 @@ if (full)
     var fieldEncryptionKey = builder.AddParameter("field-encryption-key", secret: true);
     var fieldLookupHashKey = builder.AddParameter("field-lookup-hash-key", secret: true);
     var sceSigningKey = builder.AddParameter("sce-signing-key", secret: true);
+    // Imaging signs de-identification certificates with one key and pseudonymizes DICOM UIDs with another (#5399).
+    var imagingDeidSigningKey = builder.AddParameter("imaging-deid-signing-key", secret: true);
+    var imagingDeidPseudonymizationKey = builder.AddParameter("imaging-deid-pseudonymization-key", secret: true);
 
     // Images are pinned to explicit release tags (same MinIO release as docker/docker-compose.yml). No service
     // reads MinIO yet; it runs for storage work in progress, as in docker compose's storage profile.
@@ -165,7 +168,9 @@ if (full)
         .WithEnvironment("FIELD_ENCRYPTION_KEY", fieldEncryptionKey);
     Service("ORG_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Org>("org"), 8012);
     Service("FILESHARE_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Fileshare>("fileshare"), 8013);
-    Service("IMAGING_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Imaging>("imaging"), 8014);
+    Service("IMAGING_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Imaging>("imaging"), 8014)
+        .WithEnvironment("CADENCE_IMAGING_DEID_SIGNING_KEY", imagingDeidSigningKey)
+        .WithEnvironment("CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY", imagingDeidPseudonymizationKey);
     Service("KNOWLEDGE_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Knowledge>("knowledge"), 8015);
     Service("PAYMENTS_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Payments>("payments"), 8016)
         .WithEnvironment("FIELD_ENCRYPTION_KEY", fieldEncryptionKey);

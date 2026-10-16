@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Imaging.Infrastructure.Persistence;
 using Cadence.Apps.Imaging.Services;
+using Cadence.Deid;
 using Cadence.Kernel.Time;
 
 using FellowOakDicom;
@@ -22,6 +24,35 @@ namespace Cadence.UnitTests.Imaging;
 
 public sealed class DicomIngestionServiceTests
 {
+    private static readonly byte[] SigningKey = RandomNumberGenerator.GetBytes(DicomDeidentifier.MinimumSigningKeyLength);
+    private static readonly byte[] PseudonymizationKey = RandomNumberGenerator.GetBytes(DicomDeidentifier.MinimumSigningKeyLength);
+
+    /// <summary>A de-identifier with this run's random keys; imaging has no default key (#5399).</summary>
+    internal static DicomDeidentifier TestDeidentifier() => new(SigningKey, PseudonymizationKey);
+
+    /// <summary>A batch manifest verifies under the service's signing key, and not under another key or once altered (#5399).</summary>
+    [Fact]
+    public async Task IngestBatchAsync_SignsTheManifestWithTheConfiguredKey()
+    {
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"ImagingManifestKeyTest_{Guid.NewGuid():N}")
+            .Options;
+        await using var dbContext = new ImagingDbContext(options);
+        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+
+        var result = await service.IngestBatchAsync(
+            new BatchIngestionRequest([new("slice_001.dcm", CreateSampleDicomBytesWithPhi("70001"))], "SUBJ-7001", "SITE-701", "STUDY-7001"),
+            TestContext.Current.CancellationToken);
+
+        var payload = DicomIngestionService.CreateBatchManifestPayloadWithoutSignature(result.Manifest);
+        TestDeidentifier().VerifyPayload(payload, result.Signature).Should().BeTrue();
+        new DicomDeidentifier(RandomNumberGenerator.GetBytes(32), PseudonymizationKey).VerifyPayload(payload, result.Signature).Should().BeFalse();
+
+        result.Manifest.IngestedSliceCount++;
+        TestDeidentifier().VerifyPayload(DicomIngestionService.CreateBatchManifestPayloadWithoutSignature(result.Manifest), result.Signature)
+            .Should().BeFalse();
+    }
+
     [Fact(DisplayName = "IngestInstanceAsync_DeidentifiesDicomAndPersistsCertificatesAndEnvelopes")]
     public async Task IngestInstanceAsync_DeidentifiesDicomAndPersistsCertificatesAndEnvelopes()
     {
@@ -31,7 +62,7 @@ public sealed class DicomIngestionServiceTests
 
         await using var dbContext = new ImagingDbContext(options);
 
-        var service = new DicomIngestionService(dbContext, SystemClock.Instance);
+        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
 
         byte[] rawDicom = CreateSampleDicomBytesWithPhi("99991");
 
@@ -69,7 +100,7 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, SystemClock.Instance);
+        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
 
         var files = new List<BatchFileItem>
         {
@@ -116,7 +147,7 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, SystemClock.Instance);
+        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
 
         using var zipMs = new MemoryStream();
         using (var archive = new ZipArchive(zipMs, ZipArchiveMode.Create, leaveOpen: true))
@@ -173,7 +204,7 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, SystemClock.Instance);
+        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
 
         byte[] compressedDicom = CreateUnsupportedCompressedDicomBytes();
 
@@ -199,7 +230,7 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, SystemClock.Instance);
+        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
 
         var act = async () => await service.IngestInstanceAsync(
             Array.Empty<byte>(),
@@ -222,7 +253,7 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, SystemClock.Instance);
+        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
 
         var files = new List<BatchFileItem>
         {
@@ -270,7 +301,7 @@ public sealed class DicomIngestionServiceTests
         return ms.ToArray();
     }
 
-    private static byte[] CreateSampleDicomBytesWithPhi(string sopSuffix = "99991")
+    internal static byte[] CreateSampleDicomBytesWithPhi(string sopSuffix = "99991")
     {
         var dataset = new DicomDataset
         {

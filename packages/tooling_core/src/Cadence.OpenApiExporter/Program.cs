@@ -187,7 +187,9 @@ public static class Program
             .UseSetting("DemographicsEncryption:KeyBase64", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
             .UseSetting("FIELD_ENCRYPTION_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
             .UseSetting("FIELD_LOOKUP_HASH_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
-            .UseSetting("CADENCE_SCE_SIGNING_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
+            .UseSetting("CADENCE_SCE_SIGNING_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
+            .UseSetting("CADENCE_IMAGING_DEID_SIGNING_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
+            .UseSetting("CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
         var configuredFactory = withHostBuilderMethod?.Invoke(factory, new object[] { configureHostBuilder }) ?? factory;
 
         var createClientMethod = configuredFactory.GetType().GetMethod("CreateClient", Type.EmptyTypes);

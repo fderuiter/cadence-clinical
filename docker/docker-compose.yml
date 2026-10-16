@@ -397,7 +397,12 @@ services:
     container_name: cadence-imaging
     ports:
       - "8014:8080"
-    environment: *db-env
+    environment:
+      <<: *db-env
+      # Local-only keys for de-identification certificates and DICOM UID pseudonyms (#5399); generate real ones with
+      # `openssl rand -base64 32`, a different key for each.
+      CADENCE_IMAGING_DEID_SIGNING_KEY: bG9jYWwtZGV2LW9ubHktaW1hZ2luZy1kZWlkLXNpZzE= # pragma: allowlist secret
+      CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY: bG9jYWwtZGV2LW9ubHktaW1hZ2luZy1wc2V1ZG9ueW0= # pragma: allowlist secret
     depends_on: *db-depends
 
   knowledge:
