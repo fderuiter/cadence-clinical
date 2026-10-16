@@ -56,7 +56,8 @@ public static class ToolCommands
         var draft = new Option<bool>("--draft") { Description = "Mark tests as unverified when the test report is missing" };
         command.Options.Add(validate);
         command.Options.Add(draft);
-        command.SetAction(result => RtmGeneratorService.GenerateRtm(draft: result.GetValue(draft), validateOnly: result.GetValue(validate)));
+        command.SetAction(result => RtmGeneratorService.GenerateRtm(
+            draft: result.GetValue(draft), validateOnly: result.GetValue(validate), requireCurrentSnapshot: GxpSnapshotPolicy.IsSnapshotMode()));
     }
 
     public static void ConfigureComplianceUtility(Command command)

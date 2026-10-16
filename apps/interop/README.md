@@ -30,7 +30,12 @@ matrix on every route, and takes identity and roles only from the verified gatew
 never roles from the request. An unblinded run needs `sce_run:execute_unblinded` and a token issued to the caller and
 signed with `CADENCE_SCE_SIGNING_KEY`. Unblinded runs and their artifacts are hidden from callers without
 `sce_run:read_unblinded` (#5382,
-[ADR-2515](../../docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md)).
+[ADR-2515](../../docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md)). Every SCE route
+that names a study also requires the caller to be assigned to it in the signed `study_ids` claim: lists outside the
+caller's studies are empty, a program, token or run outside them is not found, and creating a program, issuing or
+revoking a token, or executing outside them returns `403` and writes nothing. A run's program must belong to the run's
+study (#5402,
+[ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
 
 The eSource routes (`/api/v1/interop/esource/**`) need `esource_endpoint:read`/`configure` or `esource_candidate:read`/`ingest`/`reconcile`/`query` (`PermissionMatrix.Interop.cs`). Site staff ingest and reconcile; monitors and data management raise queries. Polling, ingesting and reconciling refuse a study the caller is not assigned to, lists show only the caller's studies, and signatures and audit entries name the signed caller ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
 
@@ -61,6 +66,8 @@ device is re-registered); run `VACUUM FULL` on those four tables afterwards. See
 
 - `tests/Cadence.IntegrationTests/Interop/SceUnblindingAuthorizationTests.cs`: SCE lock-token and unblinded-run
   authorization through the real host on PostgreSQL (`CADENCE_TEST_POSTGRES` or `CADENCE_TEST_DOCKER=1`).
+- `tests/Cadence.IntegrationTests/Interop/SceStudyScopeTests.cs`: a caller assigned to one study cannot list, read,
+  create, mint, revoke or execute for another, and the host connects as a `NOSUPERUSER NOBYPASSRLS` role.
 - `tests/Cadence.UnitTests/Interop/StatisticalComputingEnvironmentTests.cs`: lockfile validation and sandbox driver.
 - Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 

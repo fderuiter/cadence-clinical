@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -226,7 +227,10 @@ public record VerifyManifestResponseDto(
 /// The statistical computing environment. Every route needs an <c>sce_*</c> permission from the permission matrix,
 /// and identity and roles come only from the verified gateway principal (#5382). An unblinded run needs
 /// <c>sce_run:execute_unblinded</c> and a database-lock token issued to the caller and signed with
-/// <c>CADENCE_SCE_SIGNING_KEY</c>; unblinded runs are visible only with <c>sce_run:read_unblinded</c>.
+/// <c>CADENCE_SCE_SIGNING_KEY</c>; unblinded runs are visible only with <c>sce_run:read_unblinded</c>. Every route that
+/// names a study also requires the caller to be assigned to it in the signed <c>study_ids</c> claim (ADR-2516, #5402): a
+/// list outside the caller's studies is empty, one record outside them is not found, and a write outside them is
+/// refused with <c>403</c> and writes nothing.
 /// @req:PRD-CDR-006
 /// </summary>
 public static class SceEndpoints
@@ -249,8 +253,13 @@ public static class SceEndpoints
         var group = routes.MapGroup("/api/v1/interop/sce");
 
         // 1. List statistical programs
-        group.MapGet("/programs", async (string study_id, InteropDbContext db) =>
+        group.MapGet("/programs", async (string study_id, InteropDbContext db, HttpContext httpContext) =>
         {
+            if (!CallerScope.CanAccessStudy(httpContext, study_id))
+            {
+                return Results.Ok(new ProgramListResponseDto(study_id, 0, []));
+            }
+
             var programs = await db.StatisticalPrograms
                 .AsNoTracking()
                 .Where(p => p.StudyId == study_id)
@@ -264,6 +273,11 @@ public static class SceEndpoints
         // 2. Create / register statistical program
         group.MapPost("/programs", async (CreateProgramRequestDto req, InteropDbContext db, IClock clock, HttpContext httpContext) =>
         {
+            if (!CallerScope.CanAccessStudy(httpContext, req.StudyId))
+            {
+                return OutsideStudy();
+            }
+
             string userId = Caller(httpContext).UserId;
             string codeHash = ComputeSha256(req.SourceCode ?? "");
             string lockDigest = ComputeSha256(req.LockfileContent ?? "");
@@ -295,13 +309,13 @@ public static class SceEndpoints
         }).RequirePermission("sce_program:create");
 
         // 3. Get statistical program by ID
-        group.MapGet("/programs/{program_id}", async (string program_id, InteropDbContext db) =>
+        group.MapGet("/programs/{program_id}", async (string program_id, InteropDbContext db, HttpContext httpContext) =>
         {
             var program = await db.StatisticalPrograms
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.Id == program_id || p.Name == program_id);
 
-            if (program == null)
+            if (program == null || !CallerScope.CanAccessStudy(httpContext, program.StudyId))
             {
                 return Results.NotFound(new { error = $"Statistical program '{program_id}' not found." });
             }
@@ -332,6 +346,11 @@ public static class SceEndpoints
         // 5. List active database lock tokens
         group.MapGet("/lock-tokens", async (string study_id, InteropDbContext db, IClock clock, HttpContext httpContext) =>
         {
+            if (!CallerScope.CanAccessStudy(httpContext, study_id))
+            {
+                return Results.Ok(new LockTokenListResponseDto(study_id, 0, []));
+            }
+
             var caller = Caller(httpContext);
             var now = clock.UtcNow;
             var query = db.DatabaseLockAuthTokens
@@ -358,6 +377,11 @@ public static class SceEndpoints
             if (string.IsNullOrWhiteSpace(req.StudyId) || string.IsNullOrWhiteSpace(req.LockId) || string.IsNullOrWhiteSpace(req.IssuedTo))
             {
                 return Results.BadRequest(new { error = "study_id, lock_id and issued_to are required." });
+            }
+
+            if (!CallerScope.CanAccessStudy(httpContext, req.StudyId))
+            {
+                return OutsideStudy();
             }
 
             var now = clock.UtcNow;
@@ -424,6 +448,11 @@ public static class SceEndpoints
                 return Results.NotFound(new { error = $"Database lock auth token '{token_id}' not found." });
             }
 
+            if (!CallerScope.CanAccessStudy(httpContext, token.StudyId))
+            {
+                return OutsideStudy();
+            }
+
             var now = clock.UtcNow;
             token.IsRevoked = true;
             token.RevokedAt = now;
@@ -458,14 +487,21 @@ public static class SceEndpoints
         // 8. Execute statistical program in sandbox
         group.MapPost("/execute", async (ExecuteProgramRequestDto req, InteropDbContext db, ISceDockerEngineDriver driver, ILockfileValidatorService lockfileValidator, IClock clock, SceTokenSigner signer, HttpContext httpContext) =>
         {
+            if (!CallerScope.CanAccessStudy(httpContext, req.StudyId))
+            {
+                return OutsideStudy();
+            }
+
             var caller = Caller(httpContext);
             string userId = caller.UserId;
             string userRole = RolesOf(caller);
             var now = clock.UtcNow;
 
+            // The program must belong to the study the run is recorded under, so a caller cannot run another study's
+            // program under a study they are assigned to.
             var program = await db.StatisticalPrograms
                 .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.Id == req.ProgramId || p.Name == req.ProgramId);
+                .FirstOrDefaultAsync(p => (p.Id == req.ProgramId || p.Name == req.ProgramId) && p.StudyId == req.StudyId);
 
             if (program == null)
             {
@@ -675,6 +711,11 @@ public static class SceEndpoints
         // 9. List historical execution runs for a study
         group.MapGet("/runs", async (string study_id, string? program_id, string? snapshot_id, InteropDbContext db, HttpContext httpContext) =>
         {
+            if (!CallerScope.CanAccessStudy(httpContext, study_id))
+            {
+                return Results.Ok(new ExecutionRunListResponseDto(study_id, 0, []));
+            }
+
             var query = db.ExecutionRunRecords
                 .AsNoTracking()
                 .Where(r => r.StudyId == study_id);
@@ -705,8 +746,8 @@ public static class SceEndpoints
                 .AsNoTracking()
                 .FirstOrDefaultAsync(r => r.RunId == run_id || r.Id == run_id);
 
-            // An unblinded run does not exist for a caller who may not read it.
-            if (run == null || (run.IsUnblindedRun && !PermissionMatrix.HasPermission(Caller(httpContext), ReadUnblindedPermission)))
+            // A run outside the caller's studies, or an unblinded run they may not read, does not exist for them.
+            if (!IsVisible(run, httpContext))
             {
                 return Results.NotFound(new { error = $"Execution run '{run_id}' not found." });
             }
@@ -721,8 +762,8 @@ public static class SceEndpoints
                 .AsNoTracking()
                 .FirstOrDefaultAsync(r => r.RunId == run_id || r.Id == run_id);
 
-            // An unblinded run does not exist for a caller who may not read it.
-            if (run == null || (run.IsUnblindedRun && !PermissionMatrix.HasPermission(Caller(httpContext), ReadUnblindedPermission)))
+            // A run outside the caller's studies, or an unblinded run they may not read, does not exist for them.
+            if (!IsVisible(run, httpContext))
             {
                 return Results.NotFound(new { error = $"Execution run '{run_id}' not found." });
             }
@@ -767,8 +808,8 @@ public static class SceEndpoints
                 .AsNoTracking()
                 .FirstOrDefaultAsync(r => r.RunId == run_id || r.Id == run_id);
 
-            // An unblinded run does not exist for a caller who may not read it.
-            if (run == null || (run.IsUnblindedRun && !PermissionMatrix.HasPermission(Caller(httpContext), ReadUnblindedPermission)))
+            // A run outside the caller's studies, or an unblinded run they may not read, does not exist for them.
+            if (!IsVisible(run, httpContext))
             {
                 return Results.NotFound(new { error = $"Execution run '{run_id}' not found." });
             }
@@ -886,6 +927,14 @@ public static class SceEndpoints
         ?? throw new InvalidOperationException("SCE routes require a verified gateway principal.");
 
     private static string RolesOf(Principal principal) => string.Join(",", principal.Roles);
+
+    private static bool IsVisible([NotNullWhen(true)] ExecutionRunRecord? run, HttpContext httpContext) =>
+        run != null
+        && CallerScope.CanAccessStudy(httpContext, run.StudyId)
+        && (!run.IsUnblindedRun || PermissionMatrix.HasPermission(Caller(httpContext), ReadUnblindedPermission));
+
+    private static IResult OutsideStudy() =>
+        Results.Json(new { error = "OUTSIDE_STUDY_SCOPE", details = "You are not assigned to this study." }, statusCode: StatusCodes.Status403Forbidden);
 
     /// <summary>The signed claims of a lock token. The expiry is in whole Unix seconds.</summary>
     private static string LockTokenPayload(string tokenId, string studyId, string lockId, string issuedTo, DateTimeOffset expiresAt) =>
