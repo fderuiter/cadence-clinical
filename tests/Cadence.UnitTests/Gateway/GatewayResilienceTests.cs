@@ -107,11 +107,10 @@ public sealed class GatewayResilienceTests
         await using var gateway = CreateGateway(DownstreamUrl(downstream), ("GATEWAY_PROXY_TIMEOUT_SECONDS", "1"));
         using var client = AuthenticatedClient(gateway);
 
-        var elapsed = Stopwatch.StartNew();
+        // Only the proxy's own timeout answers 504; without it the downstream would answer 200 after 30 seconds (#5415).
         var response = await client.GetAsync(ProxiedPath, ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.GatewayTimeout);
-        elapsed.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(15));
     }
 
     internal static WebApplicationFactory<Cadence.Apps.Gateway.Program> CreateGateway(

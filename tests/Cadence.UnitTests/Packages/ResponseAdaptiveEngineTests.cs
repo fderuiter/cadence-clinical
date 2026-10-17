@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 
 using Cadence.Core.Domain.Randomization;
@@ -183,8 +182,12 @@ public class ResponseAdaptiveEngineTests
         resultDifferent.DeterministicChecksum.Should().NotBe(result1.DeterministicChecksum);
     }
 
+    /// <summary>
+    /// Ten arms allocate every subject to one of the arms, under the configured caps. The test asserts behaviour, not
+    /// how long the machine took (#5415).
+    /// </summary>
     [Fact]
-    public void Allocate_PerformanceBenchmark_ExecutesSub10MillisecondsFor10Arms()
+    public void Allocate_ForTenArms_AssignsEverySubjectToAKnownArm()
     {
         var config = new ResponseAdaptiveConfig(
             BurnInThreshold: 0,
@@ -201,23 +204,15 @@ public class ResponseAdaptiveEngineTests
 
         var request = CreateRequest();
 
-        // Warmup execution
-        ResponseAdaptiveEngine.Allocate(config, armStates, request);
+        var armIds = armStates.Select(a => a.ArmId).ToHashSet();
+        var first = ResponseAdaptiveEngine.Allocate(config, armStates, request);
 
-        const int iterations = 100;
-        var sw = Stopwatch.StartNew();
-
-        for (int i = 0; i < iterations; i++)
+        ResponseAdaptiveEngine.Allocate(config, armStates, request).AssignedArm.Should().Be(first.AssignedArm);
+        for (int i = 0; i < 100; i++)
         {
-            var req = CreateRequest(subjectId: $"SUBJ-{i}");
-            ResponseAdaptiveEngine.Allocate(config, armStates, req);
+            var result = ResponseAdaptiveEngine.Allocate(config, armStates, CreateRequest(subjectId: $"SUBJ-{i}"));
+            armIds.Should().Contain(result.AssignedArm);
         }
-
-        sw.Stop();
-
-        double averageLatencyMs = (double)sw.ElapsedMilliseconds / iterations;
-
-        averageLatencyMs.Should().BeLessThan(20.0, "ResponseAdaptiveEngine allocation must complete under 20ms for 10 treatment arms");
     }
 
     [Fact]

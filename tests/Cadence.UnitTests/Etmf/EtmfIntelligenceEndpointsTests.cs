@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Etmf.Endpoints;
@@ -51,19 +50,18 @@ public class EtmfIntelligenceEndpointsTests
         report.ConfidenceTier.Should().Be(expectedTier);
     }
 
+    /// <summary>The local heuristic gives the same classification every time for the same file (#5415).</summary>
     [Fact]
-    public async Task LocalHeuristicFallback_ExecutesUnder100Milliseconds()
+    public async Task LocalHeuristicFallback_ClassifiesTheSameFileTheSameWay()
     {
         var request = new ClassifyRequest("Site_Regulatory_Batch_Document_001.pdf");
-        var sw = Stopwatch.StartNew();
+        var first = ((Ok<DocumentIntelligenceReport>)await EtmfIntelligenceEndpoints.ClassifyDocument(request, _clock)).Value!;
 
         for (int i = 0; i < 100; i++)
         {
-            await EtmfIntelligenceEndpoints.ClassifyDocument(request, _clock);
+            var report = ((Ok<DocumentIntelligenceReport>)await EtmfIntelligenceEndpoints.ClassifyDocument(request, _clock)).Value!;
+            report.PrimaryClassification.Should().BeEquivalentTo(first.PrimaryClassification);
+            report.ConfidenceTier.Should().Be(first.ConfidenceTier);
         }
-
-        sw.Stop();
-        // 100 executions should complete in well under 100ms
-        sw.ElapsedMilliseconds.Should().BeLessThan(100);
     }
 }

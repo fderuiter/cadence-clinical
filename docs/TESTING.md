@@ -158,6 +158,12 @@ build (RS0030). Pick the replacement by what the test needs:
   token expiry, HMAC freshness or certificate validity: `SystemClock.Instance.UtcNow`.
 - **Elapsed time** for timeouts and polling deadlines: `Stopwatch.StartNew()`.
 
+A unit test never asserts how long the code took (`elapsed.Should().BeLessThan(...)`). The answer depends on the
+load on the machine, so a latency ceiling fails whenever something else runs beside the tests (#5415). Assert the
+behaviour instead: the result, the status code a timeout produces, or a deadline driven by `FakeClock`.
+`WallClockAssertionTests` in `Cadence.ArchitectureTests` enforces this for `Cadence.UnitTests`. A performance budget
+that is a real requirement belongs in an opt-in benchmark, like `LineageBenchmarkPostgresTests`.
+
 `Task.Delay` belongs only where a test deliberately holds a lock or widens a race window, or where a fake
 downstream must stall. It never makes timestamps differ.
 
