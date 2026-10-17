@@ -474,7 +474,16 @@
             </p>
           </div>
 
-          <div class="batch-filter-grid">
+          <p
+            v-if="availableSites.length === 0"
+            class="text-muted batch-empty"
+            data-testid="batch-empty"
+          >
+            No staff are on this study's delegation log yet, so there is no one
+            to assign this curriculum to.
+          </p>
+
+          <div v-else class="batch-filter-grid">
             <div class="filter-col">
               <div class="filter-title">Target Sites (Multi-Select):</div>
               <div class="checkbox-group">
@@ -537,6 +546,10 @@
               <span>Execute Batch Assignment 🚀</span>
             </button>
           </div>
+
+          <p v-if="batchError" class="badge badge-error" role="alert">
+            {{ batchError }}
+          </p>
 
           <!-- Batch Execution Result Manifest -->
           <div v-if="batchResult" class="batch-result-card">
@@ -747,7 +760,7 @@
               v-model="signaturePayload.signerName"
               type="text"
               class="text-input"
-              placeholder="e.g. Dr. Eleanor Vance, MD"
+              placeholder="Your full name"
             />
           </div>
 
@@ -829,7 +842,7 @@
           </button>
           <button
             class="btn btn-primary"
-            :disabled="submittingBatch"
+            :disabled="submittingBatch || !batchForm.reasonForChange.trim()"
             @click="handleExecuteBatchAssign"
           >
             <span v-if="submittingBatch">Deploying Batch...</span>
@@ -864,7 +877,7 @@
               v-model="bulkSignForm.signerName"
               type="text"
               class="text-input"
-              placeholder="Dr. Eleanor Vance, MD"
+              placeholder="Your full name"
             />
           </div>
           <div class="form-group">
@@ -940,6 +953,7 @@ const assignments = ref([]);
 const selectedAssignmentId = ref("");
 const activeAssignment = ref(null);
 const activeCurriculum = ref(null);
+const delegations = ref([]);
 const activeCertificate = ref(null);
 const activeTab = ref("modules");
 const selectedModuleIndex = ref(0);
@@ -990,14 +1004,14 @@ function formatTime(seconds) {
 async function refreshData() {
   loading.value = true;
   try {
-    const userId =
-      authStore.identity?.sub ||
-      authStore.identity?.username ||
-      "site_investigator_01";
-    const userRole = authStore.activeRole || "Principal Investigator";
-    signaturePayload.value.signerName =
-      authStore.identity?.username || "Clinical Investigator";
-    signaturePayload.value.signerRole = userRole;
+    // The signed-in identity is the only source of who is training (#5400): no invented user stands in for it.
+    const userId = authStore.identity?.sub || authStore.identity?.username;
+    signaturePayload.value.signerName = authStore.identity?.username || "";
+    signaturePayload.value.signerRole = authStore.activeRole || "";
+    if (!userId) {
+      assignments.value = [];
+      return;
+    }
 
     const asnList = await trainingApi.listAssignments({ user_id: userId });
     assignments.value = asnList;
@@ -1009,6 +1023,7 @@ async function refreshData() {
     if (selectedAssignmentId.value) {
       await loadAssignmentDetails(selectedAssignmentId.value);
     }
+    await loadDelegations();
   } catch (err) {
     console.error("Failed to load training assignments:", err);
   } finally {
@@ -1161,47 +1176,48 @@ onMounted(() => {
   startTimer();
 });
 
-// Batch Curriculum Assignment State
-const availableSites = ref([
-  "SITE-101",
-  "SITE-102",
-  "SITE-103",
-  "SITE-104",
-  "SITE-105",
-]);
-const availableRoles = ref([
-  "Principal Investigator",
-  "Sub-Investigator",
-  "Clinical Research Coordinator",
-  "Study Nurse",
-]);
+// Batch Curriculum Assignment State. The audience comes from the study's delegation log (#5400): the sites and roles
+// offered are the ones staff actually hold, nothing is pre-selected, and nothing is offered without an active curriculum.
+const distinctSorted = (values) =>
+  [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+const availableSites = computed(() =>
+  distinctSorted(delegations.value.map((d) => d.site_id))
+);
+const availableRoles = computed(() =>
+  distinctSorted(delegations.value.map((d) => d.role))
+);
 const batchForm = ref({
-  selectedSites: ["SITE-101", "SITE-102"],
-  selectedRoles: [
-    "Principal Investigator",
-    "Sub-Investigator",
-    "Clinical Research Coordinator",
-  ],
-  reasonForChange: "Protocol Amendment V3.0 Delta Deployment",
+  selectedSites: [],
+  selectedRoles: [],
+  reasonForChange: "",
 });
 const showBatchModal = ref(false);
 const submittingBatch = ref(false);
 const batchResult = ref(null);
+const batchError = ref("");
 
+// The people a batch would reach: distinct staff per site on the delegation log matching the selected filters.
 const computedBatchCount = computed(() => {
-  return (
-    batchForm.value.selectedSites.length * batchForm.value.selectedRoles.length
+  const sites = batchForm.value.selectedSites;
+  const roles = batchForm.value.selectedRoles;
+  if (sites.length === 0 && roles.length === 0) return 0;
+  const reached = new Set(
+    delegations.value
+      .filter((d) => sites.length === 0 || sites.includes(d.site_id))
+      .filter((d) => roles.length === 0 || roles.includes(d.role))
+      .map((d) => `${d.staff_user_id}|${d.site_id}`)
   );
+  return reached.size;
 });
 
 async function handleExecuteBatchAssign() {
+  if (!activeCurriculum.value) return;
   submittingBatch.value = true;
+  batchError.value = "";
   try {
-    const curriculumId = activeCurriculum.value?.id || "curriculum-v3-delta";
-    const studyId = activeCurriculum.value?.study_id || "CARDIO-2026";
     const res = await trainingApi.batchAssignCurriculum({
-      curriculum_id: curriculumId,
-      study_id: studyId,
+      curriculum_id: activeCurriculum.value.id,
+      study_id: activeCurriculum.value.study_id,
       site_ids: batchForm.value.selectedSites,
       roles: batchForm.value.selectedRoles,
       reason_for_change: batchForm.value.reasonForChange,
@@ -1210,6 +1226,7 @@ async function handleExecuteBatchAssign() {
     showBatchModal.value = false;
     await refreshData();
   } catch (err) {
+    batchError.value = err?.message || "The batch assignment was refused.";
     console.error("Batch assignment error:", err);
   } finally {
     submittingBatch.value = false;
@@ -1217,15 +1234,14 @@ async function handleExecuteBatchAssign() {
 }
 
 // Bulk Delegation Log Sign-Off State
-const delegations = ref([]);
 const selectedDelegationIds = ref([]);
 const loadingDelegations = ref(false);
 const showBulkSignModal = ref(false);
 const submittingBulkSign = ref(false);
 const bulkSignResult = ref(null);
 const bulkSignForm = ref({
-  signerName: authStore.identity?.username || "Dr. Eleanor Vance",
-  signerRole: authStore.activeRole || "Principal Investigator",
+  signerName: authStore.identity?.username || "",
+  signerRole: authStore.activeRole || "",
   password: "",
   reasonForChange:
     "21 CFR Part 11 Principal Investigator bulk delegation sign-off",
@@ -1248,9 +1264,13 @@ function toggleSelectAllDelegations() {
 }
 
 async function loadDelegations() {
+  const studyId = activeCurriculum.value?.study_id;
+  if (!studyId) {
+    delegations.value = [];
+    return;
+  }
   loadingDelegations.value = true;
   try {
-    const studyId = activeCurriculum.value?.study_id || "CARDIO-2026";
     const res = await trainingApi.listDelegations({ study_id: studyId });
     delegations.value = res;
   } catch (err) {
@@ -1258,6 +1278,16 @@ async function loadDelegations() {
   } finally {
     loadingDelegations.value = false;
   }
+}
+
+// The site of the selected delegations when they share one; a sign-off across sites names none.
+function singleSite(delegationIds) {
+  const sites = new Set(
+    delegations.value
+      .filter((d) => delegationIds.includes(d.id))
+      .map((d) => d.site_id)
+  );
+  return sites.size === 1 ? [...sites][0] : null;
 }
 
 async function handleExecuteBulkSignOff() {
@@ -1276,8 +1306,8 @@ async function handleExecuteBulkSignOff() {
     const res = await trainingApi.bulkSignOffDelegations(
       {
         delegation_ids: delegationIds,
-        study_id: activeCurriculum.value?.study_id || "CARDIO-2026",
-        site_id: "SITE-101",
+        study_id: activeCurriculum.value?.study_id,
+        site_id: singleSite(delegationIds),
         signature_payload: {
           meaning:
             "I confirm that I have reviewed and approved the delegated duties for the selected site staff personnel in accordance with 21 CFR Part 11 and ICH GCP E6(R2).",

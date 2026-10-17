@@ -160,6 +160,8 @@ public static class TrainingEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<BatchAssignmentResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         group.MapGet("/assignments", ListAssignmentsAsync)
@@ -205,7 +207,6 @@ public static class TrainingEndpoints
         string? protocol_version,
         KnowledgeDbContext dbContext,
         HttpContext httpContext,
-        TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
         var studies = CallerScope.StudyFilter(httpContext);
@@ -223,24 +224,8 @@ public static class TrainingEndpoints
             query = query.Where(c => c.ProtocolVersion == protocol_version);
         }
 
+        // An empty result is an empty list: nothing is invented when no curriculum exists (#5400).
         var list = await query.ToListAsync(cancellationToken);
-        if (list.Count == 0 && CallerScope.CanAccessStudy(httpContext, study_id ?? "CARDIO-2026"))
-        {
-            // Seed a default curriculum if DB is empty for demo/testing
-            var defaultCurriculum = new TrainingCurriculum
-            {
-                Id = "curriculum-v3-delta",
-                StudyId = study_id ?? "CARDIO-2026",
-                ProtocolVersion = protocol_version ?? "3.0",
-                Title = "Protocol V3.0 Delta Amendment Curriculum",
-                Description = "Procedural training on V3.0 amendment changes, dosing updates, and safety reporting.",
-                IsActive = true,
-                CreatedAt = timeProvider.GetUtcNow(),
-                CreatedBy = "svc:knowledge"
-            };
-            list.Add(defaultCurriculum);
-        }
-
         var dtos = list.Select(c => new TrainingCurriculumDto(
             c.Id, c.StudyId, c.ProtocolVersion, c.Title, c.Description, c.IsActive, c.CreatedAt)).ToList();
 
@@ -251,26 +236,13 @@ public static class TrainingEndpoints
         string curriculum_id,
         KnowledgeDbContext dbContext,
         HttpContext httpContext,
-        TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
+        // A missing curriculum and one in a study the caller is not assigned to get the same 404 (#5400).
         var c = await dbContext.TrainingCurricula.AsNoTracking().FirstOrDefaultAsync(x => x.Id == curriculum_id, cancellationToken);
-        if (c != null && !CallerScope.CanAccessStudy(httpContext, c.StudyId))
+        if (c == null || !CallerScope.CanAccessStudy(httpContext, c.StudyId))
         {
             return TypedResults.Problem($"Curriculum '{curriculum_id}' not found.", statusCode: StatusCodes.Status404NotFound);
-        }
-
-        if (c == null)
-        {
-            var fallback = new TrainingCurriculumDto(
-                curriculum_id,
-                "CARDIO-2026",
-                "3.0",
-                "Protocol V3.0 Delta Amendment Curriculum",
-                "Procedural training on V3.0 amendment changes.",
-                true,
-                timeProvider.GetUtcNow());
-            return TypedResults.Ok(fallback);
         }
 
         return TypedResults.Ok(new TrainingCurriculumDto(
@@ -298,42 +270,81 @@ public static class TrainingEndpoints
             ?? throw new InvalidOperationException("An admitted training request has no signed caller.");
         string actorRole = CallerScope.Roles(httpContext);
 
+        bool namesSites = request.SiteIds is { Count: > 0 };
+        bool namesRoles = request.Roles is { Count: > 0 };
+        bool namesPeople = request.TargetPersonnelIds is { Count: > 0 };
+        if (!namesSites && !namesRoles && !namesPeople)
+        {
+            return TypedResults.Problem(
+                "Name the site_ids, roles or target_personnel_ids to assign; there is no default audience.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        // The curriculum must exist in the request's study; another study's curriculum gets the same 404 (#5400).
+        var curriculum = await dbContext.TrainingCurricula.AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == request.CurriculumId, cancellationToken);
+        if (curriculum == null || curriculum.StudyId != request.StudyId)
+        {
+            return TypedResults.Problem($"Curriculum '{request.CurriculumId}' not found in study '{request.StudyId}'.", statusCode: StatusCodes.Status404NotFound);
+        }
+
+        if (!curriculum.IsActive)
+        {
+            return TypedResults.Problem($"Curriculum '{request.CurriculumId}' is not active.", statusCode: StatusCodes.Status409Conflict);
+        }
+
+        var principal = CallerScope.Principal(httpContext);
+        if (namesSites && request.SiteIds!.Exists(site => !SiteAccessEvaluator.CanAccessSite(principal, site)))
+        {
+            return OutsideStudy();
+        }
+
+        // The audience is the study's site staff on the delegation log: the module's record of who works on the study,
+        // at which site and in which role. Nobody is synthesized (#5400).
+        var staff = await dbContext.DelegationRecords.AsNoTracking()
+            .Where(d => d.StudyId == request.StudyId)
+            .ToListAsync(cancellationToken);
+        var studySites = staff.Select(d => d.SiteId).ToHashSet(StringComparer.Ordinal);
+
+        var unknownSites = namesSites ? request.SiteIds!.Where(site => !studySites.Contains(site)).ToList() : [];
+        if (unknownSites.Count > 0)
+        {
+            return TypedResults.Problem(
+                $"Study '{request.StudyId}' has no staff at: {string.Join(", ", unknownSites)}. Nothing was assigned.",
+                statusCode: StatusCodes.Status422UnprocessableEntity);
+        }
+
+        var unknownPeople = namesPeople
+            ? request.TargetPersonnelIds!.Where(id => !staff.Exists(d => d.StaffUserId == id)).ToList()
+            : [];
+        if (unknownPeople.Count > 0)
+        {
+            return TypedResults.Problem(
+                $"No delegation-log entry in study '{request.StudyId}' for: {string.Join(", ", unknownPeople)}. Nothing was assigned.",
+                statusCode: StatusCodes.Status422UnprocessableEntity);
+        }
+
+        // One candidate per person and site, in a site the caller reaches, matching every filter the request names.
+        var candidateList = staff
+            .Where(d => !namesSites || request.SiteIds!.Contains(d.SiteId))
+            .Where(d => !namesRoles || request.Roles!.Contains(d.Role, StringComparer.OrdinalIgnoreCase))
+            .Where(d => !namesPeople || request.TargetPersonnelIds!.Contains(d.StaffUserId))
+            .Where(d => SiteAccessEvaluator.CanAccessSite(principal, d.SiteId))
+            .GroupBy(d => (d.StaffUserId, d.SiteId))
+            .Select(g => g.OrderBy(d => d.Id, StringComparer.Ordinal).First())
+            .OrderBy(d => d.SiteId, StringComparer.Ordinal).ThenBy(d => d.StaffUserId, StringComparer.Ordinal)
+            .Select(d => (UserId: d.StaffUserId, UserName: d.StaffName, SiteId: d.SiteId, Role: d.Role))
+            .ToList();
+
+        if (candidateList.Count == 0)
+        {
+            return TypedResults.Problem(
+                "No staff on the study's delegation log match these sites, roles and people. Nothing was assigned.",
+                statusCode: StatusCodes.Status422UnprocessableEntity);
+        }
+
         var now = timeProvider.GetUtcNow();
-        var siteIds = request.SiteIds != null && request.SiteIds.Count > 0
-            ? request.SiteIds
-            : ["SITE-101", "SITE-102", "SITE-103", "SITE-104", "SITE-105"];
-
-        var roles = request.Roles != null && request.Roles.Count > 0
-            ? request.Roles
-            : ["Principal Investigator", "Sub-Investigator", "Clinical Research Coordinator", "Study Nurse"];
-
-        // Determine candidate personnel
-        var candidateList = new List<(string UserId, string UserName, string SiteId, string Role)>();
-
-        if (request.TargetPersonnelIds != null && request.TargetPersonnelIds.Count > 0)
-        {
-            foreach (var pid in request.TargetPersonnelIds)
-            {
-                var site = siteIds[0];
-                var role = roles[0];
-                candidateList.Add((pid, $"Personnel {pid}", site, role));
-            }
-        }
-        else
-        {
-            // Expand matrix across target sites and roles
-            int userCounter = 1;
-            foreach (var siteId in siteIds)
-            {
-                foreach (var role in roles)
-                {
-                    string userId = $"user_{siteId.ToLower()}_{role.Replace(" ", "_").ToLower()}";
-                    string userName = $"{role} ({siteId})";
-                    candidateList.Add((userId, userName, siteId, role));
-                    userCounter++;
-                }
-            }
-        }
+        int siteCount = candidateList.Select(c => c.SiteId).Distinct(StringComparer.Ordinal).Count();
 
         // Request Size Guardrail check (200 limit)
         if (candidateList.Count > MaxBatchLimit)
@@ -398,7 +409,7 @@ public static class TrainingEndpoints
             ActorRole = actorRole,
             Action = "training.curriculum.batch_assign",
             BatchTransactionId = batchTxId,
-            Details = $"Batch curriculum assignment for {request.CurriculumId} created {createdAssignments.Count} assignments across {siteIds.Count} sites. {skippedItems.Count} items skipped.",
+            Details = $"Batch curriculum assignment for {request.CurriculumId} created {createdAssignments.Count} assignments across {siteCount} sites. {skippedItems.Count} items skipped.",
             ReasonForChange = request.ReasonForChange ?? "Batch curriculum assignment"
         };
         dbContext.OrgAuditLogs.Add(audit);
@@ -452,22 +463,12 @@ public static class TrainingEndpoints
         string assignment_id,
         KnowledgeDbContext dbContext,
         HttpContext httpContext,
-        TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
         var asn = await dbContext.TrainingAssignments.AsNoTracking().FirstOrDefaultAsync(a => a.Id == assignment_id, cancellationToken);
-        if (asn != null && !CallerScope.CanAccessStudy(httpContext, asn.StudyId))
+        if (asn == null || !CallerScope.CanAccessStudy(httpContext, asn.StudyId))
         {
             return TypedResults.Problem($"Assignment '{assignment_id}' not found.", statusCode: StatusCodes.Status404NotFound);
-        }
-
-        if (asn == null)
-        {
-            var fallback = new TrainingAssignmentDto(
-                assignment_id, "curriculum-v3-delta", "CARDIO-2026", "SITE-101",
-                "site_investigator_01", "Dr. Eleanor Vance", "Principal Investigator",
-                "PENDING", null, null, 0, null, timeProvider.GetUtcNow());
-            return TypedResults.Ok(fallback);
         }
 
         return TypedResults.Ok(new TrainingAssignmentDto(

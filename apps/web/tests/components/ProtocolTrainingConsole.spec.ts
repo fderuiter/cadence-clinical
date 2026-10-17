@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
+import { useAuthStore } from "../../src/stores/auth";
 import ProtocolTrainingConsole from "../../src/components/clinical/ProtocolTrainingConsole.vue";
 import { trainingApi } from "../../src/api/training";
 
@@ -43,6 +44,10 @@ describe("ProtocolTrainingConsole.vue", () => {
 
   beforeEach(() => {
     setActivePinia(createPinia());
+    useAuthStore().user = {
+      sub: "site_investigator_01",
+      username: "site_investigator_01",
+    } as never;
     vi.useFakeTimers();
 
     vi.spyOn(trainingApi, "listAssignments").mockResolvedValue([
@@ -54,11 +59,22 @@ describe("ProtocolTrainingConsole.vue", () => {
     vi.spyOn(trainingApi, "recordProgress").mockResolvedValue({
       success: true,
     });
+    vi.spyOn(trainingApi, "listDelegations").mockResolvedValue([]);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     vi.useRealTimers();
+  });
+
+  it("loads no assignments and invents no trainee when no one is signed in (#5400)", async () => {
+    useAuthStore().user = null;
+    const wrapper = mount(ProtocolTrainingConsole);
+    await vi.runOnlyPendingTimersAsync();
+
+    expect(trainingApi.listAssignments).not.toHaveBeenCalled();
+    expect(trainingApi.listDelegations).not.toHaveBeenCalled();
+    expect(wrapper.find(".training-workspace").exists()).toBe(false);
   });
 
   it("mounts and starts timer under normal conditions", async () => {
