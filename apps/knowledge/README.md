@@ -26,6 +26,14 @@ Knowledge base scaffold. It holds the article, article version, category, contex
 
 Training reads need `training_log:read` and are narrowed to the caller's studies; rolling a curriculum out needs `training_curriculum:assign` (sysadmin, sponsor data management) and a study the caller is assigned to; the delegation log needs `delegation_log:read`, and its sign-off refuses records outside the signer's studies. The assigning actor is the signed caller (`PermissionMatrix.Knowledge.cs`) ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
 
+Training answers from its own records only (#5400). With no curriculum the list is empty, and a missing curriculum or
+assignment, or one in another study, is a 404; no demo curriculum, investigator or site is invented. Batch assignment
+draws its audience from the study's delegation log: the request names sites, roles or people (there is no default
+audience), and each person is assigned once per site. A site the caller does not reach is refused (403). A site or
+person not on the log, or a filter that matches nobody, is refused (422). An inactive curriculum is refused (409). A
+refused batch writes no assignment and no audit row. The console offers only the sites and roles on the log and
+pre-selects nothing.
+
 ## Persistence
 
 `AddCadencePostgresDbContext<KnowledgeDbContext>()` from [packages/database](../../packages/database/README.md) connects to the shared `cadence` database with its search path set to the `knowledge` schema ([ADR-2447](../../docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)). The connection string comes from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only the Development environment falls back to `cadence` on `localhost:5432`, and other environments fail at startup. `docker/docker-compose.yml` points it at the compose PostgreSQL and sets `Database__MigrateOnStartup=true`, so the service applies its migrations when it starts.
