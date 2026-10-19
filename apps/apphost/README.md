@@ -28,14 +28,15 @@ routes answer as the service being down.
 - `keycloak` container (port 8080, `start-dev`, importing `docker/cadence-realm.json` as docker compose does), unless `AppHost:OidcAuthority` is set.
 - `minio` container (ports 9000 and 9001; no service reads it yet), in the `full` profile only.
 - `web`: the Clinical Canvas Vite dev server on `http://localhost:3000/cadence-clinical/`, the redirect URI the
-  `cadence-web` Keycloak client allows. It gets `VITE_API_BASE_URL` (the gateway) and the `VITE_KEYCLOAK_*`
-  settings. Run `pnpm install` at the repository root first; the AppHost does not install packages.
+  `cadence-web` Keycloak client allows. It gets `VITE_API_BASE_URL` (its own origin), `CADENCE_GATEWAY_URL`
+  (the gateway, where its `/api` proxy forwards; the gateway sends no CORS headers, so the browser must not call it
+  cross-origin, #5429) and the `VITE_KEYCLOAK_*` settings. Run `pnpm install` at the repository root first; the AppHost does not install packages.
 - `subject-portal`: the participant portal's Vite dev server on `http://localhost:5174/subject-portal/`, as in docker
-  compose, in the `full` profile only (it calls interop and payments). It gets the same `VITE_API_BASE_URL` and
-  `VITE_KEYCLOAK_*` settings as `web`. Keycloak sign-in does not work there yet: the realm's `cadence-web` client
+  compose, in the `full` profile only (it calls interop and payments). It gets `VITE_API_BASE_URL` (the gateway, called
+  cross-origin, which the browser blocks until #5451) and the same `VITE_KEYCLOAK_*` settings as `web`. Keycloak sign-in does not work there yet: the realm's `cadence-web` client
   allows only the web app's redirect URI.
 - Projects, each on the host port docker compose publishes it on, so the gateway's Development defaults and the
-  web apps' `VITE_API_BASE_URL=http://localhost:8000` work for both (`core` runs 8000, 8002 and 8018):
+  web dev server's `/api` proxy to `http://localhost:8000` work for both (`core` runs 8000, 8002 and 8018):
 
   | Port | Service   | Port | Service       | Port | Service    |
   | ---- | --------- | ---- | ------------- | ---- | ---------- |

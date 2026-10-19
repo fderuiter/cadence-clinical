@@ -32,39 +32,8 @@ page.on("response", (r) => {
     apiCalls.push(`${r.status()} ${r.request().method()} ${r.url()}`);
 });
 
-// The gateway sends no CORS headers, and the AppHost builds the web app with
-// VITE_API_BASE_URL=http://localhost:8000, so every API call from :3000 is blocked by the browser.
-// Fetch gateway calls from Node instead and answer them with CORS headers (CADENCE_CORS_SHIM=0 to see the bug).
-const GATEWAY = process.env.CADENCE_GATEWAY_URL ?? "http://localhost:8000";
-if (process.env.CADENCE_CORS_SHIM !== "0") {
-  await page.route(`${GATEWAY}/**`, async (route) => {
-    const req = route.request();
-    const origin = req.headers().origin ?? new URL(WEB).origin;
-    const cors = {
-      "access-control-allow-origin": origin,
-      "access-control-allow-credentials": "true",
-      "access-control-allow-headers":
-        req.headers()["access-control-request-headers"] ?? "*",
-      "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-      "access-control-expose-headers": "*",
-    };
-    if (req.method() === "OPTIONS")
-      return route.fulfill({ status: 204, headers: cors });
-    try {
-      const res = await route.fetch();
-      return route.fulfill({
-        response: res,
-        headers: { ...res.headers(), ...cors },
-      });
-    } catch (e) {
-      return route.fulfill({
-        status: 502,
-        headers: cors,
-        body: String(e.message),
-      });
-    }
-  });
-}
+// Gateway calls go through the web dev server's /api proxy (#5429); `fetch` resolves paths against it.
+const GATEWAY = new URL(WEB).origin;
 
 let shot = 0;
 const url = (p) =>

@@ -52,7 +52,10 @@ run.
 2. The host calls `AddKernelBackgroundJobs()` and registers the in-process event publisher (ADR-2600 §4.6). The outbox
    relay and audit sealing each hold a PostgreSQL advisory lock as a leader lock while they run a pass, so with several
    replicas exactly one runs each; the others skip that pass.
-3. The gateway routes kernel and module routes to the host. A single module manifest replaces the six hand-kept copies
+3. A module declares itself with `AddCadenceModule(name, commandAssembly)`; the kernel's command catalogue then
+   includes the capabilities its commands declare, so module commands are authorized against kernel grants exactly
+   like kernel commands, and fail closed without a declaration (#5449).
+4. The gateway routes kernel and module routes to the host. A single module manifest replaces the six hand-kept copies
    of the service topology (gateway, AppHost, compose, `ARCHITECTURE.md`, `LOCAL_DEV_ENVIRONMENT.md`,
    `ENVIRONMENT_VARIABLES.md`) as modules move in.
 

@@ -44,15 +44,15 @@ Apart from `executionApi.ts` and `kernelApi.ts`, the clients in `src/api/` are s
 
 Run from the repository root with pnpm (the workspace is defined in `pnpm-workspace.yaml`):
 
-| Command                                | Purpose                                                                                                                                                                                       |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm --filter web dev`                | Vite dev server on `http://localhost:3000/cadence-clinical/`; `/api` is proxied to `http://localhost:8000`.                                                                                   |
-| `pnpm --filter web build`              | Production build of the web app only. Build `ui` first (`pnpm --filter ui build`), or run `pnpm build` from the root, which does both. The docs site is a separate build (`pnpm docs:build`). |
-| `pnpm --filter web build:demo`         | Build in `demo` mode (MSW enabled).                                                                                                                                                           |
-| `pnpm --filter web test`               | Vitest with coverage.                                                                                                                                                                         |
-| `pnpm --filter web test:e2e`           | Playwright; starts the web and subject-portal dev servers.                                                                                                                                    |
-| `pnpm --filter web lint` / `typecheck` | ESLint / `tsc --noEmit`.                                                                                                                                                                      |
-| `pnpm --filter web generate:api`       | Regenerates `src/api/generated/` from the .NET services' specs in `docs/openapi/`.                                                                                                            |
+| Command                                | Purpose                                                                                                                                                                                                                          |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm --filter web dev`                | Vite dev server on `http://localhost:3000/cadence-clinical/`. API calls go to its own origin and `/api` is proxied to the gateway (`CADENCE_GATEWAY_URL`, default `http://localhost:8000`), which sends no CORS headers (#5429). |
+| `pnpm --filter web build`              | Production build of the web app only. Build `ui` first (`pnpm --filter ui build`), or run `pnpm build` from the root, which does both. The docs site is a separate build (`pnpm docs:build`).                                    |
+| `pnpm --filter web build:demo`         | Build in `demo` mode (MSW enabled).                                                                                                                                                                                              |
+| `pnpm --filter web test`               | Vitest with coverage.                                                                                                                                                                                                            |
+| `pnpm --filter web test:e2e`           | Playwright; starts the web and subject-portal dev servers.                                                                                                                                                                       |
+| `pnpm --filter web lint` / `typecheck` | ESLint / `tsc --noEmit`.                                                                                                                                                                                                         |
+| `pnpm --filter web generate:api`       | Regenerates `src/api/generated/` from the .NET services' specs in `docs/openapi/`.                                                                                                                                               |
 
 ## Dependencies
 

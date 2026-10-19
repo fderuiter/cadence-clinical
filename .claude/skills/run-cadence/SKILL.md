@@ -114,10 +114,6 @@ The first takes about a minute (mostly the build), the second about 4 s. The ful
 
 ## Gotchas
 
-- **The gateway has no CORS, and the AppHost points the web app at `http://localhost:8000`.** Every API call from
-  `:3000` is blocked in a real browser ("No 'Access-Control-Allow-Origin' header"), so the Canvas shows "Failed to
-  fetch" everywhere. The driver answers gateway calls itself (fetches them from Node, adds CORS headers);
-  `CADENCE_CORS_SHIM=0` turns that off to see the bug. A human browser on the AppHost stack hits it too. Tracked in #5429.
 - **Kernel reads find nothing.** The kernel host provisions the `cadence-local` tenant on start (ADR-2542), but the
   realm's users hold no kernel grants (#5452): `search` answers 200 with no hits and `activity` answers 403 "You hold no
   grant in effect". A 403 "not an active kernel tenant" means the kernel was not started in Development.
