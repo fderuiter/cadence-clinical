@@ -93,7 +93,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
         (await ProblemAsync(crc, $"observations/{observation}/corrections", CorrectionReason, Correction(enrollment, "129", 1), ct))
             .Should().Be((HttpStatusCode.Conflict, ObservationErrors.VersionStale.Code));
         (await ProblemAsync(crc, $"observations/{observation}/corrections", null, Correction(enrollment, "129", 2), ct))
-            .Should().Be(((HttpStatusCode)422, ObservationErrors.ReasonForChangeRequired.Code));
+            .Should().Be(((HttpStatusCode)422, KernelErrors.ReasonForChangeRequired.Code));
 
         await SendAsync<KernelObservationLockResponse>(crc, HttpMethod.Post, $"observations/{observation}/lock", "Data review complete",
             new { enrollment_ref = NodeRef.For(enrollment).ToString() }, HttpStatusCode.OK, ct);
