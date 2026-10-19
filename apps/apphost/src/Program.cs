@@ -177,7 +177,7 @@ if (full)
     Service("AI_GATEWAY_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_AiGateway>("ai-gateway"), 8017, database: false);
 }
 
-// The gateway is the API entry point the web apps call (VITE_API_BASE_URL=http://localhost:8000). Outside
+// The gateway is the API entry point the web apps call, through the web dev server's /api proxy. Outside
 // Development it refuses to start without every *_SERVICE_URL, so it is told where each running service is, and a
 // service the profile leaves out gets its usual host port, where nothing listens: its routes answer as that
 // service being down.
@@ -212,11 +212,14 @@ foreach (var (variable, port) in new[]
 
 // The Clinical Canvas web app (Vite dev server) on port 3000, the redirect URI the cadence-web Keycloak client
 // allows. Run `pnpm install` at the repository root first; the AppHost does not install packages.
+// The browser calls the web app's own origin and Vite's /api proxy forwards to the gateway (CADENCE_GATEWAY_URL):
+// the gateway sends no CORS headers, so a page on :3000 calling :8000 directly is blocked by the browser (#5429).
 var web = builder.AddViteApp("web", "../../web")
     .WithPnpm(install: false)
     .WithEndpoint("http", endpoint => endpoint.Port = 3000)
-    .WithEnvironment("VITE_API_BASE_URL", gateway.GetEndpoint("http"))
+    .WithEnvironment("CADENCE_GATEWAY_URL", gateway.GetEndpoint("http"))
     .WithEnvironment("VITE_KEYCLOAK_CLIENT_ID", "cadence-web");
+web.WithEnvironment("VITE_API_BASE_URL", web.GetEndpoint("http"));
 useOidcOnWeb(web);
 
 await builder.Build().RunAsync();
