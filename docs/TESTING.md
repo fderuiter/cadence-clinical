@@ -76,9 +76,10 @@ dotnet test Cadence.sln
 ```
 
 Cloud agent sessions get this from the project's cloud environment: its setup script installs the .NET 10 SDK and
-PostgreSQL 18, creates that cluster (dropping Ubuntu's PostgreSQL 16 one) and restores dependencies, and the
-environment sets `CADENCE_TEST_POSTGRES`. The `scripts/claude_session_start.sh` hook restarts the cluster when a session
-resumes and sets `CADENCE_TEST_BROWSER=1`, so `cadence ci` runs as it would locally.
+PostgreSQL 18 and creates that cluster (dropping Ubuntu's PostgreSQL 16 one), and the environment sets
+`CADENCE_TEST_POSTGRES`. A failed step there only warns, so it never stops a session from starting. The
+`scripts/claude_session_start.sh` hook restores pnpm and NuGet dependencies, restarts the cluster when a session resumes
+and sets `CADENCE_TEST_BROWSER=1`, so `cadence ci` runs as it would locally.
 
 These tests currently use it:
 
