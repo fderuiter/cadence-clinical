@@ -80,3 +80,28 @@ reaching 80 percent means writing tests for dozens of screens whose services are
   - `pnpm --filter web test` and `pnpm --filter subject-portal test` pass with the new thresholds.
   - Raising the `apps/web` line floor to 48 fails the run with "does not meet global threshold", and raising the
     `src/stores/{signatures,sync}.ts` threshold to 100 fails it on that glob, so both kinds of threshold are enforced.
+
+## 7. Amendment (2026-10-19): `packages/ui`, and the plan to raise the floor (#5335)
+
+**`packages/ui` joins the gate.** `pnpm --filter ui test` now runs with coverage over every source file, components
+included, with a ratchet floor in `packages/ui/vite.config.js` (lines 37, statements 36, functions 29, branches 33 on
+2026-10-19). The Part 11 helpers `signing.js` and `econsent.js` carry an 80 percent file gate; on 2026-10-19 they
+measure 100 percent of lines, and 95.6 and 91.3 percent of branches.
+
+**The floors had fallen behind.** Tests added since 2026-09-30 lifted `apps/web` to 61.7 percent of lines without
+anyone raising the floor, so a change could have dropped 14 points unnoticed. The floors are reset to just under the
+2026-10-19 figures: `apps/web` lines 61, statements 60, functions 45, branches 50; `apps/subject-portal` lines 77,
+statements 76, functions 75, branches 61.
+
+**Plan for `apps/web`.** The floor only moves up, and these milestones say how far it must move:
+
+| Milestone                                                        | Lines | Branches | What gets the tests                                                                                          |
+| ---------------------------------------------------------------- | ----- | -------- | ------------------------------------------------------------------------------------------------------------ |
+| eCRF reference slice done (gate 3 of #5310: #5365, #5368, #5369) | 70    | 58       | eCRF entry, save states, corrections and the reason-for-change flow, end to end against the generated client |
+| Modules folded into the host (gate 5 of #5310)                   | 75    | 65       | Each screen a module conversion touches leaves with tests for its API calls and error states                 |
+| Production readiness review (2027)                               | 80    | 70       | The remaining screens at 0 percent, listed by `pnpm --filter web test`                                       |
+
+The same steps apply to `packages/ui`, whose clinical components (`AuditLogViewer`, `ClinicalDataTable`,
+`ClinicalModal`, `ClinicalFieldLayout`, `PersonaSwitcher` and the rest) have no tests yet: a change that touches one
+adds its tests and raises the package floor. Whoever closes a milestone's last issue checks the measured figure against
+the table and raises the floor in that change; a milestone the figure misses stays open on its epic.

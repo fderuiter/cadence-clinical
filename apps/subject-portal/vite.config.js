@@ -23,9 +23,20 @@ export default defineConfig({
     port: 5174,
   },
   resolve: {
-    alias: {
-      ui: path.resolve(__dirname, "../../packages/ui/index.js"),
-    },
+    alias: [
+      // The mock gateway is test and dev tooling, kept out of the library's root export (#5335).
+      {
+        find: /^ui\/testing$/,
+        replacement: path.resolve(
+          __dirname,
+          "../../packages/ui/mockGateway.js"
+        ),
+      },
+      {
+        find: /^ui$/,
+        replacement: path.resolve(__dirname, "../../packages/ui/index.js"),
+      },
+    ],
   },
   build: {
     outDir: "dist",
@@ -45,10 +56,10 @@ export default defineConfig({
       exclude: ["src/mocks/**"],
       thresholds: {
         // A ratchet floor under the whole portal: raise it when coverage rises, never lower it.
-        lines: 76,
+        lines: 77,
         statements: 76,
         functions: 75,
-        branches: 59,
+        branches: 61,
         // The file ADR-251 put under its 80 percent gate keeps it.
         "src/sync-queue.js": {
           lines: 80,
