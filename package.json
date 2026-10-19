@@ -30,8 +30,8 @@
     "adr:create": "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- scaffold adr",
     "adrs:check": "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check adrs",
     "adrs:fix": "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- fix",
-    "build": "pnpm --filter web build",
-    "build:demo": "pnpm --filter web build:demo",
+    "build": "pnpm --filter ui build && pnpm --filter web build",
+    "build:demo": "pnpm --filter ui build && pnpm --filter web build:demo",
     "docs:dev": "node scripts/build-docs.js --prepare-only && vitepress dev docs",
     "docs:build": "node scripts/build-docs.js",
     "build:docs": "node scripts/build-docs.js"

@@ -335,14 +335,6 @@ runPreflightChecks();
 try {
   // 1. Run validation scripts
   console.log("--- Step 1: Pre-Build Validation ---");
-  try {
-    console.log("Building shared UI primitives package first...");
-    runCommand(`${pnpmCmd} --filter ui build`);
-  } catch (err) {
-    console.warn(
-      "Warning: Shared UI primitives package build failed, continuing anyway..."
-    );
-  }
   // `cadence ci` sets CADENCE_DOCS_SKIP_CHECKS=1 when its "Run Cadence quality sentinels" step already passed on
   // this tree: that step runs the same gates, Markdown included, so running them again here only costs minutes.
   if (process.env.CADENCE_DOCS_SKIP_CHECKS === "1") {
