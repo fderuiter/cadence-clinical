@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel;
 using Cadence.Kernel.Api;
+using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
@@ -30,6 +31,8 @@ using FluentAssertions;
 
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 using Xunit;
 
@@ -176,6 +179,23 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
 
         using var refused = await stranger.GetAsync(new Uri($"/api/v1/kernel/activity?scope={NodeRef.For(study)}", UriKind.Relative), ct);
         refused.StatusCode.Should().Be(System.Net.HttpStatusCode.Forbidden);
+    }
+
+    /// <summary>
+    /// Validates that the host runs the kernel's background jobs and delivers committed events to its in-process
+    /// consumers (ADR-2601, #5313, #5314): the outbox relay, audit sealing and lineage check are hosted services, and the
+    /// relay's publisher is the in-process one.
+    /// </summary>
+    [Fact(DisplayName = "Host_RunsBackgroundJobs_AndDeliversEventsInProcess")]
+    public void HostRunsBackgroundJobsAndDeliversEventsInProcess()
+    {
+        fixture.SkipIfUnavailable();
+        _ = Client("unused", Crc);
+
+        var services = _host!.Services;
+        services.GetServices<IHostedService>().Select(s => s.GetType().Name)
+            .Should().Contain(["KernelOutboxRelayService", "KernelAuditSealingService", "KernelLineageCheckService"]);
+        services.GetRequiredService<IKernelEventPublisher>().GetType().Name.Should().Be("InProcessKernelEventPublisher");
     }
 
     /// <summary>A client signed as <paramref name="userId"/> in <paramref name="tenantCode"/>, on one host per test class.</summary>

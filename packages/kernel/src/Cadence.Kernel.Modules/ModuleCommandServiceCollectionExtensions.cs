@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 using Cadence.Kernel.Commands;
 
@@ -14,7 +15,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure;
 namespace Cadence.Kernel.Modules;
 
 /// <summary>Registers command handlers with the kernel command pipeline (ADR-2600).</summary>
-public static class ModuleCommandServiceCollectionExtensions
+public static partial class ModuleCommandServiceCollectionExtensions
 {
     /// <summary>
     /// Registers <typeparamref name="THandler"/> as the one handler of <typeparamref name="TCommand"/>. The host's
@@ -66,6 +67,32 @@ public static class ModuleCommandServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers <typeparamref name="TConsumer"/> to receive committed kernel events in the host (ADR-2600 §4.6). Each
+    /// delivery resolves it from a new scope in which commands run as the service account <c>svc:&lt;name&gt;</c>.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="name">The consumer's name: lower case letters, digits, <c>-</c> and <c>_</c>, unique per host.</param>
+    /// <exception cref="InvalidOperationException">A consumer with <paramref name="name"/> is already registered.</exception>
+    public static IServiceCollection AddKernelEventConsumer<TConsumer>(this IServiceCollection services, string name)
+        where TConsumer : class, IKernelEventConsumer
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        if (name is null || !ConsumerName().IsMatch(name))
+        {
+            throw new ArgumentException($"'{name}' is not a consumer name: lower case letters, digits, '-' and '_', starting with a letter.", nameof(name));
+        }
+
+        if (services.Any(d => d.ImplementationInstance is KernelEventConsumerRegistration r && r.Name == name))
+        {
+            throw new InvalidOperationException($"A kernel event consumer named '{name}' is already registered.");
+        }
+
+        services.AddSingleton(new KernelEventConsumerRegistration(name, typeof(TConsumer)));
+        services.TryAddScoped<TConsumer>();
+        return services;
+    }
+
+    /// <summary>
     /// Registers <typeparamref name="TContext"/> as the store for the aggregates <paramref name="module"/>'s commands
     /// write (ADR-2600). The pipeline creates it per command on the command's connection with the options built here
     /// (Npgsql, no retrying execution strategy), enlists it in the command's transaction and audits the one changed
@@ -96,4 +123,7 @@ public static class ModuleCommandServiceCollectionExtensions
         services.AddSingleton<IModuleCommandStore>(store);
         return services;
     }
+
+    [GeneratedRegex("^[a-z][a-z0-9_-]{0,47}$", RegexOptions.CultureInvariant)]
+    private static partial Regex ConsumerName();
 }
