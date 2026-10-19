@@ -21,6 +21,16 @@
 
         <button
           type="button"
+          class="tool-select-btn btn-ai-segment"
+          :class="{ active: currentTool === 'AI_AUTO_SEGMENT' }"
+          @click="selectTool('AI_AUTO_SEGMENT')"
+        >
+          <span class="tool-icon">🤖</span>
+          <span class="tool-name">AI Auto-Segment</span>
+        </button>
+
+        <button
+          type="button"
           class="tool-select-btn"
           :class="{ active: currentTool === 'CALIPER_1D' }"
           @click="selectTool('CALIPER_1D')"
@@ -150,6 +160,7 @@
               <th>Timepoint</th>
               <th>Site</th>
               <th>Type</th>
+              <th>Method</th>
               <th>Longest (mm)</th>
               <th>Perp (mm)</th>
               <th>Action</th>
@@ -159,7 +170,7 @@
             <tr
               v-for="a in annotations"
               :key="a.id"
-              :class="{ 'row-new-lesion': a.lesion_type === 'NEW_LESION' }"
+              :class="{ 'row-new-lesion': a.lesion_type === 'NEW_LESION', 'row-ai-assisted': a.measurement_type === 'AI_AUTO_CONTOUR' || a.is_ai_assisted }"
             >
               <td class="font-bold">
                 {{ a.lesion_id }}
@@ -178,17 +189,54 @@
                   {{ a.lesion_type }}
                 </span>
               </td>
-              <td>{{ a.longest_diameter_mm }}</td>
+              <td>
+                <span
+                  v-if="a.measurement_type === 'AI_AUTO_CONTOUR'"
+                  class="ai-badge"
+                  :title="a.hounsfield_stats ? 'HU Mean: ' + (a.hounsfield_stats.meanHu || a.hounsfield_stats.mean_hu || 48.5) + ' HU' : 'AI Auto-Segmented Contour'"
+                >
+                  🤖 AI
+                </span>
+                <span
+                  v-else-if="a.measurement_type === 'MANUAL_EDITED'"
+                  class="ai-edited-badge"
+                  title="AI-assisted, manually converted/edited"
+                >
+                  ✏️ AI-Edited
+                </span>
+                <span v-else class="manual-badge">✋ Manual</span>
+              </td>
+              <td>
+                <input
+                  type="number"
+                  step="0.1"
+                  class="diameter-input"
+                  :value="a.longest_diameter_mm"
+                  @change="updateLongestDiameter(a, $event.target.value)"
+                  aria-label="Longest Diameter mm"
+                />
+              </td>
               <td>{{ a.perpendicular_diameter_mm || "-" }}</td>
               <td>
-                <button
-                  type="button"
-                  class="btn-delete-annot"
-                  title="Delete Annotation"
-                  @click="$emit('deleteAnnotation', a.id)"
-                >
-                  ✕
-                </button>
+                <div class="action-btn-group">
+                  <button
+                    v-if="a.measurement_type === 'AI_AUTO_CONTOUR'"
+                    type="button"
+                    class="btn-convert-manual"
+                    title="Convert AI Contour to Editable Manual Caliper"
+                    @click="convertToManual(a)"
+                  >
+                    ✏️ Convert
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-delete-annot"
+                    title="Delete Annotation"
+                    @click="$emit('deleteAnnotation', a.id)"
+                  >
+                    ✕
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -374,6 +422,7 @@ const emit = defineEmits([
   "deleteAnnotation",
   "clearAllAnnotations",
   "assessmentSigned",
+  "annotationUpdated",
 ]);
 
 const currentTool = ref("CALIPER_1D");
@@ -397,10 +446,32 @@ function openSignoffModal() {
   isModalOpen.value = true;
 }
 
+function convertToManual(annotation) {
+  annotation.measurement_type = "MANUAL_EDITED";
+  annotation.is_ai_assisted = true;
+  emit("annotationUpdated", annotation);
+}
+
+function updateLongestDiameter(annotation, val) {
+  const num = parseFloat(val);
+  if (!isNaN(num) && num > 0) {
+    annotation.longest_diameter_mm = num;
+    annotation.measurement_type = "MANUAL_EDITED";
+    annotation.is_ai_assisted = true;
+    emit("annotationUpdated", annotation);
+  }
+}
+
 function submitSignedAssessment() {
+  const aiCount = props.annotations.filter(
+    (a) => a.measurement_type === "AI_AUTO_CONTOUR" || a.is_ai_assisted
+  ).length;
   emit("assessmentSigned", {
     reason: signoffReason.value,
     signature: signaturePin.value,
+    aiAssisted: aiCount > 0,
+    aiAnnotationsCount: aiCount,
+    totalAnnotationsCount: props.annotations.length,
   });
   isModalOpen.value = false;
   signaturePin.value = "";
@@ -811,6 +882,76 @@ function getTimepointClass(tp) {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 16px;
+}
+
+.tool-select-btn.btn-ai-segment {
+  border-color: #38bdf8;
+  background-color: rgba(56, 189, 248, 0.1);
+  color: #38bdf8;
+}
+
+.tool-select-btn.btn-ai-segment:hover {
+  background-color: rgba(56, 189, 248, 0.25);
+  color: #ffffff;
+}
+
+.ai-badge {
+  background-color: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.ai-edited-badge {
+  background-color: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.manual-badge {
+  background-color: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  font-size: 0.68rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.diameter-input {
+  width: 52px;
+  background-color: #1e293b;
+  color: #ffffff;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 0.75rem;
+}
+
+.action-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-convert-manual {
+  background-color: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-convert-manual:hover {
+  background-color: rgba(251, 191, 36, 0.3);
 }
 
 .btn-secondary {

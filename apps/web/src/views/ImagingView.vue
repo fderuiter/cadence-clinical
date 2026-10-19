@@ -293,6 +293,7 @@
           @delete-annotation="handleDeleteAnnotation"
           @clear-all-annotations="currentAnnotations = []"
           @assessment-signed="handleAssessmentSigned"
+          @annotation-updated="handleAnnotationUpdated"
         />
       </aside>
     </div>
@@ -609,14 +610,21 @@ function handleCaliperCreated(event, viewportKey = "single") {
 
   const newId = `annot-${Date.now()}`;
   const lesionNum = currentAnnotations.value.length + 1;
+  const isAi = event.tool === "AI_AUTO_SEGMENT" || event.measurementType === "AI_AUTO_CONTOUR" || event.isAiAssisted;
+
   currentAnnotations.value.push({
     id: newId,
-    lesion_id: `TL${lesionNum}`,
-    organ_site: "LIVER",
-    lesion_type: "TARGET",
-    longest_diameter_mm: event.lengthMm,
-    perpendicular_diameter_mm: null,
-    points: event.points,
+    lesion_id: event.lesion_id || `TL${lesionNum}`,
+    organ_site: event.organ_site || "LIVER",
+    lesion_type: event.lesion_type || "TARGET",
+    longest_diameter_mm: event.longestDiameterMm || event.lengthMm,
+    perpendicular_diameter_mm: event.perpendicularDiameterMm || null,
+    measurement_type: isAi ? "AI_AUTO_CONTOUR" : "1D_RECIST",
+    is_ai_assisted: isAi,
+    hounsfield_stats: event.hounsfieldStats || null,
+    model_version: event.modelVersion || (isAi ? "UNet-ResNet34-2D-v2.1" : null),
+    points: event.points || [],
+    fittedCalipers: event.fittedCalipers || [],
     timepoint: originTimepoint,
     viewport_origin:
       viewportKey === "A"
@@ -627,13 +635,20 @@ function handleCaliperCreated(event, viewportKey = "single") {
   });
 }
 
+function handleAnnotationUpdated(updated) {
+  const index = currentAnnotations.value.findIndex((a) => a.id === updated.id);
+  if (index !== -1) {
+    currentAnnotations.value[index] = { ...currentAnnotations.value[index], ...updated };
+  }
+}
+
 function handleDeleteAnnotation(id) {
   currentAnnotations.value = currentAnnotations.value.filter(
     (a) => a.id !== id
   );
 }
 
-function handleAssessmentSigned(_event) {
+function handleAssessmentSigned(eventPayload) {
   trajectoryHistory.value.push({
     id: `eval-${Date.now()}`,
     timepoint_name: selectedTimepoint.value,
@@ -645,6 +660,8 @@ function handleAssessmentSigned(_event) {
     pct_change_nadir: derivedResponse.value.pct_change_nadir,
     target_response: derivedResponse.value.target_response,
     overall_response: derivedResponse.value.overall_response,
+    ai_assisted: eventPayload?.aiAssisted || false,
+    ai_annotations_count: eventPayload?.aiAnnotationsCount || 0,
     reader_id: "dr.current.user",
     created_at:
       new Date().toISOString().replace("T", " ").substring(0, 19) + " UTC",
