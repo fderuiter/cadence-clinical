@@ -20,6 +20,13 @@ public sealed record KernelError(string Code, int HttpStatus, string Message)
     /// </summary>
     public Explanation? Explanation { get; init; }
 
+    /// <summary>
+    /// The invalid fields and why, keyed by the command property's name, when the command failed validation
+    /// (<see cref="KernelErrors.CommandInvalid"/>); null otherwise. Rendered as the <c>errors</c> member of the problem
+    /// details.
+    /// </summary>
+    public IReadOnlyDictionary<string, string[]>? Errors { get; init; }
+
     /// <summary>The same registered error with a message specific to this occurrence.</summary>
     public KernelError WithMessage(string message) => this with { Message = message };
 }
@@ -42,6 +49,9 @@ public static class KernelErrors
 
     public static readonly KernelError IdempotencyConflict =
         new("K.Command.IdempotencyConflict", 409, "The idempotency key was already used with a different payload.");
+
+    public static readonly KernelError CommandInvalid =
+        new("K.Command.Invalid", 422, "The command is not valid.");
 
     public static readonly KernelError HandlerMissing =
         new("K.Command.HandlerMissing", 500, "No handler is registered for the command.");

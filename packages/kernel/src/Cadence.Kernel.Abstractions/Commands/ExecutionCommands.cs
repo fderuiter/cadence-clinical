@@ -10,6 +10,7 @@ namespace Cadence.Kernel.Commands;
 /// (spec §7.4, §9.2). Study membership is an <see cref="ScreenParticipant">enrollment</see>.
 /// </summary>
 [KernelCapability("participant.register", VerbClass.Execute)]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RegisterParticipant(
     TenantId TenantId,
     ParticipantId ParticipantId,
@@ -25,6 +26,7 @@ public sealed record RegisterParticipant(
 /// <para><c>ScreenedAt</c>: When screening began in the trial world (valid time, K-TIME-9); not after the command is recorded.</para>
 /// </remarks>
 [KernelCapability("participant.screen", VerbClass.Execute, Resource = nameof(ScreenParticipant.StudySiteId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record ScreenParticipant(
     TenantId TenantId,
     EnrollmentId EnrollmentId,
@@ -44,6 +46,7 @@ public sealed record ScreenParticipant(
 /// <para><c>EffectiveAt</c>: When the change happened in the trial world: after the current status began and not after the command is recorded.</para>
 /// </remarks>
 [KernelCapability("enrollment.change_status", VerbClass.Execute, Resource = nameof(ChangeEnrollmentStatus.EnrollmentId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record ChangeEnrollmentStatus(
     TenantId TenantId,
     EnrollmentId EnrollmentId,
@@ -58,6 +61,7 @@ public sealed record ChangeEnrollmentStatus(
 /// The reason for change is the withdrawal reason.
 /// </summary>
 [KernelCapability("participant.withdraw", VerbClass.Execute, Resource = nameof(WithdrawParticipant.EnrollmentId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record WithdrawParticipant(
     TenantId TenantId,
     EnrollmentId EnrollmentId,

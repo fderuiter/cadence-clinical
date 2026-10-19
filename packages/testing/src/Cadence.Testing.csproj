@@ -12,6 +12,8 @@
 
   <ItemGroup>
     <PackageReference Include="FluentAssertions" />
+    <!-- CommandValidationCatalog: finds the IValidator<TCommand> registrations of a module or the kernel. -->
+    <PackageReference Include="FluentValidation" />
     <!-- TestSecurityContext.CreateSignedClient: gateway-signed clients for WebApplicationFactory hosts. -->
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="NSubstitute" />

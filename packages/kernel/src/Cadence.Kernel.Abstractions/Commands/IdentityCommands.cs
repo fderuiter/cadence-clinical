@@ -10,6 +10,7 @@ namespace Cadence.Kernel.Commands;
 /// @req:PRD-SYS-053
 /// </summary>
 [KernelCapability("tenant.provision", VerbClass.Execute, InCatalogue = false)]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record ProvisionTenant(
     TenantId TenantId,
     string Code,
@@ -23,6 +24,7 @@ public sealed record ProvisionTenant(
 /// @req:PRD-SYS-053
 /// </summary>
 [KernelCapability("organization.register", VerbClass.Execute)]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RegisterOrganization(
     TenantId TenantId,
     OrganizationId OrganizationId,

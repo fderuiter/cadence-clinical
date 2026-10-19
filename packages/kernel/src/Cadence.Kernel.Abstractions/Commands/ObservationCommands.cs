@@ -18,6 +18,7 @@ namespace Cadence.Kernel.Commands;
 /// <para><c>ObservedAt</c>: When the fact held in the trial world (valid time); not after the command is recorded.</para>
 /// </remarks>
 [KernelCapability("observation.record", VerbClass.Execute, Resource = nameof(RecordObservation.EnrollmentId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RecordObservation(
     TenantId TenantId,
     ObservationId ObservationId,
@@ -38,6 +39,7 @@ public sealed record RecordObservation(
 /// <para><c>ExpectedVersion</c>: The version the corrector saw (<see cref="ObservationState.Version"/>).</para>
 /// </remarks>
 [KernelCapability("observation.correct", VerbClass.Execute, Resource = nameof(CorrectObservation.EnrollmentId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record CorrectObservation(
     TenantId TenantId,
     ObservationId ObservationId,
@@ -52,6 +54,7 @@ public sealed record CorrectObservation(
 /// unlock in the reference slice.
 /// </summary>
 [KernelCapability("observation.lock", VerbClass.Execute, Resource = nameof(LockObservation.EnrollmentId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record LockObservation(
     TenantId TenantId,
     ObservationId ObservationId,

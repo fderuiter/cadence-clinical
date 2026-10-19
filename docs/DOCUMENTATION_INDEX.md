@@ -517,6 +517,8 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2508: Pin pnpm and Node with packageManager and engines](adr/2026-10-16-pin-pnpm-and-node-with-packagemanager-and-engines.md) | Current | - Status: Accepted |
 | [ADR-2523: Explicit Transactions Run Inside the Execution Strategy](adr/2026-10-19-explicit-transactions-run-inside-the-execution-strategy.md) | Current | - Status: Accepted |
 | [ADR-2542: The Kernel Host Provisions the Development Tenant](adr/2026-10-19-the-kernel-host-provisions-the-development-tenant.md) | Current | - Status: Accepted |
+| [ADR-2600: Modules Write Through the Kernel Command Path](adr/2026-10-19-modules-write-through-the-kernel-command-path.md) | Current | - Status: Accepted |
+| [ADR-2601: One Composition Host for the Kernel and Its Modules](adr/2026-10-19-one-composition-host-for-the-kernel-and-its-modules.md) | Current | - Status: Accepted |
 ## Developing and running
 
 | Document | Status | What it is |
