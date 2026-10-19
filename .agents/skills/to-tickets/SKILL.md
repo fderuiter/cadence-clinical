@@ -38,7 +38,7 @@ Assign each ticket to its owning domain queue:
 Each ticket should be a vertical tracer-bullet:
 
 1. **Title**: `[QUEUE] Short Actionable Description`
-2. **Requirement Link**: `@req:PRD-SYS-xxx`
+2. **Requirement Link**: `@req:PRD-SYS-XXX`
 3. **Seam Under Test**: The public interface and test slice.
 4. **Implementation Steps**: Files to touch, models to create, endpoints to add.
 5. **Quality Gates**: Commands to run (`dotnet cadence test --fast`, etc.).
