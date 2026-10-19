@@ -19,7 +19,8 @@
 
   <ItemGroup>
     <PackageReference Include="FluentValidation" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <!-- PrivateAssets: keeps the OpenAPI source generator out of referencing projects such as Kernel.Application (spec §2.4). -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" PrivateAssets="all" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
   </ItemGroup>
