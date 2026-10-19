@@ -9,8 +9,6 @@ using Cadence.Apps.Execution.Domain.Ports;
 
 using Microsoft.EntityFrameworkCore;
 
-using Polly;
-
 namespace Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 
 /// <summary>
@@ -19,8 +17,8 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 /// @req:PRD-DEV-002
 /// @req:PRD-DEV-003
 /// </summary>
-public sealed class DeviceRepository(ExecutionDbContext context, ResiliencePipeline saveChangesResilience)
-    : ExecutionRepositoryBase(context, saveChangesResilience), IDeviceRepository
+public sealed class DeviceRepository(ExecutionDbContext context)
+    : ExecutionRepositoryBase(context), IDeviceRepository
 {
     public async Task<DeviceInventoryItem?> GetInventoryByIdAsync(Guid id, CancellationToken ct = default)
     {

@@ -431,8 +431,6 @@ public sealed class ClinicalQueryApplicationService(
             }
         }
 
-        await using var transaction = await queryRepository.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-
         var updatedList = new List<ClinicalQuery>(queries.Count);
 
         foreach (var qId in parsedIds)
@@ -448,11 +446,6 @@ public sealed class ClinicalQueryApplicationService(
         }
 
         await queryRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        if (transaction is Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction dbTx)
-        {
-            await dbTx.CommitAsync(cancellationToken).ConfigureAwait(false);
-        }
 
         var responses = updatedList.Select(MapToResponse).ToList();
         return new BatchQueryResponse(responses, responses.Count);
@@ -515,8 +508,6 @@ public sealed class ClinicalQueryApplicationService(
             }
         }
 
-        await using var transaction = await queryRepository.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-
         var updatedList = new List<ClinicalQuery>(queries.Count);
 
         foreach (var qId in parsedIds)
@@ -534,11 +525,6 @@ public sealed class ClinicalQueryApplicationService(
         }
 
         await queryRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        if (transaction is Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction dbTx)
-        {
-            await dbTx.CommitAsync(cancellationToken).ConfigureAwait(false);
-        }
 
         var responses = updatedList.Select(MapToResponse).ToList();
         return new BatchQueryResponse(responses, responses.Count);
@@ -595,8 +581,6 @@ public sealed class ClinicalQueryApplicationService(
             }
         }
 
-        await using var transaction = await queryRepository.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-
         var updatedList = new List<ClinicalQuery>(queries.Count);
 
         foreach (var qId in parsedIds)
@@ -617,11 +601,6 @@ public sealed class ClinicalQueryApplicationService(
         }
 
         await queryRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        if (transaction is Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction dbTx)
-        {
-            await dbTx.CommitAsync(cancellationToken).ConfigureAwait(false);
-        }
 
         var responses = updatedList.Select(MapToResponse).ToList();
         return new BatchQueryResponse(responses, responses.Count);

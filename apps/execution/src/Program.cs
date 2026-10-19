@@ -44,7 +44,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
-using Polly;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
@@ -57,14 +56,6 @@ builder.Services.AddCadenceSecurity();
 builder.Services.ConfigureHttpJsonOptions(options => ExecutionJsonSerialization.Configure(options.SerializerOptions));
 // Describe the value objects and statuses those converters write, so the OpenAPI document matches the wire.
 builder.Services.ConfigureAll<OpenApiOptions>(options => options.AddSchemaTransformer<ExecutionWireTypesOpenApiTransformer>());
-
-// MIG-SUBJ-013 (`02_technical_design.md` §4.2): the shared transient-failure retry pipeline every
-// ExecutionRepositoryBase-derived repository's SaveChangesAsync wraps around ExecutionDbContext.SaveChangesAsync.
-// Concurrency conflicts are not retried; they surface as 409 through ConcurrencyConflictExceptionHandler (#4766).
-// Registered once here so every repository consumes the SAME pipeline instance rather than each building its own. Registered as a singleton ResiliencePipeline (not
-// via the Polly.Extensions `AddResiliencePipeline` DI helper, which is a separate NuGet package not
-// otherwise needed by this slice) since a stateless retry pipeline has no per-request dependencies.
-builder.Services.AddSingleton(SaveChangesResiliencePipelineFactory.Create());
 
 // RFC 9457 ProblemDetails for every domain/validation/unhandled-exception response (MIG-SUBJ-010,
 // `02_technical_design.md` §3.4). `DomainError.ToProblemResult()` (Domain/Subjects/DomainErrorExtensions.cs)
@@ -150,7 +141,9 @@ string executionDbConnectionString = CadenceDatabaseExtensions.WithModuleSchema(
 var concurrencyTokenIncrementInterceptor = new ConcurrencyTokenIncrementInterceptor();
 builder.Services.AddCadenceDbContext<ExecutionDbContext>((sp, options) =>
 {
-    options.UseNpgsql(executionDbConnectionString);
+    // Transient failures are retried by EF Core's execution strategy, around a whole SaveChanges or a whole
+    // ExecuteInTransactionAsync unit of work; concurrency conflicts are not, and surface as 409 (#4766, #5383).
+    options.UseNpgsql(executionDbConnectionString, npgsql => npgsql.EnableRetryOnFailure());
     options.AddInterceptors(
         concurrencyTokenIncrementInterceptor,
         new Cadence.Database.GxPAuditInterceptor(

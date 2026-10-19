@@ -22,7 +22,6 @@
     <!-- MIG-SUBJ-024: AddValidatorsFromAssemblyContaining<T>, used by Program.cs to register every
          FluentValidation AbstractValidator<T> in this assembly in one call. -->
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
-    <PackageReference Include="Polly" />
     <!-- MIG-SUBJ-021: MassTransit + the EF Core transactional outbox (ADR-2428 / Rule 8 / MIG-06). -->
     <PackageReference Include="MassTransit" />
     <PackageReference Include="MassTransit.EntityFrameworkCore" />

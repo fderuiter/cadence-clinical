@@ -8,12 +8,10 @@ using Cadence.Apps.Execution.Domain.Toxicity;
 
 using Microsoft.EntityFrameworkCore;
 
-using Polly;
-
 namespace Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 
-public sealed class StagedAdverseEventReviewRepository(ExecutionDbContext context, ResiliencePipeline saveChangesResilience)
-    : ExecutionRepositoryBase(context, saveChangesResilience), IStagedAdverseEventReviewRepository
+public sealed class StagedAdverseEventReviewRepository(ExecutionDbContext context)
+    : ExecutionRepositoryBase(context), IStagedAdverseEventReviewRepository
 {
     public async Task<StagedAdverseEventReview?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {

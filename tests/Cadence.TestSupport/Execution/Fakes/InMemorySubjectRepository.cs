@@ -36,6 +36,11 @@ public sealed class InMemorySubjectRepository : ISubjectRepository
 {
     private readonly ConcurrentDictionary<SubjectId, ClinicalSubject> _store = new();
 
+    /// <summary>Runs the unit of work directly: the fake has no transactions to open.</summary>
+    public Task<TResult> ExecuteInTransactionAsync<TResult>(
+        System.Func<CancellationToken, Task<TResult>> unitOfWork, CancellationToken cancellationToken) =>
+        unitOfWork(cancellationToken);
+
     public Task<int> EnrollNextIndexAsync(StudyCode studyCode, CancellationToken cancellationToken)
     {
         int? maxIndex = _store.Values

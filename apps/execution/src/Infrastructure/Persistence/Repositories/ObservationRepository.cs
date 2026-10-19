@@ -11,8 +11,6 @@ using Cadence.Kernel;
 
 using Microsoft.EntityFrameworkCore;
 
-using Polly;
-
 namespace Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 
 /// <summary>
@@ -21,8 +19,8 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 /// @req:PRD-SYS-001
 /// @req:SRS-EDC-001
 /// </summary>
-public sealed class ObservationRepository(ExecutionDbContext context, ResiliencePipeline saveChangesResilience)
-    : ExecutionRepositoryBase(context, saveChangesResilience), IObservationRepository
+public sealed class ObservationRepository(ExecutionDbContext context)
+    : ExecutionRepositoryBase(context), IObservationRepository
 {
     public Task<ClinicalObservation?> GetByIdAsync(ObservationId id, CancellationToken cancellationToken = default) =>
         GetByIdAsync(id, includeInactive: false, cancellationToken);

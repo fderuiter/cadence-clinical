@@ -113,6 +113,9 @@ namespace Cadence.Apps.Execution.Endpoints;
 - Every `DbContext` registration includes the GxP audit interceptor, which fills `CreatedAt`,
   `CreatedBy`, `ReasonForChange` and `VersionIndex` (21 CFR Part 11). Mutating entities implement
   `IGxPAuditable`.
+- Explicit transactions go through `ExecuteInTransactionAsync` (`packages/database`), which runs the unit of work inside
+  the retrying execution strategy; `BeginTransaction` is a banned API (ADR-2523). One `SaveChangesAsync` is already
+  atomic and needs no transaction.
 - Register contexts with `AddCadencePostgresDbContext` (`packages/database`). It resolves
   `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`, and fails outside `Development`
   when neither is set.

@@ -515,6 +515,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2531: Every Mapped Test Is Mandatory Evidence, and Reports Name What They Tested](adr/2026-10-15-every-mapped-test-is-mandatory-evidence.md) | Current | - Status: Accepted |
 | [ADR-2532: Feature Branches Never Commit the GxP Snapshot](adr/2026-10-16-feature-branches-never-commit-the-gxp-snapshot.md) | Current | Accepted |
 | [ADR-2508: Pin pnpm and Node with packageManager and engines](adr/2026-10-16-pin-pnpm-and-node-with-packagemanager-and-engines.md) | Current | - Status: Accepted |
+| [ADR-2523: Explicit Transactions Run Inside the Execution Strategy](adr/2026-10-19-explicit-transactions-run-inside-the-execution-strategy.md) | Current | - Status: Accepted |
 ## Developing and running
 
 | Document | Status | What it is |

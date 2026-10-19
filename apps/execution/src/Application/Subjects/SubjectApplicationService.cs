@@ -92,27 +92,33 @@ public sealed class SubjectApplicationService(
         var studyCode = new StudyCode(request.StudyId);
         SiteCode? siteCode = request.SiteId is not null ? new SiteCode(request.SiteId) : null;
 
-        int enrollmentIndex = await subjects.EnrollNextIndexAsync(studyCode, ct).ConfigureAwait(false);
+        // The index read, the insert and its audit entry are one unit of work under the per-study lock; a transient
+        // failure re-runs all three (#5383).
+        var enrolled = await subjects.ExecuteInTransactionAsync(async token =>
+        {
+            int enrollmentIndex = await subjects.EnrollNextIndexAsync(studyCode, token).ConfigureAwait(false);
 
-        // MIG-SUBJ-026 fix: request.ArmId was previously dropped entirely -- see ClinicalSubject.Create's own
-        // remarks for the full finding (confirmed against SCN-001-A's golden-master fixture) and why this is
-        // the enrollment-time arm_id, not an encrypted/blinded randomization output.
-        var subject = ClinicalSubject.Create(subjectCode, studyCode, siteCode, enrollmentIndex,
-            encryptedDemographics, stratFactors: null, request.ArmId);
-        // MIG-SUBJ-017: the .NET replacement for the legacy's own `current_change_reason.get() or "..."`
-        // per-endpoint idiom is this one, uniformly-defaulting accessor — see ICurrentAuditContextAccessor's
-        // own doc comment ("closing the legacy's two-idiom split... giving every reader exactly one
-        // resolution path"). This deliberately does not reproduce the router's distinct literal fallback
-        // text ("Initial Subject Creation"); MIG-SUBJ-017 already unified every such fallback onto one
-        // constant ("system_operation").
-        subject.ReasonForChange = auditContext.ChangeReason;
+            // MIG-SUBJ-026 fix: request.ArmId was previously dropped entirely -- see ClinicalSubject.Create's own
+            // remarks for the full finding (confirmed against SCN-001-A's golden-master fixture) and why this is
+            // the enrollment-time arm_id, not an encrypted/blinded randomization output.
+            var subject = ClinicalSubject.Create(subjectCode, studyCode, siteCode, enrollmentIndex,
+                encryptedDemographics, stratFactors: null, request.ArmId);
+            // MIG-SUBJ-017: the .NET replacement for the legacy's own `current_change_reason.get() or "..."`
+            // per-endpoint idiom is this one, uniformly-defaulting accessor — see ICurrentAuditContextAccessor's
+            // own doc comment ("closing the legacy's two-idiom split... giving every reader exactly one
+            // resolution path"). This deliberately does not reproduce the router's distinct literal fallback
+            // text ("Initial Subject Creation"); MIG-SUBJ-017 already unified every such fallback onto one
+            // constant ("system_operation").
+            subject.ReasonForChange = auditContext.ChangeReason;
 
-        await subjects.AddAsync(subject, ct).ConfigureAwait(false);
-        await auditLog.WriteAsync(nameof(ClinicalSubject), subject.Id.ToString(), "ENROLL_SUBJECT",
-            auditContext.UserId, subject.ReasonForChange, oldValues: null, newValues: null, ct).ConfigureAwait(false);
-        await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
+            await subjects.AddAsync(subject, token).ConfigureAwait(false);
+            await auditLog.WriteAsync(nameof(ClinicalSubject), subject.Id.ToString(), "ENROLL_SUBJECT",
+                auditContext.UserId, subject.ReasonForChange, oldValues: null, newValues: null, token).ConfigureAwait(false);
+            await subjects.SaveChangesAsync(token).ConfigureAwait(false);
+            return subject;
+        }, ct).ConfigureAwait(false);
 
-        return SubjectResponse.FromAggregate(subject);
+        return SubjectResponse.FromAggregate(enrolled);
     }
 
     /// <summary>

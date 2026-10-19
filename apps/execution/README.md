@@ -43,15 +43,16 @@ A PI approves a completed form with `POST /api/v1/execution/forms/{id}/approve`,
   deleted the row after it was read, the save is rejected rather than retried over their change.
   `ConcurrencyConflictExceptionHandler` returns **409 Conflict** with `code: CONCURRENCY_CONFLICT`, and nothing
   from the rejected save is written or audited. Clients re-read and re-apply (ADR-2450).
-- Only transient database failures (serialization failures, deadlocks, dropped connections) are retried, by the
-  Polly pipeline in `SaveChangesResiliencePipelineFactory`, and never inside an explicit transaction.
+- Only transient database failures (serialization failures, deadlocks, dropped connections) are retried, by EF
+  Core's retrying execution strategy (`EnableRetryOnFailure`). It retries a whole save, or a whole
+  `ExecuteInTransactionAsync` unit of work such as an enrollment with its per-study advisory lock (ADR-2523).
 - Every change is audited by `GxPAuditInterceptor` in the same save (ADR-2446), attributed to the caller or a
   named `svc:` service account (ADR-2257).
 
 ## Key dependencies
 
 - Project references: `Cadence.Core.Domain`, `Cadence.Kernel.Abstractions`, `Cadence.Security`, `Cadence.Database`, `Cadence.Telemetry`.
-- Packages: `Npgsql.EntityFrameworkCore.PostgreSQL`, `FluentValidation` (+ `DependencyInjectionExtensions`), `Polly`, `MassTransit`, `MassTransit.EntityFrameworkCore`, OpenTelemetry, `Scalar.AspNetCore`; `Microsoft.EntityFrameworkCore.Design` at design time only.
+- Packages: `Npgsql.EntityFrameworkCore.PostgreSQL`, `FluentValidation` (+ `DependencyInjectionExtensions`), `MassTransit`, `MassTransit.EntityFrameworkCore`, OpenTelemetry, `Scalar.AspNetCore`; `Microsoft.EntityFrameworkCore.Design` at design time only.
 
 ## Tests
 

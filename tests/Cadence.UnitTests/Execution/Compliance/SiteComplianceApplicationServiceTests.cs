@@ -47,7 +47,7 @@ public class SiteComplianceApplicationServiceTests
 
     private static SiteComplianceApplicationService CreateService(
         ExecutionDbContext context, RecordingAuditLogWriter? auditLog = null) =>
-        new(new SiteComplianceRepository(context, SaveChangesResiliencePipelineFactory.Create()),
+        new(new SiteComplianceRepository(context),
             auditLog ?? new RecordingAuditLogWriter(),
             new FakeCurrentAuditContextAccessor("user-compliance-1", "system_operation"));
 
@@ -227,7 +227,7 @@ public class SiteComplianceApplicationServiceTests
         await using (var context = CreateContext(databaseName))
         {
             var service = new SiteComplianceApplicationService(
-                new SiteComplianceRepository(context, SaveChangesResiliencePipelineFactory.Create()),
+                new SiteComplianceRepository(context),
                 new EfAuditLogWriter(context),
                 new FakeCurrentAuditContextAccessor("user-compliance-1", "system_operation"));
 

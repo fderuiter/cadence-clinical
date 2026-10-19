@@ -40,7 +40,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 /// that property's current value to <i>one more than its own current original value</i> (not one more than
 /// whatever its current value happens to be). Computing from <c>OriginalValue</c> rather than
 /// <c>CurrentValue</c> makes this idempotent/safe to re-run: when a save fails transiently and
-/// <see cref="Repositories.SaveChangesResiliencePipelineFactory"/> retries it, the next
+/// the execution strategy retries the unit of work, the next
 /// <c>SavingChangesAsync</c> pass recomputes the same token rather than compounding on a value this
 /// interceptor already wrote for the failed attempt. A concurrency conflict is never retried (#4766): the
 /// stale write is rejected with 409.

@@ -39,9 +39,6 @@ public sealed class InMemoryClinicalQueryRepository : IClinicalQueryRepository
         return Task.FromResult(list);
     }
 
-    public Task<System.IAsyncDisposable?> BeginTransactionAsync(CancellationToken cancellationToken) =>
-        Task.FromResult<System.IAsyncDisposable?>(null);
-
     public Task<ClinicalQuery?> GetByIdAsync(QueryId id, CancellationToken cancellationToken)
     {
         _store.TryGetValue(id, out var query);

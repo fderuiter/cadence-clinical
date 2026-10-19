@@ -33,6 +33,23 @@ public sealed class ExecutionAuditInterceptorRegistrationTests
         ShouldHaveEachInterceptorOnce(host.Services);
     }
 
+    /// <summary>
+    /// Transient failures are retried by EF Core's execution strategy around a whole save or unit of work; the Polly
+    /// pipeline around SaveChanges that could not retry inside a transaction is gone (#5383).
+    /// </summary>
+    [Fact]
+    public void ProgramCompositionRoot_RetriesTransientFailuresThroughTheExecutionStrategy()
+    {
+        using var host = new WebApplicationFactory<Cadence.Apps.Execution.Program>().WithWebHostBuilder(builder => builder
+            .UseTestGatewaySecret()
+            .UseTestDemographicsKey()
+            .UseTestPostgresConnectionString());
+        using var scope = host.Services.CreateScope();
+
+        scope.ServiceProvider.GetRequiredService<ExecutionDbContext>().Database.CreateExecutionStrategy()
+            .RetriesOnFailure.Should().BeTrue();
+    }
+
     [Fact]
     public void ExecutionApiFactory_ReplacesTheContextWithoutDuplicatingInterceptors()
     {

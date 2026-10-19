@@ -39,7 +39,7 @@ public class SiteComplianceRepositoryTests
     {
         string databaseName = System.Guid.NewGuid().ToString();
         await using var context = CreateContext(databaseName);
-        var repository = new SiteComplianceRepository(context, SaveChangesResiliencePipelineFactory.Create());
+        var repository = new SiteComplianceRepository(context);
 
         var found = await repository.GetAsync(Study, Site, Milestone, TestContext.Current.CancellationToken);
 
@@ -59,7 +59,7 @@ public class SiteComplianceRepositoryTests
         }
 
         await using var context = CreateContext(databaseName);
-        var repository = new SiteComplianceRepository(context, SaveChangesResiliencePipelineFactory.Create());
+        var repository = new SiteComplianceRepository(context);
 
         var found = await repository.GetAsync(Study, Site, Milestone, TestContext.Current.CancellationToken);
 
@@ -81,7 +81,7 @@ public class SiteComplianceRepositoryTests
         }
 
         await using var context = CreateContext(databaseName);
-        var repository = new SiteComplianceRepository(context, SaveChangesResiliencePipelineFactory.Create());
+        var repository = new SiteComplianceRepository(context);
 
         var found = await repository.GetAsync(Study, Site, Milestone, TestContext.Current.CancellationToken);
 
@@ -104,7 +104,7 @@ public class SiteComplianceRepositoryTests
         }
 
         await using var context = CreateContext(databaseName);
-        var repository = new SiteComplianceRepository(context, SaveChangesResiliencePipelineFactory.Create());
+        var repository = new SiteComplianceRepository(context);
 
         var found = await repository.GetAsync(Study, siteCode: null, Milestone, TestContext.Current.CancellationToken);
 
@@ -119,13 +119,13 @@ public class SiteComplianceRepositoryTests
 
         await using (var writeContext = CreateContext(databaseName))
         {
-            var writeRepository = new SiteComplianceRepository(writeContext, SaveChangesResiliencePipelineFactory.Create());
+            var writeRepository = new SiteComplianceRepository(writeContext);
             await writeRepository.AddAsync(cache, TestContext.Current.CancellationToken);
             await writeRepository.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         await using var readContext = CreateContext(databaseName);
-        var readRepository = new SiteComplianceRepository(readContext, SaveChangesResiliencePipelineFactory.Create());
+        var readRepository = new SiteComplianceRepository(readContext);
         var found = await readRepository.GetAsync(Study, Site, Milestone, TestContext.Current.CancellationToken);
 
         found.Should().NotBeNull();
@@ -151,7 +151,7 @@ public class SiteComplianceRepositoryTests
 
         await using (var updateContext = CreateContext(databaseName))
         {
-            var repository = new SiteComplianceRepository(updateContext, SaveChangesResiliencePipelineFactory.Create());
+            var repository = new SiteComplianceRepository(updateContext);
             var tracked = await repository.GetAsync(Study, Site, Milestone, TestContext.Current.CancellationToken);
             tracked!.ApplyWebhookUpdate(isComplete: true, missingDocuments: new[] { "CV" });
 

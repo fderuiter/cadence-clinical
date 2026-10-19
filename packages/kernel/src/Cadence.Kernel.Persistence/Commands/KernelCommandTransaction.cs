@@ -243,7 +243,9 @@ internal sealed class KernelCommandTransaction(
     public async Task<CommitOutcome> CommitAsync(string resultJson, CancellationToken cancellationToken)
     {
         using var writes = db.PermitPipelineWrites();
+#pragma warning disable RS0030 // Kernel contexts register no retrying execution strategy (KernelDatabase.UseKernelNpgsql; KernelExecutionStrategyTests), so EF permits this transaction and the commit pipeline keeps its own conflict handling.
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+#pragma warning restore RS0030
         ChangedAggregate? aggregate = null;
         try
         {
@@ -332,7 +334,9 @@ internal sealed class KernelCommandTransaction(
     {
         ArgumentNullException.ThrowIfNull(denial);
         using var writes = db.PermitPipelineWrites();
+#pragma warning disable RS0030 // Kernel contexts register no retrying execution strategy (KernelDatabase.UseKernelNpgsql; KernelExecutionStrategyTests), so EF permits this transaction and the commit pipeline keeps its own conflict handling.
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+#pragma warning restore RS0030
 
         AddProvenance("Denied", aggregate: null, denial);
         var payload = JsonSerializer.SerializeToElement(

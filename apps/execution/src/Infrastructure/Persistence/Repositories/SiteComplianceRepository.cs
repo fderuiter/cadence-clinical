@@ -7,8 +7,6 @@ using Cadence.Apps.Execution.Domain.Subjects;
 
 using Microsoft.EntityFrameworkCore;
 
-using Polly;
-
 namespace Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 
 /// <summary>
@@ -16,8 +14,8 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 /// Replaces <c>apps/execution/adapters/repositories.py</c> (compliance-cache lookup methods).
 /// @req:PRD-SUB-001
 /// </summary>
-public sealed class SiteComplianceRepository(ExecutionDbContext context, ResiliencePipeline saveChangesResilience)
-    : ExecutionRepositoryBase(context, saveChangesResilience), ISiteComplianceRepository
+public sealed class SiteComplianceRepository(ExecutionDbContext context)
+    : ExecutionRepositoryBase(context), ISiteComplianceRepository
 {
     // Tracked (not AsNoTracking): SiteComplianceApplicationService.ApplyEtmfWebhookAsync (MIG-SUBJ-020) loads
     // via this method, calls SiteComplianceCache.ApplyWebhookUpdate on the result, and persists the change

@@ -6,8 +6,6 @@ using Cadence.Apps.Execution.Domain.Ports;
 
 using Microsoft.EntityFrameworkCore;
 
-using Polly;
-
 namespace Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 
 /// <summary>
@@ -17,8 +15,8 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 /// @req:PRD-CEC-002
 /// @req:PRD-SYS-053
 /// </summary>
-public sealed class CecRepository(ExecutionDbContext context, ResiliencePipeline saveChangesResilience)
-    : ExecutionRepositoryBase(context, saveChangesResilience), ICecRepository
+public sealed class CecRepository(ExecutionDbContext context)
+    : ExecutionRepositoryBase(context), ICecRepository
 {
     public async Task<CecDossier?> GetDossierByIdAsync(string dossierId, CancellationToken cancellationToken) =>
         await Context.CecDossiers

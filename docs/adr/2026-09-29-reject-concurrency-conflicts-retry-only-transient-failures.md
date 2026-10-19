@@ -46,3 +46,7 @@ The execution service's save pipeline caught `DbUpdateConcurrencyException`, rel
 - `apps/execution`: `ConcurrencyConflictException`, `ConcurrencyConflictExceptionHandler`, `ExecutionRepositoryBase`, `SaveChangesResiliencePipelineFactory`.
 - `packages/database`: `GxPAuditInterceptor` failure rollback and idempotent version stamping; `AuditActions.Restore`.
 - Tests: `ExecutionRepositoryBaseTests` (stale write rejected and the other writer's change kept; two concurrent form updates give one success, one conflict and one audited change; a transient failure is retried with each audit entry written once; the pipeline never retries a conflict) and `ConcurrencyConflictExceptionHandlerTests` (409 with the stable code). PRD-SUB-001, PRD-SYS-053.
+
+## Amendment (2026-10-19): the execution strategy retries, not Polly
+
+[ADR-2523](2026-10-19-explicit-transactions-run-inside-the-execution-strategy.md) replaced `SaveChangesResiliencePipelineFactory` with Npgsql's retrying execution strategy (`EnableRetryOnFailure`), which retries a whole save or a whole `ExecuteInTransactionAsync` unit of work on the same transient failures. It does not retry a concurrency conflict either, so this decision stands: conflicts are rejected with 409.

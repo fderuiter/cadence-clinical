@@ -20,10 +20,9 @@ using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Storage;
 
 using Npgsql;
-
-using Polly;
 
 using Xunit;
 
@@ -31,9 +30,10 @@ namespace Cadence.UnitTests.Execution.Persistence;
 
 /// <summary>
 /// Coverage for <see cref="ExecutionRepositoryBase.SaveChangesAsync"/> and
-/// <see cref="SaveChangesResiliencePipelineFactory"/> (#4766): a concurrency conflict is rejected, never retried
-/// over the other writer's change, while transient database failures are still retried, and a retried save
-/// writes each audit entry exactly once. Uses SQLite for real concurrency-token checks.
+/// <see cref="ExecutionRepositoryBase.ExecuteInTransactionAsync{TResult}"/> (#4766, #5383): a concurrency conflict is
+/// rejected, never retried over the other writer's change, while the execution strategy retries transient database
+/// failures, and a retried save or unit of work writes each audit entry exactly once. Uses SQLite for real
+/// concurrency-token checks, with a retrying strategy that treats PostgreSQL's transient errors as Npgsql does.
 /// </summary>
 public class ExecutionRepositoryBaseTests
 {
@@ -52,7 +52,7 @@ public class ExecutionRepositoryBaseTests
 
     private static ExecutionDbContext CreateContext(SqliteConnection connection, string actor = "writer", params IInterceptor[] extra) =>
         new(new DbContextOptionsBuilder<ExecutionDbContext>()
-            .UseSqlite(connection)
+            .UseSqlite(connection, sqlite => sqlite.ExecutionStrategy(dependencies => new RetryTransientFailures(dependencies)))
             .AddInterceptors((IInterceptor[])[new ConcurrencyTokenIncrementInterceptor(), new GxPAuditInterceptor(() => actor, SystemClock.Instance), .. extra])
             .Options);
 
@@ -73,7 +73,7 @@ public class ExecutionRepositoryBaseTests
 
         // This caller reads the row first...
         await using var thisCallerContext = CreateContext(connection);
-        var repository = new SiteComplianceRepository(thisCallerContext, SaveChangesResiliencePipelineFactory.Create());
+        var repository = new SiteComplianceRepository(thisCallerContext);
         var staleCache = await thisCallerContext.SiteComplianceCaches.SingleAsync(Ct);
 
         // ...then another writer changes and commits it.
@@ -103,7 +103,7 @@ public class ExecutionRepositoryBaseTests
         await SeedComplianceCacheAsync(connection);
 
         await using var thisCallerContext = CreateContext(connection);
-        var repository = new SiteComplianceRepository(thisCallerContext, SaveChangesResiliencePipelineFactory.Create());
+        var repository = new SiteComplianceRepository(thisCallerContext);
         var staleCache = await thisCallerContext.SiteComplianceCaches.SingleAsync(Ct);
         staleCache.ApplyWebhookUpdate(isComplete: true, missingDocuments: ["from-this-caller"]);
 
@@ -138,8 +138,8 @@ public class ExecutionRepositoryBaseTests
 
         await using var firstContext = CreateContext(connection, "first-editor");
         await using var secondContext = CreateContext(connection, "second-editor");
-        var first = new FormSubmissionRepository(firstContext, SaveChangesResiliencePipelineFactory.Create());
-        var second = new FormSubmissionRepository(secondContext, SaveChangesResiliencePipelineFactory.Create());
+        var first = new FormSubmissionRepository(firstContext);
+        var second = new FormSubmissionRepository(secondContext);
 
         // Both read the same version before either saves.
         var firstCopy = (await first.GetForUpdateAsync(formId, Ct))!;
@@ -172,7 +172,7 @@ public class ExecutionRepositoryBaseTests
 
         var failOnce = new FailFirstInsertInterceptor();
         await using var context = CreateContext(connection, "writer", failOnce);
-        var repository = new SiteComplianceRepository(context, SaveChangesResiliencePipelineFactory.Create());
+        var repository = new SiteComplianceRepository(context);
         var cache = SiteComplianceCache.Create(Study, Site, Milestone, true, []);
         context.SiteComplianceCaches.Add(cache);
         AuditActions.Record(context, new AuditAction(
@@ -188,52 +188,37 @@ public class ExecutionRepositoryBaseTests
     }
 
     [Fact]
-    public async Task Pipeline_DoesNotRetryAConcurrencyConflict()
+    public async Task ExecuteInTransactionAsync_AfterATransientFailure_RerunsTheWholeUnitOfWorkOnce()
     {
-        int attempts = 0;
-        var pipeline = SaveChangesResiliencePipelineFactory.Create();
-
-        var act = async () => await pipeline.ExecuteAsync(_ =>
+        using var connection = OpenSqliteConnection();
+        await using (var setup = CreateContext(connection))
         {
-            attempts++;
-            throw new DbUpdateConcurrencyException("conflict");
+            await setup.Database.EnsureCreatedAsync(Ct);
+        }
+
+        var failOnce = new FailFirstInsertInterceptor();
+        await using var context = CreateContext(connection, "writer", failOnce);
+        var repository = new SiteComplianceRepository(context);
+        int runs = 0;
+
+        await repository.ExecuteInTransactionAsync(async ct =>
+        {
+            runs++;
+            var cache = SiteComplianceCache.Create(Study, Site, Milestone, true, []);
+            context.SiteComplianceCaches.Add(cache);
+            AuditActions.Record(context, new AuditAction(
+                nameof(SiteComplianceCache), cache.Id.ToString(), "ETMF_COMPLIANCE_UPDATE", "writer", "Webhook"));
+            await repository.SaveChangesAsync(ct);
+            return cache.Id;
         }, Ct);
 
-        await act.Should().ThrowAsync<DbUpdateConcurrencyException>();
-        attempts.Should().Be(1);
+        failOnce.Failures.Should().Be(1);
+        runs.Should().Be(2, "the transaction is retried as a whole, not the one statement that failed");
+        await using var verify = CreateContext(connection);
+        (await verify.SiteComplianceCaches.AsNoTracking().CountAsync(Ct))
+            .Should().Be(1, "the failed attempt's staged row is discarded before the retry");
+        (await verify.AuditLogEntries.AsNoTracking().CountAsync(Ct)).Should().Be(1);
     }
-
-    [Fact]
-    public async Task Pipeline_RetriesATransientFailure()
-    {
-        int attempts = 0;
-        var pipeline = SaveChangesResiliencePipelineFactory.Create();
-
-        await pipeline.ExecuteAsync(_ =>
-        {
-            attempts++;
-            return attempts == 1
-                ? throw new DbUpdateException("wrapped", SerializationFailure())
-                : ValueTask.CompletedTask;
-        }, Ct);
-
-        attempts.Should().Be(2);
-    }
-
-    [Fact]
-    public void IsTransient_RecognisesOnlyTransientDatabaseFailures()
-    {
-        SaveChangesResiliencePipelineFactory.IsTransient(SerializationFailure()).Should().BeTrue();
-        SaveChangesResiliencePipelineFactory.IsTransient(new DbUpdateException("wrapped", SerializationFailure())).Should().BeTrue();
-        SaveChangesResiliencePipelineFactory.IsTransient(new DbUpdateConcurrencyException("conflict")).Should().BeFalse();
-        SaveChangesResiliencePipelineFactory.IsTransient(
-            new DbUpdateException("unique", new PostgresException("duplicate key", "ERROR", "ERROR", PostgresErrorCodes.UniqueViolation)))
-            .Should().BeFalse();
-        SaveChangesResiliencePipelineFactory.IsTransient(new InvalidOperationException()).Should().BeFalse();
-    }
-
-    private static PostgresException SerializationFailure() =>
-        new("could not serialize access", "ERROR", "ERROR", PostgresErrorCodes.SerializationFailure);
 
     /// <summary>Fails the first INSERT with a transient serialization failure, then lets later ones through.</summary>
     private sealed class FailFirstInsertInterceptor : DbCommandInterceptor
@@ -262,5 +247,15 @@ public class ExecutionRepositoryBaseTests
                 throw SerializationFailure();
             }
         }
+
+        private static PostgresException SerializationFailure() =>
+            new("could not serialize access", "ERROR", "ERROR", PostgresErrorCodes.SerializationFailure);
+    }
+
+    /// <summary>Retries the transient PostgreSQL errors the Npgsql retrying strategy retries, without its delays.</summary>
+    private sealed class RetryTransientFailures(ExecutionStrategyDependencies dependencies)
+        : ExecutionStrategy(dependencies, maxRetryCount: 3, maxRetryDelay: TimeSpan.FromMilliseconds(1))
+    {
+        protected override bool ShouldRetryOn(Exception exception) => exception is PostgresException { IsTransient: true };
     }
 }

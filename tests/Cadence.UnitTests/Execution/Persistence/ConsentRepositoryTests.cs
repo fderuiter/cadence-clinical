@@ -42,7 +42,7 @@ public class ConsentRepositoryTests
         new(new DbContextOptionsBuilder<ExecutionDbContext>().UseSqlite(connection).Options);
 
     private static ConsentRepository CreateRepository(SqliteConnection connection) =>
-        new(CreateContext(connection), SaveChangesResiliencePipelineFactory.Create());
+        new(CreateContext(connection));
 
     private static readonly DateTimeOffset SignedDate = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 

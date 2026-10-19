@@ -7,7 +7,7 @@ namespace Cadence.Apps.Execution.Domain.Ports;
 
 /// <summary>
 /// Persistence port for <see cref="ClinicalSubject"/>. <see cref="EnrollNextIndexAsync"/> is the single
-/// shared, transaction-scoped, advisory-locked code path both <c>SubjectApplicationService.CreateAsync</c>
+/// shared, advisory-locked code path, run inside <see cref="ExecuteInTransactionAsync{TResult}"/>, both <c>SubjectApplicationService.CreateAsync</c>
 /// (MIG-SUBJ-018) and <c>EConsentCompletedConsumer</c> (MIG-SUBJ-021) must call, closing the identical
 /// sequential-enrollment-index race <c>01_spec.md</c> flags independently for both legacy call sites
 /// (<c>02_technical_design.md</c> §4.2). <see cref="GetByIdAsync"/> and <see cref="GetByCodeAsync"/> are
@@ -23,14 +23,13 @@ namespace Cadence.Apps.Execution.Domain.Ports;
 public interface ISubjectRepository
 {
     /// <summary>
-    /// Atomically computes the next sequential <c>enrollment_index</c> for <paramref name="studyCode"/> —
-    /// <c>0</c> for an empty study, otherwise <c>MAX(enrollment_index) + 1</c> — inside a
-    /// <see cref="System.Data.IsolationLevel.RepeatableRead"/> transaction serialized, on PostgreSQL, by a
-    /// <c>pg_advisory_xact_lock(hashtext(studyCode))</c> keyed specifically to <paramref name="studyCode"/>,
-    /// so a concurrent enrollment for a <i>different</i> study is never blocked behind this one. The
-    /// transaction opened here stays live on this repository instance until the caller's subsequent
-    /// <see cref="AddAsync"/> + <see cref="SaveChangesAsync"/> completes (that call commits it) — the lock is
-    /// held for exactly the read-then-insert span, not any longer.
+    /// Computes the next sequential <c>enrollment_index</c> for <paramref name="studyCode"/>: <c>0</c> for an empty
+    /// study, otherwise <c>MAX(enrollment_index) + 1</c>. It must be called inside
+    /// <see cref="ExecuteInTransactionAsync{TResult}"/>, together with the <see cref="AddAsync"/> and
+    /// <see cref="SaveChangesAsync"/> that insert the subject: on PostgreSQL it takes a
+    /// <c>pg_advisory_xact_lock(hashtext(studyCode))</c> keyed to <paramref name="studyCode"/>, held until that
+    /// transaction commits, so two enrollments in one study never read the same maximum and an enrollment in a
+    /// different study is never blocked. Called outside a transaction it throws.
     /// </summary>
     Task<int> EnrollNextIndexAsync(StudyCode studyCode, CancellationToken cancellationToken);
 
@@ -64,12 +63,16 @@ public interface ISubjectRepository
     Task AddAsync(ClinicalSubject subject, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Persists all pending changes tracked by this repository's underlying
-    /// <c>Infrastructure.Persistence.ExecutionDbContext</c> (shared across all three repositories in this
-    /// slice — any one of them can be used as the unit-of-work commit point), completing (committing) any
-    /// transaction <see cref="EnrollNextIndexAsync"/> left open, and wrapped in a
-    /// <c>DbUpdateConcurrencyException</c> retry policy shared by all three repositories
-    /// (<c>Infrastructure.Persistence.Repositories.ExecutionRepositoryBase</c>).
+    /// Persists all pending changes tracked by the underlying <c>ExecutionDbContext</c>, which the Execution
+    /// repositories share, so any one of them can commit the unit of work. A concurrency conflict surfaces as a
+    /// <c>ConcurrencyConflictException</c> (409), never as a retry.
     /// </summary>
     Task SaveChangesAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Runs <paramref name="unitOfWork"/> in one database transaction, committed when it returns. A transient
+    /// failure re-runs the whole unit of work from the start, so it must read what it needs inside the delegate.
+    /// </summary>
+    Task<TResult> ExecuteInTransactionAsync<TResult>(
+        System.Func<CancellationToken, Task<TResult>> unitOfWork, CancellationToken cancellationToken);
 }
