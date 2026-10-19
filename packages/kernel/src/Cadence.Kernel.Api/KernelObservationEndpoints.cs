@@ -207,13 +207,15 @@ public static class KernelObservationEndpoints
             : Problem(result.Error!);
     }
 
-    /// <summary>A kernel error as RFC 9457 problem details, with its stable code (K-ERR-1).</summary>
+    /// <summary>A kernel error as RFC 9457 problem details, with its stable code (K-ERR-1) and any field errors.</summary>
     internal static ProblemHttpResult Problem(KernelError error) =>
         TypedResults.Problem(
             title: error.Code,
             detail: error.Message,
             statusCode: error.HttpStatus,
-            extensions: new Dictionary<string, object?> { ["code"] = error.Code });
+            extensions: error.Errors is { } errors
+                ? new Dictionary<string, object?> { ["code"] = error.Code, ["errors"] = errors }
+                : new Dictionary<string, object?> { ["code"] = error.Code });
 
     private static string IdempotencyKey(HttpContext context) => context.Request.Headers[IdempotencyKeyHeader].ToString().Trim();
 

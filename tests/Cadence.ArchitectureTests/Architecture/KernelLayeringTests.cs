@@ -16,8 +16,9 @@ namespace Cadence.ArchitectureTests.Architecture;
 
 /// <summary>
 /// Enforces the dependency direction between the five kernel assemblies (spec §2.4, #4772):
-/// Abstractions → Domain → Application → Persistence → Api, with Domain and Abstractions free of EF Core,
-/// ASP.NET Core, Npgsql and rendering.
+/// Abstractions → Domain → Application → Persistence → Api, with Abstractions, Domain and Application free of EF Core,
+/// ASP.NET Core, Npgsql and rendering. Application reaches the module SDK, which carries EF Core for module contexts
+/// (ADR-2600), but must not use it: persistence stays behind its ports.
 /// </summary>
 public class KernelLayeringTests
 {
@@ -33,17 +34,20 @@ public class KernelLayeringTests
     private static readonly Assembly Application = typeof(KernelApplicationAssembly).Assembly;
     private static readonly Assembly Persistence = typeof(KernelPersistenceServiceCollectionExtensions).Assembly;
     private static readonly Assembly Api = typeof(KernelApiEndpointRouteBuilderExtensions).Assembly;
+    private static readonly Assembly Modules = typeof(Cadence.Kernel.Modules.IKernelUnitOfWork).Assembly;
 
     /// <summary>
-    /// Validates that Kernel.Domain and Kernel.Abstractions reference no EF Core, ASP.NET Core or Npgsql assembly.
+    /// Validates that Kernel.Abstractions, Kernel.Domain and Kernel.Application reference no EF Core, ASP.NET Core or
+    /// Npgsql assembly.
     /// </summary>
     [Theory(DisplayName = "Kernel_DomainAndAbstractions_AreFreeOfInfrastructure")]
     [InlineData("Cadence.Kernel.Abstractions")]
     [InlineData("Cadence.Kernel.Domain")]
+    [InlineData("Cadence.Kernel.Application")]
     [Trait("Category", "Architecture")]
     public void KernelDomainAndAbstractionsAreFreeOfInfrastructure(string assemblyName)
     {
-        var assembly = new[] { Abstractions, Domain }.Single(a => a.GetName().Name == assemblyName);
+        var assembly = new[] { Abstractions, Domain, Application }.Single(a => a.GetName().Name == assemblyName);
 
         References(assembly)
             .Where(r => InfrastructurePrefixes.Any(p => r.StartsWith(p, StringComparison.Ordinal)))
@@ -78,6 +82,9 @@ public class KernelLayeringTests
             ["Cadence.Kernel.Application", "Cadence.Kernel.Persistence", "Cadence.Kernel.Api"]);
         References(Application).Should().NotContain(["Cadence.Kernel.Persistence", "Cadence.Kernel.Api"]);
         References(Persistence).Should().NotContain("Cadence.Kernel.Api");
+        References(Modules).Should().NotContain(
+            ["Cadence.Kernel.Domain", "Cadence.Kernel.Application", "Cadence.Kernel.Persistence", "Cadence.Kernel.Api"],
+            "the module SDK is what modules reference instead of the kernel's inner layers (ADR-2600)");
     }
 
     private static string[] References(Assembly assembly) =>

@@ -60,7 +60,10 @@ Engines are an organising frame, not deployment units. The rules that shape ever
 - **Forbidden redefinitions (spec §2.3):** applications never declare their own `Study`, `Site`,
   `Participant`, `Observation`, `Person`, roles, rule engines or audit tables; they reference kernel IDs.
 - **Assemblies (spec §2.4):** `Cadence.Kernel.Abstractions` (IDs, ports, `IClock`) → `Domain` →
-  `Application` → `Persistence` (internal) → `Api`; applications reference `Abstractions` only (K-XS-2).
+  `Application` → `Persistence` (internal) → `Api`; applications reference `Abstractions` and the module SDK
+  `Cadence.Kernel.Modules` only (K-XS-2). A module writes clinical state by implementing a command handler from the SDK
+  and sending its command through the kernel pipeline, which commits the module's records with the kernel's audit,
+  events and outbox in one transaction ([ADR-2600](docs/adr/2026-10-19-modules-write-through-the-kernel-command-path.md)).
   `Cadence.Standards` loads public CDISC content into the Standards Registry and `Cadence.Rules` holds the rule
   language, rule packs and `IRuleEvaluator`; both reference `Abstractions` only.
 
@@ -253,9 +256,10 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
   - Bitemporal tables use guarded `tstzrange` columns (ADR-2246).
   - Every change is a command whose aggregate, provenance, events, audit-chain link and outbox rows commit in one
     transaction (ADR-2449).
-  - Background jobs that relay the outbox and verify and seal each tenant's audit chain are written
-    (`AddKernelBackgroundJobs`) but no host registers them yet, so kernel events stay in the outbox and chains are not
-    sealed (#5313). The kernel API host does run the activity projector (ADR-2485).
+  - The kernel API host runs the background jobs (`AddKernelBackgroundJobs`): the outbox relay delivers committed
+    events to the host's in-process consumers, and each tenant's audit chain is verified and sealed hourly. Each pass
+    holds a PostgreSQL leader lock, so one replica runs each job at a time (ADR-2601). The host also runs the activity
+    projector (ADR-2485).
   - The lineage graph (spec §9.6) is written in the same command transaction (`KernelLineageStore`, ADR-2255).
   - The kernel `Observation` owns the clinical value: each correction appends an insert-only revision with its reason,
     checks the expected version and lock, and commits with its audit link, event and outbox row (ADR-2620).

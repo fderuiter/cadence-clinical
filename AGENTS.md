@@ -31,7 +31,8 @@ clinical truth (K-TRUTH-1).
   `Estimand` or `*AuditLog` types, and never use `string` study/site/participant IDs. Reference kernel
   IDs (`StudyId`, `SiteId`, `ParticipantId`, … in `Cadence.Kernel.Abstractions`). Enforced by K-XS-1
   in `tests/Cadence.ArchitectureTests/Architecture`; existing violations sit in a baseline that may only shrink.
-- **K-XS-2:** applications reference `Cadence.Kernel.Abstractions` only, never kernel persistence.
+- **K-XS-2:** applications reference `Cadence.Kernel.Abstractions` and the module SDK `Cadence.Kernel.Modules` only,
+  never kernel Domain, Application, Persistence or Api (ADR-2600).
 - **Time (K-TIME-3):** never call `DateTime.Now/UtcNow` or `DateTimeOffset.Now/UtcNow` (banned in
   [`BannedSymbols.txt`](BannedSymbols.txt), enforced solution-wide across all C# projects in root `Directory.Build.props`). Inject
   `Cadence.Kernel.Time.IClock`; in tests use `FakeClock` from `Cadence.Testing.Time`, or `SystemClock.Instance`

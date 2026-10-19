@@ -39,9 +39,13 @@ public sealed class KernelBackgroundOptions
     public TimeSpan ActivityLookBack { get; set; } = TimeSpan.FromMinutes(5);
 }
 
-/// <summary>Runs <see cref="KernelOutboxRelay"/> continuously: back to back while there is a backlog, then on an interval.</summary>
+/// <summary>
+/// Runs <see cref="KernelOutboxRelay"/> continuously on the replica that holds its leader lock: back to back while there
+/// is a backlog, then on an interval.
+/// </summary>
 internal sealed partial class KernelOutboxRelayService(
     KernelOutboxRelay relay,
+    KernelLeaderLock leader,
     KernelBackgroundOptions options,
     ILogger<KernelOutboxRelayService> logger) : BackgroundService
 {
@@ -52,8 +56,10 @@ internal sealed partial class KernelOutboxRelayService(
             var backlog = false;
             try
             {
-                var result = await relay.RelayBatchAsync(options.RelayBatchSize, stoppingToken).ConfigureAwait(false);
-                backlog = result.MoreDue;
+                await leader.TryRunAsync(
+                    "outbox-relay",
+                    async ct => backlog = (await relay.RelayBatchAsync(options.RelayBatchSize, ct).ConfigureAwait(false)).MoreDue,
+                    stoppingToken).ConfigureAwait(false);
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
@@ -86,6 +92,7 @@ internal sealed partial class KernelOutboxRelayService(
 /// <summary>Runs <see cref="KernelAuditChainSealer.SealAllAsync"/> on <see cref="KernelBackgroundOptions.SealInterval"/>.</summary>
 internal sealed partial class KernelAuditSealingService(
     KernelAuditChainSealer sealer,
+    KernelLeaderLock leader,
     KernelBackgroundOptions options,
     ILogger<KernelAuditSealingService> logger) : BackgroundService
 {
@@ -95,7 +102,7 @@ internal sealed partial class KernelAuditSealingService(
         {
             try
             {
-                await sealer.SealAllAsync(stoppingToken).ConfigureAwait(false);
+                await leader.TryRunAsync("audit-sealing", sealer.SealAllAsync, stoppingToken).ConfigureAwait(false);
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
@@ -113,6 +120,7 @@ internal sealed partial class KernelAuditSealingService(
 /// <summary>Runs <see cref="KernelLineageOrphanCheck.CheckAllAsync"/> on <see cref="KernelBackgroundOptions.LineageCheckInterval"/>.</summary>
 internal sealed partial class KernelLineageCheckService(
     KernelLineageOrphanCheck check,
+    KernelLeaderLock leader,
     KernelBackgroundOptions options,
     ILogger<KernelLineageCheckService> logger) : BackgroundService
 {
@@ -122,7 +130,7 @@ internal sealed partial class KernelLineageCheckService(
         {
             try
             {
-                await check.CheckAllAsync(stoppingToken).ConfigureAwait(false);
+                await leader.TryRunAsync("lineage-check", check.CheckAllAsync, stoppingToken).ConfigureAwait(false);
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {

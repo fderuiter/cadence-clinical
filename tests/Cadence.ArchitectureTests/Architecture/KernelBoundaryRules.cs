@@ -28,6 +28,18 @@ public static class KernelBoundaryRules
     public const string KernelPersistenceAssemblyName = "Cadence.Kernel.Persistence";
 
     /// <summary>
+    /// The kernel assemblies a product module may not reference (K-XS-2, ADR-2600). Modules bind to
+    /// <c>Cadence.Kernel.Abstractions</c> and the module SDK <c>Cadence.Kernel.Modules</c> only.
+    /// </summary>
+    public static readonly IReadOnlyList<string> KernelInternalAssemblyNames =
+    [
+        "Cadence.Kernel.Api",
+        "Cadence.Kernel.Application",
+        "Cadence.Kernel.Domain",
+        KernelPersistenceAssemblyName,
+    ];
+
+    /// <summary>
     /// K-XS-1: type names only the kernel may declare (spec §2), plus the CTMS-specific duplicates
     /// (<c>CtmsStudy</c>, <c>SiteStaffMember</c>) already banned by the #4723 sentinel this rule replaces.
     /// </summary>
@@ -132,33 +144,38 @@ public static class KernelBoundaryRules
         || ToolingAssemblyNames.Contains(name, StringComparer.Ordinal);
 
     /// <summary>
-    /// K-XS-2 (spec §2/§9), compiled form: no non-kernel assembly references <c>Cadence.Kernel.Persistence</c>.
+    /// K-XS-2 (spec §2/§9, ADR-2600), compiled form: no non-kernel assembly references a kernel-internal assembly
+    /// (<see cref="KernelInternalAssemblyNames"/>).
     /// </summary>
     public static IReadOnlyList<string> EvaluateKXs2(IEnumerable<Assembly> assemblies)
     {
         return assemblies
             .Where(a => !IsExemptFromKXs2(a.GetName().Name))
-            .Where(a => a.GetReferencedAssemblies().Any(r =>
-                string.Equals(r.Name, KernelPersistenceAssemblyName, StringComparison.OrdinalIgnoreCase)))
-            .Select(a => Key(KXs2, a.GetName().Name!, KernelPersistenceAssemblyName))
+            .SelectMany(a => a.GetReferencedAssemblies()
+                .Select(r => r.Name)
+                .Where(r => KernelInternalAssemblyNames.Contains(r, StringComparer.OrdinalIgnoreCase))
+                .Select(r => Key(KXs2, a.GetName().Name!, r!)))
+            .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal)
             .ToList();
     }
 
     /// <summary>
-    /// K-XS-2 (spec §2/§9), source form: no project outside the kernel declares a Project/Package/Reference
-    /// item pointing at <c>Cadence.Kernel.Persistence</c>. Takes (project name, csproj XML) pairs so it can be
+    /// K-XS-2 (spec §2/§9, ADR-2600), source form: no project outside the kernel declares a Project/Package/Reference
+    /// item pointing at a kernel-internal assembly (<see cref="KernelInternalAssemblyNames"/>). Takes (project name, csproj XML) pairs so it can be
     /// fed both the repository's real project files and synthetic ones.
     /// </summary>
     public static IReadOnlyList<string> EvaluateKXs2Projects(IEnumerable<(string ProjectName, string CsprojContent)> projects)
     {
         var reference = new Regex(
-            @"<(ProjectReference|PackageReference|Reference)\b[^>]*Include\s*=\s*""[^""]*Cadence\.Kernel\.Persistence\b[^""]*""",
-            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+            @"<(ProjectReference|PackageReference|Reference)\b[^>]*Include\s*=\s*""[^""]*(?<assembly>Cadence\.Kernel\.(Persistence|Application|Domain|Api))\b[^""]*""",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
 
         return projects
-            .Where(p => !IsExemptFromKXs2(p.ProjectName) && reference.IsMatch(p.CsprojContent))
-            .Select(p => Key(KXs2, p.ProjectName, KernelPersistenceAssemblyName))
+            .Where(p => !IsExemptFromKXs2(p.ProjectName))
+            .SelectMany(p => reference.Matches(p.CsprojContent)
+                .Select(m => KernelInternalAssemblyNames.Single(n => n.Equals(m.Groups["assembly"].Value, StringComparison.OrdinalIgnoreCase)))
+                .Select(n => Key(KXs2, p.ProjectName, n)))
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal)
             .ToList();
