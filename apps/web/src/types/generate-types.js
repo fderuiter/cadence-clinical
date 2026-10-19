@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import { fileURLToPath } from "url";
 import * as prettier from "prettier";
 
@@ -8,6 +9,30 @@ const __dirname = path.dirname(__filename);
 
 const OPENAPI_DIR = path.resolve(__dirname, "../../../../docs/openapi/legacy");
 const OUTPUT_PATH = path.resolve(__dirname, "usdm.ts");
+const HASH_PATH = path.resolve(__dirname, ".usdm-hash.json");
+
+function calculateHash() {
+  const hash = crypto.createHash("sha256");
+
+  if (fs.existsSync(__filename)) {
+    hash.update(fs.readFileSync(__filename));
+  }
+
+  if (fs.existsSync(OPENAPI_DIR)) {
+    const files = fs
+      .readdirSync(OPENAPI_DIR)
+      .filter((f) => f.endsWith(".json"))
+      .sort();
+
+    for (const file of files) {
+      const filePath = path.join(OPENAPI_DIR, file);
+      hash.update(file);
+      hash.update(fs.readFileSync(filePath));
+    }
+  }
+
+  return hash.digest("hex");
+}
 
 function translateProperty(prop) {
   if (!prop) return "any";
@@ -68,7 +93,24 @@ function translateProperty(prop) {
   return "any";
 }
 
-async function generate() {
+async function generate(options = {}) {
+  const force = Boolean(options.force || process.argv.includes("--force"));
+  const currentHash = calculateHash();
+
+  if (!force && fs.existsSync(OUTPUT_PATH) && fs.existsSync(HASH_PATH)) {
+    try {
+      const manifest = JSON.parse(fs.readFileSync(HASH_PATH, "utf8"));
+      if (manifest && manifest.hash === currentHash) {
+        console.log(
+          `Type definitions are up-to-date (hash: ${currentHash.slice(0, 8)}). Skipping generation.`
+        );
+        return { generated: false, hash: currentHash };
+      }
+    } catch {
+      // Unparseable or corrupted manifest -> invalidate and regenerate
+    }
+  }
+
   console.log(`Generating types from ${OPENAPI_DIR} to ${OUTPUT_PATH}...`);
   if (!fs.existsSync(OPENAPI_DIR)) {
     console.error(`Schema directory not found at ${OPENAPI_DIR}`);
@@ -131,11 +173,26 @@ async function generate() {
     filepath: OUTPUT_PATH,
   });
   fs.writeFileSync(OUTPUT_PATH, formatted, "utf8");
+  fs.writeFileSync(
+    HASH_PATH,
+    JSON.stringify(
+      { hash: currentHash, generatedAt: new Date().toISOString() },
+      null,
+      2
+    ),
+    "utf8"
+  );
   console.log(
     `Successfully generated ${Object.keys(allSchemas).length} schemas from ${files.length} OpenAPI definitions into ${OUTPUT_PATH}`
   );
+  return { generated: true, hash: currentHash };
 }
 
-await generate();
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))
+) {
+  await generate();
+}
 
-export { translateProperty, generate };
+export { translateProperty, generate, calculateHash };
