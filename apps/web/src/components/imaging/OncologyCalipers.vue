@@ -170,7 +170,11 @@
             <tr
               v-for="a in annotations"
               :key="a.id"
-              :class="{ 'row-new-lesion': a.lesion_type === 'NEW_LESION', 'row-ai-assisted': a.measurement_type === 'AI_AUTO_CONTOUR' || a.is_ai_assisted }"
+              :class="{
+                'row-new-lesion': a.lesion_type === 'NEW_LESION',
+                'row-ai-assisted':
+                  a.measurement_type === 'AI_AUTO_CONTOUR' || a.is_ai_assisted,
+              }"
             >
               <td class="font-bold">
                 {{ a.lesion_id }}
@@ -193,7 +197,15 @@
                 <span
                   v-if="a.measurement_type === 'AI_AUTO_CONTOUR'"
                   class="ai-badge"
-                  :title="a.hounsfield_stats ? 'HU Mean: ' + (a.hounsfield_stats.meanHu || a.hounsfield_stats.mean_hu || 48.5) + ' HU' : 'AI Auto-Segmented Contour'"
+                  :title="
+                    a.hounsfield_stats
+                      ? 'HU Mean: ' +
+                        (a.hounsfield_stats.meanHu ||
+                          a.hounsfield_stats.mean_hu ||
+                          48.5) +
+                        ' HU'
+                      : 'AI Auto-Segmented Contour'
+                  "
                 >
                   🤖 AI
                 </span>

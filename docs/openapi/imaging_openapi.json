@@ -534,6 +534,16 @@
               }
             }
           },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_ProblemDetails"
+                }
+              }
+            }
+          },
           "200": {
             "description": "OK",
             "content": {
@@ -1708,24 +1718,6 @@
             ]
           },
           "timepointName": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "studyId": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "siteId": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "subjectId": {
             "type": [
               "null",
               "string"

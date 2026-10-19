@@ -78,7 +78,10 @@ describe("Interactive AI Lesion Auto-Segmentation & Caliper Fitting", () => {
   });
 
   it("sends ROI seed request and emits caliperCreated event in DicomMprViewer when activeTool is AI_AUTO_SEGMENT", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network error")));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("Network error"))
+    );
 
     const wrapper = mount(DicomMprViewer, {
       props: {

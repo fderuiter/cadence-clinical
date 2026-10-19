@@ -610,7 +610,10 @@ function handleCaliperCreated(event, viewportKey = "single") {
 
   const newId = `annot-${Date.now()}`;
   const lesionNum = currentAnnotations.value.length + 1;
-  const isAi = event.tool === "AI_AUTO_SEGMENT" || event.measurementType === "AI_AUTO_CONTOUR" || event.isAiAssisted;
+  const isAi =
+    event.tool === "AI_AUTO_SEGMENT" ||
+    event.measurementType === "AI_AUTO_CONTOUR" ||
+    event.isAiAssisted;
 
   currentAnnotations.value.push({
     id: newId,
@@ -622,7 +625,8 @@ function handleCaliperCreated(event, viewportKey = "single") {
     measurement_type: isAi ? "AI_AUTO_CONTOUR" : "1D_RECIST",
     is_ai_assisted: isAi,
     hounsfield_stats: event.hounsfieldStats || null,
-    model_version: event.modelVersion || (isAi ? "UNet-ResNet34-2D-v2.1" : null),
+    model_version:
+      event.modelVersion || (isAi ? "UNet-ResNet34-2D-v2.1" : null),
     points: event.points || [],
     fittedCalipers: event.fittedCalipers || [],
     timepoint: originTimepoint,
@@ -638,7 +642,10 @@ function handleCaliperCreated(event, viewportKey = "single") {
 function handleAnnotationUpdated(updated) {
   const index = currentAnnotations.value.findIndex((a) => a.id === updated.id);
   if (index !== -1) {
-    currentAnnotations.value[index] = { ...currentAnnotations.value[index], ...updated };
+    currentAnnotations.value[index] = {
+      ...currentAnnotations.value[index],
+      ...updated,
+    };
   }
 }
 
