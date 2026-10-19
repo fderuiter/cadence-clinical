@@ -9,17 +9,16 @@ metadata:
 
 # Cadence Domain Modeling
 
-Actively build, sharpen, and maintain the project's domain model, ubiquitous language, and architectural taxonomy in [`CONTEXT.md`](../../../../CONTEXT.md) and [`docs/adr/`](../../../../docs/adr/) using Antigravity inspection and editing tools.
-
+Actively build, sharpen, and maintain the project's domain model, ubiquitous language, and architectural taxonomy in [`CONTEXT.md`](../../../CONTEXT.md) and [`docs/adr/`](../../../docs/adr/) using Antigravity inspection and editing tools.
 
 ## Antigravity Tool Execution Matrix
 
-| Phase | Antigravity Tool | Invocation Pattern | Objective |
-| :--- | :--- | :--- | :--- |
-| **Terminology Audit** | `grep_search` | `Query="<term>"`, `SearchPath="apps/"` | Scan codebase for usage of conflicting or legacy terminology |
-| **Glossary Inspection**| `view_file` | `AbsolutePath=".../CONTEXT.md"` | Read current canonical definitions and domain boundaries |
-| **Live Glossary Edit** | `replace_file_content` | Target: `CONTEXT.md`, surgical section edit | Add or update terms under `# Clinical Domain Glossary` |
-| **ADR Scaffolding** | `run_command` | `CommandLine="dotnet cadence scaffold adr ..."` | Scaffold formal decision record when architectural models change |
+| Phase                   | Antigravity Tool       | Invocation Pattern                              | Objective                                                        |
+| :---------------------- | :--------------------- | :---------------------------------------------- | :--------------------------------------------------------------- |
+| **Terminology Audit**   | `grep_search`          | `Query="<term>"`, `SearchPath="apps/"`          | Scan codebase for usage of conflicting or legacy terminology     |
+| **Glossary Inspection** | `view_file`            | `AbsolutePath=".../CONTEXT.md"`                 | Read current canonical definitions and domain boundaries         |
+| **Live Glossary Edit**  | `replace_file_content` | Target: `CONTEXT.md`, surgical section edit     | Add or update terms under `# Clinical Domain Glossary`           |
+| **ADR Scaffolding**     | `run_command`          | `CommandLine="dotnet cadence scaffold adr ..."` | Scaffold formal decision record when architectural models change |
 
 ---
 
@@ -31,7 +30,7 @@ The root `CONTEXT.md` file defines the canonical glossary of clinical concepts, 
 
 1. **Challenge against the glossary**:
    When a discussion uses a term that conflicts with `CONTEXT.md`, call it out immediately.
-   *"Your glossary defines 'Re-Consent Gating' as blocking data capture until an ICF is registered, but you seem to mean retroactive revocation. Which is it?"*
+   _"Your glossary defines 'Re-Consent Gating' as blocking data capture until an ICF is registered, but you seem to mean retroactive revocation. Which is it?"_
 
 2. **Sharpen fuzzy language**:
    Propose precise clinical terms. Avoid vague abstractions like "data item", "form event", or "manager". Use canonical terms: `Encounter`, `Activity`, `BiomedicalConcept`, `eCRF Submission`, `Query Discrepancy`.
@@ -45,7 +44,5 @@ The root `CONTEXT.md` file defines the canonical glossary of clinical concepts, 
 5. **Scaffold ADRs for High-Stakes Decisions (MANDATORY TOOL: `run_command`)**:
    When a decision is hard to reverse, surprising without context, and the result of a real trade-off, scaffold an ADR:
    ```bash
-   dotnet cadence scaffold adr --title "Title" --domain "core-platform" --req "PRD-SYS-xxx"
+   dotnet cadence scaffold adr "Title"
    ```
-
-

@@ -31,7 +31,7 @@ Executes code implementation tasks adhering to .NET 10 Clean Architecture standa
 
 - Consult [`docs/MIGRATION_WORKFLOW.md`](../../../docs/MIGRATION_WORKFLOW.md) and [`CONTEXT.md`](../../../CONTEXT.md).
 - Target directories:
-  - `apps/designer/`: Protocol design / CDISC USDM / Neo4j graph.
+  - `apps/designer/`: Protocol design / CDISC USDM / PostgreSQL protocol version snapshots (Neo4j is retired, ADR-2245).
   - `apps/execution/`: EDC runtime / eCRF observations / PostgreSQL EF Core 10.
   - `apps/gateway/`: YARP reverse proxy, OIDC, and HMAC authentication.
   - `packages/contracts/`: Shared cross-service DTOs and Polly HTTP clients.
@@ -53,7 +53,7 @@ Executes code implementation tasks adhering to .NET 10 Clean Architecture standa
 3. **Immutability & Nullability**:
    - `<Nullable>enable</Nullable>` and `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` are active.
    - Use `record` types with primary constructors and `init` properties.
-   - Return `Result<TValue, DomainError>` monads; avoid throwing exceptions for domain logic.
+   - Return `Result<TValue>` (carrying a `DomainError`) from `packages/engine_core`; avoid throwing exceptions for domain logic.
 4. **Entity Framework Core 10**:
    - Apply `.AsNoTracking()` to all query-only read operations.
    - Attach `GxPAuditInterceptor` on mutating `DbContext` instances to compute SHA-256 Merkle block hashes.

@@ -32,9 +32,11 @@ This skill routes clinical workflows, architectural designs, and engineering tas
 ### 2. Development & Testing
 
 - **[`tdd`](../tdd/SKILL.md)**: Test-Driven Development using `dotnet cadence test --fast`, `Cadence.Testing` fakes (`FakeClock`, `InMemoryRepository<T>`), and `[GxPRequirement]` tags.
-- **[`implement`](../implement/SKILL.md)**: End-to-end task implementation with automated Cadence quality gate validation (`cadence fix --all`, `cadence test`, `cadence gxp sync`).
+- **[`implement`](../implement/SKILL.md)**: End-to-end task implementation with automated Cadence quality gate validation (`cadence fix`, `cadence test`, `cadence gxp sync`).
 - **[`prototype`](../prototype/SKILL.md)**: Rapid exploratory prototyping using `generate_image` and ephemeral scratch directories.
 - **[`diagnosing-bugs`](../diagnosing-bugs/SKILL.md)**: Systematic root-cause debugging using `manage_task` and `schedule` watchdog timers.
+- **[`resolving-merge-conflicts`](../resolving-merge-conflicts/SKILL.md)**: Resolve merge or rebase conflicts; take `main`'s copy of the generated GxP snapshot and regenerate `pnpm-lock.yaml` with `pnpm install`.
+- **[`wizard`](../wizard/SKILL.md)**: Generate an interactive CLI wizard for manual steps such as credential provisioning or SSO setup.
 
 ### 3. Review & Compliance
 
@@ -50,6 +52,15 @@ This skill routes clinical workflows, architectural designs, and engineering tas
 - **[`to-tickets`](../to-tickets/SKILL.md)**: Break features into tracer-bullet tickets mapped to Cadence domain queues.
 - **[`wayfinder`](../wayfinder/SKILL.md)**: Multi-session roadmap planning with subagent delegation.
 - **[`handoff`](../handoff/SKILL.md)**: Session state compaction into an Antigravity artifact with clickable conversation links.
+- **[`triage`](../triage/SKILL.md)**: Categorize and prioritize issues and bug reports across the Cadence domain queues.
+- **[`research`](../research/SKILL.md)**: Investigate technical, CDISC standard or regulatory questions.
+- **[`loop-me`](../loop-me/SKILL.md)** / **[`to-questionnaire`](../to-questionnaire/SKILL.md)**: Scope a workflow by interview, or turn an unresolved decision into a stakeholder questionnaire.
+- **[`teach`](../teach/SKILL.md)** / **[`wait-what`](../wait-what/SKILL.md)**: Explain a concept with worked examples, or re-pitch an explanation that missed.
+
+### 5. Writing
+
+- **[`writing-fragments`](../writing-fragments/SKILL.md)** → **[`writing-beats`](../writing-beats/SKILL.md)** → **[`writing-shape`](../writing-shape/SKILL.md)**: Mine raw ideas, order them into beats, then shape them into a finished document.
+- **[`writing-for-agents`](../writing-for-agents/SKILL.md)**: Author documentation, skills and rules for AI coding agents.
 
 ## Routing Protocol
 

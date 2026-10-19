@@ -9,7 +9,7 @@ metadata:
 
 # Cadence Systematic Bug Diagnosis
 
-A structured diagnosis loop for isolating root causes in multi-service clinical backends, Neo4j graphs, PostgreSQL databases, and Vue 3 frontend components using Antigravity debugging, task, and inspection tools.
+A structured diagnosis loop for isolating root causes in multi-service clinical backends, PostgreSQL databases, and Vue 3 frontend components using Antigravity debugging, task, and inspection tools.
 
 ## Antigravity Tool Execution Matrix
 
@@ -56,11 +56,10 @@ Always construct or run a minimal reproducing test case rather than diagnosing v
 - Check EF Core migrations under `Infrastructure/Persistence/Migrations/`.
 - Verify GxP audit trail triggers (`CreatedAt`, `CreatedBy`, `VersionIndex`).
 
-### B. Designer Backend & Neo4j (`apps/designer`)
+### B. Designer Backend (`apps/designer`)
 
-- Check Neo4j async session lifecycle and Cypher parameter bindings.
 - Validate USDM domain models against CDISC specifications.
-- Verify graph relationship integrity (predecessor links, immutable version branches).
+- Verify protocol version snapshot integrity (content hash, predecessor links, immutable approved versions; ADR-2245, ADR-2452).
 
 ### C. Gateway & Security (`apps/gateway`)
 
