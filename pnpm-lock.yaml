@@ -20,10 +20,10 @@ importers:
         version: 10.0.1(eslint@10.11.0)
       '@typescript-eslint/eslint-plugin':
         specifier: ^8.68.0
-        version: 8.68.0(@typescript-eslint/parser@8.71.1(eslint@10.11.0)(typescript@6.0.3))(eslint@10.11.0)(typescript@6.0.3)
+        version: 8.68.0(@typescript-eslint/parser@8.71.2(eslint@10.11.0)(typescript@6.0.3))(eslint@10.11.0)(typescript@6.0.3)
       '@typescript-eslint/parser':
-        specifier: ^8.71.0
-        version: 8.71.1(eslint@10.11.0)(typescript@6.0.3)
+        specifier: ^8.71.2
+        version: 8.71.2(eslint@10.11.0)(typescript@6.0.3)
       '@vitest/coverage-v8':
         specifier: ^5.0.2
         version: 5.0.2(vitest@5.0.5)
@@ -38,7 +38,7 @@ importers:
         version: 10.11.0
       eslint-plugin-vue:
         specifier: ^10.10.0
-        version: 10.10.0(@typescript-eslint/parser@8.71.1(eslint@10.11.0)(typescript@6.0.3))(eslint@10.11.0)(vue-eslint-parser@10.4.1(eslint@10.11.0))
+        version: 10.10.0(@typescript-eslint/parser@8.71.2(eslint@10.11.0)(typescript@6.0.3))(eslint@10.11.0)(vue-eslint-parser@10.4.1(eslint@10.11.0))
       eslint-plugin-vuejs-accessibility:
         specifier: ^2.6.2
         version: 2.6.2(eslint@10.11.0)(globals@17.8.0)
@@ -4018,10 +4018,10 @@ snapshots:
 
   '@types/web-bluetooth@0.0.21': {}
 
-  '@typescript-eslint/eslint-plugin@8.68.0(@typescript-eslint/parser@8.71.1(eslint@10.11.0)(typescript@6.0.3))(eslint@10.11.0)(typescript@6.0.3)':
+  '@typescript-eslint/eslint-plugin@8.68.0(@typescript-eslint/parser@8.71.2(eslint@10.11.0)(typescript@6.0.3))(eslint@10.11.0)(typescript@6.0.3)':
     dependencies:
       '@eslint-community/regexpp': 4.12.2
-      '@typescript-eslint/parser': 8.71.1(eslint@10.11.0)(typescript@6.0.3)
+      '@typescript-eslint/parser': 8.71.2(eslint@10.11.0)(typescript@6.0.3)
       '@typescript-eslint/scope-manager': 8.68.0
       '@typescript-eslint/type-utils': 8.68.0(eslint@10.11.0)(typescript@6.0.3)
       '@typescript-eslint/utils': 8.68.0(eslint@10.11.0)(typescript@6.0.3)
@@ -4877,7 +4877,7 @@ snapshots:
 
   escape-string-regexp@4.0.0: {}
 
-  eslint-plugin-vue@10.10.0(@typescript-eslint/parser@8.71.1(eslint@10.11.0)(typescript@6.0.3))(eslint@10.11.0)(vue-eslint-parser@10.4.1(eslint@10.11.0)):
+  eslint-plugin-vue@10.10.0(@typescript-eslint/parser@8.71.2(eslint@10.11.0)(typescript@6.0.3))(eslint@10.11.0)(vue-eslint-parser@10.4.1(eslint@10.11.0)):
     dependencies:
       '@eslint-community/eslint-utils': 4.10.1(eslint@10.11.0)
       eslint: 10.11.0
@@ -4888,7 +4888,7 @@ snapshots:
       vue-eslint-parser: 10.4.1(eslint@10.11.0)
       xml-name-validator: 5.0.0
     optionalDependencies:
-      '@typescript-eslint/parser': 8.71.1(eslint@10.11.0)(typescript@6.0.3)
+      '@typescript-eslint/parser': 8.71.2(eslint@10.11.0)(typescript@6.0.3)
 
   eslint-plugin-vue@10.10.0(@typescript-eslint/parser@8.71.2(eslint@10.11.0)(typescript@6.0.3))(eslint@10.11.0)(vue-eslint-parser@10.4.1(eslint@10.11.0)):
     dependencies:
