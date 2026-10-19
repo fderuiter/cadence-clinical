@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Application.Evidence;
 using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Application.Intelligence;
@@ -23,6 +24,7 @@ using FluentValidation;
 using FluentValidation.Results;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Cadence.Kernel.Application.Commands;
 
@@ -35,6 +37,7 @@ namespace Cadence.Kernel.Application.Commands;
 public sealed class KernelCommandPipeline(
     IServiceProvider services,
     ICurrentActor currentActor,
+    ConsumerActor consumerActor,
     IAuthorizer authorizer,
     IKernelUnitOfWorkFactory unitOfWorkFactory,
     IClock clock) : IKernelCommandSender
@@ -56,7 +59,7 @@ public sealed class KernelCommandPipeline(
             return invalid;
         }
 
-        if (currentActor.Actor is not { } actor)
+        if ((consumerActor.Actor ?? currentActor.Actor) is not { } actor)
         {
             return KernelErrors.ActorUnresolved;
         }
@@ -247,6 +250,7 @@ public static class KernelApplicationServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
         services.AddScoped<IKernelCommandSender, KernelCommandPipeline>();
+        services.TryAddScoped<ConsumerActor>();
         services.AddTransient<ICommandHandler<ProvisionTenant, TenantId>, ProvisionTenantHandler>();
         services.AddTransient<ICommandHandler<RegisterOrganization, OrganizationId>, RegisterOrganizationHandler>();
         services.AddKernelKnowledgeHandlers();

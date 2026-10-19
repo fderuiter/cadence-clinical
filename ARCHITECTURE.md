@@ -256,9 +256,10 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
   - Bitemporal tables use guarded `tstzrange` columns (ADR-2246).
   - Every change is a command whose aggregate, provenance, events, audit-chain link and outbox rows commit in one
     transaction (ADR-2449).
-  - Background jobs that relay the outbox and verify and seal each tenant's audit chain are written
-    (`AddKernelBackgroundJobs`) but no host registers them yet, so kernel events stay in the outbox and chains are not
-    sealed (#5313). The kernel API host does run the activity projector (ADR-2485).
+  - The kernel API host runs the background jobs (`AddKernelBackgroundJobs`): the outbox relay delivers committed
+    events to the host's in-process consumers, and each tenant's audit chain is verified and sealed hourly. Each pass
+    holds a PostgreSQL leader lock, so one replica runs each job at a time (ADR-2601). The host also runs the activity
+    projector (ADR-2485).
   - The lineage graph (spec §9.6) is written in the same command transaction (`KernelLineageStore`, ADR-2255).
   - The kernel `Observation` owns the clinical value: each correction appends an insert-only revision with its reason,
     checks the expected version and lock, and commits with its audit link, event and outbox row (ADR-2620).

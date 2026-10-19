@@ -5,6 +5,7 @@ using Cadence.Kernel.Api;
 using Cadence.Kernel.Application.Activity;
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Application.Search;
 using Cadence.Kernel.Application.Simulation;
@@ -63,7 +64,13 @@ builder.Services
 
     // Writes: the kernel command pipeline (ADR-2449). Observation reads and writes are the first module writes it serves
     // (ADR-2620); every write is authorized by the authority evaluator above and commits state, audit and outbox together.
-    .AddKernelCommandPipeline();
+    .AddKernelCommandPipeline()
+
+    // After commit (ADR-2601): the outbox relay delivers committed events to the consumers registered in this host,
+    // and the audit chains are verified and sealed. Each job takes a PostgreSQL leader lock per pass, so with several
+    // replicas one runs it at a time.
+    .AddKernelInProcessEvents()
+    .AddKernelBackgroundJobs();
 builder.Services.AddScoped<ServiceActorScope>();
 builder.Services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
 builder.Services.AddSingleton<IKernelChangeReason, SignedChangeReason>();

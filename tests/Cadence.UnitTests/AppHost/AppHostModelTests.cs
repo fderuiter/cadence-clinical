@@ -108,6 +108,19 @@ public sealed class AppHostModelTests
         resources.Keys.Should().Contain(["postgres", "cadence", "keycloak", "minio"]);
     }
 
+    /// <summary>The subject portal runs beside the web app on its compose port and calls the AppHost's gateway (#5335).</summary>
+    [Fact]
+    public async Task FullProfile_RunsTheSubjectPortalOnItsComposePort()
+    {
+        var resources = await ResourcesAsync();
+
+        var portal = resources.Should().ContainKey("subject-portal").WhoseValue.Should().BeOfType<ViteAppResource>().Subject;
+        portal.Annotations.OfType<EndpointAnnotation>().Single(e => e.Name == "http").Port.Should().Be(5174);
+        var environment = await EnvironmentAsync(portal);
+        environment["VITE_API_BASE_URL"].Should().BeOfType<EndpointReference>();
+        environment.Keys.Should().Contain(["VITE_KEYCLOAK_URL", "VITE_KEYCLOAK_REALM", "VITE_KEYCLOAK_CLIENT_ID"]);
+    }
+
     [Fact]
     public async Task CoreProfile_RunsOnlyWhatTheCanvasCalls()
     {
@@ -116,6 +129,7 @@ public sealed class AppHostModelTests
 
         projects.Keys.Should().BeEquivalentTo("gateway", "execution", "kernel");
         resources.Should().ContainKey("web");
+        resources.Should().NotContainKey("subject-portal");
         resources.Should().NotContainKey("minio");
         foreach (var (name, project) in projects)
         {

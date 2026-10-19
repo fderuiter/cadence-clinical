@@ -40,7 +40,7 @@ All reads are `GET`, need the gateway-signed caller identity, run in the caller'
 
 ### Observation writes (ADR-2620)
 
-The host also runs the kernel command pipeline (`AddKernelCommandPipeline`), so a write commits its state, audit chain link, event and outbox row in one PostgreSQL transaction. Each write needs an `Idempotency-Key` header and takes its reason for change only from the gateway-signed identity (`X-Change-Reason`, ADR-2495; `SignedChangeReason`). Each is authorized against the observation's enrollment.
+The host also runs the kernel command pipeline (`AddKernelCommandPipeline`), so a write commits its state, audit chain link, event and outbox row in one PostgreSQL transaction. After commit, its background jobs relay the outbox to the in-process event consumers and seal the audit chains, each under a PostgreSQL leader lock so that one replica runs a job at a time (ADR-2601). Each write needs an `Idempotency-Key` header and takes its reason for change only from the gateway-signed identity (`X-Change-Reason`, ADR-2495; `SignedChangeReason`). Each is authorized against the observation's enrollment.
 
 | Route (`/api/v1/kernel/…`)            | Does                                                                                                                                                                                              |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
