@@ -28,27 +28,7 @@ Executes an interactive design-tree interview (`grilling`) combined with live do
 1. Read [`CONTEXT.md`](../../../CONTEXT.md) and relevant ADRs in [`docs/adr/`](../../../docs/adr/) to anchor domain concepts.
 2. Initialize the **Design Tree**: Map the root goal into branching prerequisite and downstream decisions.
 3. Compute the **Frontier**: Identify all questions whose prerequisites are settled.
-4. **MANDATORY TOOL INVOCATION (`ask_question`)**:
-   You **MUST** call the `ask_question` tool to present frontier questions to the user. **Do NOT print questions as plain markdown text.**
-   ```json
-   {
-     "questions": [
-       {
-         "question": "Which architectural pattern should govern <Feature>?",
-         "options": [
-           "(Recommended) Option A: Implement deep domain engine in apps/<service> with in-memory double",
-           "Option B: Expose direct REST endpoints in apps/gateway with client proxy routing"
-         ],
-         "is_multi_select": false
-       }
-     ]
-   }
-   ```
-   - **Rules**:
-     - Format options as the user's direct response (e.g. _"Use PostgreSQL JSONB for eCRF observations"_ rather than _"I will configure JSONB"_).
-     - Prefix the recommended answer with `(Recommended)` and list it first.
-     - Never add a manual "Other" option (provided by UI).
-     - Set `is_multi_select: true` if multiple options can be chosen together.
+4. Ask each round of frontier questions through `ask_question`, following the rules in [`grilling`](../grilling/SKILL.md#mandatory-tool-invocation-ask_question) (recommended option first, options phrased as the user's answer, no manual "Other", multi-select only for orthogonal choices). For example, phrase an option as _"Use PostgreSQL JSONB for eCRF observations"_ rather than _"I will configure JSONB"_.
 5. Perform fact-finding autonomously using `grep_search` and `view_file` before asking questions; never ask the user for information you can look up yourself.
 6. When terms crystallize, update `CONTEXT.md` inline immediately using `replace_file_content`.
 7. When significant architectural trade-offs are settled, scaffold an ADR (`dotnet cadence scaffold adr "Title"`).

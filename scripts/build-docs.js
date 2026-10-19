@@ -131,8 +131,8 @@ function rewriteLinks(content) {
         cleanUrl = "LICENSE.md";
       } else if (
         !cleanUrl.startsWith("../") &&
-        fs.existsSync(path.join(repoRoot, cleanUrl)) &&
-        !fs.existsSync(path.join(repoRoot, "docs", cleanUrl))
+        fs.existsSync(path.join(repoRoot, withoutAnchor(cleanUrl))) &&
+        !fs.existsSync(path.join(repoRoot, "docs", withoutAnchor(cleanUrl)))
       ) {
         cleanUrl = "../" + cleanUrl;
       }
@@ -162,8 +162,8 @@ function rewriteLinks(content) {
         cleanUrl = "LICENSE.md";
       } else if (
         !cleanUrl.startsWith("../") &&
-        fs.existsSync(path.join(repoRoot, cleanUrl)) &&
-        !fs.existsSync(path.join(repoRoot, "docs", cleanUrl))
+        fs.existsSync(path.join(repoRoot, withoutAnchor(cleanUrl))) &&
+        !fs.existsSync(path.join(repoRoot, "docs", withoutAnchor(cleanUrl)))
       ) {
         cleanUrl = "../" + cleanUrl;
       }
@@ -173,6 +173,15 @@ function rewriteLinks(content) {
   );
 
   return rewritten;
+}
+
+/**
+ * Drops a link's `#anchor`, so `CONTRIBUTING.md#3-local-checks` is checked as the file `CONTRIBUTING.md`.
+ * @param {string} url - The link target.
+ * @returns {string} The target without its anchor.
+ */
+function withoutAnchor(url) {
+  return url.split("#")[0];
 }
 
 /**

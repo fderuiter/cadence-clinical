@@ -6143,12 +6143,12 @@
               }
             }
           },
-          "200": {
-            "description": "OK",
+          "501": {
+            "description": "Not Implemented",
             "content": {
-              "application/json": {
+              "application/problem\u002Bjson": {
                 "schema": {
-                  "$ref": "#/components/schemas/Interop_EhrPollResponse"
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
                 }
               }
             }
@@ -18943,46 +18943,6 @@
               "null",
               "string"
             ]
-          }
-        }
-      },
-      "Interop_EhrPollResponse": {
-        "required": [
-          "success",
-          "pollCount",
-          "newCandidatesCount",
-          "candidates",
-          "message"
-        ],
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean"
-          },
-          "pollCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "newCandidatesCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "candidates": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Interop_EhrCandidateItemDto"
-            }
-          },
-          "message": {
-            "type": "string"
           }
         }
       },

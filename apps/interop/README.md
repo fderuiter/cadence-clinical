@@ -39,6 +39,14 @@ study (#5402,
 
 The eSource routes (`/api/v1/interop/esource/**`) need `esource_endpoint:read`/`configure` or `esource_candidate:read`/`ingest`/`reconcile`/`query` (`PermissionMatrix.Interop.cs`). Site staff ingest and reconcile; monitors and data management raise queries. Polling, ingesting and reconciling refuse a study the caller is not assigned to, lists show only the caller's studies, and signatures and audit entries name the signed caller ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
 
+Reconciliation candidates come only from source data (#5432):
+
+- `POST /esource/ingest` parses the posted FHIR `Bundle` (`RawFhirBundleJson`; `SiteId` and `EhrSystemId` are required). `FhirObservationMapper` turns each Observation with an id, an `effectiveDateTime`, a numeric `valueQuantity` and a supported LOINC code (systolic and diastolic blood pressure, pulse, temperature, weight, height, glucose) into one candidate. The candidate carries the bundle's value, unit, time and raw resource. Unsupported Observations are skipped and named in the response, and a resource already filed for the same variable is not filed twice.
+- Candidates are not compared with the eCRF here, so their discrepancy type is `NOT_COMPARED` and they carry no eCRF value.
+- A payload that is not a bundle, or a bundle with nothing to map, returns `400` and writes nothing.
+- `POST /esource/poll` returns `501` until a FHIR client for registered endpoints exists. It never fabricates rows.
+- `GET /esource/candidates` only reads: an empty study returns an empty page.
+
 ## Persistence
 
 `AddCadencePostgresDbContext<InteropDbContext>()` from [packages/database](../../packages/database/README.md) connects to the shared `cadence` database with its search path set to the `interop` schema ([ADR-2447](../../docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)). The connection string comes from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only the Development environment falls back to `cadence` on `localhost:5432`, and other environments fail at startup. `docker/docker-compose.yml` points it at the compose PostgreSQL and sets `Database__MigrateOnStartup=true`, so the service applies its migrations when it starts.

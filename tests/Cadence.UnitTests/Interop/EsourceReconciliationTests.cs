@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
@@ -52,6 +53,39 @@ public class EsourceReconciliationTests
             AssignedStudies = studies.Length == 0 ? ["*"] : studies,
         };
         return context;
+    }
+
+    /// <summary>
+    /// A FHIR bundle with a systolic blood pressure and a glucose Observation, plus one Observation without a supported
+    /// code that ingestion skips.
+    /// </summary>
+    private const string SampleBundle = """
+        {
+          "resourceType": "Bundle",
+          "type": "collection",
+          "entry": [
+            { "resource": { "resourceType": "Patient", "id": "pat-1" } },
+            { "resource": { "resourceType": "Observation", "id": "obs-bp-1", "status": "final",
+                "code": { "coding": [ { "system": "http://loinc.org", "code": "8480-6", "display": "Systolic blood pressure" } ] },
+                "effectiveDateTime": "2026-09-30T08:15:00Z",
+                "valueQuantity": { "value": 128, "unit": "mmHg", "system": "http://unitsofmeasure.org", "code": "mm[Hg]" } } },
+            { "resource": { "resourceType": "Observation", "id": "obs-gluc-1", "status": "final",
+                "code": { "coding": [ { "system": "http://loinc.org", "code": "2339-0" } ] },
+                "effectiveDateTime": "2026-09-30T07:00:00Z",
+                "valueQuantity": { "value": 105, "unit": "mg/dL" } } },
+            { "resource": { "resourceType": "Observation", "id": "obs-other-1", "status": "final",
+                "code": { "coding": [ { "system": "http://loinc.org", "code": "0000-0" } ] },
+                "effectiveDateTime": "2026-09-30T07:00:00Z",
+                "valueQuantity": { "value": 1 } } }
+          ]
+        }
+        """;
+
+    private static async Task IngestSampleBundleAsync(InteropDbContext db, FakeClock clock, HttpContext httpContext, CancellationToken ct)
+    {
+        var result = await EsourceEndpoints.IngestFhirBundleAsync(
+            new FhirBundleIngestRequest("STUDY-101", "SITE-01", "PAT-001", null, "EPIC", SampleBundle), db, clock, httpContext, ct);
+        result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<FhirBundleIngestResponse>>();
     }
 
     [Fact]
@@ -124,37 +158,96 @@ public class EsourceReconciliationTests
         verifyObj.Subject.Should().Be("cadence-client-99");
     }
 
+    /// <summary>
+    /// A posted FHIR bundle becomes one candidate per supported Observation, carrying the bundle's own value, unit,
+    /// time and raw resource, and nothing is claimed about the eCRF (#5432).
+    /// </summary>
     [Fact]
     [GxPRequirement("PRD-ESR-001")]
-    public async Task PollHospitalEhr_IngestsCandidatesWithDiscrepancyClassification()
+    public async Task IngestFhirBundle_MapsEachSupportedObservationFromTheBundle()
     {
-        // Arrange
-        var dbName = $"EhrPollTest_{Guid.NewGuid():N}";
-        using var db = CreateDbContext(dbName);
+        using var db = CreateDbContext($"EhrIngestTest_{Guid.NewGuid():N}");
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
-        var httpContext = CreateMockHttpContext();
+        var ct = TestContext.Current.CancellationToken;
 
-        var request = new EhrPollRequest(
-            EndpointId: null,
-            StudyId: "STUDY-101",
-            SiteId: "SITE-01",
-            SubjectId: "PAT-001",
-            PrivateKeyPem: null);
+        var result = await EsourceEndpoints.IngestFhirBundleAsync(
+            new FhirBundleIngestRequest("STUDY-101", "SITE-01", "PAT-001", null, "EPIC", SampleBundle), db, clock, CreateMockHttpContext(), ct);
 
-        // Act
-        var result = await EsourceEndpoints.PollHospitalEhrAsync(request, db, clock, httpContext, TestContext.Current.CancellationToken);
+        var response = result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<FhirBundleIngestResponse>>().Subject.Value!;
+        response.CandidateCount.Should().Be(2);
+        response.Message.Should().Contain("skipped 1");
 
-        // Assert
-        var pollObj = result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<EhrPollResponse>>().Subject.Value;
-        pollObj.Should().NotBeNull();
-        pollObj!.Success.Should().BeTrue();
-        pollObj.Candidates.Should().HaveCountGreaterThanOrEqualTo(5);
+        var stored = await db.EhrReconciliationCandidateRecords.OrderBy(c => c.TargetVariable).ToListAsync(ct);
+        stored.Select(c => c.TargetVariable).Should().Equal("GLUC", "SYSBP");
+        var bp = stored.Single(c => c.TargetVariable == "SYSBP");
+        bp.FhirResourceId.Should().Be("obs-bp-1");
+        bp.CandidateValueJson.Should().Be("128");
+        bp.CandidateUnit.Should().Be("mmHg");
+        bp.SourceTimestamp.Should().Be(new DateTimeOffset(2026, 9, 30, 8, 15, 0, TimeSpan.Zero));
+        bp.CurrentEcrfValueJson.Should().BeNull();
+        bp.DiscrepancyType.Should().Be("NOT_COMPARED");
+        bp.RawFhirResourceJson.Should().Contain("obs-bp-1");
+        stored.Should().OnlyContain(c => c.StudyId == "STUDY-101" && c.SiteId == "SITE-01" && c.EhrSystemId == "EPIC");
+    }
 
-        pollObj.Candidates.Should().Contain(c => c.DiscrepancyType == "NEW_FIELD");
-        pollObj.Candidates.Should().Contain(c => c.DiscrepancyType == "VALUE_MISMATCH");
-        pollObj.Candidates.Should().Contain(c => c.DiscrepancyType == "UNIT_MISMATCH");
-        pollObj.Candidates.Should().Contain(c => c.DiscrepancyType == "DATE_MISMATCH");
-        pollObj.Candidates.Should().Contain(c => c.DiscrepancyType == "EXACT_MATCH");
+    /// <summary>Ingesting the same bundle twice files each resource once.</summary>
+    [Fact]
+    public async Task IngestFhirBundle_Twice_DoesNotDuplicateCandidates()
+    {
+        using var db = CreateDbContext($"EhrIngestTwice_{Guid.NewGuid():N}");
+        var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+        var ct = TestContext.Current.CancellationToken;
+
+        await IngestSampleBundleAsync(db, clock, CreateMockHttpContext(), ct);
+        await IngestSampleBundleAsync(db, clock, CreateMockHttpContext(), ct);
+
+        (await db.EhrReconciliationCandidateRecords.CountAsync(ct)).Should().Be(2);
+    }
+
+    /// <summary>A payload that is not a FHIR bundle, or a bundle with nothing mappable, is refused and writes nothing.</summary>
+    [Theory]
+    [InlineData("not json")]
+    [InlineData("{}")]
+    [InlineData("""{"resourceType":"Patient","id":"p1"}""")]
+    [InlineData("""{"resourceType":"Bundle","entry":[]}""")]
+    [InlineData("""{"resourceType":"Bundle","entry":[{"resource":{"resourceType":"Observation","id":"x","code":{"coding":[{"system":"http://loinc.org","code":"0000-0"}]}}}]}""")]
+    public async Task IngestFhirBundle_WithNothingToMap_IsRefusedAndWritesNothing(string bundle)
+    {
+        using var db = CreateDbContext($"EhrIngestBad_{Guid.NewGuid():N}");
+        var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+        var ct = TestContext.Current.CancellationToken;
+
+        var result = await EsourceEndpoints.IngestFhirBundleAsync(
+            new FhirBundleIngestRequest("STUDY-101", "SITE-01", "PAT-001", null, "EPIC", bundle), db, clock, CreateMockHttpContext(), ct);
+
+        result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Which.StatusCode.Should().Be(400);
+        (await db.EhrReconciliationCandidateRecords.CountAsync(ct)).Should().Be(0);
+    }
+
+    /// <summary>With no EHR client configured, polling answers 501 instead of inventing candidates (#5432).</summary>
+    [Fact]
+    public void PollHospitalEhr_WithNoEhrClient_Answers501()
+    {
+        var result = EsourceEndpoints.PollHospitalEhrAsync(
+            new EhrPollRequest(EndpointId: null, StudyId: "STUDY-101", SiteId: "SITE-01", SubjectId: "PAT-001", PrivateKeyPem: null),
+            CreateMockHttpContext());
+
+        result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Which.StatusCode.Should().Be(501);
+    }
+
+    /// <summary>Listing candidates for a study with none returns an empty page and writes nothing (#5432).</summary>
+    [Fact]
+    public async Task ListCandidates_OnAnEmptyStudy_ReturnsNothingAndWritesNothing()
+    {
+        using var db = CreateDbContext($"EhrListEmpty_{Guid.NewGuid():N}");
+        var ct = TestContext.Current.CancellationToken;
+
+        var result = await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, CreateMockHttpContext(), ct);
+
+        var page = result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<EhrCandidateListResponse>>().Subject.Value!;
+        page.TotalCount.Should().Be(0);
+        page.Candidates.Should().BeEmpty();
+        (await db.EhrReconciliationCandidateRecords.CountAsync(ct)).Should().Be(0);
     }
 
     [Fact]
@@ -168,8 +261,8 @@ public class EsourceReconciliationTests
         var httpContext = CreateMockHttpContext("crc_sarah", "crc");
 
         // Seed candidate list
-        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, httpContext, TestContext.Current.CancellationToken);
-        var firstCandidate = await db.EhrReconciliationCandidateRecords.FirstAsync(c => c.DiscrepancyType == "VALUE_MISMATCH", TestContext.Current.CancellationToken);
+        await IngestSampleBundleAsync(db, clock, httpContext, TestContext.Current.CancellationToken);
+        var firstCandidate = await db.EhrReconciliationCandidateRecords.FirstAsync(c => c.TargetVariable == "SYSBP", TestContext.Current.CancellationToken);
 
         var acceptReq = new EhrReconcileAcceptRequest(
             CandidateId: firstCandidate.Id,
@@ -205,7 +298,7 @@ public class EsourceReconciliationTests
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
         var httpContext = CreateMockHttpContext("crc_sarah", "crc");
 
-        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, httpContext, TestContext.Current.CancellationToken);
+        await IngestSampleBundleAsync(db, clock, httpContext, TestContext.Current.CancellationToken);
         var firstCandidate = await db.EhrReconciliationCandidateRecords.FirstAsync(TestContext.Current.CancellationToken);
 
         // Test 1: Empty rationale fails
@@ -246,8 +339,8 @@ public class EsourceReconciliationTests
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
         var httpContext = CreateMockHttpContext("crc_sarah", "crc");
 
-        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, httpContext, TestContext.Current.CancellationToken);
-        var mismatchCandidate = await db.EhrReconciliationCandidateRecords.FirstAsync(c => c.DiscrepancyType == "VALUE_MISMATCH", TestContext.Current.CancellationToken);
+        await IngestSampleBundleAsync(db, clock, httpContext, TestContext.Current.CancellationToken);
+        var mismatchCandidate = await db.EhrReconciliationCandidateRecords.FirstAsync(c => c.TargetVariable == "SYSBP", TestContext.Current.CancellationToken);
 
         var queryReq = new EhrReconcileQueryRequest(
             CandidateId: mismatchCandidate.Id,
@@ -281,7 +374,7 @@ public class EsourceReconciliationTests
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
         var httpContext = CreateMockHttpContext("crc_sarah");
 
-        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, httpContext, TestContext.Current.CancellationToken);
+        await IngestSampleBundleAsync(db, clock, httpContext, TestContext.Current.CancellationToken);
         var candidate = await db.EhrReconciliationCandidateRecords.FirstAsync(TestContext.Current.CancellationToken);
 
         // Perform an accept action to generate audit log
@@ -309,7 +402,7 @@ public class EsourceReconciliationTests
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
         var httpContext = CreateMockHttpContext("crc_sarah", "crc");
 
-        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, httpContext, TestContext.Current.CancellationToken);
+        await IngestSampleBundleAsync(db, clock, httpContext, TestContext.Current.CancellationToken);
         var initialCandidates = await db.EhrReconciliationCandidateRecords.Take(2).ToListAsync(TestContext.Current.CancellationToken);
         var idsToAccept = initialCandidates.Select(c => c.Id).ToList();
 
@@ -345,7 +438,7 @@ public class EsourceReconciliationTests
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
         var httpContext = CreateMockHttpContext("crc_sarah", "crc");
 
-        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, httpContext, TestContext.Current.CancellationToken);
+        await IngestSampleBundleAsync(db, clock, httpContext, TestContext.Current.CancellationToken);
         var initialCandidates = await db.EhrReconciliationCandidateRecords.Take(2).ToListAsync(TestContext.Current.CancellationToken);
         var idsToReject = initialCandidates.Select(c => c.Id).ToList();
 
@@ -408,7 +501,7 @@ public class EsourceReconciliationTests
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
         var httpContext = CreateMockHttpContext();
 
-        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, httpContext, TestContext.Current.CancellationToken);
+        await IngestSampleBundleAsync(db, clock, httpContext, TestContext.Current.CancellationToken);
         var validCandidate = await db.EhrReconciliationCandidateRecords.FirstAsync(TestContext.Current.CancellationToken);
 
         var mixedIds = new List<string> { validCandidate.Id, "non-existent-candidate-id-999" };
@@ -437,11 +530,11 @@ public class EsourceReconciliationTests
         using var db = CreateDbContext($"EhrStudyScope_{Guid.NewGuid():N}");
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
         var ct = TestContext.Current.CancellationToken;
-        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, CreateMockHttpContext(), ct);
+        await IngestSampleBundleAsync(db, clock, CreateMockHttpContext(), ct);
         var candidate = await db.EhrReconciliationCandidateRecords.FirstAsync(ct);
         var outsider = CreateMockHttpContext("crc_other", "crc", "STUDY-202");
 
-        var list = await EsourceEndpoints.ListCandidatesAsync(null, null, null, "ALL", "ALL", 0, 50, db, clock, outsider, ct);
+        var list = await EsourceEndpoints.ListCandidatesAsync(null, null, null, "ALL", "ALL", 0, 50, db, outsider, ct);
         var lookup = await EsourceEndpoints.GetCandidateByIdAsync(candidate.Id, db, outsider, ct);
         var accept = await EsourceEndpoints.AcceptCandidateAsync(
             new EhrReconcileAcceptRequest(candidate.Id, "Verified", "Accept"), db, clock, outsider, ct);
@@ -463,10 +556,10 @@ public class EsourceReconciliationTests
         var ct = TestContext.Current.CancellationToken;
         var outsider = CreateMockHttpContext("crc_other", "crc", "STUDY-202");
 
-        var poll = await EsourceEndpoints.PollHospitalEhrAsync(
-            new EhrPollRequest(EndpointId: "none", StudyId: "STUDY-101", SiteId: "SITE-01", SubjectId: "PAT-001", PrivateKeyPem: null), db, clock, outsider, ct);
+        var poll = EsourceEndpoints.PollHospitalEhrAsync(
+            new EhrPollRequest(EndpointId: "none", StudyId: "STUDY-101", SiteId: "SITE-01", SubjectId: "PAT-001", PrivateKeyPem: null), outsider);
         var ingest = await EsourceEndpoints.IngestFhirBundleAsync(
-            new FhirBundleIngestRequest(StudyId: "STUDY-101", SiteId: "SITE-01", SubjectId: "PAT-001", SubjectPseudonym: null, EhrSystemId: null, RawFhirBundleJson: "{}"),
+            new FhirBundleIngestRequest(StudyId: "STUDY-101", SiteId: "SITE-01", SubjectId: "PAT-001", SubjectPseudonym: null, EhrSystemId: "EPIC", RawFhirBundleJson: SampleBundle),
             db, clock, outsider, ct);
 
         poll.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Which.StatusCode.Should().Be(403);
