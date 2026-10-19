@@ -20,8 +20,6 @@ export {
   generateJwtHS256,
 };
 
-export const GATEWAY_SECRET = "internal-gateway-secret-12345"; // pragma: allowlist secret
-
 export const VALID_SERVICE_PREFIXES = [
   "designer/",
   "execution/",
@@ -213,12 +211,16 @@ export function isValidGatewayPathPrefix(path) {
  * 2. 403 Forbidden Subject role-based route blocking
  * 3. Dual-signature header validation (X-Sig-Token & X-Gateway-Signature)
  *
+ * The simulator holds no gateway secret of its own. A request carrying an X-Gateway-Signature is verified only
+ * against `options.secret`; without one it is rejected, so a mock can never accept a signature it cannot check.
+ *
  * @param {Request|Object} req - Intercepted Request object or simulated request object.
  * @param {Object} [options={}] - Custom options.
+ * @param {string} [options.secret] - Test secret to verify X-Gateway-Signature against.
  * @returns {Promise<Object>} { valid: boolean, status: number, body: Object, strippedPath: string }
  */
 export async function validateGatewayRequest(req, options = {}) {
-  const secret = options.secret || GATEWAY_SECRET;
+  const secret = options.secret;
 
   // Extract URL & path
   let urlStr =
@@ -362,6 +364,17 @@ export async function validateGatewayRequest(req, options = {}) {
   const gatewaySig =
     getHeader("X-Gateway-Signature") || getHeader("x-gateway-signature");
   if (gatewaySig) {
+    if (!secret) {
+      console.error(
+        "[MSW Mock Gateway] X-Gateway-Signature present but the mock gateway has no secret to verify it"
+      );
+      return {
+        valid: false,
+        status: 401,
+        body: { detail: "Invalid gateway signature" },
+        strippedPath,
+      };
+    }
     const timestamp =
       getHeader("X-Gateway-Timestamp") ||
       getHeader("x-gateway-timestamp") ||

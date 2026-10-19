@@ -5,8 +5,11 @@ import {
   generateGatewaySignature,
   isWhitelistedSubjectRoute,
   isPathSignatureGated,
-  GATEWAY_SECRET,
 } from "../mockGateway.js";
+import * as uiRoot from "../index.js";
+
+// A per-test secret: the simulator ships none of its own (#5335).
+const TEST_GATEWAY_SECRET = "mock-gateway-unit-test-secret"; // pragma: allowlist secret
 
 describe("Mock Gateway Simulator Unit Tests", () => {
   let consoleSpy;
@@ -154,7 +157,7 @@ describe("Mock Gateway Simulator Unit Tests", () => {
         timestamp,
         "2",
         changeReason,
-        GATEWAY_SECRET
+        TEST_GATEWAY_SECRET
       );
 
       const req = new Request("http://localhost:8000/designer/studies", {
@@ -169,8 +172,46 @@ describe("Mock Gateway Simulator Unit Tests", () => {
         },
       });
 
-      const result = await validateGatewayRequest(req);
+      const result = await validateGatewayRequest(req, {
+        secret: TEST_GATEWAY_SECRET,
+      });
       expect(result.valid).toBe(true);
+    });
+
+    it("rejects a signed request when no secret is configured, even if the signature is genuine", async () => {
+      const timestamp = "1700000000";
+      const validSig = await generateGatewaySignature(
+        "usr-123",
+        "Sponsor Admin",
+        timestamp,
+        "2",
+        null,
+        TEST_GATEWAY_SECRET
+      );
+
+      const req = new Request("http://localhost:8000/designer/studies", {
+        method: "GET",
+        headers: {
+          "X-User-Id": "usr-123",
+          "X-User-Roles": "Sponsor Admin",
+          "X-Gateway-Timestamp": timestamp,
+          "X-Gateway-Signature": validSig,
+          "X-Signature-Version": "2",
+        },
+      });
+
+      const result = await validateGatewayRequest(req);
+      expect(result.valid).toBe(false);
+      expect(result.status).toBe(401);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining("has no secret to verify it")
+      );
+    });
+
+    it("keeps the gateway simulator and any gateway secret out of the library's root export", () => {
+      expect(uiRoot).not.toHaveProperty("GATEWAY_SECRET");
+      expect(uiRoot).not.toHaveProperty("validateGatewayRequest");
+      expect(uiRoot).not.toHaveProperty("isGatewayApiCall");
     });
 
     it("should reject invalid/tampered X-Gateway-Signature and log console error", async () => {
@@ -185,7 +226,9 @@ describe("Mock Gateway Simulator Unit Tests", () => {
         },
       });
 
-      const result = await validateGatewayRequest(req);
+      const result = await validateGatewayRequest(req, {
+        secret: TEST_GATEWAY_SECRET,
+      });
       expect(result.valid).toBe(false);
       expect(result.status).toBe(401);
       expect(result.body.detail).toBe("Invalid gateway signature");
