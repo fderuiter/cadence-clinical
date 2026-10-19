@@ -2,7 +2,7 @@ using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Text.RegularExpressions;
+using System.Linq;
 
 namespace Cadence.Kernel.Knowledge;
 
@@ -11,7 +11,7 @@ namespace Cadence.Kernel.Knowledge;
 /// URIs with a more permissive licence class is refused, so licensed content can never be flagged as shippable
 /// (K-SEM-2). The URIs follow HL7 FHIR's canonical code-system URIs where FHIR defines one.
 /// </summary>
-public static partial class KnownCodeSystems
+public static class KnownCodeSystems
 {
     /// <summary>NCI Thesaurus, which carries CDISC Controlled Terminology (C-codes).</summary>
     public const string NciThesaurus = "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl";
@@ -91,7 +91,7 @@ public static partial class KnownCodeSystems
     public static string CdiscCt(string package)
     {
         ArgumentNullException.ThrowIfNull(package);
-        return PackageType().IsMatch(package)
+        return IsPackageType(package)
             ? CdiscCtPackagePrefix + package
             : throw new ArgumentException($"'{package}' is not a CDISC CT package type such as 'sdtmct'.", nameof(package));
     }
@@ -102,7 +102,7 @@ public static partial class KnownCodeSystems
         ArgumentNullException.ThrowIfNull(uri);
         if (uri.StartsWith(CdiscCtPackagePrefix, StringComparison.Ordinal)
             && uri[CdiscCtPackagePrefix.Length..] is var type
-            && PackageType().IsMatch(type))
+            && IsPackageType(type))
         {
             package = type;
             return true;
@@ -120,7 +120,7 @@ public static partial class KnownCodeSystems
     public static string? UriFor(string codeSystem)
     {
         ArgumentNullException.ThrowIfNull(codeSystem);
-        if (PackageType().IsMatch(codeSystem))
+        if (IsPackageType(codeSystem))
         {
             return CdiscCtPackagePrefix + codeSystem;
         }
@@ -130,6 +130,14 @@ public static partial class KnownCodeSystems
             : null;
     }
 
-    [GeneratedRegex("^[a-z][a-z0-9-]*ct$", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 100)]
-    private static partial Regex PackageType();
+    /// <summary>
+    /// Whether a name is a CDISC CT package type: a lower-case ASCII letter, then lower-case letters, digits or
+    /// hyphens, ending in <c>ct</c>. A plain character check, not a regex with a match timeout, so a busy machine
+    /// cannot turn a valid name into a refusal.
+    /// </summary>
+    private static bool IsPackageType(string name) =>
+        name.Length >= 3
+        && name[0] is >= 'a' and <= 'z'
+        && name.EndsWith("ct", StringComparison.Ordinal)
+        && name.All(c => c is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '-');
 }
