@@ -58,8 +58,10 @@ public static class CadenceSecurityServiceCollectionExtensions
             .ValidateOnStart();
 
         services.AddTransient<AuditorWriteGuardMiddleware>();
-        // Process-local single use by default; a host with a durable store replaces it (ADR-2515).
+        // Process-local single use by default; every host with an e-signature route replaces it with the durable
+        // store, and outside Development the startup check refuses one that does not (ADR-2515, #5434).
         services.TryAddSingleton<ISigTokenUseStore>(sp => new ReplayCache(sp.GetService<IClock>()));
+        services.AddHostedService<SigTokenUseStoreStartupCheck>();
         services.AddSingleton(sp => new SigTokenVerifier(sp.GetRequiredService<ISigTokenUseStore>(), sp.GetService<IClock>()));
         services.AddSingleton<IAuditLogWriter, InMemoryAuditStore>();
         services.AddSingleton(sp => new AuditDigestEngine(

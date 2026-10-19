@@ -70,13 +70,14 @@ The verifier consumes the token's `jti` through `ISigTokenUseStore.TryRecordFirs
 every other check passes. The record is kept until the end of the acceptance window, so it can never be forgotten while
 the token is still accepted.
 
-- **Execution** registers `PostgresSigTokenUseStore`: an insert into `execution.consumed_signature_tokens`, whose
-  primary key on the token id makes check-and-record one atomic step across instances and restarts. Expired rows are
-  deleted on the next use.
-- **Every other host** keeps the process-local `ReplayCache`, registered once as a singleton by `AddCadenceSecurity()`.
-  That is single use within one process only. Those services gain the durable store when they fold into the single
-  host (#5315); until then a restart or second instance of, for example, knowledge or eConsent can accept a token again
-  inside its 70-second window. This is a known gap, not a guarantee.
+- **Every host that maps an e-signature route** (Execution, eConsent and Knowledge) calls
+  `AddCadenceDurableSigTokenStore<TContext>()` from `packages/database`. It registers `PostgresSigTokenUseStore<TContext>`:
+  an insert into `consumed_signature_tokens` in the host's own schema, whose primary key on the token id makes
+  check-and-record one atomic step across instances and restarts. Expired rows are deleted on the next use (#5434).
+- `AddCadenceSecurity()` still registers the process-local `ReplayCache` as the default, which is single use within one
+  process only. Outside `Development`, `SigTokenUseStoreStartupCheck` refuses to start a host that maps a
+  `RequireElectronicSignature` route over a store that is not an `IDurableSigTokenUseStore`, so the gap cannot return
+  silently. When the services fold into the single host (#5315), the host's one store covers them all.
 
 ### 4.3 Signing routes
 
@@ -109,9 +110,10 @@ The statistical computing environment's database-lock tokens unlock unblinded an
 ## 5. Consequences & Trade-offs
 
 - Clients must obtain a step-up token for each batch with the matching `semantic_action` and `batch_id`.
-- A replayed or concurrent second use of an Execution token fails with 401 on any instance, which the PostgreSQL
-  integration tests show across two hosts sharing one database.
-- Other services' single use remains process-local until #5315. Docker-based multi-instance runs were not executed.
+- A replayed or concurrent second use of an Execution, eConsent or Knowledge token fails on any instance. The PostgreSQL
+  integration tests show it across two Execution hosts sharing one database, and across two store instances of the
+  eConsent and Knowledge contexts (#5434). Docker-based multi-instance runs were not executed.
+- Each signing service carries its own `consumed_signature_tokens` table until #5315 gives them one host.
 - Single-form approval (`/approve`) still expects the client to send an HMAC keyed with the gateway secret, which no
   client can hold. It is out of this decision and tracked as a follow-up.
 
@@ -119,10 +121,16 @@ The statistical computing environment's database-lock tokens unlock unblinded an
 
 - `packages/security`: `SigTokenVerifier.VerifyAndConsumeAsync`, `ISigTokenUseStore`, `ReplayCache`,
   `ElectronicSignatureEndpointFilter` (binding resolved from the request) and `HttpContext.VerifiedSigToken()`.
-- `apps/execution`: `PostgresSigTokenUseStore`, the `consumed_signature_tokens` migration, and the batch sign-off route
-  and service.
+- `packages/security`: `IDurableSigTokenUseStore`, `ElectronicSignatureRequired` endpoint metadata and
+  `SigTokenUseStoreStartupCheck` (#5434).
+- `packages/database`: `ConsumedSignatureToken`, `PostgresSigTokenUseStore<TContext>` and
+  `AddCadenceDurableSigTokenStore<TContext>()` (#5434).
+- `apps/execution`, `apps/econsent`, `apps/knowledge`: each registers the durable store over its own context and has a
+  `consumed_signature_tokens` migration; Execution also has the batch sign-off route and service.
 - `apps/knowledge`: the delegation sign-off route; `PermissionMatrix` grants `delegation_log:sign`.
 - Tests: `Cadence.IntegrationTests.Execution.BatchSignOffSignatureTests` (PostgreSQL, two hosts on one database),
   `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests`,
   `Cadence.UnitTests.Knowledge.DelegationSignOffAuthorityTests`, `Cadence.UnitTests.Packages.SignatureTokenTests` and
-  `Cadence.IntegrationTests.Interop.SceUnblindingAuthorizationTests` (PostgreSQL).
+  `Cadence.IntegrationTests.Interop.SceUnblindingAuthorizationTests` (PostgreSQL),
+  `Cadence.IntegrationTests.Database.SignatureTokenSingleUsePostgresTests` (PostgreSQL) and
+  `Cadence.UnitTests.Security.SigTokenUseStoreWiringTests`.

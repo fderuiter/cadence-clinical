@@ -3,13 +3,14 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Cadence.Apps.Execution.Infrastructure.Security;
+namespace Cadence.Database.Signatures;
 
 /// <summary>
 /// One used e-signature step-up token, keyed by its <c>jti</c>. The primary key makes "first use wins" a single
 /// atomic insert, shared by every instance of the host and kept across restarts (ADR-2515). A row is needed only
 /// until <see cref="RetainUntil"/>, the end of the token's acceptance window; after that the verifier refuses the
-/// token on its timestamps alone.
+/// token on its timestamps alone. Every service that maps an e-signature route keeps this table in its own schema
+/// (#5434).
 /// </summary>
 public sealed class ConsumedSignatureToken
 {
@@ -29,6 +30,7 @@ public sealed class ConsumedSignatureTokenConfiguration : IEntityTypeConfigurati
     /// <summary>The token id length limit; the gateway issues GUIDs.</summary>
     public const int MaxTokenIdLength = 128;
 
+    /// <inheritdoc />
     public void Configure(EntityTypeBuilder<ConsumedSignatureToken> builder)
     {
         builder.ToTable("consumed_signature_tokens");

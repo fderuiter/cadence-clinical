@@ -20,6 +20,11 @@ migration application.
 - `ResolveDesignTimeConnectionString(args)`: used by every design-time `*DbContextFactory` (`dotnet ef`). Reads
   `--connection "..."` passed after `--`, then `POSTGRES_CONNECTION_STRING`, and throws when neither is set.
 - `AddCadenceMigrations<TContext>()`: applies migrations according to the `Database` configuration section.
+- `AddCadenceDurableSigTokenStore<TContext>()` (`Cadence.Database.Signatures`): replaces the process-local e-signature
+  `ReplayCache` with `PostgresSigTokenUseStore<TContext>`, which records each used token id in the context's
+  `consumed_signature_tokens` table (`ConsumedSignatureTokenConfiguration`), so a token is single use across instances
+  and restarts. Every host that maps a `RequireElectronicSignature` route calls it and maps the table with a migration
+  ([ADR-2515](../../docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md), #5434).
 - `AddCadenceDbContext<TContext>()`: `AddDbContext` plus the compiled EF model when one exists.
 - `ExecuteInTransactionAsync(unitOfWork)` (`CadenceTransactions`): the only way to run an explicit transaction. It runs
   the delegate in one transaction inside the context's execution strategy, commits when it returns, and on a transient

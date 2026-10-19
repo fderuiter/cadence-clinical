@@ -19,6 +19,7 @@ Generated from the EF Core model of `Cadence.Apps.Econsent.Infrastructure.Persis
 | [`econsent.consent_templates`](#econsentconsent_templates) | `ConsentTemplate` | 13 |
 | [`econsent.consent_translations`](#econsentconsent_translations) | `ConsentTranslation` | 13 |
 | [`econsent.consent_withdrawals`](#econsentconsent_withdrawals) | `ConsentWithdrawal` | 14 |
+| [`econsent.consumed_signature_tokens`](#econsentconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
 | [`econsent.etmf_archival_deliveries`](#econsentetmf_archival_deliveries) | `EtmfArchivalDelivery` | 18 |
 | [`econsent.granular_consent_options`](#econsentgranular_consent_options) | `GranularConsentOption` | 12 |
 | [`econsent.reconsent_requirements`](#econsentreconsent_requirements) | `ReconsentRequirement` | 15 |
@@ -343,6 +344,20 @@ Indexes:
 - `IX_consent_withdrawals_StudyId`: (`StudyId`)
 - `IX_consent_withdrawals_SubjectPseudonym`: (`SubjectPseudonym`)
 - `IX_consent_withdrawals_TemplateId`: (`TemplateId`)
+
+## econsent.consumed_signature_tokens
+
+Entity: `ConsumedSignatureToken`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `TokenId` | `character varying(128)` | no |  | PK |
+| `ConsumedAt` | `timestamp with time zone` | no |  |  |
+| `RetainUntil` | `timestamp with time zone` | no |  |  |
+
+Indexes:
+
+- `IX_consumed_signature_tokens_RetainUntil`: (`RetainUntil`)
 
 ## econsent.etmf_archival_deliveries
 

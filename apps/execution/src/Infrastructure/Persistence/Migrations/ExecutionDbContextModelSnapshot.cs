@@ -2490,7 +2490,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.ToTable("staged_adverse_event_reviews", (string)null);
                 });
 
-            modelBuilder.Entity("Cadence.Apps.Execution.Infrastructure.Security.ConsumedSignatureToken", b =>
+            modelBuilder.Entity("Cadence.Database.Signatures.ConsumedSignatureToken", b =>
                 {
                     b.Property<string>("TokenId")
                         .HasMaxLength(128)
