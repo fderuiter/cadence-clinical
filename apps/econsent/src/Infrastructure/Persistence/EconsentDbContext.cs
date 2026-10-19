@@ -2,6 +2,7 @@ using Cadence.Apps.Econsent.Domain;
 using Cadence.Apps.Econsent.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
+using Cadence.Database.Signatures;
 using Cadence.Security.FieldProtection;
 
 using MassTransit;
@@ -47,6 +48,8 @@ public sealed class EconsentDbContext(DbContextOptions<EconsentDbContext> option
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        // Used e-signature tokens, single use across instances and restarts (ADR-2515, #5434).
+        modelBuilder.ApplyConfiguration(new ConsumedSignatureTokenConfiguration());
 
         modelBuilder.ApplyConfiguration(new ConsentDocumentConfiguration());
         modelBuilder.ApplyConfiguration(new EtmfArchivalDeliveryConfiguration());

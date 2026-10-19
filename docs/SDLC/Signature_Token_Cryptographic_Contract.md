@@ -83,7 +83,7 @@ This verification is centralized in `SigTokenVerifier.VerifyAndConsumeAsync(toke
    - Extract the unique `jti` claim.
    - Only after every other check passes, record it with `ISigTokenUseStore.TryRecordFirstUseAsync(jti, exp + 5s)`. A second use, including a concurrent one, is rejected.
    - The record is kept until `exp + 5s`, the end of the acceptance window, never only until `exp`; otherwise the token could be replayed in the skew after expiry.
-   - Single use reaches exactly as far as the store is shared. Execution uses `PostgresSigTokenUseStore` (`execution.consumed_signature_tokens`, primary key on the token id), which holds across instances and restarts. Other services use the process-local `ReplayCache` until they fold into the single host (#5315): within one process only (ADR-2515).
+   - Single use reaches exactly as far as the store is shared. Every service with an e-signature route (Execution, eConsent, Knowledge) uses `PostgresSigTokenUseStore<TContext>` (`consumed_signature_tokens` in its own schema, primary key on the token id), which holds across instances and restarts. Outside `Development` a host that maps a signed route over the process-local `ReplayCache` refuses to start (#5434, ADR-2515).
 
 ---
 

@@ -12,6 +12,7 @@ Generated from the EF Core model of `Cadence.Apps.Knowledge.Infrastructure.Persi
 | [`knowledge.TrainingCertificates`](#knowledgetrainingcertificates) | `TrainingCertificate` | 9 |
 | [`knowledge.TrainingCurricula`](#knowledgetrainingcurricula) | `TrainingCurriculum` | 9 |
 | [`knowledge.audit_log_entries`](#knowledgeaudit_log_entries) | `AuditLogEntry` | 11 |
+| [`knowledge.consumed_signature_tokens`](#knowledgeconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
 | [`knowledge.knowledge_article_audit_logs`](#knowledgeknowledge_article_audit_logs) | `KnowledgeArticleAuditLog` | 12 |
 | [`knowledge.knowledge_article_versions`](#knowledgeknowledge_article_versions) | `KnowledgeArticleVersion` | 11 |
 | [`knowledge.knowledge_articles`](#knowledgeknowledge_articles) | `KnowledgeArticle` | 16 |
@@ -132,6 +133,20 @@ Entity: `AuditLogEntry`
 Indexes:
 
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+
+## knowledge.consumed_signature_tokens
+
+Entity: `ConsumedSignatureToken`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `TokenId` | `character varying(128)` | no |  | PK |
+| `ConsumedAt` | `timestamp with time zone` | no |  |  |
+| `RetainUntil` | `timestamp with time zone` | no |  |  |
+
+Indexes:
+
+- `IX_consumed_signature_tokens_RetainUntil`: (`RetainUntil`)
 
 ## knowledge.knowledge_article_audit_logs
 

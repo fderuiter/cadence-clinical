@@ -27,6 +27,7 @@ using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Database;
+using Cadence.Database.Signatures;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
@@ -157,7 +158,7 @@ builder.Services.AddCadenceMigrations<ExecutionDbContext>(builder.Configuration)
 
 // E-signature step-up tokens are single use across every instance and restart: their use is recorded in
 // consumed_signature_tokens, not in process memory (#5311, ADR-2515).
-builder.Services.Replace(ServiceDescriptor.Singleton<ISigTokenUseStore, PostgresSigTokenUseStore>());
+builder.Services.AddCadenceDurableSigTokenStore<ExecutionDbContext>();
 
 // The repository ports, Scoped to match ExecutionDbContext's own lifetime
 builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();

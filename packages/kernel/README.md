@@ -645,7 +645,9 @@ scope of its study, and `ActivateStudySite` checks it.
 capability.
 
 Search queries the source tables with PostgreSQL full-text search (`simple` configuration, prefix words) through a
-tenant-bound context, so RLS applies. To make a new table searchable, add a `KernelSearchSource` to
+tenant-bound context, so RLS applies. A row whose code equals the search text (ignoring case) always matches, even
+when the parser indexes the code differently from the search words: `CADENCE-101` is indexed as `cadence` and `-101`,
+which the words `cadence` and `101` never reach (#5487). To make a new table searchable, add a `KernelSearchSource` to
 `KernelSearchStore.BuiltInSources` (code and title columns of alias `t`) and a migration calling
 `KernelSearchSql.CreateIndexes`. `SearchExpressionsUseTheIndexes` fails if the query cannot use the index.
 

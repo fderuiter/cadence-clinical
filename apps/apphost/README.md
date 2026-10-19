@@ -24,7 +24,7 @@ routes answer as the service being down.
 
 ## Resources
 
-- `postgres` (with a data volume and pgAdmin) and one database named `cadence`, shared by all services per [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md). With `ConnectionStrings:cadence` set, `cadence` is that existing database and no container runs.
+- `postgres` (PostgreSQL 18, the digest-pinned image docker compose runs and the tests qualify per [ADR-2533](../../docs/adr/2026-10-19-tests-ci-and-compose-run-one-pinned-postgresql-major.md), with a data volume and pgAdmin) and one database named `cadence`, shared by all services per [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md). With `ConnectionStrings:cadence` set, `cadence` is that existing database and no container runs.
 - `keycloak` container (port 8080, `start-dev`, importing `docker/cadence-realm.json` as docker compose does), unless `AppHost:OidcAuthority` is set.
 - `minio` container (ports 9000 and 9001; no service reads it yet), in the `full` profile only.
 - `web`: the Clinical Canvas Vite dev server on `http://localhost:3000/cadence-clinical/`, the redirect URI the
@@ -33,8 +33,8 @@ routes answer as the service being down.
   cross-origin, #5429) and the `VITE_KEYCLOAK_*` settings. Run `pnpm install` at the repository root first; the AppHost does not install packages.
 - `subject-portal`: the participant portal's Vite dev server on `http://localhost:5174/subject-portal/`, as in docker
   compose, in the `full` profile only (it calls interop and payments). Like `web`, it gets `VITE_API_BASE_URL` (its own
-  origin), `CADENCE_GATEWAY_URL` (where its `/api` proxy forwards, #5451) and the `VITE_KEYCLOAK_*` settings. Keycloak sign-in does not work there yet: the realm's `cadence-web` client
-  allows only the web app's redirect URI.
+  origin), `CADENCE_GATEWAY_URL` (where its `/api` proxy forwards, #5451) and the `VITE_KEYCLOAK_*` settings. The dev realm's `cadence-web` client allows its redirect URI,
+  `http://localhost:5174/subject-portal/*`.
 - Projects, each on the host port docker compose publishes it on, so the gateway's Development defaults and the
   web dev server's `/api` proxy to `http://localhost:8000` work for both (`core` runs 8000, 8002 and 8018). Each
   service's port, address variable, database need and profile come from the service topology manifest

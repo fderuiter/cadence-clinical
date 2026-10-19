@@ -75,6 +75,17 @@ public sealed class ElectronicSignatureEndpointFilter(Func<EndpointFilterInvocat
             });
 }
 
+/// <summary>Endpoint metadata marking a route gated by <c>RequireElectronicSignature</c>.</summary>
+public sealed class ElectronicSignatureRequired
+{
+    /// <summary>The shared instance.</summary>
+    public static ElectronicSignatureRequired Instance { get; } = new();
+
+    private ElectronicSignatureRequired()
+    {
+    }
+}
+
 public static class ElectronicSignatureEndpointExtensions
 {
     /// <summary>
@@ -93,6 +104,7 @@ public static class ElectronicSignatureEndpointExtensions
 
         return builder
             .AddEndpointFilter(new ElectronicSignatureEndpointFilter(semanticAction, resolveAction))
+            .WithMetadata(ElectronicSignatureRequired.Instance)
             .ProducesProblem(StatusCodes.Status401Unauthorized);
     }
 
@@ -110,6 +122,7 @@ public static class ElectronicSignatureEndpointExtensions
 
         return builder
             .AddEndpointFilter(new ElectronicSignatureEndpointFilter(resolveBinding))
+            .WithMetadata(ElectronicSignatureRequired.Instance)
             .ProducesProblem(StatusCodes.Status401Unauthorized);
     }
 

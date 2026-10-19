@@ -521,6 +521,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2601: One Composition Host for the Kernel and Its Modules](adr/2026-10-19-one-composition-host-for-the-kernel-and-its-modules.md) | Current | - Status: Accepted |
 | [ADR-2621: Observation Corrections Are Revisions; Locks Are Scoped Assertions](adr/2026-10-19-observation-corrections-are-revisions-locks-are-scoped-assertions.md) | Current | - Status: Accepted |
 | [ADR-2622: eCRF Forms Are Kernel Collection Instances Saved in One Command](adr/2026-10-19-ecrf-forms-are-collection-instances-saved-in-one-command.md) | Current | - Status: Accepted |
+| [ADR-2533: Tests, CI and Compose Run One Pinned PostgreSQL Major](adr/2026-10-19-tests-ci-and-compose-run-one-pinned-postgresql-major.md) | Current | - Status: Accepted |
 ## Developing and running
 
 | Document | Status | What it is |

@@ -1,6 +1,7 @@
 using Cadence.Apps.Econsent.Endpoints;
 using Cadence.Apps.Econsent.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Database.Signatures;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.FieldProtection;
 using Cadence.Telemetry;
@@ -16,6 +17,8 @@ builder.Services.AddCadenceSecurity();
 // Signer e-mail addresses are encrypted at rest; FIELD_ENCRYPTION_KEY is required and validated at startup (#4770).
 builder.Services.AddCadenceFieldEncryption();
 builder.AddCadencePostgresDbContext<EconsentDbContext>();
+// Consent capture is e-signed; each token is single use across instances and restarts (ADR-2515, #5434).
+builder.Services.AddCadenceDurableSigTokenStore<EconsentDbContext>();
 
 builder.Services.AddMassTransit(x =>
 {

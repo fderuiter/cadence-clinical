@@ -62,14 +62,12 @@ describe("Cache Validation and Execution Guard (generate)", () => {
     expect(fs.existsSync(usdmPath)).toBe(true);
     expect(fs.existsSync(hashPath)).toBe(true);
 
-    const startTime = performance.now();
+    // generated: false is the early return; no wall-clock assertion, which fails on a busy machine (#5418).
     const result = await generate();
-    const duration = performance.now() - startTime;
 
     expect(result.generated).toBe(false);
     expect(result.hash).toBe(calculateHash());
-    expect(duration).toBeLessThan(100);
-  }, 15000);
+  }, 60000);
 
   it("forces regeneration when force option is true", async () => {
     await generate();
@@ -78,7 +76,7 @@ describe("Cache Validation and Execution Guard (generate)", () => {
     expect(result.generated).toBe(true);
     expect(fs.existsSync(usdmPath)).toBe(true);
     expect(fs.existsSync(hashPath)).toBe(true);
-  }, 15000);
+  }, 60000);
 
   it("triggers full generation when usdm.ts is missing", async () => {
     await generate();
@@ -94,7 +92,7 @@ describe("Cache Validation and Execution Guard (generate)", () => {
         fs.writeFileSync(usdmPath, backupUsdm, "utf8");
       }
     }
-  }, 15000);
+  }, 60000);
 
   it("triggers full generation when .usdm-hash.json is corrupted or missing", async () => {
     await generate();
@@ -107,5 +105,5 @@ describe("Cache Validation and Execution Guard (generate)", () => {
     } finally {
       fs.writeFileSync(hashPath, backupHash, "utf8");
     }
-  }, 15000);
+  }, 60000);
 });

@@ -1,6 +1,7 @@
 using Cadence.Apps.Knowledge.Endpoints;
 using Cadence.Apps.Knowledge.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Database.Signatures;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
 
@@ -12,6 +13,8 @@ builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 builder.AddCadencePostgresDbContext<KnowledgeDbContext>();
+// Delegation sign-off is e-signed; each token is single use across instances and restarts (ADR-2515, #5434).
+builder.Services.AddCadenceDurableSigTokenStore<KnowledgeDbContext>();
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();
