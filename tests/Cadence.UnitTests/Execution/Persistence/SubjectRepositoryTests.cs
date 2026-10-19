@@ -13,8 +13,6 @@ using FluentAssertions;
 
 using Microsoft.EntityFrameworkCore;
 
-using Polly;
-
 using Xunit;
 
 namespace Cadence.UnitTests.Execution.Persistence;
@@ -54,8 +52,26 @@ public class SubjectRepositoryTests
         return path;
     }
 
-    private static SubjectRepository CreateRepository(string path, ResiliencePipeline? pipeline = null) =>
-        new(new ExecutionDbContext(FileOptions(path)), pipeline ?? SaveChangesResiliencePipelineFactory.Create());
+    private static SubjectRepository CreateRepository(string path) => new(new ExecutionDbContext(FileOptions(path)));
+
+    /// <summary>Reads the next index inside a unit of work, as every caller must.</summary>
+    private static Task<int> NextIndexAsync(SubjectRepository repository) =>
+        repository.ExecuteInTransactionAsync(ct => repository.EnrollNextIndexAsync(StudyA, ct), TestContext.Current.CancellationToken);
+
+    /// <summary>Enrolls one subject the way the application service does: index, insert and save in one unit of work.</summary>
+    private static Task<int> EnrollAsync(SubjectRepository repository, string code, TimeSpan holdBeforeInsert = default) =>
+        repository.ExecuteInTransactionAsync(async ct =>
+        {
+            int index = await repository.EnrollNextIndexAsync(StudyA, ct);
+            if (holdBeforeInsert > TimeSpan.Zero)
+            {
+                await Task.Delay(holdBeforeInsert, ct);
+            }
+
+            await repository.AddAsync(ClinicalSubject.Create(new SubjectCode(code), StudyA, null, index, null, null), ct);
+            await repository.SaveChangesAsync(ct);
+            return index;
+        }, TestContext.Current.CancellationToken);
 
     private static void DeleteDbFileBestEffort(string path)
     {
@@ -81,7 +97,7 @@ public class SubjectRepositoryTests
         try
         {
             var repository = CreateRepository(path);
-            int next = await repository.EnrollNextIndexAsync(StudyA, TestContext.Current.CancellationToken);
+            int next = await NextIndexAsync(repository);
 
             next.Should().Be(0);
         }
@@ -110,7 +126,7 @@ public class SubjectRepositoryTests
             }
 
             var repository = CreateRepository(path);
-            int next = await repository.EnrollNextIndexAsync(StudyA, TestContext.Current.CancellationToken);
+            int next = await NextIndexAsync(repository);
 
             next.Should().Be(3);
         }
@@ -121,26 +137,19 @@ public class SubjectRepositoryTests
     }
 
     [Fact]
-    public async Task EnrollNextIndexAsync_ThenAddAsyncThenSaveChangesAsync_PersistsSubjectAtComputedIndexAndCommitsTransaction()
+    public async Task EnrollNextIndexAsync_InsideAUnitOfWork_PersistsSubjectAtComputedIndexAndCommits()
     {
-        // Single-caller structural smoke test: the transaction EnrollNextIndexAsync opens and leaves pending
-        // must actually participate in the subsequent insert and be committed by SaveChangesAsync.
         string path = await CreateSchemaAsync();
         try
         {
-            var repository = CreateRepository(path);
-            int next = await repository.EnrollNextIndexAsync(StudyA, TestContext.Current.CancellationToken);
-            var subject = ClinicalSubject.Create(
-                new SubjectCode("SUBJ-STRUCTURAL"), StudyA, siteCode: null,
-                enrollmentIndex: next, encryptedDemographics: null, stratFactors: null);
-            await repository.AddAsync(subject, TestContext.Current.CancellationToken);
-            await repository.SaveChangesAsync(TestContext.Current.CancellationToken);
+            int next = await EnrollAsync(CreateRepository(path), "SUBJ-STRUCTURAL");
 
             await using var readContext = new ExecutionDbContext(FileOptions(path));
             var persisted = await readContext.ClinicalSubjects.AsNoTracking()
                 .SingleAsync(TestContext.Current.CancellationToken);
+            next.Should().Be(0);
             persisted.EnrollmentIndex.Should().Be(0);
-            persisted.SubjectCode.Should().Be(subject.SubjectCode);
+            persisted.SubjectCode.Should().Be(new SubjectCode("SUBJ-STRUCTURAL"));
         }
         finally
         {
@@ -156,20 +165,28 @@ public class SubjectRepositoryTests
         {
             var repository = CreateRepository(path);
 
-            int first = await repository.EnrollNextIndexAsync(StudyA, TestContext.Current.CancellationToken);
-            await repository.AddAsync(
-                ClinicalSubject.Create(new SubjectCode("SUBJ-SEQ-0"), StudyA, null, first, null, null),
-                TestContext.Current.CancellationToken);
-            await repository.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-            int second = await repository.EnrollNextIndexAsync(StudyA, TestContext.Current.CancellationToken);
-            await repository.AddAsync(
-                ClinicalSubject.Create(new SubjectCode("SUBJ-SEQ-1"), StudyA, null, second, null, null),
-                TestContext.Current.CancellationToken);
-            await repository.SaveChangesAsync(TestContext.Current.CancellationToken);
+            int first = await EnrollAsync(repository, "SUBJ-SEQ-0");
+            int second = await EnrollAsync(repository, "SUBJ-SEQ-1");
 
             first.Should().Be(0);
             second.Should().Be(1);
+        }
+        finally
+        {
+            DeleteDbFileBestEffort(path);
+        }
+    }
+
+    /// <summary>Outside a transaction the per-study lock would end with its own statement, so the call is refused (#5383).</summary>
+    [Fact]
+    public async Task EnrollNextIndexAsync_OutsideAUnitOfWork_Throws()
+    {
+        string path = await CreateSchemaAsync();
+        try
+        {
+            var act = () => CreateRepository(path).EnrollNextIndexAsync(StudyA, TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*ExecuteInTransactionAsync*");
         }
         finally
         {
@@ -190,18 +207,10 @@ public class SubjectRepositoryTests
 
             async Task EnrollOneAsync(int callerIndex)
             {
-                var repository = CreateRepository(path);
-                int index = await repository.EnrollNextIndexAsync(StudyA, TestContext.Current.CancellationToken);
-
-                // Widen the race window between computing the index and actually inserting -- if the
-                // transaction/lock scoping were wrong (e.g. the lock released before the insert), this delay
-                // would make two callers collide on the same computed index.
-                await Task.Delay(10, TestContext.Current.CancellationToken);
-
-                await repository.AddAsync(
-                    ClinicalSubject.Create(new SubjectCode($"SUBJ-PARALLEL-{callerIndex}"), StudyA, null, index, null, null),
-                    TestContext.Current.CancellationToken);
-                await repository.SaveChangesAsync(TestContext.Current.CancellationToken);
+                // The hold widens the race window between computing the index and inserting: if the
+                // transaction/lock scoping were wrong (the lock released before the insert), two callers would
+                // collide on the same computed index.
+                int index = await EnrollAsync(CreateRepository(path), $"SUBJ-PARALLEL-{callerIndex}", TimeSpan.FromMilliseconds(10));
                 results.Add(index);
             }
 
@@ -296,7 +305,7 @@ public class SubjectRepositoryTests
             }
 
             await using var context = new ExecutionDbContext(FileOptions(path));
-            var repository = new SubjectRepository(context, SaveChangesResiliencePipelineFactory.Create());
+            var repository = new SubjectRepository(context);
 
             var found = await repository.GetByIdAsync(subject.Id.Value.ToString(), TestContext.Current.CancellationToken);
 
@@ -343,7 +352,7 @@ public class SubjectRepositoryTests
             }
 
             await using var context = new ExecutionDbContext(FileOptions(path));
-            var repository = new SubjectRepository(context, SaveChangesResiliencePipelineFactory.Create());
+            var repository = new SubjectRepository(context);
 
             var found = await repository.GetByCodeAsync("SUBJ-BY-CODE", TestContext.Current.CancellationToken);
 

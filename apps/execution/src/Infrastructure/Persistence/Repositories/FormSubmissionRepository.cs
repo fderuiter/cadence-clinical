@@ -9,8 +9,6 @@ using Cadence.Apps.Execution.Domain.Subjects;
 
 using Microsoft.EntityFrameworkCore;
 
-using Polly;
-
 namespace Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 
 /// <summary>
@@ -20,8 +18,8 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 /// @req:PRD-SYS-002
 /// @req:SRS-EDC-002
 /// </summary>
-public sealed class FormSubmissionRepository(ExecutionDbContext context, ResiliencePipeline saveChangesResilience)
-    : ExecutionRepositoryBase(context, saveChangesResilience), IFormSubmissionRepository
+public sealed class FormSubmissionRepository(ExecutionDbContext context)
+    : ExecutionRepositoryBase(context), IFormSubmissionRepository
 {
     public async Task<FormSubmission?> GetByIdAsync(FormSubmissionId id, CancellationToken cancellationToken) =>
         await Context.FormSubmissions

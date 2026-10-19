@@ -29,7 +29,7 @@ public sealed class SubjectListPostgresTests(ExecutionPostgresFixture fixture) :
 
         await using (var context = ExecutionPostgresFixture.CreateDbContext(fixture.ConnectionString!))
         {
-            var repository = new SubjectRepository(context, SaveChangesResiliencePipelineFactory.Create());
+            var repository = new SubjectRepository(context);
             for (int i = 0; i < 4; i++)
             {
                 var subject = ClinicalSubject.Create(new SubjectCode($"{study.Value}-S{i}"), study, i < 3 ? site : new SiteCode("SITE-002"),
@@ -46,7 +46,7 @@ public sealed class SubjectListPostgresTests(ExecutionPostgresFixture fixture) :
         }
 
         await using var readContext = ExecutionPostgresFixture.CreateDbContext(fixture.ConnectionString!);
-        var reader = new SubjectRepository(readContext, SaveChangesResiliencePipelineFactory.Create());
+        var reader = new SubjectRepository(readContext);
 
         var enrolledAtSite = await reader.ListAsync(new SubjectListCriteria(study, site, SubjectState.Enrolled, 50, 0), ct);
         enrolledAtSite.Total.Should().Be(2);

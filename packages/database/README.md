@@ -21,6 +21,10 @@ migration application.
   `--connection "..."` passed after `--`, then `POSTGRES_CONNECTION_STRING`, and throws when neither is set.
 - `AddCadenceMigrations<TContext>()`: applies migrations according to the `Database` configuration section.
 - `AddCadenceDbContext<TContext>()`: `AddDbContext` plus the compiled EF model when one exists.
+- `ExecuteInTransactionAsync(unitOfWork)` (`CadenceTransactions`): the only way to run an explicit transaction. It runs
+  the delegate in one transaction inside the context's execution strategy, commits when it returns, and on a transient
+  failure clears the change tracker and runs the delegate again. `BeginTransaction` and `BeginTransactionAsync` are
+  banned everywhere else (`BannedSymbols.txt`, ADR-2523). A single `SaveChangesAsync` needs no explicit transaction.
 - `GxPAuditInterceptor`: stamps `CreatedAt`, `CreatedBy`, `ReasonForChange` and `VersionIndex` (21 CFR Part 11), and is
   the only writer of audit entries: one Merkle-chained `AuditLogEntry` per changed entity, one chain per aggregate type
   (ADR-2446). Audited changes must be saved with `SaveChangesAsync`; a synchronous save of them throws.
@@ -37,11 +41,11 @@ Each service owns its migrations under `apps/<service>/src/Infrastructure/Persis
 in the shared `cadence` database. The layout and the operations runbook are in
 [docs/OPERATIONAL_DATABASE.md](../../docs/OPERATIONAL_DATABASE.md).
 
-| Setting | Behaviour | Use for |
-| --- | --- | --- |
-| `Database__MigrateOnStartup=true` | applies pending migrations before the web server starts; a failure stops startup | local compose, single-instance environments |
-| `Database__MigrateOnly=true` | applies pending migrations, then exits with code 0 (non-zero on failure) | a deployment job or init container that runs before new replicas roll out |
-| neither (default) | never touches the schema | multi-replica production, where the job above owns migrations |
+| Setting                           | Behaviour                                                                        | Use for                                                                   |
+| --------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `Database__MigrateOnStartup=true` | applies pending migrations before the web server starts; a failure stops startup | local compose, single-instance environments                               |
+| `Database__MigrateOnly=true`      | applies pending migrations, then exits with code 0 (non-zero on failure)         | a deployment job or init container that runs before new replicas roll out |
+| neither (default)                 | never touches the schema                                                         | multi-replica production, where the job above owns migrations             |
 
 For DBA review and GxP qualification, generate an idempotent script instead:
 

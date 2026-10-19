@@ -56,11 +56,11 @@ public class MutationRepositoryTrackingTests
 
         var observation = ClinicalObservation.Create(
             Study, Subject, new DomainCode("VS"), new TestCode("SYSBP"), "Systolic BP", new DateTime(2026, 1, 1, 8, 0, 0, DateTimeKind.Utc), value: 120).Value!;
-        var seedRepository = new ObservationRepository(CreateContext(connection), SaveChangesResiliencePipelineFactory.Create());
+        var seedRepository = new ObservationRepository(CreateContext(connection));
         await seedRepository.AddAsync(observation, ct);
         await seedRepository.SaveChangesAsync(ct);
 
-        var repository = new ObservationRepository(CreateContext(connection), SaveChangesResiliencePipelineFactory.Create());
+        var repository = new ObservationRepository(CreateContext(connection));
         var loaded = await repository.GetForUpdateAsync(observation.Id, ct);
         loaded!.VerifySdv("monitor-1", new DateTime(2026, 9, 29, 12, 0, 0, DateTimeKind.Utc)).IsSuccess.Should().BeTrue();
         await repository.SaveChangesAsync(ct);
@@ -79,11 +79,11 @@ public class MutationRepositoryTrackingTests
         await EnsureSchemaAsync(connection);
 
         var submission = FormSubmission.Initialize(Study, Subject, new FormId("VS_FORM"), initialPayload: "{}").Value!;
-        var seedRepository = new FormSubmissionRepository(CreateContext(connection), SaveChangesResiliencePipelineFactory.Create());
+        var seedRepository = new FormSubmissionRepository(CreateContext(connection));
         await seedRepository.AddAsync(submission, ct);
         await seedRepository.SaveChangesAsync(ct);
 
-        var repository = new FormSubmissionRepository(CreateContext(connection), SaveChangesResiliencePipelineFactory.Create());
+        var repository = new FormSubmissionRepository(CreateContext(connection));
         var loaded = await repository.GetForUpdateAsync(submission.Id, ct);
         loaded!.Complete().IsSuccess.Should().BeTrue();
         await repository.SaveChangesAsync(ct);
@@ -102,11 +102,11 @@ public class MutationRepositoryTrackingTests
         await EnsureSchemaAsync(connection);
 
         var query = ClinicalQuery.Raise(Study, Subject, new TestCode("SYSBP"), "Value out of range").Value!;
-        var seedRepository = new ClinicalQueryRepository(CreateContext(connection), SaveChangesResiliencePipelineFactory.Create());
+        var seedRepository = new ClinicalQueryRepository(CreateContext(connection));
         await seedRepository.AddAsync(query, ct);
         await seedRepository.SaveChangesAsync(ct);
 
-        var repository = new ClinicalQueryRepository(CreateContext(connection), SaveChangesResiliencePipelineFactory.Create());
+        var repository = new ClinicalQueryRepository(CreateContext(connection));
         var loaded = await repository.GetForUpdateAsync(query.Id, ct);
         loaded!.Answer("Confirmed with source", "site-user-1").IsSuccess.Should().BeTrue();
         await repository.SaveChangesAsync(ct);

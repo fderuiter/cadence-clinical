@@ -71,7 +71,9 @@ internal sealed partial class KernelOutboxRelay(
     {
         await using var db = contextFactory.Create(tenant);
         using var writes = db.PermitPipelineWrites();
+#pragma warning disable RS0030 // Kernel contexts register no retrying execution strategy (KernelDatabase.UseKernelNpgsql; KernelExecutionStrategyTests), so EF permits this transaction and the commit pipeline keeps its own conflict handling.
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+#pragma warning restore RS0030
 
         var due = await db.OutboxMessages
             .FromSql(

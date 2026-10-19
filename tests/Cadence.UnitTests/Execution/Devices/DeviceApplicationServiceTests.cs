@@ -17,7 +17,6 @@ using Microsoft.EntityFrameworkCore;
 
 using NSubstitute;
 
-using Polly;
 
 using Xunit;
 
@@ -50,7 +49,7 @@ public sealed class DeviceApplicationServiceTests : IAsyncLifetime
         _auditContext.UserId.Returns("usr:investigator-1");
         _publishEndpoint = Substitute.For<IPublishEndpoint>();
 
-        _repository = new DeviceRepository(_dbContext, ResiliencePipeline.Empty);
+        _repository = new DeviceRepository(_dbContext);
         _service = new DeviceApplicationService(_repository, _clock, _auditContext, _publishEndpoint);
     }
 

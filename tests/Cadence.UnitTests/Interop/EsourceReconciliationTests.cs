@@ -21,7 +21,9 @@ using Xunit;
 namespace Cadence.UnitTests.Interop;
 
 /// <summary>
-/// Unit tests for eSource reconciliation, SMART on FHIR assertion/polling, and GxP audit attribution.
+/// Unit tests for eSource reconciliation, SMART on FHIR assertion/polling, and GxP audit attribution. They run on the
+/// in-memory provider, so they are not the evidence for PRD-ESR-002/003: <c>EsourceReconciliationPostgresTests</c> runs
+/// the same routes on PostgreSQL (#5383, #5324).
 /// </summary>
 public class EsourceReconciliationTests
 {
@@ -156,7 +158,6 @@ public class EsourceReconciliationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-ESR-002")]
     [GxPRequirement("PRD-SYS-001")]
     public async Task AcceptCandidate_CommitsValueAndWritesGxPAuditAndESignature()
     {
@@ -195,8 +196,6 @@ public class EsourceReconciliationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-ESR-002")]
-    [GxPRequirement("PRD-ESR-003")]
     [GxPRequirement("PRD-SYS-001")]
     public async Task RejectCandidate_RequiresRationaleAndPreservesOriginalPayload()
     {
@@ -239,7 +238,6 @@ public class EsourceReconciliationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-ESR-002")]
     public async Task RaiseClinicalQuery_RegistersQueryAndUpdatesCandidateStatus()
     {
         // Arrange
@@ -274,7 +272,6 @@ public class EsourceReconciliationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-ESR-003")]
     [GxPRequirement("PRD-SYS-001")]
     public async Task GetProvenanceAudit_ReturnsRawFhirPayloadAndAuditTrail()
     {
@@ -303,7 +300,6 @@ public class EsourceReconciliationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-ESR-002")]
     [GxPRequirement("PRD-SYS-001")]
     public async Task BatchAcceptCandidates_CommitsAllValidCandidatesAndWritesAuditLogs()
     {
@@ -340,8 +336,6 @@ public class EsourceReconciliationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-ESR-002")]
-    [GxPRequirement("PRD-ESR-003")]
     [GxPRequirement("PRD-SYS-001")]
     public async Task BatchRejectCandidates_RequiresRationaleAndUpdatesStatus()
     {
@@ -380,7 +374,6 @@ public class EsourceReconciliationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-ESR-002")]
     public async Task BatchAcceptCandidates_ExceedingLimit_ReturnsBadRequest()
     {
         // Arrange
@@ -407,7 +400,6 @@ public class EsourceReconciliationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-ESR-002")]
     public async Task BatchOperation_WithNonExistentCandidateId_RollsBackTransaction()
     {
         // Arrange

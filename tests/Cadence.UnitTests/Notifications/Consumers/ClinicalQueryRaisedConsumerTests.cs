@@ -103,8 +103,18 @@ public class ClinicalQueryRaisedConsumerTests
 
         (await harness.Consumed.Any<ClinicalQueryRaised>(ct)).Should().BeTrue();
 
-        // Publish duplicate message
+        // Publish duplicate message, and wait until the consumer has finished with it before reading the context
         await harness.Bus.Publish(message, ct);
+        int consumed = 0;
+        await foreach (var _ in harness.Consumed.SelectAsync<ClinicalQueryRaised>(ct))
+        {
+            if (++consumed == 2)
+            {
+                break;
+            }
+        }
+
+        consumed.Should().Be(2);
 
         var recordCount = await dbContext.NotificationRecords.CountAsync(r => r.RelatedEntityId == "QRY-1002", ct);
         recordCount.Should().Be(1);

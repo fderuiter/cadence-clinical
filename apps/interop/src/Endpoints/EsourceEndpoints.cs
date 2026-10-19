@@ -618,96 +618,70 @@ public static class EsourceEndpoints
 
         var distinctIds = request.CandidateIds.Distinct().ToList();
 
-        using var transaction = db.Database.IsRelational()
-            ? await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false)
-            : null;
+        // One SaveChanges writes every candidate and audit entry atomically, and the context's retrying execution
+        // strategy retries it as a whole. An explicit transaction here added nothing and failed under that strategy (#5383).
+        var items = await db.EhrReconciliationCandidateRecords
+            .Where(c => distinctIds.Contains(c.Id))
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
 
-        try
+        if (items.Count != distinctIds.Count)
         {
-            var items = await db.EhrReconciliationCandidateRecords
-                .Where(c => distinctIds.Contains(c.Id))
-                .ToListAsync(ct)
-                .ConfigureAwait(false);
-
-            if (items.Count != distinctIds.Count)
-            {
-                var missingIds = distinctIds.Except(items.Select(i => i.Id)).ToList();
-                if (transaction != null)
-                {
-                    await transaction.RollbackAsync(ct).ConfigureAwait(false);
-                }
-                return Results.Problem($"Batch operation aborted. Candidate record(s) not found: {string.Join(", ", missingIds)}", statusCode: StatusCodes.Status404NotFound);
-            }
-
-            if (items.Exists(i => !CallerScope.CanAccessStudy(httpContext, i.StudyId)))
-            {
-                if (transaction != null)
-                {
-                    await transaction.RollbackAsync(ct).ConfigureAwait(false);
-                }
-                return OutsideStudy();
-            }
-
-            var callerUser = GetCallerUser(httpContext);
-            var callerRole = GetCallerRole(httpContext);
-            var now = clock.UtcNow;
-            var commitReason = string.IsNullOrWhiteSpace(request.CommitReason) ? "CRC batch accepted candidate data from hospital EHR" : request.CommitReason;
-
-            foreach (var item in items)
-            {
-                item.Status = "ACCEPTED";
-                item.ResolutionAction = "ACCEPT_COMMIT";
-                item.ResolutionReason = commitReason;
-                item.ResolvedBy = callerUser;
-                item.ResolvedAt = now;
-                item.CurrentEcrfValueJson = item.CandidateValueJson;
-                item.CurrentEcrfUpdatedAt = now;
-                item.DiscrepancyType = "EXACT_MATCH";
-                item.VersionIndex += 1;
-
-                var eSig = new
-                {
-                    signed_by = callerUser,
-                    role = callerRole,
-                    signed_at = now,
-                    meaning = "21 CFR Part 11 eSignature - Batch Accept & Commit eSource Records",
-                    reason = request.ChangeReason ?? "CRC eSource Batch Reconciliation Accept & Commit"
-                };
-                item.ElectronicSignatureJson = JsonSerializer.Serialize(eSig);
-
-                db.InteropAuditLogs.Add(new InteropAuditLog
-                {
-                    Timestamp = now,
-                    UserId = callerUser,
-                    UserRole = callerRole,
-                    Action = "ESOURCE_CANDIDATE_BATCH_ACCEPTED",
-                    Details = $"Batch accepted candidate {item.Id} ({item.TargetVariable}) into eCRF with value {item.CandidateValueJson}",
-                    ChangeReason = request.ChangeReason ?? "CRC eSource Batch Reconciliation Accept & Commit"
-                });
-            }
-
-            await db.SaveChangesAsync(ct).ConfigureAwait(false);
-
-            if (transaction != null)
-            {
-                await transaction.CommitAsync(ct).ConfigureAwait(false);
-            }
-
-            var dtos = items.Select(ToDto).ToList();
-            return Results.Ok(new EhrReconcileBatchActionResponse(
-                Success: true,
-                ActionCount: dtos.Count,
-                Candidates: dtos,
-                Message: $"Successfully batch accepted {dtos.Count} candidate items."));
+            var missingIds = distinctIds.Except(items.Select(i => i.Id)).ToList();
+            return Results.Problem($"Batch operation aborted. Candidate record(s) not found: {string.Join(", ", missingIds)}", statusCode: StatusCodes.Status404NotFound);
         }
-        catch
+
+        if (items.Exists(i => !CallerScope.CanAccessStudy(httpContext, i.StudyId)))
         {
-            if (transaction != null)
-            {
-                await transaction.RollbackAsync(ct).ConfigureAwait(false);
-            }
-            throw;
+            return OutsideStudy();
         }
+
+        var callerUser = GetCallerUser(httpContext);
+        var callerRole = GetCallerRole(httpContext);
+        var now = clock.UtcNow;
+        var commitReason = string.IsNullOrWhiteSpace(request.CommitReason) ? "CRC batch accepted candidate data from hospital EHR" : request.CommitReason;
+
+        foreach (var item in items)
+        {
+            item.Status = "ACCEPTED";
+            item.ResolutionAction = "ACCEPT_COMMIT";
+            item.ResolutionReason = commitReason;
+            item.ResolvedBy = callerUser;
+            item.ResolvedAt = now;
+            item.CurrentEcrfValueJson = item.CandidateValueJson;
+            item.CurrentEcrfUpdatedAt = now;
+            item.DiscrepancyType = "EXACT_MATCH";
+            item.VersionIndex += 1;
+
+            var eSig = new
+            {
+                signed_by = callerUser,
+                role = callerRole,
+                signed_at = now,
+                meaning = "21 CFR Part 11 eSignature - Batch Accept & Commit eSource Records",
+                reason = request.ChangeReason ?? "CRC eSource Batch Reconciliation Accept & Commit"
+            };
+            item.ElectronicSignatureJson = JsonSerializer.Serialize(eSig);
+
+            db.InteropAuditLogs.Add(new InteropAuditLog
+            {
+                Timestamp = now,
+                UserId = callerUser,
+                UserRole = callerRole,
+                Action = "ESOURCE_CANDIDATE_BATCH_ACCEPTED",
+                Details = $"Batch accepted candidate {item.Id} ({item.TargetVariable}) into eCRF with value {item.CandidateValueJson}",
+                ChangeReason = request.ChangeReason ?? "CRC eSource Batch Reconciliation Accept & Commit"
+            });
+        }
+
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        var dtos = items.Select(ToDto).ToList();
+        return Results.Ok(new EhrReconcileBatchActionResponse(
+            Success: true,
+            ActionCount: dtos.Count,
+            Candidates: dtos,
+            Message: $"Successfully batch accepted {dtos.Count} candidate items."));
     }
 
     public static async Task<IResult> BatchRejectCandidatesAsync(
@@ -734,92 +708,66 @@ public static class EsourceEndpoints
 
         var distinctIds = request.CandidateIds.Distinct().ToList();
 
-        using var transaction = db.Database.IsRelational()
-            ? await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false)
-            : null;
+        // One SaveChanges writes every candidate and audit entry atomically, and the context's retrying execution
+        // strategy retries it as a whole. An explicit transaction here added nothing and failed under that strategy (#5383).
+        var items = await db.EhrReconciliationCandidateRecords
+            .Where(c => distinctIds.Contains(c.Id))
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
 
-        try
+        if (items.Count != distinctIds.Count)
         {
-            var items = await db.EhrReconciliationCandidateRecords
-                .Where(c => distinctIds.Contains(c.Id))
-                .ToListAsync(ct)
-                .ConfigureAwait(false);
-
-            if (items.Count != distinctIds.Count)
-            {
-                var missingIds = distinctIds.Except(items.Select(i => i.Id)).ToList();
-                if (transaction != null)
-                {
-                    await transaction.RollbackAsync(ct).ConfigureAwait(false);
-                }
-                return Results.Problem($"Batch operation aborted. Candidate record(s) not found: {string.Join(", ", missingIds)}", statusCode: StatusCodes.Status404NotFound);
-            }
-
-            if (items.Exists(i => !CallerScope.CanAccessStudy(httpContext, i.StudyId)))
-            {
-                if (transaction != null)
-                {
-                    await transaction.RollbackAsync(ct).ConfigureAwait(false);
-                }
-                return OutsideStudy();
-            }
-
-            var callerUser = GetCallerUser(httpContext);
-            var callerRole = GetCallerRole(httpContext);
-            var now = clock.UtcNow;
-
-            foreach (var item in items)
-            {
-                item.Status = "REJECTED";
-                item.ResolutionAction = "REJECT";
-                item.ResolutionReason = request.RejectionReason.Trim();
-                item.ResolvedBy = callerUser;
-                item.ResolvedAt = now;
-                item.VersionIndex += 1;
-
-                var eSig = new
-                {
-                    signed_by = callerUser,
-                    role = callerRole,
-                    signed_at = now,
-                    meaning = "21 CFR Part 11 eSignature - Batch Reject eSource Records",
-                    reason = request.RejectionReason
-                };
-                item.ElectronicSignatureJson = JsonSerializer.Serialize(eSig);
-
-                db.InteropAuditLogs.Add(new InteropAuditLog
-                {
-                    Timestamp = now,
-                    UserId = callerUser,
-                    UserRole = callerRole,
-                    Action = "ESOURCE_CANDIDATE_BATCH_REJECTED",
-                    Details = $"Batch rejected candidate {item.Id} ({item.TargetVariable}). Clinical rationale: {request.RejectionReason}",
-                    ChangeReason = request.ChangeReason ?? "CRC eSource Batch Reconciliation Reject"
-                });
-            }
-
-            await db.SaveChangesAsync(ct).ConfigureAwait(false);
-
-            if (transaction != null)
-            {
-                await transaction.CommitAsync(ct).ConfigureAwait(false);
-            }
-
-            var dtos = items.Select(ToDto).ToList();
-            return Results.Ok(new EhrReconcileBatchActionResponse(
-                Success: true,
-                ActionCount: dtos.Count,
-                Candidates: dtos,
-                Message: $"Successfully batch rejected {dtos.Count} candidate items."));
+            var missingIds = distinctIds.Except(items.Select(i => i.Id)).ToList();
+            return Results.Problem($"Batch operation aborted. Candidate record(s) not found: {string.Join(", ", missingIds)}", statusCode: StatusCodes.Status404NotFound);
         }
-        catch
+
+        if (items.Exists(i => !CallerScope.CanAccessStudy(httpContext, i.StudyId)))
         {
-            if (transaction != null)
-            {
-                await transaction.RollbackAsync(ct).ConfigureAwait(false);
-            }
-            throw;
+            return OutsideStudy();
         }
+
+        var callerUser = GetCallerUser(httpContext);
+        var callerRole = GetCallerRole(httpContext);
+        var now = clock.UtcNow;
+
+        foreach (var item in items)
+        {
+            item.Status = "REJECTED";
+            item.ResolutionAction = "REJECT";
+            item.ResolutionReason = request.RejectionReason.Trim();
+            item.ResolvedBy = callerUser;
+            item.ResolvedAt = now;
+            item.VersionIndex += 1;
+
+            var eSig = new
+            {
+                signed_by = callerUser,
+                role = callerRole,
+                signed_at = now,
+                meaning = "21 CFR Part 11 eSignature - Batch Reject eSource Records",
+                reason = request.RejectionReason
+            };
+            item.ElectronicSignatureJson = JsonSerializer.Serialize(eSig);
+
+            db.InteropAuditLogs.Add(new InteropAuditLog
+            {
+                Timestamp = now,
+                UserId = callerUser,
+                UserRole = callerRole,
+                Action = "ESOURCE_CANDIDATE_BATCH_REJECTED",
+                Details = $"Batch rejected candidate {item.Id} ({item.TargetVariable}). Clinical rationale: {request.RejectionReason}",
+                ChangeReason = request.ChangeReason ?? "CRC eSource Batch Reconciliation Reject"
+            });
+        }
+
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        var dtos = items.Select(ToDto).ToList();
+        return Results.Ok(new EhrReconcileBatchActionResponse(
+            Success: true,
+            ActionCount: dtos.Count,
+            Candidates: dtos,
+            Message: $"Successfully batch rejected {dtos.Count} candidate items."));
     }
 
     public static async Task<IResult> RaiseClinicalQueryAsync(

@@ -89,7 +89,7 @@ public class EConsentCompletedConsumerTests
         }
     }
 
-    private sealed class FakeSubjectRepository(FakeUnitOfWork unitOfWork) : ISubjectRepository
+    private sealed class FakeSubjectRepository(FakeUnitOfWork store) : ISubjectRepository
     {
         /// <summary>Every <see cref="StudyCode"/> this repository's <see cref="EnrollNextIndexAsync"/> was
         /// invoked with, in call order -- the recording the "shared code path" boundary-check AC needs.</summary>
@@ -98,7 +98,7 @@ public class EConsentCompletedConsumerTests
         public Task<int> EnrollNextIndexAsync(StudyCode studyCode, CancellationToken cancellationToken)
         {
             EnrollNextIndexAsyncCalls.Add(studyCode);
-            int? maxIndex = unitOfWork.Subjects
+            int? maxIndex = store.Subjects
                 .Where(s => s.StudyCode == studyCode)
                 .Select(s => (int?)s.EnrollmentIndex)
                 .Max();
@@ -107,11 +107,11 @@ public class EConsentCompletedConsumerTests
 
         public Task<ClinicalSubject?> GetByIdAsync(string id, CancellationToken cancellationToken) =>
             Task.FromResult(Guid.TryParse(id, out var guid)
-                ? unitOfWork.Subjects.SingleOrDefault(s => s.Id == new SubjectId(guid))
+                ? store.Subjects.SingleOrDefault(s => s.Id == new SubjectId(guid))
                 : null);
 
         public Task<ClinicalSubject?> GetByCodeAsync(string code, CancellationToken cancellationToken) =>
-            Task.FromResult(unitOfWork.Subjects.SingleOrDefault(s => s.SubjectCode.Value == code));
+            Task.FromResult(store.Subjects.SingleOrDefault(s => s.SubjectCode.Value == code));
 
         // The consumer never lists subjects; the fake only has to satisfy the port.
         public Task<SubjectPage> ListAsync(SubjectListCriteria criteria, CancellationToken cancellationToken) =>
@@ -119,11 +119,21 @@ public class EConsentCompletedConsumerTests
 
         public Task AddAsync(ClinicalSubject subject, CancellationToken cancellationToken)
         {
-            unitOfWork.StageSubject(subject);
+            store.StageSubject(subject);
             return Task.CompletedTask;
         }
 
-        public Task SaveChangesAsync(CancellationToken cancellationToken) => unitOfWork.SaveChangesAsync();
+        public Task SaveChangesAsync(CancellationToken cancellationToken) => store.SaveChangesAsync();
+
+        /// <summary>How many units of work the consumer ran; the fake has no real transaction to open.</summary>
+        public int TransactionCount { get; private set; }
+
+        public Task<TResult> ExecuteInTransactionAsync<TResult>(
+            Func<CancellationToken, Task<TResult>> unitOfWork, CancellationToken cancellationToken)
+        {
+            TransactionCount++;
+            return unitOfWork(cancellationToken);
+        }
     }
 
     private sealed class FakeConsentRepository(FakeUnitOfWork unitOfWork) : IConsentRepository
@@ -289,6 +299,7 @@ public class EConsentCompletedConsumerTests
             // Behavioral half: this exact call site actually invoked that single shared method -- not merely
             // producing a matching output value some other, hand-rolled path could equally have produced.
             subjectsRepository.EnrollNextIndexAsyncCalls.Should().ContainSingle().Which.Should().Be(StudyA);
+            subjectsRepository.TransactionCount.Should().Be(1, "the index, the subject and the consent are one unit of work (#5383)");
         }
         finally
         {

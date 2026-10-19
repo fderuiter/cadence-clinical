@@ -8,16 +8,14 @@ using Cadence.Apps.Execution.Domain.Ports;
 
 using Microsoft.EntityFrameworkCore;
 
-using Polly;
-
 namespace Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 
 /// <summary>
 /// EF Core repository adapter for <see cref="PublishedFormVersionRegistry"/>.
 /// @req:PRD-SYS-053
 /// </summary>
-public sealed class PublishedFormVersionRegistryRepository(ExecutionDbContext context, ResiliencePipeline saveChangesResilience)
-    : ExecutionRepositoryBase(context, saveChangesResilience), IPublishedFormVersionRegistryRepository
+public sealed class PublishedFormVersionRegistryRepository(ExecutionDbContext context)
+    : ExecutionRepositoryBase(context), IPublishedFormVersionRegistryRepository
 {
     public async Task<PublishedFormVersionRegistry?> GetByVersionAndFormAsync(
         string studyId, string protocolVersion, string formId, CancellationToken cancellationToken) =>

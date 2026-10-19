@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Infrastructure.Persistence;
 using Cadence.Compliance;
+using Cadence.Database;
 using Cadence.Kernel.Time;
 
 using Microsoft.EntityFrameworkCore;
@@ -94,20 +95,8 @@ public class DsurCompilerEngine
             return new DsurCompileResult(record, payload);
         }
 
-        // Execute within a read-committed database transaction on relational databases
-        if (_dbContext.Database.IsRelational())
-        {
-            var strategy = _dbContext.Database.CreateExecutionStrategy();
-            return await strategy.ExecuteAsync(async () =>
-            {
-                using var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
-                var result = await CompileCoreAsync();
-                await transaction.CommitAsync(cancellationToken);
-                return result;
-            });
-        }
-
-        return await CompileCoreAsync();
+        // One read-committed unit of work inside the execution strategy (#5383); the in-memory provider runs it directly.
+        return await _dbContext.ExecuteInTransactionAsync(_ => CompileCoreAsync(), IsolationLevel.ReadCommitted, cancellationToken);
     }
 
     public async Task<DsurApprovalResult> ApproveDsurAsync(

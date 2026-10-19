@@ -110,9 +110,11 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
     // Confirm
     await wrapper.find("#btn-confirm-reauth").trigger("click");
 
-    // Wait for async actions and DOM update
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    await wrapper.vm.$nextTick();
+    // Wait until the sign-off has finished and the modal has closed, however long that takes under load
+    await vi.waitFor(async () => {
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#reauth-modal").exists()).toBe(false);
+    });
 
     // Verify correct API invocation
     expect(soaClient.verifySignature).toHaveBeenCalledWith(

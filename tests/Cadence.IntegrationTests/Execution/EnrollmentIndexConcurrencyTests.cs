@@ -80,7 +80,7 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
         var tasks = Enumerable.Range(0, concurrencyLevel).Select(async i =>
         {
             await using var context = ExecutionPostgresFixture.CreateDbContext(connectionString);
-            var repository = new SubjectRepository(context, SaveChangesResiliencePipelineFactory.Create());
+            var repository = new SubjectRepository(context);
             var service = new SubjectApplicationService(repository, consents, compliance, encryption, auditWriter, auditContext);
 
             var request = new SubjectCreateRequest($"SUBJ-PG-{i:D3}", studyCode.Value, "SITE-001", ArmId: null, Demographics: null);
@@ -122,7 +122,7 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
         var tasks = Enumerable.Range(0, concurrencyLevel).Select(async i =>
         {
             await using var context = ExecutionPostgresFixture.CreateDbContext(connectionString);
-            var repository = new SubjectRepository(context, SaveChangesResiliencePipelineFactory.Create());
+            var repository = new SubjectRepository(context);
             var consumer = new EConsentCompletedConsumer(repository, consents, auditWriter, new AmbientAuditContextAccessor(new HttpContextAccessor()));
 
             var consumeContext = Substitute.For<ConsumeContext<EConsentCompletedEvent>>();
@@ -170,7 +170,7 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
         var tasksA = Enumerable.Range(0, perStudyCount).Select(async i =>
         {
             await using var context = ExecutionPostgresFixture.CreateDbContext(connectionString);
-            var repository = new SubjectRepository(context, SaveChangesResiliencePipelineFactory.Create());
+            var repository = new SubjectRepository(context);
             var service = new SubjectApplicationService(repository, consents, compliance, encryption, auditWriter, auditContext);
 
             var request = new SubjectCreateRequest($"SUBJ-A-{i:D3}", studyA.Value, "SITE-001", ArmId: null, Demographics: null);
@@ -181,7 +181,7 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
         var tasksB = Enumerable.Range(0, perStudyCount).Select(async i =>
         {
             await using var context = ExecutionPostgresFixture.CreateDbContext(connectionString);
-            var repository = new SubjectRepository(context, SaveChangesResiliencePipelineFactory.Create());
+            var repository = new SubjectRepository(context);
             var service = new SubjectApplicationService(repository, consents, compliance, encryption, auditWriter, auditContext);
 
             var request = new SubjectCreateRequest($"SUBJ-B-{i:D3}", studyB.Value, "SITE-001", ArmId: null, Demographics: null);

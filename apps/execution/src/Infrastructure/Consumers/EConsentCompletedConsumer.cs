@@ -118,59 +118,65 @@ public sealed class EConsentCompletedConsumer(
         var subjectCode = new SubjectCode(msg.SubjectId);
         var studyCode = new StudyCode(msg.StudyId);
 
-        // Idempotency check #1 (subject creation): looked up by domain code alone -- deliberately not the
-        // dual id-then-code fallback GetByIdAsync/GetByCodeAsync sequencing an application service would use,
-        // since this event only ever carries the domain code. Skip entirely, log-only, no error when found.
-        var existing = await subjects.GetByCodeAsync(subjectCode.Value, context.CancellationToken).ConfigureAwait(false);
-        if (existing is null)
+        // Both idempotency checks, the enrollment index under its per-study lock and both inserts are one unit of
+        // work; a transient failure re-runs it from the checks (#5383).
+        await subjects.ExecuteInTransactionAsync(async token =>
         {
-            // Same shared, transaction-scoped, advisory-locked path SubjectApplicationService.CreateAsync
-            // (MIG-SUBJ-018) calls for its own enrollment -- 02_technical_design.md §4.2's explicit closing
-            // of the "identical race exists independently in both places" finding. ISubjectRepository
-            // exposes exactly one index-assignment method, so there is no second, hand-rolled query path
-            // this call site could drift onto.
-            int nextIndex = await subjects.EnrollNextIndexAsync(studyCode, context.CancellationToken).ConfigureAwait(false);
-            SiteCode? siteCode = msg.SiteId is { Length: > 0 } site ? new SiteCode(site) : null;
-            var created = ClinicalSubject.Create(subjectCode, studyCode, siteCode, nextIndex,
-                encryptedDemographics: null, stratFactors: null);
-            created.ReasonForChange = account.ChangeReason;
-            await subjects.AddAsync(created, context.CancellationToken).ConfigureAwait(false);
-            await auditLog.WriteAsync(nameof(ClinicalSubject), created.Id.ToString(), "INSERT",
-                account.UserId, created.ReasonForChange,
-                oldValues: null, newValues: null, context.CancellationToken).ConfigureAwait(false);
-
-            if (logger != null)
+            // Idempotency check #1 (subject creation): looked up by domain code alone -- deliberately not the
+            // dual id-then-code fallback GetByIdAsync/GetByCodeAsync sequencing an application service would use,
+            // since this event only ever carries the domain code. Skip entirely, log-only, no error when found.
+            var existing = await subjects.GetByCodeAsync(subjectCode.Value, token).ConfigureAwait(false);
+            if (existing is null)
             {
-                logger.LogSubjectAutoEnrolled(msg.SubjectId, msg.StudyId, nextIndex);
+                // Same shared, advisory-locked path SubjectApplicationService.CreateAsync
+                // (MIG-SUBJ-018) calls for its own enrollment -- 02_technical_design.md §4.2's explicit closing
+                // of the "identical race exists independently in both places" finding. ISubjectRepository
+                // exposes exactly one index-assignment method, so there is no second, hand-rolled query path
+                // this call site could drift onto.
+                int nextIndex = await subjects.EnrollNextIndexAsync(studyCode, token).ConfigureAwait(false);
+                SiteCode? siteCode = msg.SiteId is { Length: > 0 } site ? new SiteCode(site) : null;
+                var created = ClinicalSubject.Create(subjectCode, studyCode, siteCode, nextIndex,
+                    encryptedDemographics: null, stratFactors: null);
+                created.ReasonForChange = account.ChangeReason;
+                await subjects.AddAsync(created, token).ConfigureAwait(false);
+                await auditLog.WriteAsync(nameof(ClinicalSubject), created.Id.ToString(), "INSERT",
+                    account.UserId, created.ReasonForChange,
+                    oldValues: null, newValues: null, token).ConfigureAwait(false);
+
+                if (logger != null)
+                {
+                    logger.LogSubjectAutoEnrolled(msg.SubjectId, msg.StudyId, nextIndex);
+                }
             }
-        }
 
-        // Idempotency check #2 (consent-cache backfill) -- INDEPENDENT of check #1 above: this runs even
-        // when the subject already existed, and is itself skipped only when a matching consent-cache row
-        // already exists. The two checks never share state, so "subject exists but consent doesn't" and
-        // "both already exist" (pure redelivery) are both handled correctly without coupling one to the other.
-        var version = new ProtocolVersionRef(studyCode, msg.VersionTag, msg.VersionIndex);
-        var consentExists = await consents.ExistsAsync(subjectCode, studyCode, msg.VersionIndex, context.CancellationToken)
-            .ConfigureAwait(false);
-        if (!consentExists)
-        {
-            var consent = SubjectConsent.Create(subjectCode, version, icfSigned: true, icfSignedDate: signedAt,
-                requiresReconsent: false, isPaperOverride: false);
-            await consents.AddAsync(consent, context.CancellationToken).ConfigureAwait(false);
-            await auditLog.WriteAsync(nameof(SubjectConsent), consent.Id.ToString(), "INSERT",
-                account.UserId, account.ChangeReason,
-                oldValues: null, newValues: null, context.CancellationToken).ConfigureAwait(false);
-
-            if (logger != null)
+            // Idempotency check #2 (consent-cache backfill) -- INDEPENDENT of check #1 above: this runs even
+            // when the subject already existed, and is itself skipped only when a matching consent-cache row
+            // already exists. The two checks never share state, so "subject exists but consent doesn't" and
+            // "both already exist" (pure redelivery) are both handled correctly without coupling one to the other.
+            var version = new ProtocolVersionRef(studyCode, msg.VersionTag, msg.VersionIndex);
+            var consentExists = await consents.ExistsAsync(subjectCode, studyCode, msg.VersionIndex, token)
+                .ConfigureAwait(false);
+            if (!consentExists)
             {
-                logger.LogConsentRecordBackfilled(msg.SubjectId, msg.StudyId, msg.VersionIndex);
-            }
-        }
+                var consent = SubjectConsent.Create(subjectCode, version, icfSigned: true, icfSignedDate: signedAt,
+                    requiresReconsent: false, isPaperOverride: false);
+                await consents.AddAsync(consent, token).ConfigureAwait(false);
+                await auditLog.WriteAsync(nameof(SubjectConsent), consent.Id.ToString(), "INSERT",
+                    account.UserId, account.ChangeReason,
+                    oldValues: null, newValues: null, token).ConfigureAwait(false);
 
-        // One transaction, both writes: ISubjectRepository/IConsentRepository share the same underlying
-        // ExecutionDbContext in this slice, so either repository's SaveChangesAsync commits both pending
-        // writes atomically -- and, once Program.cs's AddEntityFrameworkOutbox<ExecutionDbContext> wraps this
-        // receive endpoint, inside the same transactional outbox MassTransit uses for at-least-once delivery.
-        await subjects.SaveChangesAsync(context.CancellationToken).ConfigureAwait(false);
+                if (logger != null)
+                {
+                    logger.LogConsentRecordBackfilled(msg.SubjectId, msg.StudyId, msg.VersionIndex);
+                }
+            }
+
+            // One transaction, both writes: ISubjectRepository/IConsentRepository share the same underlying
+            // ExecutionDbContext in this slice, so either repository's SaveChangesAsync commits both pending
+            // writes atomically -- and, once Program.cs's AddEntityFrameworkOutbox<ExecutionDbContext> wraps this
+            // receive endpoint, inside the same transactional outbox MassTransit uses for at-least-once delivery.
+            await subjects.SaveChangesAsync(token).ConfigureAwait(false);
+            return true;
+        }, context.CancellationToken).ConfigureAwait(false);
     }
 }

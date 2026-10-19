@@ -10,8 +10,6 @@ using Cadence.Apps.Execution.Domain.Subjects;
 
 using Microsoft.EntityFrameworkCore;
 
-using Polly;
-
 namespace Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 
 /// <summary>
@@ -20,8 +18,8 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 /// @req:PRD-SYS-007
 /// @req:SRS-EDC-004
 /// </summary>
-public sealed class ClinicalQueryRepository(ExecutionDbContext context, ResiliencePipeline saveChangesResilience)
-    : ExecutionRepositoryBase(context, saveChangesResilience), IClinicalQueryRepository
+public sealed class ClinicalQueryRepository(ExecutionDbContext context)
+    : ExecutionRepositoryBase(context), IClinicalQueryRepository
 {
     private static readonly QueryStatus[] ActiveStatuses =
     [
@@ -50,15 +48,6 @@ public sealed class ClinicalQueryRepository(ExecutionDbContext context, Resilien
             .Where(q => idList.Contains(q.Id))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
-    }
-
-    public async Task<System.IAsyncDisposable?> BeginTransactionAsync(CancellationToken cancellationToken)
-    {
-        if (Context.Database.ProviderName?.Contains("InMemory") ?? false)
-        {
-            return null;
-        }
-        return await Context.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<ClinicalQuery?> GetActiveQueryOnCoordinatesAsync(
