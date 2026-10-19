@@ -87,6 +87,9 @@ public static class ObservationLimits
 /// <summary>Errors raised by the observation commands (spec §8.1, ADR-2620).</summary>
 public static class ObservationErrors
 {
+    public static readonly KernelError ReasonForChangeRequired =
+        new("K.Observation.ReasonForChangeRequired", 422, "A non-empty reason for change is required to correct an observation.");
+
     public static readonly KernelError ValueInvalid =
         new("K.Observation.ValueInvalid", 422, $"An observation value is required, at most {ObservationLimits.MaxValueLength} characters.");
 
@@ -110,5 +113,5 @@ public static class ObservationErrors
 
     /// <summary>Every observation error, for the API's documented problem set.</summary>
     public static IReadOnlyList<KernelError> All { get; } =
-        [ValueInvalid, ObservedAtInvalid, EnrollmentUnknown, ValueUnchanged, VersionStale, Locked, AlreadyLocked];
+        [ReasonForChangeRequired, ValueInvalid, ObservedAtInvalid, EnrollmentUnknown, ValueUnchanged, VersionStale, Locked, AlreadyLocked];
 }
