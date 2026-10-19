@@ -1,5 +1,5 @@
 // Vue SPA Vite configuration
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import vue from "@vitejs/plugin-vue";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -7,10 +7,29 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const DEV_PORT = 3000;
+// Where the dev server's /api proxy forwards: the API gateway (the AppHost passes its endpoint).
+const GATEWAY_URL = process.env.CADENCE_GATEWAY_URL || "http://localhost:8000";
+
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || "/cadence-clinical/",
   plugins: [
     vue(),
+    {
+      // The gateway sends no CORS headers, so a dev server page that called http://localhost:8000 directly would be
+      // blocked by the browser. Unless VITE_API_BASE_URL is set (environment or .env files), the dev server sends API calls to its own origin,
+      // and the /api proxy below forwards them to the gateway (#5429). Builds, tests and demo mode are unchanged.
+      name: "same-origin-api-in-dev",
+      config(_config, { command, mode }) {
+        if (
+          command === "serve" &&
+          mode === "development" &&
+          !loadEnv(mode, __dirname, "VITE_API_BASE_URL").VITE_API_BASE_URL
+        ) {
+          process.env.VITE_API_BASE_URL = `http://localhost:${DEV_PORT}`;
+        }
+      },
+    },
     {
       name: "html-transform",
       transformIndexHtml(html) {
@@ -42,11 +61,11 @@ export default defineConfig({
     ],
   },
   server: {
-    port: 3000,
+    port: DEV_PORT,
     strictPort: true,
     proxy: {
       "/api": {
-        target: "http://localhost:8000",
+        target: GATEWAY_URL,
         changeOrigin: true,
         secure: false,
       },

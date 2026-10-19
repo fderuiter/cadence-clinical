@@ -125,12 +125,14 @@ curl http://localhost:<port>/healthz/ready
 ### Web clients
 
 ```bash
-pnpm --filter web dev                           # http://localhost:5173
+pnpm --filter web dev                           # http://localhost:3000/cadence-clinical/
 pnpm --filter subject-portal dev                # http://localhost:5174
 ```
 
-Set `VITE_API_BASE_URL` and the `VITE_KEYCLOAK_*` variables, or `VITE_ENABLE_MSW=true` to work against
-mocked responses without a backend.
+The web dev server calls its own origin, and its `/api` proxy forwards to the gateway (`CADENCE_GATEWAY_URL`,
+default `http://localhost:8000`); the gateway sends no CORS headers, so do not point `VITE_API_BASE_URL` at it
+(#5429). Set the `VITE_KEYCLOAK_*` variables for another Keycloak, or `VITE_ENABLE_MSW=true` to work against mocked
+responses without a backend.
 
 ## 4. Services and ports
 

@@ -114,10 +114,6 @@ The first takes about a minute (mostly the build), the second about 4 s. The ful
 
 ## Gotchas
 
-- **The gateway has no CORS, and the AppHost points the web app at `http://localhost:8000`.** Every API call from
-  `:3000` is blocked in a real browser ("No 'Access-Control-Allow-Origin' header"), so the Canvas shows "Failed to
-  fetch" everywhere. The driver answers gateway calls itself (fetches them from Node, adds CORS headers);
-  `CADENCE_CORS_SHIM=0` turns that off to see the bug. A human browser on the AppHost stack hits it too. Tracked in #5429.
 - **No kernel tenant for the realm users.** Tokens carry `tenant_id=cadence-local`, but nothing provisions that
   kernel tenant, so kernel reads answer 403 "Your sign-in's tenant is not an active kernel tenant" (activity,
   search, Trace). `scripts/local_stack_nodocker.sh up` inserts the row into `kernel.tenants` directly: local only, no audit entry, no

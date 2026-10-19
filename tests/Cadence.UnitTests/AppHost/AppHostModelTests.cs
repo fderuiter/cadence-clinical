@@ -176,6 +176,20 @@ public sealed class AppHostModelTests
         web.Keys.Should().Contain("VITE_API_BASE_URL");
     }
 
+    /// <summary>
+    /// The web app calls its own origin and Vite's /api proxy forwards to the gateway: the gateway sends no CORS
+    /// headers, so a browser page on the web port calling the gateway's port directly is blocked (#5429).
+    /// </summary>
+    [Fact]
+    public async Task WebApp_CallsItsOwnOrigin_AndProxiesApiCallsToTheGateway()
+    {
+        var resources = await ResourcesAsync("--AppHost:Profile=core");
+
+        var web = await EnvironmentAsync(resources["web"]);
+        web["VITE_API_BASE_URL"].Should().BeOfType<EndpointReference>().Which.Resource.Name.Should().Be("web");
+        web["CADENCE_GATEWAY_URL"].Should().BeOfType<EndpointReference>().Which.Resource.Name.Should().Be("gateway");
+    }
+
     [Theory]
     [InlineData("--AppHost:Profile=everything")]
     [InlineData("--AppHost:OidcAuthority=http://localhost:8080")]
