@@ -27,20 +27,20 @@ Prior to this change, client-side MSW mock handlers lacked centralized browser-c
 ### Option 1: Ad-hoc Mock Signature Checking in Individual Handler Files
 
 - **Overview:** Implement custom validation logic inside individual MSW route handlers.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Quick to throw together for single tests.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Duplicate code and inconsistent signature enforcement across endpoints.
   - ❌ Hard to maintain when Gateway signature rules evolve.
 
 ### Option 2: Shared `mockGateway` Simulator in `@cadence/ui` (Selected)
 
 - **Overview:** Create a centralized `mockGateway.js` module in `packages/ui` exporting path-prefix validators, Subject-role whitelist checkers, and `validateGatewayRequest` utilizing browser Crypto APIs via `signing.js`.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Centralized, reusable Gateway security simulation for MSW and client test runners.
   - ✅ Full alignment with API Gateway Version 2 signature spec and Subject RBAC rules.
   - ✅ Unit tested via Vitest in `packages/ui/tests/mockGateway.test.js`.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires exposing `mockGateway` export entry in `packages/ui/package.json`.
 
 ## 4. Decision Outcome
@@ -62,3 +62,10 @@ Prior to this change, client-side MSW mock handlers lacked centralized browser-c
 ## 7. Amendment (2026-10-02): which requests the mock gateway intercepts
 
 The web app and the subject portal each kept their own copy of the list of gateway paths their MSW handlers intercept, which the duplication gate flagged (#5164). That check now lives with the rest of the gateway simulation, as `isGatewayApiCall(url)` in `packages/ui/mockGateway.js`: a request is intercepted when it targets port 8000 or starts with one of the service prefixes. Both apps' handlers call it, and `packages/ui/tests/mockGateway.test.js` covers it.
+
+## 8. Amendment (2026-10-19): no secret in the library (#5335)
+
+The simulator used to export a literal `GATEWAY_SECRET` from the root of `@cadence/ui` and fell back to it whenever a caller passed none. A browser bundle never holds the gateway secret, and AGENTS.md §5 forbids fallback secrets, so:
+
+- The simulator is exported only as `ui/testing`. The root export (`index.js`) no longer re-exports it, and `packages/ui/tests/mockGateway.test.js` asserts that.
+- There is no `GATEWAY_SECRET`. `validateGatewayRequest(req, { secret })` verifies an `X-Gateway-Signature` only against the secret passed in, and rejects a signed request when it has none. The apps' MSW handlers pass no secret, so they fail closed on a signature they cannot check; tests pass their own test secret.

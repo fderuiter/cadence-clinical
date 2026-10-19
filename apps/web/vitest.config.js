@@ -32,10 +32,10 @@ export default mergeConfig(
         ],
         thresholds: {
           // A ratchet floor under the whole app: raise it when coverage rises, never lower it.
-          lines: 47,
-          statements: 46,
-          functions: 36,
-          branches: 38,
+          lines: 61,
+          statements: 60,
+          functions: 45,
+          branches: 50,
           // The files ADR-251 put under its 80 percent gate keep it.
           "src/components/{ReasonForChangeModal,ReasonModal,ReviewCommentsSidebar,TrivialComponent}.vue":
             {

@@ -20,12 +20,26 @@ export default defineConfig({
     },
   ],
   resolve: {
-    alias: {
-      ui: path.resolve(__dirname, "../../packages/ui/dist/index.js"),
-      "@": path.resolve(__dirname, "./src"),
-      pinia: path.resolve(__dirname, "node_modules/pinia"),
-      vue: path.resolve(__dirname, "node_modules/vue"),
-    },
+    alias: [
+      // The mock gateway is test and dev tooling, kept out of the library's root export (#5335).
+      {
+        find: /^ui\/testing$/,
+        replacement: path.resolve(
+          __dirname,
+          "../../packages/ui/mockGateway.js"
+        ),
+      },
+      {
+        find: /^ui$/,
+        replacement: path.resolve(__dirname, "../../packages/ui/dist/index.js"),
+      },
+      { find: "@", replacement: path.resolve(__dirname, "./src") },
+      {
+        find: "pinia",
+        replacement: path.resolve(__dirname, "node_modules/pinia"),
+      },
+      { find: "vue", replacement: path.resolve(__dirname, "node_modules/vue") },
+    ],
   },
   server: {
     port: 3000,

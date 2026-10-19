@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { gatewayHandlers } from "../src/mocks/handlers.js";
-import { generateGatewaySignature, GATEWAY_SECRET } from "ui";
+import { generateGatewaySignature } from "ui";
+
+// The browser never holds the gateway secret; this one exists only to mint a well-formed signature.
+const TEST_GATEWAY_SECRET = "web-mock-gateway-test-secret"; // pragma: allowlist secret
 
 describe("Web App MSW Mock Gateway Interceptor Integration Tests", () => {
   let consoleSpy;
@@ -87,7 +90,7 @@ describe("Web App MSW Mock Gateway Interceptor Integration Tests", () => {
     );
   });
 
-  it("verifies V2 HMAC-SHA256 X-Gateway-Signature header generated via browser Crypto API", async () => {
+  it("rejects an X-Gateway-Signature it has no secret to verify instead of trusting it", async () => {
     const timestamp = "1700000000";
     const sig = await generateGatewaySignature(
       "user-001",
@@ -95,7 +98,7 @@ describe("Web App MSW Mock Gateway Interceptor Integration Tests", () => {
       timestamp,
       "2",
       null,
-      GATEWAY_SECRET
+      TEST_GATEWAY_SECRET
     );
 
     const response = await runHandler(
@@ -110,8 +113,10 @@ describe("Web App MSW Mock Gateway Interceptor Integration Tests", () => {
       }
     );
 
-    // Passed gateway validation -> MSW passthrough
+    // The dev mock gateway ships no secret, so it fails closed on a signature it cannot check.
     expect(response).not.toBeNull();
-    expect(response.headers.get("x-msw-intention")).toBe("passthrough");
+    expect(response.status).toBe(401);
+    const data = await response.json();
+    expect(data.detail).toBe("Invalid gateway signature");
   });
 });

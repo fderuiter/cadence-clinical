@@ -1,5 +1,5 @@
 import { http, HttpResponse, passthrough } from "msw";
-import { isGatewayApiCall, validateGatewayRequest } from "ui";
+import { isGatewayApiCall, validateGatewayRequest } from "ui/testing";
 
 export const gatewayHandlers = [
   http.post(

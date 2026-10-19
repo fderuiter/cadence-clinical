@@ -6,7 +6,7 @@ Shared frontend package (JavaScript, TypeScript types and Vue 3 components) used
 
 - `index.js` (main entry, built to `dist/` as an ES and CJS library): helpers such as `debounce`, HTML builders for lookup inputs, rule editors and schedule-of-activities matrices, condition-tree serialisation, `initHoverDetection`, and re-exports of the modules and components below.
 - `signing.js`: browser-side hashing, canonical serialisation and AES-GCM helpers (`sha256`, `canonicalSerialize`, `encryptAESGCM`, `deriveKeyFromPIN`, and others).
-- `mockGateway.js`: gateway path and signature helpers for mocks and tests (`validateGatewayRequest`, `isPathSignatureGated`, a test `GATEWAY_SECRET`). It is not used for real authentication, which happens in [apps/gateway](../../apps/gateway/README.md).
+- `mockGateway.js`, exported only as `ui/testing`: the gateway simulator for MSW handlers and tests (`validateGatewayRequest`, `isGatewayApiCall`, `isPathSignatureGated`). It is not part of the root export and holds no secret: it verifies an `X-Gateway-Signature` only against a secret the caller passes as `options.secret`, and rejects one it cannot check. Real authentication happens in [apps/gateway](../../apps/gateway/README.md).
 - `econsent.js`: consent normalisation and comprehension-check helpers.
 - `accessibility-matcher.js`: `toBeAccessible` Vitest matcher built on `axe-core`.
 - `src/components/`: Vue components (`FileUploadModal`, `MediaPlayer`, and `clinical/` components such as `ClinicalFormField`, `ClinicalDataTable`, `ClinicalQueryPanel`, `AuditLogViewer`, `PersonaSwitcher`).
@@ -19,13 +19,19 @@ Shared frontend package (JavaScript, TypeScript types and Vue 3 components) used
 | Command                  | Purpose                                             |
 | ------------------------ | --------------------------------------------------- |
 | `pnpm --filter ui build` | Generates types, then builds the library with Vite. |
-| `pnpm --filter ui test`  | Vitest (`tests/`).                                  |
+| `pnpm --filter ui test`  | Vitest (`tests/`) with coverage.                    |
 | `pnpm --filter ui lint`  | ESLint.                                             |
+
+## Coverage
+
+`pnpm --filter ui test` measures coverage over every source file, components included (ADR-2530). The global thresholds
+in `vite.config.js` are a ratchet floor: raise them when coverage rises, never lower them. `signing.js` and
+`econsent.js`, the Part 11 signing and eConsent helpers, carry an 80 percent gate of their own.
 
 ## Dependencies
 
 - Runtime: `axe-core`; peer dependency `vue`.
-- Development: Vite, Vitest, TypeScript, `pinia`.
+- Development: Vite, Vitest with `@vitest/coverage-v8`, TypeScript, `pinia`.
 
 ## Used by
 
