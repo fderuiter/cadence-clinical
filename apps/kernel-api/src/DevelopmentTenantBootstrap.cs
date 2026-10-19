@@ -17,11 +17,14 @@ namespace Cadence.Kernel.Host;
 /// The kernel tenant a local stack's sign-ins name (ADR-2542): with <c>Kernel:DevelopmentTenant:Code</c> set, the host
 /// provisions that tenant on start, if no active tenant has the code yet, through the kernel command pipeline as the
 /// <see cref="Operator"/> service account, so the row, its event and its audit entry are written like any other
-/// provisioning. Only in the Development environment: anywhere else the host refuses to start with the setting.
+/// provisioning. With <c>Kernel:DevelopmentTenant:DemoData</c> also true, it then writes the demo study and the local
+/// realm's grants into the tenant (<see cref="DevelopmentDemoData"/>, ADR-2543). Only in the Development environment:
+/// anywhere else the host refuses to start with the setting.
 /// </summary>
 internal sealed partial class DevelopmentTenantBootstrap(
     string code,
     string name,
+    bool demoData,
     IServiceScopeFactory scopes,
     ILogger<DevelopmentTenantBootstrap> logger) : IHostedService
 {
@@ -35,12 +38,24 @@ internal sealed partial class DevelopmentTenantBootstrap(
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        var tenant = await ProvisionAsync(cancellationToken).ConfigureAwait(false);
+        if (demoData)
+        {
+            await DevelopmentDemoData.SeedAsync(tenant, scopes, cancellationToken).ConfigureAwait(false);
+            LogDemoData(logger, DevelopmentDemoData.StudyCode, code);
+        }
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    private async Task<TenantId> ProvisionAsync(CancellationToken cancellationToken)
+    {
         await using var scope = scopes.CreateAsyncScope();
         var services = scope.ServiceProvider;
-        if (await services.GetRequiredService<ITenantDirectory>().FindActiveByCodeAsync(code, cancellationToken).ConfigureAwait(false) is not null)
+        if (await services.GetRequiredService<ITenantDirectory>().FindActiveByCodeAsync(code, cancellationToken).ConfigureAwait(false) is { } existing)
         {
             LogAlreadyProvisioned(logger, code);
-            return;
+            return existing;
         }
 
         services.GetRequiredService<ServiceActorScope>().Actor = Operator;
@@ -53,9 +68,8 @@ internal sealed partial class DevelopmentTenantBootstrap(
         }
 
         LogProvisioned(logger, code, result.Value);
+        return result.Value;
     }
-
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     /// <summary>
     /// Registers the bootstrap when <c>Kernel:DevelopmentTenant:Code</c> is set, and returns the platform operators the
@@ -76,9 +90,11 @@ internal sealed partial class DevelopmentTenantBootstrap(
         }
 
         string name = section["Name"] is { Length: > 0 } configured ? configured : $"Local development ({code})";
+        bool demoData = section.GetValue<bool>("DemoData");
         services.AddHostedService(sp => new DevelopmentTenantBootstrap(
             code,
             name,
+            demoData,
             sp.GetRequiredService<IServiceScopeFactory>(),
             sp.GetRequiredService<ILogger<DevelopmentTenantBootstrap>>()));
         return [Operator.Id];
@@ -89,6 +105,9 @@ internal sealed partial class DevelopmentTenantBootstrap(
 
     [LoggerMessage(EventId = 2543, Level = LogLevel.Information, Message = "Provisioned the development tenant {Code} ({TenantId})")]
     private static partial void LogProvisioned(ILogger logger, string code, TenantId tenantId);
+
+    [LoggerMessage(EventId = 2544, Level = LogLevel.Information, Message = "The demo study {StudyCode} is seeded in the development tenant {Code}")]
+    private static partial void LogDemoData(ILogger logger, string studyCode, string code);
 }
 
 /// <summary>

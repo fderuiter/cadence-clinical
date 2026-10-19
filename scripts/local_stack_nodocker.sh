@@ -42,6 +42,12 @@ up() {
   if ! curl -sf http://localhost:8080/realms/cadence >/dev/null; then
     mkdir -p "$KC_HOME/data/import"
     cp "$REPO/docker/cadence-realm.json" "$KC_HOME/data/import/"
+    # start-dev --import-realm skips a realm Keycloak already has, so a changed realm file (such as the users' fixed
+    # subject ids the kernel's demo grants name, ADR-2543) would never arrive. Re-import it, replacing the stored realm.
+    if [ -d "$KC_HOME/data/h2" ]; then
+      JAVA_TOOL_OPTIONS= "$KC_HOME/bin/kc.sh" import --db dev-file --file "$KC_HOME/data/import/cadence-realm.json" --override true \
+        >"$STATE/keycloak-import.log" 2>&1 || { echo "keycloak realm import failed: $STATE/keycloak-import.log" >&2; return 1; }
+    fi
     KC_BOOTSTRAP_ADMIN_USERNAME=admin KC_BOOTSTRAP_ADMIN_PASSWORD=admin JAVA_TOOL_OPTIONS= \
       nohup "$KC_HOME/bin/kc.sh" start-dev --import-realm --http-port 8080 >"$STATE/keycloak.log" 2>&1 &
     echo $! >"$STATE/keycloak.pid"

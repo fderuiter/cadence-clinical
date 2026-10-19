@@ -1,5 +1,9 @@
 # ADR-2542: The Kernel Host Provisions the Development Tenant
 
+> [!NOTE]
+> §4 "Grants are not provisioned" is amended by [ADR-2543](2026-10-19-the-kernel-host-seeds-the-local-demo-study.md):
+> with `Kernel:DevelopmentTenant:DemoData` on, the bootstrap seeds a demo study and grants the realm's users.
+
 - **Status:** Accepted
 - **Date:** 2026-10-19
 - **Authors:** @fderuiter

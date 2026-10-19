@@ -152,6 +152,7 @@
   ],
   "users": [
     {
+      "id": "d0b6257b-57fe-420b-9526-366e83c756aa",
       "username": "designer_demo",
       "enabled": true,
       "email": "designer_demo@example.com",
@@ -168,6 +169,7 @@
       "attributes": { "tenant_id": ["cadence-local"], "study_ids": ["*"] }
     },
     {
+      "id": "8808e058-a472-4f72-9970-a027eddf35bc",
       "username": "designer.lead",
       "enabled": true,
       "email": "designer.lead@example.com",
@@ -184,6 +186,7 @@
       "attributes": { "tenant_id": ["cadence-local"], "study_ids": ["*"] }
     },
     {
+      "id": "1a4345cc-364c-4b8b-881e-93bbea528b0a",
       "username": "crc.site101",
       "enabled": true,
       "email": "crc.site101@example.com",
@@ -204,6 +207,7 @@
       }
     },
     {
+      "id": "ee2cfdb6-d893-4fb4-a10f-d50830b6728a",
       "username": "cra.monitor",
       "enabled": true,
       "email": "cra.monitor@example.com",
@@ -224,6 +228,7 @@
       }
     },
     {
+      "id": "47a9d88f-73d7-4aca-9fd6-14b8e6e9284f",
       "username": "dm.lead",
       "enabled": true,
       "email": "dm.lead@example.com",
@@ -240,6 +245,7 @@
       "attributes": { "tenant_id": ["cadence-local"], "study_ids": ["*"] }
     },
     {
+      "id": "3d290711-4167-4da5-b55a-4c75760bd27c",
       "username": "safety.officer",
       "enabled": true,
       "email": "safety.officer@example.com",
@@ -256,6 +262,7 @@
       "attributes": { "tenant_id": ["cadence-local"], "study_ids": ["*"] }
     },
     {
+      "id": "d43095eb-1912-40dd-a528-fa04335a2342",
       "username": "auditor.lead",
       "enabled": true,
       "email": "auditor.lead@example.com",

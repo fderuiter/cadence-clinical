@@ -51,6 +51,21 @@ public sealed class KeycloakRealmTenantTests
         studies.GetProperty("access.token.claim").GetString().Should().Be("true");
     }
 
+    /// <summary>
+    /// Every realm user has a fixed, unique subject id, so the kernel host's demo seed can grant them by the subject the
+    /// gateway forwards (ADR-2543, #5452); without one, Keycloak generates a new id on every import.
+    /// </summary>
+    [Fact]
+    public void EveryRealmUser_HasAFixedSubjectId()
+    {
+        var ids = Realm().GetProperty("users").EnumerateArray()
+            .Select(u => u.TryGetProperty("id", out var id) ? id.GetString() : null)
+            .ToList();
+
+        ids.Should().NotBeEmpty().And.OnlyHaveUniqueItems();
+        ids.Should().AllSatisfy(id => System.Guid.TryParse(id, out var _).Should().BeTrue($"'{id}' is a subject id"));
+    }
+
     [Fact]
     public void EveryRealmUser_HasATenant()
     {
