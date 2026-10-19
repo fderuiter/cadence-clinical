@@ -68,6 +68,6 @@ This creates a dated file under `docs/adr/YYYY-MM-DD-slug.md` and automatically 
 ## Gotchas
 
 - The scaffolder appends the index entry to the end of `docs/adr/index.md`; move it into the matching domain section.
-- The number is the next free one on your checkout. Parallel PRs claim numbers too, so re-check `origin/main` before pushing and renumber on a clash ([numbering rules](../../../docs/adr/index.md#numbering-rules)).
+- The scaffolder numbers the ADR one above the highest existing number, which lands in the closed Stitch block (2800s). Renumber the heading to the next free number in your area's block ([numbering rules](../../../docs/adr/index.md#numbering-rules)). Parallel PRs claim numbers too, so re-check `origin/main` before pushing and renumber on a clash.
 - In an agent shell the CLI prints only its banner unless run as `TERM=dumb pnpm cadence check adrs` or `script -qc "pnpm cadence check adrs" /dev/null` ([docs/CI.md](../../../docs/CI.md)).
 - Superseding an ADR also changes the old ADR's status, adds a `> [!NOTE]` callout, annotates its index entry, and updates `ARCHITECTURE.md` and `CONTEXT.md` (AGENTS.md).
