@@ -66,7 +66,7 @@ public class KernelBoundaryTests
             .ToList();
 
         violations.Should().BeEmpty(
-            "product modules reference Cadence.Kernel.Abstractions only, never Cadence.Kernel.Persistence (K-XS-2)");
+            "product modules reference Cadence.Kernel.Abstractions and Cadence.Kernel.Modules only, never kernel Persistence, Application, Domain or Api (K-XS-2, ADR-2600)");
 
         IArchRule kernelPersistenceRule = Types()
             .Should().NotDependOnAny(Types().That().ResideInNamespaceMatching(@"^Cadence\.Kernel\.Persistence(\..*)?$"));
@@ -164,6 +164,25 @@ public class KernelBoundaryTests
         ]);
 
         violations.Should().Equal("K-XS-2|Cadence.Apps.Synthetic|Cadence.Kernel.Persistence");
+    }
+
+    /// <summary>
+    /// Validates that the K-XS-2 project rule reports a module that references kernel Application or Domain, and allows
+    /// the module SDK (ADR-2600).
+    /// </summary>
+    [Fact(DisplayName = "K_XS_2_Bites_OnSyntheticProjectReferencingKernelApplication_AndAllowsModuleSdk")]
+    [Trait("Category", "Architecture")]
+    public void KXs2BitesOnSyntheticProjectReferencingKernelApplicationAndAllowsModuleSdk()
+    {
+        var violations = KernelBoundaryRules.EvaluateKXs2Projects(
+        [
+            ("Cadence.Modules.Synthetic", """<Project><ItemGroup><ProjectReference Include="..\Cadence.Kernel.Application\Cadence.Kernel.Application.csproj" /><ProjectReference Include="..\Cadence.Kernel.Domain\Cadence.Kernel.Domain.csproj" /></ItemGroup></Project>"""),
+            ("Cadence.Modules.Clean", """<Project><ItemGroup><ProjectReference Include="..\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" /><ProjectReference Include="..\Cadence.Kernel.Modules\Cadence.Kernel.Modules.csproj" /></ItemGroup></Project>"""),
+        ]);
+
+        violations.Should().Equal(
+            "K-XS-2|Cadence.Modules.Synthetic|Cadence.Kernel.Application",
+            "K-XS-2|Cadence.Modules.Synthetic|Cadence.Kernel.Domain");
     }
 
     /// <summary>

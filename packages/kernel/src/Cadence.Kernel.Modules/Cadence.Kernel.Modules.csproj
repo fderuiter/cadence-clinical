@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Cadence.Kernel.Modules</RootNamespace>
+    <AssemblyName>Cadence.Kernel.Modules</AssemblyName>
+    <Description>Module SDK: the command handler contracts kernel and module handlers share (ADR-2600, K-XS-2).</Description>
+  </PropertyGroup>
+
+  <!-- Modules reference this and Cadence.Kernel.Abstractions only, never Application or Persistence (ADR-2600). -->
+  <ItemGroup>
+    <ProjectReference Include="..\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\engine_core\src\Cadence.Core.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+</Project>

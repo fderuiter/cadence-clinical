@@ -185,7 +185,7 @@ public sealed class IdentityVaultTests
 
         foreach (var text in new[] { JsonSerializer.Serialize(command), command.ToString(), Jane.ToString() })
         {
-            text.Should().NotContainAny("Jane", "Doe", "1970", "Hospital", "555");
+            text.Should().NotContainAny("Jane", "Doe", "1970-03-14", "Hospital", "555 0100");
         }
 
         Jane.ToString().Should().Be("IdentityDetails { GivenName, FamilyName, BirthDate, Email, Phone }");

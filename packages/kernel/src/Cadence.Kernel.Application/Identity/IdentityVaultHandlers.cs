@@ -8,6 +8,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
 using Cadence.Kernel.Identity;
+using Cadence.Kernel.Modules;
 
 using Microsoft.Extensions.DependencyInjection;
 

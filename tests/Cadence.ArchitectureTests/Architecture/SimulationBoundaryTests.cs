@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 
 using Cadence.Kernel.Application;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.Persistence;
 
 using FluentAssertions;
@@ -27,13 +28,13 @@ namespace Cadence.ArchitectureTests.Architecture;
 public class SimulationBoundaryTests
 {
     private static readonly Lazy<ArchModel> Kernel = new(() => new ArchLoader()
-        .LoadAssemblies(typeof(KernelApplicationAssembly).Assembly, typeof(KernelPersistenceServiceCollectionExtensions).Assembly)
+        .LoadAssemblies(typeof(KernelApplicationAssembly).Assembly, typeof(KernelPersistenceServiceCollectionExtensions).Assembly, typeof(Cadence.Kernel.Modules.IKernelUnitOfWork).Assembly)
         .Build());
 
     private static readonly string[] WritePaths =
     [
         "Cadence.Kernel.Commands.IKernelCommandSender",
-        "Cadence.Kernel.Application.Commands.IKernelUnitOfWork",
+        "Cadence.Kernel.Modules.IKernelUnitOfWork",
         "Cadence.Kernel.Application.Commands.IKernelUnitOfWorkFactory",
         "Cadence.Kernel.Application.Commands.KernelCommandPipeline",
     ];

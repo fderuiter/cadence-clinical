@@ -15,6 +15,7 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Identity;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Lineage;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.Persistence.IdentityVault;
 using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
@@ -59,7 +60,7 @@ internal sealed class KernelUnitOfWorkFactory(KernelTenantDbContextFactory conte
 internal sealed class KernelCommandTransaction(
     KernelDbContext db,
     CommandExecution execution,
-    Action<CommitStage>? faultInjector) : IKernelCommandTransaction, IKernelUnitOfWork
+    Action<CommitStage>? faultInjector) : IKernelCommandTransaction, IKernelUnitOfWork, IIdentityVaultStaging
 {
     private const string DecisionDeniedEvent = "DecisionDenied";
 

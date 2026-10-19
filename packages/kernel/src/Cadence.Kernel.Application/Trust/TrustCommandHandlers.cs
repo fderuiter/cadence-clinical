@@ -9,6 +9,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Standards;
 using Cadence.Kernel.Events;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Trust;
