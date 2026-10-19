@@ -60,7 +60,10 @@ Engines are an organising frame, not deployment units. The rules that shape ever
 - **Forbidden redefinitions (spec §2.3):** applications never declare their own `Study`, `Site`,
   `Participant`, `Observation`, `Person`, roles, rule engines or audit tables; they reference kernel IDs.
 - **Assemblies (spec §2.4):** `Cadence.Kernel.Abstractions` (IDs, ports, `IClock`) → `Domain` →
-  `Application` → `Persistence` (internal) → `Api`; applications reference `Abstractions` only (K-XS-2).
+  `Application` → `Persistence` (internal) → `Api`; applications reference `Abstractions` and the module SDK
+  `Cadence.Kernel.Modules` only (K-XS-2). A module writes clinical state by implementing a command handler from the SDK
+  and sending its command through the kernel pipeline, which commits the module's records with the kernel's audit,
+  events and outbox in one transaction ([ADR-2600](docs/adr/2026-10-19-modules-write-through-the-kernel-command-path.md)).
   `Cadence.Standards` loads public CDISC content into the Standards Registry and `Cadence.Rules` holds the rule
   language, rule packs and `IRuleEvaluator`; both reference `Abstractions` only.
 

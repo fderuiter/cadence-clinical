@@ -8,6 +8,7 @@ using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
 using Cadence.Kernel.WorkQueues;
 

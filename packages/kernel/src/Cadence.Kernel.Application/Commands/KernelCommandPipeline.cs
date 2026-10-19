@@ -14,6 +14,7 @@ using Cadence.Kernel.Application.Protocol;
 using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Application.WorkQueues;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.Time;
 
 using Microsoft.Extensions.DependencyInjection;

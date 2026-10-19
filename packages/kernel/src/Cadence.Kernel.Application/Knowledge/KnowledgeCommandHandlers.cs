@@ -8,6 +8,7 @@ using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Events;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Lineage;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
 
 using Microsoft.Extensions.DependencyInjection;

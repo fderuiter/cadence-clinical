@@ -11,6 +11,7 @@ using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Events;
 using Cadence.Kernel.Lineage;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;

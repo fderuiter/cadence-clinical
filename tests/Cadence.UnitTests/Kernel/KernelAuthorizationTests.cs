@@ -10,6 +10,7 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Explanations;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 using Cadence.Testing.Time;

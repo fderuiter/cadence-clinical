@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
+using Cadence.Kernel.Modules;
 
 namespace Cadence.Kernel.Application.Commands;
 
