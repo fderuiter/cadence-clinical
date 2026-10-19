@@ -29,6 +29,13 @@ public interface ISigTokenUseStore
 }
 
 /// <summary>
+/// An <see cref="ISigTokenUseStore"/> whose records are shared by every instance of the host and survive a restart.
+/// Outside <c>Development</c>, a host that maps an e-signature route must register one, or it refuses to start
+/// (<see cref="SigTokenUseStoreStartupCheck"/>, #5434).
+/// </summary>
+public interface IDurableSigTokenUseStore : ISigTokenUseStore;
+
+/// <summary>
 /// The process-local <see cref="ISigTokenUseStore"/>: correct for one instance that does not restart within a
 /// token's acceptance window, and the default until a host registers a durable store (ADR-2515).
 /// @req:SRS-SYS-005

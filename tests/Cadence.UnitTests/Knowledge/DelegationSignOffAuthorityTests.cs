@@ -201,6 +201,10 @@ public sealed class DelegationSignOffAuthorityTests(DelegationSignOffAuthorityTe
                 services.AddDbContext<KnowledgeDbContext>(options => options
                     .UseInMemoryDatabase(_databaseName)
                     .UseInternalServiceProvider(inMemory));
+
+                // The durable token-use store needs PostgreSQL; this in-memory host keeps uses in process memory.
+                services.RemoveAll<ISigTokenUseStore>();
+                services.AddSingleton<ISigTokenUseStore>(new ReplayCache());
             });
         }
     }
