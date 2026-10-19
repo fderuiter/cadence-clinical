@@ -48,6 +48,7 @@ public enum LibraryItemKind
 /// <see cref="ExpectedContentHash"/> is set, must match it.
 /// </summary>
 [KernelCapability("standard.register", VerbClass.Execute)]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RegisterStandardVersion(
     TenantId TenantId,
     StandardVersionId StandardVersionId,
@@ -58,6 +59,7 @@ public sealed record RegisterStandardVersion(
 
 /// <summary>Approves a draft standard version for use by studies. Needs an <c>Approved</c> Attestation bound to its content hash.</summary>
 [KernelCapability("standard.approve", VerbClass.Approve, Resource = nameof(ApproveStandardVersion.StandardVersionId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record ApproveStandardVersion(
     TenantId TenantId,
     StandardVersionId StandardVersionId,
@@ -70,6 +72,7 @@ public sealed record ApproveStandardVersion(
 /// <c>Responsibility</c> Attestation bound to its content hash.
 /// </summary>
 [KernelCapability("standard.deprecate", VerbClass.Approve, Resource = nameof(DeprecateStandardVersion.StandardVersionId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record DeprecateStandardVersion(
     TenantId TenantId,
     StandardVersionId StandardVersionId,
@@ -83,6 +86,7 @@ public sealed record DeprecateStandardVersion(
 /// <see cref="Content"/> must be a JSON object valid for the kind.
 /// </summary>
 [KernelCapability("library_item.draft", VerbClass.Propose)]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record DraftLibraryItem(
     TenantId TenantId,
     LibraryItemId LibraryItemId,
@@ -96,6 +100,7 @@ public sealed record DraftLibraryItem(
 
 /// <summary>Approves a draft library item version. Needs an <c>Approved</c> Attestation bound to its content hash.</summary>
 [KernelCapability("library_item.approve", VerbClass.Approve, Resource = nameof(ApproveLibraryItem.LibraryItemId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record ApproveLibraryItem(
     TenantId TenantId,
     LibraryItemId LibraryItemId,
@@ -105,6 +110,7 @@ public sealed record ApproveLibraryItem(
 
 /// <summary>Deprecates a library item version. Needs a <c>Responsibility</c> Attestation. Pinned studies keep it.</summary>
 [KernelCapability("library_item.deprecate", VerbClass.Approve, Resource = nameof(DeprecateLibraryItem.LibraryItemId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record DeprecateLibraryItem(
     TenantId TenantId,
     LibraryItemId LibraryItemId,
@@ -119,6 +125,7 @@ public sealed record DeprecateLibraryItem(
 /// declaration. The declaration replaces the previous one as a whole.
 /// </summary>
 [KernelCapability("study.declare_standards", VerbClass.Execute, Resource = nameof(DeclareStudyStandards.StudyId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record DeclareStudyStandards(
     TenantId TenantId,
     StudyId StudyId,

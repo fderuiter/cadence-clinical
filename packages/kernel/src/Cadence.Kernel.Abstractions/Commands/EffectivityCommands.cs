@@ -12,6 +12,7 @@ namespace Cadence.Kernel.Commands;
 /// per scope.
 /// </summary>
 [KernelCapability("effectivity.declare", VerbClass.Execute, Resource = nameof(ProtocolVersionId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record DeclareEffectivity(
     TenantId TenantId,
     EffectivityId EffectivityId,
@@ -28,6 +29,7 @@ public sealed record DeclareEffectivity(
 /// be approved.
 /// </summary>
 [KernelCapability("effectivity.change_status", VerbClass.Approve, Resource = nameof(EffectivityId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record ChangeEffectivityStatus(
     TenantId TenantId,
     EffectivityId EffectivityId,
@@ -41,6 +43,7 @@ public sealed record ChangeEffectivityStatus(
 /// Activates a study site (spec §7.1). It needs at least one protocol version in force at the site now (K-TIME-4).
 /// </summary>
 [KernelCapability("study_site.activate", VerbClass.Approve, Resource = nameof(StudySiteId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record ActivateStudySite(
     TenantId TenantId,
     StudySiteId StudySiteId,

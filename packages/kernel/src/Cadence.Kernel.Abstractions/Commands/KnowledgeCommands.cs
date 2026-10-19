@@ -11,6 +11,7 @@ namespace Cadence.Kernel.Commands;
 /// (spec §6.1). A known URI must carry the licence class <see cref="KnownCodeSystems"/> gives it (K-SEM-2).
 /// </summary>
 [KernelCapability("code_system.register", VerbClass.Execute)]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RegisterCodeSystem(
     TenantId TenantId,
     CodeSystemId CodeSystemId,
@@ -26,6 +27,7 @@ public sealed record RegisterCodeSystem(
 /// specification, rule and projection names the version it used, never "the latest" (spec §6.1).
 /// </summary>
 [KernelCapability("code_system.import_version", VerbClass.Execute, Resource = nameof(ImportCodeSystemVersion.CodeSystemId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record ImportCodeSystemVersion(
     TenantId TenantId,
     CodeSystemVersionId CodeSystemVersionId,
@@ -61,6 +63,7 @@ public sealed record CodeSystemEntryData(
 /// (<paramref name="ExternalCode"/>), which is unique in the tenant; a sponsor concept has none.
 /// </summary>
 [KernelCapability("concept.define", VerbClass.Execute)]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record DefineConcept(
     TenantId TenantId,
     ConceptId ConceptId,
@@ -77,6 +80,7 @@ public sealed record DefineConcept(
 /// meaning it was recorded against.
 /// </summary>
 [KernelCapability("concept.revise", VerbClass.Execute, Resource = nameof(ReviseConcept.ConceptId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record ReviseConcept(
     TenantId TenantId,
     ConceptId ConceptId,
@@ -87,6 +91,7 @@ public sealed record ReviseConcept(
 
 /// <summary>Deprecates a concept: no new references should use it; existing ones still resolve.</summary>
 [KernelCapability("concept.deprecate", VerbClass.Approve, Resource = nameof(DeprecateConcept.ConceptId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record DeprecateConcept(
     TenantId TenantId,
     ConceptId ConceptId,
@@ -99,6 +104,7 @@ public sealed record DeprecateConcept(
 /// why the mapping holds (a CDISC publication, a reviewer's rationale).
 /// </summary>
 [KernelCapability("concept.map", VerbClass.Propose)]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record MapConcept(
     TenantId TenantId,
     ConceptMappingId ConceptMappingId,
@@ -112,6 +118,7 @@ public sealed record MapConcept(
 
 /// <summary>Confirms or rejects a proposed mapping, or rejects a confirmed one that turned out wrong.</summary>
 [KernelCapability("concept_mapping.review", VerbClass.Approve, Resource = nameof(ReviewConceptMapping.ConceptMappingId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record ReviewConceptMapping(
     TenantId TenantId,
     ConceptMappingId ConceptMappingId,

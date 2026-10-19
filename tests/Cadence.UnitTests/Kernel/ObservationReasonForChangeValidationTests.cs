@@ -9,6 +9,7 @@ using Cadence.Kernel.Application.Evidence;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
 using Cadence.Testing.Time;
 

@@ -134,6 +134,9 @@ Use `packages/testing/src` or centralized unit test fixtures under `tests/Cadenc
 - `GoldenMasterFixtureLoader` and `GoldenMasterAssert`: golden-master scenarios ported from the Python
   reference.
 - `GxPRequirementAttribute`: declares which requirement a test verifies. See below.
+- `CommandValidationCatalog` (`Cadence.Testing.Commands`): `Violations(services, commandAssembly)` lists the
+  commands that have neither a registered FluentValidation validator nor `[NoValidator("why")]`, or both
+  (ADR-2600 §4.4). The kernel's tests and each module's tests assert it is empty.
 - `StartupValidationFactory<TEntryPoint>` (`Cadence.Testing.Hosting`): builds a service's real `Program` host
   without starting it and runs its `ValidateOnStart` checks on the test thread (`ValidateStartup()` returns the
   exception, or `null`). Use it to test that a service refuses bad configuration. Asserting the failure through
