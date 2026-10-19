@@ -173,13 +173,11 @@ async function generate(options = {}) {
     filepath: OUTPUT_PATH,
   });
   fs.writeFileSync(OUTPUT_PATH, formatted, "utf8");
+  // The cache holds only the input hash, written as Prettier would, so regenerating unchanged inputs leaves the
+  // tracked file byte-for-byte the same (#5441).
   fs.writeFileSync(
     HASH_PATH,
-    JSON.stringify(
-      { hash: currentHash, generatedAt: new Date().toISOString() },
-      null,
-      2
-    ),
+    `${JSON.stringify({ hash: currentHash }, null, 2)}\n`,
     "utf8"
   );
   console.log(
