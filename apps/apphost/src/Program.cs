@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.JavaScript;
+
+using Cadence.Topology;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -103,37 +106,38 @@ else
         .WithEnvironment("VITE_KEYCLOAK_REALM", "cadence");
 }
 
-// Product services. Each one listens on the host port docker compose publishes it on (8001-8018), so the
-// gateway's Development defaults, the web apps and docs/LOCAL_DEV_ENVIRONMENT.md hold for both. Every service
-// verifies gateway-signed identity with GATEWAY_SECRET and refuses to start without it. Services backed by
-// PostgreSQL get ConnectionStrings__cadence from the database reference and apply their own migrations on start,
-// as in docker compose.
+// Product services, from the service topology manifest (#5315). Each one listens on the host port docker compose
+// publishes it on, so the gateway's Development defaults, the web apps and docs/LOCAL_DEV_ENVIRONMENT.md hold for both.
+// Every service verifies gateway-signed identity with GATEWAY_SECRET and refuses to start without it. Services backed
+// by PostgreSQL get ConnectionStrings__cadence from the database reference and apply their own migrations on start, as
+// in docker compose.
 var routes = new List<(string Variable, IResourceBuilder<ProjectResource> Service)>();
 
-IResourceBuilder<ProjectResource> Service(string variable, IResourceBuilder<ProjectResource> project, int port, bool database = true)
+IResourceBuilder<ProjectResource> Service(IResourceBuilder<ProjectResource> project)
 {
+    var service = ServiceTopology.Get(project.Resource.Name);
     project
-        .WithHttpEndpoint(port: port, name: "http")
+        .WithHttpEndpoint(port: service.Port, name: "http")
         .WithHttpHealthCheck("/healthz/ready")
         .WithEnvironment("GATEWAY_SECRET", gatewaySecret);
 
-    if (database)
+    if (service.Database)
     {
         useDatabase(project
             .WithEnvironment("AUDIT_LOG_SECRET_KEY", auditLogSecretKey)
             .WithEnvironment("Database__MigrateOnStartup", "true"));
     }
 
-    routes.Add((variable, project));
+    routes.Add((service.UrlVariable, project));
     return project;
 }
 
-Service("EXECUTION_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Execution>("execution"), 8002)
+Service(builder.AddProject<Projects.Cadence_Apps_Execution>("execution"))
     .WithEnvironment("DemographicsEncryption__KeyBase64", demographicsEncryptionKey);
 // The local realm's users sign in with tenant code cadence-local (ADR-2514); the kernel host provisions that tenant on
 // start, in Development only (ADR-2542). A project resource does not inherit the AppHost's environment, so the kernel
 // is given it, and the tenant setting only when that environment is Development.
-var kernel = Service("KERNEL_SERVICE_URL", builder.AddProject<Projects.Cadence_Kernel_Host>("kernel"), 8018)
+var kernel = Service(builder.AddProject<Projects.Cadence_Kernel_Host>("kernel"))
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName);
 if (builder.Environment.IsDevelopment())
 {
@@ -162,28 +166,28 @@ if (full)
         .WithEnvironment("MINIO_ROOT_PASSWORD", minioRootPassword)
         .WithArgs("server", "/data", "--console-address", ":9001");
 
-    Service("DESIGNER_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Designer>("designer"), 8001, database: false);
-    Service("ETMF_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Etmf>("etmf"), 8003);
-    Service("INTEROP_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Interop>("interop"), 8004)
+    Service(builder.AddProject<Projects.Cadence_Apps_Designer>("designer"));
+    Service(builder.AddProject<Projects.Cadence_Apps_Etmf>("etmf"));
+    Service(builder.AddProject<Projects.Cadence_Apps_Interop>("interop"))
         .WithEnvironment("FIELD_LOOKUP_HASH_KEY", fieldLookupHashKey)
         .WithEnvironment("CADENCE_SCE_SIGNING_KEY", sceSigningKey);
-    Service("QUALITY_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Quality>("quality"), 8005);
-    Service("NOTIFICATIONS_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Notifications>("notifications"), 8006);
-    Service("CTMS_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Ctms>("ctms"), 8007);
-    Service("SAFETY_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Safety>("safety"), 8008);
-    Service("TICKETS_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Tickets>("tickets"), 8009);
-    Service("EISF_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Eisf>("eisf"), 8010);
-    Service("ECONSENT_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Econsent>("econsent"), 8011)
+    Service(builder.AddProject<Projects.Cadence_Apps_Quality>("quality"));
+    Service(builder.AddProject<Projects.Cadence_Apps_Notifications>("notifications"));
+    Service(builder.AddProject<Projects.Cadence_Apps_Ctms>("ctms"));
+    Service(builder.AddProject<Projects.Cadence_Apps_Safety>("safety"));
+    Service(builder.AddProject<Projects.Cadence_Apps_Tickets>("tickets"));
+    Service(builder.AddProject<Projects.Cadence_Apps_Eisf>("eisf"));
+    Service(builder.AddProject<Projects.Cadence_Apps_Econsent>("econsent"))
         .WithEnvironment("FIELD_ENCRYPTION_KEY", fieldEncryptionKey);
-    Service("ORG_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Org>("org"), 8012);
-    Service("FILESHARE_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Fileshare>("fileshare"), 8013);
-    Service("IMAGING_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Imaging>("imaging"), 8014)
+    Service(builder.AddProject<Projects.Cadence_Apps_Org>("org"));
+    Service(builder.AddProject<Projects.Cadence_Apps_Fileshare>("fileshare"));
+    Service(builder.AddProject<Projects.Cadence_Apps_Imaging>("imaging"))
         .WithEnvironment("CADENCE_IMAGING_DEID_SIGNING_KEY", imagingDeidSigningKey)
         .WithEnvironment("CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY", imagingDeidPseudonymizationKey);
-    Service("KNOWLEDGE_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Knowledge>("knowledge"), 8015);
-    Service("PAYMENTS_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Payments>("payments"), 8016)
+    Service(builder.AddProject<Projects.Cadence_Apps_Knowledge>("knowledge"));
+    Service(builder.AddProject<Projects.Cadence_Apps_Payments>("payments"))
         .WithEnvironment("FIELD_ENCRYPTION_KEY", fieldEncryptionKey);
-    Service("AI_GATEWAY_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_AiGateway>("ai-gateway"), 8017, database: false);
+    Service(builder.AddProject<Projects.Cadence_Apps_AiGateway>("ai-gateway"));
 }
 
 // The gateway is the API entry point the web apps call, through the web dev server's /api proxy. Outside
@@ -191,7 +195,7 @@ if (full)
 // service the profile leaves out gets its usual host port, where nothing listens: its routes answer as that
 // service being down.
 var gateway = builder.AddProject<Projects.Cadence_Apps_Gateway>("gateway")
-    .WithHttpEndpoint(port: 8000, name: "http")
+    .WithHttpEndpoint(port: ServiceTopology.GatewayPort, name: "http")
     .WithHttpHealthCheck("/healthz/live")
     .WithEnvironment("GATEWAY_SECRET", gatewaySecret);
 useOidcOnGateway(gateway);
@@ -202,21 +206,10 @@ foreach (var (variable, service) in routes)
     routed.Add(variable);
 }
 
-foreach (var (variable, port) in new[]
+foreach (var service in ServiceTopology.Services.Where(s => !routed.Contains(s.UrlVariable)))
 {
-    ("DESIGNER_SERVICE_URL", 8001), ("EXECUTION_SERVICE_URL", 8002), ("ETMF_SERVICE_URL", 8003),
-    ("INTEROP_SERVICE_URL", 8004), ("QUALITY_SERVICE_URL", 8005), ("NOTIFICATIONS_SERVICE_URL", 8006),
-    ("CTMS_SERVICE_URL", 8007), ("SAFETY_SERVICE_URL", 8008), ("TICKETS_SERVICE_URL", 8009),
-    ("EISF_SERVICE_URL", 8010), ("ECONSENT_SERVICE_URL", 8011), ("ORG_SERVICE_URL", 8012),
-    ("FILESHARE_SERVICE_URL", 8013), ("IMAGING_SERVICE_URL", 8014), ("KNOWLEDGE_SERVICE_URL", 8015),
-    ("PAYMENTS_SERVICE_URL", 8016), ("AI_GATEWAY_SERVICE_URL", 8017), ("KERNEL_SERVICE_URL", 8018),
-})
-{
-    if (!routed.Contains(variable))
-    {
-        string url = $"http://localhost:{port}";
-        gateway.WithEnvironment(variable, url);
-    }
+    string url = $"http://localhost:{service.Port}";
+    gateway.WithEnvironment(service.UrlVariable, url);
 }
 
 // The Clinical Canvas web app (Vite dev server) on port 3000, the redirect URI the cadence-web Keycloak client

@@ -65,11 +65,6 @@ internal sealed class CorrectObservationHandler : ICommandHandler<CorrectObserva
 {
     public async Task<CommandResult<ObservationState>> HandleAsync(CorrectObservation command, ICommandContext context, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(command.ReasonForChange))
-        {
-            return ObservationErrors.ReasonForChangeRequired;
-        }
-
         var lockId = ObservationLockId.For(command.ObservationId);
         await context.Work.LockAsync<ObservationLock>(lockId, cancellationToken).ConfigureAwait(false);
         if (await context.Work.ReadAsync<ObservationLock>(lockId, cancellationToken).ConfigureAwait(false) is not null)

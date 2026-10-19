@@ -90,7 +90,7 @@ a service that does fails at startup when a required key is missing.
 
 ## Gateway routing
 
-Read by `apps/gateway/src/Program.cs:105-122`. In Development each defaults to `http://localhost:<port>`; in any other environment each is required and the gateway refuses to start without it. A value that is not an absolute http or https URL fails startup in every environment.
+Read by `apps/gateway/src/Program.cs`, one per service in the topology manifest (`packages/topology`). In Development each defaults to `http://localhost:<port>`; in any other environment each is required and the gateway refuses to start without it. A value that is not an absolute http or https URL fails startup in every environment.
 
 | Key                         | Default port |
 | --------------------------- | ------------ |

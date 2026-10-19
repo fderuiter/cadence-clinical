@@ -38,4 +38,9 @@
     <ProjectReference Include="..\..\kernel-api\src\Cadence.Kernel.Host.csproj" />
   </ItemGroup>
 
+  <!-- The service topology manifest (#5315): a library the AppHost reads, not a service it runs. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\packages\topology\src\Cadence.Topology.csproj" IsAspireProjectResource="false" />
+  </ItemGroup>
+
 </Project>
