@@ -32,8 +32,8 @@ routes answer as the service being down.
   (the gateway, where its `/api` proxy forwards; the gateway sends no CORS headers, so the browser must not call it
   cross-origin, #5429) and the `VITE_KEYCLOAK_*` settings. Run `pnpm install` at the repository root first; the AppHost does not install packages.
 - `subject-portal`: the participant portal's Vite dev server on `http://localhost:5174/subject-portal/`, as in docker
-  compose, in the `full` profile only (it calls interop and payments). It gets `VITE_API_BASE_URL` (the gateway, called
-  cross-origin, which the browser blocks until #5451) and the same `VITE_KEYCLOAK_*` settings as `web`. Keycloak sign-in does not work there yet: the realm's `cadence-web` client
+  compose, in the `full` profile only (it calls interop and payments). Like `web`, it gets `VITE_API_BASE_URL` (its own
+  origin), `CADENCE_GATEWAY_URL` (where its `/api` proxy forwards, #5451) and the `VITE_KEYCLOAK_*` settings. Keycloak sign-in does not work there yet: the realm's `cadence-web` client
   allows only the web app's redirect URI.
 - Projects, each on the host port docker compose publishes it on, so the gateway's Development defaults and the
   web dev server's `/api` proxy to `http://localhost:8000` work for both (`core` runs 8000, 8002 and 8018). Each

@@ -91,7 +91,10 @@ public sealed class AppHostModelTests
         resources.Keys.Should().Contain(["postgres", "cadence", "keycloak", "minio"]);
     }
 
-    /// <summary>The subject portal runs beside the web app on its compose port and calls the AppHost's gateway (#5335).</summary>
+    /// <summary>
+    /// The subject portal runs beside the web app on its compose port (#5335) and, like the web app, calls its own origin
+    /// while its dev server's /api proxy forwards to the gateway, which sends no CORS headers (#5451).
+    /// </summary>
     [Fact]
     public async Task FullProfile_RunsTheSubjectPortalOnItsComposePort()
     {
@@ -100,7 +103,8 @@ public sealed class AppHostModelTests
         var portal = resources.Should().ContainKey("subject-portal").WhoseValue.Should().BeOfType<ViteAppResource>().Subject;
         portal.Annotations.OfType<EndpointAnnotation>().Single(e => e.Name == "http").Port.Should().Be(5174);
         var environment = await EnvironmentAsync(portal);
-        environment["VITE_API_BASE_URL"].Should().BeOfType<EndpointReference>();
+        environment["VITE_API_BASE_URL"].Should().BeOfType<EndpointReference>().Which.Resource.Name.Should().Be("subject-portal");
+        environment["CADENCE_GATEWAY_URL"].Should().BeOfType<EndpointReference>().Which.Resource.Name.Should().Be("gateway");
         environment.Keys.Should().Contain(["VITE_KEYCLOAK_URL", "VITE_KEYCLOAK_REALM", "VITE_KEYCLOAK_CLIENT_ID"]);
     }
 
