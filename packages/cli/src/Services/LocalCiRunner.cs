@@ -140,9 +140,16 @@ public sealed class LocalCiEnvironment
     }
 
     /// <summary>
+    /// The PostgreSQL major the database tests qualify; it equals <c>Cadence.Testing.Persistence.PostgresTestImage.Major</c>
+    /// and the docker compose image, which a unit test checks (#5438).
+    /// </summary>
+    public const int PostgresMajor = 18;
+
+    /// <summary>
     /// Mirrors how the test fixtures choose a database (docs/TESTING.md): <c>CADENCE_TEST_POSTGRES</c> first, then
-    /// <c>CADENCE_TEST_DOCKER=1</c>. A connection string is opened once so an unreachable server fails before the
-    /// test run instead of turning every database test into a skip.
+    /// <c>CADENCE_TEST_DOCKER=1</c>. A connection string is opened once so an unreachable server, or one of another
+    /// major than <see cref="PostgresMajor"/>, fails before the test run instead of turning every database test into
+    /// a skip or a failure.
     /// </summary>
     public static CiPostgresStatus ProbePostgresFromEnvironment()
     {
@@ -150,7 +157,7 @@ public sealed class LocalCiEnvironment
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             return Environment.GetEnvironmentVariable("CADENCE_TEST_DOCKER") == "1"
-                ? new CiPostgresStatus(true, "CADENCE_TEST_DOCKER=1: the tests start a postgres:16-alpine container.")
+                ? new CiPostgresStatus(true, $"CADENCE_TEST_DOCKER=1: the tests start a PostgreSQL {PostgresMajor} container.")
                 : new CiPostgresStatus(false, "Neither CADENCE_TEST_POSTGRES nor CADENCE_TEST_DOCKER=1 is set.");
         }
 
@@ -159,7 +166,11 @@ public sealed class LocalCiEnvironment
             var builder = new NpgsqlConnectionStringBuilder(connectionString) { Timeout = 5 };
             using var connection = new NpgsqlConnection(builder.ConnectionString);
             connection.Open();
-            return new CiPostgresStatus(true, $"CADENCE_TEST_POSTGRES reaches {builder.Host}:{builder.Port}.");
+            int major = connection.PostgreSqlVersion.Major;
+            return major == PostgresMajor
+                ? new CiPostgresStatus(true, $"CADENCE_TEST_POSTGRES reaches PostgreSQL {major} at {builder.Host}:{builder.Port}.")
+                : new CiPostgresStatus(false,
+                    $"CADENCE_TEST_POSTGRES reaches PostgreSQL {major} at {builder.Host}:{builder.Port}, but the tests qualify PostgreSQL {PostgresMajor} (docs/TESTING.md).");
         }
         catch (Exception ex) when (ex is NpgsqlException or ArgumentException or InvalidOperationException or TimeoutException)
         {

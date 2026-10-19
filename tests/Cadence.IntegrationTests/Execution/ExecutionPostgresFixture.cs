@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Kernel.Time;
+using Cadence.Testing.Persistence;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -23,7 +24,7 @@ namespace Cadence.IntegrationTests.Execution;
 /// <list type="number">
 /// <item><c>CADENCE_TEST_POSTGRES</c>: an Npgsql connection string to an existing server; the fixture
 /// creates a throwaway database on it and drops it afterwards (works without Docker).</item>
-/// <item><c>CADENCE_TEST_DOCKER=1</c>: a Testcontainers <c>postgres:16-alpine</c> container.</item>
+/// <item><c>CADENCE_TEST_DOCKER=1</c>: a Testcontainers container of <see cref="PostgresTestImage.Image"/>.</item>
 /// </list>
 /// With neither set, <see cref="ConnectionString"/> is null and tests call <see cref="SkipIfUnavailable"/>
 /// so they report as skipped rather than passing against a stand-in. Once opted in, any startup
@@ -108,7 +109,7 @@ public sealed class ExecutionPostgresFixture : IAsyncLifetime
         }
 
         _container = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
+            .WithImage(PostgresTestImage.Image)
             .Build();
 
         using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));

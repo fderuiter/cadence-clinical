@@ -179,7 +179,7 @@ Other runtime pieces:
 | Subject portal         | `apps/subject-portal`         | Participant PWA (port 5174)                                                                                                                                                                                                           |
 | Aspire AppHost         | `apps/apphost`                | Local orchestration of PostgreSQL (database `cadence`), MinIO, Keycloak, every .NET service and the web app; a `core` profile runs the gateway, kernel API, execution and web only, optionally on an existing PostgreSQL and Keycloak |
 | Keycloak               | `docker/cadence-realm.json`   | OIDC identity provider (port 8080), realm `cadence`                                                                                                                                                                                   |
-| PostgreSQL 16          | compose `postgres`            | One `cadence` database with a schema per service (ADR-2447)                                                                                                                                                                           |
+| PostgreSQL 18          | compose `postgres`            | One `cadence` database with a schema per service (ADR-2447)                                                                                                                                                                           |
 | MinIO, ClamAV          | compose profile `storage`     | Object storage (fileshare, through `packages/storage`) and upload scanning (no service calls ClamAV yet)                                                                                                                              |
 | Front proxy            | compose `front-proxy` (nginx) | Port 8000; forwards the web apps' API calls to the gateway                                                                                                                                                                            |
 | Other compose services | `docker/docker-compose.yml`   | `dotnet-dev` (SDK container)                                                                                                                                                                                                          |
@@ -244,7 +244,7 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
 
 ## 5. Persistence
 
-- **PostgreSQL 16+ through EF Core 10 + Npgsql.** `AddCadencePostgresDbContext`
+- **PostgreSQL 18 through EF Core 10 + Npgsql** (tests, CI and compose pin one image, ADR-2533). `AddCadencePostgresDbContext`
   (`packages/database`) resolves `ConnectionStrings:cadence` (set by the Aspire AppHost), then
   `POSTGRES_CONNECTION_STRING`. Only the `Development` environment falls back to the local compose
   database; any other environment fails at startup. Transient-failure retries are enabled.
