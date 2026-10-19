@@ -456,9 +456,16 @@ function startPanOrMeasure(event, plane) {
 }
 
 async function handleAiSeedClick(seedX, seedY, plane) {
-  const studyUid = props.seriesUid || "1.2.840.113619.2.55.3.200.1";
-  const seriesUid = props.seriesUid || "1.2.840.113619.2.55.3.200.1.1";
-  const sliceVal = plane === "AXIAL" ? axialSlice.value : plane === "SAGITTAL" ? sagittalSlice.value : coronalSlice.value;
+  // Without a loaded series there is nothing to segment; never invent DICOM UIDs (#5426).
+  if (!props.seriesUid) return;
+  const studyUid = props.seriesUid;
+  const seriesUid = props.seriesUid;
+  const sliceVal =
+    plane === "AXIAL"
+      ? axialSlice.value
+      : plane === "SAGITTAL"
+        ? sagittalSlice.value
+        : coronalSlice.value;
 
   const payload = {
     seedX: Math.round(seedX),
@@ -470,9 +477,15 @@ async function handleAiSeedClick(seedX, seedY, plane) {
 
   let segmentationResult = null;
   try {
-    const origin = typeof window !== "undefined" && window.location && window.location.origin && window.location.origin !== "null" && !window.location.origin.startsWith("http://localhost:3000") && !window.location.origin.includes("127.0.0.1")
-      ? window.location.origin
-      : "http://localhost:5000";
+    const origin =
+      typeof window !== "undefined" &&
+      window.location &&
+      window.location.origin &&
+      window.location.origin !== "null" &&
+      !window.location.origin.startsWith("http://localhost:3000") &&
+      !window.location.origin.includes("127.0.0.1")
+        ? window.location.origin
+        : "http://localhost:5000";
     const segmentUrl = `${origin}/api/v1/imaging/studies/${studyUid}/series/${seriesUid}/segment`;
 
     const response = await fetch(segmentUrl, {
@@ -483,7 +496,7 @@ async function handleAiSeedClick(seedX, seedY, plane) {
     if (response.ok) {
       segmentationResult = await response.json();
     }
-  } catch (err) {
+  } catch {
     // API offline or unmocked in test environment; fall back to client-side UNet/ResNet model simulation
   }
 
@@ -493,7 +506,9 @@ async function handleAiSeedClick(seedX, seedY, plane) {
     const contour = [];
     for (let i = 0; i < numPts; i++) {
       const theta = (2.0 * Math.PI * i) / numPts;
-      const radiusPx = baseRadiusPx * (1.0 + 0.15 * Math.sin(3 * theta) + 0.08 * Math.cos(5 * theta));
+      const radiusPx =
+        baseRadiusPx *
+        (1.0 + 0.15 * Math.sin(3 * theta) + 0.08 * Math.cos(5 * theta));
       contour.push({
         x: Number((seedX + radiusPx * Math.cos(theta)).toFixed(2)),
         y: Number((seedY + radiusPx * Math.sin(theta)).toFixed(2)),
@@ -515,10 +530,26 @@ async function handleAiSeedClick(seedX, seedY, plane) {
       perpendicularDiameterMm: perpMm,
       contourPoints: contour,
       fittedCalipers: [
-        { startPoint: p1, endPoint: p2, lengthMm: longestMm, caliperType: "LONGEST_DIAMETER" },
-        { startPoint: perpP1, endPoint: perpP2, lengthMm: perpMm, caliperType: "PERPENDICULAR_DIAMETER" },
+        {
+          startPoint: p1,
+          endPoint: p2,
+          lengthMm: longestMm,
+          caliperType: "LONGEST_DIAMETER",
+        },
+        {
+          startPoint: perpP1,
+          endPoint: perpP2,
+          lengthMm: perpMm,
+          caliperType: "PERPENDICULAR_DIAMETER",
+        },
       ],
-      hounsfieldStats: { meanHu: 48.5, minHu: 12.0, maxHu: 88.5, stdDevHu: 11.4, modelVersion: "UNet-ResNet34-2D-v2.1" },
+      hounsfieldStats: {
+        meanHu: 48.5,
+        minHu: 12.0,
+        maxHu: 88.5,
+        stdDevHu: 11.4,
+        modelVersion: "UNet-ResNet34-2D-v2.1",
+      },
       measurementType: "AI_AUTO_CONTOUR",
       modelVersion: "UNet-ResNet34-2D-v2.1",
       isAiAssisted: true,
@@ -528,15 +559,28 @@ async function handleAiSeedClick(seedX, seedY, plane) {
   emit("caliperCreated", {
     plane: plane,
     tool: "AI_AUTO_SEGMENT",
-    lengthMm: segmentationResult.longestDiameterMm || segmentationResult.LongestDiameterMm,
-    longestDiameterMm: segmentationResult.longestDiameterMm || segmentationResult.LongestDiameterMm,
-    perpendicularDiameterMm: segmentationResult.perpendicularDiameterMm || segmentationResult.PerpendicularDiameterMm,
+    lengthMm:
+      segmentationResult.longestDiameterMm ||
+      segmentationResult.LongestDiameterMm,
+    longestDiameterMm:
+      segmentationResult.longestDiameterMm ||
+      segmentationResult.LongestDiameterMm,
+    perpendicularDiameterMm:
+      segmentationResult.perpendicularDiameterMm ||
+      segmentationResult.PerpendicularDiameterMm,
     measurementType: "AI_AUTO_CONTOUR",
     isAiAssisted: true,
-    hounsfieldStats: segmentationResult.hounsfieldStats || segmentationResult.HounsfieldStats,
+    hounsfieldStats:
+      segmentationResult.hounsfieldStats || segmentationResult.HounsfieldStats,
     modelVersion: segmentationResult.modelVersion || "UNet-ResNet34-2D-v2.1",
-    points: segmentationResult.contourPoints || segmentationResult.ContourPoints || [],
-    fittedCalipers: segmentationResult.fittedCalipers || segmentationResult.FittedCalipers || [],
+    points:
+      segmentationResult.contourPoints ||
+      segmentationResult.ContourPoints ||
+      [],
+    fittedCalipers:
+      segmentationResult.fittedCalipers ||
+      segmentationResult.FittedCalipers ||
+      [],
     sliceIndex: sliceVal,
     timepoint: props.timepoint || "",
     viewportLabel: props.viewportLabel || "",
@@ -674,8 +718,14 @@ function renderViewport(canvas, plane, sliceVal) {
     if (annot.points && annot.points.length > 2) {
       // Polygon contour overlay (AI auto-segment contour or manual polygon)
       ctx.lineWidth = 2;
-      ctx.strokeStyle = annot.measurement_type === "AI_AUTO_CONTOUR" || annot.is_ai_assisted ? "#38bdf8" : "#10b981";
-      ctx.fillStyle = annot.measurement_type === "AI_AUTO_CONTOUR" || annot.is_ai_assisted ? "rgba(56, 189, 248, 0.22)" : "rgba(16, 185, 129, 0.15)";
+      ctx.strokeStyle =
+        annot.measurement_type === "AI_AUTO_CONTOUR" || annot.is_ai_assisted
+          ? "#38bdf8"
+          : "#10b981";
+      ctx.fillStyle =
+        annot.measurement_type === "AI_AUTO_CONTOUR" || annot.is_ai_assisted
+          ? "rgba(56, 189, 248, 0.22)"
+          : "rgba(16, 185, 129, 0.15)";
 
       ctx.beginPath();
       ctx.moveTo(annot.points[0].x, annot.points[0].y);
@@ -694,7 +744,8 @@ function renderViewport(canvas, plane, sliceVal) {
           const type = cal.caliperType || cal.CaliperType;
           if (sp && ep) {
             ctx.lineWidth = 2;
-            ctx.strokeStyle = type === "PERPENDICULAR_DIAMETER" ? "#f59e0b" : "#38bdf8";
+            ctx.strokeStyle =
+              type === "PERPENDICULAR_DIAMETER" ? "#f59e0b" : "#38bdf8";
             if (type === "PERPENDICULAR_DIAMETER") {
               ctx.setLineDash([4, 3]);
             }
