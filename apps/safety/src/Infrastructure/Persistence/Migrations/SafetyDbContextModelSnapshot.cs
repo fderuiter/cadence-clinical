@@ -8,7 +8,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
+namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations
+{
     [DbContext(typeof(SafetyDbContext))]
     partial class SafetyDbContextModelSnapshot : ModelSnapshot
     {
@@ -27,7 +28,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime?>("AckAReceivedAt")
+                    b.Property<DateTimeOffset?>("AckAReceivedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("AckAStatus")
@@ -38,7 +39,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .IsRequired()
                         .HasColumnType("jsonb");
 
-                    b.Property<DateTime?>("AckBReceivedAt")
+                    b.Property<DateTimeOffset?>("AckBReceivedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("AckBStatus")
@@ -49,7 +50,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .IsRequired()
                         .HasColumnType("jsonb");
 
-                    b.Property<DateTime?>("AckCReceivedAt")
+                    b.Property<DateTimeOffset?>("AckCReceivedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("AckCStatus")
@@ -70,7 +71,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -104,7 +105,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<DateTime?>("MdnReceivedAt")
+                    b.Property<DateTimeOffset?>("MdnReceivedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("MdnStatus")
@@ -207,7 +208,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -259,7 +260,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime?>("AdjudicatedAt")
+                    b.Property<DateTimeOffset?>("AdjudicatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CapaReference")
@@ -287,7 +288,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                     b.Property<bool>("CompetentAuthorityNotified")
                         .HasColumnType("boolean");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -374,7 +375,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                     b.Property<int>("VigilanceDeadlineDays")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime>("VigilanceDueDate")
+                    b.Property<DateTimeOffset>("VigilanceDueDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("VigilanceReportingRequired")
@@ -412,7 +413,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -463,7 +464,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<DateTime?>("ApprovedAt")
+                    b.Property<DateTimeOffset?>("ApprovedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ApprovedByUserId")
@@ -480,7 +481,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -518,7 +519,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<DateTime>("ReceiptDate")
+                    b.Property<DateTimeOffset>("ReceiptDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("SeriousnessCongenitalAnomaly")
@@ -576,7 +577,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime?>("ApprovedAt")
+                    b.Property<DateTimeOffset?>("ApprovedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ApprovedByUserId")
@@ -588,7 +589,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -597,13 +598,12 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasColumnType("character varying(255)");
 
                     b.Property<string>("EsignatureManifestId")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                        .HasColumnType("text");
 
-                    b.Property<DateTime>("PeriodEnd")
+                    b.Property<DateTimeOffset>("PeriodEnd")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime>("PeriodStart")
+                    b.Property<DateTimeOffset>("PeriodStart")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ReasonForChange")
@@ -667,7 +667,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -721,7 +721,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -769,7 +769,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -782,7 +782,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<DateTime>("RunDate")
+                    b.Property<DateTimeOffset>("RunDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("StudyId")
@@ -811,7 +811,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -854,7 +854,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .IsRequired()
                         .HasColumnType("jsonb");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -895,7 +895,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime?>("ApprovedAt")
+                    b.Property<DateTimeOffset?>("ApprovedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ApprovedByUserId")
@@ -910,7 +910,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                     b.Property<double>("ConfidenceScore")
                         .HasColumnType("double precision");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -1016,7 +1016,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -1075,7 +1075,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
 
-                    b.Property<DateTime?>("ReviewedAt")
+                    b.Property<DateTimeOffset?>("ReviewedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ReviewedBy")
@@ -1153,7 +1153,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -1256,3 +1256,4 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations;
 #pragma warning restore 612, 618
         }
     }
+}

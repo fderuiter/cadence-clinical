@@ -41,8 +41,13 @@ public record DsurCompileRequest(
     IReadOnlyList<SafetyCaseIcsrInput>? SafetyCases = null
 );
 
+/// <summary>
+/// The body of a DSUR approval. The signer is never named here: it is the verified caller, who must also present a
+/// step-up signature token (<c>X-Sig-Token</c>) bound to the report (#5462).
+/// </summary>
+/// <param name="SigningReason">The meaning of the signature (21 CFR 11.50); defaults to approval of the DSUR.</param>
+/// <param name="ReasonForChange">Why the record is being locked; required.</param>
 public record DsurApproveRequest(
-    string? SignerUserId,
     string? SigningReason,
     string? ReasonForChange
 );

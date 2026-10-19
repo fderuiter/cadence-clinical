@@ -107,7 +107,7 @@ Entity: `PeriodicSafetyReportRecord`
 | `CompoundName` | `character varying(255)` | no |  |  |
 | `CreatedAt` | `timestamp with time zone` | no |  |  |
 | `CreatedBy` | `character varying(255)` | no |  |  |
-| `EsignatureManifestId` | `character varying(255)` | yes |  |  |
+| `EsignatureManifestId` | `text` | yes |  |  |
 | `PeriodEnd` | `timestamp with time zone` | no |  |  |
 | `PeriodStart` | `timestamp with time zone` | no |  |  |
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
