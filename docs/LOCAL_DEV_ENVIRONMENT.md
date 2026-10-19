@@ -108,7 +108,7 @@ already run, so the core profile also works without Docker, for example in a clo
 [apps/apphost](../apps/apphost/README.md#run-locally) has the full command.
 
 `scripts/local_stack_nodocker.sh up` does all of that in a container with no Docker: it starts a throwaway
-PostgreSQL 16 cluster on port 5433, Keycloak from its release tarball with the `cadence` realm, and the core profile
+PostgreSQL 18 cluster on port 5433, Keycloak from its release tarball with the `cadence` realm, and the core profile
 in tmux session `apphost` (`status` and `down` check and stop it). The kernel host provisions the `cadence-local`
 tenant the realm's users sign in to (ADR-2542). Agents drive the running stack with
 [.claude/skills/run-cadence](../.claude/skills/run-cadence/SKILL.md).

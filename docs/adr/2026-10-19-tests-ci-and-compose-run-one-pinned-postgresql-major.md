@@ -63,8 +63,8 @@ major nobody deploys, and planner, default and extension differences between maj
 
 - **Positive Impact:** the RTM's database environment and the developer stack name the same major.
 - **Negative Impact:** cloud sessions with Ubuntu's PostgreSQL 16 cannot run the database tests until PostgreSQL 18 is
-  installed from the PostgreSQL apt repository. `scripts/local_stack_nodocker.sh`, which runs the stack (not the tests)
-  without Docker, still starts the PostgreSQL 16 binaries until it moves too.
+  installed from the PostgreSQL apt repository; the project's cloud environment setup script does that, and
+  `scripts/local_stack_nodocker.sh` starts the PostgreSQL 18 binaries too.
 - **Mitigation Strategy:** the refusal names both majors, so a mismatch is found before the test run, not inferred from
   failures.
 
