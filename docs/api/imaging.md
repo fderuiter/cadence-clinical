@@ -13,4 +13,5 @@ Generated from `docs/openapi/imaging_openapi.json` by `pnpm cadence generate-api
 | `POST` | `/api/v1/imaging/studies/batch` | BatchIngestStudyFolder |  |
 | `GET` | `/api/v1/imaging/studies/{studyUid}` | WadoRsGetStudy |  |
 | `GET` | `/api/v1/imaging/studies/{studyUid}/series/{seriesUid}/instances/{instanceUid}/frames/{frameList}` | WadoRsGetInstanceFrames |  |
+| `POST` | `/api/v1/imaging/studies/{studyUid}/series/{seriesUid}/segment` | SegmentRoiSeed |  |
 | `GET` | `/healthz` | ImagingHealthCheck | Medical Imaging DICOM service health probe. |

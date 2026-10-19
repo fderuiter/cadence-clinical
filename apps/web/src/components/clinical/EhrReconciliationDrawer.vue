@@ -747,7 +747,8 @@ export interface EhrCandidate {
     | "EXACT_MATCH"
     | "VALUE_MISMATCH"
     | "UNIT_MISMATCH"
-    | "DATE_MISMATCH";
+    | "DATE_MISMATCH"
+    | "NOT_COMPARED";
   confidence_score: number;
   mapping_provenance: string;
   raw_fhir_resource: Record<string, any>;
@@ -1142,6 +1143,8 @@ function formatDiscrepancy(disc: string): string {
       return "🔄 Unit Mismatch";
     case "DATE_MISMATCH":
       return "📅 Date Mismatch";
+    case "NOT_COMPARED":
+      return "Not compared with eCRF";
     default:
       return disc;
   }

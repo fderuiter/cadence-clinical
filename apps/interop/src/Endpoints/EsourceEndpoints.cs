@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Interop.Application.Services;
 using Cadence.Apps.Interop.Domain;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
@@ -70,7 +71,7 @@ public static class EsourceEndpoints
             .WithName("PollHospitalEhr")
             .RequirePermission("esource_candidate:ingest")
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .Produces<EhrPollResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status501NotImplemented)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
         group.MapPost("/ingest", IngestFhirBundleAsync)
@@ -289,12 +290,13 @@ public static class EsourceEndpoints
             ErrorMessage: isValid ? null : "Assertion verification failed (check exp/sub/aud)"));
     }
 
-    public static async Task<IResult> PollHospitalEhrAsync(
+    /// <summary>
+    /// Polls a registered EHR endpoint. No FHIR client is wired yet, so this answers 501 and writes nothing rather than
+    /// inventing candidates (#5432). Bundles that a site exports are ingested through <see cref="IngestFhirBundleAsync"/>.
+    /// </summary>
+    public static IResult PollHospitalEhrAsync(
         EhrPollRequest request,
-        InteropDbContext db,
-        IClock clock,
-        HttpContext httpContext,
-        CancellationToken ct)
+        HttpContext httpContext)
     {
         if (string.IsNullOrWhiteSpace(request.StudyId) || string.IsNullOrWhiteSpace(request.SubjectId))
         {
@@ -306,45 +308,10 @@ public static class EsourceEndpoints
             return OutsideStudy();
         }
 
-        var endpoint = await db.EhrEndpointRecords.FirstOrDefaultAsync(e => e.Id == request.EndpointId, ct).ConfigureAwait(false);
-        if (endpoint != null)
-        {
-            endpoint.LastPolledAt = clock.UtcNow;
-        }
-
-        var siteId = !string.IsNullOrWhiteSpace(request.SiteId) ? request.SiteId : "SITE-01";
-        var ehrSys = endpoint?.Name ?? "EHR-HOSPITAL-MAIN";
-
-        // Generate candidate records for subject from EHR FHIR poll simulation
-        var generatedCandidates = SeedDefaultCandidates(request.StudyId, siteId, request.SubjectId, ehrSys, clock.UtcNow);
-
-        var newDtos = new List<EhrCandidateItemDto>();
-        foreach (var candidate in generatedCandidates)
-        {
-            // Avoid duplicate candidates for same resource & target variable if existing pending review
-            var existing = await db.EhrReconciliationCandidateRecords
-                .FirstOrDefaultAsync(c => c.StudyId == candidate.StudyId && c.SubjectId == candidate.SubjectId && c.FhirResourceId == candidate.FhirResourceId && c.TargetVariable == candidate.TargetVariable, ct)
-                .ConfigureAwait(false);
-
-            if (existing == null)
-            {
-                db.EhrReconciliationCandidateRecords.Add(candidate);
-                newDtos.Add(ToDto(candidate));
-            }
-            else
-            {
-                newDtos.Add(ToDto(existing));
-            }
-        }
-
-        await db.SaveChangesAsync(ct).ConfigureAwait(false);
-
-        return Results.Ok(new EhrPollResponse(
-            Success: true,
-            PollCount: generatedCandidates.Count,
-            NewCandidatesCount: newDtos.Count,
-            Candidates: newDtos,
-            Message: $"Successfully polled EHR for subject {request.SubjectId}. {newDtos.Count} candidate items synchronized."));
+        return Results.Problem(
+            "Polling an EHR is not available: no FHIR client is configured. Ingest an exported FHIR bundle instead.",
+            statusCode: StatusCodes.Status501NotImplemented,
+            title: "EHR polling not configured");
     }
 
     public static async Task<IResult> IngestFhirBundleAsync(
@@ -364,17 +331,54 @@ public static class EsourceEndpoints
             return OutsideStudy();
         }
 
-        var candidates = SeedDefaultCandidates(request.StudyId, request.SiteId ?? "SITE-01", request.SubjectId, request.EhrSystemId ?? "EHR-HOSPITAL-IMPORT", clock.UtcNow);
-        var dtos = new List<EhrCandidateItemDto>();
-
-        foreach (var c in candidates)
+        if (string.IsNullOrWhiteSpace(request.SiteId) || string.IsNullOrWhiteSpace(request.EhrSystemId))
         {
-            if (!string.IsNullOrWhiteSpace(request.SubjectPseudonym))
+            return Results.Problem("SiteId and EhrSystemId are required.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        FhirObservationMapper.Result mapped;
+        try
+        {
+            mapped = FhirObservationMapper.Map(
+                request.RawFhirBundleJson ?? string.Empty,
+                new FhirObservationMapper.Target(
+                    request.StudyId,
+                    request.SiteId,
+                    request.SubjectId,
+                    string.IsNullOrWhiteSpace(request.SubjectPseudonym) ? request.SubjectId : request.SubjectPseudonym,
+                    request.EhrSystemId),
+                clock.UtcNow);
+        }
+        catch (FormatException ex)
+        {
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (mapped.Candidates.Count == 0)
+        {
+            return Results.Problem(
+                "The bundle holds no Observation that maps to a supported CDASH variable.",
+                statusCode: StatusCodes.Status400BadRequest,
+                extensions: new Dictionary<string, object?> { ["skipped"] = mapped.Skipped });
+        }
+
+        var dtos = new List<EhrCandidateItemDto>();
+        foreach (var candidate in mapped.Candidates)
+        {
+            // A resource already pending review for the same variable is not filed twice.
+            var existing = await db.EhrReconciliationCandidateRecords
+                .FirstOrDefaultAsync(c => c.StudyId == candidate.StudyId && c.SubjectId == candidate.SubjectId && c.FhirResourceId == candidate.FhirResourceId && c.TargetVariable == candidate.TargetVariable, ct)
+                .ConfigureAwait(false);
+
+            if (existing is null)
             {
-                c.SubjectPseudonym = request.SubjectPseudonym;
+                db.EhrReconciliationCandidateRecords.Add(candidate);
+                dtos.Add(ToDto(candidate));
             }
-            db.EhrReconciliationCandidateRecords.Add(c);
-            dtos.Add(ToDto(c));
+            else
+            {
+                dtos.Add(ToDto(existing));
+            }
         }
 
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
@@ -383,7 +387,9 @@ public static class EsourceEndpoints
             Success: true,
             CandidateCount: dtos.Count,
             Candidates: dtos,
-            Message: $"Successfully ingested FHIR bundle for subject {request.SubjectId}."));
+            Message: mapped.Skipped.Count == 0
+                ? $"Ingested {dtos.Count} Observation(s) for subject {request.SubjectId}."
+                : $"Ingested {dtos.Count} Observation(s) for subject {request.SubjectId}; skipped {mapped.Skipped.Count}: {string.Join("; ", mapped.Skipped)}."));
     }
 
     public static async Task<IResult> ListCandidatesAsync(
@@ -395,7 +401,6 @@ public static class EsourceEndpoints
         int skip,
         int limit,
         InteropDbContext db,
-        IClock clock,
         HttpContext httpContext,
         CancellationToken ct)
     {
@@ -431,22 +436,6 @@ public static class EsourceEndpoints
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
-        // If no records in database yet for this query, seed sample candidate data so drawer works seamlessly
-        var seedStudy = study_id ?? "STUDY-101";
-        if (total == 0 && CallerScope.CanAccessStudy(httpContext, seedStudy))
-        {
-            var seedSite = site_id ?? "SITE-01";
-            var seedSubject = subject_id ?? "PAT-001";
-            var seeded = SeedDefaultCandidates(seedStudy, seedSite, seedSubject, "EPIC-HEALTH-SYSTEM", clock.UtcNow);
-            foreach (var s in seeded)
-            {
-                db.EhrReconciliationCandidateRecords.Add(s);
-            }
-            await db.SaveChangesAsync(ct).ConfigureAwait(false);
-
-            items = seeded;
-            total = seeded.Count;
-        }
 
         var dtos = items.Select(ToDto).ToList();
         return Results.Ok(new EhrCandidateListResponse(dtos, total));
@@ -973,190 +962,6 @@ public static class EsourceEndpoints
         var studies = CallerScope.StudyFilter(httpContext);
         return studies == null ? candidates : candidates.Where(c => studies.Contains(c.StudyId));
     }
-
-    private static List<EhrReconciliationCandidateRecord> SeedDefaultCandidates(string studyId, string siteId, string subjectId, string ehrSys, DateTimeOffset now)
-    {
-        var pseudo = subjectId.StartsWith("PAT-", StringComparison.OrdinalIgnoreCase) ? subjectId : $"PAT-{subjectId}";
-
-        return
-        [
-            new EhrReconciliationCandidateRecord
-            {
-                Id = "c1010000-0000-0000-0000-000000000001", // deid-ignore
-                StudyId = studyId,
-                SiteId = siteId,
-                SubjectId = subjectId,
-                SubjectPseudonym = pseudo,
-                EhrSystemId = ehrSys,
-                FhirResourceType = "Observation",
-                FhirResourceId = "obs-sys-bp-9912",
-                SourceTimestamp = now.AddDays(-1),
-                TargetDomain = "VS",
-                TargetVariable = "SYSBP",
-                CdashTestcd = "SYSBP",
-                CdashTest = "Systolic Blood Pressure",
-                CandidateValueJson = "128",
-                CandidateUnit = "mmHg",
-                CurrentEcrfValueJson = "140",
-                CurrentEcrfUpdatedAt = now.AddDays(-2),
-                DiscrepancyType = "VALUE_MISMATCH",
-                ConfidenceScore = 0.98,
-                MappingProvenance = "FHIR Observation.code LOINC 8480-6 -> CDASH VS.SYSBP",
-                RawFhirResourceJson = JsonSerializer.Serialize(new
-                {
-                    resourceType = "Observation",
-                    id = "obs-sys-bp-9912",
-                    status = "final",
-                    code = new { coding = new[] { new { system = "http://loinc.org", code = "8480-6", display = "Systolic blood pressure" } } },
-                    subject = new { reference = $"Patient/{subjectId}" },
-                    effectiveDateTime = now.AddDays(-1).ToString("o"),
-                    valueQuantity = new { value = 128, unit = "mmHg", system = "http://unitsofmeasure.org", code = "mm[Hg]" } // deid-ignore
-                }),
-                Status = "PENDING_REVIEW",
-                CreatedAt = now
-            },
-            new EhrReconciliationCandidateRecord
-            {
-                Id = "c1010000-0000-0000-0000-000000000002", // deid-ignore
-                StudyId = studyId,
-                SiteId = siteId,
-                SubjectId = subjectId,
-                SubjectPseudonym = pseudo,
-                EhrSystemId = ehrSys,
-                FhirResourceType = "Observation",
-                FhirResourceId = "obs-hr-9913",
-                SourceTimestamp = now.AddDays(-1),
-                TargetDomain = "VS",
-                TargetVariable = "PULSE",
-                CdashTestcd = "PULSE",
-                CdashTest = "Pulse Rate",
-                CandidateValueJson = "72",
-                CandidateUnit = "beats/min",
-                CurrentEcrfValueJson = "72",
-                CurrentEcrfUpdatedAt = now.AddDays(-1),
-                DiscrepancyType = "EXACT_MATCH",
-                ConfidenceScore = 1.0,
-                MappingProvenance = "FHIR Observation.code LOINC 8867-4 -> CDASH VS.PULSE",
-                RawFhirResourceJson = JsonSerializer.Serialize(new
-                {
-                    resourceType = "Observation",
-                    id = "obs-hr-9913",
-                    status = "final",
-                    code = new { coding = new[] { new { system = "http://loinc.org", code = "8867-4", display = "Heart rate" } } },
-                    subject = new { reference = $"Patient/{subjectId}" },
-                    effectiveDateTime = now.AddDays(-1).ToString("o"),
-                    valueQuantity = new { value = 72, unit = "beats/min", system = "http://unitsofmeasure.org", code = "/min" } // deid-ignore
-                }),
-                Status = "PENDING_REVIEW",
-                CreatedAt = now
-            },
-            new EhrReconciliationCandidateRecord
-            {
-                Id = "c1010000-0000-0000-0000-000000000003", // deid-ignore
-                StudyId = studyId,
-                SiteId = siteId,
-                SubjectId = subjectId,
-                SubjectPseudonym = pseudo,
-                EhrSystemId = ehrSys,
-                FhirResourceType = "Observation",
-                FhirResourceId = "obs-gluc-9914",
-                SourceTimestamp = now.AddHours(-12),
-                TargetDomain = "LB",
-                TargetVariable = "GLUC",
-                CdashTestcd = "GLUC",
-                CdashTest = "Glucose Lab Test",
-                CandidateValueJson = "105",
-                CandidateUnit = "mg/dL",
-                CurrentEcrfValueJson = null,
-                CurrentEcrfUpdatedAt = null,
-                DiscrepancyType = "NEW_FIELD",
-                ConfidenceScore = 0.95,
-                MappingProvenance = "FHIR Observation.code LOINC 2339-0 -> CDASH LB.GLUC",
-                RawFhirResourceJson = JsonSerializer.Serialize(new
-                {
-                    resourceType = "Observation",
-                    id = "obs-gluc-9914",
-                    status = "final",
-                    code = new { coding = new[] { new { system = "http://loinc.org", code = "2339-0", display = "Glucose [Mass/volume] in Blood" } } },
-                    subject = new { reference = $"Patient/{subjectId}" },
-                    effectiveDateTime = now.AddHours(-12).ToString("o"),
-                    valueQuantity = new { value = 105, unit = "mg/dL", system = "http://unitsofmeasure.org", code = "mg/dL" } // deid-ignore
-                }),
-                Status = "PENDING_REVIEW",
-                CreatedAt = now
-            },
-            new EhrReconciliationCandidateRecord
-            {
-                Id = "c1010000-0000-0000-0000-000000000004", // deid-ignore
-                StudyId = studyId,
-                SiteId = siteId,
-                SubjectId = subjectId,
-                SubjectPseudonym = pseudo,
-                EhrSystemId = ehrSys,
-                FhirResourceType = "Observation",
-                FhirResourceId = "obs-temp-9915",
-                SourceTimestamp = now.AddDays(-1),
-                TargetDomain = "VS",
-                TargetVariable = "TEMP",
-                CdashTestcd = "TEMP",
-                CdashTest = "Body Temperature",
-                CandidateValueJson = "37.0",
-                CandidateUnit = "C",
-                CurrentEcrfValueJson = "98.6",
-                CurrentEcrfUpdatedAt = now.AddDays(-1),
-                DiscrepancyType = "UNIT_MISMATCH",
-                ConfidenceScore = 0.92,
-                MappingProvenance = "FHIR Observation.code LOINC 8310-5 -> CDASH VS.TEMP",
-                RawFhirResourceJson = JsonSerializer.Serialize(new
-                {
-                    resourceType = "Observation",
-                    id = "obs-temp-9915",
-                    status = "final",
-                    code = new { coding = new[] { new { system = "http://loinc.org", code = "8310-5", display = "Body temperature" } } },
-                    subject = new { reference = $"Patient/{subjectId}" },
-                    effectiveDateTime = now.AddDays(-1).ToString("o"),
-                    valueQuantity = new { value = 37.0, unit = "C", system = "http://unitsofmeasure.org", code = "Cel" } // deid-ignore
-                }),
-                Status = "PENDING_REVIEW",
-                CreatedAt = now
-            },
-            new EhrReconciliationCandidateRecord
-            {
-                Id = "c1010000-0000-0000-0000-000000000005", // deid-ignore
-                StudyId = studyId,
-                SiteId = siteId,
-                SubjectId = subjectId,
-                SubjectPseudonym = pseudo,
-                EhrSystemId = ehrSys,
-                FhirResourceType = "Observation",
-                FhirResourceId = "obs-weight-9916",
-                SourceTimestamp = now.AddDays(-5),
-                TargetDomain = "VS",
-                TargetVariable = "WEIGHT",
-                CdashTestcd = "WEIGHT",
-                CdashTest = "Weight",
-                CandidateValueJson = "75.2",
-                CandidateUnit = "kg",
-                CurrentEcrfValueJson = "75.2",
-                CurrentEcrfUpdatedAt = now.AddDays(-1),
-                DiscrepancyType = "DATE_MISMATCH",
-                ConfidenceScore = 0.89,
-                MappingProvenance = "FHIR Observation.code LOINC 29463-7 -> CDASH VS.WEIGHT",
-                RawFhirResourceJson = JsonSerializer.Serialize(new
-                {
-                    resourceType = "Observation",
-                    id = "obs-weight-9916",
-                    status = "final",
-                    code = new { coding = new[] { new { system = "http://loinc.org", code = "29463-7", display = "Body weight" } } },
-                    subject = new { reference = $"Patient/{subjectId}" },
-                    effectiveDateTime = now.AddDays(-5).ToString("o"),
-                    valueQuantity = new { value = 75.2, unit = "kg", system = "http://unitsofmeasure.org", code = "kg" } // deid-ignore
-                }),
-                Status = "PENDING_REVIEW",
-                CreatedAt = now
-            },
-        ];
-    }
 }
 
 // Request and Response DTOs
@@ -1206,13 +1011,6 @@ public record EhrPollRequest(
     string? SiteId,
     string SubjectId,
     string? PrivateKeyPem);
-
-public record EhrPollResponse(
-    bool Success,
-    int PollCount,
-    int NewCandidatesCount,
-    List<EhrCandidateItemDto> Candidates,
-    string Message);
 
 public record FhirBundleIngestRequest(
     string StudyId,
