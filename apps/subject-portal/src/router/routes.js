@@ -1,0 +1,84 @@
+// One route per portal view, in the order the shell renders them. `viewId` is
+// the view's section id (and the value of `state.currentView`); `tab` puts the
+// view in the tab bar.
+import ComplianceView from "../views/ComplianceView.vue";
+import ConsentView from "../views/ConsentView.vue";
+import InboxView from "../views/InboxView.vue";
+import LaySummariesView from "../views/LaySummariesView.vue";
+import QuestionnaireView from "../views/QuestionnaireView.vue";
+import TasksView from "../views/TasksView.vue";
+import WalletView from "../views/WalletView.vue";
+
+export const viewRoutes = [
+  {
+    path: "/",
+    name: "tasks",
+    component: TasksView,
+    meta: {
+      viewId: "view-tasks",
+      tab: { id: "tasks", label: "My Tasks", icon: "📋" },
+    },
+  },
+  {
+    path: "/questionnaire",
+    name: "questionnaire",
+    component: QuestionnaireView,
+    // Opened from a task; a direct link without an active questionnaire
+    // lands on the task list instead.
+    meta: { viewId: "view-questionnaire", requiresActiveQuestionnaire: true },
+  },
+  {
+    path: "/compliance",
+    name: "compliance",
+    component: ComplianceView,
+    meta: {
+      viewId: "view-compliance",
+      tab: { id: "compliance", label: "My Compliance", icon: "📈" },
+    },
+  },
+  {
+    path: "/inbox",
+    name: "inbox",
+    component: InboxView,
+    meta: {
+      viewId: "view-inbox",
+      tab: { id: "inbox", label: "My Inbox", icon: "✉️" },
+    },
+  },
+  {
+    path: "/consent",
+    name: "consent",
+    component: ConsentView,
+    meta: {
+      viewId: "view-consent",
+      tab: { id: "consent", label: "My Consent", icon: "✍️" },
+    },
+  },
+  {
+    path: "/wallet",
+    name: "wallet",
+    component: WalletView,
+    meta: {
+      viewId: "view-wallet",
+      tab: { id: "wallet", label: "My Wallet", icon: "💳" },
+    },
+  },
+  {
+    path: "/lay-summaries",
+    name: "lay-summaries",
+    component: LaySummariesView,
+    meta: {
+      viewId: "view-lay-summaries",
+      tab: { id: "lay-summaries", label: "Trial Results", icon: "📜" },
+    },
+  },
+];
+
+// The tab bar entries, with the view each one controls.
+export const tabs = viewRoutes
+  .filter((route) => route.meta.tab)
+  .map((route) => ({ ...route.meta.tab, viewId: route.meta.viewId }));
+
+export function routeForView(viewId) {
+  return viewRoutes.find((route) => route.meta.viewId === viewId);
+}
