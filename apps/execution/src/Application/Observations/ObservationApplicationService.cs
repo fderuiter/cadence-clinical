@@ -140,12 +140,16 @@ public sealed class ObservationApplicationService(
         }
 
         // Lab range evaluation
+        // Ranges are scoped to the observation's study and site, and loaded from the database on first use (#5435).
+        await labRangeService.EnsureLoadedAsync(cancellationToken).ConfigureAwait(false);
         var labResult = labRangeService.Evaluate(
+            studyCode,
             testCode,
             normVal ?? request.Value,
             sex: sex,
             ageYears: ageYears,
-            labSource: request.LabSource);
+            labSource: request.LabSource,
+            siteId: siteCode?.Value);
 
         var additionalProps = new ObservationAdditionalProperties
         {

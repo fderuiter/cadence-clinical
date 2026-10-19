@@ -1,24 +1,38 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Domain.Observations;
+using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Infrastructure.Persistence;
+
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cadence.Apps.Execution.Infrastructure.Normalization;
 
 /// <summary>
 /// Reference range selection and clinical indicator evaluation engine conforming to PRD-SYS-121.
 /// Matches age- and sex-stratified normal intervals and computes out-of-range indicators.
+/// Custom ranges are held as an immutable snapshot keyed by study and test code. <see cref="UpdateActiveRanges"/>
+/// builds a new snapshot and swaps it in one reference write, and <see cref="EnsureLoadedAsync"/> loads the persisted
+/// ranges before the first evaluation, so evaluation never sees an empty or half-built set (#5435). Loading is lazy
+/// because hosts that never evaluate (OpenAPI export, composition tests) must start without a database.
 /// @req:PRD-SYS-121
 /// @req:SRS-EDC-001
 /// </summary>
-public sealed class LabRangeService : ILabRangeService
+/// <param name="scopeFactory">Resolves <see cref="ExecutionDbContext"/> for the first load; without one (unit tests)
+/// only <see cref="UpdateActiveRanges"/> fills the snapshot.</param>
+public sealed class LabRangeService(IServiceScopeFactory? scopeFactory = null) : ILabRangeService
 {
-    private readonly ConcurrentDictionary<string, List<LabReferenceRange>> _activeCustomRanges = new(StringComparer.OrdinalIgnoreCase);
+    private readonly SemaphoreSlim _loadLock = new(1, 1);
+    private volatile FrozenDictionary<string, LabReferenceRange[]> _activeCustomRanges = FrozenDictionary<string, LabReferenceRange[]>.Empty;
+    private volatile bool _loaded;
 
     private sealed record RangeRule(double Low, double High, string? Sex = null);
 
@@ -58,36 +72,70 @@ public sealed class LabRangeService : ILabRangeService
         ["HT"] = [new(1.2, 2.2)],
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
-    public void UpdateActiveRanges(IEnumerable<LabReferenceRange> ranges)
-    {
-        if (ranges == null) return;
-        _activeCustomRanges.Clear();
+    // A range without a study cannot be scoped, so it never applies.
+    private static string Key(string studyId, string testCode) => $"{studyId.Trim()}\u001f{testCode.Trim()}";
 
-        foreach (var group in ranges.Where(r => r.IsActive && !r.IsDeleted).GroupBy(r => r.TestCode, StringComparer.OrdinalIgnoreCase))
+    public async Task EnsureLoadedAsync(CancellationToken cancellationToken = default)
+    {
+        if (_loaded || scopeFactory is null)
         {
-            _activeCustomRanges[group.Key] = group.ToList();
+            return;
+        }
+
+        await _loadLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (_loaded)
+            {
+                return;
+            }
+
+            await using var scope = scopeFactory.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
+            var ranges = await db.LabReferenceRanges
+                .AsNoTracking()
+                .Where(r => r.IsActive && !r.IsDeleted)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            // An import that finished while this load ran already published a complete, newer set.
+            if (!_loaded)
+            {
+                UpdateActiveRanges(ranges);
+            }
+        }
+        finally
+        {
+            _loadLock.Release();
         }
     }
 
-    public LabAssessmentResult EvaluateRange(
-        string testCode,
-        double? value,
-        int? ageYears = null,
-        string? sex = null,
-        string? labSource = null,
-        string? studyId = null,
-        string? siteId = null) =>
-        Evaluate(new TestCode(testCode), value, sex, ageYears, labSource, studyId, siteId);
+    // Every caller passes all active persisted ranges, so each call publishes a complete set.
+    public void UpdateActiveRanges(IEnumerable<LabReferenceRange> ranges)
+    {
+        ArgumentNullException.ThrowIfNull(ranges);
+
+        _activeCustomRanges = ranges
+            .Where(r => r.IsActive && !r.IsDeleted && !string.IsNullOrWhiteSpace(r.StudyId))
+            .GroupBy(r => Key(r.StudyId, r.TestCode), StringComparer.OrdinalIgnoreCase)
+            .ToFrozenDictionary(g => g.Key, g => g.ToArray(), StringComparer.OrdinalIgnoreCase);
+        _loaded = true;
+    }
 
     public LabAssessmentResult Evaluate(
+        StudyCode studyId,
         TestCode testCode,
         double? value,
         string? sex = null,
         int? ageYears = null,
         string? labSource = null,
-        string? studyId = null,
         string? siteId = null)
     {
+        if (string.IsNullOrWhiteSpace(studyId.Value))
+        {
+            throw new ArgumentException("A study is required to choose a lab reference range.", nameof(studyId));
+        }
+
         if (value is null)
         {
             return new LabAssessmentResult("NORMAL", false, null, null, null);
@@ -97,10 +145,10 @@ public sealed class LabRangeService : ILabRangeService
         string normSource = string.IsNullOrWhiteSpace(labSource) ? "CENTRAL" : labSource.Trim().ToUpperInvariant();
         string normSex = string.IsNullOrWhiteSpace(sex) ? "U" : sex.Trim().ToUpperInvariant();
 
-        // 1. Check custom persisted ranges first
-        if (_activeCustomRanges.TryGetValue(normCode, out var candidates) && candidates.Count > 0)
+        // 1. Check the study's custom persisted ranges first
+        if (_activeCustomRanges.TryGetValue(Key(studyId.Value, normCode), out var candidates) && candidates.Length > 0)
         {
-            var bestMatch = SelectBestRange(candidates, normSource, siteId, normSex, ageYears, studyId);
+            var bestMatch = SelectBestRange(candidates, normSource, siteId, normSex, ageYears);
             if (bestMatch != null)
             {
                 return EvaluateAgainstCustomRange(value.Value, bestMatch);
@@ -144,23 +192,16 @@ public sealed class LabRangeService : ILabRangeService
     }
 
     private static LabReferenceRange? SelectBestRange(
-        List<LabReferenceRange> candidates,
+        LabReferenceRange[] candidates,
         string obsSource,
         string? obsSiteId,
         string obsSex,
-        int? obsAge,
-        string? obsStudyId)
+        int? obsAge)
     {
         var scored = new List<(LabReferenceRange Range, int Score)>();
 
         foreach (var r in candidates)
         {
-            if (!string.IsNullOrWhiteSpace(obsStudyId) && !string.IsNullOrWhiteSpace(r.StudyId) &&
-                !string.Equals(r.StudyId, obsStudyId, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
             // 1. Site Specificity
             int siteScore = 0;
             if (obsSource == "LOCAL")

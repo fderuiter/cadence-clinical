@@ -204,30 +204,26 @@ public sealed class ObservationDemographicsLabRangeTests
     {
         public string? CapturedSex { get; private set; }
         public int? CapturedAgeYears { get; private set; }
+        public StudyCode? CapturedStudy { get; private set; }
+        public string? CapturedSite { get; private set; }
+
+        public Task EnsureLoadedAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 
         public LabAssessmentResult Evaluate(
+            StudyCode studyId,
             TestCode testCode,
             double? value,
             string? sex = null,
             int? ageYears = null,
             string? labSource = null,
-            string? studyId = null,
             string? siteId = null)
         {
+            CapturedStudy = studyId;
+            CapturedSite = siteId;
             CapturedSex = sex;
             CapturedAgeYears = ageYears;
             return new LabAssessmentResult("NORMAL", false, null, 10.0, 40.0);
         }
-
-        public LabAssessmentResult EvaluateRange(
-            string testCode,
-            double? value,
-            int? ageYears = null,
-            string? sex = null,
-            string? labSource = null,
-            string? studyId = null,
-            string? siteId = null) =>
-            Evaluate(new TestCode(testCode), value, sex, ageYears, labSource, studyId, siteId);
 
         public void UpdateActiveRanges(IEnumerable<LabReferenceRange> ranges)
         {
@@ -291,6 +287,8 @@ public sealed class ObservationDemographicsLabRangeTests
         response.IsSuccess.Should().BeTrue();
         trackingLabRange.CapturedSex.Should().Be("F");
         trackingLabRange.CapturedAgeYears.Should().Be(30);
+        trackingLabRange.CapturedStudy.Should().Be(new StudyCode("STUDY-101"));
+        trackingLabRange.CapturedSite.Should().Be("SITE-01");
     }
 
     [Fact]
