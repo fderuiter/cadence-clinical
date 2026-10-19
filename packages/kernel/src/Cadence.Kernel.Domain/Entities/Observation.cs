@@ -111,6 +111,11 @@ public class Observation : AggregateRoot<ObservationId>
     /// </summary>
     public KernelError? Correct(string? value, string reasonForChange, string recordedBy, DateTimeOffset recordedAt)
     {
+        if (string.IsNullOrWhiteSpace(reasonForChange))
+        {
+            return ObservationErrors.ReasonForChangeRequired;
+        }
+
         if (!IsValid(value))
         {
             return ObservationErrors.ValueInvalid;
