@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Protocol;
+using Cadence.Kernel.Commands;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Simulation;
@@ -45,8 +47,13 @@ public static class KernelSimulationEndpoints
             .WithName("KernelSimulateProtocol")
             .WithSummary("Evaluates a candidate USDM protocol version in memory without database changes.")
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status403Forbidden)
-            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+            .ProducesKernelErrors(
+                KernelErrors.ActorUnresolved,
+                KernelErrors.AuthorizationDenied,
+                SimulationErrors.VersionUnknown,
+                SimulationErrors.BaseNotFrozen,
+                SimulationErrors.ContentInvalid,
+                SimulationErrors.ElementIdDuplicated);
 
         group.MapPost("/protocols/generate-proposal", GenerateProposalAsync)
             .WithName("KernelGenerateProtocolProposal")
@@ -113,7 +120,7 @@ public static class KernelSimulationEndpoints
 
         if (!result.IsSuccess)
         {
-            return KernelProblems.BadRequest(result.Error!.Code, result.Error.Message);
+            return KernelErrorEndpoints.Problem(result.Error!);
         }
 
         return TypedResults.Ok(result.Value!);

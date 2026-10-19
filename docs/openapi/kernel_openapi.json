@@ -1173,8 +1173,28 @@
               }
             }
           },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
           "403": {
-            "description": "Forbidden",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Simulation.VersionUnknown\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1184,7 +1204,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Simulation.BaseNotFrozen\u0060, \u0060K.Simulation.ContentInvalid\u0060, \u0060K.Simulation.ElementIdDuplicated\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1193,7 +1213,33 @@
               }
             }
           }
-        }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Simulation.VersionUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Simulation.BaseNotFrozen",
+            "status": 422
+          },
+          {
+            "code": "K.Simulation.ContentInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Simulation.ElementIdDuplicated",
+            "status": 422
+          }
+        ]
       }
     },
     "/api/v1/kernel/protocols/generate-proposal": {
@@ -1380,8 +1426,18 @@
               }
             }
           },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
           "403": {
-            "description": "Forbidden",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1391,7 +1447,7 @@
             }
           },
           "404": {
-            "description": "Not Found",
+            "description": "Not Found. Kernel errors: \u0060K.Observation.EnrollmentUnknown\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1401,7 +1457,7 @@
             }
           },
           "409": {
-            "description": "Conflict",
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1411,7 +1467,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Observation.ObservedAtInvalid\u0060, \u0060K.Observation.ValueInvalid\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1420,7 +1476,57 @@
               }
             }
           }
-        }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Observation.EnrollmentUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Observation.ObservedAtInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Observation.ValueInvalid",
+            "status": 422
+          }
+        ]
       }
     },
     "/api/v1/kernel/observations/{observationRef}/corrections": {
@@ -1471,8 +1577,18 @@
               }
             }
           },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
           "403": {
-            "description": "Forbidden",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1482,7 +1598,7 @@
             }
           },
           "404": {
-            "description": "Not Found",
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1492,7 +1608,7 @@
             }
           },
           "409": {
-            "description": "Conflict",
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Observation.VersionStale\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1502,7 +1618,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Observation.ReasonForChangeRequired\u0060, \u0060K.Observation.ValueInvalid\u0060, \u0060K.Observation.ValueUnchanged\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1512,7 +1628,7 @@
             }
           },
           "423": {
-            "description": "Locked",
+            "description": "Locked. Kernel errors: \u0060K.Observation.Locked\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1521,7 +1637,65 @@
               }
             }
           }
-        }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Observation.VersionStale",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Observation.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Observation.ValueInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Observation.ValueUnchanged",
+            "status": 422
+          },
+          {
+            "code": "K.Observation.Locked",
+            "status": 423
+          }
+        ]
       }
     },
     "/api/v1/kernel/observations/{observationRef}/lock": {
@@ -1572,8 +1746,18 @@
               }
             }
           },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
           "403": {
-            "description": "Forbidden",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1583,7 +1767,7 @@
             }
           },
           "404": {
-            "description": "Not Found",
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1593,7 +1777,17 @@
             }
           },
           "409": {
-            "description": "Conflict",
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Observation.AlreadyLocked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1602,7 +1796,49 @@
               }
             }
           }
-        }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Observation.AlreadyLocked",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          }
+        ]
       }
     }
   },

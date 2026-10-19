@@ -21,6 +21,7 @@ using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
+using Cadence.Testing.Commands;
 using Cadence.Testing.Security;
 
 using FluentAssertions;
@@ -29,6 +30,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 
 using Xunit;
@@ -222,7 +224,10 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
     {
         _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
-            .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString));
+            .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
+
+            // Every error an observation endpoint returns must be one its command declares (ADR-2600 §4.5).
+            .ConfigureTestServices(services => services.AddDeclaredKernelErrorsCheck()));
         return _host.CreateSignedClient(new GatewayIdentity(userId, [], [], TenantId: tenantCode));
     }
 

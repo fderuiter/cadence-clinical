@@ -109,6 +109,18 @@ Modules register their errors in the same closed `KernelError` registry with an 
 declares the codes its handler can return; endpoints that send commands declare the pipeline-wide codes plus those in
 OpenAPI, and tests fail when a handler returns an undeclared code.
 
+Implemented (#5366) as follows. A command lists its errors with `[RaisesKernelErrors(typeof(Registry), nameof(…))]`, so
+a renamed or removed field fails the build. The pipeline-wide set is `KernelErrors.CommandPipeline`. In the module SDK,
+`.ProducesKernelCommand<TCommand>()` declares both sets on the endpoint: a problem response per status, the codes in
+each response's description, and the `x-kernel-errors` extension on the operation. Mapping a command that declares
+nothing throws. `KernelErrorEndpoints.Problem` renders an error as problem details with its `code` member.
+`KernelErrorCatalog` collects every registered error of the kernel's and the modules' assemblies and reports malformed
+codes and clashes. A unit test reads the published `kernel_openapi.json` and fails when a kernel endpoint that takes a
+body declares no kernel errors or names an unregistered one; the two in-memory protocol computations are exempt
+because they call no kernel service. The test sender `AddDeclaredKernelErrorsCheck()` (`Cadence.Testing`) throws when a
+command that declares its errors returns another. The kernel's other commands declare theirs as they gain endpoints or
+validators (#5448).
+
 ### 4.6 After commit
 
 The host runs the outbox relay. A consumer reacts to an event by sending a command as a named service account with

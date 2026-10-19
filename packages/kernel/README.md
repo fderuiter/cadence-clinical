@@ -325,7 +325,9 @@ To add a command:
 
 1. Declare the command record in `Cadence.Kernel.Abstractions/Commands` implementing `ICommand<TResult>`, its events
    with `[KernelEvent("Name", 1)]` in `Events/`, and any new errors as `public static readonly KernelError` fields
-   with a `K.<Area>.<Name>` code.
+   with a `K.<Area>.<Name>` code. List the errors its handler can return with
+   `[RaisesKernelErrors(typeof(SomeErrors), nameof(SomeErrors.X), …)]`; the pipeline's own
+   (`KernelErrors.CommandPipeline`) are implied.
 2. Implement `ICommandHandler<TCommand, TResult>` (from `Cadence.Kernel.Modules`) in `Cadence.Kernel.Application`: load or add **one**
    aggregate through `context.Work` (a second throws, K-TX-1), decide, `Raise` events, declare the aggregate's
    inputs with `LinkInput` (see [Lineage](#lineage-adr-2471)), return a `CommandResult`. Never save.
@@ -337,6 +339,12 @@ To add a command:
    both. Rules that read state stay in the handler. Existing kernel commands still check their inputs in the handler
    (`NoValidatorAttribute.HandlerChecksInputs`, #5448).
 4. Test it through the pipeline in `tests/Cadence.IntegrationTests/Kernel` (see `KernelCommandPipelinePostgresTests`).
+   The fixture's sender is wrapped with `AddDeclaredKernelErrorsCheck()` (`Cadence.Testing`), so a command that returns
+   an error it does not declare fails the test.
+5. Map an endpoint for it with `.ProducesKernelCommand<TCommand>()` and answer a failure with
+   `KernelErrorEndpoints.Problem(error)`. The endpoint then lists every code it can return in its OpenAPI operation
+   (`x-kernel-errors`, and in each problem response's description), and `KernelErrorContractTests` fails when a kernel
+   endpoint that takes a body declares none or names an unregistered code.
 
 A module writes its own records through the same pipeline (ADR-2600):
 

@@ -38,6 +38,7 @@ using Cadence.Rules.Evaluation;
 using Cadence.Rules.Indicators;
 using Cadence.Rules.Packs;
 using Cadence.Standards;
+using Cadence.Testing.Commands;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Database;
 
@@ -149,6 +150,7 @@ public class KernelPostgresFixture : IAsyncLifetime
             .AddSingleton<KernelOutboxRelay>()
             .AddKernelPersistence(ConnectionString)
             .AddKernelCommandPipeline()
+            .AddDeclaredKernelErrorsCheck()
             .AddKernelStandardsPersistence()
             .AddKernelStandards()
             .AddKernelValidationPersistence()

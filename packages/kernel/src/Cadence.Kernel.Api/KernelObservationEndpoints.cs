@@ -8,6 +8,7 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
 
 using Microsoft.AspNetCore.Builder;
@@ -54,28 +55,19 @@ public static class KernelObservationEndpoints
             .WithName("KernelRecordObservation")
             .WithSummary("Records an observation for the participant of an enrollment (observation.record).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status403Forbidden)
-            .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status409Conflict)
-            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+            .ProducesKernelCommand<RecordObservation>();
 
         group.MapPost("/{observationRef}/corrections", CorrectAsync)
             .WithName("KernelCorrectObservation")
             .WithSummary("Corrects an observation's value with the signed reason for change (observation.correct).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status403Forbidden)
-            .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status409Conflict)
-            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
-            .ProducesProblem(StatusCodes.Status423Locked);
+            .ProducesKernelCommand<CorrectObservation>();
 
         group.MapPost("/{observationRef}/lock", LockAsync)
             .WithName("KernelLockObservation")
             .WithSummary("Locks an observation so no correction commits after it (observation.lock).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status403Forbidden)
-            .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status409Conflict);
+            .ProducesKernelCommand<LockObservation>();
 
         return kernel;
     }
@@ -208,14 +200,7 @@ public static class KernelObservationEndpoints
     }
 
     /// <summary>A kernel error as RFC 9457 problem details, with its stable code (K-ERR-1) and any field errors.</summary>
-    internal static ProblemHttpResult Problem(KernelError error) =>
-        TypedResults.Problem(
-            title: error.Code,
-            detail: error.Message,
-            statusCode: error.HttpStatus,
-            extensions: error.Errors is { } errors
-                ? new Dictionary<string, object?> { ["code"] = error.Code, ["errors"] = errors }
-                : new Dictionary<string, object?> { ["code"] = error.Code });
+    internal static ProblemHttpResult Problem(KernelError error) => KernelErrorEndpoints.Problem(error);
 
     private static string IdempotencyKey(HttpContext context) => context.Request.Headers[IdempotencyKeyHeader].ToString().Trim();
 

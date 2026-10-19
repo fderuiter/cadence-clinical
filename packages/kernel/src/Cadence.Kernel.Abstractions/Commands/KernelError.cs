@@ -72,6 +72,24 @@ public static class KernelErrors
         new("K.Aggregate.AlreadyExists", 409, "An aggregate with the same identity already exists.");
 
     /// <summary>
+    /// The errors the command pipeline itself can return for any command, before or after its handler runs: a missing
+    /// tenant, idempotency key or reason for change, an unresolved actor, a failed validation, a denied authorization, a
+    /// reused idempotency key and a commit-time concurrency conflict. A command's declared errors
+    /// (<see cref="RaisesKernelErrorsAttribute"/>) add to these.
+    /// </summary>
+    public static IReadOnlyList<KernelError> CommandPipeline { get; } =
+    [
+        TenantRequired,
+        IdempotencyKeyRequired,
+        ReasonForChangeRequired,
+        ActorUnresolved,
+        CommandInvalid,
+        AuthorizationDenied,
+        IdempotencyConflict,
+        ConcurrencyConflict,
+    ];
+
+    /// <summary>
     /// Every error registered anywhere in the kernel contracts (public static <see cref="KernelError"/> fields), for the
     /// uniqueness test and for documentation.
     /// </summary>
