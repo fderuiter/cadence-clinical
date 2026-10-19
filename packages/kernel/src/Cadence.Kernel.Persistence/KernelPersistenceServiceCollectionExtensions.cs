@@ -69,6 +69,7 @@ public static class KernelPersistenceServiceCollectionExtensions
             KernelDatabase.UseKernelNpgsql(options, connectionString);
             options.AddInterceptors(TenantInterceptor);
         });
+        services.TryAddSingleton(new KernelConnectionString(connectionString));
         services.TryAddSingleton<KernelTenantDbContextFactory>();
         services.TryAddSingleton<KernelUnitOfWorkFactory>();
         services.TryAddSingleton<IKernelUnitOfWorkFactory>(sp => sp.GetRequiredService<KernelUnitOfWorkFactory>());
@@ -100,8 +101,9 @@ public static class KernelPersistenceServiceCollectionExtensions
     /// <summary>
     /// Runs the kernel's background jobs in the host: the outbox relay (delivers events to the host's
     /// <see cref="IKernelEventPublisher"/>), the hourly verify-and-seal pass over every tenant's audit chain and the
-    /// hourly K-LIN-1 lineage check (reported to <see cref="ILineageOrphanSink"/>). Call
-    /// after <see cref="AddKernelPersistence"/> in exactly one host per deployment.
+    /// hourly K-LIN-1 lineage check (reported to <see cref="ILineageOrphanSink"/>). Call after
+    /// <see cref="AddKernelPersistence"/>. Each pass takes a PostgreSQL leader lock, so with several replicas exactly one
+    /// runs each job at a time (ADR-2601).
     /// </summary>
     public static IServiceCollection AddKernelBackgroundJobs(
         this IServiceCollection services, Action<KernelBackgroundOptions>? configure = null)
@@ -114,7 +116,9 @@ public static class KernelPersistenceServiceCollectionExtensions
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.ActivityBatchSize);
         ArgumentOutOfRangeException.ThrowIfLessThan(options.ActivityLookBack, TimeSpan.Zero);
 
+        services.RemoveAll<KernelBackgroundOptions>();
         services.AddSingleton(options);
+        services.TryAddSingleton<KernelLeaderLock>();
         services.TryAddSingleton<KernelOutboxRelay>();
         services.AddHostedService<KernelOutboxRelayService>();
         services.AddHostedService<KernelAuditSealingService>();

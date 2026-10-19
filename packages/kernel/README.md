@@ -309,6 +309,18 @@ replay.
 
 Intervals and batch size are set through `KernelBackgroundOptions`.
 
+Each pass first takes a PostgreSQL session advisory lock named after its job (`KernelLeaderLock`), so with several
+replicas exactly one runs each job at a time and each tenant's events keep their order; a replica that dies mid-pass
+loses the lock with its connection (ADR-2601).
+
+**Consumers (ADR-2600 §4.6).** `AddKernelInProcessEvents()` makes the relay deliver to consumers registered with
+`AddKernelEventConsumer<TConsumer>("name")` (module SDK). A consumer derives from `KernelEventConsumer<TEvent>`, which
+matches the event's `[KernelEvent]` type and schema version and deserializes the payload. Each delivery runs in its own
+scope where `IKernelCommandSender` acts as `svc:<name>`; a consumer changes state only by sending a command keyed by
+`delivery.IdempotencyKey` (`<name>:<event id>`), so the idempotency records are its inbox and a retried or redelivered
+event replays instead of acting twice. A failing consumer makes the relay retry the event for every consumer. The
+service account needs grants like any actor; module command capabilities reach the authorizer under #5449.
+
 To add a command:
 
 1. Declare the command record in `Cadence.Kernel.Abstractions/Commands` implementing `ICommand<TResult>`, its events
@@ -344,7 +356,7 @@ A module writes its own records through the same pipeline (ADR-2600):
 A host registers `AddKernelPersistence(appRoleConnectionString)`, `AddKernelCommandPipeline()`, an `IClock`, an
 `ICurrentActor`, an `IAuthorizer`, an `INodeVisibility` and logging; the container fails to resolve the sender or the
 lineage reader if any is missing. The host that runs `AddKernelBackgroundJobs()` also registers an
-`IKernelEventPublisher`.
+`IKernelEventPublisher`; the kernel host registers the in-process one.
 
 ## Observations and corrections (ADR-2620)
 
