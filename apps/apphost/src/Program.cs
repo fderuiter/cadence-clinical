@@ -232,14 +232,16 @@ web.WithEnvironment("VITE_API_BASE_URL", web.GetEndpoint("http"));
 useOidcOnWeb(web);
 
 // The participant-facing subject portal (Vite dev server) on port 5174, as in docker compose, in the full profile only:
-// it calls interop and payments, which the core profile does not run (#5335).
+// it calls interop and payments, which the core profile does not run (#5335). Like the web app, it calls its own origin
+// and its /api proxy forwards to the gateway (#5451).
 if (full)
 {
     var subjectPortal = builder.AddViteApp("subject-portal", "../../subject-portal")
         .WithPnpm(install: false)
         .WithEndpoint("http", endpoint => endpoint.Port = 5174)
-        .WithEnvironment("VITE_API_BASE_URL", gateway.GetEndpoint("http"))
+        .WithEnvironment("CADENCE_GATEWAY_URL", gateway.GetEndpoint("http"))
         .WithEnvironment("VITE_KEYCLOAK_CLIENT_ID", "cadence-web");
+    subjectPortal.WithEnvironment("VITE_API_BASE_URL", subjectPortal.GetEndpoint("http"));
     useOidcOnWeb(subjectPortal);
 }
 
