@@ -18,6 +18,12 @@ namespace Cadence.Kernel.Commands;
 /// <para><c>ObservedAt</c>: When the fact held in the trial world (valid time); not after the command is recorded.</para>
 /// </remarks>
 [KernelCapability("observation.record", VerbClass.Execute, Resource = nameof(RecordObservation.EnrollmentId))]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(ObservationErrors),
+    nameof(ObservationErrors.EnrollmentUnknown),
+    nameof(ObservationErrors.ValueInvalid),
+    nameof(ObservationErrors.ObservedAtInvalid))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RecordObservation(
     TenantId TenantId,
@@ -39,6 +45,14 @@ public sealed record RecordObservation(
 /// <para><c>ExpectedVersion</c>: The version the corrector saw (<see cref="ObservationState.Version"/>).</para>
 /// </remarks>
 [KernelCapability("observation.correct", VerbClass.Execute, Resource = nameof(CorrectObservation.EnrollmentId))]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound))]
+[RaisesKernelErrors(
+    typeof(ObservationErrors),
+    nameof(ObservationErrors.ReasonForChangeRequired),
+    nameof(ObservationErrors.Locked),
+    nameof(ObservationErrors.VersionStale),
+    nameof(ObservationErrors.ValueInvalid),
+    nameof(ObservationErrors.ValueUnchanged))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record CorrectObservation(
     TenantId TenantId,
@@ -54,6 +68,8 @@ public sealed record CorrectObservation(
 /// unlock in the reference slice.
 /// </summary>
 [KernelCapability("observation.lock", VerbClass.Execute, Resource = nameof(LockObservation.EnrollmentId))]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound))]
+[RaisesKernelErrors(typeof(ObservationErrors), nameof(ObservationErrors.AlreadyLocked))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record LockObservation(
     TenantId TenantId,

@@ -137,6 +137,10 @@ Use `packages/testing/src` or centralized unit test fixtures under `tests/Cadenc
 - `CommandValidationCatalog` (`Cadence.Testing.Commands`): `Violations(services, commandAssembly)` lists the
   commands that have neither a registered FluentValidation validator nor `[NoValidator("why")]`, or both
   (ADR-2600 §4.4). The kernel's tests and each module's tests assert it is empty.
+- `AddDeclaredKernelErrorsCheck()` (`Cadence.Testing.Commands`): wraps the registered `IKernelCommandSender` so a
+  command carrying `[RaisesKernelErrors]` throws when it returns an error it does not declare (ADR-2600 §4.5). The
+  kernel Postgres fixture and the kernel host observation tests use it; a module's tests add it after
+  `AddKernelCommandPipeline()`.
 - `StartupValidationFactory<TEntryPoint>` (`Cadence.Testing.Hosting`): builds a service's real `Program` host
   without starting it and runs its `ValidateOnStart` checks on the test thread (`ValidateStartup()` returns the
   exception, or `null`). Use it to test that a service refuses bad configuration. Asserting the failure through

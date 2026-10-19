@@ -3,8 +3,13 @@
   <PropertyGroup>
     <RootNamespace>Cadence.Kernel.Modules</RootNamespace>
     <AssemblyName>Cadence.Kernel.Modules</AssemblyName>
-    <Description>Module SDK: the command handler contracts kernel and module handlers share (ADR-2600, K-XS-2).</Description>
+    <Description>Module SDK: the command handler contracts kernel and module handlers share, module persistence, event consumers and endpoint error declarations (ADR-2600, ADR-2601, K-XS-2).</Description>
   </PropertyGroup>
+
+  <!-- Modules map their own endpoints (ADR-2601), so the SDK carries the endpoint helpers that declare kernel errors. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
 
   <!-- Modules reference this and Cadence.Kernel.Abstractions only, never Application or Persistence (ADR-2600). -->
   <ItemGroup>
@@ -14,13 +19,14 @@
 
   <ItemGroup>
     <PackageReference Include="FluentValidation" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
   </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="Cadence.Kernel.Persistence" />
+    <InternalsVisibleTo Include="Cadence.UnitTests" />
   </ItemGroup>
 
 </Project>
