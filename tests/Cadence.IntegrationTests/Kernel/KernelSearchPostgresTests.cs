@@ -60,6 +60,27 @@ public sealed class KernelSearchPostgresTests(KernelPostgresFixture fixture) : I
     }
 
     /// <summary>
+    /// A code ending in a hyphen and digits (<c>HYPH-301</c>) is found by its exact code, ranked first, although the
+    /// full-text parser indexes <c>-301</c> as a signed number that the search words never match (#5487); its words
+    /// still find it too.
+    /// </summary>
+    [Fact(DisplayName = "Search_FindsAnExactCodeEndingInHyphenDigits")]
+    public async Task SearchFindsAnExactCodeEndingInHyphenDigits()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var seeded = await SeedTenantAsync("HYPH", "Asthma");
+
+        var exact = await Search().SearchAsync(seeded.Tenant, new SearchRequest("hyph-301"), ct);
+        var studiesOnly = await Search().SearchAsync(seeded.Tenant, new SearchRequest("HYPH-301", [NodeKinds.Study]), ct);
+        var byWords = await Search().SearchAsync(seeded.Tenant, new SearchRequest("hyph asthma"), ct);
+
+        exact[0].Should().Match<SearchHit>(h => h.Ref == NodeRef.For(seeded.Study, 1) && h.ExactCode && h.Code == "HYPH-301");
+        studiesOnly.Should().ContainSingle().Which.ExactCode.Should().BeTrue();
+        byWords.Select(h => h.Ref.Id).Should().Contain([seeded.Study.Value, seeded.Organization.Value]);
+    }
+
+    /// <summary>
     /// Two tenants hold objects with the same words and codes. Each tenant's search returns only its own objects:
     /// the query runs under that tenant's Row-Level Security, like every read of the source tables.
     /// @req:PRD-CRF-013
