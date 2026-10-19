@@ -113,19 +113,16 @@ public static class StorageServiceCollectionExtensions
 
     /// <summary>
     /// The client settings for the options: the region endpoint for Amazon S3, or the custom endpoint with path-style
-    /// addressing for MinIO; Signature Version 4 always, since the SDK otherwise presigns URLs with the deprecated
-    /// Signature Version 2 in <c>us-east-1</c> and on custom endpoints.
+    /// addressing for MinIO. AWSSDK.S3 4 signs and presigns every request with Signature Version 4, so no setting is
+    /// needed for it.
     /// </summary>
     public static AmazonS3Config CreateConfig(S3StorageOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
 
-        // The SDK reads this process-wide switch, not the client setting, when it presigns a URL.
-        AWSConfigsS3.UseSignatureVersion4 = true;
         var config = new AmazonS3Config
         {
             ForcePathStyle = options.ForcePathStyle ?? !string.IsNullOrWhiteSpace(options.ServiceUrl),
-            SignatureVersion = "4",
         };
         if (string.IsNullOrWhiteSpace(options.ServiceUrl))
         {
