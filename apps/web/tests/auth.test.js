@@ -323,7 +323,14 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
 
   describe("Stores call the API instead of fabricating data", () => {
     it("submits batch signatures to the API and stores the server response", async () => {
-      const response = { signature_id: "sig-1", signed_forms_count: 2 };
+      const response = {
+        status: "success",
+        signed_forms_count: 2,
+        signatures: [
+          { form_submission_id: "FS-1", payload_hash: "h1" },
+          { form_submission_id: "FS-2", payload_hash: "h2" },
+        ],
+      };
       const post = vi
         .spyOn(apiClient, "post")
         .mockResolvedValueOnce({ sig_token: "step-up-token" })
@@ -470,15 +477,17 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
 
         const res = await signatureStore.submitBatchSignature(payload);
 
-        expect(res.signature_id).toBeDefined();
-        expect(res.signature_id.startsWith("mock-sig-")).toBe(true);
-        expect(res.signed_forms_count).toBe(2);
+        // The demo stores no signature, so it reports none and invents no ids (#5468).
+        expect(res.status).toBe("demo");
+        expect(res.signatures).toEqual([]);
+        expect(res.signed_forms_count).toBe(0);
+        expect(res).not.toHaveProperty("signature_id");
         expect(signatureStore.lastSignatureResult).toEqual(res);
 
         // Verify localStorage persistence
         const stored = window.localStorage.getItem("lastSignatureResult");
         expect(stored).toBeDefined();
-        expect(JSON.parse(stored).signature_id).toBe(res.signature_id);
+        expect(JSON.parse(stored)).toEqual(res);
       });
     });
 

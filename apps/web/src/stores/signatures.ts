@@ -18,14 +18,24 @@ export interface BatchSignPayload {
   targetType?: string;
 }
 
+/** One signature the service stored: the form submission carrying the manifest, and the manifest's payload hash. */
+export interface BatchSignedForm {
+  form_submission_id: string;
+  payload_hash: string;
+}
+
+/**
+ * The batch sign-off response. Every id in it names a stored record (#5468): each signature manifest is stored on
+ * the form submission it signs, readable at GET /api/v1/execution/forms/{form_submission_id}.
+ */
 export interface BatchSignResponse {
-  signature_id: string;
+  status: string;
+  approved_submission_ids: string[];
+  skipped_submission_ids: string[];
   study_id: string;
-  subject_id: string;
   signed_forms_count: number;
-  content_digest: string;
-  timestamp_utc: string;
-  audit_tx: string;
+  signed_at: string;
+  signatures: BatchSignedForm[];
 }
 
 export const useSignatureStore = defineStore("signatures", {
@@ -71,22 +81,15 @@ export const useSignatureStore = defineStore("signatures", {
           !isMocked
         ) {
           await new Promise((resolve) => setTimeout(resolve, 300));
+          // The demo stores no signature, so it reports none rather than inventing ids (#5468).
           const mockResponse: BatchSignResponse = {
-            signature_id:
-              "mock-sig-" +
-              Date.now() +
-              "-" +
-              Math.random().toString(36).substring(2, 7),
+            status: "demo",
+            approved_submission_ids: [],
+            skipped_submission_ids: [],
             study_id: payload.studyId,
-            subject_id: payload.subjectId,
-            signed_forms_count: payload.formIds.length,
-            content_digest:
-              "sha256-" +
-              Array.from({ length: 64 }, () =>
-                Math.floor(Math.random() * 16).toString(16)
-              ).join(""),
-            timestamp_utc: new Date().toISOString(),
-            audit_tx: "tx-" + Math.random().toString(36).substring(2, 10),
+            signed_forms_count: 0,
+            signed_at: new Date().toISOString(),
+            signatures: [],
           };
           this.lastSignatureResult = mockResponse;
           if (typeof window !== "undefined" && window.localStorage) {

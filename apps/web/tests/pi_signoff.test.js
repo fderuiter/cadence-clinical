@@ -247,11 +247,21 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
       status: "SUCCESS",
       approved_submission_ids: ["SUBJ-001:FORM", "SUBJ-002:FORM"],
       skipped_submission_ids: [],
-      signature_id: "CERT-MULTI-SUBJ-12345",
-      timestamp_utc: "2026-10-06T12:00:00Z",
-      content_digest:
-        "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
-      audit_tx: "TX-AUDIT-MULTI-SUBJ-8888",
+      study_id: "STUDY-USDM-001",
+      signed_forms_count: 2,
+      signed_at: "2026-10-06T12:00:00Z",
+      signatures: [
+        {
+          form_submission_id: "SUBJ-001:FORM",
+          payload_hash:
+            "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+        },
+        {
+          form_submission_id: "SUBJ-002:FORM",
+          payload_hash:
+            "b1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+        },
+      ],
     });
 
     await wrapper.find("#signoff-target-type").setValue("SUBJECT");
@@ -300,16 +310,16 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
 
     // Verify Signature Certification Summary Card rendered
     expect(wrapper.find("#signature-cert-card").exists()).toBe(true);
-    expect(wrapper.find("#cert-serial-id").text()).toBe(
-      "CERT-MULTI-SUBJ-12345"
-    );
+    // Only the stored signatures the service returned are shown, never a certificate serial or audit tx (#5468).
+    expect(wrapper.find("#cert-signed-count").text()).toBe("2");
     expect(wrapper.find("#cert-timestamp").text()).toBe("2026-10-06T12:00:00Z");
-    expect(wrapper.find("#cert-content-digest").text()).toBe(
-      "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
-    );
-    expect(wrapper.find("#cert-audit-tx").text()).toBe(
-      "TX-AUDIT-MULTI-SUBJ-8888"
-    );
+    const shown = wrapper.findAll("#cert-signatures .cert-signature");
+    expect(shown.map((li) => li.text())).toEqual([
+      "SUBJ-001:FORM: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+      "SUBJ-002:FORM: b1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    ]);
+    expect(wrapper.find("#cert-serial-id").exists()).toBe(false);
+    expect(wrapper.find("#cert-audit-tx").exists()).toBe(false);
 
     alertMock.mockRestore();
   });

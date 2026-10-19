@@ -140,9 +140,10 @@ describe("BatchSignatureModal.vue", () => {
     // Submit form
     await wrapper.find("form").trigger("submit.prevent");
 
-    await wrapper.vm.$nextTick();
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    await wrapper.vm.$nextTick();
+    await vi.waitFor(async () => {
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find(".error-banner").exists()).toBe(true);
+    });
 
     // Verify error banner is shown
     expect(wrapper.find(".error-banner").exists()).toBe(true);
@@ -160,17 +161,23 @@ describe("BatchSignatureModal.vue", () => {
     /**
      * @req: PRD-SYS-001
      * Verify that on successful electronic signature execution, the confirmation banner
-     * is displayed with signature certificate serial number, digest, and timestamp.
+     * is displayed with the stored signatures the service returned (form submission id and payload hash),
+     * the signed count and the signing time, and no certificate serial or audit transaction id (#5468).
      */
     const mockResponse = {
-      signature_id: "sig_abc123",
+      status: "success",
+      approved_submission_ids: ["FS-101"],
+      skipped_submission_ids: [],
       study_id: "STUDY-USDM-001",
-      subject_id: "SUBJ-101",
       signed_forms_count: 1,
-      content_digest:
-        "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", // pragma: allowlist secret
-      timestamp_utc: "2026-08-27T10:00:00Z",
-      audit_tx: "tx_xyz789",
+      signed_at: "2026-08-27T10:00:00Z",
+      signatures: [
+        {
+          form_submission_id: "FS-101",
+          payload_hash:
+            "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", // pragma: allowlist secret
+        },
+      ],
     };
 
     const mockPost = vi.mocked(apiClient.post);
@@ -195,9 +202,10 @@ describe("BatchSignatureModal.vue", () => {
     // Submit form
     await wrapper.find("form").trigger("submit.prevent");
 
-    await wrapper.vm.$nextTick();
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    await wrapper.vm.$nextTick();
+    await vi.waitFor(async () => {
+      await wrapper.vm.$nextTick();
+      expect(wrapper.emitted("signed")).toBeTruthy();
+    });
 
     // Emitted 'signed' with result
     expect(wrapper.emitted("signed")).toBeTruthy();
@@ -209,8 +217,12 @@ describe("BatchSignatureModal.vue", () => {
     // Success confirmation banner is shown
     expect(wrapper.find(".confirmation-banner").exists()).toBe(true);
     const confirmationText = wrapper.find(".confirmation-banner").text();
-    expect(confirmationText).toContain("sig_abc123");
+    expect(confirmationText).toContain("FS-101");
+    expect(confirmationText).toContain(
+      "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08" // pragma: allowlist secret
+    );
     expect(confirmationText).toContain("2026-08-27T10:00:00Z");
-    expect(confirmationText).toContain("tx_xyz789");
+    expect(confirmationText).not.toContain("Cert Serial");
+    expect(confirmationText).not.toContain("Audit TX");
   });
 });

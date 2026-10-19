@@ -58,7 +58,7 @@ describe("demo simulations are gated on a demo build (#4523)", () => {
   it("does not restore a persisted demo signature outside a demo build", () => {
     window.localStorage.setItem(
       "lastSignatureResult",
-      JSON.stringify({ signature_id: "mock-sig-1" })
+      JSON.stringify({ status: "demo", signatures: [] })
     );
     setActivePinia(createPinia());
     expect(useSignatureStore().lastSignatureResult).toBeNull();
@@ -122,7 +122,7 @@ describe("demo simulations are gated on a demo build (#4523)", () => {
       password: "pw", // pragma: allowlist secret
       meaning: "APPROVED",
     });
-    expect(res.signature_id.startsWith("mock-sig-")).toBe(true);
+    expect(res.status).toBe("demo");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

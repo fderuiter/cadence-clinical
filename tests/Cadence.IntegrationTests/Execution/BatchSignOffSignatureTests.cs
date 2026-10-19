@@ -86,6 +86,40 @@ public sealed class BatchSignOffSignatureTests(ExecutionPostgresApiFactory facto
         manifest.GetProperty("hmac_signature").GetString().Should().Be(expected);
     }
 
+    /// <summary>
+    /// Every identifier the response returns can be fetched: each signature names a stored form whose manifest has
+    /// the returned payload hash, and no certificate serial or audit transaction id is minted (#5468).
+    /// </summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("SRS-EDC-003")]
+    public async Task BatchSignOff_ResponseIdsResolveToStoredSignatures()
+    {
+        factory.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        string formId = await CreateCompletedFormAsync(factory);
+        using var investigator = factory.CreateSignedClient(Investigator);
+
+        var response = await SendAsync(investigator, BatchPath, TokenFor(formId), Body(formId));
+
+        string body = await response.Content.ReadAsStringAsync(ct);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        using var result = JsonDocument.Parse(body);
+        result.RootElement.TryGetProperty("signature_id", out _).Should().BeFalse();
+        result.RootElement.TryGetProperty("audit_tx", out _).Should().BeFalse();
+        var signatures = result.RootElement.GetProperty("signatures").EnumerateArray().ToList();
+        signatures.Should().ContainSingle();
+        foreach (var signature in signatures)
+        {
+            string id = signature.GetProperty("form_submission_id").GetString()!;
+            var fetched = await investigator.GetAsync($"{FormsPath}{id}", ct);
+            fetched.StatusCode.Should().Be(HttpStatusCode.OK);
+            using var form = JsonDocument.Parse(await fetched.Content.ReadAsStringAsync(ct));
+            form.RootElement.GetProperty("signature_manifest").GetProperty("payload_hash").GetString()
+                .Should().Be(signature.GetProperty("payload_hash").GetString());
+        }
+    }
+
     /// <summary>A token bound to another batch, or issued to someone else, signs nothing.</summary>
     [Theory]
     [Trait("Category", "GxP_OQ")]
