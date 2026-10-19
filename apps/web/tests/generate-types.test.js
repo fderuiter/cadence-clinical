@@ -51,61 +51,64 @@ describe("Type-Array Union Generator (translateProperty)", () => {
   });
 });
 
-describe("Cache Validation and Execution Guard (generate)", () => {
-  it("calculates a valid SHA-256 hash string", () => {
-    const hash = calculateHash();
-    expect(hash).toMatch(/^[a-f0-9]{64}$/);
-  });
+// A full generation formats the whole USDM type file with Prettier, which can take well over 15 s on a loaded machine.
+describe(
+  "Cache Validation and Execution Guard (generate)",
+  { timeout: 60000 },
+  () => {
+    it("calculates a valid SHA-256 hash string", () => {
+      const hash = calculateHash();
+      expect(hash).toMatch(/^[a-f0-9]{64}$/);
+    });
 
-  it("returns early when content hash matches cached manifest", async () => {
-    await generate({ force: true });
-    expect(fs.existsSync(usdmPath)).toBe(true);
-    expect(fs.existsSync(hashPath)).toBe(true);
+    it("returns early when content hash matches cached manifest", async () => {
+      await generate({ force: true });
+      expect(fs.existsSync(usdmPath)).toBe(true);
+      expect(fs.existsSync(hashPath)).toBe(true);
 
-    const startTime = performance.now();
-    const result = await generate();
-    const duration = performance.now() - startTime;
-
-    expect(result.generated).toBe(false);
-    expect(result.hash).toBe(calculateHash());
-    expect(duration).toBeLessThan(100);
-  }, 15000);
-
-  it("forces regeneration when force option is true", async () => {
-    await generate();
-    const result = await generate({ force: true });
-
-    expect(result.generated).toBe(true);
-    expect(fs.existsSync(usdmPath)).toBe(true);
-    expect(fs.existsSync(hashPath)).toBe(true);
-  }, 15000);
-
-  it("triggers full generation when usdm.ts is missing", async () => {
-    await generate();
-    const backupUsdm = fs.readFileSync(usdmPath, "utf8");
-    fs.unlinkSync(usdmPath);
-
-    try {
+      // generated: false with an unchanged hash proves the cache was used; no wall-clock bound (#5478).
       const result = await generate();
+
+      expect(result.generated).toBe(false);
+      expect(result.hash).toBe(calculateHash());
+    });
+
+    it("forces regeneration when force option is true", async () => {
+      await generate();
+      const result = await generate({ force: true });
+
       expect(result.generated).toBe(true);
       expect(fs.existsSync(usdmPath)).toBe(true);
-    } finally {
-      if (!fs.existsSync(usdmPath)) {
-        fs.writeFileSync(usdmPath, backupUsdm, "utf8");
+      expect(fs.existsSync(hashPath)).toBe(true);
+    });
+
+    it("triggers full generation when usdm.ts is missing", async () => {
+      await generate();
+      const backupUsdm = fs.readFileSync(usdmPath, "utf8");
+      fs.unlinkSync(usdmPath);
+
+      try {
+        const result = await generate();
+        expect(result.generated).toBe(true);
+        expect(fs.existsSync(usdmPath)).toBe(true);
+      } finally {
+        if (!fs.existsSync(usdmPath)) {
+          fs.writeFileSync(usdmPath, backupUsdm, "utf8");
+        }
       }
-    }
-  }, 15000);
+    });
 
-  it("triggers full generation when .usdm-hash.json is corrupted or missing", async () => {
-    await generate();
-    const backupHash = fs.readFileSync(hashPath, "utf8");
-    fs.writeFileSync(hashPath, "{ invalid json }", "utf8");
+    it("triggers full generation when .usdm-hash.json is corrupted or missing", async () => {
+      await generate();
+      const backupHash = fs.readFileSync(hashPath, "utf8");
+      fs.writeFileSync(hashPath, "{ invalid json }", "utf8");
 
-    try {
-      const result = await generate();
-      expect(result.generated).toBe(true);
-    } finally {
-      fs.writeFileSync(hashPath, backupHash, "utf8");
-    }
-  }, 15000);
-});
+      try {
+        const result = await generate();
+        expect(result.generated).toBe(true);
+      } finally {
+        fs.writeFileSync(hashPath, backupHash, "utf8");
+      }
+    });
+  }
+);

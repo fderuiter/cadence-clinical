@@ -170,7 +170,9 @@ build (RS0030). Pick the replacement by what the test needs:
 A unit test never asserts how long the code took (`elapsed.Should().BeLessThan(...)`). The answer depends on the
 load on the machine, so a latency ceiling fails whenever something else runs beside the tests (#5415). Assert the
 behaviour instead: the result, the status code a timeout produces, or a deadline driven by `FakeClock`.
-`WallClockAssertionTests` in `Cadence.ArchitectureTests` enforces this for `Cadence.UnitTests`. A performance budget
+The same holds for the Vitest suites: no `expect(duration).toBeLessThan(...)` on a `performance.now()` or `Date.now()`
+difference; a slow step gets a longer test timeout instead (#5478). `WallClockAssertionTests` in
+`Cadence.ArchitectureTests` enforces this for `Cadence.UnitTests` and for the frontend tests. A performance budget
 that is a real requirement belongs in an opt-in benchmark, like `LineageBenchmarkPostgresTests`.
 
 `Task.Delay` belongs only where a test deliberately holds a lock or widens a race window, or where a fake
