@@ -107,7 +107,8 @@ internal sealed class KernelSearchStore(KernelTenantDbContextFactory contexts) :
                   coalesce(lower(({s.Code})::text) = lower(@text), false) AS "ExactCode",
                   ts_rank({s.Document}, to_tsquery('simple'::regconfig, @query))::double precision AS "Rank"
                 FROM {s.From}
-                WHERE t.tenant_id = @tenant AND {s.Document} @@ to_tsquery('simple'::regconfig, @query)
+                WHERE t.tenant_id = @tenant
+                  AND ({s.Document} @@ to_tsquery('simple'::regconfig, @query) OR lower(({s.Code})::text) = lower(@text))
                 """);
         }
 

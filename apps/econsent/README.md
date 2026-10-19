@@ -24,7 +24,7 @@ Electronic consent scaffold. It holds the consent persistence model (documents, 
 
 `Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md). Every route not marked anonymous requires the gateway-signed caller identity. `GATEWAY_SECRET` (at least 32 characters) is required at startup; see [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
 
-Publishing a template needs `econsent_template:publish` (sponsor data management and study build) and capturing consent needs `econsent_consent:capture` (site coordinators and investigators). Both refuse a study the caller is not assigned to, and a new template must name its study. Records are attributed to the signed staff member who captured them (`PermissionMatrix.Econsent.cs`) ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
+Publishing a template needs `econsent_template:publish` (sponsor data management and study build) and capturing consent needs `econsent_consent:capture` (site coordinators and investigators). Both refuse a study the caller is not assigned to, and a new template must name its study. Records are attributed to the signed staff member who captured them (`PermissionMatrix.Econsent.cs`) ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)). Consent capture needs an e-signature step-up token, and each token is used once across every instance and restart: its id is recorded in `econsent.consumed_signature_tokens` (`AddCadenceDurableSigTokenStore`, #5434, [ADR-2515](../../docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md)).
 
 ## Persistence
 

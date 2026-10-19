@@ -559,6 +559,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2530: Measure Web Coverage over All Source with a Ratchet Floor](2026-09-30-measure-web-coverage-over-all-source-with-a-ratchet-floor.md) (2026-09-30)
 - [ADR-2531: Every Mapped Test Is Mandatory Evidence, and Reports Name What They Tested](2026-10-15-every-mapped-test-is-mandatory-evidence.md) (2026-10-15) _(Amended by [ADR-2532](2026-10-16-feature-branches-never-commit-the-gxp-snapshot.md))_
 - [ADR-2532: Feature Branches Never Commit the GxP Snapshot](2026-10-16-feature-branches-never-commit-the-gxp-snapshot.md) (2026-10-16)
+- [ADR-2533: Tests, CI and Compose Run One Pinned PostgreSQL Major](2026-10-19-tests-ci-and-compose-run-one-pinned-postgresql-major.md) (2026-10-19)
 - [ADR-2591: Synchronous In-Process DSUR Compilation and Cryptographic Signing Engine](2026-09-30-synchronous-in-process-dsur-compilation-and-cryptographic-signing-engine.md) (2026-09-30)
 - [ADR-2592: Dual Ecosystem Vulnerability Auditor and CEC Chair Adjudications Persistence](2026-09-30-dual-ecosystem-vulnerability-auditor-and-cec-chair-adjudications-persistence.md) (2026-09-30)
 - [ADR-2802: CTMS Visit Letter PDF Compilation and Automated Dispatch Pipeline](2026-10-01-ctms-visit-letter-pdf-compilation-and-automated-dispatch-pipeline.md) (2026-10-01)

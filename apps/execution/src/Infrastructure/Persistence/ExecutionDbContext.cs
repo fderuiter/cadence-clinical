@@ -12,6 +12,7 @@ using Cadence.Apps.Execution.Domain.Toxicity;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Configurations;
 using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Core.Domain.Audit;
+using Cadence.Database.Signatures;
 
 using MassTransit;
 
