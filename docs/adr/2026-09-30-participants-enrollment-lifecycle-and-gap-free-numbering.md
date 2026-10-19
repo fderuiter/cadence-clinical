@@ -97,7 +97,7 @@ withdrawal is proven, and how the database enforces the lifecycle.
    second one retries.
 5. **Status history** (`kernel.enrollment_status_periods`): `IBitemporalEntity` rows keyed by enrollment, with the
    K-TIME-1 and K-TIME-2 guards of ADR-2246. `IEnrollmentDirectory.StatusAsOfAsync(tenant, enrollment, validAt,
-   knownAt)` answers the as-of question.
+knownAt)` answers the as-of question.
 6. **Subject codes** (`SubjectCode` value object): 1 to 64 printable characters without surrounding whitespace,
    unique per study (unique index on `(tenant_id, study_id, subject_code)`), checked under the study lock
    (`K.Execution.SubjectCodeTaken`). `IEnrollmentDirectory.ResolveParticipantAsync(tenant, study, code)` is the
@@ -111,7 +111,9 @@ withdrawal is proven, and how the database enforces the lifecycle.
 9. **Advisory locks (K-TX-4):** `IKernelUnitOfWork.LockAsync<TAggregate>(id)` takes a session-level
    `pg_advisory_lock` on the command's own connection, keyed by the first 8 bytes of
    `SHA-256("{tenant}:{aggregate type}:{id}")`, and releases it when the command's unit of work is disposed, after
-   commit or rollback. A command takes at most one lock, so lock ordering cannot deadlock. The lock is read-only with
+   commit or rollback. A command takes at most one lock, so lock ordering cannot deadlock. _(Amended by
+   [ADR-2621](2026-10-19-observation-corrections-are-revisions-locks-are-scoped-assertions.md): at most one exclusive
+   lock, plus shared lock-scope keys taken in a fixed order.)_ The lock is read-only with
    respect to the locked aggregate (K-TX-4). Protocol version numbering (ADR-2452) now takes the same study lock, so
    concurrent forks no longer race for a number.
 10. **Withdrawal:** `WithdrawParticipant(kind, attestationId, effectiveAt)` with `WithdrawalKind` (withdrawal by

@@ -71,7 +71,8 @@ record their results back as kernel facts where the result is evidence.
 2. **Bitemporal where truth is contestable.** Valid time (when it was true in the trial) and recorded time
    (when Cadence learned it) for anything that can later be disputed or corrected.
 3. **Corrections supersede; nothing is overwritten.** A correction closes the prior row's recorded interval
-   and inserts a new row with a reason for change.
+   and inserts a new row with a reason for change; an Observation's correction appends an insert-only revision
+   instead (K-FACT-1).
 4. **Meaning first, representation second.** Facts are keyed by Concepts (§6.1). Standards are projections
    through versioned mapping specifications (§6.3).
 5. **The protocol is executable.** The protocol is a machine-readable specification of the experiment; the
@@ -255,9 +256,9 @@ Without a version the reference means "as of the read's `(valid_at, known_at)`".
 Canonical query: `as_of(valid_at, known_at)`. Operational reads default to `(now, now)`; regulatory
 reconstruction uses `(t_clinical, t_inspection_cutoff)`.
 
-| Bitemporal                                                                                                                                                                             | Append-only                                                                                           | Current-state + audit                           |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| Effectivity, Enrollment, Applicability, ConsentStatus, Grant, Delegation, Qualification, OrganizationRelationship, StudySite lifecycle, Observation, Assertion, Specimen custody state | DomainEvent, AuditEntry, Attestation, ProvenanceActivity, LineageEdge, ArtifactVersion, ValidationRun | Reference/config data without dispute semantics |
+| Bitemporal                                                                                                                                                                | Append-only                                                                                                                | Current-state + audit                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Effectivity, Enrollment, Applicability, ConsentStatus, Grant, Delegation, Qualification, OrganizationRelationship, StudySite lifecycle, Assertion, Specimen custody state | DomainEvent, AuditEntry, Attestation, ProvenanceActivity, LineageEdge, ArtifactVersion, ValidationRun, ObservationRevision | Reference/config data without dispute semantics; Observation (a current-state head row over its insert-only revisions, ADR-2621) |
 
 - **K-TIME-1** Bitemporal rows are never `UPDATE`d except to close `recorded_period`. They are never deleted or truncated.
   Enforced by a trigger (SQLSTATE `KT001`).
@@ -297,8 +298,11 @@ Command → Authenticate → Resolve Actor → Authorize (§9.3) → Check conse
 
 Implemented by `KernelCommandPipeline` and `KernelCommandTransaction` (ADR-2449): one PostgreSQL transaction per
 command; `KernelDbContext` refuses `SaveChanges` outside it. K-TX-4 locks are `IKernelUnitOfWork.LockAsync<TAggregate>(id)`:
-a PostgreSQL advisory lock on the command's connection, held until the transaction ends, at most one per command
-(ADR-2453). How to add a command:
+a PostgreSQL advisory lock on the command's connection, held until the transaction ends. A command takes at most one
+exclusive lock (ADR-2453). A write that a `Locked` or `Frozen` Assertion can cover also takes a shared lock on each scope
+key that covers it, always in the order study, study site, enrollment, form instance, observation, and `ApplyLock` and
+`ReleaseLock` take the exclusive lock on their own scope key, so a write and a lock never both commit (§10.5,
+ADR-2621). How to add a command:
 [`packages/kernel/README.md`](../../packages/kernel/README.md#command-pipeline-adr-2449).
 
 ### 5.2 Events
@@ -671,12 +675,15 @@ public sealed record Observation(
     ValidPeriod Valid,
     RecordedPeriod Recorded,
     SourceRef Source,
-    ObservationId? Supersedes);
+    IReadOnlyList<ObservationRevision> Revisions); // insert-only, numbered from 1; Value repeats the latest
 ```
 
-- **K-FACT-1** Values are immutable. A correction is a new Observation that supersedes the prior one
-  (recorded period closed, `Supersedes` link, reason required). Status such as Verified or Queried is an
-  Assertion, not a mutable column.
+- **K-FACT-1** Values are immutable. An Observation has a stable `ObservationId` and an insert-only, numbered
+  series of revisions; a correction appends revision _n+1_, which supersedes revision _n_, with a reason, the
+  recording actor and the recorded time. Revision _n_ is recorded from its `RecordedAt` until revision _n+1_'s, so no
+  history row is ever updated. The head row's current value and version are a cache of the latest revision, changed
+  only in the transaction that appends it. Status such as Verified or Queried is an Assertion, not a mutable column
+  (ADR-2620, ADR-2621).
 - **K-FACT-2** Units are UCUM. Normalisation, reference-range flags and toxicity grades are **derived
   Observations** with provenance naming inputs and the versioned algorithm and range set.
 - **K-FACT-3** `Missing` is a first-class value with a reason.
@@ -691,7 +698,9 @@ A statement about a fact or another assertion by an actor with authority: `Verif
 `Queried`, `QueryAnswered`, `Adjudicated`, `CodedAs(MedDRA/WHODrug)`, `Eligibility`, `ProtocolDeviation`,
 `CausalityAssessment`, `Expectedness`, `ArmAssigned`, `Frozen`, `Locked`. Assertions are append-only and
 bitemporal; a later assertion may retract an earlier one. Queries target an `ObservationId`, never
-coordinates (inventory §3 item 10).
+coordinates (inventory §3 item 10). An Assertion that judges a value (`Verified`, `Reviewed`, `CodedAs`,
+`Adjudicated`) names the revision it judged, `(ObservationId, Revision)`, so it never applies to a later correction;
+a Query and a lock name only the `ObservationId` (ADR-2621).
 
 ### 8.3 Source and Artifact
 
@@ -1054,10 +1063,13 @@ partial with the mask reasons but no hidden count, so a number never reveals ano
 
 ### 10.5 Locks and freezes (resolves G5)
 
-`Frozen` and `Locked` are Assertions at a scope (form instance, participant, study site, study), each with an
-Attestation. They act as authorization conditions that deny `Execute` on covered facts. Unlocking is a
-retracting Assertion with a reason and an Attestation. Database lock is `Locked` at Study scope; EDC form
-approval and read-only display are application workflow over it.
+`Frozen` and `Locked` are Assertions at a scope (observation, form instance, participant enrollment, study site,
+study), each with an Attestation and a reason. They act as authorization conditions that deny `Execute` on covered
+facts: recording a new observation in the scope as well as correcting one. Unlocking is a retracting Assertion with a
+reason and an Attestation. Applying or releasing one emits `LockApplied` or `LockReleased` with its scope. Database
+lock is `Locked` at Study scope; EDC form approval and read-only display are application workflow over it. A covered
+write holds shared advisory locks on its covering scope keys and the lock command the exclusive one (§5.1), so either
+the write commits before the lock or the lock commits first and the write is refused (ADR-2621).
 
 ---
 
@@ -1262,6 +1274,7 @@ kernel, is merged into another, or is retired.
 | K031 | Qualifications                             | Actor prerequisites are bitemporal Qualifications with artifact evidence; QualificationRequirements name the qualification a capability needs within a scope; the evaluator denies naming what to obtain or renew (K-AUTH-5, K-AUTH-6)                              | ADR-2459           |
 | K032 | Visit timing, anchors and cycles           | `ExpectedSchedule.Assess` measures an actual date against the window with no built-in severity; visits anchored on another visit's actual date; repeating cycles as numbered occurrences                                                                            | ADR-2507           |
 | K033 | AI proposals and automation agents         | A Proposal with a content hash and no effect on kernel state; approval is an attested, separation-of-duties decision by a person; agents read and propose only; expiry derived on read                                                                              | ADR-2489           |
+| K034 | Observation corrections and locks          | A correction appends an insert-only revision to a stable Observation; value Assertions cite the revision; `Locked`/`Frozen` are scoped Assertions with Attestation and retraction, guarded by shared scope locks                                                    | ADR-2620, ADR-2621 |
 
 ---
 

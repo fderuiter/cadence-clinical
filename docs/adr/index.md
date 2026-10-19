@@ -73,10 +73,11 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 | K031     | Qualifications gate capabilities                                         | [ADR-2459](2026-09-30-qualifications-gate-capabilities.md)                                                                                                                                                                                                                                                                                                                         |
 | K032     | Visit timing, anchored visits and cycles on the expected schedule        | [ADR-2507](2026-09-30-visit-timing-anchored-visits-and-cycles-on-the-expected-schedule.md)                                                                                                                                                                                                                                                                                         |
 | K033     | AI proposals and automation agents                                       | [ADR-2489](2026-09-30-ai-proposals-and-automation-agents.md)                                                                                                                                                                                                                                                                                                                       |
+| K034     | Observation corrections and scoped locks                                 | [ADR-2620](2026-10-15-ecrf-correction-transaction-boundary.md), [ADR-2621](2026-10-19-observation-corrections-are-revisions-locks-are-scoped-assertions.md)                                                                                                                                                                                                                        |
 
 ## Domain-Based Decisions Log
 
-### 0. Clinical Kernel (K001–K033)
+### 0. Clinical Kernel (K001–K034)
 
 - [ADR-2244: Clinical Kernel Modular Monolith Architecture](2026-09-29-clinical-kernel-modular-monolith-architecture.md) (2026-09-29)
 - [ADR-2245: Native PostgreSQL ProtocolVersion Snapshots and Neo4j Retirement](2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md) (2026-09-29)
@@ -124,6 +125,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2601: One Composition Host for the Kernel and Its Modules](2026-10-19-one-composition-host-for-the-kernel-and-its-modules.md) (2026-10-19)
 - [ADR-2610: Scaffold Services Become Kernel Modules or Merge](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md) (2026-10-15)
 - [ADR-2620: The eCRF Correction Transaction Boundary](2026-10-15-ecrf-correction-transaction-boundary.md) (2026-10-15)
+- [ADR-2621: Observation Corrections Are Revisions; Locks Are Scoped Assertions](2026-10-19-observation-corrections-are-revisions-locks-are-scoped-assertions.md) (2026-10-19)
 
 ### 1. Core Platform & Execution Engine
 

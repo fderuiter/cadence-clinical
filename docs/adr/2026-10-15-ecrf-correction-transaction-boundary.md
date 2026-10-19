@@ -1,5 +1,10 @@
 # ADR-2620: The eCRF Correction Transaction Boundary
 
+> [!NOTE]
+> Amended by [ADR-2621](2026-10-19-observation-corrections-are-revisions-locks-are-scoped-assertions.md): the kernel
+> specification adopts this ADR's revision model for corrections (K-FACT-1), and the per-observation
+> `ObservationLock` is replaced by scoped `Locked`/`Frozen` Assertions under #4729.
+
 - **Status:** Accepted
 - **Date:** 2026-10-15
 - **Authors:** @fderuiter

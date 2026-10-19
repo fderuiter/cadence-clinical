@@ -519,6 +519,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2542: The Kernel Host Provisions the Development Tenant](adr/2026-10-19-the-kernel-host-provisions-the-development-tenant.md) | Current | - Status: Accepted |
 | [ADR-2600: Modules Write Through the Kernel Command Path](adr/2026-10-19-modules-write-through-the-kernel-command-path.md) | Current | - Status: Accepted |
 | [ADR-2601: One Composition Host for the Kernel and Its Modules](adr/2026-10-19-one-composition-host-for-the-kernel-and-its-modules.md) | Current | - Status: Accepted |
+| [ADR-2621: Observation Corrections Are Revisions; Locks Are Scoped Assertions](adr/2026-10-19-observation-corrections-are-revisions-locks-are-scoped-assertions.md) | Current | - Status: Accepted |
 ## Developing and running
 
 | Document | Status | What it is |
