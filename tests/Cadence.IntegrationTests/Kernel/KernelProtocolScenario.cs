@@ -15,8 +15,7 @@ namespace Cadence.IntegrationTests.Kernel;
 
 /// <summary>
 /// Builds protocol scenarios through the production pipeline: a tenant with a sponsor and a study, protocol versions
-/// driven to a status, and attestations signed by the fixture's person. The study is seeded directly because no
-/// kernel command registers studies yet.
+/// driven to a status, and attestations signed by the fixture's person.
 /// </summary>
 internal sealed class KernelProtocolScenario(KernelPostgresFixture fixture)
 {
@@ -48,9 +47,9 @@ internal sealed class KernelProtocolScenario(KernelPostgresFixture fixture)
 
         await OkAsync(new RegisterOrganization(tenant, sponsor, $"ORG-{suffix}", $"Sponsor {suffix}", OrganizationKind.Sponsor, $"org-{suffix}", Reason), ct);
 
-        var study = new Study(StudyId.New(), tenant, sponsor, $"STUDY-{suffix}", "Cardiovascular outcomes", "Phase 3", KernelPostgresFixture.ActorId, "Seeded for test");
-        await fixture.SeedAsync(study);
-        return (tenant, study.Id);
+        var study = await OkAsync(
+            new RegisterStudy(tenant, StudyId.New(), sponsor, $"STUDY-{suffix}", "Cardiovascular outcomes", "Phase 3", $"study-{suffix}", Reason), ct);
+        return (tenant, study);
     }
 
     public Task<CommandResult<ProtocolVersionState>> CreateDraftAsync(TenantId tenant, StudyId study, ProtocolVersionId id, CancellationToken ct, string? content = null) =>

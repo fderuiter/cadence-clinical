@@ -29,6 +29,9 @@ public static class KernelEventFamilies
     {
         ["TenantProvisioned"] = EventFamily.Execution,
         ["OrganizationRegistered"] = EventFamily.Execution,
+        ["StudyRegistered"] = EventFamily.Knowledge,
+        ["SiteRegistered"] = EventFamily.Execution,
+        ["SiteLinkedToStudy"] = EventFamily.Execution,
         ["CodeSystemRegistered"] = EventFamily.Knowledge,
         ["CodeSystemVersionImported"] = EventFamily.Knowledge,
         ["ConceptDefined"] = EventFamily.Knowledge,

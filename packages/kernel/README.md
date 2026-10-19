@@ -185,6 +185,21 @@ var outside = fork.Design().ExternalReferences();                   // ConceptRe
   schedule or eligibility changes. `IProtocolVersionReader.GetScheduleOfActivitiesAsync` compiles a stored version's
   matrix; it is never stored.
 
+## Studies, sites and study sites (#5485)
+
+A study is owned by one sponsor organization, a site is a durable location of an institution, and a study site is
+that site in that study (spec §3.1). Each is created by a command through the pipeline:
+
+| Command           | Capability (resource)         | Event               | Refuses                                                                                               |
+| ----------------- | ----------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------- |
+| `RegisterStudy`   | `study.register` (tenant)     | `StudyRegistered`   | an unknown sponsor, a code already used in the tenant                                                 |
+| `RegisterSite`    | `site.register` (tenant)      | `SiteRegistered`    | an unknown institution, a code the institution already uses, a country that is not ISO 3166-1 alpha-2 |
+| `LinkSiteToStudy` | `study_site.link` (the study) | `SiteLinkedToStudy` | an unknown study or site, a site already linked to the study                                          |
+
+A new study site is `Selected`; `ActivateStudySite` activates it once a protocol version is in force there
+([Effectivity](#effectivity-and-study-site-activation-adr-2456)). Each handler checks uniqueness under one advisory
+lock (the tenant, the institution, the study), so concurrent registrations with one code run in turn.
+
 ## Participants and enrollment (ADR-2453)
 
 A `Participant` is an identity only; each study membership is an `Enrollment` at one study site (spec §7.4):
