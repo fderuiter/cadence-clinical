@@ -374,6 +374,9 @@ Commands in `Commands/ObservationCommands.cs`, each authorized against the obser
   (K-TX-4), and the correction reads the lock under it, so no correction commits after a lock.
 - `IObservationRecords` reads an observation with its revisions, lock and kernel audit entries.
 - Reactions (the eCRF projection, edit checks, queries, SDV) consume `ObservationCorrected` after commit.
+- Coming under #4729 (ADR-2621): `LockObservation` and `ObservationLock` give way to scoped `Locked`/`Frozen`
+  Assertions with unlock, `LockApplied`/`LockReleased` events and shared scope locks; value Assertions will cite the
+  revision they judged.
 
 ## Object references and navigation (ADR-2481)
 
