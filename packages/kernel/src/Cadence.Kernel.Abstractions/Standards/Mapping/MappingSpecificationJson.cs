@@ -182,6 +182,8 @@ public static partial class MappingSpecificationJson
         WriteOptional(writer, "standardCharacter", mapping.Result.StandardCharacter);
         WriteOptional(writer, "standardNumeric", mapping.Result.StandardNumeric);
         WriteOptional(writer, "standardUnit", mapping.Result.StandardUnit);
+        WriteOptional(writer, "status", mapping.Result.Status);
+        WriteOptional(writer, "reasonNotDone", mapping.Result.ReasonNotDone);
         writer.WriteEndObject();
         WriteOptional(writer, "standardUnit", mapping.StandardUnit);
         if (mapping.Conversions.Count > 0)
@@ -369,7 +371,7 @@ public static partial class MappingSpecificationJson
                 problems.Add($"{path}: a coded result (codelist) is not a quantity; drop standardUnit, result.standardNumeric and result.originalUnit.");
             }
 
-            var written = assign.Keys.Concat(new[] { result.Original, result.OriginalUnit, result.StandardCharacter, result.StandardNumeric, result.StandardUnit }.OfType<string>());
+            var written = assign.Keys.Concat(new[] { result.Original, result.OriginalUnit, result.StandardCharacter, result.StandardNumeric, result.StandardUnit, result.Status, result.ReasonNotDone }.OfType<string>());
             foreach (var duplicate in written.GroupBy(v => v, StringComparer.Ordinal).Where(g => g.Count() > 1))
             {
                 problems.Add($"{path}: variable {duplicate.Key} is written {duplicate.Count()} times.");
@@ -492,13 +494,20 @@ public static partial class MappingSpecificationJson
 
         var resultPath = $"{path}.result";
         var before = problems.Count;
-        CheckProperties(result, resultPath, problems, "original", "originalUnit", "standardCharacter", "standardNumeric", "standardUnit");
+        CheckProperties(result, resultPath, problems, "original", "originalUnit", "standardCharacter", "standardNumeric", "standardUnit", "status", "reasonNotDone");
         var original = Name(result, "original", resultPath, problems, required: true);
         var originalUnit = Name(result, "originalUnit", resultPath, problems, required: false);
         var standardCharacter = Name(result, "standardCharacter", resultPath, problems, required: false);
         var standardNumeric = Name(result, "standardNumeric", resultPath, problems, required: false);
         var standardUnit = Name(result, "standardUnit", resultPath, problems, required: false);
-        return problems.Count == before ? new ResultVariables(original!, originalUnit, standardCharacter, standardNumeric, standardUnit) : null;
+        var status = Name(result, "status", resultPath, problems, required: false);
+        var reasonNotDone = Name(result, "reasonNotDone", resultPath, problems, required: false);
+        if (reasonNotDone is not null && status is null)
+        {
+            problems.Add($"{resultPath}.reasonNotDone: requires result.status, which says the value was not done.");
+        }
+
+        return problems.Count == before ? new ResultVariables(original!, originalUnit, standardCharacter, standardNumeric, standardUnit, status, reasonNotDone) : null;
     }
 
     private static List<UnitConversion> ReadConversions(JsonElement json, string path, List<string> problems)

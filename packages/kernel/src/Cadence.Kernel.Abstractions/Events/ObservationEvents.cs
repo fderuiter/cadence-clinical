@@ -1,12 +1,13 @@
 using System;
 
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
 
 namespace Cadence.Kernel.Events;
 
 /// <summary>An observation was recorded (spec §8.1, Evidence family).</summary>
-[KernelEvent("ObservationRecorded", 1)]
+[KernelEvent("ObservationRecorded", 2)]
 public sealed record ObservationRecorded(
     TenantId TenantId,
     ObservationId ObservationId,
@@ -14,21 +15,21 @@ public sealed record ObservationRecorded(
     ParticipantId ParticipantId,
     StudyId StudyId,
     ConceptRef Concept,
-    string Value,
+    ObservationValue Value,
     DateTimeOffset ObservedAt);
 
 /// <summary>
 /// An observation's value was corrected (K-FACT-1, Evidence family): revision <c>Revision</c> supersedes
 /// <c>Supersedes</c>. Consumers such as the eCRF projection and edit checks react after commit (ADR-2620).
 /// </summary>
-[KernelEvent("ObservationCorrected", 1)]
+[KernelEvent("ObservationCorrected", 2)]
 public sealed record ObservationCorrected(
     TenantId TenantId,
     ObservationId ObservationId,
     EnrollmentId EnrollmentId,
     int Revision,
     int Supersedes,
-    string Value,
+    ObservationValue Value,
     string ReasonForChange);
 
 /// <summary>An observation was locked (Quality family); no correction commits after it.</summary>

@@ -777,8 +777,7 @@ namespace Cadence.Kernel.Persistence.Migrations
 
                     b.Property<string>("Value")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)")
+                        .HasColumnType("jsonb")
                         .HasColumnName("value");
 
                     b.Property<long>("VersionIndex")
@@ -887,8 +886,7 @@ namespace Cadence.Kernel.Persistence.Migrations
 
                     b.Property<string>("Value")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)")
+                        .HasColumnType("jsonb")
                         .HasColumnName("value");
 
                     b.HasKey("Id");

@@ -783,7 +783,7 @@ Entity: `ObservationRevision`
 | `recorded_at` | `timestamp with time zone` | no |  |  |
 | `recorded_by` | `character varying(255)` | no |  |  |
 | `tenant_id` | `uuid` | no |  |  |
-| `value` | `character varying(4000)` | no |  |  |
+| `value` | `jsonb` | no |  |  |
 
 Foreign keys:
 
@@ -815,7 +815,7 @@ Entity: `Observation`
 | `revision` | `integer` | no |  |  |
 | `study_id` | `uuid` | no |  |  |
 | `tenant_id` | `uuid` | no |  |  |
-| `value` | `character varying(4000)` | no |  |  |
+| `value` | `jsonb` | no |  |  |
 | `version_index` | `bigint` | no |  |  |
 
 Foreign keys:

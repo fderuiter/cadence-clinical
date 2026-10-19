@@ -43,7 +43,7 @@ public sealed class KernelCommandPipeline(
     IClock clock) : IKernelCommandSender
 {
     /// <summary>Serialisation used for request hashes and stored results; stable across processes.</summary>
-    internal static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    internal static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) { AllowOutOfOrderMetadataProperties = true };
 
     private static readonly ConcurrentDictionary<Type, object> Invokers = new();
 

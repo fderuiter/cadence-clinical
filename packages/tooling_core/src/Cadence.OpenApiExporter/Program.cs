@@ -248,13 +248,17 @@ public static class Program
         {
             if (obj.ContainsKey("$ref") && obj["$ref"]?.GetValue<string>() is string refVal)
             {
-                const string targetPrefix = "#/components/schemas/";
-                if (refVal.StartsWith(targetPrefix, StringComparison.Ordinal))
+                obj["$ref"] = PrefixedRef(refVal, prefix);
+            }
+
+            // A polymorphic schema's discriminator maps each type value to a schema by reference too.
+            if (obj["discriminator"] is JsonObject { } discriminator && discriminator["mapping"] is JsonObject mapping)
+            {
+                foreach (var (key, value) in mapping.ToList())
                 {
-                    string schemaName = refVal.Substring(targetPrefix.Length);
-                    if (!schemaName.StartsWith(prefix, StringComparison.Ordinal))
+                    if (value?.GetValue<string>() is string mapped)
                     {
-                        obj["$ref"] = $"{targetPrefix}{prefix}{schemaName}";
+                        mapping[key] = PrefixedRef(mapped, prefix);
                     }
                 }
             }
@@ -271,6 +275,18 @@ public static class Program
                 RewriteRefPointers(item, prefix);
             }
         }
+    }
+
+    private static string PrefixedRef(string refVal, string prefix)
+    {
+        const string targetPrefix = "#/components/schemas/";
+        if (!refVal.StartsWith(targetPrefix, StringComparison.Ordinal))
+        {
+            return refVal;
+        }
+
+        string schemaName = refVal.Substring(targetPrefix.Length);
+        return schemaName.StartsWith(prefix, StringComparison.Ordinal) ? refVal : $"{targetPrefix}{prefix}{schemaName}";
     }
 
     private static JsonObject AggregateOpenApiSpecs(

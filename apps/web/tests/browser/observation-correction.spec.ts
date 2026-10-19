@@ -16,9 +16,11 @@ test("corrects an observation with a reason and shows it in the kernel audit tra
   await page.goto(
     `tests/browser/observation.html?observation=${encodeURIComponent(observationRef)}`
   );
-  await expect(page.getByTestId("observation-value")).toHaveText("182");
+  await expect(page.getByTestId("observation-value")).toHaveText("182 mm[Hg]");
   await expect(page.getByTestId("observation-version")).toHaveText("1");
 
+  // A quantity is corrected in its own unit: the user types the number and the unit is kept (ADR-2623).
+  await expect(page.getByTestId("observation-unit")).toHaveText("mm[Hg]");
   await page.locator("#observation-new-value").fill("128");
   await page.locator("#observation-save").click();
   await page
@@ -30,7 +32,7 @@ test("corrects an observation with a reason and shows it in the kernel audit tra
   await expect(page.getByTestId("observation-outcome")).toContainText(
     "Correction saved"
   );
-  await expect(page.getByTestId("observation-value")).toHaveText("128");
+  await expect(page.getByTestId("observation-value")).toHaveText("128 mm[Hg]");
   await expect(page.getByTestId("observation-version")).toHaveText("2");
   await expect(page.getByTestId("observation-audit")).toContainText(
     `Typographical Error: ${reasonDetail}`

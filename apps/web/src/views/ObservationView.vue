@@ -12,7 +12,7 @@
         <dl class="observation-summary">
           <dt>Current value</dt>
           <dd data-testid="observation-value">
-            {{ observation.value }}
+            {{ formatObservationValue(observation.value) }}
           </dd>
           <dt>Version</dt>
           <dd data-testid="observation-version">
@@ -42,7 +42,10 @@
             type="text"
             autocomplete="off"
             :disabled="saving"
+            :aria-invalid="parseError !== null"
+            aria-describedby="observation-new-value-hint"
           />
+          <span v-if="unit" data-testid="observation-unit">{{ unit }}</span>
           <button
             id="observation-save"
             class="btn btn-primary"
@@ -51,6 +54,13 @@
           >
             {{ saving ? "Saving…" : "Save correction" }}
           </button>
+          <p
+            id="observation-new-value-hint"
+            class="observation-hint"
+            :role="parseError ? 'alert' : undefined"
+          >
+            {{ parseError ?? "" }}
+          </p>
         </form>
 
         <div
@@ -63,9 +73,9 @@
           :role="outcome.kind === 'saved' ? 'status' : 'alert'"
         >
           <template v-if="outcome.kind === 'saved'">
-            Correction saved. The value is now {{ outcome.state.value }} at
-            version {{ outcome.state.version }}, with your reason in the audit
-            trail.
+            Correction saved. The value is now
+            {{ formatObservationValue(outcome.state.value) }} at version
+            {{ outcome.state.version }}, with your reason in the audit trail.
           </template>
           <template v-else>
             {{ outcome.message }}
@@ -93,7 +103,7 @@
               :key="revision.number"
             >
               <td>{{ revision.number }}</td>
-              <td>{{ revision.value }}</td>
+              <td>{{ formatObservationValue(revision.value) }}</td>
               <td>{{ revision.reason_for_change }}</td>
               <td>{{ revision.recorded_by }}</td>
               <td>{{ revision.recorded_at }}</td>
@@ -143,10 +153,17 @@
 import { computed, onMounted, ref, watch } from "vue";
 import ReasonForChangeModal from "../components/ReasonForChangeModal.vue";
 import { useObservationCorrection } from "../composables/useObservationCorrection";
+import {
+  correctionUnit,
+  formatObservationValue,
+  parseCorrection,
+  sameObservationValue,
+} from "../api/observationValue";
 
 /**
  * Corrects one kernel observation (ADR-2620). The value shown is always the kernel's: the screen keeps no local
- * copy, and reports a correction as saved only after the kernel has committed it.
+ * copy, and reports a correction as saved only after the kernel has committed it. A correction keeps the current
+ * value's kind (ADR-2623): a quantity is corrected in its unit, a code in its code system version.
  */
 const props = defineProps<{ observationRef: string }>();
 
@@ -164,10 +181,23 @@ const {
 const newValue = ref("");
 const reasonOpen = ref(false);
 
-const canSave = computed(() => {
-  const value = newValue.value.trim();
-  return value.length > 0 && value !== observation.value?.value;
+const unit = computed(() => correctionUnit(observation.value?.value));
+
+const parsed = computed(() => {
+  const current = observation.value?.value;
+  if (!current || newValue.value.trim().length === 0) return null;
+  return parseCorrection(newValue.value, current);
 });
+
+const parseError = computed(() =>
+  parsed.value && !parsed.value.ok ? parsed.value.message : null
+);
+
+const canSave = computed(
+  () =>
+    parsed.value?.ok === true &&
+    !sameObservationValue(parsed.value.value, observation.value?.value)
+);
 
 function askReason() {
   if (canSave.value && !saving.value) reasonOpen.value = true;
@@ -175,7 +205,8 @@ function askReason() {
 
 async function onReason(reason: string) {
   reasonOpen.value = false;
-  await correct(newValue.value.trim(), reason);
+  if (parsed.value?.ok !== true) return;
+  await correct(parsed.value.value, reason);
   if (outcome.value?.kind === "saved") newValue.value = "";
 }
 
@@ -192,8 +223,14 @@ watch(() => props.observationRef, load);
 .observation-correction {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
   align-items: center;
   margin: 16px 0;
+}
+.observation-hint {
+  flex-basis: 100%;
+  margin: 0;
+  color: #991b1b;
 }
 .observation-outcome {
   padding: 8px 12px;

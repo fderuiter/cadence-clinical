@@ -15,6 +15,7 @@ using Cadence.Kernel.Api;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.References;
@@ -49,7 +50,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
     private const string Stranger = "stranger@observation-host.test";
     private const string CorrectionReason = "Transcription error – source reads 128";
 
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower, AllowOutOfOrderMetadataProperties = true };
 
     private readonly KernelProtocolScenario _scenario = new(fixture);
     private WebApplicationFactory<Cadence.Kernel.Host.Program>? _host;
@@ -74,30 +75,30 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
         {
             enrollment_ref = NodeRef.For(enrollment).ToString(),
             concept = $"{ConceptId.New()}@1",
-            value = "182",
+            value = Systolic(182),
             observed_at = SystemClock.Instance.UtcNow.AddHours(-1),
         }, HttpStatusCode.Created, ct);
         recorded.Version.Should().Be(1);
         var observation = NodeRef.Parse(recorded.Ref).Unversioned();
 
         var corrected = await SendAsync<KernelObservationStateResponse>(crc, HttpMethod.Post, $"observations/{observation}/corrections", CorrectionReason,
-            Correction(enrollment, "128", 1), HttpStatusCode.OK, ct);
-        corrected.Value.Should().Be("128");
+            Correction(enrollment, 128, 1), HttpStatusCode.OK, ct);
+        corrected.Value.Should().Be(new QuantityValue(128m, "mm[Hg]"));
         corrected.Version.Should().Be(2);
 
         var read = await SendAsync<KernelObservationResponse>(crc, HttpMethod.Get, $"observations/{observation}", null, null, HttpStatusCode.OK, ct);
-        read.Value.Should().Be("128");
-        read.Revisions.Select(r => (r.Number, r.Value, r.ReasonForChange)).Should().Equal((1, "182", "Initial entry"), (2, "128", CorrectionReason));
+        read.Value.Should().Be(new QuantityValue(128m, "mm[Hg]"));
+        read.Revisions.Select(r => (r.Number, r.Value, r.ReasonForChange)).Should().Equal((1, Mmhg(182), "Initial entry"), (2, Mmhg(128), CorrectionReason));
         read.Audit.Should().Contain(a => a.Action == "Updated" && a.Version == 2 && a.ReasonForChange == CorrectionReason && a.ActorId == Crc);
 
-        (await ProblemAsync(crc, $"observations/{observation}/corrections", CorrectionReason, Correction(enrollment, "129", 1), ct))
+        (await ProblemAsync(crc, $"observations/{observation}/corrections", CorrectionReason, Correction(enrollment, 129, 1), ct))
             .Should().Be((HttpStatusCode.Conflict, ObservationErrors.VersionStale.Code));
-        (await ProblemAsync(crc, $"observations/{observation}/corrections", null, Correction(enrollment, "129", 2), ct))
+        (await ProblemAsync(crc, $"observations/{observation}/corrections", null, Correction(enrollment, 129, 2), ct))
             .Should().Be(((HttpStatusCode)422, KernelErrors.ReasonForChangeRequired.Code));
 
         await SendAsync<KernelObservationLockResponse>(crc, HttpMethod.Post, $"observations/{observation}/lock", "Data review complete",
             new { enrollment_ref = NodeRef.For(enrollment).ToString() }, HttpStatusCode.OK, ct);
-        (await ProblemAsync(crc, $"observations/{observation}/corrections", CorrectionReason, Correction(enrollment, "129", 2), ct))
+        (await ProblemAsync(crc, $"observations/{observation}/corrections", CorrectionReason, Correction(enrollment, 129, 2), ct))
             .Should().Be(((HttpStatusCode)423, ObservationErrors.Locked.Code));
     }
 
@@ -117,12 +118,12 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
         {
             enrollment_ref = NodeRef.For(enrollment).ToString(),
             concept = $"{ConceptId.New()}@1",
-            value = "182",
+            value = Systolic(182),
             observed_at = SystemClock.Instance.UtcNow.AddHours(-1),
         }, HttpStatusCode.Created, ct);
         var observation = NodeRef.Parse(recorded.Ref).Unversioned();
 
-        (await ProblemAsync(stranger, $"observations/{observation}/corrections", CorrectionReason, Correction(enrollment, "128", 1), ct))
+        (await ProblemAsync(stranger, $"observations/{observation}/corrections", CorrectionReason, Correction(enrollment, 128, 1), ct))
             .Should().Be((HttpStatusCode.Forbidden, KernelErrors.AuthorizationDenied.Code));
         using (var hidden = await stranger.GetAsync(new Uri($"/api/v1/kernel/observations/{observation}", UriKind.Relative), ct))
         {
@@ -130,7 +131,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
         }
 
         var read = await SendAsync<KernelObservationResponse>(crc, HttpMethod.Get, $"observations/{observation}", null, null, HttpStatusCode.OK, ct);
-        read.Value.Should().Be("182");
+        read.Value.Should().Be(new QuantityValue(182m, "mm[Hg]"));
         read.Version.Should().Be(1);
     }
 
@@ -154,7 +155,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
         {
             enrollment_ref = NodeRef.For(enrollment).ToString(),
             concept = $"{ConceptId.New()}@1",
-            value = "182",
+            value = Systolic(182),
             observed_at = SystemClock.Instance.UtcNow.AddHours(-1),
         }, HttpStatusCode.Created, ct);
         var observation = NodeRef.Parse(recorded.Ref).Unversioned();
@@ -177,11 +178,16 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
         var revisions = await db.ObservationRevisions.AsNoTracking().Where(r => r.ObservationId == ObservationId.FromGuid(observation.Id))
             .OrderBy(r => r.Number).Select(r => new { r.Number, r.Value, r.ReasonForChange }).ToListAsync(ct);
         revisions.Select(r => (r.Number, r.Value, r.ReasonForChange)).Should()
-            .Equal((1, "182", "Initial entry"), (2, "128", $"Typographical Error: {Detail}"));
+            .Equal((1, Mmhg(182), "Initial entry"), (2, Mmhg(128), $"Typographical Error: {Detail}"));
     }
 
-    private static object Correction(EnrollmentId enrollment, string value, long expectedVersion) =>
-        new { enrollment_ref = NodeRef.For(enrollment).ToString(), value, expected_version = expectedVersion };
+    private static object Correction(EnrollmentId enrollment, decimal systolic, long expectedVersion) =>
+        new { enrollment_ref = NodeRef.For(enrollment).ToString(), value = Systolic(systolic), expected_version = expectedVersion };
+
+    // A typed value as a client sends it (ADR-2623).
+    private static object Systolic(decimal value) => new { type = "quantity", value, unit = "mm[Hg]" };
+
+    private static ObservationValue Mmhg(decimal value) => new QuantityValue(value, "mm[Hg]");
 
     /// <summary>A tenant with a study, a study site and one screened participant; the coordinator granted at the site.</summary>
     private async Task<(string Code, TenantId Tenant, EnrollmentId Enrollment)> SeedAsync(bool grant, CancellationToken ct)

@@ -811,5 +811,6 @@ internal sealed class KernelCommandTransaction(
 /// <summary>JSON options shared by kernel persistence for event payloads, envelopes and audit change sets.</summary>
 internal static class KernelCommandPipelineJson
 {
-    public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
+    // jsonb reorders object members, so a polymorphic value's "type" member may come back after its other members.
+    public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web) { AllowOutOfOrderMetadataProperties = true };
 }

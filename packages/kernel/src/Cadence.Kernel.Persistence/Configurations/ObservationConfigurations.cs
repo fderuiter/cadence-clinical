@@ -1,5 +1,5 @@
-using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Persistence.Evidence;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -16,7 +16,7 @@ internal sealed class ObservationConfiguration : IEntityTypeConfiguration<Observ
     {
         builder.ToTable("observations", t => t.HasCheckConstraint("ck_observations_revision", "revision > 0"));
         builder.HasKey(x => x.Id);
-        builder.Property(x => x.Value).HasMaxLength(ObservationLimits.MaxValueLength).IsRequired();
+        builder.Property(x => x.Value).IsObservationValue();
         builder.Ignore(x => x.Concept);
         builder.HasIndex(x => new { x.TenantId, x.EnrollmentId });
         builder.HasIndex(x => new { x.TenantId, x.ParticipantId, x.ConceptId });
@@ -53,7 +53,7 @@ internal sealed class ObservationRevisionConfiguration : IEntityTypeConfiguratio
         // Revisions are created with their id; without this EF would treat one added to a loaded observation as an
         // existing row to update.
         builder.Property(x => x.Id).ValueGeneratedNever();
-        builder.Property(x => x.Value).HasMaxLength(ObservationLimits.MaxValueLength).IsRequired();
+        builder.Property(x => x.Value).IsObservationValue();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
         builder.Property(x => x.RecordedBy).HasMaxLength(255).IsRequired();
         builder.HasIndex(x => new { x.TenantId, x.ObservationId, x.Number }).IsUnique();

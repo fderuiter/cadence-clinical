@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 
 using Cadence.Kernel.Authorization;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
 
 namespace Cadence.Kernel.Commands;
@@ -13,8 +14,8 @@ namespace Cadence.Kernel.Commands;
 /// <remarks>
 /// <para><c>EnrollmentId</c>: The enrollment the fact is about; the participant and study are taken from it, and the
 /// command is authorized against it.</para>
-/// <para><c>Value</c>: The value as entered, at most <see cref="ObservationLimits.MaxValueLength"/> characters. The
-/// typed value model (#5363) replaces it.</para>
+/// <para><c>Value</c>: The value as entered: a quantity with its UCUM unit, a code, text, a boolean, a date or time
+/// at its precision, or a reasoned absence (<see cref="ObservationValue"/>, ADR-2623).</para>
 /// <para><c>ObservedAt</c>: When the fact held in the trial world (valid time); not after the command is recorded.</para>
 /// </remarks>
 [KernelCapability("observation.record", VerbClass.Execute, Resource = nameof(RecordObservation.EnrollmentId))]
@@ -30,7 +31,7 @@ public sealed record RecordObservation(
     ObservationId ObservationId,
     EnrollmentId EnrollmentId,
     ConceptRef Concept,
-    string Value,
+    ObservationValue Value,
     DateTimeOffset ObservedAt,
     string IdempotencyKey,
     string ReasonForChange) : ICommand<ObservationState>;
@@ -57,7 +58,7 @@ public sealed record CorrectObservation(
     TenantId TenantId,
     ObservationId ObservationId,
     EnrollmentId EnrollmentId,
-    string Value,
+    ObservationValue Value,
     long ExpectedVersion,
     string IdempotencyKey,
     string ReasonForChange) : ICommand<ObservationState>;
@@ -88,25 +89,18 @@ public sealed record ObservationState(
     ParticipantId ParticipantId,
     StudyId StudyId,
     ConceptRef Concept,
-    string Value,
+    ObservationValue Value,
     long Version,
     int Revision);
 
 /// <summary>An observation's lock after <see cref="LockObservation"/>.</summary>
 public sealed record ObservationLockState(ObservationLockId LockId, ObservationId ObservationId, DateTimeOffset LockedAt, string LockedBy);
 
-/// <summary>Limits on observation values.</summary>
-public static class ObservationLimits
-{
-    /// <summary>The longest value the kernel stores.</summary>
-    public const int MaxValueLength = 4000;
-}
-
 /// <summary>Errors raised by the observation commands (spec §8.1, ADR-2620).</summary>
 public static class ObservationErrors
 {
     public static readonly KernelError ValueInvalid =
-        new("K.Observation.ValueInvalid", 422, $"An observation value is required, at most {ObservationLimits.MaxValueLength} characters.");
+        new("K.Observation.ValueInvalid", 422, "The observation value is missing or invalid.");
 
     public static readonly KernelError ObservedAtInvalid =
         new("K.Observation.ObservedAtInvalid", 422, "An observation cannot be observed after it is recorded.");

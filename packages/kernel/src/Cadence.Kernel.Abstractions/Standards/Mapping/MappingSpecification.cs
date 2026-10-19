@@ -69,20 +69,23 @@ public sealed record VariableMapping(
 {
     /// <summary>Every variable the mapping writes, in the order it writes them.</summary>
     public IEnumerable<string> Variables() =>
-        Assign.Keys.Concat(new[] { Result.Original, Result.OriginalUnit, Result.StandardCharacter, Result.StandardNumeric, Result.StandardUnit }.OfType<string>());
+        Assign.Keys.Concat(new[] { Result.Original, Result.OriginalUnit, Result.StandardCharacter, Result.StandardNumeric, Result.StandardUnit, Result.Status, Result.ReasonNotDone }.OfType<string>());
 }
 
 /// <summary>
-/// The variables a result is written to: the original result and unit as collected (<c>--ORRES</c>, <c>--ORRESU</c>)
-/// and the standardised result in character and numeric form with its unit (<c>--STRESC</c>, <c>--STRESN</c>,
-/// <c>--STRESU</c>). Only <see cref="Original"/> is required.
+/// The variables a result is written to: the original result and unit as collected (<c>--ORRES</c>, <c>--ORRESU</c>),
+/// the standardised result in character and numeric form with its unit (<c>--STRESC</c>, <c>--STRESN</c>,
+/// <c>--STRESU</c>), and for a value that was not obtained, its status and reason (<c>--STAT</c>, <c>--REASND</c>).
+/// Only <see cref="Original"/> is required; a missing value can be mapped only when <see cref="Status"/> is named.
 /// </summary>
 public sealed record ResultVariables(
     string Original,
     string? OriginalUnit = null,
     string? StandardCharacter = null,
     string? StandardNumeric = null,
-    string? StandardUnit = null);
+    string? StandardUnit = null,
+    string? Status = null,
+    string? ReasonNotDone = null);
 
 /// <summary>A linear conversion between UCUM units: <c>standard = value × Factor + Offset</c>.</summary>
 public sealed record UnitConversion(string From, string To, decimal Factor, decimal Offset = 0m);

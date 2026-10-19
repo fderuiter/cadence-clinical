@@ -673,7 +673,8 @@ public sealed record Observation(
     ClinicalEventId? Event,
     SpecimenId? Specimen,
     ConceptRef Concept,          // §6.1, never an SDTM variable
-    ObservationValue Value,      // Quantity(value, ucum) | Coded(ConceptRef) | Text | Boolean | Instant | Missing(reason)
+    ObservationValue Value,      // Quantity(value, ucum, comparator?) | Coded(code system version, code) | Text | Boolean
+                                 // | DateTime(ISO 8601, year to second precision) | Missing(null flavor, detail?)
     ValidPeriod Valid,
     RecordedPeriod Recorded,
     SourceRef Source,
@@ -686,9 +687,12 @@ public sealed record Observation(
   history row is ever updated. The head row's current value and version are a cache of the latest revision, changed
   only in the transaction that appends it. Status such as Verified or Queried is an Assertion, not a mutable column
   (ADR-2620, ADR-2621).
-- **K-FACT-2** Units are UCUM. Normalisation, reference-range flags and toxicity grades are **derived
+- **K-FACT-2** Units are UCUM, carried by the quantity itself, and a quantity keeps the precision it was entered with.
+  A coded value names its code-system version, so its meaning cannot drift (§6.2). Normalisation, reference-range flags and toxicity grades are **derived
   Observations** with provenance naming inputs and the versioned algorithm and range set.
-- **K-FACT-3** `Missing` is a first-class value with a reason.
+- **K-FACT-3** `Missing` is a first-class value with a reason: a null flavor (`NotDone`, `Unknown`, `AskedButUnknown`,
+  `NotAsked`, `NotApplicable`, `Masked`) and an optional detail. It fits every collection item and projects to SDTM
+  `--STAT = NOT DONE` and `--REASND`, never to an empty result (ADR-2623).
 - **K-FACT-4** No EDC concepts on Observations: no `PageId`, `VisitId` string, `IsSdvVerified`.
 - **K-FACT-5** No free-form extension attributes on Observations (resolves G8). Qualifiers that carry
   meaning are Concepts (e.g. position, laterality, fasting status as qualifier ConceptRefs); workflow or
@@ -1291,6 +1295,7 @@ kernel, is merged into another, or is retired.
 | K033 | AI proposals and automation agents         | A Proposal with a content hash and no effect on kernel state; approval is an attested, separation-of-duties decision by a person; agents read and propose only; expiry derived on read                                                                              | ADR-2489           |
 | K034 | Observation corrections and locks          | A correction appends an insert-only revision to a stable Observation; value Assertions cite the revision; `Locked`/`Frozen` are scoped Assertions with Attestation and retraction, guarded by shared scope locks                                                    | ADR-2620, ADR-2621 |
 | K035 | eCRF forms on the kernel                   | A form instance is a kernel `CollectionInstance`; one command saves a whole page against per-value revisions; structural checks before commit, edit checks after; a correction supersedes, never erases, a form signature                                           | ADR-2622           |
+| K036 | Typed observation values                   | One polymorphic `ObservationValue` (quantity with UCUM unit, coded with code-system version, text, boolean, partial ISO 8601 date/time, missing with a null flavor) in commands, events, jsonb storage, the API and the SDTM projection                             | ADR-2623           |
 
 ---
 

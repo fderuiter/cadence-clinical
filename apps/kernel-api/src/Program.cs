@@ -28,7 +28,13 @@ builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
 
 // snake_case on the wire, like Execution, so the generated web clients read the same way.
-builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower);
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+
+    // A client may send a typed value's "type" member after its other members (ADR-2623).
+    options.SerializerOptions.AllowOutOfOrderMetadataProperties = true;
+});
 
 // The only host that registers kernel persistence (K-XS-2). In production it connects as the application role and
 // its migrations and role grant are applied separately with KernelDatabase; a local stack that connects as the

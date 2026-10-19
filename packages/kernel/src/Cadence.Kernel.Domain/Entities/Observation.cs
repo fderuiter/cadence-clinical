@@ -4,6 +4,7 @@ using System.Linq;
 
 using Cadence.Core.Domain;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Time;
 
@@ -65,8 +66,8 @@ public class Observation : AggregateRoot<ObservationId>
     /// <summary>When the fact held in the trial world (valid time).</summary>
     public DateTimeOffset ObservedAt { get; private set; }
 
-    /// <summary>The current value: the value of the latest revision.</summary>
-    public string Value { get; private set; } = string.Empty;
+    /// <summary>The current value: the value of the latest revision (ADR-2623).</summary>
+    public ObservationValue Value { get; private set; } = null!;
 
     /// <summary>The number of the latest revision.</summary>
     public int Revision { get; private set; }
@@ -82,15 +83,15 @@ public class Observation : AggregateRoot<ObservationId>
         ParticipantId participantId,
         StudyId studyId,
         ConceptRef concept,
-        string? value,
+        ObservationValue? value,
         DateTimeOffset observedAt,
         string reasonForChange,
         string recordedBy,
         DateTimeOffset recordedAt)
     {
-        if (!IsValid(value))
+        if (ObservationValue.ProblemOf(value) is { } problem)
         {
-            return ObservationErrors.ValueInvalid;
+            return ObservationErrors.ValueInvalid.WithMessage(problem);
         }
 
         var observed = KernelTimestamps.ToStoredPrecision(observedAt);
@@ -109,19 +110,19 @@ public class Observation : AggregateRoot<ObservationId>
     /// Supersedes the current value with <paramref name="value"/>. The caller has already checked the lock and the
     /// expected version; this refuses only an invalid or unchanged value.
     /// </summary>
-    public KernelError? Correct(string? value, string reasonForChange, string recordedBy, DateTimeOffset recordedAt)
+    public KernelError? Correct(ObservationValue? value, string reasonForChange, string recordedBy, DateTimeOffset recordedAt)
     {
         if (string.IsNullOrWhiteSpace(reasonForChange))
         {
             return KernelErrors.ReasonForChangeRequired;
         }
 
-        if (!IsValid(value))
+        if (ObservationValue.ProblemOf(value) is { } problem)
         {
-            return ObservationErrors.ValueInvalid;
+            return ObservationErrors.ValueInvalid.WithMessage(problem);
         }
 
-        if (string.Equals(value, Value, StringComparison.Ordinal))
+        if (value == Value)
         {
             return ObservationErrors.ValueUnchanged;
         }
@@ -130,16 +131,13 @@ public class Observation : AggregateRoot<ObservationId>
         return null;
     }
 
-    private void Append(string value, string reasonForChange, string recordedBy, DateTimeOffset recordedAt)
+    private void Append(ObservationValue value, string reasonForChange, string recordedBy, DateTimeOffset recordedAt)
     {
         var number = _revisions.Count == 0 ? 1 : _revisions.Max(r => r.Number) + 1;
         _revisions.Add(new ObservationRevision(this, number, value, reasonForChange, recordedBy, recordedAt));
         Value = value;
         Revision = number;
     }
-
-    private static bool IsValid(string? value) =>
-        !string.IsNullOrWhiteSpace(value) && value.Length <= ObservationLimits.MaxValueLength;
 }
 
 /// <summary>
@@ -149,7 +147,7 @@ public class ObservationRevision
 {
     protected ObservationRevision() { }
 
-    internal ObservationRevision(Observation observation, int number, string value, string reasonForChange, string recordedBy, DateTimeOffset recordedAt)
+    internal ObservationRevision(Observation observation, int number, ObservationValue value, string reasonForChange, string recordedBy, DateTimeOffset recordedAt)
     {
         Id = Guid.CreateVersion7(recordedAt);
         TenantId = observation.TenantId;
@@ -170,7 +168,8 @@ public class ObservationRevision
     /// <summary>1 for the recorded value, then one more per correction.</summary>
     public int Number { get; private set; }
 
-    public string Value { get; private set; } = string.Empty;
+    /// <summary>The value this revision recorded.</summary>
+    public ObservationValue Value { get; private set; } = null!;
 
     public string ReasonForChange { get; private set; } = string.Empty;
 

@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
 
 namespace Cadence.Kernel.Protocol.Design;
@@ -178,15 +180,78 @@ public sealed record CollectionSpec(string Id, string Name, IReadOnlyList<Collec
 
 /// <summary>
 /// One item to collect: the concept it records, its UCUM unit when it is a quantity, the pinned terminology its values
-/// come from, and why it is collected when that differs from its specification's purpose.
+/// come from, the kind of value it takes, and why it is collected when that differs from its specification's purpose.
 /// </summary>
+/// <param name="Id">The item's id, stable across versions (K-PROT-1).</param>
+/// <param name="Concept">What the item records (K-SEM-1).</param>
+/// <param name="Unit">The UCUM unit a quantity is collected in.</param>
+/// <param name="Terminology">The pinned terminology a code is chosen from.</param>
+/// <param name="Required">Whether the item must have a value, a reasoned missing value included.</param>
+/// <param name="Purpose">Why the item is collected, when that differs from its specification's purpose.</param>
+/// <param name="ValueKind">
+/// The kind of value the item takes (ADR-2623). When null it follows from the item: a quantity when it has a
+/// <paramref name="Unit"/>, a code when it has a <paramref name="Terminology"/>, otherwise any kind.
+/// </param>
 public sealed record CollectionItem(
     string Id,
     ConceptRef Concept,
     string? Unit = null,
     TerminologyBinding? Terminology = null,
     bool Required = false,
-    DataPurpose? Purpose = null) : IProtocolElement;
+    DataPurpose? Purpose = null,
+    ObservationValueKind? ValueKind = null) : IProtocolElement
+{
+    /// <summary>The kind of value the item takes, or null when it takes any kind. Derived, so never serialised.</summary>
+    [JsonIgnore]
+    public ObservationValueKind? ExpectedKind
+    {
+        get
+        {
+            if (ValueKind is not null || Unit is not null)
+            {
+                return ValueKind ?? ObservationValueKind.Quantity;
+            }
+
+            return Terminology is not null ? ObservationValueKind.Coded : null;
+        }
+    }
+
+    /// <summary>
+    /// Why <paramref name="value"/> cannot be recorded for this item, or null when it can (ADR-2623): it must be valid,
+    /// of the item's kind, in the item's UCUM unit and from the item's code-system version. A missing value with a
+    /// reason fits every item (K-FACT-3). Whether a code is in the item's codelist needs the Concept Registry and is
+    /// checked where the value is recorded.
+    /// </summary>
+    public string? Admits(ObservationValue? value)
+    {
+        if (ObservationValue.ProblemOf(value) is { } problem)
+        {
+            return problem;
+        }
+
+        if (value is MissingValue)
+        {
+            return null;
+        }
+
+        if (ExpectedKind is { } kind && value!.Kind != kind)
+        {
+            return $"Item {Id} takes a {kind} value, not a {value.Kind} value.";
+        }
+
+        if (Unit is not null && value is QuantityValue quantity && !string.Equals(quantity.Unit, Unit, System.StringComparison.Ordinal))
+        {
+            return $"Item {Id} is collected in {Unit}, not {quantity.Unit}.";
+        }
+
+        if (Terminology is not null && value is CodedValue coded && coded.CodeSystemVersionId != Terminology.CodeSystemVersionId)
+        {
+            return $"Item {Id} takes codes from code-system version {Terminology.CodeSystemVersionId}, not {coded.CodeSystemVersionId}.";
+        }
+
+        return null;
+    }
+}
 
 /// <summary>A value set from a pinned code-system version, optionally narrowed to one codelist.</summary>
 public sealed record TerminologyBinding(CodeSystemVersionId CodeSystemVersionId, string? Codelist = null);

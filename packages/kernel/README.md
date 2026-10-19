@@ -399,6 +399,11 @@ Commands in `Commands/ObservationCommands.cs`, each authorized against the obser
   (K-TX-4), and the correction reads the lock under it, so no correction commits after a lock.
 - `IObservationRecords` reads an observation with its revisions, lock and kernel audit entries.
 - Reactions (the eCRF projection, edit checks, queries, SDV) consume `ObservationCorrected` after commit.
+- The value is a typed `ObservationValue` (`Evidence/ObservationValue.cs`, ADR-2623): `quantity` (UCUM unit,
+  optional comparator), `coded` (code-system version and code), `text`, `boolean`, `dateTime` (partial ISO 8601) or
+  `missing` (null flavor and detail), with a `type` discriminator, stored as `jsonb`. `CollectionItem.Admits` checks a
+  value against the protocol's item, and `MappingInput.From` feeds it to the SDTM mapping (`--STAT`/`--REASND` for a
+  missing value).
 - Coming under #4729 (ADR-2621): `LockObservation` and `ObservationLock` give way to scoped `Locked`/`Frozen`
   Assertions with unlock, `LockApplied`/`LockReleased` events and shared scope locks; value Assertions will cite the
   revision they judged.
