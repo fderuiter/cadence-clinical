@@ -16,6 +16,7 @@ namespace Cadence.Kernel.Commands;
 /// <para><c>Method</c>: How the signer authenticated, for example the token's <c>amr</c> values (<c>pwd+otp</c>).</para>
 /// </remarks>
 [KernelCapability("attestation.sign", VerbClass.Execute, InCatalogue = false)]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record Attest(
     TenantId TenantId,
     AttestationId AttestationId,

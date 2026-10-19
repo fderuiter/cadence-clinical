@@ -15,6 +15,7 @@ namespace Cadence.Kernel.Commands;
 /// <para><c>Capabilities</c>: The capability tokens the role bundles, at least one.</para>
 /// </remarks>
 [KernelCapability("role.define", VerbClass.Approve)]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record DefineRole(
     TenantId TenantId,
     RoleId RoleId,
@@ -34,6 +35,7 @@ public sealed record DefineRole(
 /// <para><c>WithGrantOption</c>: Whether the grantee may delegate it (<see cref="DelegateGrant"/>).</para>
 /// </remarks>
 [KernelCapability("grant.issue", VerbClass.Approve)]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record IssueGrant(
     TenantId TenantId,
     GrantId GrantId,
@@ -53,6 +55,7 @@ public sealed record IssueGrant(
 /// within the parent's, and it stops authorizing as soon as the parent does.
 /// </summary>
 [KernelCapability("grant.delegate", VerbClass.Execute, Resource = nameof(ParentGrantId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record DelegateGrant(
     TenantId TenantId,
     GrantId GrantId,
@@ -73,6 +76,7 @@ public sealed record DelegateGrant(
 /// delegation it signed.
 /// </summary>
 [KernelCapability("grant.revoke", VerbClass.Approve, Resource = nameof(GrantId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RevokeGrant(
     TenantId TenantId,
     GrantId GrantId,

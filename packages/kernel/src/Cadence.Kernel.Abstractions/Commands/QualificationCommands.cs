@@ -34,6 +34,7 @@ public enum QualificationKind
 /// <para><c>ValidTo</c>: When it expires, exclusive; null when it does not.</para>
 /// </remarks>
 [KernelCapability("qualification.record", VerbClass.Execute)]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RecordQualification(
     TenantId TenantId,
     QualificationId QualificationId,
@@ -52,6 +53,7 @@ public sealed record RecordQualification(
 /// was filed in error. The earlier record stays, so decisions made while it was known remain explained by it.
 /// </summary>
 [KernelCapability("qualification.revoke", VerbClass.Approve, Resource = nameof(QualificationId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RevokeQualification(
     TenantId TenantId,
     QualificationId QualificationId,
@@ -70,6 +72,7 @@ public sealed record RevokeQualification(
 /// <para><c>ValidTo</c>: When the requirement ends, exclusive; null while open-ended.</para>
 /// </remarks>
 [KernelCapability("qualification_requirement.define", VerbClass.Approve)]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record DefineQualificationRequirement(
     TenantId TenantId,
     QualificationRequirementId RequirementId,
@@ -84,6 +87,7 @@ public sealed record DefineQualificationRequirement(
 
 /// <summary>Ends a qualification requirement at <c>EffectiveAt</c>; decisions made while it applied stay explained by it.</summary>
 [KernelCapability("qualification_requirement.retire", VerbClass.Approve, Resource = nameof(RequirementId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RetireQualificationRequirement(
     TenantId TenantId,
     QualificationRequirementId RequirementId,

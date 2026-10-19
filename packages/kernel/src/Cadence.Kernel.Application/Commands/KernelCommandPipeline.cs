@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -17,13 +19,16 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Time;
 
+using FluentValidation;
+using FluentValidation.Results;
+
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cadence.Kernel.Application.Commands;
 
 /// <summary>
-/// The kernel command pipeline (spec §5.1): validate → resolve actor (K-TX-5) → authorize (K-AUTH-1, denials
-/// audited) → idempotency (K-TX-3) → handler decides on one aggregate (K-TX-1) → one transaction for state,
+/// The kernel command pipeline (spec §5.1): pipeline-wide checks → resolve actor (K-TX-5) → the command's validators
+/// (ADR-2600 §4.4) → authorize (K-AUTH-1, denials audited) → idempotency (K-TX-3) → handler decides on one aggregate (K-TX-1) → one transaction for state,
 /// provenance, events, audit and outbox (K-TX-2).
 /// @req:PRD-SYS-053
 /// </summary>
@@ -63,6 +68,11 @@ public sealed class KernelCommandPipeline(
         if (invoker.Resolve(services) is not { } handler)
         {
             return KernelErrors.HandlerMissing.WithMessage($"No handler is registered for {commandType.Name}.");
+        }
+
+        if (Invalid(await invoker.ValidateAsync(services, command, cancellationToken).ConfigureAwait(false)) is { } fieldErrors)
+        {
+            return fieldErrors;
         }
 
         var execution = new CommandExecution(
@@ -140,6 +150,25 @@ public sealed class KernelCommandPipeline(
         return string.IsNullOrWhiteSpace(command.ReasonForChange) ? KernelErrors.ReasonForChangeRequired : null;
     }
 
+    /// <summary>
+    /// <see cref="KernelErrors.CommandInvalid"/> with the failures grouped by property, or null when there are none.
+    /// </summary>
+    private static KernelError? Invalid(IReadOnlyList<ValidationFailure> failures)
+    {
+        if (failures.Count == 0)
+        {
+            return null;
+        }
+
+        var errors = failures
+            .GroupBy(f => f.PropertyName, StringComparer.Ordinal)
+            .OrderBy(g => g.Key, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Select(f => f.ErrorMessage).Distinct(StringComparer.Ordinal).ToArray(), StringComparer.Ordinal);
+        return KernelErrors.CommandInvalid.WithMessage(
+            $"The command is not valid: {string.Join(", ", errors.Keys)}.") with
+        { Errors = errors };
+    }
+
     private static async Task<CommandResult<TResult>?> ReplayAsync<TResult>(
         IKernelCommandTransaction transaction, CommandExecution execution, CancellationToken cancellationToken)
     {
@@ -170,6 +199,9 @@ public sealed class KernelCommandPipeline(
     {
         object? Resolve(IServiceProvider services);
 
+        Task<IReadOnlyList<ValidationFailure>> ValidateAsync(
+            IServiceProvider services, ICommand<TResult> command, CancellationToken cancellationToken);
+
         Task<CommandResult<TResult>> InvokeAsync(
             object handler, ICommand<TResult> command, ICommandContext context, CancellationToken cancellationToken);
     }
@@ -179,6 +211,19 @@ public sealed class KernelCommandPipeline(
     {
         public object? Resolve(IServiceProvider services) =>
             services.GetService<ICommandHandler<TCommand, TResult>>();
+
+        public async Task<IReadOnlyList<ValidationFailure>> ValidateAsync(
+            IServiceProvider services, ICommand<TResult> command, CancellationToken cancellationToken)
+        {
+            List<ValidationFailure> failures = [];
+            foreach (var validator in services.GetServices<IValidator<TCommand>>())
+            {
+                var result = await validator.ValidateAsync((TCommand)command, cancellationToken).ConfigureAwait(false);
+                failures.AddRange(result.Errors.Where(e => e.Severity == Severity.Error));
+            }
+
+            return failures;
+        }
 
         public Task<CommandResult<TResult>> InvokeAsync(
             object handler, ICommand<TResult> command, ICommandContext context, CancellationToken cancellationToken) =>
