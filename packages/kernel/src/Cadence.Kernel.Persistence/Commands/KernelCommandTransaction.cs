@@ -23,6 +23,7 @@ using Cadence.Kernel.References;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Storage;
 
 using Npgsql;
 
@@ -37,30 +38,41 @@ internal enum CommitStage
     EventsStaged,
     AuditAppended,
     IdempotencyStaged,
+    ModuleWritten,
     Saved,
     VaultWritten,
 }
 
-/// <summary>Creates a <see cref="KernelCommandTransaction"/> with its own <see cref="KernelDbContext"/> per command.</summary>
-internal sealed class KernelUnitOfWorkFactory(KernelTenantDbContextFactory contextFactory) : IKernelUnitOfWorkFactory
+/// <summary>
+/// Creates a <see cref="KernelCommandTransaction"/> with its own <see cref="KernelDbContext"/> per command, able to open
+/// the registered module stores on the same connection (ADR-2600).
+/// </summary>
+internal sealed class KernelUnitOfWorkFactory(
+    KernelTenantDbContextFactory contextFactory,
+    IEnumerable<IModuleCommandStore> moduleStores) : IKernelUnitOfWorkFactory
 {
+    private readonly IModuleCommandStore[] _moduleStores = [.. moduleStores];
+
     /// <summary>Test hook: invoked at each <see cref="CommitStage"/>; throwing aborts the commit.</summary>
     internal Action<CommitStage>? FaultInjector { get; set; }
 
     public IKernelCommandTransaction Begin(CommandExecution execution) =>
-        new KernelCommandTransaction(contextFactory.Create(execution.Command.TenantId), execution, FaultInjector);
+        new KernelCommandTransaction(contextFactory.Create(execution.Command.TenantId), execution, FaultInjector, _moduleStores);
 }
 
 /// <summary>
 /// One command's persistence (spec §5.1): tracks its single aggregate (K-TX-1), its declared lineage inputs and its
 /// events, then writes state, provenance, lineage, events, the audit link, outbox rows, the idempotency record and any
-/// staged IdentityVault writes in one PostgreSQL transaction (K-TX-2, K-LIN-2, ADR-2458).
+/// staged IdentityVault writes in one PostgreSQL transaction (K-TX-2, K-LIN-2, ADR-2458). The aggregate may be the
+/// kernel's or a module's: a module's context is opened on this command's connection and enlisted in the same
+/// transaction, so its rows commit or roll back with the kernel's (ADR-2600).
 /// @req:PRD-SYS-053
 /// </summary>
 internal sealed class KernelCommandTransaction(
     KernelDbContext db,
     CommandExecution execution,
-    Action<CommitStage>? faultInjector) : IKernelCommandTransaction, IKernelUnitOfWork, IIdentityVaultStaging
+    Action<CommitStage>? faultInjector,
+    IReadOnlyList<IModuleCommandStore>? moduleStores = null) : IKernelCommandTransaction, IKernelUnitOfWork, IIdentityVaultStaging
 {
     private const string DecisionDeniedEvent = "DecisionDenied";
 
@@ -69,8 +81,10 @@ internal sealed class KernelCommandTransaction(
     private readonly Dictionary<NodeRef, bool> _parts = [];
     private readonly List<(NodeRef From, NodeRef To, LineageEdgeKind Kind)> _partEdges = [];
     private readonly List<IIdentityVaultWrite> _vaultWrites = [];
+    private readonly List<(IModuleCommandStore Store, ModuleDbContext Context)> _modules = [];
     private (Type Type, string Key)? _claimed;
     private long? _lockKey;
+    private bool _connectionHeld;
     private AuthorizationDecision? _permit;
 
     public IKernelUnitOfWork Work => this;
@@ -82,17 +96,19 @@ internal sealed class KernelCommandTransaction(
     {
         ArgumentNullException.ThrowIfNull(id);
         Claim(typeof(TAggregate), KeyText(id));
-        return await db.Set<TAggregate>().FindAsync([id], cancellationToken).ConfigureAwait(false);
+        var store = await StoreForAsync(typeof(TAggregate), cancellationToken).ConfigureAwait(false);
+        return await store.Set<TAggregate>().FindAsync([id], cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<bool> ExistsAsync<TAggregate>(object id, CancellationToken cancellationToken)
         where TAggregate : AggregateRootBase
     {
         ArgumentNullException.ThrowIfNull(id);
-        var found = await db.Set<TAggregate>().FindAsync([id], cancellationToken).ConfigureAwait(false);
+        var store = await StoreForAsync(typeof(TAggregate), cancellationToken).ConfigureAwait(false);
+        var found = await store.Set<TAggregate>().FindAsync([id], cancellationToken).ConfigureAwait(false);
         if (found is not null && _claimed != (typeof(TAggregate), KeyText(id)))
         {
-            db.Entry(found).State = EntityState.Detached;
+            store.Entry(found).State = EntityState.Detached;
         }
 
         return found is not null;
@@ -102,9 +118,10 @@ internal sealed class KernelCommandTransaction(
         where TAggregate : AggregateRootBase
     {
         ArgumentNullException.ThrowIfNull(id);
-        var key = db.Model.FindEntityType(typeof(TAggregate))?.FindPrimaryKey()?.Properties.Single().Name
-            ?? throw new InvalidOperationException($"{typeof(TAggregate).Name} is not a kernel aggregate.");
-        return await db.Set<TAggregate>().AsNoTracking()
+        var store = await StoreForAsync(typeof(TAggregate), cancellationToken).ConfigureAwait(false);
+        var key = store.Model.FindEntityType(typeof(TAggregate))?.FindPrimaryKey()?.Properties.Single().Name
+            ?? throw new InvalidOperationException($"{typeof(TAggregate).Name} has no single-column key.");
+        return await store.Set<TAggregate>().AsNoTracking()
             .SingleOrDefaultAsync(e => EF.Property<object>(e, key) == id, cancellationToken)
             .ConfigureAwait(false);
     }
@@ -114,7 +131,8 @@ internal sealed class KernelCommandTransaction(
         where TAggregate : AggregateRootBase
     {
         ArgumentNullException.ThrowIfNull(filter);
-        return await db.Set<TAggregate>().AsNoTracking().Where(filter).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var store = await StoreForAsync(typeof(TAggregate), cancellationToken).ConfigureAwait(false);
+        return await store.Set<TAggregate>().AsNoTracking().Where(filter).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task LockAsync<TAggregate>(object id, CancellationToken cancellationToken)
@@ -135,24 +153,15 @@ internal sealed class KernelCommandTransaction(
 
         // A session lock on a connection this command keeps open: the handler's reads, its commit and the release all run
         // on it. DisposeAsync releases the lock after the commit or failure, and Npgsql resets pooled connections anyway.
-        await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
-        try
-        {
-            await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_lock({key})", cancellationToken).ConfigureAwait(false);
-        }
-        catch
-        {
-            await db.Database.CloseConnectionAsync().ConfigureAwait(false);
-            throw;
-        }
-
+        await HoldConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_lock({key})", cancellationToken).ConfigureAwait(false);
         _lockKey = key;
     }
 
     public void Add(AggregateRootBase aggregate)
     {
         ArgumentNullException.ThrowIfNull(aggregate);
-        var entry = db.Add(aggregate);
+        var entry = StoreFor(aggregate.GetType()).Add(aggregate);
         Claim(aggregate.GetType(), KeyText(entry));
     }
 
@@ -247,6 +256,11 @@ internal sealed class KernelCommandTransaction(
 #pragma warning disable RS0030 // Kernel contexts register no retrying execution strategy (KernelDatabase.UseKernelNpgsql; KernelExecutionStrategyTests), so EF permits this transaction and the commit pipeline keeps its own conflict handling.
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
 #pragma warning restore RS0030
+        foreach (var (_, context) in _modules)
+        {
+            await context.Database.UseTransactionAsync(transaction.GetDbTransaction(), cancellationToken).ConfigureAwait(false);
+        }
+
         ChangedAggregate? aggregate = null;
         try
         {
@@ -281,6 +295,15 @@ internal sealed class KernelCommandTransaction(
                 RecordedAt = execution.RecordedAt,
             });
             Fault(CommitStage.IdempotencyStaged);
+
+            // The module's rows first: a stale version writes no row and fails the command before any kernel row.
+            foreach (var (_, context) in _modules)
+            {
+                using var moduleWrites = context.PermitCommandWrites();
+                await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            Fault(CommitStage.ModuleWritten);
 
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             Fault(CommitStage.Saved);
@@ -358,23 +381,94 @@ internal sealed class KernelCommandTransaction(
 
     public async ValueTask DisposeAsync()
     {
-        if (_lockKey is { } key)
+        try
         {
-            try
+            if (_lockKey is { } key)
             {
                 await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_unlock({key})").ConfigureAwait(false);
             }
-            catch (NpgsqlException)
+        }
+        catch (NpgsqlException)
+        {
+            // A broken connection has already lost its session locks; a healthy one is reset when it returns to the pool.
+        }
+        finally
+        {
+            foreach (var (_, context) in _modules)
             {
-                // A broken connection has already lost its session locks; a healthy one is reset when it returns to the pool.
+                await context.DisposeAsync().ConfigureAwait(false);
             }
-            finally
+
+            if (_connectionHeld)
             {
                 await db.Database.CloseConnectionAsync().ConfigureAwait(false);
             }
+
+            await db.DisposeAsync().ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Opens this command's connection and keeps it open until <see cref="DisposeAsync"/>. The kernel context opens it,
+    /// so its tenant interceptor scopes the session before a lock or any module context uses it (K-ID-2).
+    /// </summary>
+    private async Task HoldConnectionAsync(CancellationToken cancellationToken)
+    {
+        if (!_connectionHeld)
+        {
+            await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+            _connectionHeld = true;
+        }
+    }
+
+    /// <summary>The context that maps <paramref name="aggregateType"/>, with the connection held for a module's.</summary>
+    private async Task<DbContext> StoreForAsync(Type aggregateType, CancellationToken cancellationToken)
+    {
+        var store = StoreFor(aggregateType);
+        if (!ReferenceEquals(store, db))
+        {
+            await HoldConnectionAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        await db.DisposeAsync().ConfigureAwait(false);
+        return store;
+    }
+
+    /// <summary>
+    /// The context that maps <paramref name="aggregateType"/>: the kernel's, or a registered module's opened on this
+    /// command's connection (ADR-2600).
+    /// </summary>
+    private DbContext StoreFor(Type aggregateType)
+    {
+        if (db.Model.FindEntityType(aggregateType) is not null)
+        {
+            return db;
+        }
+
+        foreach (var (_, context) in _modules)
+        {
+            if (context.Model.FindEntityType(aggregateType) is not null)
+            {
+                return context;
+            }
+        }
+
+        foreach (var store in moduleStores ?? [])
+        {
+            if (_modules.Exists(m => ReferenceEquals(m.Store, store)))
+            {
+                continue;
+            }
+
+            var context = store.Create(db.Database.GetDbConnection());
+            _modules.Add((store, context));
+            if (context.Model.FindEntityType(aggregateType) is not null)
+            {
+                return context;
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"{aggregateType.Name} is mapped neither by the kernel nor by a registered module command store (ADR-2600).");
     }
 
     /// <summary>
@@ -402,7 +496,9 @@ internal sealed class KernelCommandTransaction(
     private ChangedAggregate? StampAggregate()
     {
         var changed = db.ChangeTracker.Entries<AggregateRootBase>()
-            .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+            .Select(e => (Entry: e, Module: (string?)null))
+            .Concat(_modules.SelectMany(m => m.Context.ChangeTracker.Entries<AggregateRootBase>().Select(e => (Entry: e, Module: (string?)m.Store.Module))))
+            .Where(e => e.Entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
             .ToList();
         if (changed.Count > 1)
         {
@@ -414,7 +510,7 @@ internal sealed class KernelCommandTransaction(
             return null;
         }
 
-        var entry = changed[0];
+        var (entry, module) = changed[0];
         var aggregate = entry.Entity;
         string action;
         string changes;
@@ -444,11 +540,14 @@ internal sealed class KernelCommandTransaction(
                 break;
         }
 
+        // A module aggregate is a lineage node only once its identifier type has a registered node kind (ADR-2481).
         var subject = entry.Metadata.FindPrimaryKey()?.Properties is [var key] && entry.Property(key.Name).CurrentValue is IEntityId id
+            && (module is null || NodeKinds.IdentifierTypes.Contains(id.GetType()))
             ? NodeRef.For(id, aggregate.VersionIndex)
             : null;
         var derived = entry.Metadata.ClrType.IsDefined(typeof(DerivedObjectAttribute), inherit: false);
-        return new ChangedAggregate(entry.Metadata.ClrType.Name, KeyText(entry), aggregate.VersionIndex, action, changes, subject, derived);
+        var type = module is null ? entry.Metadata.ClrType.Name : $"{module}.{entry.Metadata.ClrType.Name}";
+        return new ChangedAggregate(type, KeyText(entry), aggregate.VersionIndex, action, changes, subject, derived);
     }
 
     private static SortedDictionary<string, object?> Snapshot(EntityEntry entry, bool modifiedOnly, bool original)

@@ -21,7 +21,7 @@ Dependencies point inward only (spec §2.4, enforced by `tests/Cadence.Architect
 
 - `Cadence.Kernel.Abstractions`: strongly-typed UUIDv7 IDs (`TenantId`, `StudyId`, `ParticipantId`, …), `IClock`, serialization contexts, and the command contracts (`ICommand<T>`, `IKernelCommandSender`, `Actor`, `KernelErrors`, event records). No EF Core, ASP.NET Core or rendering. Application modules reference only this assembly and `Cadence.Kernel.Modules` (K-XS-2).
 - `Cadence.Kernel.Domain`: kernel aggregates, state machines and temporal logic. Pure: no EF Core, ASP.NET Core or Npgsql.
-- `Cadence.Kernel.Modules`: the module SDK ([ADR-2600](../../docs/adr/2026-10-19-modules-write-through-the-kernel-command-path.md)). The command handler contracts kernel and module handlers share (`ICommandHandler<TCommand, TResult>`, `ICommandContext`, `IKernelUnitOfWork`) and `AddCommandHandler<TCommand, TResult, THandler>()`. A module writes clinical state by implementing a handler and sending its command through `IKernelCommandSender`.
+- `Cadence.Kernel.Modules`: the module SDK ([ADR-2600](../../docs/adr/2026-10-19-modules-write-through-the-kernel-command-path.md)). The command handler contracts kernel and module handlers share (`ICommandHandler<TCommand, TResult>`, `ICommandContext`, `IKernelUnitOfWork`) and `AddCommandHandler<TCommand, TResult, THandler>()`; `ModuleDbContext`, `AddModuleCommandStore<TContext>()` and `ModuleTenantIsolationSql` for a module's own records. A module writes clinical state by implementing a handler and sending its command through `IKernelCommandSender`.
 - `Cadence.Kernel.Application`: the command pipeline (`KernelCommandPipeline`), its ports (`ICurrentActor`, `IAuthorizer`, `IKernelUnitOfWorkFactory`) and the kernel's command handlers, and the authority evaluator (`AuthorityEvaluator`, ADR-2455).
 - `Cadence.Kernel.Persistence`: `KernelDbContext` over the single `kernel` schema (ADR-2247), ID value converters, tenant-scoped contexts and Row-Level Security (`Tenancy/`), the per-command unit of work and audit chain (`KernelCommandTransaction`, `KernelAuditChainVerifier`), `KernelDatabase` (migrate, grant the app role) and migrations. Referenced only by `Cadence.Kernel.Api` and the host ([apps/kernel-api](../../apps/kernel-api/README.md)).
 - `Cadence.Kernel.Api`: Minimal API route group (`/api/v1/kernel`) that slices add endpoints to, and the read endpoints for the Clinical Canvas (`KernelReadEndpoints`: nodes, zoom path, children, command catalogue, CanI, search, protocol versions; `KernelLineageEndpoints`: Trace, dependents, amendment impact; `KernelActivityEndpoints`: the activity stream) behind `KernelTenantFilter`, which resolves the caller's kernel tenant through the host's `IKernelTenantResolver`, with every returned object masked through the host's `INodeVisibility` ([ADR-2540](../../docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md)). The host is [apps/kernel-api](../../apps/kernel-api/README.md).
@@ -319,6 +319,20 @@ To add a command:
    inputs with `LinkInput` (see [Lineage](#lineage-adr-2471)), return a `CommandResult`. Never save.
 3. Register the handler in `AddKernelCommandPipeline()`.
 4. Test it through the pipeline in `tests/Cadence.IntegrationTests/Kernel` (see `KernelCommandPipelinePostgresTests`).
+
+A module writes its own records through the same pipeline (ADR-2600):
+
+1. Derive the module's context from `ModuleDbContext` and map each aggregate with `HasCommandAuditColumns()`, which
+   makes `VersionIndex` the concurrency token. The context refuses `SaveChanges` for audited records outside a command.
+2. In the module's migration, give each tenant-scoped table a `tenant_id` column and apply
+   `ModuleTenantIsolationSql.EnableForTenantColumn(schema, table)`, the same forced RLS policy as kernel tables.
+3. Register `AddModuleCommandStore<TContext>("module_name", options => new TContext(options))` and each handler with
+   `AddCommandHandler<TCommand, TResult, THandler>()`. The context must not enable a retrying execution strategy.
+4. The handler uses `context.Work` exactly as a kernel handler does. At commit the pipeline opens the module context on
+   the command's tenant-scoped connection, enlists it in the kernel transaction, stamps the audit fields, writes the
+   module row with the version check and audits it on the tenant's chain as `module_name.TypeName`. A stale version
+   fails with `K.Aggregate.ConcurrencyConflict`; any failure rolls back the module row with every kernel row.
+   `ModuleCommandPathPostgresTests` shows a complete test module.
 
 A host registers `AddKernelPersistence(appRoleConnectionString)`, `AddKernelCommandPipeline()`, an `IClock`, an
 `ICurrentActor`, an `IAuthorizer`, an `INodeVisibility` and logging; the container fails to resolve the sender or the
