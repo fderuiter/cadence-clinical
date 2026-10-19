@@ -12,6 +12,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\compliance\src\Cadence.Compliance.csproj" />
     <ProjectReference Include="..\..\deid\src\Cadence.Deid.csproj" />
+    <ProjectReference Include="..\..\topology\src\Cadence.Topology.csproj" />
   </ItemGroup>
 
   <ItemGroup>

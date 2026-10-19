@@ -8,6 +8,8 @@ using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.JavaScript;
 using Aspire.Hosting.Testing;
 
+using Cadence.Topology;
+
 using FluentAssertions;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -24,30 +26,14 @@ namespace Cadence.UnitTests.AppHost;
 /// </summary>
 public sealed class AppHostModelTests
 {
-    private static readonly Dictionary<string, int> ServicePorts = new(StringComparer.Ordinal)
-    {
-        ["gateway"] = 8000,
-        ["designer"] = 8001,
-        ["execution"] = 8002,
-        ["etmf"] = 8003,
-        ["interop"] = 8004,
-        ["quality"] = 8005,
-        ["notifications"] = 8006,
-        ["ctms"] = 8007,
-        ["safety"] = 8008,
-        ["tickets"] = 8009,
-        ["eisf"] = 8010,
-        ["econsent"] = 8011,
-        ["org"] = 8012,
-        ["fileshare"] = 8013,
-        ["imaging"] = 8014,
-        ["knowledge"] = 8015,
-        ["payments"] = 8016,
-        ["ai-gateway"] = 8017,
-        ["kernel"] = 8018,
-    };
+    // From the topology manifest; ServiceTopologyTests pins the manifest to docker compose and the docs.
+    private static readonly Dictionary<string, int> ServicePorts = ServiceTopology.Services
+        .ToDictionary(s => s.Name, s => s.Port, StringComparer.Ordinal)
+        .Append(new KeyValuePair<string, int>("gateway", ServiceTopology.GatewayPort))
+        .ToDictionary(StringComparer.Ordinal);
 
-    private static readonly string[] WithoutDatabase = ["gateway", "designer", "ai-gateway"];
+    private static readonly string[] WithoutDatabase =
+        ["gateway", .. ServiceTopology.Services.Where(s => !s.Database).Select(s => s.Name)];
 
     [Fact]
     public async Task EveryService_IsAProjectOnItsComposePort()
@@ -93,10 +79,7 @@ public sealed class AppHostModelTests
         var variables = await EnvironmentNamesAsync(projects["gateway"]);
 
         variables.Should().Contain("OIDC_AUTHORITY").And.Contain("OIDC_AUDIENCE");
-        foreach (string service in ServicePorts.Keys.Where(s => s != "gateway"))
-        {
-            variables.Should().Contain($"{service.Replace('-', '_').ToUpperInvariant()}_SERVICE_URL");
-        }
+        variables.Should().Contain(ServiceTopology.Services.Select(s => s.UrlVariable));
     }
 
     [Fact]
@@ -127,7 +110,7 @@ public sealed class AppHostModelTests
         var resources = await ResourcesAsync("--AppHost:Profile=core");
         var projects = resources.Values.OfType<ProjectResource>().ToDictionary(p => p.Name, StringComparer.Ordinal);
 
-        projects.Keys.Should().BeEquivalentTo("gateway", "execution", "kernel");
+        projects.Keys.Should().BeEquivalentTo(["gateway", .. ServiceTopology.Services.Where(s => s.Core).Select(s => s.Name)]);
         resources.Should().ContainKey("web");
         resources.Should().NotContainKey("subject-portal");
         resources.Should().NotContainKey("minio");
@@ -141,9 +124,9 @@ public sealed class AppHostModelTests
         var gateway = await EnvironmentAsync(projects["gateway"]);
         gateway["EXECUTION_SERVICE_URL"].Should().BeOfType<EndpointReference>();
         gateway["KERNEL_SERVICE_URL"].Should().BeOfType<EndpointReference>();
-        foreach (string service in ServicePorts.Keys.Except(["gateway", "execution", "kernel"]))
+        foreach (var service in ServiceTopology.Services.Where(s => !s.Core))
         {
-            gateway[$"{service.Replace('-', '_').ToUpperInvariant()}_SERVICE_URL"].Should().Be($"http://localhost:{ServicePorts[service]}", service);
+            gateway[service.UrlVariable].Should().Be($"http://localhost:{service.Port}", service.Name);
         }
         (await EnvironmentAsync(projects["execution"])).Keys
             .Should().Contain(["GATEWAY_SECRET", "AUDIT_LOG_SECRET_KEY", "ConnectionStrings__cadence", "DemographicsEncryption__KeyBase64"]);
