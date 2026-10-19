@@ -148,6 +148,10 @@ services:
       ]
     volumes:
       - ..:/app
+    environment:
+      # The portal's dev server proxies /api to the gateway inside the compose network; the browser calls :5174 only
+      # (#5451).
+      CADENCE_GATEWAY_URL: http://front-proxy:8000
     ports:
       - "5174:5174"
     depends_on:
