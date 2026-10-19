@@ -19,7 +19,8 @@
 
   <ItemGroup>
     <PackageReference Include="FluentValidation" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <!-- PrivateAssets keeps its OpenAPI XML-comment source generator out of the kernel assemblies that reference the SDK. -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" PrivateAssets="all" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
   </ItemGroup>
