@@ -48,6 +48,9 @@ routes answer as the service being down.
   (`Database__MigrateOnStartup=true`), as in docker compose. Each project has a health check on
   `/healthz/ready` (the gateway on `/healthz/live`), shown in the dashboard.
 - The gateway receives every `*_SERVICE_URL` from the service endpoints above.
+- The kernel runs in the AppHost's environment (`ASPNETCORE_ENVIRONMENT`; project resources do not inherit it), and in
+  Development it gets `Kernel__DevelopmentTenant__Code=cadence-local`, so it provisions the tenant the local realm's
+  users sign in with (ADR-2514, ADR-2542) and the Canvas's kernel reads are served on a fresh database.
 
 Aspire sets `OTEL_EXPORTER_OTLP_ENDPOINT` on each project; [packages/telemetry](../../packages/telemetry/README.md) enables OTLP export when that variable is present, so service telemetry reaches the dashboard.
 

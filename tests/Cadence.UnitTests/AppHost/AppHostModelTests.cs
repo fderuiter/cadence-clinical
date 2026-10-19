@@ -145,6 +145,20 @@ public sealed class AppHostModelTests
         (await EnvironmentAsync(resources["kernel"])).Keys.Should().Contain("ConnectionStrings__cadence");
     }
 
+    /// <summary>
+    /// The kernel host provisions the tenant the local realm's users sign in with (ADR-2514, ADR-2542), so the Canvas's
+    /// kernel reads are served instead of refused as "not an active kernel tenant" (#5430).
+    /// </summary>
+    [Fact]
+    public async Task Kernel_ProvisionsTheLocalRealmsTenant()
+    {
+        var resources = await ResourcesAsync("--AppHost:Profile=core");
+
+        var kernel = await EnvironmentAsync(resources["kernel"]);
+        kernel["ASPNETCORE_ENVIRONMENT"].Should().Be("Development", "the bootstrap refuses to run in any other environment");
+        kernel["Kernel__DevelopmentTenant__Code"].Should().Be("cadence-local");
+    }
+
     [Fact]
     public async Task ExistingOidcAuthority_ReplacesTheKeycloakContainer()
     {

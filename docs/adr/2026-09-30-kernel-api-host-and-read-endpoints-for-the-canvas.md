@@ -84,20 +84,20 @@ evaluator existed every decision was a denial that named it, and until visibilit
 
 All are `GET`, all under `/api/v1/kernel`, all answer problem details on failure, and none sends a command.
 
-| Endpoint | Answers |
-| --- | --- |
-| `nodes/{nodeRef}` | The object's summary: ref at its current version, kind, title, code, status. 404 outside the tenant. |
-| `nodes/{nodeRef}/path` | The zoom path from the tenant down to the object, with grouping levels. Presentation only. |
-| `nodes/{nodeRef}/children` | The object's zoom children with their own child counts and grouping level. A node the caller may not see is refused with 403 (#5033). |
-| `nodes/{nodeRef}/commands` | Every kernel command offered on the object's kind, each with the caller's dry-run decision and explanation. |
-| `authorization/can-i?capability=&resource=` | The caller's dry-run decision on one capability and object, with its explanation. |
-| `search?q=&kind=&limit=` | Search hits (limit 1 to 50, default 20). |
-| `studies/{studyRef}/protocol-versions` | The study's protocol versions, newest first, without content: number, parent, status, content hash, amendment intent, approving attestation, withdrawal reason. |
-| `protocol-versions/{versionRef}` | One protocol version, the same way. |
-| `nodes/{nodeRef}/lineage?direction=&depth=&edge_kind=&valid_at=&known_at=` | Trace: the lineage walk from the object, backward (default) or forward, with every object reached and every edge followed (ADR-2471). |
-| `nodes/{nodeRef}/dependents?depth=&edge_kind=&valid_at=&known_at=` | Impact: what depends on the object, grouped by kind with counts (Canvas D2). |
-| `protocol-versions/{versionRef}/impact?depth=&valid_at=&known_at=` | Amendment impact (K-PROT-2): the dependents of the version the amendment changes, with the elements it declares it changes. A first version is a 400; it amends nothing. |
-| `activity?scope=&family=&actor=&from=&before=&limit=` | The activity stream (ADR-2485): what happened in a scope, newest first, with an opaque `next` cursor (§4.7). |
+| Endpoint                                                                   | Answers                                                                                                                                                                  |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `nodes/{nodeRef}`                                                          | The object's summary: ref at its current version, kind, title, code, status. 404 outside the tenant.                                                                     |
+| `nodes/{nodeRef}/path`                                                     | The zoom path from the tenant down to the object, with grouping levels. Presentation only.                                                                               |
+| `nodes/{nodeRef}/children`                                                 | The object's zoom children with their own child counts and grouping level. A node the caller may not see is refused with 403 (#5033).                                    |
+| `nodes/{nodeRef}/commands`                                                 | Every kernel command offered on the object's kind, each with the caller's dry-run decision and explanation.                                                              |
+| `authorization/can-i?capability=&resource=`                                | The caller's dry-run decision on one capability and object, with its explanation.                                                                                        |
+| `search?q=&kind=&limit=`                                                   | Search hits (limit 1 to 50, default 20).                                                                                                                                 |
+| `studies/{studyRef}/protocol-versions`                                     | The study's protocol versions, newest first, without content: number, parent, status, content hash, amendment intent, approving attestation, withdrawal reason.          |
+| `protocol-versions/{versionRef}`                                           | One protocol version, the same way.                                                                                                                                      |
+| `nodes/{nodeRef}/lineage?direction=&depth=&edge_kind=&valid_at=&known_at=` | Trace: the lineage walk from the object, backward (default) or forward, with every object reached and every edge followed (ADR-2471).                                    |
+| `nodes/{nodeRef}/dependents?depth=&edge_kind=&valid_at=&known_at=`         | Impact: what depends on the object, grouped by kind with counts (Canvas D2).                                                                                             |
+| `protocol-versions/{versionRef}/impact?depth=&valid_at=&known_at=`         | Amendment impact (K-PROT-2): the dependents of the version the amendment changes, with the elements it declares it changes. A first version is a 400; it amends nothing. |
+| `activity?scope=&family=&actor=&from=&before=&limit=`                      | The activity stream (ADR-2485): what happened in a scope, newest first, with an opaque `next` cursor (§4.7).                                                             |
 
 - NodeRefs travel as their canonical strings (`kind:id@version`); a malformed one, or one of the wrong kind for the
   endpoint, is a 400.
@@ -128,7 +128,8 @@ shipped, the resolver answered 503 for every read.
 The host registers the kernel's `KernelAuthorization` unchanged, over the kernel's `AuthorityEvaluator`
 (`AddKernelAuthorityEvaluator`, ADR-2455): a decision is a permit when a grant or delegation the caller holds, in effect
 now, carries the capability and covers the resource, and otherwise a denial whose unmet condition is `grant.active`.
-The host only reads and never provisions a tenant, so it names no platform operators.
+The host only reads and never provisions a tenant, so it names no platform operators. [ADR-2542](2026-10-19-the-kernel-host-provisions-the-development-tenant.md) amends this: in Development, a
+host configured with `Kernel:DevelopmentTenant:Code` provisions that one tenant on start, as its only platform operator.
 
 The actor is the person named by the verified subject. A subject the kernel does not accept as an accountable person
 (a reserved id such as `system`, or a service or agent id) gives the request no actor, so every dry run denies it with
