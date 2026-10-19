@@ -13,7 +13,7 @@
 
 | Setting                     | Values                                                     | Effect                                                                                                                                                                 |
 | --------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AppHost:Profile`           | `full` (default), `core`                                   | `core` runs the gateway, the kernel API host, execution and the web app. `full` adds the other 15 services and MinIO.                                                  |
+| `AppHost:Profile`           | `full` (default), `core`                                   | `core` runs the gateway, the kernel API host, execution and the web app. `full` adds the other 15 services, MinIO and the subject portal.                              |
 | `ConnectionStrings:cadence` | an Npgsql connection string                                | Use this existing database instead of starting the PostgreSQL container. The services apply their migrations to it.                                                    |
 | `AppHost:OidcAuthority`     | a Keycloak realm URL, `http(s)://host:port/realms/<realm>` | Use this issuer for the gateway and the web app instead of starting the Keycloak container. The realm needs the `cadence-web` client from `docker/cadence-realm.json`. |
 
@@ -30,6 +30,10 @@ routes answer as the service being down.
 - `web`: the Clinical Canvas Vite dev server on `http://localhost:3000/cadence-clinical/`, the redirect URI the
   `cadence-web` Keycloak client allows. It gets `VITE_API_BASE_URL` (the gateway) and the `VITE_KEYCLOAK_*`
   settings. Run `pnpm install` at the repository root first; the AppHost does not install packages.
+- `subject-portal`: the participant portal's Vite dev server on `http://localhost:5174/subject-portal/`, as in docker
+  compose, in the `full` profile only (it calls interop and payments). It gets the same `VITE_API_BASE_URL` and
+  `VITE_KEYCLOAK_*` settings as `web`. Keycloak sign-in does not work there yet: the realm's `cadence-web` client
+  allows only the web app's redirect URI.
 - Projects, each on the host port docker compose publishes it on, so the gateway's Development defaults and the
   web apps' `VITE_API_BASE_URL=http://localhost:8000` work for both (`core` runs 8000, 8002 and 8018):
 

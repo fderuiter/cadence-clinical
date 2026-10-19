@@ -1,0 +1,107 @@
+<template>
+  <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
+  <div
+    id="portal-sign-modal"
+    class="modal-overlay"
+    style="display: none"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="portal-modal-title"
+    tabindex="-1"
+    @keydown="handleModalKeyDown"
+  >
+    <div class="modal">
+      <form id="sign-modal-form" @submit.prevent>
+        <div id="portal-modal-title" class="modal-header">
+          Electronic Signature Required
+        </div>
+        <div class="modal-body">
+          <p>
+            To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>,
+            you must provide your electronic signature credentials and declare
+            your change reason or completion affirmation.
+          </p>
+          <!-- Accessible modal live error region -->
+          <div
+            id="modal-error-banner"
+            style="
+              display: none;
+              padding: 8px;
+              border-radius: 4px;
+              background-color: var(--semantic-color-error-bg);
+              color: var(--semantic-color-error);
+              margin-bottom: 12px;
+              font-size: 13px;
+              font-weight: 600;
+            "
+            role="status"
+            aria-live="polite"
+          />
+
+          <div class="form-group mb-12">
+            <label for="sign-reason">Reason for Action / Declaration</label>
+            <select id="sign-reason">
+              <option value="Initial Questionnaire Completion">
+                Initial Questionnaire Completion
+              </option>
+              <option value="Correction of previous entry">
+                Correction of previous entry
+              </option>
+              <option value="Requested update by study coordinator">
+                Requested update by study coordinator
+              </option>
+              <option value="Acknowledge important reminder">
+                Acknowledge important reminder
+              </option>
+              <option value="Other">Other (specify below)</option>
+            </select>
+          </div>
+          <div class="form-group mb-12">
+            <label for="sign-reason-custom"
+              >Custom Reason Detail (Optional)</label
+            >
+            <textarea
+              id="sign-reason-custom"
+              placeholder="Provide extra detail if 'Other' selected..."
+            />
+          </div>
+          <div class="form-group mb-12">
+            <label for="sign-username">User ID / Username</label>
+            <input
+              id="sign-username"
+              type="text"
+              placeholder="Enter your participant identifier..."
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="sign-password">Security PIN / Password</label>
+            <input
+              id="sign-password"
+              type="password"
+              inputmode="numeric"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-modal-cancel" type="button" class="btn btn-secondary">
+            Cancel
+          </button>
+          <button id="btn-modal-sign" type="submit" class="btn btn-primary">
+            Sign and Confirm
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { trapTabKey } from "./focus-trap.js";
+
+function handleModalKeyDown(e) {
+  trapTabKey(e, "portal-sign-modal", ["input", "select", "textarea", "button"]);
+}
+</script>
