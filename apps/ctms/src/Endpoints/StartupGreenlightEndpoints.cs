@@ -45,6 +45,7 @@ public static class StartupGreenlightEndpoints
             .RequirePermission(ReadPermission)
             .RequireSiteScope("siteId")
             .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Evaluates 6-facet greenlight readiness for a single trial site.")
             .Produces<SiteGreenlightGateResponseDto>(StatusCodes.Status200OK);
 
@@ -55,14 +56,16 @@ public static class StartupGreenlightEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Certifies greenlight activation for a single trial site, issuing an HMAC-SHA256 token.")
             .Produces<SiteGreenlightGateResponseDto>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         startup.MapGet("/matrix", GetCountryMatrixAsync)
             .WithName("GetCountryGreenlightMatrix")
             .RequirePermission(ReadPermission)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Displays country-level matrix showing 6-facet greenlight readiness for all sites in a selected country.")
-            .Produces<List<SiteGreenlightGateResponseDto>>(StatusCodes.Status200OK);
+            .Produces<List<SiteGreenlightGateResponseDto>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
 
         startup.MapPost("/matrix/batch-certify", BatchCertifyCountrySitesAsync)
             .WithName("BatchCertifyCountrySites")
@@ -90,6 +93,18 @@ public static class StartupGreenlightEndpoints
             detail: "You are not assigned to this study.",
             statusCode: StatusCodes.Status403Forbidden);
 
+    private static ProblemHttpResult StudyRequired() =>
+        TypedResults.Problem(
+            title: "Study required",
+            detail: "Name the study (study_id); there is no default study.",
+            statusCode: StatusCodes.Status400BadRequest);
+
+    private static ProblemHttpResult NoGate(string siteId, string studyId) =>
+        TypedResults.Problem(
+            title: "No greenlight gate",
+            detail: $"No greenlight gate is recorded for site {siteId} in study {studyId}.",
+            statusCode: StatusCodes.Status404NotFound);
+
     public static async Task<Results<Ok<SiteGreenlightGateResponseDto>, ProblemHttpResult>> GetSiteGreenlightAsync(
         string siteId,
         [FromQuery(Name = "study_id")] string studyId,
@@ -103,9 +118,9 @@ public static class StartupGreenlightEndpoints
             return OutsideStudy();
         }
 
-        countryCode = (countryCode ?? "US").ToUpperInvariant();
-        var gate = await GetOrCreateGateAsync(db, studyId, siteId, countryCode, ct);
-        return TypedResults.Ok(ToResponseDto(gate));
+        // A site without a recorded gate has no readiness evidence; nothing is invented for it (#5433).
+        var gate = await FindGateAsync(db.CtmsSiteGreenlightGates.AsNoTracking(), studyId, siteId, countryCode, ct);
+        return gate is null ? NoGate(siteId, studyId) : TypedResults.Ok(ToResponseDto(gate));
     }
 
     public static async Task<Results<Ok<SiteGreenlightGateResponseDto>, BadRequest<ProblemDetails>, ProblemHttpResult>> CertifySiteGreenlightAsync(
@@ -124,8 +139,11 @@ public static class StartupGreenlightEndpoints
             return OutsideStudy();
         }
 
-        countryCode = (countryCode ?? "US").ToUpperInvariant();
-        var gate = await GetOrCreateGateAsync(db, studyId, siteId, countryCode, ct);
+        var gate = await FindGateAsync(db.CtmsSiteGreenlightGates, studyId, siteId, countryCode, ct);
+        if (gate is null)
+        {
+            return NoGate(siteId, studyId);
+        }
 
         if (!IsFullyCompliant(gate))
         {
@@ -174,24 +192,23 @@ public static class StartupGreenlightEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(studyId))
+        {
+            return StudyRequired();
+        }
+
         countryCode = (countryCode ?? "US").ToUpperInvariant();
-        studyId = string.IsNullOrWhiteSpace(studyId) ? "PROTOCOL-2026-01" : studyId;
         if (!CallerScope.CanAccessStudy(httpContext, studyId))
         {
             return OutsideStudy();
         }
 
+        // Reads only: a study and country with no recorded gates is an empty matrix (#5433).
         var gates = await db.CtmsSiteGreenlightGates
             .AsNoTracking()
             .Where(g => g.StudyId == studyId && g.CountryCode == countryCode)
+            .OrderBy(g => g.SiteId)
             .ToListAsync(ct);
-
-        if (gates.Count == 0)
-        {
-            gates = SeedCountryGates(studyId, countryCode);
-            db.CtmsSiteGreenlightGates.AddRange(gates);
-            await db.SaveChangesAsync(ct);
-        }
 
         var responseDtos = gates.Select(ToResponseDto).ToList();
         return TypedResults.Ok(responseDtos);
@@ -216,14 +233,20 @@ public static class StartupGreenlightEndpoints
             });
         }
 
+        if (string.IsNullOrWhiteSpace(request.StudyId))
+        {
+            return StudyRequired();
+        }
+
         string countryCode = (request.CountryCode ?? "US").ToUpperInvariant();
-        string studyId = string.IsNullOrWhiteSpace(request.StudyId) ? "PROTOCOL-2026-01" : request.StudyId;
+        string studyId = request.StudyId;
+        var siteIds = request.SiteIds.Distinct(StringComparer.Ordinal).ToList();
         if (!CallerScope.CanAccessStudy(httpContext, studyId))
         {
             return OutsideStudy();
         }
 
-        var outsideSites = request.SiteIds
+        var outsideSites = siteIds
             .Where(site => !SiteAccessEvaluator.CanAccessSite(CallerScope.Principal(httpContext), site))
             .ToList();
         if (outsideSites.Count > 0)
@@ -235,16 +258,19 @@ public static class StartupGreenlightEndpoints
         }
 
         var gates = await db.CtmsSiteGreenlightGates
-            .Where(g => g.StudyId == studyId && g.CountryCode == countryCode && request.SiteIds.Contains(g.SiteId))
+            .Where(g => g.StudyId == studyId && g.CountryCode == countryCode && siteIds.Contains(g.SiteId))
             .ToListAsync(ct);
 
-        if (gates.Count == 0)
+        // Only sites with a recorded gate in this study and country can be certified; nothing is invented (#5433).
+        var unknownSites = siteIds.Except(gates.Select(g => g.SiteId), StringComparer.Ordinal).ToList();
+        if (unknownSites.Count > 0)
         {
-            var seedGates = SeedCountryGates(studyId, countryCode);
-            db.CtmsSiteGreenlightGates.AddRange(seedGates);
-            await db.SaveChangesAsync(ct);
-
-            gates = seedGates.Where(g => request.SiteIds.Contains(g.SiteId)).ToList();
+            return TypedResults.BadRequest(new ProblemDetails
+            {
+                Title = "Unknown Sites",
+                Detail = $"No greenlight gate is recorded in study {studyId} ({countryCode}) for: {string.Join(", ", unknownSites)}. Nothing was certified.",
+                Status = StatusCodes.Status400BadRequest
+            });
         }
 
         var nonCompliantSites = gates.Where(g => !IsFullyCompliant(g)).Select(g => g.SiteId).ToList();
@@ -369,76 +395,17 @@ public static class StartupGreenlightEndpoints
         );
     }
 
-    private static async Task<CtmsSiteGreenlightGate> GetOrCreateGateAsync(
-        CtmsDbContext db, string studyId, string siteId, string countryCode, CancellationToken ct)
+    private static Task<CtmsSiteGreenlightGate?> FindGateAsync(
+        IQueryable<CtmsSiteGreenlightGate> gates, string studyId, string siteId, string? countryCode, CancellationToken ct)
     {
-        var gate = await db.CtmsSiteGreenlightGates
-            .FirstOrDefaultAsync(g => g.StudyId == studyId && g.SiteId == siteId, ct);
-
-        if (gate == null)
+        var query = gates.Where(g => g.StudyId == studyId && g.SiteId == siteId);
+        if (!string.IsNullOrWhiteSpace(countryCode))
         {
-            gate = new CtmsSiteGreenlightGate
-            {
-                StudyId = studyId,
-                SiteId = siteId,
-                SiteName = $"Site {siteId}",
-                CountryCode = countryCode,
-                OverallStatus = "PENDING",
-                ReadinessPercentage = 100,
-                FacetRegulatoryIrb = true,
-                FacetCtaBudget = true,
-                FacetEisfBaseline = true,
-                FacetDoaLog = true,
-                FacetStaffTraining = true,
-                FacetIpRelease = true,
-                CreatedBy = "svc:site-startup-engine",
-                ReasonForChange = "Initial greenlight gate creation"
-            };
-            db.CtmsSiteGreenlightGates.Add(gate);
-            await db.SaveChangesAsync(ct);
+            string country = countryCode.ToUpperInvariant();
+            query = query.Where(g => g.CountryCode == country);
         }
 
-        return gate;
-    }
-
-    private static List<CtmsSiteGreenlightGate> SeedCountryGates(string studyId, string countryCode)
-    {
-        var list = new List<CtmsSiteGreenlightGate>();
-        string prefix = countryCode.ToUpper() switch
-        {
-            "DE" => "SITE-20",
-            "US" => "SITE-10",
-            "JP" => "SITE-30",
-            "GB" => "SITE-40",
-            _ => "SITE-50"
-        };
-
-        // Create 6 sites: 4 fully compliant (100%), 2 non-compliant (exceptions)
-        for (int i = 1; i <= 6; i++)
-        {
-            string sId = $"{prefix}{i}";
-            bool isCompliant = (i <= 4);
-
-            list.Add(new CtmsSiteGreenlightGate
-            {
-                StudyId = studyId,
-                SiteId = sId,
-                SiteName = $"{countryCode} Clinical Trial Site {i}",
-                CountryCode = countryCode,
-                OverallStatus = "PENDING",
-                ReadinessPercentage = isCompliant ? 100 : 67,
-                FacetRegulatoryIrb = true,
-                FacetCtaBudget = true,
-                FacetEisfBaseline = true,
-                FacetDoaLog = isCompliant,
-                FacetStaffTraining = true,
-                FacetIpRelease = isCompliant,
-                CreatedBy = "svc:site-startup-engine",
-                ReasonForChange = "Seed country matrix sites"
-            });
-        }
-
-        return list;
+        return query.FirstOrDefaultAsync(ct);
     }
 }
 

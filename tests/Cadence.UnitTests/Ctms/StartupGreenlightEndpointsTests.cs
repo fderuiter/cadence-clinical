@@ -26,6 +26,8 @@ namespace Cadence.UnitTests.Ctms;
 
 public sealed class StartupGreenlightEndpointsTests
 {
+    private const string Study = "PROTOCOL-2026-01";
+
     private readonly CtmsDbContext _db;
     private readonly FakeClock _clock;
     private readonly IConfiguration _config;
@@ -47,24 +49,121 @@ public sealed class StartupGreenlightEndpointsTests
     }
 
     /// <summary>
-    /// Verifies that country matrix endpoint returns 6-facet readiness for all sites in a target country.
+    /// Verifies that country matrix endpoint returns 6-facet readiness for the recorded sites in a target country.
     /// </summary>
     [Fact]
     [GxPRequirement("PRD-SSU-001")]
-    public async Task GetCountryMatrix_ReturnsSixFacetReadinessForAllSites()
+    public async Task GetCountryMatrix_ReturnsSixFacetReadinessForRecordedSites()
     {
-        // Act
+        await AddGatesAsync(("SITE-DE-2", "DE", false), ("SITE-DE-1", "DE", true), ("SITE-GB-1", "GB", true));
+
         var dtos = await MatrixAsync("DE");
 
-        // Assert
-        dtos.Should().NotBeNull();
-        dtos!.Count.Should().Be(6);
+        dtos.Select(d => d.SiteId).Should().Equal("SITE-DE-1", "SITE-DE-2");
+        dtos[0].IsCompliant.Should().BeTrue();
+        dtos[0].ReadinessPercentage.Should().Be(100);
+        dtos[1].IsCompliant.Should().BeFalse();
+        dtos[1].ReadinessPercentage.Should().Be(67);
+        dtos[1].UnfulfilledReasons.Should().Equal("Pending Delegation of Authority Log", "Pending Investigational Product Depot Release");
+    }
 
-        var firstSite = dtos[0];
-        firstSite.CountryCode.Should().Be("DE");
-        firstSite.StudyId.Should().Be("PROTOCOL-2026-01");
-        firstSite.ReadinessPercentage.Should().BeInRange(0, 100);
-        firstSite.UnfulfilledReasons.Should().NotBeNull();
+    /// <summary>
+    /// A study and country with no recorded gates is an empty matrix, and reading it writes nothing (#5433).
+    /// </summary>
+    [Fact]
+    public async Task GetCountryMatrix_OnAnEmptyStudy_ReturnsNothingAndWritesNothing()
+    {
+        var dtos = await MatrixAsync("DE");
+
+        dtos.Should().BeEmpty();
+        (await _db.CtmsSiteGreenlightGates.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+    }
+
+    /// <summary>
+    /// The matrix has no default study: a request without one is refused (#5433).
+    /// </summary>
+    [Fact]
+    public async Task GetCountryMatrix_WithoutAStudy_IsRefused()
+    {
+        var result = await StartupGreenlightEndpoints.GetCountryMatrixAsync(" ", "US", _db, Caller(), TestContext.Current.CancellationToken);
+
+        result.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+    }
+
+    /// <summary>
+    /// Reading or certifying a site with no recorded gate answers 404 and invents no gate or token (#5433).
+    /// </summary>
+    [Fact]
+    public async Task SiteGreenlight_WithNoRecordedGate_IsNotFoundAndWritesNothing()
+    {
+        var read = await StartupGreenlightEndpoints.GetSiteGreenlightAsync(
+            "SITE-NEW", Study, "US", _db, Caller(), TestContext.Current.CancellationToken);
+        var certify = await StartupGreenlightEndpoints.CertifySiteGreenlightAsync(
+            "SITE-NEW", Study, "US", "Certify", _db, Caller(), _clock, _config, TestContext.Current.CancellationToken);
+
+        read.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+        certify.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+        (await _db.CtmsSiteGreenlightGates.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+        (await _db.CtmsAuditLogs.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+    }
+
+    /// <summary>
+    /// A recorded, fully compliant gate is certified with a token and an audit entry naming the signed caller.
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-SSU-003")]
+    public async Task CertifySite_WithACompliantRecordedGate_IssuesATokenSignedByTheCaller()
+    {
+        await AddGatesAsync(("SITE-US-1", "US", true));
+
+        var result = await StartupGreenlightEndpoints.CertifySiteGreenlightAsync(
+            "SITE-US-1", Study, "US", "Certify", _db, Caller(), _clock, _config, TestContext.Current.CancellationToken);
+
+        var dto = result.Result.Should().BeOfType<Ok<SiteGreenlightGateResponseDto>>().Subject.Value!;
+        dto.OverallStatus.Should().Be("APPROVED");
+        dto.GreenlightToken.Should().Contain(".");
+        dto.GreenlightCertifiedBy.Should().Be("sponsor-dm-1");
+        (await _db.CtmsAuditLogs.SingleAsync(TestContext.Current.CancellationToken)).Action.Should().Be("GREENLIGHT_CERTIFIED");
+    }
+
+    /// <summary>
+    /// Batch certify on an empty database, or naming any site without a recorded gate, is refused and writes
+    /// nothing, not even for the sites that do have a gate (#5433).
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task BatchCertify_WithUnknownSites_IsRefusedAndWritesNothing(bool withOneKnownSite)
+    {
+        if (withOneKnownSite)
+        {
+            await AddGatesAsync(("SITE-US-1", "US", true));
+        }
+
+        var request = new BatchCertifyRequestDto(Study, "US", ["SITE-US-1", "SITE-US-9"], "Certify");
+
+        var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
+            request, "Certify", _db, Caller(), _clock, _config, TestContext.Current.CancellationToken);
+
+        result.Result.Should().BeOfType<BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>()
+            .Which.Value!.Detail.Should().Contain("SITE-US-9");
+        (await _db.CtmsSiteGreenlightGates.CountAsync(TestContext.Current.CancellationToken)).Should().Be(withOneKnownSite ? 1 : 0);
+        (await _db.CtmsSiteGreenlightGates.CountAsync(g => g.GreenlightToken != null, TestContext.Current.CancellationToken)).Should().Be(0);
+        (await _db.CtmsAuditLogs.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+    }
+
+    /// <summary>
+    /// Batch certify has no default study: a request without one is refused (#5433).
+    /// </summary>
+    [Fact]
+    public async Task BatchCertify_WithoutAStudy_IsRefused()
+    {
+        var request = new BatchCertifyRequestDto("", "US", ["SITE-US-1"], "Certify");
+
+        var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
+            request, "Certify", _db, Caller(), _clock, _config, TestContext.Current.CancellationToken);
+
+        result.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
     }
 
     /// <summary>
@@ -74,8 +173,8 @@ public sealed class StartupGreenlightEndpointsTests
     [GxPRequirement("PRD-SSU-002")]
     public async Task BatchCertify_RejectsNonCompliantSites()
     {
-        // Arrange: Seed country matrix
-        await MatrixAsync("US");
+        // Arrange
+        await AddGatesAsync(("SITE-US-1", "US", true), ("SITE-US-2", "US", false));
 
         var nonCompliantSite = await _db.CtmsSiteGreenlightGates
             .FirstAsync(g => !g.FacetDoaLog || !g.FacetIpRelease, TestContext.Current.CancellationToken);
@@ -103,13 +202,14 @@ public sealed class StartupGreenlightEndpointsTests
     public async Task BatchCertify_CertifiesCompliantSites_WithIndividualTokensAndAuditLogs()
     {
         // Arrange
+        await AddGatesAsync(("SITE-GB-1", "GB", true), ("SITE-GB-2", "GB", true), ("SITE-GB-3", "GB", false));
         var matrix = await MatrixAsync("GB");
         var compliantSiteIds = matrix
             .Where(s => s.IsCompliant)
             .Select(s => s.SiteId)
             .ToList();
 
-        compliantSiteIds.Should().HaveCountGreaterThan(0);
+        compliantSiteIds.Should().Equal("SITE-GB-1", "SITE-GB-2");
 
         var request = new BatchCertifyRequestDto(
             StudyId: "PROTOCOL-2026-01",
@@ -250,6 +350,7 @@ public sealed class StartupGreenlightEndpointsTests
     [Fact]
     public async Task BatchCertify_OutsideTheCallersStudiesOrSites_IsRefusedAndCertifiesNothing()
     {
+        await AddGatesAsync(("SITE-GB-1", "GB", true), ("SITE-GB-2", "GB", true));
         var matrix = await MatrixAsync("GB");
         var compliantSiteIds = matrix.Where(s => s.IsCompliant).Select(s => s.SiteId).ToList();
         var request = new BatchCertifyRequestDto("PROTOCOL-2026-01", "GB", compliantSiteIds, "Certify");
@@ -265,9 +366,36 @@ public sealed class StartupGreenlightEndpointsTests
         (await _db.CtmsAuditLogs.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
     }
 
+    private async Task AddGatesAsync(params (string SiteId, string Country, bool Compliant)[] sites)
+    {
+        foreach (var (siteId, country, compliant) in sites)
+        {
+            _db.CtmsSiteGreenlightGates.Add(new CtmsSiteGreenlightGate
+            {
+                StudyId = Study,
+                SiteId = siteId,
+                SiteName = $"Site {siteId}",
+                CountryCode = country,
+                OverallStatus = "PENDING",
+                ReadinessPercentage = compliant ? 100 : 67,
+                FacetRegulatoryIrb = true,
+                FacetCtaBudget = true,
+                FacetEisfBaseline = true,
+                FacetDoaLog = compliant,
+                FacetStaffTraining = true,
+                FacetIpRelease = compliant,
+                CreatedBy = "test-setup",
+                ReasonForChange = "Test gate"
+            });
+        }
+
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        _db.ChangeTracker.Clear();
+    }
+
     private async Task<List<SiteGreenlightGateResponseDto>> MatrixAsync(string country)
     {
-        var result = await StartupGreenlightEndpoints.GetCountryMatrixAsync("PROTOCOL-2026-01", country, _db, Caller(), TestContext.Current.CancellationToken);
+        var result = await StartupGreenlightEndpoints.GetCountryMatrixAsync(Study, country, _db, Caller(), TestContext.Current.CancellationToken);
         return result.Result.Should().BeOfType<Ok<List<SiteGreenlightGateResponseDto>>>().Subject.Value!;
     }
 
