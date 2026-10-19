@@ -19,7 +19,7 @@ TDD in Cadence follows a strict, rapid red → green → refactor loop anchored 
 | **Red (Failing Test)**     | `replace_file_content` / `write_to_file` | Author new test case with `[GxPRequirement]` and `/// @req:`                                                          | Add failing test case testing public interface                             |
 | **Test Execution**         | `run_command`                            | `CommandLine="dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter 'FullyQualifiedName~<TestName>'"` | Execute sub-second unit test verification                                  |
 | **Green (Implementation)** | `replace_file_content`                   | Target: production code, single contiguous edit                                                                       | Write minimal production code to pass test                                 |
-| **Quality Sentinel**       | `run_command`                            | `CommandLine="dotnet cadence fix --all && dotnet cadence check"`                                                      | Format, verify layer boundaries, and run 21 quality gates                  |
+| **Quality Sentinel**       | `run_command`                            | `CommandLine="dotnet cadence fix && dotnet cadence check"`                                                            | Format, verify layer boundaries, and run 21 quality gates                  |
 | **Compliance Sync**        | `run_command`                            | `CommandLine="pnpm cadence gxp sync"`                                                                                 | Validate requirement tags and results (preview only; never commit the RTM) |
 
 ---
@@ -90,7 +90,7 @@ Agree on the public interface boundary before authoring tests:
 - Adhere strictly to Cadence conventions:
   - File-scoped namespaces (`namespace Cadence.<Service>.<Layer>;`).
   - Strict alphabetical using directive ordering.
-  - Return `Result<TValue, DomainError>` monads; avoid throwing exceptions for domain logic.
+  - Return `Result<TValue>` (carrying a `DomainError`) from `packages/engine_core`; avoid throwing exceptions for domain logic.
 - Re-run the test via `run_command`:
   ```bash
   dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~test_name"

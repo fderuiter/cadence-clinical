@@ -59,3 +59,10 @@ CADENCE_GXP_SNAPSHOT=1 pnpm cadence gxp snapshot --commit
 ```
 
 `gxp snapshot` runs the tests, writes and stages the RTM, the IQ/OQ/PQ report and `docs/SDLC/runs/`, and fails when the RTM's test mapping does not match the tags. `--commit` commits with `CADENCE_GXP_SNAPSHOT=1` set so the pre-commit gate admits the files. Never run it on a feature branch.
+
+## Gotchas
+
+- In an agent shell run it as `TERM=dumb pnpm cadence gxp sync` (or under `script -qc "…" /dev/null`); otherwise only the banner prints ([docs/CI.md](../../../docs/CI.md)).
+- Skipped database tests fail the sync. Point `CADENCE_TEST_POSTGRES` at a local PostgreSQL 16 when Docker is unavailable, and never export `POSTGRES_CONNECTION_STRING` in the test shell.
+- RLS tests count only when they run as the application role, not a superuser or `BYPASSRLS` role.
+- Stale `.claude/worktrees/` checkouts break the documentation gates; `git worktree remove` them first.
