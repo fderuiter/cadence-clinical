@@ -8,6 +8,7 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Explanations;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 
@@ -125,13 +126,16 @@ public static class KernelAuthorizationServiceCollectionExtensions
 {
     /// <summary>
     /// Registers <see cref="KernelAuthorization"/> as the pipeline's <see cref="IAuthorizer"/> and as
-    /// <see cref="IAuthorizationProbe"/>, over the kernel command catalogue. The host also registers the
+    /// <see cref="IAuthorizationProbe"/>, over the command catalogue of the kernel and every module registered with
+    /// <see cref="CadenceModuleServiceCollectionExtensions.AddCadenceModule"/> (ADR-2601). The host also registers the
     /// <see cref="IAuthorizationEvaluator"/> (the authority slice, #4781) and logging.
     /// </summary>
     public static IServiceCollection AddKernelAuthorization(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
-        services.AddSingleton(KernelCommandCatalog.Kernel);
+        services.AddSingleton(sp => sp.GetServices<CadenceModuleRegistration>().ToArray() is { Length: > 0 } modules
+            ? new KernelCommandCatalog([typeof(ICommand).Assembly, .. modules.Select(m => m.CommandAssembly)])
+            : KernelCommandCatalog.Kernel);
         services.AddScoped<KernelAuthorization>();
         services.AddScoped<IAuthorizer>(sp => sp.GetRequiredService<KernelAuthorization>());
         services.AddScoped<IAuthorizationProbe>(sp => sp.GetRequiredService<KernelAuthorization>());

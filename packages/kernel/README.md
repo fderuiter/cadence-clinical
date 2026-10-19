@@ -319,7 +319,7 @@ matches the event's `[KernelEvent]` type and schema version and deserializes the
 scope where `IKernelCommandSender` acts as `svc:<name>`; a consumer changes state only by sending a command keyed by
 `delivery.IdempotencyKey` (`<name>:<event id>`), so the idempotency records are its inbox and a retried or redelivered
 event replays instead of acting twice. A failing consumer makes the relay retry the event for every consumer. The
-service account needs grants like any actor; module command capabilities reach the authorizer under #5449.
+service account needs grants like any actor.
 
 To add a command:
 
@@ -344,7 +344,9 @@ A module writes its own records through the same pipeline (ADR-2600):
    makes `VersionIndex` the concurrency token. The context refuses `SaveChanges` for audited records outside a command.
 2. In the module's migration, give each tenant-scoped table a `tenant_id` column and apply
    `ModuleTenantIsolationSql.EnableForTenantColumn(schema, table)`, the same forced RLS policy as kernel tables.
-3. Register `AddModuleCommandStore<TContext>("module_name", options => new TContext(options))`, each handler with
+3. Declare the module with `AddCadenceModule("module_name", typeof(SomeCommand).Assembly)`, so the kernel authorizes
+   its commands against the `[KernelCapability]` they declare (a command's resource is a kernel identifier; a command
+   without a capability is denied). Register `AddModuleCommandStore<TContext>("module_name", options => new TContext(options))`, each handler with
    `AddCommandHandler<TCommand, TResult, THandler>()` and each validator with `AddCommandValidator<TCommand, TValidator>()`;
    the module's tests call `CommandValidationCatalog.Violations` for its command assembly. The context must not enable a retrying execution strategy.
 4. The handler uses `context.Work` exactly as a kernel handler does. At commit the pipeline opens the module context on
