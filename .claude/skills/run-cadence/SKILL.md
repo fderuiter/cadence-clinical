@@ -117,11 +117,11 @@ The first takes about a minute (mostly the build), the second about 4 s. The ful
 - **The gateway has no CORS, and the AppHost points the web app at `http://localhost:8000`.** Every API call from
   `:3000` is blocked in a real browser ("No 'Access-Control-Allow-Origin' header"), so the Canvas shows "Failed to
   fetch" everywhere. The driver answers gateway calls itself (fetches them from Node, adds CORS headers);
-  `CADENCE_CORS_SHIM=0` turns that off to see the bug. A human browser on the AppHost stack hits it too.
+  `CADENCE_CORS_SHIM=0` turns that off to see the bug. A human browser on the AppHost stack hits it too. Tracked in #5429.
 - **No kernel tenant for the realm users.** Tokens carry `tenant_id=cadence-local`, but nothing provisions that
   kernel tenant, so kernel reads answer 403 "Your sign-in's tenant is not an active kernel tenant" (activity,
   search, Trace). `scripts/local_stack_nodocker.sh up` inserts the row into `kernel.tenants` directly: local only, no audit entry, no
-  grants, so kernel objects show as masked.
+  grants, so kernel objects show as masked. Tracked in #5430.
 - **`ui` must be built.** `apps/web/vite.config.js` aliases `ui` to `packages/ui/dist/index.js`, which `pnpm install`
   does not create; Vite shows "Failed to resolve import "ui" from "src/main.js"". `scripts/local_stack_nodocker.sh up` runs
   `pnpm --filter ui build`. If Vite already started without it, restart the AppHost: Vite keeps the failed
