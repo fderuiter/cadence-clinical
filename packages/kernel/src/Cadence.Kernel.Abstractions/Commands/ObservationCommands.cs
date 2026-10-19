@@ -48,7 +48,6 @@ public sealed record RecordObservation(
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound))]
 [RaisesKernelErrors(
     typeof(ObservationErrors),
-    nameof(ObservationErrors.ReasonForChangeRequired),
     nameof(ObservationErrors.Locked),
     nameof(ObservationErrors.VersionStale),
     nameof(ObservationErrors.ValueInvalid),
@@ -106,9 +105,6 @@ public static class ObservationLimits
 /// <summary>Errors raised by the observation commands (spec §8.1, ADR-2620).</summary>
 public static class ObservationErrors
 {
-    public static readonly KernelError ReasonForChangeRequired =
-        new("K.Observation.ReasonForChangeRequired", 422, "A non-empty reason for change is required to correct an observation.");
-
     public static readonly KernelError ValueInvalid =
         new("K.Observation.ValueInvalid", 422, $"An observation value is required, at most {ObservationLimits.MaxValueLength} characters.");
 
@@ -132,5 +128,5 @@ public static class ObservationErrors
 
     /// <summary>Every observation error, for the API's documented problem set.</summary>
     public static IReadOnlyList<KernelError> All { get; } =
-        [ReasonForChangeRequired, ValueInvalid, ObservedAtInvalid, EnrollmentUnknown, ValueUnchanged, VersionStale, Locked, AlreadyLocked];
+        [ValueInvalid, ObservedAtInvalid, EnrollmentUnknown, ValueUnchanged, VersionStale, Locked, AlreadyLocked];
 }

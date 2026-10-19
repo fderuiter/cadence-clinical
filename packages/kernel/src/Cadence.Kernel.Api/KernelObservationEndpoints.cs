@@ -149,12 +149,6 @@ public static class KernelObservationEndpoints
             return KernelProblems.BadRequest("Invalid correction", "Name the observation's enrollment as an enrollment NodeRef.");
         }
 
-        var reason = changeReason.Read(context);
-        if (string.IsNullOrWhiteSpace(reason))
-        {
-            return Problem(ObservationErrors.ReasonForChangeRequired);
-        }
-
         var result = await sender.SendAsync(
             new CorrectObservation(
                 KernelRequestTenant.Get(context),
@@ -163,7 +157,7 @@ public static class KernelObservationEndpoints
                 request.Value ?? string.Empty,
                 request.ExpectedVersion,
                 IdempotencyKey(context),
-                reason),
+                changeReason.Read(context) ?? string.Empty),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         return result.Value is { } state ? TypedResults.Ok(KernelObservationStateResponse.From(state)) : Problem(result.Error!);
     }
