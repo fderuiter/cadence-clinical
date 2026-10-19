@@ -8625,7 +8625,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Observation.ReasonForChangeRequired\u0060, \u0060K.Observation.ValueInvalid\u0060, \u0060K.Observation.ValueUnchanged\u0060.",
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Observation.ValueInvalid\u0060, \u0060K.Observation.ValueUnchanged\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -8684,10 +8684,6 @@
           },
           {
             "code": "K.Command.TenantRequired",
-            "status": 422
-          },
-          {
-            "code": "K.Observation.ReasonForChangeRequired",
             "status": 422
           },
           {

@@ -57,7 +57,10 @@ run.
    like kernel commands, and fail closed without a declaration (#5449).
 4. The gateway routes kernel and module routes to the host. A single module manifest replaces the six hand-kept copies
    of the service topology (gateway, AppHost, compose, `ARCHITECTURE.md`, `LOCAL_DEV_ENVIRONMENT.md`,
-   `ENVIRONMENT_VARIABLES.md`) as modules move in.
+   `ENVIRONMENT_VARIABLES.md`) as modules move in. The manifest is `ServiceTopology` in `packages/topology`
+   (#5315): the gateway builds its routes and clusters from it and the AppHost its services, ports and wiring.
+   Compose and the docs can't read C#, so `ServiceTopologyTests` fails when they disagree with it. When a service
+   becomes a module of this host, its manifest entry's routes move to the kernel host's entry.
 
 ## 5. Consequences & Trade-offs
 

@@ -18,9 +18,4 @@
     <ProjectReference Include="..\Cadence.Kernel.Persistence\Cadence.Kernel.Persistence.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <InternalsVisibleTo Include="Cadence.UnitTests" />
-    <InternalsVisibleTo Include="Cadence.IntegrationTests" />
-  </ItemGroup>
-
 </Project>

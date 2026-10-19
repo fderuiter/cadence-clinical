@@ -1,11 +1,16 @@
 using System;
+using System.Linq;
 using System.Net.Sockets;
+
+using Cadence.Topology;
 
 namespace Cadence.ToolingCore.Services;
 
 public static class PortCheckerService
 {
-    private static readonly int[] DefaultPorts = [8000, 8001, 8002, 8004, 8005, 8006, 8007, 8008, 8009, 8010, 8011, 8012, 8013, 8014, 8015, 8016, 8017, 8018, 8019, 5432, 7687, 8080];
+    /// <summary>The gateway and every service (from the topology manifest), PostgreSQL and Keycloak.</summary>
+    private static readonly int[] DefaultPorts =
+        [ServiceTopology.GatewayPort, .. ServiceTopology.Services.Select(s => s.Port), 5432, 8080];
 
     public static int CheckPorts(int[]? ports = null)
     {

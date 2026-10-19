@@ -113,7 +113,7 @@ public class Observation : AggregateRoot<ObservationId>
     {
         if (string.IsNullOrWhiteSpace(reasonForChange))
         {
-            return ObservationErrors.ReasonForChangeRequired;
+            return KernelErrors.ReasonForChangeRequired;
         }
 
         if (!IsValid(value))
