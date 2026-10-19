@@ -97,6 +97,12 @@ pipeline-wide checks (tenant, idempotency key, reason) carries `[NoValidator("wh
 command has neither. Domain invariants stay in the handler. .NET 10 endpoint validation is not used: commands are also
 sent by event consumers and jobs, which never pass an endpoint.
 
+Validators register with `AddCommandValidator<TCommand, TValidator>()` and check shape only, so the stage opens no
+database work; field errors travel on `KernelError.Errors`. The catalog check is `CommandValidationCatalog` in
+`Cadence.Testing`, which the kernel's and each module's tests call. The kernel's existing commands check their inputs
+in their handlers and return registered domain errors that clients already rely on; they carry
+`[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]` until #5448 moves their shape checks into validators.
+
 ### 4.5 Errors
 
 Modules register their errors in the same closed `KernelError` registry with an `M.<Module>.` code prefix. Each command

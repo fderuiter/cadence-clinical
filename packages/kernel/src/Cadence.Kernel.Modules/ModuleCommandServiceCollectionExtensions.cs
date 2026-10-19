@@ -3,6 +3,8 @@ using System.Linq;
 
 using Cadence.Kernel.Commands;
 
+using FluentValidation;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -31,6 +33,35 @@ public static class ModuleCommandServiceCollectionExtensions
         }
 
         services.TryAddTransient<ICommandHandler<TCommand, TResult>, THandler>();
+        return services;
+    }
+
+    /// <summary>
+    /// Registers <typeparamref name="TValidator"/> for <typeparamref name="TCommand"/> (ADR-2600 §4.4). The pipeline runs
+    /// every validator of a command after resolving the actor and before authorization, and refuses an invalid command
+    /// with <see cref="KernelErrors.CommandInvalid"/> and its field errors. Validators check the command's shape only;
+    /// rules that read state stay in the handler. A command without a validator carries <see cref="NoValidatorAttribute"/>.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// <typeparamref name="TValidator"/> is already registered, or <typeparamref name="TCommand"/> declares
+    /// <see cref="NoValidatorAttribute"/>.
+    /// </exception>
+    public static IServiceCollection AddCommandValidator<TCommand, TValidator>(this IServiceCollection services)
+        where TCommand : ICommand
+        where TValidator : class, IValidator<TCommand>
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        if (typeof(TCommand).IsDefined(typeof(NoValidatorAttribute), inherit: false))
+        {
+            throw new InvalidOperationException($"{typeof(TCommand).Name} declares [NoValidator]; remove it to register {typeof(TValidator).Name}.");
+        }
+
+        if (services.Any(d => d.ServiceType == typeof(IValidator<TCommand>) && d.ImplementationType == typeof(TValidator)))
+        {
+            throw new InvalidOperationException($"{typeof(TValidator).Name} is already registered for {typeof(TCommand).Name}.");
+        }
+
+        services.AddSingleton<IValidator<TCommand>, TValidator>();
         return services;
     }
 

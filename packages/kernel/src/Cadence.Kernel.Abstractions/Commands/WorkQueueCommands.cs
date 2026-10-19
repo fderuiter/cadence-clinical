@@ -17,6 +17,7 @@ namespace Cadence.Kernel.Commands;
 /// <para><c>Source</c>: The registered item source, for example <c>protocol.versions_in_review</c>.</para>
 /// </remarks>
 [KernelCapability("work_queue.define", VerbClass.Approve)]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record DefineWorkQueue(
     TenantId TenantId,
     WorkQueueDefinitionId WorkQueueDefinitionId,

@@ -317,7 +317,13 @@ To add a command:
 2. Implement `ICommandHandler<TCommand, TResult>` (from `Cadence.Kernel.Modules`) in `Cadence.Kernel.Application`: load or add **one**
    aggregate through `context.Work` (a second throws, K-TX-1), decide, `Raise` events, declare the aggregate's
    inputs with `LinkInput` (see [Lineage](#lineage-adr-2471)), return a `CommandResult`. Never save.
-3. Register the handler in `AddKernelCommandPipeline()`.
+3. Register the handler in `AddKernelCommandPipeline()`, and a FluentValidation `AbstractValidator<TCommand>` for the
+   command's shape with `AddCommandValidator<TCommand, TValidator>()`. The pipeline runs it after resolving the actor
+   and before authorization, and refuses an invalid command with `K.Command.Invalid` (422) and field errors in
+   `KernelError.Errors`. A command with nothing to validate beyond the pipeline-wide checks carries
+   `[NoValidator("why")]`; `CommandValidationCatalog` (`Cadence.Testing`) fails a test when a command has neither or
+   both. Rules that read state stay in the handler. Existing kernel commands still check their inputs in the handler
+   (`NoValidatorAttribute.HandlerChecksInputs`, #5448).
 4. Test it through the pipeline in `tests/Cadence.IntegrationTests/Kernel` (see `KernelCommandPipelinePostgresTests`).
 
 A module writes its own records through the same pipeline (ADR-2600):
@@ -326,8 +332,9 @@ A module writes its own records through the same pipeline (ADR-2600):
    makes `VersionIndex` the concurrency token. The context refuses `SaveChanges` for audited records outside a command.
 2. In the module's migration, give each tenant-scoped table a `tenant_id` column and apply
    `ModuleTenantIsolationSql.EnableForTenantColumn(schema, table)`, the same forced RLS policy as kernel tables.
-3. Register `AddModuleCommandStore<TContext>("module_name", options => new TContext(options))` and each handler with
-   `AddCommandHandler<TCommand, TResult, THandler>()`. The context must not enable a retrying execution strategy.
+3. Register `AddModuleCommandStore<TContext>("module_name", options => new TContext(options))`, each handler with
+   `AddCommandHandler<TCommand, TResult, THandler>()` and each validator with `AddCommandValidator<TCommand, TValidator>()`;
+   the module's tests call `CommandValidationCatalog.Violations` for its command assembly. The context must not enable a retrying execution strategy.
 4. The handler uses `context.Work` exactly as a kernel handler does. At commit the pipeline opens the module context on
    the command's tenant-scoped connection, enlists it in the kernel transaction, stamps the audit fields, writes the
    module row with the version check and audits it on the tenant's chain as `module_name.TypeName`. A stale version

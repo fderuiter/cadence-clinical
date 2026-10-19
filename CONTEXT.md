@@ -236,7 +236,7 @@ An architectural paradigm establishing a single, unified body of clinical truth 
 
 ### Module command path and module SDK
 
-A module changes clinical state the way the kernel does: it implements a command handler from the module SDK (`Cadence.Kernel.Modules`) and sends its command through the kernel command pipeline. The module's record is written by its own `DbContext`, enlisted on the command's connection and transaction, so the record, its kernel audit chain link, its events and its idempotency record commit together; there is one history per record (ADR-2600). The SDK and `Cadence.Kernel.Abstractions` are the only kernel assemblies a module may reference (K-XS-2).
+A module changes clinical state the way the kernel does: it implements a command handler from the module SDK (`Cadence.Kernel.Modules`) and sends its command through the kernel command pipeline. The module's record is written by its own `DbContext`, enlisted on the command's connection and transaction, so the record, its kernel audit chain link, its events and its idempotency record commit together; there is one history per record (ADR-2600). Before authorization the pipeline runs the command's FluentValidation validators and refuses a malformed command with `K.Command.Invalid` and field errors; a command with nothing to validate says why with `[NoValidator]`. The SDK and `Cadence.Kernel.Abstractions` are the only kernel assemblies a module may reference (K-XS-2).
 
 ### Clinical Kernel Single-Database Schema Standard
 
