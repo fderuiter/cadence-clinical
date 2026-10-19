@@ -52,59 +52,62 @@ The claim set and checks are specified in `docs/SDLC/Signature_Token_Cryptograph
 
 ## Configuration
 
-| Setting | Required | Purpose |
-| --- | --- | --- |
-| `GATEWAY_SECRET` | yes (gateway and every service) | Shared HMAC key, at least 32 characters. No default; startup fails without it. |
-| `OIDC_AUTHORITY` | yes | Token issuer, e.g. `https://idp.example.com/realms/cadence`. |
-| `OIDC_AUDIENCE` | yes outside Development | Expected `aud` claim (`cadence-api`); startup fails without it outside Development, and it is validated whenever set. |
-| `OIDC_METADATA_ADDRESS` | no | Internal discovery URL when it differs from the public issuer. |
-| `OIDC_REQUIRE_HTTPS_METADATA` | no (default `true`) | Set `false` only for local Keycloak over HTTP. |
-| `OIDC_SIGNATURE_CLIENT_ID` | no (default `cadence-esignature`) | Keycloak client with only direct access grants enabled, used to re-check signer passwords. |
-| `OIDC_SIGNATURE_CLIENT_SECRET` | no | That client's secret, when it is confidential. |
-| `OIDC_TOKEN_ENDPOINT` | no | Token endpoint override; defaults to `<realm>/protocol/openid-connect/token` beside `OIDC_METADATA_ADDRESS` or `OIDC_AUTHORITY`. |
-| `<SERVICE>_SERVICE_URL` | outside Development | Backend base URLs, e.g. `EXECUTION_SERVICE_URL`; absolute http(s) URLs. |
-| `GATEWAY_PROXY_TIMEOUT_SECONDS` | no (default `30`) | Idle time after which a proxied request fails with 504. |
-| `GATEWAY_HEALTH_CHECK_INTERVAL_SECONDS` | no (default `10`) | How often each service's `/healthz/ready` is probed. |
-| `GATEWAY_HEALTH_CHECK_TIMEOUT_SECONDS` | no (default `5`) | Time limit for one probe. |
-| `GATEWAY_RATE_LIMIT_PER_MINUTE` | no (default `600`) | Requests per caller per minute before 429. |
-| `CADENCE_TRUSTED_PROXIES` | behind a proxy | Proxies whose `X-Forwarded-For`/`-Proto` are honoured (IPs or CIDR ranges). |
+| Setting                                 | Required                          | Purpose                                                                                                                          |
+| --------------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `GATEWAY_SECRET`                        | yes (gateway and every service)   | Shared HMAC key, at least 32 characters. No default; startup fails without it.                                                   |
+| `OIDC_AUTHORITY`                        | yes                               | Token issuer, e.g. `https://idp.example.com/realms/cadence`.                                                                     |
+| `OIDC_AUDIENCE`                         | yes outside Development           | Expected `aud` claim (`cadence-api`); startup fails without it outside Development, and it is validated whenever set.            |
+| `OIDC_METADATA_ADDRESS`                 | no                                | Internal discovery URL when it differs from the public issuer.                                                                   |
+| `OIDC_REQUIRE_HTTPS_METADATA`           | no (default `true`)               | Set `false` only for local Keycloak over HTTP.                                                                                   |
+| `OIDC_SIGNATURE_CLIENT_ID`              | no (default `cadence-esignature`) | Keycloak client with only direct access grants enabled, used to re-check signer passwords.                                       |
+| `OIDC_SIGNATURE_CLIENT_SECRET`          | no                                | That client's secret, when it is confidential.                                                                                   |
+| `OIDC_TOKEN_ENDPOINT`                   | no                                | Token endpoint override; defaults to `<realm>/protocol/openid-connect/token` beside `OIDC_METADATA_ADDRESS` or `OIDC_AUTHORITY`. |
+| `<SERVICE>_SERVICE_URL`                 | outside Development               | Backend base URLs, e.g. `EXECUTION_SERVICE_URL`; absolute http(s) URLs.                                                          |
+| `GATEWAY_PROXY_TIMEOUT_SECONDS`         | no (default `30`)                 | Idle time after which a proxied request fails with 504.                                                                          |
+| `GATEWAY_HEALTH_CHECK_INTERVAL_SECONDS` | no (default `10`)                 | How often each service's `/healthz/ready` is probed.                                                                             |
+| `GATEWAY_HEALTH_CHECK_TIMEOUT_SECONDS`  | no (default `5`)                  | Time limit for one probe.                                                                                                        |
+| `GATEWAY_RATE_LIMIT_PER_MINUTE`         | no (default `600`)                | Requests per caller per minute before 429.                                                                                       |
+| `CADENCE_TRUSTED_PROXIES`               | behind a proxy                    | Proxies whose `X-Forwarded-For`/`-Proto` are honoured (IPs or CIDR ranges).                                                      |
 
 ## Routes
 
-Each route forwards a whole path prefix to one service. Service addresses come from `<SERVICE>_SERVICE_URL`. In
+Each route forwards a whole path prefix to one service. The routes, clusters and address keys come from the service
+topology manifest ([`packages/topology`](../../packages/topology/README.md), #5315). Service addresses come from `<SERVICE>_SERVICE_URL`. In
 Development a missing address defaults to `http://localhost:<port>` (the ports in
 [docs/LOCAL_DEV_ENVIRONMENT.md](../../docs/LOCAL_DEV_ENVIRONMENT.md)); in any other environment the gateway refuses to
 start without it. An address that is not an absolute http or https URL fails startup everywhere
 (`tests/Cadence.UnitTests/Gateway/GatewayServiceUrlValidationTests.cs`).
 
-| Path prefix | Service | Address key |
-| --- | --- | --- |
-| `/api/v1/studies/**` | designer | `DESIGNER_SERVICE_URL` |
-| `/api/v1/protocols/**` | designer | `DESIGNER_SERVICE_URL` |
-| `/api/v1/observations/**` | execution | `EXECUTION_SERVICE_URL` |
-| `/api/v1/forms/**` | execution | `EXECUTION_SERVICE_URL` |
-| `/api/v1/queries/**` | execution | `EXECUTION_SERVICE_URL` |
-| `/api/v1/execution/**` | execution | `EXECUTION_SERVICE_URL` |
-| `/api/v1/etmf/**` | etmf | `ETMF_SERVICE_URL` |
-| `/api/v1/interop/**` | interop | `INTEROP_SERVICE_URL` |
-| `/api/v1/quality/**` | quality | `QUALITY_SERVICE_URL` |
-| `/api/v1/notifications/**` | notifications | `NOTIFICATIONS_SERVICE_URL` |
-| `/api/v1/ctms/**` | ctms | `CTMS_SERVICE_URL` |
-| `/api/v1/safety/**` | safety | `SAFETY_SERVICE_URL` |
-| `/api/v1/tickets/**` | tickets | `TICKETS_SERVICE_URL` |
-| `/api/v1/eisf/**` | eisf | `EISF_SERVICE_URL` |
-| `/api/v1/econsent/**` | econsent | `ECONSENT_SERVICE_URL` |
-| `/api/v1/org/**` | org | `ORG_SERVICE_URL` |
-| `/api/v1/fileshare/**` | fileshare | `FILESHARE_SERVICE_URL` |
-| `/api/v1/imaging/**` | imaging | `IMAGING_SERVICE_URL` |
-| `/api/v1/knowledge/**` | knowledge | `KNOWLEDGE_SERVICE_URL` |
-| `/api/v1/payments/**` | payments | `PAYMENTS_SERVICE_URL` |
-| `/api/v1/ai/**` | ai-gateway | `AI_GATEWAY_SERVICE_URL` |
-| `/api/v1/kernel/**` | kernel ([apps/kernel-api](../kernel-api/README.md)) | `KERNEL_SERVICE_URL` |
+| Path prefix                | Service                                             | Address key                 |
+| -------------------------- | --------------------------------------------------- | --------------------------- |
+| `/api/v1/studies/**`       | designer                                            | `DESIGNER_SERVICE_URL`      |
+| `/api/v1/protocols/**`     | designer                                            | `DESIGNER_SERVICE_URL`      |
+| `/api/v1/observations/**`  | execution                                           | `EXECUTION_SERVICE_URL`     |
+| `/api/v1/forms/**`         | execution                                           | `EXECUTION_SERVICE_URL`     |
+| `/api/v1/queries/**`       | execution                                           | `EXECUTION_SERVICE_URL`     |
+| `/api/v1/execution/**`     | execution                                           | `EXECUTION_SERVICE_URL`     |
+| `/api/v1/etmf/**`          | etmf                                                | `ETMF_SERVICE_URL`          |
+| `/api/v1/interop/**`       | interop                                             | `INTEROP_SERVICE_URL`       |
+| `/api/v1/quality/**`       | quality                                             | `QUALITY_SERVICE_URL`       |
+| `/api/v1/notifications/**` | notifications                                       | `NOTIFICATIONS_SERVICE_URL` |
+| `/api/v1/ctms/**`          | ctms                                                | `CTMS_SERVICE_URL`          |
+| `/api/v1/safety/**`        | safety                                              | `SAFETY_SERVICE_URL`        |
+| `/api/v1/tickets/**`       | tickets                                             | `TICKETS_SERVICE_URL`       |
+| `/api/v1/eisf/**`          | eisf                                                | `EISF_SERVICE_URL`          |
+| `/api/v1/econsent/**`      | econsent                                            | `ECONSENT_SERVICE_URL`      |
+| `/api/v1/org/**`           | org                                                 | `ORG_SERVICE_URL`           |
+| `/api/v1/fileshare/**`     | fileshare                                           | `FILESHARE_SERVICE_URL`     |
+| `/api/v1/imaging/**`       | imaging                                             | `IMAGING_SERVICE_URL`       |
+| `/api/v1/knowledge/**`     | knowledge                                           | `KNOWLEDGE_SERVICE_URL`     |
+| `/api/v1/training/**`      | knowledge                                           | `KNOWLEDGE_SERVICE_URL`     |
+| `/api/v1/payments/**`      | payments                                            | `PAYMENTS_SERVICE_URL`      |
+| `/api/v1/ai/**`            | ai-gateway                                          | `AI_GATEWAY_SERVICE_URL`    |
+| `/api/v1/kernel/**`        | kernel ([apps/kernel-api](../kernel-api/README.md)) | `KERNEL_SERVICE_URL`        |
 
 `tests/Cadence.UnitTests/Gateway/GatewayRouteCoverageTests.cs` boots the gateway and every service and fails when a route leads to a
 prefix its service does not map, or when a service maps an `/api/v1` endpoint no route reaches. Add or remove a
-route in `src/Program.cs` together with the endpoints it serves
+route prefix in the manifest together with the endpoints it serves; `ServiceTopologyTests` fails when this table
+disagrees with the manifest
 ([ADR-2448](../../docs/adr/2026-09-29-gateway-routes-verified-against-service-endpoints.md)).
 
 ## Timeouts and health checks

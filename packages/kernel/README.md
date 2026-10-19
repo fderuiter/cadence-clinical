@@ -402,6 +402,8 @@ Commands in `Commands/ObservationCommands.cs`, each authorized against the obser
 - Coming under #4729 (ADR-2621): `LockObservation` and `ObservationLock` give way to scoped `Locked`/`Frozen`
   Assertions with unlock, `LockApplied`/`LockReleased` events and shared scope locks; value Assertions will cite the
   revision they judged.
+- Coming under #5459 (ADR-2622): a `CollectionInstance` groups the observations of one form, and
+  `RecordCollectedValues` records and corrects all of them in one command, each against the revision it was edited from.
 
 ## Object references and navigation (ADR-2481)
 
