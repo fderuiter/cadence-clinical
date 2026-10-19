@@ -13,49 +13,18 @@ Interview the user relentlessly until reaching a shared, unambiguous understandi
 
 ## Antigravity Tool Execution Matrix
 
-| Phase | Antigravity Tool | Invocation Pattern | Objective |
-| :--- | :--- | :--- | :--- |
-| **Fact Finding** | `grep_search` / `find_by_name` | Query files across `apps/` & `packages/` | Look up facts and constraints autonomously |
-| **Frontier Decision** | `ask_question` | `questions=[{"question": "...", "options": [...]}]` | Prompt user with interactive multi-choice when appropriate |
-| **Design Synthesis** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/grill_summary.md` | Emit structured design tree and settled decisions |
+| Phase                 | Antigravity Tool               | Invocation Pattern                                              | Objective                                                  |
+| :-------------------- | :----------------------------- | :-------------------------------------------------------------- | :--------------------------------------------------------- |
+| **Fact Finding**      | `grep_search` / `find_by_name` | Query files across `apps/` & `packages/`                        | Look up facts and constraints autonomously                 |
+| **Frontier Decision** | `ask_question`                 | `questions=[{"question": "...", "options": [...]}]`             | Prompt user with interactive multi-choice when appropriate |
+| **Design Synthesis**  | `write_to_file`                | Target: `<appDataDir>/brain/<conversation-id>/grill_summary.md` | Emit structured design tree and settled decisions          |
 
 ---
 
 ## The Grilling Loop
 
-1. **Rounds & The Frontier**:
-   - The **frontier** contains every decision whose prerequisites are settled.
-   - You must evaluate the entire frontier in rounds.
-   - For each decision, perform autonomous fact-finding first using `grep_search` and `find_by_name`.
+Run the loop exactly as [`grilling`](../grilling/SKILL.md) defines it: frontier rounds over the design tree, every question through `ask_question` with the recommended option first, facts looked up rather than asked, and no action until the user confirms a shared understanding. That skill is the one source of the procedure; this one adds only the entry point and the summary.
 
-2. **MANDATORY TOOL INVOCATION (`ask_question`)**:
-   - You **MUST** call the `ask_question` tool to present frontier questions to the user. **Do NOT print multiple-choice questions as plain markdown text in chat.**
-   - Format options from the user's perspective (e.g. *"Use PostgreSQL JSONB"*).
-   - Place the recommended option first, prefixed with `(Recommended)`.
-   - Never add a manual "Other" option (provided by UI).
-   - Set `is_multi_select: true` when multiple orthogonal choices can be selected simultaneously.
+When the frontier is empty, emit a summary artifact to `<appDataDir>/brain/<conversation-id>/grill_summary.md` via `write_to_file`: the design tree, each settled decision and the answer that settled it.
 
-   ```json
-   {
-     "questions": [
-       {
-         "question": "Which design approach should govern <Topic>?",
-         "options": [
-           "(Recommended) Option A: Concrete recommended decision with rationale",
-           "Option B: Alternative approach with trade-offs"
-         ],
-         "is_multi_select": false
-       }
-     ]
-   }
-   ```
-
-3. **Autonomous Fact-Finding**:
-   - Facts are the agent's job. When a question requires repo, file, or schema facts, look them up or dispatch a subagent. Never ask the user for information available in the environment.
-
-4. **Iterate & Conclude**:
-   - Each round of user answers settles decisions and advances the frontier outward.
-   - Emit a summary artifact to `<appDataDir>/brain/<conversation-id>/grill_summary.md` via `write_to_file`.
-   - The session ends when the frontier is empty and no unspoken assumptions remain.
-
-
+To record the outcome in `CONTEXT.md` and `docs/adr/` as decisions land, use [`grill-with-docs`](../grill-with-docs/SKILL.md) instead.

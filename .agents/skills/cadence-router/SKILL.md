@@ -47,7 +47,7 @@ This skill routes clinical workflows, architectural designs, and engineering tas
 ### 4. Planning & Alignment
 
 - **[`grill-with-docs`](../grill-with-docs/SKILL.md)**: Relentless design-tree interview to sharpen plans while updating `CONTEXT.md` and drafting ADRs.
-- **[`grill-me`](../grill-me/SKILL.md)** / **[`grilling`](../grilling/SKILL.md)**: Deep frontier questioning with `ask_question` to stress-test architectural choices.
+- **[`grilling`](../grilling/SKILL.md)**: The one grilling procedure (frontier rounds through `ask_question`) that the other grill skills follow; **[`grill-me`](../grill-me/SKILL.md)** is its user-invoked entry point with a summary artifact.
 - **[`to-spec`](../to-spec/SKILL.md)**: Synthesize discussions into structured specifications aligned with PRD/SRS requirements.
 - **[`to-tickets`](../to-tickets/SKILL.md)**: Break features into tracer-bullet tickets mapped to Cadence domain queues.
 - **[`wayfinder`](../wayfinder/SKILL.md)**: Multi-session roadmap planning with subagent delegation.
