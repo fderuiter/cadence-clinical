@@ -41,12 +41,12 @@ All reads are `GET`, need the gateway-signed caller identity, run in the caller'
 
 The host also runs the kernel command pipeline (`AddKernelCommandPipeline`), so a write commits its state, audit chain link, event and outbox row in one PostgreSQL transaction. Each write needs an `Idempotency-Key` header and takes its reason for change only from the gateway-signed identity (`X-Change-Reason`, ADR-2495; `SignedChangeReason`). Each is authorized against the observation's enrollment.
 
-| Route (`/api/v1/kernel/…`)            | Does                                                                                                                                                      |
-| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST observations`                   | Records an observation (`observation.record`): enrollment, concept, value, observed-at. 201.                                                              |
-| `POST observations/{ref}/corrections` | Corrects the value (`observation.correct`) with the expected version. 409 `K.Observation.VersionStale`, 423 `K.Observation.Locked`, 422 without a reason. |
-| `POST observations/{ref}/lock`        | Locks the observation (`observation.lock`); no correction commits after it.                                                                               |
-| `GET observations/{ref}`              | The value, version, lock, every revision and the kernel audit entries about it. 403 when the caller may not see its enrollment.                           |
+| Route (`/api/v1/kernel/…`)            | Does                                                                                                                                                                                              |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST observations`                   | Records an observation (`observation.record`): enrollment, concept, value, observed-at. 201.                                                                                                      |
+| `POST observations/{ref}/corrections` | Corrects the value (`observation.correct`) with the expected version. 409 `K.Observation.VersionStale`, 423 `K.Observation.Locked`, 422 `K.Observation.ReasonForChangeRequired` without a reason. |
+| `POST observations/{ref}/lock`        | Locks the observation (`observation.lock`); no correction commits after it.                                                                                                                       |
+| `GET observations/{ref}`              | The value, version, lock, every revision and the kernel audit entries about it. 403 when the caller may not see its enrollment.                                                                   |
 
 Also `GET /healthz`, `/healthz/live`, `/healthz/ready` and `GET /api/v1/kernel/status` (anonymous). OpenAPI and the Scalar reference are mapped in Development only; the exported document is [docs/openapi/kernel_openapi.json](../../docs/openapi/kernel_openapi.json).
 

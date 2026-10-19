@@ -21,13 +21,13 @@ Participant-facing eCOA/ePRO and eConsent web app (Vue 3, Vite) with an offline 
 
 Run from the repository root with pnpm:
 
-| Command                                 | Purpose                                                       |
-| --------------------------------------- | ------------------------------------------------------------- |
-| `pnpm --filter subject-portal dev`      | Vite dev server on `http://localhost:5174/subject-portal/`.   |
-| `pnpm --filter subject-portal build`    | Production build (builds `ui` first).                         |
-| `pnpm --filter subject-portal test`     | Vitest with coverage (80% thresholds on `src/sync-queue.js`). |
-| `pnpm --filter subject-portal test:e2e` | Playwright.                                                   |
-| `pnpm --filter subject-portal lint`     | ESLint.                                                       |
+| Command                                 | Purpose                                                        |
+| --------------------------------------- | -------------------------------------------------------------- |
+| `pnpm --filter subject-portal dev`      | Vite dev server on `http://localhost:5174/subject-portal/`.    |
+| `pnpm --filter subject-portal build`    | Production build. Build `ui` first (`pnpm --filter ui build`). |
+| `pnpm --filter subject-portal test`     | Vitest with coverage (80% thresholds on `src/sync-queue.js`).  |
+| `pnpm --filter subject-portal test:e2e` | Playwright.                                                    |
+| `pnpm --filter subject-portal lint`     | ESLint.                                                        |
 
 `docker/docker-compose.yml` also runs the dev server as the `subject-portal` service on port 5174.
 
