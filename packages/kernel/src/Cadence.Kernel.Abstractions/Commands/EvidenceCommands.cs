@@ -13,6 +13,7 @@ namespace Cadence.Kernel.Commands;
 /// <para><c>Title</c>: A human-readable name, at most 500 characters.</para>
 /// </remarks>
 [KernelCapability("artifact.register", VerbClass.Execute)]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RegisterArtifact(
     TenantId TenantId,
     ArtifactId ArtifactId,
@@ -26,6 +27,7 @@ public sealed record RegisterArtifact(
 
 /// <summary>Adds a new immutable version to an artifact, numbered after its latest one.</summary>
 [KernelCapability("artifact.add_version", VerbClass.Execute, Resource = nameof(AddArtifactVersion.ArtifactId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record AddArtifactVersion(
     TenantId TenantId,
     ArtifactId ArtifactId,

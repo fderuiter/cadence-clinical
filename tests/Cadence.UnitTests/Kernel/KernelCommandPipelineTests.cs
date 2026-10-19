@@ -13,6 +13,7 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Identity;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Lineage;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 using Cadence.Testing;
@@ -380,10 +381,6 @@ public sealed partial class KernelCommandPipelineTests
         }
 
         public void LinkPart(NodeRef from, NodeRef to, LineageEdgeKind kind)
-        {
-        }
-
-        public void StageVaultWrite(IIdentityVaultWrite write)
         {
         }
 

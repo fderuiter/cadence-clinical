@@ -16,6 +16,7 @@ namespace Cadence.Kernel.Commands;
 /// details it carries.</para>
 /// </remarks>
 [KernelCapability("identity.record.person", VerbClass.Execute, Resource = nameof(PersonId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RecordPersonIdentity(
     TenantId TenantId,
     PersonId PersonId,
@@ -31,6 +32,7 @@ public sealed record RecordPersonIdentity(
 /// <para><c>Details</c> is never serialized, as for <see cref="RecordPersonIdentity"/>.</para>
 /// </remarks>
 [KernelCapability("identity.record.site_local", VerbClass.Execute, Resource = nameof(ParticipantId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RecordSiteLocalIdentity(
     TenantId TenantId,
     ParticipantId ParticipantId,
@@ -43,6 +45,7 @@ public sealed record RecordSiteLocalIdentity(
 /// which decrypts only after it commits; sent on its own it records a reveal and discloses nothing.
 /// </summary>
 [KernelCapability("identity.reveal.person", VerbClass.Execute, Resource = nameof(PersonId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RevealPersonIdentity(
     TenantId TenantId,
     PersonId PersonId,
@@ -60,6 +63,7 @@ public sealed record RevealPersonIdentity(
 
 /// <summary>Audits the disclosure of a participant's site-local identifier (K-IDN-1), as <see cref="RevealPersonIdentity"/>.</summary>
 [KernelCapability("identity.reveal.site_local", VerbClass.Execute, Resource = nameof(ParticipantId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RevealSiteLocalIdentity(
     TenantId TenantId,
     ParticipantId ParticipantId,
@@ -80,6 +84,7 @@ public sealed record RevealSiteLocalIdentity(
 /// the pseudonymous kernel records remain (spec §9.2). An erased record cannot be recorded again.
 /// </summary>
 [KernelCapability("identity.erase.person", VerbClass.Approve, Resource = nameof(PersonId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record ErasePersonIdentity(
     TenantId TenantId,
     PersonId PersonId,
@@ -88,6 +93,7 @@ public sealed record ErasePersonIdentity(
 
 /// <summary>Erases a participant's site-local identifier by crypto-shredding, as <see cref="ErasePersonIdentity"/>.</summary>
 [KernelCapability("identity.erase.site_local", VerbClass.Approve, Resource = nameof(ParticipantId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record EraseSiteLocalIdentity(
     TenantId TenantId,
     ParticipantId ParticipantId,
@@ -100,6 +106,7 @@ public sealed record EraseSiteLocalIdentity(
 /// linking it again to the same person is a no-op.
 /// </summary>
 [KernelCapability("identity.link.cross_study", VerbClass.Execute, Resource = nameof(PersonId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record LinkParticipantToPerson(
     TenantId TenantId,
     ParticipantId ParticipantId,
@@ -112,6 +119,7 @@ public sealed record LinkParticipantToPerson(
 /// <see cref="IIdentityVault.RevealLinksAsync"/>, which reads the links only after it commits.
 /// </summary>
 [KernelCapability("identity.reveal.links", VerbClass.Execute, Resource = nameof(PersonId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RevealPersonLinks(
     TenantId TenantId,
     PersonId PersonId,

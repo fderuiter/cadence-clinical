@@ -139,7 +139,7 @@ public class KernelPostgresFixture : IAsyncLifetime
         await PostgresTestEvidence.VerifyAndRecordAsync(
             "kernel", _server.Kind, AdminConnectionString, $"{KernelDbContext.Schema}.__ef_migrations_history", _appRole).ConfigureAwait(false);
 
-        _services = new ServiceCollection()
+        var services = new ServiceCollection()
             .AddSingleton<IClock>(Clock)
             .AddSingleton<ICurrentActor>(CurrentActor)
             .AddSingleton<IAuthorizer>(Authorizer)
@@ -156,8 +156,14 @@ public class KernelPostgresFixture : IAsyncLifetime
             .AddCadenceRules()
             .AddCadenceStandards()
             .AddKernelIdentityVault()
-            .AddKernelIdentityVaultPersistence(VaultMasterKey, VaultRegion)
-            .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
+            .AddKernelIdentityVaultPersistence(VaultMasterKey, VaultRegion);
+        ConfigureServices(services);
+        _services = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
+    }
+
+    /// <summary>Adds test-only services, such as a module's handlers and command store, before the provider is built.</summary>
+    protected virtual void ConfigureServices(IServiceCollection services)
+    {
     }
 
     /// <summary>
@@ -273,7 +279,8 @@ public class KernelPostgresFixture : IAsyncLifetime
         await context.SaveChangesAsync().ConfigureAwait(false);
     }
 
-    private IServiceProvider Scope()
+    /// <summary>A fresh scope's provider, as a request would get one; the fixture disposes it.</summary>
+    protected IServiceProvider Scope()
     {
         var scope = (_services ?? throw new InvalidOperationException(SkipReason)).CreateScope();
         _scopes.Add(scope);

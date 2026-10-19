@@ -234,6 +234,10 @@ A lineage read (ADR-2471) walks the graph backward (toward inputs) or forward (t
 
 An architectural paradigm establishing a single, unified body of clinical truth (`Cadence.Kernel.*`) encompassing fundamental regulated trial concepts: Tenant, Organization, Person, Study, Site, StudySite, Participant, Enrollment, Applicability, Event, Observation, and Attestation. Product workflows (EDC, CTMS, eTMF, RTSM, Safety, eCOA) operate as projection modules and specialized workflow handlers over this single relational schema, eliminating duplicate cross-service entity definitions and synchronization failure windows under 21 CFR Part 11 and ICH GCP E6(R2).
 
+### Module command path and module SDK
+
+A module changes clinical state the way the kernel does: it implements a command handler from the module SDK (`Cadence.Kernel.Modules`) and sends its command through the kernel command pipeline. The module's record is written by its own `DbContext`, enlisted on the command's connection and transaction, so the record, its kernel audit chain link, its events and its idempotency record commit together; there is one history per record (ADR-2600). Before authorization the pipeline runs the command's FluentValidation validators and refuses a malformed command with `K.Command.Invalid` and field errors; a command with nothing to validate says why with `[NoValidator]`. The SDK and `Cadence.Kernel.Abstractions` are the only kernel assemblies a module may reference (K-XS-2).
+
 ### Clinical Kernel Single-Database Schema Standard
 
 A persistence consolidation standard aligning .NET Aspire AppHost (`Cadence.AppHost`) and all EF Core microservice `DbContext` configurations onto a single logical PostgreSQL database (`cadence`) with schema-level isolation (`kernel.*`, `edc.*`, `ctms.*`, `etmf.*`, `quality.*`). Enables cross-domain ACID transactions, PostgreSQL Row-Level Security (RLS), composite foreign keys, and unified bitemporal point-in-time state reconstruction under 21 CFR Part 11 without distributed transactions.
