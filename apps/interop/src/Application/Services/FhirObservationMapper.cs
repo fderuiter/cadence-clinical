@@ -34,8 +34,11 @@ public static class FhirObservationMapper
         ["2339-0"] = new("LB", "GLUC", "Glucose"),
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
-    /// <summary>The source and subject the mapped candidates are filed under.</summary>
-    public sealed record Target(string StudyId, string SiteId, string SubjectId, string SubjectPseudonym, string EhrSystemId);
+    /// <summary>
+    /// The source and subject the mapped candidates are filed under. The caller stamps the study and site on each
+    /// candidate, so this type adds no string study or site ID of its own (K-XS-1).
+    /// </summary>
+    public sealed record Target(string SubjectId, string SubjectPseudonym, string EhrSystemId);
 
     /// <summary>The candidates mapped from a bundle, and the Observations that were skipped with the reason.</summary>
     public sealed record Result(IReadOnlyList<EhrReconciliationCandidateRecord> Candidates, IReadOnlyList<string> Skipped);
@@ -143,8 +146,6 @@ public static class FhirObservationMapper
         reason = string.Empty;
         return new EhrReconciliationCandidateRecord
         {
-            StudyId = target.StudyId,
-            SiteId = target.SiteId,
             SubjectId = target.SubjectId,
             SubjectPseudonym = target.SubjectPseudonym,
             EhrSystemId = target.EhrSystemId,

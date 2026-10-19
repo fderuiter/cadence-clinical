@@ -19,7 +19,7 @@ Medical imaging service. It de-identifies DICOM uploads (single instances and ba
 
 - `GET /healthz`, `GET /healthz/live`, `GET /healthz/ready` (anonymous; mapped by `MapCadenceHealthAndStatusEndpoints` and `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready` checks `ImagingDbContext`.
 - `GET /api/v1/imaging/status` (anonymous status payload).
-- `POST /api/v1/imaging/studies/{studyUid}/series/{seriesUid}/segment` (`Endpoints/ImagingSegmentationEndpoints.cs`, `Services/ImagingSegmentationService.cs`). It does not read the image: the contour is drawn around the seed point, the scale and Hounsfield statistics are constants, and the result is stored as an AI-assisted annotation. Study scope is checked only when the body names a study. Do not rely on it until #5426 is fixed.
+- `POST /api/v1/imaging/studies/{studyUid}/series/{seriesUid}/segment` (`Endpoints/ImagingSegmentationEndpoints.cs`, `Services/ImagingSegmentationService.cs`). It does not read the image: the contour is drawn around the seed point, the scale and Hounsfield statistics are constants, and the result is stored as an AI-assisted annotation. The study, site and subject come from the stored scan, the series must belong to it, and the caller's signed study scope must include that study (403 otherwise, 404 for an unknown study or series); writing needs `imaging_adjudication:submit` (#5441). Do not rely on the measurement until #5426 is fixed.
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
 - The gateway forwards `/api/v1/imaging/**` to this service. Compose publishes host port 8014 (container port 8080); the gateway's default upstream is `http://localhost:8014` (`IMAGING_SERVICE_URL`).
 
