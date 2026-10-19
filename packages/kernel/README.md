@@ -797,7 +797,7 @@ scripts/manage_migrations.sh script kernel   # idempotent SQL for DBA review
 ```
 
 After adding a migration, apply it to a real PostgreSQL before opening the PR (no Docker needed; any reachable
-server works, e.g. an apt-installed PostgreSQL 16):
+server works, e.g. an apt-installed PostgreSQL 18, docs/TESTING.md):
 
 ```bash
 CADENCE_TEST_POSTGRES="Host=localhost;Username=postgres;Password=postgres;Database=postgres" \

@@ -58,16 +58,27 @@ the qualified major, before any test runs, since a pass under such a role says n
 `gxp snapshot` and `cadence ci` set it to `TestResults/gxp`), it records the server version and source, the installed extensions, the latest
 kernel migration and the role's attributes in `kernel.database.txt`, which the RTM and IQ/OQ/PQ report print.
 
-Where Docker is not available, for example in a cloud agent session, a local server works:
+Where Docker is not available, a local PostgreSQL 18 server works. Create its cluster as UTF8: a `SQL_ASCII` cluster,
+which `initdb` makes under the C locale, fails the kernel's correction tests.
 
 ```bash
-sudo apt-get install -y postgresql
-sudo service postgresql start
-sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres'"
+sudo install -d /usr/share/postgresql-common/pgdg
+sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+. /etc/os-release
+echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+  | sudo tee /etc/apt/sources.list.d/pgdg.list
+sudo apt-get update && sudo apt-get install -y postgresql-18
+sudo pg_createcluster 18 main --port 5432 --locale C.UTF-8 --encoding UTF8 -- --auth-local=trust --auth-host=trust
+sudo pg_ctlcluster 18 main start
 
-export CADENCE_TEST_POSTGRES="Host=localhost;Username=postgres;Password=postgres;Database=postgres"
+export CADENCE_TEST_POSTGRES="Host=127.0.0.1;Port=5432;Username=postgres;Database=postgres"
 dotnet test Cadence.sln
 ```
+
+Cloud agent sessions get this from the project's cloud environment: its setup script installs the .NET 10 SDK and
+PostgreSQL 18, creates that cluster (dropping Ubuntu's PostgreSQL 16 one) and restores dependencies, and the
+environment sets `CADENCE_TEST_POSTGRES`. The `scripts/claude_session_start.sh` hook restarts the cluster when a session
+resumes and sets `CADENCE_TEST_BROWSER=1`, so `cadence ci` runs as it would locally.
 
 These tests currently use it:
 
