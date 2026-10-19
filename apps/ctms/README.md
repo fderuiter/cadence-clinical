@@ -28,6 +28,12 @@ Clinical trial management scaffold. It holds the CTMS persistence model (monitor
 
 Site start-up greenlight routes need `ctms_greenlight:read` or `ctms_greenlight:certify`; the site routes also apply site scope, and every route refuses a study the caller is not assigned to. The certifier is the signed caller, and tokens are sealed with `GATEWAY_SECRET` with no fallback (`PermissionMatrix.Ctms.cs`) ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
 
+Greenlight gates are activation evidence, so the service never invents them (#5433). Every route needs a `study_id`;
+there is no default study. `GET /startup/matrix` only reads, and a study and country with no recorded gates is an empty
+matrix. Reading or certifying a single site with no recorded gate returns `404` and writes nothing. Batch certify
+refuses the whole request with `400` when any named site has no gate in that study and country, and certifies nothing.
+No route records facet evidence yet (#5445), so gates come from the database (for demo data, `pnpm cadence db seed`).
+
 ## Persistence
 
 `AddCadencePostgresDbContext<CtmsDbContext>()` from [packages/database](../../packages/database/README.md) connects to the shared `cadence` database with its search path set to the `ctms` schema ([ADR-2447](../../docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)). The connection string comes from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only the Development environment falls back to `cadence` on `localhost:5432`, and other environments fail at startup. `docker/docker-compose.yml` points it at the compose PostgreSQL and sets `Database__MigrateOnStartup=true`, so the service applies its migrations when it starts.
