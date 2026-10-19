@@ -35,8 +35,17 @@ Two opt-ins are checked in order, by every fixture below:
 
 1. `CADENCE_TEST_POSTGRES` is an Npgsql connection string to a server you already run, as a superuser. Each fixture
    creates a throwaway database on it (`cadence_it_*`, `cadence_kernel_it_*` or `cadence_e2e_*`) and drops it afterwards.
-2. `CADENCE_TEST_DOCKER=1` starts a Testcontainers `postgres:16-alpine` container, whose default `postgres` user is a
-   superuser. `PostgresTestServer` in `tests/Cadence.TestSupport/Database` makes this choice for the kernel fixtures.
+2. `CADENCE_TEST_DOCKER=1` starts a Testcontainers container of `PostgresTestImage.Image`, whose default `postgres`
+   user is a superuser. `PostgresTestServer` in `tests/Cadence.TestSupport/Database` makes this choice for the kernel
+   fixtures.
+
+The tests qualify **PostgreSQL 18**, the major docker compose runs
+([ADR-2533](adr/2026-10-19-tests-ci-and-compose-run-one-pinned-postgresql-major.md)). `PostgresTestImage`
+(`packages/testing`, `Cadence.Testing.Persistence`) holds the major and the digest-pinned image; every fixture, CI's
+service container and `docker/docker-compose.yml` use that image, and `PostgresVersionPinTests` fails when one drifts.
+A server of another major is refused: `cadence ci` stops before the tests when `CADENCE_TEST_POSTGRES` reaches one, and
+the kernel fixture fails its tests on one. A local server for `CADENCE_TEST_POSTGRES` is PostgreSQL 18 (on Debian or
+Ubuntu, `postgresql-18` from the PostgreSQL apt repository).
 
 Once either is set, a fixture that cannot reach or start the server fails its tests; it never turns them into skips.
 A run that skips database tests is not evidence: `cadence ci` fails when any test in `Cadence.IntegrationTests` or
@@ -44,8 +53,8 @@ A run that skips database tests is not evidence: `cadence ci` fails when any tes
 fail on such a run. The only exemption is the opt-in lineage benchmark, named in
 `DatabaseTestEvidence.OptInTests`.
 
-The kernel fixture checks that its application role is neither a superuser nor `BYPASSRLS` before any test runs, since
-a pass under such a role says nothing about Row-Level Security. When `CADENCE_TEST_EVIDENCE_DIR` is set (`gxp sync`,
+The kernel fixture checks that its application role is neither a superuser nor `BYPASSRLS`, and that the server runs
+the qualified major, before any test runs, since a pass under such a role says nothing about Row-Level Security. When `CADENCE_TEST_EVIDENCE_DIR` is set (`gxp sync`,
 `gxp snapshot` and `cadence ci` set it to `TestResults/gxp`), it records the server version and source, the installed extensions, the latest
 kernel migration and the role's attributes in `kernel.database.txt`, which the RTM and IQ/OQ/PQ report print.
 

@@ -455,7 +455,8 @@ jobs:
     # CADENCE_TEST_POSTGRES they would be skipped (docs/TESTING.md).
     services:
       postgres:
-        image: postgres:16
+        # The image the tests qualify: PostgresTestImage.Image and docker/docker-compose.yml (ADR-2533).
+        image: postgres:18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
         env:
           POSTGRES_USER: cadence
           # A throwaway database on the runner; no credential is needed or stored.

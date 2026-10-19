@@ -39,6 +39,7 @@ using Cadence.Rules.Indicators;
 using Cadence.Rules.Packs;
 using Cadence.Standards;
 using Cadence.Testing.Commands;
+using Cadence.Testing.Persistence;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Database;
 
@@ -56,7 +57,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// PostgreSQL fixture for the kernel schema. Opt in with <c>CADENCE_TEST_POSTGRES</c> (an Npgsql connection string
 /// to an existing server, as a superuser) or <c>CADENCE_TEST_DOCKER=1</c> (a Testcontainers
-/// <c>postgres:16-alpine</c> container, see <see cref="PostgresTestServer"/>): the fixture creates a throwaway database, applies the kernel migrations as
+/// <see cref="PostgresTestImage.Image"/> container, see <see cref="PostgresTestServer"/>): the fixture creates a throwaway database, applies the kernel migrations as
 /// the owner, creates a login role granted exactly <see cref="KernelDatabase.GrantAppRoleSql"/> (not the owner, no
 /// <c>BYPASSRLS</c>), wires the command pipeline for that role exactly as a host does
 /// (<see cref="KernelPersistenceServiceCollectionExtensions.AddKernelPersistence"/> plus

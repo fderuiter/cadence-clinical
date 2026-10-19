@@ -2,6 +2,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Testing.Persistence;
+
 using Testcontainers.PostgreSql;
 
 namespace Cadence.TestSupport.Database;
@@ -15,7 +17,7 @@ public enum PostgresTestServerKind
     /// <summary><c>CADENCE_TEST_POSTGRES</c>: a connection string to a server you run, as a superuser.</summary>
     External,
 
-    /// <summary><c>CADENCE_TEST_DOCKER=1</c>: a Testcontainers <c>postgres:16-alpine</c> container.</summary>
+    /// <summary><c>CADENCE_TEST_DOCKER=1</c>: a Testcontainers container of <see cref="PostgresTestImage.Image"/>.</summary>
     Docker,
 }
 
@@ -27,7 +29,7 @@ public enum PostgresTestServerKind
 public sealed class PostgresTestServer : IAsyncDisposable
 {
     /// <summary>The image <see cref="PostgresTestServerKind.Docker"/> starts; the version the kernel targets.</summary>
-    public const string DockerImage = "postgres:16-alpine";
+    public const string DockerImage = PostgresTestImage.Image;
 
     /// <summary>The skip message for a fixture with neither opt-in set.</summary>
     public const string SkipReason =

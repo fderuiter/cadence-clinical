@@ -3,6 +3,8 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Testing.Persistence;
+
 using Npgsql;
 
 using Testcontainers.PostgreSql;
@@ -17,7 +19,7 @@ namespace Cadence.IntegrationTests.Database;
 /// <list type="number">
 /// <item><c>CADENCE_TEST_POSTGRES</c>: a connection string to a server you run; a <c>cadence_it_*</c> database is
 /// created on it.</item>
-/// <item><c>CADENCE_TEST_DOCKER=1</c>: a Testcontainers <c>postgres:16-alpine</c> container.</item>
+/// <item><c>CADENCE_TEST_DOCKER=1</c>: a Testcontainers container of <see cref="PostgresTestImage.Image"/>.</item>
 /// </list>
 /// With neither set, <see cref="ConnectionString"/> is null and tests call <see cref="SkipIfUnavailable"/>.
 /// No migrations are applied; that is left to the tests.
@@ -49,7 +51,7 @@ public sealed class ThrowawayPostgresDatabase : IAsyncLifetime
         }
         else if (Environment.GetEnvironmentVariable("CADENCE_TEST_DOCKER") == "1")
         {
-            _container = new PostgreSqlBuilder().WithImage("postgres:16-alpine").Build();
+            _container = new PostgreSqlBuilder().WithImage(PostgresTestImage.Image).Build();
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
             await _container.StartAsync(cts.Token).ConfigureAwait(false);
             _adminConnectionString = _container.GetConnectionString();

@@ -10,6 +10,7 @@ using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Kernel.Time;
 using Cadence.Testing.Hosting;
+using Cadence.Testing.Persistence;
 using Cadence.Testing.Security;
 
 using Microsoft.AspNetCore.Hosting;
@@ -34,7 +35,7 @@ namespace Cadence.E2ETests.E2E;
 /// <list type="number">
 /// <item><c>CADENCE_TEST_POSTGRES</c>: an Npgsql connection string to an existing server; the factory
 /// creates a throwaway database on it and drops it afterwards (works without Docker).</item>
-/// <item><c>CADENCE_TEST_DOCKER=1</c>: a Testcontainers <c>postgres:16-alpine</c> container.</item>
+/// <item><c>CADENCE_TEST_DOCKER=1</c>: a Testcontainers container of <see cref="PostgresTestImage.Image"/>.</item>
 /// </list>
 /// With neither set the host runs on the EF Core in-memory provider, which is enough for routing and
 /// read paths. Tests that write through enrollment (which needs real transactions and advisory locks)
@@ -86,7 +87,7 @@ public class ExecutionE2EFactory : WebApplicationFactory<Cadence.Apps.Execution.
             }
 
             _postgresContainer = new PostgreSqlBuilder()
-                .WithImage("postgres:16-alpine")
+                .WithImage(PostgresTestImage.Image)
                 .Build();
 
             await _postgresContainer.StartAsync().ConfigureAwait(false);
