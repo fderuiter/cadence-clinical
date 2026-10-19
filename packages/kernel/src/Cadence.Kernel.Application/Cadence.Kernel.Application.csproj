@@ -22,4 +22,13 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
+  <!-- The module SDK's Microsoft.AspNetCore.OpenApi package brings its XML-comment source generator along, and the
+       generated code references Microsoft.AspNetCore.OpenApi. The application layer maps no endpoints and must stay
+       free of ASP.NET Core (spec §2.4, KernelLayeringTests), so the generator is removed here. -->
+  <Target Name="RemoveOpenApiSourceGenerator" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <Analyzer Remove="@(Analyzer)" Condition="'%(Analyzer.NuGetPackageId)' == 'Microsoft.AspNetCore.OpenApi'" />
+    </ItemGroup>
+  </Target>
+
 </Project>
