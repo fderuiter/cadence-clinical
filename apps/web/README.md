@@ -12,7 +12,7 @@ Staff-facing single-page application (Vue 3, Pinia, Vue Router, Vite). It talks 
 - `src/views/`, `src/components/`, `src/features/`, `src/composables/`, `src/router/`: UI components and views. `src/components/AppShell.vue` provides the application shell layout, including responsive header navigation with a collapsible drawer (`#mobile-nav-menu`), mobile hamburger menu button (`#btn-mobile-menu-toggle`), workspace persona switcher, quick command palette access, and screen-reader status announcements (`.sr-only-status-alerts`). Includes `DicomMprViewer.vue` (`src/components/imaging/`) for multi-planar DICOM reconstruction (Axial, Sagittal, Coronal viewports with crosshair tracking and RECIST 1.1 caliper measurements), featuring responsive single-column fluid stacking and scaled canvas coordinate translation for mobile viewports (`@media (max-width: 640px)`).
 - `src/canvas/` and `src/components/canvas/`: the Clinical Canvas (`StudyCanvasView.vue`, route `/studies/:studyCode`): lifecycle stages and sections, the browser mirror of the kernel NodeRef (ADR-2481), the palette, pulse, participants and inspector. `src/stores/studyCanvas.ts` holds what it has read from Execution.
 - `src/mocks/`: MSW handlers for offline and demo use.
-- `src/types/generate-types.js`: generates API types before build, test and typecheck.
+- `src/types/generate-types.js`: generates `src/types/usdm.ts` from `docs/openapi/legacy/` before build, test and typecheck. It skips the work when the SHA-256 of the script and the legacy specs matches `src/types/.usdm-hash.json`; `node src/types/generate-types.js --force` regenerates anyway.
 - `tests/`: Vitest unit tests; `tests/e2e/`: Playwright specs.
 
 ## Authentication
@@ -44,15 +44,15 @@ Apart from `executionApi.ts` and `kernelApi.ts`, the clients in `src/api/` are s
 
 Run from the repository root with pnpm (the workspace is defined in `pnpm-workspace.yaml`):
 
-| Command                                | Purpose                                                                                                     |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `pnpm --filter web dev`                | Vite dev server on `http://localhost:3000/cadence-clinical/`; `/api` is proxied to `http://localhost:8000`. |
-| `pnpm --filter web build`              | Production build (also builds `usdm-schemas` and `ui` first, then the docs site).                           |
-| `pnpm --filter web build:demo`         | Build in `demo` mode (MSW enabled).                                                                         |
-| `pnpm --filter web test`               | Vitest with coverage.                                                                                       |
-| `pnpm --filter web test:e2e`           | Playwright; starts the web and subject-portal dev servers.                                                  |
-| `pnpm --filter web lint` / `typecheck` | ESLint / `tsc --noEmit`.                                                                                    |
-| `pnpm --filter web generate:api`       | Regenerates `src/api/generated/` from the .NET services' specs in `docs/openapi/`.                          |
+| Command                                | Purpose                                                                                                                                                                                       |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm --filter web dev`                | Vite dev server on `http://localhost:3000/cadence-clinical/`; `/api` is proxied to `http://localhost:8000`.                                                                                   |
+| `pnpm --filter web build`              | Production build of the web app only. Build `ui` first (`pnpm --filter ui build`), or run `pnpm build` from the root, which does both. The docs site is a separate build (`pnpm docs:build`). |
+| `pnpm --filter web build:demo`         | Build in `demo` mode (MSW enabled).                                                                                                                                                           |
+| `pnpm --filter web test`               | Vitest with coverage.                                                                                                                                                                         |
+| `pnpm --filter web test:e2e`           | Playwright; starts the web and subject-portal dev servers.                                                                                                                                    |
+| `pnpm --filter web lint` / `typecheck` | ESLint / `tsc --noEmit`.                                                                                                                                                                      |
+| `pnpm --filter web generate:api`       | Regenerates `src/api/generated/` from the .NET services' specs in `docs/openapi/`.                                                                                                            |
 
 ## Dependencies
 

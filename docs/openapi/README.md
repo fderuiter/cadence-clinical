@@ -11,6 +11,6 @@ The top-level `*_openapi.json` files are the OpenAPI documents the .NET services
 `legacy/` holds the specs of the Python services this platform was ported from. The .NET services don't serve them: the legacy aggregate lists 878 paths, and the .NET services serve 53. They stay because the web app is still typed against them:
 
 - `apps/web/src/api/types.ts` was generated from `legacy/cdisc_openapi.json` with `openapi-typescript`.
-- `apps/web/src/types/usdm.ts` is generated from every file in `legacy/` by `apps/web/src/types/generate-types.js`, which runs before the web app's build, typecheck and tests.
+- `apps/web/src/types/usdm.ts` is generated from every file in `legacy/` by `apps/web/src/types/generate-types.js`, which runs before the web app's build, typecheck and tests and regenerates only when the script or a legacy spec changes (SHA-256 recorded in `apps/web/src/types/.usdm-hash.json`).
 
 Most web API calls therefore target endpoints that no .NET service implements yet; [`docs/web/API_MIGRATION.md`](../web/API_MIGRATION.md) tracks moving the web onto these specs. Once the web clients move to the specs above, `legacy/` can be deleted. No gate checks the legacy specs.
