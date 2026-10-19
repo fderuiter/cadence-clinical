@@ -1,2 +1,4 @@
 src/types/cdash.ts
+# Local build, test and coverage output (git-ignored)
+coverage/
 dist/

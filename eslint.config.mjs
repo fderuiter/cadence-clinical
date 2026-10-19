@@ -67,6 +67,7 @@ export default [
       "**/.pytest_cache/**",
       "**/playwright-report/**",
       "**/test-results/**",
+      "**/coverage/**",
       "scripts/**",
       "docs/.vitepress/**",
       "**/mockServiceWorker.js",
