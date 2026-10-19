@@ -65,7 +65,7 @@ public sealed class ObservationGoldenMasterTests
         string expectedIndicator)
     {
         var labRange = new LabRangeService();
-        var result = labRange.EvaluateRange(testCode, value, age, sex);
+        var result = labRange.Evaluate(new StudyCode("STUDY-101"), new TestCode(testCode), value, sex, age);
 
         result.IsOutOfRange.Should().Be(expectedOutOfRange);
         result.Indicator.Should().Be(expectedIndicator);

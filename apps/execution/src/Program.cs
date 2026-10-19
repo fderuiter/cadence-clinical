@@ -116,7 +116,7 @@ builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.Services.AddSingleton<IDemographicsEncryptionService, AesGcmDemographicsEncryptionService>();
 builder.Services.AddSingleton<IDemographicsNormalizationService, DemographicsNormalizationService>();
 builder.Services.AddSingleton<IUcumNormalizationService, UcumNormalizationService>();
-builder.Services.AddSingleton<ILabRangeService, LabRangeService>();
+builder.Services.AddSingleton<ILabRangeService>(sp => new LabRangeService(sp.GetRequiredService<IServiceScopeFactory>()));
 builder.Services.AddSingleton<IOutlierDetectionService, OutlierDetectionService>();
 builder.Services.AddScoped<IBatchEvaluationContextLoader, BatchEvaluationContextLoader>();
 builder.Services.AddSingleton<IEditCheckEngine, AstEditCheckEngine>();

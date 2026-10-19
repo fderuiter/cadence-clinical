@@ -36,6 +36,20 @@ A PI approves a completed form with `POST /api/v1/execution/forms/{id}/approve`,
 
 `ExecutionDbContext` on PostgreSQL. The connection string is resolved by `CadenceDatabaseExtensions.ResolvePostgresConnectionString` in [packages/database](../../packages/database/README.md): `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only Development falls back to `cadence` on `localhost:5432`. The context uses the `edc` schema in the shared `cadence` database (ADR-2447). The context registers the `GxPAuditInterceptor` and a concurrency-token interceptor. MassTransit uses the EF Core outbox on the same database with the in-memory transport. Migrations live in `Infrastructure/Persistence/Migrations/`; `dotnet run ... -- --seed` seeds sample data and exits.
 
+## Lab reference ranges
+
+An observation's out-of-range flag comes from `LabRangeService` (#5435). It first looks for an active custom range
+imported for the observation's own study and test code; a range never applies to another study, and a range with no
+study never applies. Among that study's ranges it prefers, in order, the exact local site (for a `LOCAL` observation,
+then a generic local range, then central), a matching sex over `ALL`, and the narrowest matching age band. When the
+study has no custom range for the test it uses the built-in standard catalog. Evaluation requires the study.
+
+The custom ranges are an in-process snapshot. Before the first evaluation after a start, `EnsureLoadedAsync` loads
+the persisted active ranges; if it cannot, the observation is refused rather than flagged against the wrong ranges.
+Loading is lazy so hosts that never evaluate (the OpenAPI export, composition tests) start without a database. Each import, update or delete
+rebuilds the snapshot and swaps it in one step, so an evaluation never sees an empty or partial set. A second instance
+sees another instance's import only after it restarts (durable shared state is #5364).
+
 ## Errors and concurrency
 
 - Domain errors come back as RFC 7807 ProblemDetails with a `code` extension. `DomainErrorHttpMapping` sets the status.

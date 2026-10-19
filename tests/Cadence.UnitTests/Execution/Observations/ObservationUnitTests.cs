@@ -173,17 +173,17 @@ public sealed class ObservationUnitTests
         var labRange = new LabRangeService();
 
         // Normal glucose (85 mg/dL)
-        var normalResult = labRange.EvaluateRange("GLUC", 85.0, 35, "M");
+        var normalResult = labRange.Evaluate(new StudyCode("STUDY-101"), new TestCode("GLUC"), 85.0, "M", 35);
         normalResult.IsOutOfRange.Should().BeFalse();
         normalResult.Indicator.Should().Be("NORMAL");
 
         // High glucose (150 mg/dL)
-        var highResult = labRange.EvaluateRange("GLUC", 150.0, 35, "M");
+        var highResult = labRange.Evaluate(new StudyCode("STUDY-101"), new TestCode("GLUC"), 150.0, "M", 35);
         highResult.IsOutOfRange.Should().BeTrue();
         highResult.Indicator.Should().Be("HIGH");
 
         // Low potassium (3.0 mmol/L)
-        var lowResult = labRange.EvaluateRange("K", 3.0, 45, "F");
+        var lowResult = labRange.Evaluate(new StudyCode("STUDY-101"), new TestCode("K"), 3.0, "F", 45);
         lowResult.IsOutOfRange.Should().BeTrue();
         lowResult.Indicator.Should().Be("LOW");
     }

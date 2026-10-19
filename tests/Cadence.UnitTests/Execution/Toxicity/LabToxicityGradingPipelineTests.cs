@@ -49,10 +49,8 @@ public sealed class LabToxicityGradingPipelineTests
         _ucumService.GetNormalizedRepresentation(Arg.Any<double?>(), Arg.Any<string?>())
             .Returns(call => ((double?)call[0], (string?)call[1]));
 
-        _labRangeService.Evaluate(Arg.Any<TestCode>(), Arg.Any<double?>(), Arg.Any<string?>(), Arg.Any<int?>(), Arg.Any<string?>())
-            .Returns(new LabAssessmentResult("NORMAL", false, null, 10.0, 40.0));
-
-        _labRangeService.EvaluateRange(Arg.Any<string>(), Arg.Any<double?>(), Arg.Any<int?>(), Arg.Any<string>(), Arg.Any<string>())
+        _labRangeService.Evaluate(
+                Arg.Any<StudyCode>(), Arg.Any<TestCode>(), Arg.Any<double?>(), Arg.Any<string?>(), Arg.Any<int?>(), Arg.Any<string?>(), Arg.Any<string?>())
             .Returns(new LabAssessmentResult("NORMAL", false, null, 10.0, 40.0));
     }
 
