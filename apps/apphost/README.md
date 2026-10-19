@@ -36,7 +36,9 @@ routes answer as the service being down.
   origin), `CADENCE_GATEWAY_URL` (where its `/api` proxy forwards, #5451) and the `VITE_KEYCLOAK_*` settings. Keycloak sign-in does not work there yet: the realm's `cadence-web` client
   allows only the web app's redirect URI.
 - Projects, each on the host port docker compose publishes it on, so the gateway's Development defaults and the
-  web dev server's `/api` proxy to `http://localhost:8000` work for both (`core` runs 8000, 8002 and 8018):
+  web dev server's `/api` proxy to `http://localhost:8000` work for both (`core` runs 8000, 8002 and 8018). Each
+  service's port, address variable, database need and profile come from the service topology manifest
+  ([`packages/topology`](../../packages/topology/README.md)); a new service still needs its `AddProject` line:
 
   | Port | Service   | Port | Service       | Port | Service    |
   | ---- | --------- | ---- | ------------- | ---- | ---------- |

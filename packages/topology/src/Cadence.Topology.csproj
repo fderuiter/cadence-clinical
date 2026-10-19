@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Cadence.Topology</RootNamespace>
+    <Description>The service topology manifest: each service's name, port, address variable, routes and needs (#5315).</Description>
+    <!-- Public API for other projects: every public member needs an XML comment (CS1591). -->
+    <CadenceRequireXmlDocs>true</CadenceRequireXmlDocs>
+  </PropertyGroup>
+</Project>
