@@ -114,10 +114,9 @@ The first takes about a minute (mostly the build), the second about 4 s. The ful
 
 ## Gotchas
 
-- **No kernel tenant for the realm users.** Tokens carry `tenant_id=cadence-local`, but nothing provisions that
-  kernel tenant, so kernel reads answer 403 "Your sign-in's tenant is not an active kernel tenant" (activity,
-  search, Trace). `scripts/local_stack_nodocker.sh up` inserts the row into `kernel.tenants` directly: local only, no audit entry, no
-  grants, so kernel objects show as masked. Tracked in #5430.
+- **Kernel reads find nothing.** The kernel host provisions the `cadence-local` tenant on start (ADR-2542), but the
+  realm's users hold no kernel grants (#5452): `search` answers 200 with no hits and `activity` answers 403 "You hold no
+  grant in effect". A 403 "not an active kernel tenant" means the kernel was not started in Development.
 - **`ui` must be built.** `apps/web/vite.config.js` aliases `ui` to `packages/ui/dist/index.js`, which `pnpm install`
   does not create; Vite shows "Failed to resolve import "ui" from "src/main.js"". `scripts/local_stack_nodocker.sh up` runs
   `pnpm --filter ui build`. If Vite already started without it, restart the AppHost: Vite keeps the failed

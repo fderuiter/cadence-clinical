@@ -71,9 +71,6 @@ up() {
   wait_for http://localhost:8000/healthz/live 300
   wait_for http://localhost:3000/cadence-clinical/ 300
 
-  # The realm's users carry tenant_id=cadence-local, but nothing provisions that kernel tenant, so every kernel read
-  # answers 403 "not an active kernel tenant". Local-only shortcut: insert it (no audit entry).
-  psql -h 127.0.0.1 -p $PG_PORT -U postgres cadence -qc "insert into kernel.tenants (id, code, name, is_active, created_at, created_by, reason_for_change, version_index) values (gen_random_uuid(), 'cadence-local', 'Local development', true, now(), 'run-cadence skill', 'Local dev tenant for the cadence-local realm users', 1) on conflict (code) do nothing"
   echo "apphost   ok  (gateway :8000, execution :8002, kernel :8018, web http://localhost:3000/cadence-clinical/)"
   grep -o 'http://localhost:15000/login?t=[0-9a-f]*' "$STATE/apphost.log" | tail -1 | sed 's/^/dashboard     /'
 }

@@ -35,6 +35,10 @@ builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.P
 // schema owner sets Database__MigrateOnStartup to true instead.
 string connectionString = CadenceDatabaseExtensions.ResolvePostgresConnectionString(builder.Configuration, builder.Environment);
 KernelMigrationHostedService.Register(builder.Services, builder.Configuration, connectionString);
+
+// A local stack's sign-ins name a tenant code (cadence-local in the local realm, ADR-2514); in Development the host can
+// provision that tenant on start, as a platform operator only it holds (ADR-2542). Refused in any other environment.
+string[] platformOperators = DevelopmentTenantBootstrap.Register(builder.Services, builder.Configuration, builder.Environment);
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.Services.AddHttpContextAccessor();
 builder.Services
@@ -45,9 +49,9 @@ builder.Services
     .AddKernelSearch()
     .AddKernelAuthorization()
 
-    // Decisions come from the caller's grants, roles and delegations (ADR-2455). The host only reads and never
-    // bootstraps a tenant, so it names no platform operators.
-    .AddKernelAuthorityEvaluator()
+    // Decisions come from the caller's grants, roles and delegations (ADR-2455). The only platform operator is the
+    // development tenant bootstrap, and only when it is configured (ADR-2542); callers never act as it.
+    .AddKernelAuthorityEvaluator(platformOperators)
 
     // The activity stream (ADR-2485). This is the one host with kernel persistence, so it also runs the projector
     // that copies committed events into the stream (ADR-2540 §4.7).
@@ -67,6 +71,7 @@ builder.Services
     // replicas one runs it at a time.
     .AddKernelInProcessEvents()
     .AddKernelBackgroundJobs();
+builder.Services.AddScoped<ServiceActorScope>();
 builder.Services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
 builder.Services.AddSingleton<IKernelChangeReason, SignedChangeReason>();
 

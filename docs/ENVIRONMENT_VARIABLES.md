@@ -42,6 +42,13 @@ All services share the `cadence` database, each in its own schema; see [OPERATIO
 | ----------------------------------- | --------------------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DemographicsEncryption__KeyBase64` | `apps/execution/src/Program.cs:105` (`DemographicsEncryptionOptions`) | none    | yes; Base64 of a 16, 24 or 32 byte AES key (`openssl rand -base64 32`). The service refuses to start without a valid key. Under the Aspire AppHost, set it as the `demographics-encryption-key` parameter |
 
+## Kernel API host
+
+| Key                               | Read by                                                        | Default                      | Required                                                                                                                                                                                                                |
+| --------------------------------- | -------------------------------------------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Kernel__DevelopmentTenant__Code` | `apps/kernel-api/src/DevelopmentTenantBootstrap.cs` (ADR-2542) | none                         | no; Development only. Provisions the kernel tenant with this code on start, unless an active one exists. docker compose and the AppHost set `cadence-local`. The host refuses to start with it in any other environment |
+| `Kernel__DevelopmentTenant__Name` | `apps/kernel-api/src/DevelopmentTenantBootstrap.cs`            | `Local development (<code>)` | no                                                                                                                                                                                                                      |
+
 ## Notifications service
 
 | Key                        | Read by                                                                | Default                     | Required                                                                                                                                                                                                           |

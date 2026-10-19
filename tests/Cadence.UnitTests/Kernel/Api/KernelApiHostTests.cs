@@ -811,6 +811,24 @@ public sealed class KernelApiHostTests : IDisposable
         _lineage.Dependents.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// The development tenant bootstrap runs only in Development (ADR-2542): with its setting in any other environment
+    /// the host refuses to start, so no deployed host carries a platform operator.
+    /// </summary>
+    [Fact]
+    public void DevelopmentTenantSetting_OutsideDevelopment_StopsTheHost()
+    {
+        using var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
+            .UseEnvironment("Production")
+            .UseTestGatewaySecret()
+            .UseTestPostgresConnectionString()
+            .UseSetting("Kernel:DevelopmentTenant:Code", "cadence-local"));
+
+        var start = () => factory.CreateClient();
+
+        start.Should().Throw<InvalidOperationException>().WithMessage("*only in Development (ADR-2542)*");
+    }
+
     private HttpClient Client(bool knownTenant = true, bool hostVisibility = false) =>
         Factory(knownTenant, hostVisibility: hostVisibility).CreateSignedClient();
 

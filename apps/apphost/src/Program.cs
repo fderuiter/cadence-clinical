@@ -6,6 +6,7 @@ using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.JavaScript;
 
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
@@ -129,7 +130,15 @@ IResourceBuilder<ProjectResource> Service(string variable, IResourceBuilder<Proj
 
 Service("EXECUTION_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Execution>("execution"), 8002)
     .WithEnvironment("DemographicsEncryption__KeyBase64", demographicsEncryptionKey);
-Service("KERNEL_SERVICE_URL", builder.AddProject<Projects.Cadence_Kernel_Host>("kernel"), 8018);
+// The local realm's users sign in with tenant code cadence-local (ADR-2514); the kernel host provisions that tenant on
+// start, in Development only (ADR-2542). A project resource does not inherit the AppHost's environment, so the kernel
+// is given it, and the tenant setting only when that environment is Development.
+var kernel = Service("KERNEL_SERVICE_URL", builder.AddProject<Projects.Cadence_Kernel_Host>("kernel"), 8018)
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName);
+if (builder.Environment.IsDevelopment())
+{
+    kernel.WithEnvironment("Kernel__DevelopmentTenant__Code", "cadence-local");
+}
 
 if (full)
 {
