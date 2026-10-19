@@ -88,8 +88,17 @@ belongs to CTMS.
 ### Observation
 
 A recorded clinical fact: this concept had this value for this participant over this valid period, as
-asserted by this source. Values are immutable; a correction is a new Observation that supersedes the
-old one (K-FACT-1). The concept is a `ConceptRef`, never an SDTM variable.
+asserted by this source. Values are immutable; a correction appends a numbered revision to the same
+Observation, with a reason, so the earlier value stays readable (K-FACT-1, ADR-2621). The concept is a
+`ConceptRef`, never an SDTM variable.
+
+### Collection Instance
+
+The kernel side of one filled-in form: which Observations were collected together, for which participant
+and visit, under which CollectionSpec version (K-FACT-6, ADR-2622). It holds membership only; the form's
+layout, workflow and screen state are the EDC application's **FormInstance**. One command saves a whole
+page of its values, form locks apply at its scope, and a form signature names its members' exact revisions.
+_Avoid_: page IDs or visit strings on Observations, server-side form drafts
 
 ### Assertion
 

@@ -284,7 +284,9 @@ Command → Authenticate → Resolve Actor → Authorize (§9.3) → Check conse
         → commit → Outbox relay → subscribers (projections, applications, integrations, validation)
 ```
 
-- **K-TX-1** One command changes **one aggregate**. Multi-aggregate processes are sagas driven by events.
+- **K-TX-1** One command changes **one aggregate**, or the member Observations of one CollectionInstance (K-FACT-6)
+  under that instance's exclusive lock and the shared scope locks that cover it (§10.5). Other multi-aggregate
+  processes are sagas driven by events (ADR-2622).
 - **K-TX-2** Events, audit, provenance, lineage and outbox rows are written in the same transaction as the
   state change, or the change does not happen.
 - **K-TX-3** Commands carry an idempotency key and a reason for change (mutations). Replaying a key with the
@@ -691,6 +693,13 @@ public sealed record Observation(
 - **K-FACT-5** No free-form extension attributes on Observations (resolves G8). Qualifiers that carry
   meaning are Concepts (e.g. position, laterality, fasting status as qualifier ConceptRefs); workflow or
   display metadata belongs to the application.
+- **K-FACT-6** Observations collected together belong to one `CollectionInstance(id, participant, event,
+collection_spec_version, members)`: the kernel side of a form instance, naming which values were collected
+  together, for which participant and visit, under which CollectionSpec version (K-TIME-8). Membership is
+  insert-only, like an Observation's revisions; layout, item order, workflow and UI state stay with the application.
+  It is the form-instance scope of §10.5 and the target of form signatures (§9.5). One command records and corrects
+  its members, each against the revision it was edited from, and a stale revision refuses the whole save (K-TX-1,
+  ADR-2622).
 
 ### 8.2 Assertion
 
@@ -895,6 +904,9 @@ reason)`, append-only. Meanings: `Authored`, `Reviewed`, `Approved`, `Verified`,
   current content must have the signed hash. Commands that need a signature name an Attestation, which
   `IAttestationVerifier` checks within the tenant: the acting person must be the signer (ADR-2452). Content hashes
   are `sha256:` and lower-case hex over canonical JSON, for protocol versions and standards metadata alike.
+- A form signature targets a `CollectionInstance` with the hash of its members' sorted `(ObservationId, Revision,
+value)`, so it names the exact revisions signed. A correction never alters an Attestation: the signature stays bound
+  to what it covered and is shown as superseded until someone signs again (ADR-2622).
 
 ### 9.6 Lineage graph (ADR-2255)
 
@@ -1002,7 +1014,10 @@ value type, permissible CT values declared in the CollectionSpec) is **always ac
 validates only those structural constraints pre-commit. Edit checks run after commit and produce Findings
 and `Queried` Assertions; they never reject what the source said. EDC may block **form completion**
 (application workflow state) on unresolved fatal findings. Rule sets are versioned RulePacks bound to the
-ProtocolVersion and CollectionSpec versions they target.
+ProtocolVersion and CollectionSpec versions they target. For a form, the structural checks run inside the command
+that saves the CollectionInstance and refuse the whole save; edit checks run from the outbox against the
+CollectionSpec version the instance records. An application gives early feedback by asking the server to evaluate
+the same rules without committing, never through a second rule engine (K-RULE-3, ADR-2622).
 
 ### 10.3 ValidationFinding
 
@@ -1063,8 +1078,8 @@ partial with the mask reasons but no hidden count, so a number never reveals ano
 
 ### 10.5 Locks and freezes (resolves G5)
 
-`Frozen` and `Locked` are Assertions at a scope (observation, form instance, participant enrollment, study site,
-study), each with an Attestation and a reason. They act as authorization conditions that deny `Execute` on covered
+`Frozen` and `Locked` are Assertions at a scope (observation, form instance (its `CollectionInstance`, K-FACT-6),
+participant enrollment, study site, study), each with an Attestation and a reason. They act as authorization conditions that deny `Execute` on covered
 facts: recording a new observation in the scope as well as correcting one. Unlocking is a retracting Assertion with a
 reason and an Attestation. Applying or releasing one emits `LockApplied` or `LockReleased` with its scope. Database
 lock is `Locked` at Study scope; EDC form approval and read-only display are application workflow over it. A covered
@@ -1275,6 +1290,7 @@ kernel, is merged into another, or is retired.
 | K032 | Visit timing, anchors and cycles           | `ExpectedSchedule.Assess` measures an actual date against the window with no built-in severity; visits anchored on another visit's actual date; repeating cycles as numbered occurrences                                                                            | ADR-2507           |
 | K033 | AI proposals and automation agents         | A Proposal with a content hash and no effect on kernel state; approval is an attested, separation-of-duties decision by a person; agents read and propose only; expiry derived on read                                                                              | ADR-2489           |
 | K034 | Observation corrections and locks          | A correction appends an insert-only revision to a stable Observation; value Assertions cite the revision; `Locked`/`Frozen` are scoped Assertions with Attestation and retraction, guarded by shared scope locks                                                    | ADR-2620, ADR-2621 |
+| K035 | eCRF forms on the kernel                   | A form instance is a kernel `CollectionInstance`; one command saves a whole page against per-value revisions; structural checks before commit, edit checks after; a correction supersedes, never erases, a form signature                                           | ADR-2622           |
 
 ---
 
