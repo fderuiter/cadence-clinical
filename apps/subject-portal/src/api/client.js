@@ -1,6 +1,12 @@
 // Gateway API dispatch and the typed fetch helpers built on it.
 import { state } from "../stores/state.js";
 
+// The gateway the portal calls. The AppHost sets VITE_API_BASE_URL to its gateway endpoint; docker compose and the
+// tests use the gateway's published port.
+const API_BASE_URL = (
+  import.meta.env?.VITE_API_BASE_URL || "http://localhost:8000"
+).replace(/\/+$/, "");
+
 // Auth Fetch Helpers
 export async function fetchAssignments(subjectId) {
   return await dispatchApi(`assignments/subject/${subjectId}`);
@@ -35,11 +41,11 @@ export async function dispatchApi(endpoint, options = {}) {
 
   let url;
   if (cleanEndpoint.startsWith("api/v1/")) {
-    url = `http://localhost:8000/${cleanEndpoint}`;
+    url = `${API_BASE_URL}/${cleanEndpoint}`;
   } else if (cleanEndpoint.startsWith("payments/")) {
-    url = `http://localhost:8000/api/v1/${cleanEndpoint}`;
+    url = `${API_BASE_URL}/api/v1/${cleanEndpoint}`;
   } else {
-    url = `http://localhost:8000/api/v1/interop/${cleanEndpoint}`;
+    url = `${API_BASE_URL}/api/v1/interop/${cleanEndpoint}`;
   }
 
   const defaultHeaders = {

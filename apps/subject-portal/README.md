@@ -1,6 +1,6 @@
 # Subject portal
 
-Participant-facing eCOA/ePRO and eConsent web app (Vue 3, Vite) with an offline sync queue and a service worker. It calls the API gateway at `http://localhost:8000`.
+Participant-facing eCOA/ePRO and eConsent web app (Vue 3, Vite) with an offline sync queue and a service worker. It calls the API gateway at `VITE_API_BASE_URL` (default `http://localhost:8000`), and the AppHost's `full` profile runs it on port 5174.
 
 ## Layout
 
@@ -31,7 +31,7 @@ Participant-facing eCOA/ePRO and eConsent web app (Vue 3, Vite) with an offline 
 
 ## Backend and authentication
 
-- Requests go to `http://localhost:8000/api/v1/...`; paths without an `api/v1/` prefix are sent to `/api/v1/interop/...`. The base URL is hard-coded in `src/api/client.js`.
+- Requests go to `http://localhost:8000/api/v1/...`; paths without an `api/v1/` prefix are sent to `/api/v1/interop/...`. The base URL is `VITE_API_BASE_URL` (default `http://localhost:8000`), read in `src/api/client.js`.
 - When Keycloak sign-in succeeds (`VITE_KEYCLOAK_URL`, `VITE_KEYCLOAK_REALM`, `VITE_KEYCLOAK_CLIENT_ID`; defaults `http://localhost:8080/`, `cadence`, `cadence-web`), the access token is sent as `Authorization: Bearer <token>`. Without a token the gateway rejects every proxied request (see [apps/gateway](../gateway/README.md)).
 - The interop service currently maps only its status endpoint (see [apps/interop](../interop/README.md)), so the portal's interop calls have no backend implementation yet.
 
