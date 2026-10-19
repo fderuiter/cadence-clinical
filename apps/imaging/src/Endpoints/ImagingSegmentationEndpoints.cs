@@ -21,8 +21,10 @@ public static class ImagingSegmentationEndpoints
 
         group.MapPost("/{studyUid}/series/{seriesUid}/segment", SegmentRoiAsync)
             .WithName("SegmentRoiSeed")
-            .RequirePermission("imaging_study:read")
+            // Writing a measurement is a reader's act, not a read: the independent-review readers hold it (ADR-2516).
+            .RequirePermission("imaging_adjudication:submit")
             .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .Produces<SegmentationResultDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
@@ -51,20 +53,22 @@ public static class ImagingSegmentationEndpoints
             return TypedResults.BadRequest(new { code = "INVALID_REQUEST", message = "Request body is required." });
         }
 
-        if (!string.IsNullOrWhiteSpace(request.StudyId) && !CallerScope.CanAccessStudy(httpContext, request.StudyId))
-        {
-            return OutsideStudy();
-        }
+        var outcome = await segmentationService.SegmentRoiAsync(
+            studyUid,
+            seriesUid,
+            request,
+            Caller(httpContext),
+            studyId => CallerScope.CanAccessStudy(httpContext, studyId),
+            cancellationToken).ConfigureAwait(false);
 
-        try
+        return outcome.Status switch
         {
-            string callerId = Caller(httpContext);
-            var result = await segmentationService.SegmentRoiAsync(studyUid, seriesUid, request, callerId, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(result);
-        }
-        catch (Exception ex)
-        {
-            return TypedResults.BadRequest(new { code = "SEGMENTATION_FAILED", message = ex.Message });
-        }
+            SegmentationStatus.Segmented when outcome.Result is not null => TypedResults.Ok(outcome.Result),
+            SegmentationStatus.OutsideCallerStudies => OutsideStudy(),
+            _ => TypedResults.Problem(
+                title: "Series not found",
+                detail: "No stored scan has this study and series.",
+                statusCode: StatusCodes.Status404NotFound),
+        };
     }
 }

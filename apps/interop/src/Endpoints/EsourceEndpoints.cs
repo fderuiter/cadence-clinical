@@ -342,8 +342,6 @@ public static class EsourceEndpoints
             mapped = FhirObservationMapper.Map(
                 request.RawFhirBundleJson ?? string.Empty,
                 new FhirObservationMapper.Target(
-                    request.StudyId,
-                    request.SiteId,
                     request.SubjectId,
                     string.IsNullOrWhiteSpace(request.SubjectPseudonym) ? request.SubjectId : request.SubjectPseudonym,
                     request.EhrSystemId),
@@ -365,6 +363,9 @@ public static class EsourceEndpoints
         var dtos = new List<EhrCandidateItemDto>();
         foreach (var candidate in mapped.Candidates)
         {
+            candidate.StudyId = request.StudyId;
+            candidate.SiteId = request.SiteId;
+
             // A resource already pending review for the same variable is not filed twice.
             var existing = await db.EhrReconciliationCandidateRecords
                 .FirstOrDefaultAsync(c => c.StudyId == candidate.StudyId && c.SubjectId == candidate.SubjectId && c.FhirResourceId == candidate.FhirResourceId && c.TargetVariable == candidate.TargetVariable, ct)

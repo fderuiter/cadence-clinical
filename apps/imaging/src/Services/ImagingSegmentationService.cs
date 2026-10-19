@@ -45,10 +45,7 @@ public record SegmentRoiRequest(
     string? LesionId = null,
     string? OrganSite = null,
     string? LesionType = null,
-    string? TimepointName = null,
-    string? StudyId = null,
-    string? SiteId = null,
-    string? SubjectId = null);
+    string? TimepointName = null);
 
 public record SegmentationResultDto(
     string AnnotationId,
@@ -69,47 +66,88 @@ public record SegmentationResultDto(
     DateTimeOffset Timestamp,
     string ReaderId);
 
+/// <summary>Why a segmentation request was not carried out, or <see cref="Segmented"/> when it was.</summary>
+public enum SegmentationStatus
+{
+    /// <summary>The annotation was written.</summary>
+    Segmented,
+
+    /// <summary>No stored scan has that study instance UID, or the series is not one of its series.</summary>
+    NotFound,
+
+    /// <summary>The stored scan belongs to a clinical study outside the caller's signed study scope.</summary>
+    OutsideCallerStudies,
+}
+
+/// <summary>The outcome of a segmentation request; <see cref="Result"/> is set only when it was segmented.</summary>
+public sealed record SegmentationOutcome(SegmentationStatus Status, SegmentationResultDto? Result = null);
+
 public interface IImagingSegmentationService
 {
-    Task<SegmentationResultDto> SegmentRoiAsync(
+    /// <summary>
+    /// Segments a lesion on a stored series and writes the annotation. The clinical study, site and subject come from
+    /// the stored scan, never from the request, and <paramref name="canAccessStudy"/> must admit that study (ADR-2516).
+    /// </summary>
+    Task<SegmentationOutcome> SegmentRoiAsync(
         string studyUid,
         string seriesUid,
         SegmentRoiRequest request,
         string callerId,
+        Func<string, bool> canAccessStudy,
         CancellationToken cancellationToken = default);
 }
 
 public class ImagingSegmentationService : IImagingSegmentationService
 {
     private readonly ImagingDbContext _dbContext;
+    private readonly IClock _clock;
 
-    public ImagingSegmentationService(ImagingDbContext dbContext)
+    public ImagingSegmentationService(ImagingDbContext dbContext, IClock clock)
     {
         _dbContext = dbContext;
+        _clock = clock;
     }
 
-    public async Task<SegmentationResultDto> SegmentRoiAsync(
+    public async Task<SegmentationOutcome> SegmentRoiAsync(
         string studyUid,
         string seriesUid,
         SegmentRoiRequest request,
         string callerId,
+        Func<string, bool> canAccessStudy,
         CancellationToken cancellationToken = default)
     {
-        DateTimeOffset now = SystemClock.Instance.UtcNow;
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(canAccessStudy);
 
         var study = await _dbContext.ImagingStudyEnvelopes
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.StudyInstanceUid == studyUid || s.Id == studyUid, cancellationToken)
             .ConfigureAwait(false);
+        if (study is null || string.IsNullOrWhiteSpace(study.StudyId))
+        {
+            return new SegmentationOutcome(SegmentationStatus.NotFound);
+        }
+
+        if (!canAccessStudy(study.StudyId))
+        {
+            return new SegmentationOutcome(SegmentationStatus.OutsideCallerStudies);
+        }
 
         var series = await _dbContext.ImagingSeriesEnvelopes
             .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.SeriesInstanceUid == seriesUid || s.Id == seriesUid, cancellationToken)
+            .FirstOrDefaultAsync(
+                s => s.StudyEnvelopeId == study.Id && (s.SeriesInstanceUid == seriesUid || s.Id == seriesUid),
+                cancellationToken)
             .ConfigureAwait(false);
+        if (series is null)
+        {
+            return new SegmentationOutcome(SegmentationStatus.NotFound);
+        }
 
-        string studyId = !string.IsNullOrWhiteSpace(request.StudyId) ? request.StudyId : (study?.StudyId ?? "STUDY-ONC-001");
-        string siteId = !string.IsNullOrWhiteSpace(request.SiteId) ? request.SiteId : (study?.SiteId ?? "SITE-01");
-        string subjectId = !string.IsNullOrWhiteSpace(request.SubjectId) ? request.SubjectId : (study?.SubjectId ?? "SUBJ-ONC-001");
+        DateTimeOffset now = _clock.UtcNow;
+        string studyId = study.StudyId;
+        string siteId = study.SiteId;
+        string subjectId = study.SubjectId;
         string timepointName = !string.IsNullOrWhiteSpace(request.TimepointName) ? request.TimepointName : "BASELINE";
         string lesionId = !string.IsNullOrWhiteSpace(request.LesionId) ? request.LesionId : "TL1";
         string organSite = !string.IsNullOrWhiteSpace(request.OrganSite) ? request.OrganSite : "LIVER";
@@ -234,8 +272,8 @@ public class ImagingSegmentationService : IImagingSegmentationService
         var annotation = new ImagingAnnotation
         {
             Id = Guid.NewGuid().ToString(),
-            StudyEnvelopeId = study?.Id,
-            SeriesEnvelopeId = series?.Id,
+            StudyEnvelopeId = study.Id,
+            SeriesEnvelopeId = series.Id,
             StudyId = studyId,
             SiteId = siteId,
             SubjectId = subjectId,
@@ -261,7 +299,7 @@ public class ImagingSegmentationService : IImagingSegmentationService
         _dbContext.ImagingAnnotations.Add(annotation);
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return new SegmentationResultDto(
+        return new SegmentationOutcome(SegmentationStatus.Segmented, new SegmentationResultDto(
             AnnotationId: annotation.Id,
             StudyInstanceUid: studyUid,
             SeriesInstanceUid: seriesUid,
@@ -278,6 +316,6 @@ public class ImagingSegmentationService : IImagingSegmentationService
             ModelVersion: modelVersion,
             IsAiAssisted: true,
             Timestamp: now,
-            ReaderId: callerId);
+            ReaderId: callerId));
     }
 }
