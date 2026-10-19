@@ -12,6 +12,7 @@ using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Persistence.Search;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Search;
+using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -63,6 +64,8 @@ public sealed class KernelSearchTests
     /// asked through the same dry-run authorization as every other control.
     /// </summary>
     [Theory(DisplayName = "IdentitySource_IsSearchedOnlyWithTheRevealCapability")]
+    [KernelRule("K-IDN-1")]
+    [KernelRule("K-ID-8")]
     [InlineData(false)]
     [InlineData(true)]
     public async Task IdentitySourceIsSearchedOnlyWithTheRevealCapability(bool permitted)
@@ -138,6 +141,7 @@ public sealed class KernelSearchTests
 
     /// <summary>The store refuses a source it does not know and returns nothing for no sources, without querying.</summary>
     [Fact(DisplayName = "Store_RefusesUnknownSources_AndReturnsNothingForNone")]
+    [KernelRule("K-ID-8")]
     public async Task StoreRefusesUnknownSourcesAndReturnsNothingForNone()
     {
         var store = new KernelSearchStore(null!);

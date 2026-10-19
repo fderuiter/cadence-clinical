@@ -11,6 +11,7 @@ using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.Trust;
+using Cadence.Testing;
 using Cadence.TestSupport.Kernel.Protocol;
 
 using FluentAssertions;
@@ -100,6 +101,7 @@ public sealed class ProtocolDesignPostgresTests(KernelPostgresFixture fixture) :
 
     /// <summary>Another tenant's concept, code-system version and artifact are unknown here (K-SEM-1 within a tenant).</summary>
     [Fact(DisplayName = "Submit_AnotherTenantsReferences_AreUnknown")]
+    [KernelRule("K-SEM-1")]
     public async Task SubmitAnotherTenantsReferencesAreUnknown()
     {
         fixture.SkipIfUnavailable();
@@ -121,6 +123,7 @@ public sealed class ProtocolDesignPostgresTests(KernelPostgresFixture fixture) :
     /// exists in the tenant (K-SEM-1). Before the concepts are defined, the import fails.
     /// </summary>
     [Fact(DisplayName = "ImportedUsdmDesign_ResolvesInTheTenant_AndGoesIntoReview")]
+    [KernelRule("K-SEM-1")]
     public async Task ImportedUsdmDesignResolvesInTheTenantAndGoesIntoReview()
     {
         fixture.SkipIfUnavailable();

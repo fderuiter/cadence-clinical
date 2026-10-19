@@ -42,6 +42,8 @@ public sealed class KernelExplanationPostgresTests(KernelPostgresFixture fixture
     [Fact(DisplayName = "Denial_IsExplained_AndAuditedWithItsConditions")]
     [Trait("Category", "GxP_OQ")]
     [GxPRequirement("PRD-SYS-001")]
+    [KernelRule("K-AUTH-2")]
+    [KernelRule("K-AUTH-6")]
     public async Task DenialIsExplainedAndAuditedWithItsConditions()
     {
         fixture.SkipIfUnavailable();

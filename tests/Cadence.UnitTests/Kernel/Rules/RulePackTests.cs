@@ -51,6 +51,7 @@ public class RulePackTests
 
     [Theory(DisplayName = "RulePack_InvalidContent_ReportsEveryProblem")]
     [Trait("Category", "Unit")]
+    [KernelRule("K-RULE-2")]
     [InlineData("citation", "null", "citation: required. Every rule cites the public document it implements (K-RULE-2).")]
     [InlineData("citation", """{"document":"Pinnacle 21 Community validator rules"}""", "cites a vendor's validator")]
     [InlineData("citation", """{"document":"FDA Validator Rules","uri":"ftp://x"}""", "is not an http(s) URI")]
@@ -128,6 +129,7 @@ public class RulePackTests
     [Fact(DisplayName = "Evaluator_IsDeterministic_OverGeneratedPacksAndRecords")]
     [GxPRequirement("PRD-CRF-004")]
     [Trait("Category", "Unit")]
+    [KernelRule("K-RULE-4")]
     public void EvaluatorIsDeterministicOverGeneratedPacksAndRecords()
     {
         for (var seed = 1; seed <= 200; seed++)

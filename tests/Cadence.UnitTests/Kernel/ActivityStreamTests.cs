@@ -11,6 +11,7 @@ using Cadence.Kernel.Application.Activity;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.References;
+using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -69,6 +70,7 @@ public sealed class ActivityStreamTests
     /// says why; the visibility check is asked once per page for the distinct subjects only.
     /// </summary>
     [Fact]
+    [KernelRule("K-EVT-3")]
     public async Task EntriesAboutHiddenObjectsAreMaskedNotDropped()
     {
         var hidden = NodeRef.For(ProtocolVersionId.New(), 2);

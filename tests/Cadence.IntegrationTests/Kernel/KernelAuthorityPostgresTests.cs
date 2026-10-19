@@ -75,6 +75,9 @@ public sealed class KernelAuthorityPostgresTests : IClassFixture<KernelPostgresF
     /// </summary>
     [Fact(DisplayName = "Scenario3_ActOutsideDelegation_DeniedAudited_RetroactiveDoaDoesNotValidate")]
     [GxPRequirement("PRD-SYS-001")]
+    [KernelRule("K-AUTH-2")]
+    [KernelRule("K-AUTH-3")]
+    [KernelRule("K-AUTH-6")]
     public async Task Scenario3ActOutsideDelegationDeniedAuditedRetroactiveDoaDoesNotValidate()
     {
         _fixture.SkipIfUnavailable();
@@ -185,6 +188,7 @@ public sealed class KernelAuthorityPostgresTests : IClassFixture<KernelPostgresF
     /// study-country grant must name its country.
     /// </summary>
     [Fact(DisplayName = "Authority_DatabaseGuards_KeepHistoryAndRoles")]
+    [KernelRule("K-TIME-1")]
     public async Task AuthorityDatabaseGuardsKeepHistoryAndRoles()
     {
         _fixture.SkipIfUnavailable();
@@ -214,6 +218,8 @@ public sealed class KernelAuthorityPostgresTests : IClassFixture<KernelPostgresF
     /// qualification and the day it expired.
     /// </summary>
     [Fact(DisplayName = "Scenario12_ExpiredProtocolTraining_DeniesEligibilitySignatureNamingIt")]
+    [KernelRule("K-AUTH-5")]
+    [KernelRule("K-AUTH-6")]
     public async Task Scenario12ExpiredProtocolTrainingDeniesEligibilitySignatureNamingIt()
     {
         _fixture.SkipIfUnavailable();

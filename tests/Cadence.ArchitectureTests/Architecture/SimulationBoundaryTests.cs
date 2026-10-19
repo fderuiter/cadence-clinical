@@ -4,6 +4,7 @@ using System.Linq;
 using Cadence.Kernel.Application;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Persistence;
+using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -42,12 +43,14 @@ public class SimulationBoundaryTests
     /// <summary>Validates that the simulation engine depends on no write path and no persistence or EF Core type.</summary>
     [Fact(DisplayName = "K_SIM_1_SimulationEngine_CannotReachWritePaths")]
     [Trait("Category", "Architecture")]
+    [KernelRule("K-SIM-1")]
     public void KSim1SimulationEngineCannotReachWritePaths() =>
         ArchRuleExtensions.Check(EngineRule(@"^Cadence\.Kernel\.Application\.Simulation$"), Kernel.Value);
 
     /// <summary>Validates that simulation's persistence reads reach no write path and call no <c>SaveChanges</c>.</summary>
     [Fact(DisplayName = "K_SIM_1_SimulationInputs_NeverSave")]
     [Trait("Category", "Architecture")]
+    [KernelRule("K-SIM-1")]
     public void KSim1SimulationInputsNeverSave()
     {
         ArchRuleExtensions.Check(InputsRule(@"^Cadence\.Kernel\.Persistence\.Simulation$"), Kernel.Value);

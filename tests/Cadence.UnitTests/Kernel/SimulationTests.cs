@@ -16,6 +16,7 @@ using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Trust;
+using Cadence.Testing;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Kernel.Protocol;
 
@@ -120,6 +121,7 @@ public sealed class SimulationTests
     /// reports that arm, with the study as scope and both versions pinned, and reads the dependents of that arm only.
     /// </summary>
     [Fact]
+    [KernelRule("K-SIM-2")]
     public async Task Simulate_StoredDraftAgainstItsParent()
     {
         var inputs = new Inputs();
@@ -154,6 +156,7 @@ public sealed class SimulationTests
     /// The same inputs give the same input and result hashes (K-SIM-3); a different as-of or candidate changes them.
     /// </summary>
     [Fact]
+    [KernelRule("K-SIM-3")]
     public async Task Simulate_HashesAreReproducible()
     {
         var inputs = new Inputs();
@@ -181,6 +184,7 @@ public sealed class SimulationTests
     /// hash that does not move when the hidden content changes (K-SIM-4).
     /// </summary>
     [Fact]
+    [KernelRule("K-SIM-4")]
     public async Task Simulate_MasksWhatTheReaderMayNotSee()
     {
         var inputs = new Inputs();

@@ -58,6 +58,7 @@ public sealed class KernelIdentityVaultPostgresTests(KernelPostgresFixture fixtu
     /// </summary>
     [Fact(DisplayName = "RecordAndReveal_DisclosesOnlyAfterAnAuditedReveal_AndNoKernelTableHoldsIdentifiers")]
     [GxPRequirement("PRD-SYS-001")]
+    [KernelRule("K-IDN-1")]
     public async Task RecordAndRevealDisclosesOnlyAfterAnAuditedRevealAndNoKernelTableHoldsIdentifiers()
     {
         fixture.SkipIfUnavailable();
@@ -103,6 +104,7 @@ public sealed class KernelIdentityVaultPostgresTests(KernelPostgresFixture fixtu
     /// </summary>
     [Fact(DisplayName = "Reveal_WithoutTheLayersCapability_IsDeniedAuditedAndDisclosesNothing")]
     [GxPRequirement("PRD-SYS-001")]
+    [KernelRule("K-IDN-1")]
     public async Task RevealWithoutTheLayersCapabilityIsDeniedAuditedAndDisclosesNothing()
     {
         fixture.SkipIfUnavailable();
@@ -279,6 +281,7 @@ public sealed class KernelIdentityVaultPostgresTests(KernelPostgresFixture fixtu
     /// name the person; the links are disclosed through an audited reveal. A participant links to one person only.
     /// </summary>
     [Fact(DisplayName = "Link_JoinsAPersonsParticipantsAcrossStudies_InsideTheVault")]
+    [KernelRule("K-IDN-2")]
     public async Task LinkJoinsAPersonsParticipantsAcrossStudiesInsideTheVault()
     {
         fixture.SkipIfUnavailable();
@@ -310,6 +313,7 @@ public sealed class KernelIdentityVaultPostgresTests(KernelPostgresFixture fixtu
     /// direct identifier. Names, dates of birth and contact details live only in <c>identity_vault</c>.
     /// </summary>
     [Fact(DisplayName = "KernelSchema_HasNoDirectIdentifierColumn")]
+    [KernelRule("K-IDN-1")]
     public async Task KernelSchemaHasNoDirectIdentifierColumn()
     {
         fixture.SkipIfUnavailable();

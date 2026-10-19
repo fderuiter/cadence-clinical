@@ -5,6 +5,7 @@ using Cadence.Kernel;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Explanations;
 using Cadence.Kernel.References;
+using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -28,6 +29,8 @@ public sealed class ExplanationTests
     /// evidence, and turns each unmet condition into a next action.
     /// </summary>
     [Fact(DisplayName = "Denial_ExplainsMetAndUnmetConditions")]
+    [KernelRule("K-AUTH-6")]
+    [KernelRule("K-EXP-1")]
     public void DenialExplainsMetAndUnmetConditions()
     {
         var decision = AuthorizationDecision.Deny(
@@ -67,6 +70,7 @@ public sealed class ExplanationTests
     /// with it.
     /// </summary>
     [Fact(DisplayName = "Explanation_FollowsTheEvidence")]
+    [KernelRule("K-EXP-3")]
     public void ExplanationFollowsTheEvidence()
     {
         var expired = new TrainingRecord(Training, ValidUntil: new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero));

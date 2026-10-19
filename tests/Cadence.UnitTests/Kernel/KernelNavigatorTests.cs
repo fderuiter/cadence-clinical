@@ -8,6 +8,7 @@ using Cadence.Kernel;
 using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.References;
+using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -43,6 +44,7 @@ public sealed class KernelNavigatorTests
     /// level carries its NodeRef.
     /// </summary>
     [Fact(DisplayName = "ZoomPath_EnrollmentAtSite")]
+    [KernelRule("K-ID-7")]
     public async Task ZoomPathEnrollmentAtSite()
     {
         var enrollment = NodeRef.For(EnrollmentId.New(), version: 4);
@@ -65,6 +67,7 @@ public sealed class KernelNavigatorTests
     /// without error and without a country level.
     /// </summary>
     [Fact(DisplayName = "ZoomPath_SitelessEnrollmentResolvesUnderStudy")]
+    [KernelRule("K-ID-7")]
     public async Task ZoomPathSitelessEnrollmentResolvesUnderStudy()
     {
         var enrollment = NodeRef.For(EnrollmentId.New());

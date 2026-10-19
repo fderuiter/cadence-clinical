@@ -38,6 +38,9 @@ public class KernelBoundaryTests
     /// </summary>
     [Fact(DisplayName = "K_XS_1_NonKernelAssemblies_MustNotRedefineKernelConcepts_BeyondBaseline")]
     [Trait("Category", "Architecture")]
+    [KernelRule("K-XS-1")]
+    [KernelRule("K-TRUTH-1")]
+    [KernelRule("K-SCOPE-1")]
     public void KXs1NonKernelAssembliesMustNotRedefineKernelConceptsBeyondBaseline()
     {
         NonKernelAssemblies.Value.Should().NotBeEmpty();
@@ -54,6 +57,7 @@ public class KernelBoundaryTests
     /// </summary>
     [Fact(DisplayName = "K_XS_2_NoProjectOutsideKernel_MayReference_KernelPersistence")]
     [Trait("Category", "Architecture")]
+    [KernelRule("K-XS-2")]
     public void KXs2NoProjectOutsideKernelMayReferenceKernelPersistence()
     {
         var projects = KernelBoundaryRules.LoadRepositoryProjects(KernelBoundaryBaseline.RepositoryRoot()).ToList();
@@ -81,6 +85,8 @@ public class KernelBoundaryTests
     /// </summary>
     [Fact(DisplayName = "K_MOD_1_ModuleDbContexts_MustNotDuplicateKernelIdentity_BeyondBaseline")]
     [Trait("Category", "Architecture")]
+    [KernelRule("K-MOD-1")]
+    [KernelRule("K-TRUTH-1")]
     public void KMod1ModuleDbContextsMustNotDuplicateKernelIdentityBeyondBaseline()
     {
         var comparison = KernelBoundaryBaseline.Verify(
@@ -95,6 +101,7 @@ public class KernelBoundaryTests
     /// </summary>
     [Fact(DisplayName = "K_XS_1_Bites_OnSyntheticDuplicateSiteAndStringStudyId")]
     [Trait("Category", "Architecture")]
+    [KernelRule("K-XS-1")]
     public void KXs1BitesOnSyntheticDuplicateSiteAndStringStudyId()
     {
         const string prefix = "K-XS-1|Cadence.ArchitectureTests|Cadence.ArchitectureTests.Architecture.Fixtures.";
@@ -129,6 +136,7 @@ public class KernelBoundaryTests
     /// </summary>
     [Fact(DisplayName = "K_MOD_1_Bites_OnSyntheticDbContextWithStringAndGuidKernelIds")]
     [Trait("Category", "Architecture")]
+    [KernelRule("K-MOD-1")]
     public void KMod1BitesOnSyntheticDbContextWithStringAndGuidKernelIds()
     {
         const string prefix = "K-MOD-1|Cadence.ArchitectureTests|Cadence.ArchitectureTests.Architecture.Fixtures.";
@@ -150,6 +158,7 @@ public class KernelBoundaryTests
     /// </summary>
     [Fact(DisplayName = "K_XS_2_Bites_OnSyntheticProjectReferencingKernelPersistence")]
     [Trait("Category", "Architecture")]
+    [KernelRule("K-XS-2")]
     public void KXs2BitesOnSyntheticProjectReferencingKernelPersistence()
     {
         const string offending =
@@ -172,6 +181,7 @@ public class KernelBoundaryTests
     /// </summary>
     [Fact(DisplayName = "K_XS_2_Bites_OnSyntheticProjectReferencingKernelApplication_AndAllowsModuleSdk")]
     [Trait("Category", "Architecture")]
+    [KernelRule("K-XS-2")]
     public void KXs2BitesOnSyntheticProjectReferencingKernelApplicationAndAllowsModuleSdk()
     {
         var violations = KernelBoundaryRules.EvaluateKXs2Projects(

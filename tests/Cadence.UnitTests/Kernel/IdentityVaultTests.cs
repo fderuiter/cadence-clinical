@@ -12,6 +12,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Identity;
 using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.IdentityVault;
+using Cadence.Testing;
 using Cadence.Testing.Hosting;
 
 using FluentAssertions;
@@ -198,6 +199,7 @@ public sealed class IdentityVaultTests
     /// and <c>people</c> is pseudonymous.
     /// </summary>
     [Fact(DisplayName = "KernelModel_HasNoDirectIdentifierColumn")]
+    [KernelRule("K-IDN-1")]
     public void KernelModelHasNoDirectIdentifierColumn()
     {
         using var context = new KernelDbContextDesignTimeFactory().CreateDbContext(

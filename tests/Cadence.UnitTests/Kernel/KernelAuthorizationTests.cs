@@ -13,6 +13,7 @@ using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
+using Cadence.Testing;
 using Cadence.Testing.Time;
 
 using FluentAssertions;
@@ -70,6 +71,7 @@ public sealed class KernelAuthorizationTests
     /// token, so no command can reach the pipeline undeclared.
     /// </summary>
     [Fact(DisplayName = "Catalog_EveryKernelCommandDeclaresACapability")]
+    [KernelRule("K-AUTH-7")]
     public void CatalogEveryKernelCommandDeclaresACapability()
     {
         var commandTypes = typeof(ICommand).Assembly.GetTypes()
@@ -99,6 +101,8 @@ public sealed class KernelAuthorizationTests
     /// command opens a transaction and records the denial; the dry run touches no persistence.
     /// </summary>
     [Fact(DisplayName = "DryRun_AndCommand_AskTheEvaluatorTheSameQuestion")]
+    [KernelRule("K-AUTH-7")]
+    [KernelRule("K-AUTH-1")]
     public async Task DryRunAndCommandAskTheEvaluatorTheSameQuestion()
     {
         var harness = new Harness();
@@ -129,6 +133,7 @@ public sealed class KernelAuthorizationTests
     /// and unmet condition codes, and never reaches the audit chain.
     /// </summary>
     [Fact(DisplayName = "DryRun_IsLoggedAndNotAudited")]
+    [KernelRule("K-AUTH-7")]
     public async Task DryRunIsLoggedAndNotAudited()
     {
         var harness = new Harness();
@@ -187,6 +192,7 @@ public sealed class KernelAuthorizationTests
 
     /// <summary>A command type without a declared capability is denied without asking the evaluator (fail closed).</summary>
     [Fact(DisplayName = "Command_WithoutCapability_IsDenied")]
+    [KernelRule("K-AUTH-7")]
     public async Task CommandWithoutCapabilityIsDenied()
     {
         var harness = new Harness();

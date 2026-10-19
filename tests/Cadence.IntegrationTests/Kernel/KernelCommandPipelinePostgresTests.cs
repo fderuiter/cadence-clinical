@@ -66,6 +66,8 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// and the idempotency record, all naming the same activity.
     /// </summary>
     [Fact(DisplayName = "ProvisionTenant_Commits_StateProvenanceEventAuditOutboxAndIdempotency_AsOneActivity")]
+    [KernelRule("K-PROV-1")]
+    [KernelRule("K-TX-2")]
     public async Task ProvisionTenantCommitsStateProvenanceEventAuditOutboxAndIdempotencyAsOneActivity()
     {
         fixture.SkipIfUnavailable();
@@ -114,6 +116,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// anything, and the same key with a different payload is an idempotency conflict (409).
     /// </summary>
     [Fact(DisplayName = "Command_SameIdempotencyKey_ReplaysOriginal_AndDifferentPayloadConflicts")]
+    [KernelRule("K-TX-3")]
     public async Task CommandSameIdempotencyKeyReplaysOriginalAndDifferentPayloadConflicts()
     {
         fixture.SkipIfUnavailable();
@@ -136,6 +139,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// even when the aggregate's own unique key is what rejects the second transaction.
     /// </summary>
     [Fact(DisplayName = "Command_SameKeyConcurrently_WritesOnce_AndBothCallersGetTheResult")]
+    [KernelRule("K-TX-3")]
     public async Task CommandSameKeyConcurrentlyWritesOnceAndBothCallersGetTheResult()
     {
         fixture.SkipIfUnavailable();
@@ -152,6 +156,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// Validates K-TX-5: with no resolved actor the command is refused (401) before anything is written.
     /// </summary>
     [Fact(DisplayName = "Command_WithoutActor_IsRefused_AndWritesNothing")]
+    [KernelRule("K-TX-5")]
     public async Task CommandWithoutActorIsRefusedAndWritesNothing()
     {
         fixture.SkipIfUnavailable();
@@ -171,6 +176,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// written.
     /// </summary>
     [Fact(DisplayName = "Command_MissingReasonOrKey_IsRejected")]
+    [KernelRule("K-TX-3")]
     public async Task CommandMissingReasonOrKeyIsRejected()
     {
         fixture.SkipIfUnavailable();
@@ -189,6 +195,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// <c>DecisionDenied</c> event and a "Denied" audit link naming the reason, and returns 403.
     /// </summary>
     [Fact(DisplayName = "Command_Denied_IsAudited_AndChangesNoState")]
+    [KernelRule("K-AUTH-2")]
     public async Task CommandDeniedIsAuditedAndChangesNoState()
     {
         fixture.SkipIfUnavailable();
@@ -218,6 +225,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// row or idempotency record behind, and the tenant's chain head is not advanced.
     /// </summary>
     [Theory(DisplayName = "Commit_FailingAtAnyStage_PersistsNothing")]
+    [KernelRule("K-TX-2")]
     [MemberData(nameof(CommitStages))]
     public async Task CommitFailingAtAnyStagePersistsNothing(string stageName)
     {
@@ -436,6 +444,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// Validates K-TX-1 at the unit of work: a command that loads one aggregate for change cannot load a second.
     /// </summary>
     [Fact(DisplayName = "UnitOfWork_SecondAggregate_Throws")]
+    [KernelRule("K-TX-1")]
     public async Task UnitOfWorkSecondAggregateThrows()
     {
         fixture.SkipIfUnavailable();
@@ -515,6 +524,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// second one throws, so two commands can never wait on each other's locks.
     /// </summary>
     [Fact(DisplayName = "Lock_SameAggregateAgain_IsANoOp_ButASecondAggregateThrows")]
+    [KernelRule("K-TX-4")]
     public async Task LockSameAggregateAgainIsANoOpButASecondAggregateThrows()
     {
         fixture.SkipIfUnavailable();
@@ -538,6 +548,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// the same id in another tenant, or under another aggregate type, is a different lock and does not wait.
     /// </summary>
     [Fact(DisplayName = "Lock_WaitsForTheHolder_UntilDisposed_AndIsScopedToTenantAndType")]
+    [KernelRule("K-TX-4")]
     public async Task LockWaitsForTheHolderUntilDisposedAndIsScopedToTenantAndType()
     {
         fixture.SkipIfUnavailable();

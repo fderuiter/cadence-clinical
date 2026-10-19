@@ -45,6 +45,7 @@ public sealed class KernelSimulationPostgresTests(KernelPostgresFixture fixture)
     /// kernel table of the tenant exactly as it was.
     /// </summary>
     [Fact(DisplayName = "Simulate_ForkedDraftAgainstApprovedParent_WritesNothing")]
+    [KernelRule("K-SIM-1")]
     public async Task SimulateForkedDraftAgainstApprovedParentWritesNothing()
     {
         fixture.SkipIfUnavailable();

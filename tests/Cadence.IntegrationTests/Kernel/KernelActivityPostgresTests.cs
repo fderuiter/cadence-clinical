@@ -48,6 +48,7 @@ public sealed class KernelActivityPostgresTests(KernelPostgresFixture fixture) :
     /// the projector reads is left exactly as it was.
     /// </summary>
     [Fact(DisplayName = "Projection_ScopesByZoomPath_AndIsIdempotent")]
+    [KernelRule("K-EVT-3")]
     public async Task ProjectionScopesByZoomPathAndIsIdempotent()
     {
         fixture.SkipIfUnavailable();
@@ -199,6 +200,7 @@ public sealed class KernelActivityPostgresTests(KernelPostgresFixture fixture) :
     /// reference; a reader with no mask sees the reference. The stream never shortens.
     /// </summary>
     [Fact(DisplayName = "Read_MasksEntriesTheReaderMayNotSee")]
+    [KernelRule("K-EVT-3")]
     public async Task ReadMasksEntriesTheReaderMayNotSee()
     {
         fixture.SkipIfUnavailable();
