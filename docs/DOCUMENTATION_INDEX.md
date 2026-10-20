@@ -39,6 +39,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [Mapping specifications](kernel/MAPPING_SPECIFICATIONS.md) | Current | Writing, pinning and applying mapping specifications; K-STD-1 (spec §6.3, ADR-2463) |
 | [Clock migration backlog](kernel/CLOCK_MIGRATION_BACKLOG.md) | Current | Remaining `DateTime.Now/UtcNow` call sites to move to `IClock` (K-TIME-3) |
 | [Clinical Canvas](ux/CLINICAL_CANVAS.md) | Current | UI interaction model (study-centric navigation, three panes, six verbs) and the kernel read APIs the UI needs |
+| [AI agents](ai/AI_AGENTS.md) | Current | The AI agent catalogue by lifecycle stage, research-type packs, the autonomy ladder and the regulatory map (ADR-2630) |
 
 ## Architecture decision records
 
@@ -527,6 +528,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2525: Dependabot Bumps Merge as One Locally Validated Batch](adr/2026-10-20-dependabot-bumps-merge-as-one-locally-validated-batch.md) | Current | - Status: Accepted |
 | [ADR-2623: Observation Values Are Typed](adr/2026-10-19-observation-values-are-typed.md) | Current | - Status: Accepted |
 | [ADR-2517: SMART Client Assertions Are Signed Only With Server-Side Endpoint Keys](adr/2026-10-19-smart-client-assertions-are-signed-only-with-server-side-endpoint-keys.md) | Current | - Status: Accepted |
+| [ADR-2630: AI Agents Act Through Proposals in One Governed Runtime](adr/2026-10-20-ai-agents-act-through-proposals-in-one-governed-runtime.md) | Current | - Status: Accepted |
 ## Developing and running
 
 | Document | Status | What it is |

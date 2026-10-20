@@ -217,9 +217,9 @@ The system must provide 21 CFR Part 11 compliant digital signing of binary docum
 
 The platform web client and automated testing harness must support deterministic Persona Context Switching across all supported clinical roles (`super_admin`, `sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `auditor`). Context switching must seamlessly adjust active auth headers, tenant scopes, role-based UI gate visibility, and de-identification filters, allowing complete automated validation of the end-to-end golden path workflow from study authoring to audit inspection.
 
-#### PRD-SYS-051: AI Gateway Microservice and Three-Tier Clinical Intelligence Architecture
+#### PRD-SYS-051: Governed AI Agent Runtime with Human-Approved Proposals and Dual Attribution
 
-The platform must encapsulate all artificial intelligence model routing, rate-limiting, cost accounting, and prompt execution behind a dedicated internal microservice (`apps/ai_gateway`) protected by HMAC authentication. Outbound prompts must undergo in-flight de-identification of Protected Health Information (PHI) via `packages/deid`, and generated records must enter a `DRAFT_AI` state with dual-attribution metadata requiring human verification and 21 CFR Part 11 electronic signatures.
+The platform must run every AI agent in one in-process Intelligence module of the composition host (ADR-2610, ADR-2630), behind a provider-neutral model port with per-tenant budgets, a kill switch and a local-only switch. An agent acts for one requesting person and reads only through that person's grants. Its only write into clinical data is a kernel Proposal (ADR-2489) that cites the records it read and names its model and qualified task configuration version; outbound free text is scrubbed and IdentityVault data is never sent to a model. A Proposal changes nothing until a person other than the proposer approves it with a 21 CFR Part 11 attestation over its content hash, and the resulting change records both the agent and the approving person. Regulated records carry no AI draft state.
 
 #### PRD-SYS-052: Generative Pharmacovigilance Safety Narratives with 21 CFR Part 11 Electronic Signature
 
