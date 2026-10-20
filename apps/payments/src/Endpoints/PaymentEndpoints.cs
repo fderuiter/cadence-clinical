@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -1473,7 +1474,7 @@ public static class PaymentEndpoints
             SubjectId = request.SubjectId,
             StudyId = request.StudyId,
             SiteId = request.SiteId,
-            ExpenseDate = request.ExpenseDate ?? now.ToString("yyyy-MM-dd"),
+            ExpenseDate = request.ExpenseDate ?? now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             Category = request.Category,
             MerchantName = request.MerchantName,
             GrossAmount = gross,
@@ -1689,7 +1690,7 @@ public static class PaymentEndpoints
         }
 
         // Date extraction
-        string expenseDate = SystemClock.Instance.UtcNow.ToString("yyyy-MM-dd");
+        string expenseDate = SystemClock.Instance.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         var dateMatch = Regex.Match(text, @"\b(\d{4}-\d{2}-\d{2})\b");
         if (dateMatch.Success)
         {
@@ -2442,8 +2443,7 @@ public static class PaymentEndpoints
 
         string remittanceNumber = $"REM-{invoiceNumber}";
         string pdfContentRaw = $"SELF-BILLING REMITTANCE STATEMENT\nInvoice #: {invoiceNumber}\nStudy: {studyId}\nSite: {siteId}\nNet Total: {currency} {totalNet:F2}\nDate: {now:yyyy-MM-dd HH:mm:ss} UTC";
-        using var sha256 = SHA256.Create();
-        byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(pdfContentRaw));
+        byte[] hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(pdfContentRaw));
         string sha256Hash = Convert.ToHexStringLower(hashBytes);
 
         var remittance = new RemittanceAdvice

@@ -178,10 +178,13 @@ public sealed class MappingEngine : IMappingEngine
         }
     }
 
+    // Two-character comparators come first so that <= is not read as <.
+    private static readonly string[] BoundComparators = ["<=", ">=", "<", ">"];
+
     // A bound is a comparator followed by a number, such as <1.0 or >=200.
     private static bool IsBound(string value)
     {
-        var comparator = new[] { "<=", ">=", "<", ">" }.FirstOrDefault(c => value.StartsWith(c, StringComparison.Ordinal));
+        var comparator = BoundComparators.FirstOrDefault(c => value.StartsWith(c, StringComparison.Ordinal));
         return comparator is not null
             && decimal.TryParse(value.AsSpan(comparator.Length), NumberStyle, CultureInfo.InvariantCulture, out _);
     }

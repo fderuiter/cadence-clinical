@@ -37,7 +37,7 @@ public static partial class PromptTemplate
         return Placeholder().Replace(template, m => values[m.Groups[1].Value]);
     }
 
-    private static string Describe(IReadOnlyCollection<string> names) => names.Count == 0 ? "none" : string.Join(", ", names);
+    private static string Describe(List<string> names) => names.Count == 0 ? "none" : string.Join(", ", names);
 
     [GeneratedRegex(@"\{\{([a-z][a-z0-9_]{0,63})\}\}", RegexOptions.CultureInvariant)]
     private static partial Regex Placeholder();

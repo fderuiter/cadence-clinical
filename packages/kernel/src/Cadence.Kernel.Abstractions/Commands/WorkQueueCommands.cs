@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 using Cadence.Kernel.Authorization;
 
@@ -18,6 +19,8 @@ namespace Cadence.Kernel.Commands;
 /// </remarks>
 [KernelCapability("work_queue.define", VerbClass.Approve)]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix",
+    Justification = "'Work queue' is kernel specification vocabulary (Canvas D10, ADR-2486); it is not a System.Collections.Queue.")]
 public sealed record DefineWorkQueue(
     TenantId TenantId,
     WorkQueueDefinitionId WorkQueueDefinitionId,

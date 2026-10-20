@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 
 using Cadence.Apps.Econsent.Domain;
@@ -22,7 +23,7 @@ public class EconsentScoreDecimalPrecisionTests
     {
         var property = typeof(ComprehensionResult).GetProperty(nameof(ComprehensionResult.Score));
         property.Should().NotBeNull("Score property must exist on ComprehensionResult");
-        property!.PropertyType.Should().Be(typeof(decimal), "Score property on ComprehensionResult must be of type decimal");
+        property!.PropertyType.Should().Be<decimal>("Score property on ComprehensionResult must be of type decimal");
     }
 
     [Fact]
@@ -68,7 +69,7 @@ public class EconsentScoreDecimalPrecisionTests
         calculatedScore.Should().Be(83.33m);
 
         // Verify that float/double binary inaccuracy (e.g. 79.99999999999999) is avoided by decimal representation
-        decimal scoreFromFloatString = decimal.Parse("79.99");
+        decimal scoreFromFloatString = decimal.Parse("79.99", CultureInfo.InvariantCulture);
         scoreFromFloatString.Should().Be(79.99m);
         (scoreFromFloatString < passingThreshold).Should().BeTrue();
     }

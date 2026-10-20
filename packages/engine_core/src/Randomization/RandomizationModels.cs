@@ -8,6 +8,8 @@ using Cadence.Security.Blinding;
 
 namespace Cadence.Core.Domain.Randomization;
 
+[SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+    Justification = "Member names are the serialized enum values shared with the API and the Python reference; renaming them would change the wire format.")]
 public enum RandomizationAlgorithmType
 {
     PERMUTED_BLOCK,
@@ -18,6 +20,8 @@ public enum RandomizationAlgorithmType
     RESPONSE_ADAPTIVE
 }
 
+[SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+    Justification = "Member names are the serialized enum values shared with the API and the Python reference; renaming them would change the wire format.")]
 public enum ImbalanceDistanceMetric
 {
     RANGE,
@@ -25,6 +29,8 @@ public enum ImbalanceDistanceMetric
     STANDARD_DEVIATION
 }
 
+[SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+    Justification = "Member names are the serialized enum values shared with the API and the Python reference; renaming them would change the wire format.")]
 public enum DoseEscalationAction
 {
     ESCALATE,

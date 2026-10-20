@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,6 +27,8 @@ public interface IActivityStore
 /// The activity stream for the current actor (ADR-2485): reads a page from the projection and masks every entry whose
 /// object the reader may not see through <see cref="INodeVisibility"/>, the same D1 contract as lineage and search.
 /// </summary>
+[SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix",
+    Justification = "'Activity stream' is kernel specification vocabulary (spec §5.2, ADR-2485); it is not a System.IO.Stream.")]
 public sealed class ActivityStream(IActivityStore store, INodeVisibility visibility, ICurrentActor currentActor) : IActivityStream
 {
     public async Task<ActivityPage> ReadAsync(TenantId tenant, ActivityQuery query, CancellationToken cancellationToken)

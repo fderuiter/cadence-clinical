@@ -210,7 +210,7 @@ public class LockfileValidatorService : ILockfileValidatorService
         foreach (var rawLine in lines)
         {
             string line = rawLine.Trim();
-            if (line.StartsWith("[[package]]") || line.StartsWith("[[package."))
+            if (line.StartsWith("[[package]]", StringComparison.Ordinal) || line.StartsWith("[[package.", StringComparison.Ordinal))
             {
                 if (!string.IsNullOrEmpty(currentName))
                 {

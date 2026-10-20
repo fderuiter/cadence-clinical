@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cadence.Apps.Etmf.Workers;
 
-public sealed class EtmfExportWorker : BackgroundService
+public sealed partial class EtmfExportWorker : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly EtmfExportQueue _queue;
@@ -33,7 +33,7 @@ public sealed class EtmfExportWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("eTMF Export Background Worker started.");
+        LogWorkerStarted(_logger);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -75,7 +75,7 @@ public sealed class EtmfExportWorker : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred in eTMF Export Background Worker loop.");
+                LogWorkerLoopFailed(_logger, ex);
                 await Task.Delay(2000, stoppingToken);
             }
         }
@@ -90,7 +90,7 @@ public sealed class EtmfExportWorker : BackgroundService
         var job = await db.TmfExportJobs.FirstOrDefaultAsync(j => j.Id == jobId, ct);
         if (job == null)
         {
-            _logger.LogWarning("Export job {JobId} not found.", jobId);
+            LogJobNotFound(_logger, jobId);
             return;
         }
 
@@ -141,13 +141,28 @@ public sealed class EtmfExportWorker : BackgroundService
             job.ExpiresAt = now.AddHours(24);
 
             await db.SaveChangesAsync(ct);
-            _logger.LogInformation("Export job {JobId} completed successfully with {DocCount} documents.", job.Id, documents.Count);
+            LogJobCompleted(_logger, job.Id, documents.Count);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to execute export job {JobId}.", jobId);
+            LogJobFailed(_logger, ex, jobId);
             job.Status = "FAILED";
             await db.SaveChangesAsync(ct);
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "eTMF Export Background Worker started.")]
+    private static partial void LogWorkerStarted(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Error occurred in eTMF Export Background Worker loop.")]
+    private static partial void LogWorkerLoopFailed(ILogger logger, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Export job {JobId} not found.")]
+    private static partial void LogJobNotFound(ILogger logger, string? jobId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Export job {JobId} completed successfully with {DocCount} documents.")]
+    private static partial void LogJobCompleted(ILogger logger, string jobId, int docCount);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to execute export job {JobId}.")]
+    private static partial void LogJobFailed(ILogger logger, Exception exception, string? jobId);
 }

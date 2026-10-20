@@ -107,7 +107,7 @@ public static partial class SignatureTokenEndpoints
 
         if (check.Outcome != CredentialCheckOutcome.Verified || !string.Equals(check.Subject, subject, StringComparison.Ordinal))
         {
-            logger.LogWarning("E-signature re-authentication failed for {Subject} ({SemanticAction}).", subject, request.SemanticAction);
+            LogReauthenticationFailed(logger, subject, request.SemanticAction);
             return Problem(StatusCodes.Status401Unauthorized, "INVALID_CREDENTIALS", "The credentials entered are not valid for the signed-in user.");
         }
 
@@ -115,7 +115,7 @@ public static partial class SignatureTokenEndpoints
             new SigTokenGrant(subject, username, roles, request.Action!, request.SemanticAction!, NullIfBlank(request.BatchId)),
             timeProvider.GetUtcNow(),
             GatewayIdentity.EncodeSecret(signing.Value.Secret!));
-        logger.LogInformation("E-signature token issued to {Subject} for {SemanticAction} on {Action}.", subject, request.SemanticAction, request.Action);
+        LogTokenIssued(logger, subject, request.SemanticAction, request.Action);
 
         httpContext.Response.Headers.CacheControl = "no-store";
         return TypedResults.Ok(new SignatureTokenResponse(token, (int)SigTokenClaims.Lifetime.TotalSeconds));
@@ -152,4 +152,10 @@ public static partial class SignatureTokenEndpoints
 
     [GeneratedRegex("^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*){1,4}$", RegexOptions.CultureInvariant)]
     private static partial Regex SemanticActionPattern();
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "E-signature re-authentication failed for {Subject} ({SemanticAction}).")]
+    private static partial void LogReauthenticationFailed(ILogger logger, string subject, string? semanticAction);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "E-signature token issued to {Subject} for {SemanticAction} on {Action}.")]
+    private static partial void LogTokenIssued(ILogger logger, string subject, string? semanticAction, string? action);
 }

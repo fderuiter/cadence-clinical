@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -174,7 +175,7 @@ public static partial class DocIndexSyncService
                 target = target[..anchorIdx];
             }
             target = target.Trim();
-            if (string.IsNullOrEmpty(target) || target.StartsWith("http://") || target.StartsWith("https://") || target.StartsWith("mailto:"))
+            if (string.IsNullOrEmpty(target) || target.StartsWith("http://", StringComparison.Ordinal) || target.StartsWith("https://", StringComparison.Ordinal) || target.StartsWith("mailto:", StringComparison.Ordinal))
             {
                 continue;
             }
@@ -189,11 +190,11 @@ public static partial class DocIndexSyncService
     private static string NormalizePath(string path)
     {
         path = path.Replace('\\', '/').Trim();
-        if (path.StartsWith("./"))
+        if (path.StartsWith("./", StringComparison.Ordinal))
         {
             path = path[2..];
         }
-        while (path.StartsWith("../"))
+        while (path.StartsWith("../", StringComparison.Ordinal))
         {
             path = path[3..];
         }
@@ -244,16 +245,16 @@ public static partial class DocIndexSyncService
             foreach (var line in lines)
             {
                 string trimmed = line.Trim();
-                if (string.IsNullOrEmpty(title) && trimmed.StartsWith("# "))
+                if (string.IsNullOrEmpty(title) && trimmed.StartsWith("# ", StringComparison.Ordinal))
                 {
                     title = trimmed[2..].Trim();
                 }
                 else if (!string.IsNullOrEmpty(title) && string.IsNullOrEmpty(description) &&
                          !string.IsNullOrWhiteSpace(trimmed) &&
                          !trimmed.StartsWith('#') &&
-                         !trimmed.StartsWith("---") &&
+                         !trimmed.StartsWith("---", StringComparison.Ordinal) &&
                          !trimmed.StartsWith('|') &&
-                         !trimmed.StartsWith("```"))
+                         !trimmed.StartsWith("```", StringComparison.Ordinal))
                 {
                     string cleaned = trimmed
                         .Replace("> [!WARNING]", "")
@@ -322,7 +323,7 @@ public static partial class DocIndexSyncService
             string line = lines[i];
             string trimmed = line.Trim();
 
-            if (trimmed.StartsWith("## "))
+            if (trimmed.StartsWith("## ", StringComparison.Ordinal))
             {
                 // If we were in a table in previous category, flush remaining docs for that category before entering new category
                 if (!string.IsNullOrEmpty(currentCategory) && categoryGroups.TryGetValue(currentCategory, out var pendingDocs) && pendingDocs.Count > 0)
@@ -336,7 +337,7 @@ public static partial class DocIndexSyncService
                 hasStatusCol = true;
             }
 
-            if (trimmed.StartsWith("| Document |") || trimmed.StartsWith("| Location |"))
+            if (trimmed.StartsWith("| Document |", StringComparison.Ordinal) || trimmed.StartsWith("| Location |", StringComparison.Ordinal))
             {
                 inTable = true;
                 hasStatusCol = trimmed.Contains("Status");
@@ -387,11 +388,11 @@ public static partial class DocIndexSyncService
 
             if (hasStatusCol)
             {
-                sb.AppendLine($"| [{title}]({doc.RelativePath}) | {status} | {desc} |");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"| [{title}]({doc.RelativePath}) | {status} | {desc} |");
             }
             else
             {
-                sb.AppendLine($"| [{title}]({doc.RelativePath}) | {desc} |");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"| [{title}]({doc.RelativePath}) | {desc} |");
             }
         }
     }

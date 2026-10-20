@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace Cadence.Security.Rbac;
@@ -13,6 +14,8 @@ public static partial class PermissionMatrix
     private static readonly Dictionary<string, Dictionary<string, HashSet<string>>> _rolePermissions =
         new(StringComparer.OrdinalIgnoreCase);
 
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "Public UPPER_SNAKE names ported from the Python reference (packages/security/rbac.py) and referenced across services; renaming them is a separate public API change.")]
     public static IReadOnlyDictionary<string, Dictionary<string, HashSet<string>>> ROLE_PERMISSIONS => _rolePermissions;
 
     static PermissionMatrix()

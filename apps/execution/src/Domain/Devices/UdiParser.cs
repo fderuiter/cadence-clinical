@@ -28,6 +28,8 @@ public record ParsedUdiResult(
 /// </summary>
 public static class UdiParser
 {
+    private static readonly string[] EmptyBarcodeErrors = ["Barcode string cannot be null or empty."];
+
     private static readonly char[] HibccMod43Chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-. $/+%".ToCharArray();
 
     /// <summary>
@@ -47,14 +49,14 @@ public static class UdiParser
                 ManufacturingDate: null,
                 SoftwareVersion: null,
                 IsValid: false,
-                ValidationErrors: new[] { "Barcode string cannot be null or empty." });
+                ValidationErrors: EmptyBarcodeErrors);
         }
 
         var trimmed = rawBarcode.Trim();
         var errors = new List<string>();
 
         // Check format
-        if (trimmed.StartsWith("+", StringComparison.Ordinal) || trimmed.StartsWith("]d2+", StringComparison.Ordinal) || trimmed.StartsWith("]C0+", StringComparison.Ordinal))
+        if (trimmed.StartsWith('+') || trimmed.StartsWith("]d2+", StringComparison.Ordinal) || trimmed.StartsWith("]C0+", StringComparison.Ordinal))
         {
             return ParseHibcc(trimmed);
         }
@@ -184,7 +186,7 @@ public static class UdiParser
                 else if (index + 2 <= clean.Length && clean.Substring(index, 2) == "10")
                 {
                     index += 2;
-                    int end = clean.IndexOfAny(new[] { '\x1d', '\u001d' }, index);
+                    int end = clean.IndexOf('\u001d', index);
                     if (end == -1)
                     {
                         // Check if 21 or 17 or 11 AI starts
@@ -200,7 +202,7 @@ public static class UdiParser
                 else if (index + 2 <= clean.Length && clean.Substring(index, 2) == "21")
                 {
                     index += 2;
-                    int end = clean.IndexOfAny(new[] { '\x1d', '\u001d' }, index);
+                    int end = clean.IndexOf('\u001d', index);
                     if (end == -1) end = clean.Length;
                     serialNumber = clean.Substring(index, end - index);
                     index = end;
@@ -208,7 +210,7 @@ public static class UdiParser
                 else if (index + 4 <= clean.Length && clean.Substring(index, 4) == "8012")
                 {
                     index += 4;
-                    int end = clean.IndexOfAny(new[] { '\x1d', '\u001d' }, index);
+                    int end = clean.IndexOf('\u001d', index);
                     if (end == -1) end = clean.Length;
                     softwareVersion = clean.Substring(index, end - index);
                     index = end;
@@ -277,7 +279,7 @@ public static class UdiParser
 
         // Validate primary HIBCC format: starts with +, followed by LIC (1 letter + 3 alpha/num) and product code
         string udiDi = primary;
-        if (primary.StartsWith("+", StringComparison.Ordinal) && primary.Length >= 5)
+        if (primary.StartsWith('+') && primary.Length >= 5)
         {
             // Remove '+' and check character if present
             udiDi = primary.Substring(1);
@@ -328,7 +330,7 @@ public static class UdiParser
                     }
                 }
             }
-            else if (secondary.StartsWith("+$", StringComparison.Ordinal) || secondary.StartsWith("$", StringComparison.Ordinal))
+            else if (secondary.StartsWith("+$", StringComparison.Ordinal) || secondary.StartsWith('$'))
             {
                 int start = secondary.StartsWith("+$", StringComparison.Ordinal) ? 2 : 1;
                 string remainder = secondary.Substring(start);
@@ -406,9 +408,9 @@ public static class UdiParser
             return yymmdd;
         }
 
-        int yy = int.Parse(yymmdd.Substring(0, 2), CultureInfo.InvariantCulture);
-        int mm = int.Parse(yymmdd.Substring(2, 2), CultureInfo.InvariantCulture);
-        int dd = int.Parse(yymmdd.Substring(4, 2), CultureInfo.InvariantCulture);
+        int yy = int.Parse(yymmdd.AsSpan(0, 2), CultureInfo.InvariantCulture);
+        int mm = int.Parse(yymmdd.AsSpan(2, 2), CultureInfo.InvariantCulture);
+        int dd = int.Parse(yymmdd.AsSpan(4, 2), CultureInfo.InvariantCulture);
 
         // Standard GS1 rule: DD = 00 means last day of the month
         int year = 2000 + yy;

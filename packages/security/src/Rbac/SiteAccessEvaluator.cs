@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace Cadence.Security.Rbac;
@@ -10,6 +11,8 @@ namespace Cadence.Security.Rbac;
 /// </summary>
 public static class SiteAccessEvaluator
 {
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "Public UPPER_SNAKE names ported from the Python reference (packages/security/rbac.py) and referenced across services; renaming them is a separate public API change.")]
     public static IReadOnlySet<string> SITE_SCOPED_ROLES { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         RoleNormalization.ROLE_INVESTIGATOR,

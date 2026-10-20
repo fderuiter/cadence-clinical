@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -123,5 +124,7 @@ public interface IKernelUnitOfWork
     /// a part this command writes as a new version (<see cref="IncludePart"/>). It is written in the command's transaction
     /// with the part (K-LIN-2).
     /// </summary>
+    [SuppressMessage("Naming", "CA1716:Identifiers should not match keywords",
+        Justification = "from and to name the lineage edge's direction (spec K-LIN-2); modules are written in C#, where 'to' is not a keyword.")]
     void LinkPart(NodeRef from, NodeRef to, LineageEdgeKind kind);
 }

@@ -235,7 +235,7 @@ public sealed class QualityGateRegistryTests : IDisposable
         var names = QualityGates.All.SelectMany(g => g.AllNames).ToList();
 
         names.Should().OnlyHaveUniqueItems();
-        names.Should().OnlyContain(n => n == n.ToLowerInvariant() && !n.Contains('_'));
+        names.Should().OnlyContain(n => !n.Any(char.IsUpper) && !n.Contains('_'));
         QualityGates.All.Should().OnlyContain(g => !string.IsNullOrWhiteSpace(g.Checks));
         QualityGates.All.Where(g => g.PreCommit != PreCommitMode.Full).Should().OnlyContain(g => !string.IsNullOrWhiteSpace(g.PreCommitNote));
 

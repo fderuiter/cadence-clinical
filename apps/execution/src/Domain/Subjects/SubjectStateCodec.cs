@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -11,7 +12,7 @@ namespace Cadence.Apps.Execution.Domain.Subjects;
 /// </summary>
 public static class SubjectStateCodec
 {
-    private static readonly IReadOnlyDictionary<string, SubjectState> ByCode = new Dictionary<string, SubjectState>
+    private static readonly FrozenDictionary<string, SubjectState> ByCode = new Dictionary<string, SubjectState>
     {
         ["SCREENING"] = SubjectState.Screening,
         ["SCREEN_FAILED"] = SubjectState.ScreenFailed,
@@ -22,7 +23,7 @@ public static class SubjectStateCodec
         ["COMPLETED"] = SubjectState.Completed,
         ["WITHDRAWN"] = SubjectState.Withdrawn,
         ["RECONSENT_REQUIRED"] = SubjectState.ReconsentRequired,
-    };
+    }.ToFrozenDictionary();
 
     public static string ToCode(SubjectState state) =>
         ByCode.First(kv => kv.Value == state).Key;

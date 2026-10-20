@@ -144,7 +144,7 @@ public static class SyncGxPService
         }
 
         var psiGit = new ProcessStartInfo("git") { WorkingDirectory = repoRoot, UseShellExecute = false };
-        foreach (string arg in new[] { "add", "--" }.Concat(SnapshotPaths))
+        foreach (string arg in SnapshotPaths.Prepend("--").Prepend("add"))
         {
             psiGit.ArgumentList.Add(arg);
         }

@@ -16,6 +16,7 @@ public class ProtocolRagService
     /// Formats canonical verbatim citation marker per PRD-TCK-005.
     /// </summary>
     [SuppressMessage("SonarAnalyzer.CSharp", "S2325:Methods should be static", Justification = "Instance method API consistency across compliance services")]
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Instance method API consistency across compliance services; callers use the injected service.")]
     public string FormatCitationMarker(string protocolVersion, string? sectionNumber, int pageNumber) =>
         ProtocolRagEvaluator.FormatCitationMarker(protocolVersion, sectionNumber, pageNumber);
 
@@ -23,6 +24,7 @@ public class ProtocolRagService
     /// Formats the Tier 2 Grounded RAG user prompt containing structured excerpt blocks.
     /// </summary>
     [SuppressMessage("SonarAnalyzer.CSharp", "S2325:Methods should be static", Justification = "Instance method API consistency across compliance services")]
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Instance method API consistency across compliance services; callers use the injected service.")]
     public string FormatGroundedRagPrompt(string query, IReadOnlyList<ProtocolRagContextChunk>? chunks) =>
         ProtocolRagEvaluator.FormatGroundedRagPrompt(query, chunks);
 
@@ -30,6 +32,7 @@ public class ProtocolRagService
     /// Computes mathematical faithfulness score and validates citation grounding.
     /// </summary>
     [SuppressMessage("SonarAnalyzer.CSharp", "S2325:Methods should be static", Justification = "Instance method API consistency across compliance services")]
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Instance method API consistency across compliance services; callers use the injected service.")]
     public (double FaithfulnessScore, IReadOnlyList<ParsedCitation> Citations, bool IsGrounded) EvaluateFaithfulness(
         string query, string answer, IReadOnlyList<ProtocolRagContextChunk>? chunks) =>
         ProtocolRagEvaluator.EvaluateFaithfulness(query, answer, chunks);

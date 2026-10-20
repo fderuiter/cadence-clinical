@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json.Serialization;
@@ -13,6 +14,8 @@ namespace Cadence.Security.Blinding;
 /// Role-aware response property masking engine for trial blinding rules.
 /// @req:PRD-SYS-053
 /// </summary>
+[SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+    Justification = "Public UPPER_SNAKE names ported from the Python reference (packages/security/rbac.py) and referenced across services; renaming them is a separate public API change.")]
 public static class FieldMasker
 {
     public static IReadOnlySet<string> UNMASKED_ALLOCATION_FIELDS { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)

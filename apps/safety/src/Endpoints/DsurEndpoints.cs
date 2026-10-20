@@ -11,6 +11,7 @@ using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 
@@ -212,6 +213,6 @@ public static class DsurEndpoints
         };
 
     /// <summary>A request without a verified caller is refused, never attributed to a default user (#5462).</summary>
-    private static IResult VerifiedCallerRequired() =>
+    private static ProblemHttpResult VerifiedCallerRequired() =>
         TypedResults.Problem("A verified caller identity is required.", statusCode: StatusCodes.Status401Unauthorized);
 }

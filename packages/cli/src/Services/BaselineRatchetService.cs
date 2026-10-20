@@ -120,7 +120,7 @@ public static class BaselineRatchetService
             return 0;
         }
 
-        IReadOnlyList<Growth> growth;
+        List<Growth> growth;
         try
         {
             growth = FindGrowth(repoRoot, mergeBase, preCommit);
@@ -257,7 +257,7 @@ public static class BaselineRatchetService
         return File.Exists(full) ? File.ReadAllText(full) : null;
     }
 
-    private static IEnumerable<string> Lines(string? output) =>
+    private static string[] Lines(string? output) =>
         (output ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     private static string? Git(string repoRoot, params string[] args)

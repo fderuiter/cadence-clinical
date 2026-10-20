@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -114,6 +115,8 @@ public static class KernelEventFamilies
 /// integration events (K-EVT-2), and every entry is checked for the reader: an entry about an object the reader may
 /// not see is returned masked, never dropped.
 /// </summary>
+[SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix",
+    Justification = "'Activity stream' is kernel specification vocabulary (spec §5.2, ADR-2485); it is not a System.IO.Stream.")]
 public interface IActivityStream
 {
     /// <summary>A page of activity in <paramref name="tenant"/> for the current actor.</summary>

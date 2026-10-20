@@ -8,6 +8,7 @@ using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 
 namespace Cadence.Apps.Execution.Endpoints;
@@ -119,7 +120,7 @@ public static class DeviceEndpoints
         return routes;
     }
 
-    private static IResult ParseUdi(UdiParseRequest request, IDeviceApplicationService deviceService)
+    private static Ok<ParsedUdiResponse> ParseUdi(UdiParseRequest request, IDeviceApplicationService deviceService)
     {
         var result = deviceService.ParseUdi(request);
         return TypedResults.Ok(result);

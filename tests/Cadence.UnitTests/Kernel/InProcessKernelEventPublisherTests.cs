@@ -75,7 +75,7 @@ public sealed class InProcessKernelEventPublisherTests
 
     private static EventEnvelope Envelope(string type, int version) =>
         new(Guid.CreateVersion7(), type, version, TenantId.New(), null, DateTimeOffset.UnixEpoch, "user-1", Guid.CreateVersion7(),
-            Guid.CreateVersion7(), null, JsonSerializer.SerializeToElement(new ProbeHappened("value"), new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+            Guid.CreateVersion7(), null, JsonSerializer.SerializeToElement(new ProbeHappened("value"), JsonSerializerOptions.Web));
 
     /// <summary>The event the probe consumers handle.</summary>
     [KernelEvent("probe.Happened", 1)]

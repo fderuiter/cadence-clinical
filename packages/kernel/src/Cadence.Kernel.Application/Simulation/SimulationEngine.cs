@@ -208,7 +208,7 @@ public sealed class SimulationEngine(
     /// Both contents are protocol designs: a stored version's by the protocol commands, unsaved content by
     /// <see cref="LoadAsync"/>.
     /// </summary>
-    private static IReadOnlyList<ScheduleChange> ScheduleChanges(string? baseContent, string candidateContent)
+    private static List<ScheduleChange> ScheduleChanges(string? baseContent, string candidateContent)
     {
         var before = baseContent is null ? [] : ExpectedSchedule.Plan(DesignOf(baseContent));
         var after = ExpectedSchedule.Plan(DesignOf(candidateContent));

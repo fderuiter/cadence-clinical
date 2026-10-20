@@ -69,7 +69,7 @@ public static class MarkdownValidatorService
             {
                 string line = lines[i];
                 string trimmed = line.TrimStart();
-                if (trimmed.StartsWith("```") || trimmed.StartsWith("~~~"))
+                if (trimmed.StartsWith("```", StringComparison.Ordinal) || trimmed.StartsWith("~~~", StringComparison.Ordinal))
                 {
                     inFencedBlock = !inFencedBlock;
                     continue;

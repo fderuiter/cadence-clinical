@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -24,6 +25,8 @@ namespace Cadence.Apps.Safety.Application;
 /// </summary>
 public class DsurCompilerEngine
 {
+    private static readonly JsonSerializerOptions IndentedJson = new() { WriteIndented = true };
+
     /// <summary>The audit chain the report's entries join (the record's CLR type name).</summary>
     public const string AuditEntityName = nameof(PeriodicSafetyReportRecord);
 
@@ -95,7 +98,7 @@ public class DsurCompilerEngine
                 SignalSummary: []
             );
 
-            var payloadJson = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
+            var payloadJson = JsonSerializer.Serialize(payload, IndentedJson);
 
             var record = new PeriodicSafetyReportRecord
             {
@@ -172,13 +175,13 @@ public class DsurCompilerEngine
         var markdownBody = new StringBuilder()
             .AppendLine("# Development Safety Update Report (DSUR) - Regulatory Approval")
             .AppendLine()
-            .AppendLine($" - **Report Identifier:** {record.Id}")
-            .AppendLine($" - **Compound Name:** {record.CompoundName}")
-            .AppendLine($" - **Study Identifier:** {record.StudyId}")
-            .AppendLine($" - **Reporting Period:** {record.PeriodStart:yyyy-MM-dd} to {record.PeriodEnd:yyyy-MM-dd}")
-            .AppendLine(System.Globalization.CultureInfo.InvariantCulture, $" - **Total Patient-Years Exposure:** {record.TotalPatientYearsExposure:0.####}")
-            .AppendLine($" - **Total SAE Count:** {record.TotalSaes}")
-            .AppendLine($" - **Regulatory Status:** APPROVED & LOCKED")
+            .AppendLine(CultureInfo.InvariantCulture, $" - **Report Identifier:** {record.Id}")
+            .AppendLine(CultureInfo.InvariantCulture, $" - **Compound Name:** {record.CompoundName}")
+            .AppendLine(CultureInfo.InvariantCulture, $" - **Study Identifier:** {record.StudyId}")
+            .AppendLine(CultureInfo.InvariantCulture, $" - **Reporting Period:** {record.PeriodStart:yyyy-MM-dd} to {record.PeriodEnd:yyyy-MM-dd}")
+            .AppendLine(CultureInfo.InvariantCulture, $" - **Total Patient-Years Exposure:** {record.TotalPatientYearsExposure:0.####}")
+            .AppendLine(CultureInfo.InvariantCulture, $" - **Total SAE Count:** {record.TotalSaes}")
+            .AppendLine(CultureInfo.InvariantCulture, $" - **Regulatory Status:** APPROVED & LOCKED")
             .AppendLine()
             .AppendLine("This document is frozen and cryptographically signed in compliance with 21 CFR Part 11.")
             .ToString();

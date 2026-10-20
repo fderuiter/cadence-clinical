@@ -21,71 +21,71 @@ public class PaymentDecimalCalculationTests
     public void AllMonetaryAndRatePropertiesInPaymentEntities_UseDecimalType()
     {
         // 1. BudgetContract
-        typeof(BudgetContract).GetProperty(nameof(BudgetContract.TotalBudget))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(BudgetContract).GetProperty(nameof(BudgetContract.OverheadPercentage))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(BudgetContract).GetProperty(nameof(BudgetContract.WithholdingPercentage))!.PropertyType.Should().Be(typeof(decimal));
+        typeof(BudgetContract).GetProperty(nameof(BudgetContract.TotalBudget))!.PropertyType.Should().Be<decimal>();
+        typeof(BudgetContract).GetProperty(nameof(BudgetContract.OverheadPercentage))!.PropertyType.Should().Be<decimal>();
+        typeof(BudgetContract).GetProperty(nameof(BudgetContract.WithholdingPercentage))!.PropertyType.Should().Be<decimal>();
 
         // 2. FeeSchedule
-        typeof(FeeSchedule).GetProperty(nameof(FeeSchedule.BaseAmount))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(FeeSchedule).GetProperty(nameof(FeeSchedule.OverheadPercentage))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(FeeSchedule).GetProperty(nameof(FeeSchedule.WithholdingPercentage))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(FeeSchedule).GetProperty(nameof(FeeSchedule.PatientStipend))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(FeeSchedule).GetProperty(nameof(FeeSchedule.TravelReimbursement))!.PropertyType.Should().Be(typeof(decimal));
+        typeof(FeeSchedule).GetProperty(nameof(FeeSchedule.BaseAmount))!.PropertyType.Should().Be<decimal>();
+        typeof(FeeSchedule).GetProperty(nameof(FeeSchedule.OverheadPercentage))!.PropertyType.Should().Be<decimal>();
+        typeof(FeeSchedule).GetProperty(nameof(FeeSchedule.WithholdingPercentage))!.PropertyType.Should().Be<decimal>();
+        typeof(FeeSchedule).GetProperty(nameof(FeeSchedule.PatientStipend))!.PropertyType.Should().Be<decimal>();
+        typeof(FeeSchedule).GetProperty(nameof(FeeSchedule.TravelReimbursement))!.PropertyType.Should().Be<decimal>();
 
         // 3. SplitPayeeConfig
-        typeof(SplitPayeeConfig).GetProperty(nameof(SplitPayeeConfig.AllocationPercentage))!.PropertyType.Should().Be(typeof(decimal));
+        typeof(SplitPayeeConfig).GetProperty(nameof(SplitPayeeConfig.AllocationPercentage))!.PropertyType.Should().Be<decimal>();
 
         // 4. Payable
-        typeof(Payable).GetProperty(nameof(Payable.BaseAmount))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(Payable).GetProperty(nameof(Payable.OverheadAmount))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(Payable).GetProperty(nameof(Payable.PatientStipendAmount))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(Payable).GetProperty(nameof(Payable.TravelReimbursementAmount))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(Payable).GetProperty(nameof(Payable.GrossAmount))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(Payable).GetProperty(nameof(Payable.WithholdingRate))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(Payable).GetProperty(nameof(Payable.WithholdingAmount))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(Payable).GetProperty(nameof(Payable.NetAmount))!.PropertyType.Should().Be(typeof(decimal));
+        typeof(Payable).GetProperty(nameof(Payable.BaseAmount))!.PropertyType.Should().Be<decimal>();
+        typeof(Payable).GetProperty(nameof(Payable.OverheadAmount))!.PropertyType.Should().Be<decimal>();
+        typeof(Payable).GetProperty(nameof(Payable.PatientStipendAmount))!.PropertyType.Should().Be<decimal>();
+        typeof(Payable).GetProperty(nameof(Payable.TravelReimbursementAmount))!.PropertyType.Should().Be<decimal>();
+        typeof(Payable).GetProperty(nameof(Payable.GrossAmount))!.PropertyType.Should().Be<decimal>();
+        typeof(Payable).GetProperty(nameof(Payable.WithholdingRate))!.PropertyType.Should().Be<decimal>();
+        typeof(Payable).GetProperty(nameof(Payable.WithholdingAmount))!.PropertyType.Should().Be<decimal>();
+        typeof(Payable).GetProperty(nameof(Payable.NetAmount))!.PropertyType.Should().Be<decimal>();
 
         // 5. PayableAllocation
-        typeof(PayableAllocation).GetProperty(nameof(PayableAllocation.AllocationPercentage))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(PayableAllocation).GetProperty(nameof(PayableAllocation.GrossShare))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(PayableAllocation).GetProperty(nameof(PayableAllocation.WithholdingShare))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(PayableAllocation).GetProperty(nameof(PayableAllocation.NetShare))!.PropertyType.Should().Be(typeof(decimal));
+        typeof(PayableAllocation).GetProperty(nameof(PayableAllocation.AllocationPercentage))!.PropertyType.Should().Be<decimal>();
+        typeof(PayableAllocation).GetProperty(nameof(PayableAllocation.GrossShare))!.PropertyType.Should().Be<decimal>();
+        typeof(PayableAllocation).GetProperty(nameof(PayableAllocation.WithholdingShare))!.PropertyType.Should().Be<decimal>();
+        typeof(PayableAllocation).GetProperty(nameof(PayableAllocation.NetShare))!.PropertyType.Should().Be<decimal>();
 
         // 6. HoldbackReserve
-        typeof(HoldbackReserve).GetProperty(nameof(HoldbackReserve.HoldbackAmount))!.PropertyType.Should().Be(typeof(decimal));
+        typeof(HoldbackReserve).GetProperty(nameof(HoldbackReserve.HoldbackAmount))!.PropertyType.Should().Be<decimal>();
 
         // 7. SelfBillingInvoice
-        typeof(SelfBillingInvoice).GetProperty(nameof(SelfBillingInvoice.TotalBaseAmount))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(SelfBillingInvoice).GetProperty(nameof(SelfBillingInvoice.TotalOverheadAmount))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(SelfBillingInvoice).GetProperty(nameof(SelfBillingInvoice.TotalPatientStipend))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(SelfBillingInvoice).GetProperty(nameof(SelfBillingInvoice.TotalTravelReimbursement))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(SelfBillingInvoice).GetProperty(nameof(SelfBillingInvoice.TotalGrossAmount))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(SelfBillingInvoice).GetProperty(nameof(SelfBillingInvoice.TotalHoldbackAmount))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(SelfBillingInvoice).GetProperty(nameof(SelfBillingInvoice.TotalNetAmount))!.PropertyType.Should().Be(typeof(decimal));
+        typeof(SelfBillingInvoice).GetProperty(nameof(SelfBillingInvoice.TotalBaseAmount))!.PropertyType.Should().Be<decimal>();
+        typeof(SelfBillingInvoice).GetProperty(nameof(SelfBillingInvoice.TotalOverheadAmount))!.PropertyType.Should().Be<decimal>();
+        typeof(SelfBillingInvoice).GetProperty(nameof(SelfBillingInvoice.TotalPatientStipend))!.PropertyType.Should().Be<decimal>();
+        typeof(SelfBillingInvoice).GetProperty(nameof(SelfBillingInvoice.TotalTravelReimbursement))!.PropertyType.Should().Be<decimal>();
+        typeof(SelfBillingInvoice).GetProperty(nameof(SelfBillingInvoice.TotalGrossAmount))!.PropertyType.Should().Be<decimal>();
+        typeof(SelfBillingInvoice).GetProperty(nameof(SelfBillingInvoice.TotalHoldbackAmount))!.PropertyType.Should().Be<decimal>();
+        typeof(SelfBillingInvoice).GetProperty(nameof(SelfBillingInvoice.TotalNetAmount))!.PropertyType.Should().Be<decimal>();
 
         // 8. InvoiceLineItem
-        typeof(InvoiceLineItem).GetProperty(nameof(InvoiceLineItem.BaseAmount))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(InvoiceLineItem).GetProperty(nameof(InvoiceLineItem.OverheadAmount))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(InvoiceLineItem).GetProperty(nameof(InvoiceLineItem.PatientStipend))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(InvoiceLineItem).GetProperty(nameof(InvoiceLineItem.TravelReimbursement))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(InvoiceLineItem).GetProperty(nameof(InvoiceLineItem.GrossAmount))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(InvoiceLineItem).GetProperty(nameof(InvoiceLineItem.WithholdingRate))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(InvoiceLineItem).GetProperty(nameof(InvoiceLineItem.WithholdingAmount))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(InvoiceLineItem).GetProperty(nameof(InvoiceLineItem.NetAmount))!.PropertyType.Should().Be(typeof(decimal));
+        typeof(InvoiceLineItem).GetProperty(nameof(InvoiceLineItem.BaseAmount))!.PropertyType.Should().Be<decimal>();
+        typeof(InvoiceLineItem).GetProperty(nameof(InvoiceLineItem.OverheadAmount))!.PropertyType.Should().Be<decimal>();
+        typeof(InvoiceLineItem).GetProperty(nameof(InvoiceLineItem.PatientStipend))!.PropertyType.Should().Be<decimal>();
+        typeof(InvoiceLineItem).GetProperty(nameof(InvoiceLineItem.TravelReimbursement))!.PropertyType.Should().Be<decimal>();
+        typeof(InvoiceLineItem).GetProperty(nameof(InvoiceLineItem.GrossAmount))!.PropertyType.Should().Be<decimal>();
+        typeof(InvoiceLineItem).GetProperty(nameof(InvoiceLineItem.WithholdingRate))!.PropertyType.Should().Be<decimal>();
+        typeof(InvoiceLineItem).GetProperty(nameof(InvoiceLineItem.WithholdingAmount))!.PropertyType.Should().Be<decimal>();
+        typeof(InvoiceLineItem).GetProperty(nameof(InvoiceLineItem.NetAmount))!.PropertyType.Should().Be<decimal>();
 
         // 9. RemittanceAdvice
-        typeof(RemittanceAdvice).GetProperty(nameof(RemittanceAdvice.GrossAmount))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(RemittanceAdvice).GetProperty(nameof(RemittanceAdvice.OverheadAmount))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(RemittanceAdvice).GetProperty(nameof(RemittanceAdvice.HoldbackAmount))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(RemittanceAdvice).GetProperty(nameof(RemittanceAdvice.NetAmount))!.PropertyType.Should().Be(typeof(decimal));
+        typeof(RemittanceAdvice).GetProperty(nameof(RemittanceAdvice.GrossAmount))!.PropertyType.Should().Be<decimal>();
+        typeof(RemittanceAdvice).GetProperty(nameof(RemittanceAdvice.OverheadAmount))!.PropertyType.Should().Be<decimal>();
+        typeof(RemittanceAdvice).GetProperty(nameof(RemittanceAdvice.HoldbackAmount))!.PropertyType.Should().Be<decimal>();
+        typeof(RemittanceAdvice).GetProperty(nameof(RemittanceAdvice.NetAmount))!.PropertyType.Should().Be<decimal>();
 
         // 10. ParticipantWallet
-        typeof(ParticipantWallet).GetProperty(nameof(ParticipantWallet.CurrentBalance))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(ParticipantWallet).GetProperty(nameof(ParticipantWallet.LifetimeStipends))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(ParticipantWallet).GetProperty(nameof(ParticipantWallet.LifetimeReimbursements))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(ParticipantWallet).GetProperty(nameof(ParticipantWallet.LifetimeDisbursements))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(ParticipantWallet).GetProperty(nameof(ParticipantWallet.TaxableYtd))!.PropertyType.Should().Be(typeof(decimal));
-        typeof(ParticipantWallet).GetProperty(nameof(ParticipantWallet.AntiCoercionCap))!.PropertyType.Should().Be(typeof(decimal?));
+        typeof(ParticipantWallet).GetProperty(nameof(ParticipantWallet.CurrentBalance))!.PropertyType.Should().Be<decimal>();
+        typeof(ParticipantWallet).GetProperty(nameof(ParticipantWallet.LifetimeStipends))!.PropertyType.Should().Be<decimal>();
+        typeof(ParticipantWallet).GetProperty(nameof(ParticipantWallet.LifetimeReimbursements))!.PropertyType.Should().Be<decimal>();
+        typeof(ParticipantWallet).GetProperty(nameof(ParticipantWallet.LifetimeDisbursements))!.PropertyType.Should().Be<decimal>();
+        typeof(ParticipantWallet).GetProperty(nameof(ParticipantWallet.TaxableYtd))!.PropertyType.Should().Be<decimal>();
+        typeof(ParticipantWallet).GetProperty(nameof(ParticipantWallet.AntiCoercionCap))!.PropertyType.Should().Be<decimal?>();
     }
 
     [Fact]

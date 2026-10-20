@@ -35,7 +35,7 @@ public sealed class StagedAdverseEventReview : AggregateRoot<string>
     public DateTimeOffset? ReviewedAt { get; private set; }
     public string? InvestigatorNotes { get; private set; }
     public int Version { get; private set; } = 1;
-    public bool IsDeleted { get; private set; } = false;
+    public bool IsDeleted { get; private set; }
 
     private StagedAdverseEventReview() { } // EF Core
 

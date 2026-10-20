@@ -14,6 +14,7 @@ using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 
@@ -96,7 +97,7 @@ public static class ImagingAdjudicationEndpoints
     private static string Caller(HttpContext httpContext) =>
         CallerScope.UserId(httpContext) ?? throw new InvalidOperationException("An admitted adjudication request has no signed caller.");
 
-    private static IResult OutsideStudy() =>
+    private static ProblemHttpResult OutsideStudy() =>
         TypedResults.Problem(
             title: "Outside your studies",
             detail: "You are not assigned to this study.",

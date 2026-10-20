@@ -80,7 +80,7 @@ public sealed class SignatureCredentialOptions
 /// brute-force lockout.
 /// @req:PRD-SYS-053
 /// </summary>
-public sealed class KeycloakCredentialVerifier(
+public sealed partial class KeycloakCredentialVerifier(
     HttpClient httpClient,
     IOptions<SignatureCredentialOptions> options,
     ILogger<KeycloakCredentialVerifier> logger) : ICredentialVerifier
@@ -112,17 +112,17 @@ public sealed class KeycloakCredentialVerifier(
                 var error = await response.Content.ReadFromJsonAsync<ErrorResponse>(cancellationToken).ConfigureAwait(false);
                 if (string.Equals(error?.Error, "invalid_grant", StringComparison.Ordinal))
                 {
-                    logger.LogWarning("Signature re-authentication rejected by the identity provider.");
+                    LogReauthenticationRejected(logger);
                     return CredentialCheck.Rejected;
                 }
 
-                logger.LogError("Identity provider refused the signature client ({Error}); check OIDC_SIGNATURE_CLIENT_ID.", error?.Error);
+                LogSignatureClientRefused(logger, error?.Error);
                 return CredentialCheck.Unavailable;
             }
 
             if (!response.IsSuccessStatusCode)
             {
-                logger.LogError("Identity provider token endpoint answered {Status} during signature re-authentication.", (int)response.StatusCode);
+                LogTokenEndpointStatus(logger, (int)response.StatusCode);
                 return CredentialCheck.Unavailable;
             }
 
@@ -135,7 +135,7 @@ public sealed class KeycloakCredentialVerifier(
                 throw;
             }
 
-            logger.LogError(ex, "Identity provider unreachable during signature re-authentication.");
+            LogIdentityProviderUnreachable(logger, ex);
             return CredentialCheck.Unavailable;
         }
 
@@ -169,12 +169,12 @@ public sealed class KeycloakCredentialVerifier(
             using var response = await httpClient.PostAsync(logoutEndpoint, content, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                logger.LogWarning("Could not end the signature re-authentication session ({Status}); it expires on its own.", (int)response.StatusCode);
+                LogLogoutStatus(logger, (int)response.StatusCode);
             }
         }
         catch (HttpRequestException ex)
         {
-            logger.LogWarning(ex, "Could not end the signature re-authentication session; it expires on its own.");
+            LogLogoutFailed(logger, ex);
         }
     }
 
@@ -194,4 +194,22 @@ public sealed class KeycloakCredentialVerifier(
     private sealed record TokenResponse(
         [property: JsonPropertyName("access_token")] string? AccessToken,
         [property: JsonPropertyName("refresh_token")] string? RefreshToken);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Signature re-authentication rejected by the identity provider.")]
+    private static partial void LogReauthenticationRejected(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Identity provider refused the signature client ({Error}); check OIDC_SIGNATURE_CLIENT_ID.")]
+    private static partial void LogSignatureClientRefused(ILogger logger, string? error);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Identity provider token endpoint answered {Status} during signature re-authentication.")]
+    private static partial void LogTokenEndpointStatus(ILogger logger, int status);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Identity provider unreachable during signature re-authentication.")]
+    private static partial void LogIdentityProviderUnreachable(ILogger logger, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not end the signature re-authentication session ({Status}); it expires on its own.")]
+    private static partial void LogLogoutStatus(ILogger logger, int status);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not end the signature re-authentication session; it expires on its own.")]
+    private static partial void LogLogoutFailed(ILogger logger, Exception exception);
 }

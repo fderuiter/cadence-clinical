@@ -333,7 +333,7 @@ public sealed class AgentRunnerTests
 
         public FixedClients(RunChatClient client) => _result = CommandResult<RunChatClient>.Success(client);
 
-        public Task<CommandResult<RunChatClient>> CreateAsync(AgentRunCall call, CancellationToken cancellationToken) => Task.FromResult(_result);
+        public Task<CommandResult<RunChatClient>> CreateAsync(AgentRunCall agentCall, CancellationToken cancellationToken) => Task.FromResult(_result);
     }
 
     private sealed class ScrubCountingClient(IChatClient inner, Dictionary<string, int> counts) : DelegatingChatClient(inner)

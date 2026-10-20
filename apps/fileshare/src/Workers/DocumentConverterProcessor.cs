@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cadence.Apps.Fileshare.Workers;
 
-public sealed class DocumentConverterProcessor : IDocumentConverterProcessor
+public sealed partial class DocumentConverterProcessor : IDocumentConverterProcessor
 {
     private readonly IStoragePort<byte[]>? _storagePort;
     private readonly ILogger<DocumentConverterProcessor> _logger;
@@ -43,7 +43,10 @@ public sealed class DocumentConverterProcessor : IDocumentConverterProcessor
             }
         }
 
-        _logger.LogInformation("Successfully converted FileRecord {FileRecordId} to PDF rendition {PdfKey}", fileRecord.Id, pdfKey);
+        LogConverted(_logger, fileRecord.Id, pdfKey);
         return pdfKey;
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Successfully converted FileRecord {FileRecordId} to PDF rendition {PdfKey}")]
+    private static partial void LogConverted(ILogger logger, string fileRecordId, string pdfKey);
 }

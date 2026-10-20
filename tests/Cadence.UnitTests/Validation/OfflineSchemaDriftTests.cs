@@ -32,13 +32,13 @@ public class OfflineSchemaDriftTests
 
     private static string CamelToSnake(string name)
     {
-        return Regex.Replace(name, @"(?<!^)(?=[A-Z])", "_").ToLower();
+        return Regex.Replace(name, @"(?<!^)(?=[A-Z])", "_").ToLowerInvariant();
     }
 
     private static bool AreTypesCompatible(string jsType, string pyType)
     {
-        var js = jsType.Trim().ToLower();
-        var py = pyType.Trim().ToLower();
+        var js = jsType.Trim().ToLowerInvariant();
+        var py = pyType.Trim().ToLowerInvariant();
 
         if (js == "string" && (py.Contains("str") || py.Contains("datetime") || py.Contains("status"))) return true;
         if (js == "number" && (py.Contains("int") || py.Contains("float") || py.Contains("double") || py.Contains("decimal"))) return true;

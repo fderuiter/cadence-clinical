@@ -30,17 +30,17 @@ public class PathBoundaryLinterTests
     private static (bool IsValid, string Error) ValidateFile(string relPath)
     {
         var normalized = relPath.Replace("\\", "/");
-        if (normalized.EndsWith(".vue") && !normalized.StartsWith("apps/") && !normalized.StartsWith("packages/"))
+        if (normalized.EndsWith(".vue", StringComparison.Ordinal) && !normalized.StartsWith("apps/", StringComparison.Ordinal) && !normalized.StartsWith("packages/", StringComparison.Ordinal))
         {
             return (false, "Vue components (*.vue) must reside inside frontend structures");
         }
 
-        if (normalized.EndsWith(".sh") && !normalized.StartsWith("scripts/"))
+        if (normalized.EndsWith(".sh", StringComparison.Ordinal) && !normalized.StartsWith("scripts/", StringComparison.Ordinal))
         {
             return (false, "Shell scripts (*.sh) must reside in scripts");
         }
 
-        if (normalized.StartsWith("apps/") || normalized.StartsWith("packages/") || normalized.StartsWith("tests/") || normalized.StartsWith("scripts/") || normalized.StartsWith("docs/"))
+        if (normalized.StartsWith("apps/", StringComparison.Ordinal) || normalized.StartsWith("packages/", StringComparison.Ordinal) || normalized.StartsWith("tests/", StringComparison.Ordinal) || normalized.StartsWith("scripts/", StringComparison.Ordinal) || normalized.StartsWith("docs/", StringComparison.Ordinal))
         {
             return (true, string.Empty);
         }

@@ -92,7 +92,9 @@ public class FluidTemplateRenderer : ITemplateRenderer
     /// <inheritdoc />
     public string Render(TemplateCatalog catalog, string key, object model)
     {
-        return RenderAsync(catalog, key, model).GetAwaiter().GetResult();
+        var (template, resourceName) = GetOrParseTemplate(catalog, key);
+        var context = CreateContext(model);
+        return template.Render(context, EncoderFor(resourceName));
     }
 
     private static TemplateOptions CreateDefaultOptions()

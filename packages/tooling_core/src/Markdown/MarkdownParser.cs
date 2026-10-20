@@ -64,7 +64,7 @@ public static class MarkdownParser
                         }
 
                         // Strip anchors, queries, pytest selectors
-                        string target = rawTarget.Split('#')[0].Split('?')[0].Split(new[] { "::" }, StringSplitOptions.None)[0].Trim();
+                        string target = rawTarget.Split('#')[0].Split('?')[0].Split("::", StringSplitOptions.None)[0].Trim();
                         if (string.IsNullOrEmpty(target)) continue;
 
                         // Ignore placeholders

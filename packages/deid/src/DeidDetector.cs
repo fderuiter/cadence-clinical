@@ -65,6 +65,7 @@ public class DeidDetector
     private static readonly Regex TenDigitRegex = new(@"^\d{3}[-.\s]?\d{3}[-.\s]?\d{4}$", RegexOptions.Compiled);
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SonarAnalyzer.CSharp", "S2325:Methods should be static", Justification = "Instance method API consistency across de-identification detectors")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Instance method API consistency across de-identification detectors; callers use the injected detector.")]
     public List<DetectionResult> Detect(string text, ComplianceProfile profile = ComplianceProfile.HIPAA, List<string>? customTerms = null)
     {
         if (string.IsNullOrEmpty(text))

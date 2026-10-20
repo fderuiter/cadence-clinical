@@ -35,5 +35,5 @@ public interface IAuditLoggerPort
 
 public interface IEventDispatcherPort
 {
-    Task DispatchAsync(DomainEvent @event, CancellationToken ct = default);
+    Task DispatchAsync(DomainEvent domainEvent, CancellationToken ct = default);
 }

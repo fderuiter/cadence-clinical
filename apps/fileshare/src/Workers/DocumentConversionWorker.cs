@@ -34,7 +34,7 @@ public sealed partial class DocumentConversionWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("DocumentConversionWorker started.");
+        LogStarted(_logger);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -50,7 +50,7 @@ public sealed partial class DocumentConversionWorker : BackgroundService
             await Delay(_options.ConversionPollInterval, stoppingToken).ConfigureAwait(false);
         }
 
-        _logger.LogInformation("DocumentConversionWorker stopping.");
+        LogStopping(_logger);
     }
 
     public async Task ProcessPendingConversionsAsync(CancellationToken ct)
@@ -111,7 +111,7 @@ public sealed partial class DocumentConversionWorker : BackgroundService
             catch (Exception ex)
             {
                 lastError = ex.Message;
-                _logger.LogWarning(ex, "Conversion attempt {Attempt}/{MaxRetries} failed for FileRecord {RecordId}", attempt, _options.MaxRetryCount, record.Id);
+                LogConversionAttemptFailed(_logger, ex, attempt, _options.MaxRetryCount, record.Id);
 
                 if (attempt < _options.MaxRetryCount)
                 {
@@ -150,4 +150,13 @@ public sealed partial class DocumentConversionWorker : BackgroundService
 
     [LoggerMessage(Level = LogLevel.Error, Message = "DocumentConversionWorker pass failed; retrying after poll interval.")]
     private static partial void LogPassFailed(ILogger logger, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "DocumentConversionWorker started.")]
+    private static partial void LogStarted(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "DocumentConversionWorker stopping.")]
+    private static partial void LogStopping(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Conversion attempt {Attempt}/{MaxRetries} failed for FileRecord {RecordId}")]
+    private static partial void LogConversionAttemptFailed(ILogger logger, Exception exception, int attempt, int maxRetries, string recordId);
 }

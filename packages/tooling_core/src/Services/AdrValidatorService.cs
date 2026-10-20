@@ -363,7 +363,7 @@ public static class AdrValidatorService
         var architecturalChanges = changedFiles.Where(f => IsArchitecturalFile(f, repoRoot)).ToList();
         if (architecturalChanges.Count == 0) return true;
 
-        bool newAdrAdded = changedFiles.Any(f => f.StartsWith("docs/adr/") && FilenamePattern.IsMatch(Path.GetFileName(f)) && (File.Exists(f) || File.Exists(Path.Combine(repoRoot, f))));
+        bool newAdrAdded = changedFiles.Any(f => f.StartsWith("docs/adr/", StringComparison.Ordinal) && FilenamePattern.IsMatch(Path.GetFileName(f)) && (File.Exists(f) || File.Exists(Path.Combine(repoRoot, f))));
         if (!newAdrAdded)
         {
             AnsiConsole.MarkupLine("[red]Error: Architectural changes detected, but no corresponding ADR found in docs/adr/.[/]");
@@ -380,20 +380,20 @@ public static class AdrValidatorService
 
     private static bool IsArchitecturalFile(string filepath, string repoRoot)
     {
-        if (filepath.StartsWith("tests/") || filepath.Contains("/tests/") ||
-            filepath.StartsWith("docs/") || filepath.StartsWith("scripts/") ||
-            filepath.StartsWith(".github/") || filepath.EndsWith(".md") ||
-            filepath.EndsWith(".txt") || (Path.GetFileName(filepath).StartsWith('.') && filepath.EndsWith("ignore")) ||
-            filepath.EndsWith(".d.ts"))
+        if (filepath.StartsWith("tests/", StringComparison.Ordinal) || filepath.Contains("/tests/") ||
+            filepath.StartsWith("docs/", StringComparison.Ordinal) || filepath.StartsWith("scripts/", StringComparison.Ordinal) ||
+            filepath.StartsWith(".github/", StringComparison.Ordinal) || filepath.EndsWith(".md", StringComparison.Ordinal) ||
+            filepath.EndsWith(".txt", StringComparison.Ordinal) || (Path.GetFileName(filepath).StartsWith('.') && filepath.EndsWith("ignore", StringComparison.Ordinal)) ||
+            filepath.EndsWith(".d.ts", StringComparison.Ordinal))
         {
             return false;
         }
 
         if (filepath == "package.json") return RootPackageJsonDependenciesChanged(repoRoot);
-        if (filepath.StartsWith("apps/gateway/")) return true;
-        if (filepath.StartsWith("packages/security/") || filepath.StartsWith("packages/ui/")) return true;
+        if (filepath.StartsWith("apps/gateway/", StringComparison.Ordinal)) return true;
+        if (filepath.StartsWith("packages/security/", StringComparison.Ordinal) || filepath.StartsWith("packages/ui/", StringComparison.Ordinal)) return true;
 
-        if (filepath.StartsWith("apps/") && Regex.IsMatch(filepath, @"(?:database|schema|model|migration|\bdb\b)", RegexOptions.IgnoreCase))
+        if (filepath.StartsWith("apps/", StringComparison.Ordinal) && Regex.IsMatch(filepath, @"(?:database|schema|model|migration|\bdb\b)", RegexOptions.IgnoreCase))
         {
             return true;
         }
@@ -558,7 +558,7 @@ public static class AdrValidatorService
     {
         var match = Regex.Match(filename, @"^(\d{4})-\d{2}-\d{2}");
         if (!match.Success) return false;
-        int year = int.Parse(match.Groups[1].Value);
+        int year = int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
         if (year < 2026) return false;
         return !(year == 2026 && BaselineFiles.Contains(filename));
     }

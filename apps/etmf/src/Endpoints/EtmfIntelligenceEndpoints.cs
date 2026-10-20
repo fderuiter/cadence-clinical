@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -19,6 +20,7 @@ using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
@@ -60,7 +62,7 @@ public static class EtmfIntelligenceEndpoints
         return studies == null ? documents : documents.Where(d => studies.Contains(d.StudyId));
     }
 
-    private static IResult OutsideStudy() =>
+    private static ProblemHttpResult OutsideStudy() =>
         TypedResults.Problem(
             title: "Outside your studies",
             detail: "You are not assigned to this study.",
@@ -168,6 +170,8 @@ public static class EtmfIntelligenceEndpoints
         return TypedResults.Created($"/api/v1/etmf/documents/{docId}", stagingItem);
     }
 
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "Parameter names bind the snake_case route and query-string names of the published API; renaming them would change the API.")]
     public static async Task<IResult> GetQcQueue(
         [FromQuery] string? study_id,
         [FromServices] EtmfDbContext dbContext,
@@ -226,6 +230,8 @@ public static class EtmfIntelligenceEndpoints
         return TypedResults.Ok(stagingItems);
     }
 
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "Parameter names bind the snake_case route and query-string names of the published API; renaming them would change the API.")]
     public static async Task<IResult> ReviewQcDocument(
         [FromRoute] string doc_id,
         [FromBody] CraqcReviewRequest request,
@@ -315,6 +321,8 @@ public static class EtmfIntelligenceEndpoints
         return TypedResults.Ok(doc);
     }
 
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "Parameter names bind the snake_case route and query-string names of the published API; renaming them would change the API.")]
     public static async Task<IResult> GetDocuments(
         [FromQuery] string? study_id,
         [FromQuery] int? zone,
@@ -336,6 +344,8 @@ public static class EtmfIntelligenceEndpoints
         return TypedResults.Ok(docs);
     }
 
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "Parameter names bind the snake_case route and query-string names of the published API; renaming them would change the API.")]
     public static async Task<IResult> GetDocumentById(
         [FromRoute] string document_id,
         [FromServices] EtmfDbContext dbContext,
@@ -648,6 +658,8 @@ public static class EtmfIntelligenceEndpoints
         }
     }
 
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "Parameter names bind the snake_case route and query-string names of the published API; renaming them would change the API.")]
     public static async Task<IResult> GetExportJob(
         [FromRoute] string job_id,
         [FromServices] EtmfDbContext dbContext,
@@ -675,6 +687,8 @@ public static class EtmfIntelligenceEndpoints
         });
     }
 
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "Parameter names bind the snake_case route and query-string names of the published API; renaming them would change the API.")]
     public static async Task<IResult> DownloadExportJob(
         [FromRoute] string job_id,
         [FromServices] EtmfDbContext dbContext,
@@ -717,6 +731,8 @@ public static class EtmfIntelligenceEndpoints
         return TypedResults.File(fileStream, "application/zip", $"etmf_export_{job.StudyId}_{job.Id}.zip");
     }
 
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "Parameter names bind the snake_case route and query-string names of the published API; renaming them would change the API.")]
     public static async Task<IResult> ListExportJobs(
         [FromQuery] string? study_id,
         [FromServices] EtmfDbContext dbContext,

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -220,7 +221,7 @@ public static class LetterTemplateEndpoints
 
         var model = new SiteVisitLetterModel(
             CraId: letter.CreatedBy,
-            CreatedAt: letter.CreatedAt.ToString("yyyy-MM-dd"),
+            CreatedAt: letter.CreatedAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             StudyId: "STUDY",
             SiteId: "SITE",
             VisitId: letter.VisitId,
@@ -342,13 +343,13 @@ public static class GxpPdfCompiler
 
         var pdfBuilder = new StringBuilder();
         pdfBuilder.AppendLine("%PDF-1.7");
-        pdfBuilder.AppendLine($"% Cadence Clinical GxP PDF Document - {templateName}");
-        pdfBuilder.AppendLine($"% Study: {request.StudyId} | Site: {request.SiteId} | Visit: {visitId}");
+        pdfBuilder.AppendLine(CultureInfo.InvariantCulture, $"% Cadence Clinical GxP PDF Document - {templateName}");
+        pdfBuilder.AppendLine(CultureInfo.InvariantCulture, $"% Study: {request.StudyId} | Site: {request.SiteId} | Visit: {visitId}");
         if (!request.Finalize)
         {
             pdfBuilder.AppendLine("% Watermark: DRAFT - UNSIGNED WORKING COPY");
         }
-        pdfBuilder.AppendLine($"% Content-SHA256: {bodyHash}");
+        pdfBuilder.AppendLine(CultureInfo.InvariantCulture, $"% Content-SHA256: {bodyHash}");
         pdfBuilder.AppendLine();
         pdfBuilder.AppendLine(htmlContent);
         pdfBuilder.AppendLine();

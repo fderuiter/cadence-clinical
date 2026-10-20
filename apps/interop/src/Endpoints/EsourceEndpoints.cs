@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
@@ -152,6 +153,8 @@ public static class EsourceEndpoints
         return app;
     }
 
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "Parameter names bind the snake_case route and query-string names of the published API; renaming them would change the API.")]
     public static async Task<IResult> ListEhrEndpointsAsync(
         bool active_only,
         InteropDbContext db,
@@ -459,6 +462,8 @@ public static class EsourceEndpoints
                 : $"Ingested {dtos.Count} Observation(s) for subject {request.SubjectId}; skipped {mapped.Skipped.Count}: {string.Join("; ", mapped.Skipped)}."));
     }
 
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "Parameter names bind the snake_case route and query-string names of the published API; renaming them would change the API.")]
     public static async Task<IResult> ListCandidatesAsync(
         string? study_id,
         string? subject_id,
@@ -508,6 +513,8 @@ public static class EsourceEndpoints
         return Results.Ok(new EhrCandidateListResponse(dtos, total));
     }
 
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "Parameter names bind the snake_case route and query-string names of the published API; renaming them would change the API.")]
     public static async Task<IResult> GetCandidateByIdAsync(
         string candidate_id,
         InteropDbContext db,
@@ -899,6 +906,8 @@ public static class EsourceEndpoints
             Message: $"Clinical query #{query.Id} opened for record {item.TargetVariable}."));
     }
 
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "Parameter names bind the snake_case route and query-string names of the published API; renaming them would change the API.")]
     public static async Task<IResult> GetProvenanceAuditAsync(
         string candidate_id,
         InteropDbContext db,

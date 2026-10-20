@@ -112,7 +112,7 @@ public static partial class DevEnvironmentValidatorService
         if (string.IsNullOrWhiteSpace(name)) return string.Empty;
         string lower = name.Trim().ToLowerInvariant();
 
-        if (lower.EndsWith("_service_url"))
+        if (lower.EndsWith("_service_url", StringComparison.Ordinal))
         {
             lower = lower[..^"_service_url".Length];
         }
@@ -139,7 +139,7 @@ public static partial class DevEnvironmentValidatorService
             string line = lines[i].Trim();
             if (!line.StartsWith('|') || !line.EndsWith('|')) continue;
 
-            if (line.Contains("---") || (line.ToLowerInvariant().Contains("service") && line.ToLowerInvariant().Contains("host port")))
+            if (line.Contains("---") || (line.Contains("service", StringComparison.OrdinalIgnoreCase) && line.Contains("host port", StringComparison.OrdinalIgnoreCase)))
             {
                 continue;
             }

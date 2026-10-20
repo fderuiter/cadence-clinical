@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading;
@@ -17,6 +18,8 @@ namespace Cadence.Kernel.Modules;
 public interface IKernelEventConsumer
 {
     /// <summary>True when the consumer reacts to <paramref name="envelope"/>.</summary>
+    [SuppressMessage("Naming", "CA1716:Identifiers should not match keywords",
+        Justification = "Kernel module SDK vocabulary (ADR-2600); modules are written in C#, where it is not a keyword.")]
     bool Handles(EventEnvelope envelope);
 
     /// <summary>Reacts to one delivery of an event this consumer handles.</summary>

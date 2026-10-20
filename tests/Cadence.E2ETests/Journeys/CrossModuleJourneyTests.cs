@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -149,7 +150,7 @@ public sealed class CrossModuleJourneyTests(KernelHostJourneyFixture fixture) : 
         }
 
         var lineage = JsonSerializer.Deserialize<KernelLineageResponse>(trace, KernelHostJourneyFixture.Json)!;
-        lineage.Nodes.Should().Contain(n => n.Ref != null && NodeRef.Parse(n.Ref).Unversioned() == NodeRef.For(study.ProtocolVersion));
+        lineage.Nodes.Should().Contain(n => n.Ref != null && NodeRef.Parse(n.Ref, CultureInfo.InvariantCulture).Unversioned() == NodeRef.For(study.ProtocolVersion));
 
         // TODO(2026-10-20): export the locked study to SDTM Dataset-JSON and assert the VS record carries 128 mm[Hg] with
         // lineage back to this observation revision. No export from kernel observations exists yet (port of
@@ -259,7 +260,7 @@ public sealed class CrossModuleJourneyTests(KernelHostJourneyFixture fixture) : 
         }
 
         var captured = JsonSerializer.Deserialize<KernelObservationStateResponse>(body, KernelHostJourneyFixture.Json)!;
-        var observationRef = NodeRef.Parse(captured.Ref).Unversioned();
+        var observationRef = NodeRef.Parse(captured.Ref, CultureInfo.InvariantCulture).Unversioned();
         var observation = ObservationId.FromGuid(observationRef.Id);
         written.Add((observation.ToString(), JourneyStudy.Coordinator));
 

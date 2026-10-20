@@ -78,7 +78,7 @@ internal static class BitemporalSql
         }
 
         var qualified = $"{SqlIdentifier.Quote(schema)}.{SqlIdentifier.Quote(table)}";
-        var keys = string.Join(", ", new[] { "tenant_id" }.Concat(entityKeyColumns).Select(c => $"{SqlIdentifier.Quote(c)} WITH ="));
+        var keys = string.Join(", ", entityKeyColumns.Prepend("tenant_id").Select(c => $"{SqlIdentifier.Quote(c)} WITH ="));
         return $"""
             ALTER TABLE {qualified} ADD CONSTRAINT {SqlIdentifier.Quote(ExclusionConstraintName(table))}
                 EXCLUDE USING gist ({keys}, {SqlIdentifier.Quote(BitemporalEntityTypeBuilderExtensions.ValidPeriodColumn)} WITH &&, {SqlIdentifier.Quote(BitemporalEntityTypeBuilderExtensions.RecordedPeriodColumn)} WITH &&)

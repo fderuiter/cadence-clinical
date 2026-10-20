@@ -1,6 +1,7 @@
 using System;
 using System.CommandLine;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 
@@ -70,7 +71,7 @@ public static class ScaffoldCommands
                     var match = Regex.Match(firstLine, @"ADR-(\d+):");
                     if (match.Success)
                     {
-                        maxNum = Math.Max(maxNum, int.Parse(match.Groups[1].Value));
+                        maxNum = Math.Max(maxNum, int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture));
                     }
                 }
             }

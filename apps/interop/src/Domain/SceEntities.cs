@@ -36,7 +36,7 @@ public class DatabaseLockAuthToken
     public required DateTimeOffset IssuedAt { get; set; }
     public required DateTimeOffset ExpiresAt { get; set; }
     public string SignatureHash { get; set; } = string.Empty;
-    public bool IsRevoked { get; set; } = false;
+    public bool IsRevoked { get; set; }
     public DateTimeOffset? RevokedAt { get; set; }
     public string? RevokedBy { get; set; }
     public string? RevocationReason { get; set; }
@@ -65,13 +65,13 @@ public class ExecutionRunRecord
     public required DateTimeOffset ExecutionStart { get; set; }
     public required DateTimeOffset ExecutionEnd { get; set; }
     public double DurationMs { get; set; }
-    public int ExitCode { get; set; } = 0;
+    public int ExitCode { get; set; }
     public string Status { get; set; } = "COMPLETED";
     public string StdoutCapture { get; set; } = string.Empty;
     public string StderrCapture { get; set; } = string.Empty;
     public string OutputArtifactsJson { get; set; } = "[]";
     public string OutputArtifactsDigest { get; set; } = string.Empty;
-    public bool IsUnblindedRun { get; set; } = false;
+    public bool IsUnblindedRun { get; set; }
     public string? DatabaseLockTokenId { get; set; }
     public string ExecutedBy { get; set; } = string.Empty;
     public string ExecutedByRole { get; set; } = "BIOSTATISTICIAN";

@@ -107,7 +107,7 @@ public static class OpenApiSyncService
         return drift;
     }
 
-    private static IEnumerable<string> StaleSpecs(string exportedDir, string committedDir)
+    private static List<string> StaleSpecs(string exportedDir, string committedDir)
     {
         if (!Directory.Exists(committedDir))
         {
@@ -134,7 +134,7 @@ public static class OpenApiSyncService
         }
     }
 
-    private static bool RunExporter(string repoRoot, string exportDir, IReadOnlyList<string>? targetServices = null)
+    private static bool RunExporter(string repoRoot, string exportDir, List<string>? targetServices = null)
     {
         var psi = new ProcessStartInfo("dotnet")
         {

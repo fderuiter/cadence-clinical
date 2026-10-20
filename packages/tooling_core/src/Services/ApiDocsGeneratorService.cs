@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -132,8 +133,8 @@ public static class ApiDocsGeneratorService
     private static string RenderService(string name, List<(string Method, string Path, string OperationId, string Summary)> operations)
     {
         var sb = new StringBuilder();
-        sb.Append($"# {name} API\n\n");
-        sb.Append($"Generated from `docs/openapi/{name}_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand.\n\n");
+        sb.Append(CultureInfo.InvariantCulture, $"# {name} API\n\n");
+        sb.Append(CultureInfo.InvariantCulture, $"Generated from `docs/openapi/{name}_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand.\n\n");
         if (operations.Count == 0)
         {
             sb.Append("The service exposes no operations.\n");
@@ -144,7 +145,7 @@ public static class ApiDocsGeneratorService
         sb.Append("| ------ | ---- | --------- | ------- |\n");
         foreach (var op in operations)
         {
-            sb.Append($"| `{op.Method}` | `{op.Path}` | {Escape(op.OperationId)} | {Escape(op.Summary)} |\n");
+            sb.Append(CultureInfo.InvariantCulture, $"| `{op.Method}` | `{op.Path}` | {Escape(op.OperationId)} | {Escape(op.Summary)} |\n");
         }
         return sb.ToString();
     }
@@ -159,7 +160,7 @@ public static class ApiDocsGeneratorService
         sb.Append("| ------- | ---------- |\n");
         foreach (var svc in services)
         {
-            sb.Append($"| [{svc.Name}]({svc.Name}.md) | {svc.Operations} |\n");
+            sb.Append(CultureInfo.InvariantCulture, $"| [{svc.Name}]({svc.Name}.md) | {svc.Operations} |\n");
         }
         return sb.ToString();
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -101,7 +102,7 @@ internal sealed class KernelSearchStore(KernelTenantDbContextFactory contexts) :
                 sql.Append(" UNION ALL ");
             }
 
-            sql.Append($"""
+            sql.Append(CultureInfo.InvariantCulture, $"""
                 SELECT '{s.Kind}' AS "Kind", {s.Id} AS "Id", ({s.Version})::bigint AS "Version", ({s.Title})::text AS "Title",
                   ({s.Code})::text AS "Code", ({s.Detail})::text AS "Detail",
                   coalesce(lower(({s.Code})::text) = lower(@text), false) AS "ExactCode",

@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 
@@ -31,10 +32,10 @@ public sealed class NodeRefTests
     [InlineData("tenant:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e@9223372036854775807")]
     public void NodeRefRoundTripsItsCanonicalForm(string text)
     {
-        var node = NodeRef.Parse(text);
+        var node = NodeRef.Parse(text, CultureInfo.InvariantCulture);
 
         node.ToString().Should().Be(text);
-        NodeRef.Parse(node.ToString()).Should().Be(node);
+        NodeRef.Parse(node.ToString(), CultureInfo.InvariantCulture).Should().Be(node);
 
         var json = JsonSerializer.Serialize(new { node });
         json.Should().Be($"{{\"node\":\"{text}\"}}");
@@ -69,7 +70,7 @@ public sealed class NodeRefTests
     public void NodeRefRejectsNonCanonicalStrings(string text)
     {
         NodeRef.TryParse(text, out _).Should().BeFalse();
-        var parse = () => NodeRef.Parse(text);
+        var parse = () => NodeRef.Parse(text, CultureInfo.InvariantCulture);
         parse.Should().Throw<FormatException>();
         var json = () => JsonSerializer.Deserialize<NodeRef>(JsonSerializer.Serialize(text));
         json.Should().Throw<JsonException>();

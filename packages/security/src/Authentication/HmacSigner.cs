@@ -13,6 +13,12 @@ namespace Cadence.Security.Authentication;
 /// </summary>
 public static class HmacSigner
 {
+    private static readonly JsonSerializerOptions CanonicalJsonOptions = new()
+    {
+        WriteIndented = false,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+
     public static string ComputeSignature(string payload, string secret)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(payload);
@@ -43,12 +49,7 @@ public static class HmacSigner
     public static byte[] CanonicalSerialize(IDictionary<string, object?> payload)
     {
         var sortedDict = new SortedDictionary<string, object?>(payload, StringComparer.Ordinal);
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = false,
-            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        };
-        string json = JsonSerializer.Serialize(sortedDict, options);
+        string json = JsonSerializer.Serialize(sortedDict, CanonicalJsonOptions);
         return Encoding.UTF8.GetBytes(json);
     }
 

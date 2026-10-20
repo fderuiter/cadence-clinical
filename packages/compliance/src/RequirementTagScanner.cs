@@ -288,7 +288,7 @@ public static partial class RequirementTagScanner
         }
     }
 
-    private static IReadOnlyList<string> CollectRequirementIds(string attributeBlock, string leadingBlock, string body)
+    private static List<string> CollectRequirementIds(string attributeBlock, string leadingBlock, string body)
     {
         var ids = new List<string>();
 
@@ -309,7 +309,7 @@ public static partial class RequirementTagScanner
         return ids.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(id => id, StringComparer.Ordinal).ToList();
     }
 
-    private static IReadOnlyList<string> CollectKernelRuleIds(string attributeBlock) =>
+    private static List<string> CollectKernelRuleIds(string attributeBlock) =>
         KernelRuleRegex().Matches(attributeBlock)
             .Select(m => m.Groups[1].Value.Trim())
             .Distinct(StringComparer.Ordinal)

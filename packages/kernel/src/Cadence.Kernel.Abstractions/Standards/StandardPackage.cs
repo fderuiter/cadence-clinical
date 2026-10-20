@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 using Cadence.Kernel.Knowledge;
 
@@ -116,6 +117,8 @@ public sealed record ResolvedCodeSystemVersion(CodeSystemVersionRef Reference, C
 public enum StandardDataType
 {
     /// <summary>Character (text) values.</summary>
+    [SuppressMessage("Naming", "CA1720:Identifier contains type name",
+        Justification = "Char is the data type name the CDISC standards publish (Define-XML/SAS 'Char' and 'Num').")]
     Char,
 
     /// <summary>Numeric values.</summary>

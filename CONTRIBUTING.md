@@ -94,7 +94,9 @@ output can be redirected to a file as it is.
 **Warnings are errors.** Fix a warning rather than suppressing it. When a suppression is the right call
 (a generated EF migration, an established acronym, an analyzer false positive), scope it to the member
 and give the reason: `[SuppressMessage(..., Justification = "...")]`, or a comment on the
-`#pragma warning disable` or `<NoWarn>` line. Two project-wide rules:
+`#pragma warning disable` or `<NoWarn>` line. The analyzers run the `latest-recommended` NetAnalyzers rule set
+([ADR-2535](docs/adr/2026-10-20-netanalyzers-10-applies-the-recommended-rule-set.md)); `.editorconfig` turns a few of
+its rules off only for scaffolded migrations and for tests, with the reason beside each. Two project-wide rules:
 
 - CS1591 (missing XML comment on a public member) is off for services, tools and tests. Projects that
   are an API for other code (`packages/contracts`, `Cadence.Kernel.Api`, `Cadence.Standards`, `Cadence.Rules`) set

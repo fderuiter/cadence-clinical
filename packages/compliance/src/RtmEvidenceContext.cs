@@ -55,10 +55,10 @@ public sealed record RtmEvidenceContext(string Revision, string GeneratedAtUtc, 
     {
         var sb = new StringBuilder();
         sb.AppendLine(StartMarker);
-        sb.AppendLine($"- **Tested revision:** {Revision}");
-        sb.AppendLine($"- **Generated (UTC):** {GeneratedAtUtc}");
-        sb.AppendLine($"- **Database:** {Database}");
-        sb.AppendLine($"- **Runner:** {Runner}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Tested revision:** {Revision}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Generated (UTC):** {GeneratedAtUtc}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Database:** {Database}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Runner:** {Runner}");
         sb.AppendLine(EndMarker);
         return sb.ToString();
     }

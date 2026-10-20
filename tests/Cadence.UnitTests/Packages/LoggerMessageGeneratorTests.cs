@@ -114,7 +114,7 @@ public class LoggerMessageGeneratorTests
         _logger.Logs.Should().BeEmpty();
     }
 
-    private class TestLogger : ILogger
+    private sealed class TestLogger : ILogger
     {
         public List<LogEntry> Logs { get; } = new();
         public LogLevel EnabledLevel { get; set; } = LogLevel.Trace;
@@ -129,6 +129,6 @@ public class LoggerMessageGeneratorTests
             Logs.Add(new LogEntry(logLevel, eventId, formatter(state, exception), state));
         }
 
-        public record LogEntry(LogLevel Level, EventId EventId, string Message, object? State);
+        public sealed record LogEntry(LogLevel Level, EventId EventId, string Message, object? State);
     }
 }

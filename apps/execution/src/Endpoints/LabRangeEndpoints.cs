@@ -12,6 +12,7 @@ using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 
 namespace Cadence.Apps.Execution.Endpoints;
@@ -220,7 +221,7 @@ public static class LabRangeEndpoints
         if (httpContext.Request.HasFormContentType)
         {
             var form = await httpContext.Request.ReadFormAsync(ct);
-            var file = form.Files.GetFile("file") ?? form.Files.FirstOrDefault();
+            var file = form.Files.GetFile("file") ?? (form.Files.Count > 0 ? form.Files[0] : null);
 
             string studyId = form["study_id"].FirstOrDefault() ?? form["studyId"].FirstOrDefault() ?? "STUDY-101";
             string? siteId = form["site_id"].FirstOrDefault() ?? form["siteId"].FirstOrDefault();
@@ -273,7 +274,7 @@ public static class LabRangeEndpoints
         if (httpContext.Request.HasFormContentType)
         {
             var form = await httpContext.Request.ReadFormAsync(ct);
-            var file = form.Files.GetFile("file") ?? form.Files.FirstOrDefault();
+            var file = form.Files.GetFile("file") ?? (form.Files.Count > 0 ? form.Files[0] : null);
 
             string studyId = form["study_id"].FirstOrDefault() ?? form["studyId"].FirstOrDefault() ?? "STUDY-101";
             string? siteId = form["site_id"].FirstOrDefault() ?? form["siteId"].FirstOrDefault();
@@ -351,7 +352,7 @@ public static class LabRangeEndpoints
         return TypedResults.Ok(result);
     }
 
-    private static IResult ConvertUnit(
+    private static Ok<UnitConversionResponse> ConvertUnit(
         UnitConversionRequest request,
         ILabRangeImportService labRangeImportService)
     {
@@ -359,7 +360,7 @@ public static class LabRangeEndpoints
         return TypedResults.Ok(response);
     }
 
-    private static IResult GetLoincCatalog(
+    private static Ok<LoincCatalogResponse> GetLoincCatalog(
         ILabRangeImportService labRangeImportService)
     {
         var response = labRangeImportService.GetLoincCatalog();

@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cadence.Apps.Fileshare.Workers;
 
-public sealed class MediaTranscoderProcessor : IMediaTranscoderProcessor
+public sealed partial class MediaTranscoderProcessor : IMediaTranscoderProcessor
 {
     private readonly IStoragePort<byte[]>? _storagePort;
     private readonly ILogger<MediaTranscoderProcessor> _logger;
@@ -47,7 +47,10 @@ public sealed class MediaTranscoderProcessor : IMediaTranscoderProcessor
             }
         }
 
-        _logger.LogInformation("Successfully transcoded FileRecord {FileRecordId} to HLS manifest {ManifestKey}", fileRecord.Id, manifestKey);
+        LogTranscoded(_logger, fileRecord.Id, manifestKey);
         return manifestKey;
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Successfully transcoded FileRecord {FileRecordId} to HLS manifest {ManifestKey}")]
+    private static partial void LogTranscoded(ILogger logger, string fileRecordId, string manifestKey);
 }

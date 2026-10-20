@@ -48,7 +48,7 @@ public partial class Program { }
     }
 
     private static string Capitalize(string str) =>
-        string.IsNullOrEmpty(str) ? str : char.ToUpper(str[0]) + str[1..];
+        string.IsNullOrEmpty(str) ? str : char.ToUpperInvariant(str[0]) + str[1..];
 
     private static string FindRepoRoot()
     {

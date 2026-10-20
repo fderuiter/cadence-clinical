@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -172,9 +173,9 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
 
         var screenings = page.Entries.Where(e => e.Type == "ParticipantScreened").ToList();
         screenings.Should().HaveCount(2).And.OnlyContain(e => e.SubjectKind == NodeKinds.Enrollment && e.Family == "Execution");
-        screenings.Should().ContainSingle(e => e.Mask == null && e.Subject != null && NodeRef.Parse(e.Subject).Unversioned() == own);
+        screenings.Should().ContainSingle(e => e.Mask == null && e.Subject != null && NodeRef.Parse(e.Subject, CultureInfo.InvariantCulture).Unversioned() == own);
         screenings.Should().ContainSingle(e => e.Mask == NotPermitted && e.Subject == null);
-        page.Entries.Should().NotContain(e => e.Subject != null && NodeRef.Parse(e.Subject).Unversioned() == other);
+        page.Entries.Should().NotContain(e => e.Subject != null && NodeRef.Parse(e.Subject, CultureInfo.InvariantCulture).Unversioned() == other);
         page.Entries.Should().BeInDescendingOrder(e => e.Recorded);
 
         using var refused = await stranger.GetAsync(new Uri($"/api/v1/kernel/activity?scope={NodeRef.For(study)}", UriKind.Relative), ct);

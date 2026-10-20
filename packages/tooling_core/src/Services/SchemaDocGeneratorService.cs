@@ -105,7 +105,7 @@ public static class SchemaDocGeneratorService
 
     private static string Normalize(string text) => text.Replace("\r\n", "\n", StringComparison.Ordinal);
 
-    private static IEnumerable<string> Stale(string renderedDir, string committedDir)
+    private static List<string> Stale(string renderedDir, string committedDir)
     {
         if (!Directory.Exists(committedDir))
         {

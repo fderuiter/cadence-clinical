@@ -298,6 +298,7 @@ public class KernelPostgresFixture : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
+        GC.SuppressFinalize(this);
         foreach (var scope in _scopes)
         {
             scope.Dispose();

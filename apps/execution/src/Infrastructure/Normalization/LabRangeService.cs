@@ -28,7 +28,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Normalization;
 /// </summary>
 /// <param name="scopeFactory">Resolves <see cref="ExecutionDbContext"/> for the first load; without one (unit tests)
 /// only <see cref="UpdateActiveRanges"/> fills the snapshot.</param>
-public sealed class LabRangeService(IServiceScopeFactory? scopeFactory = null) : ILabRangeService
+public sealed class LabRangeService(IServiceScopeFactory? scopeFactory = null) : ILabRangeService, IDisposable
 {
     private readonly SemaphoreSlim _loadLock = new(1, 1);
     private volatile FrozenDictionary<string, LabReferenceRange[]> _activeCustomRanges = FrozenDictionary<string, LabReferenceRange[]>.Empty;
@@ -302,5 +302,8 @@ public sealed class LabRangeService(IServiceScopeFactory? scopeFactory = null) :
 
         return new LabAssessmentResult("NORMAL", false, boundsJson, low, high);
     }
+
+    /// <summary>Releases the lock that serialises the first load; the container disposes the singleton at shutdown.</summary>
+    public void Dispose() => _loadLock.Dispose();
 }
 

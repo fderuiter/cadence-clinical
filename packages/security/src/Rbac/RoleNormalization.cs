@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace Cadence.Security.Rbac;
@@ -8,6 +9,8 @@ namespace Cadence.Security.Rbac;
 /// Provides role normalization mapping role aliases to canonical platform role names.
 /// @req:PRD-SYS-053
 /// </summary>
+[SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+    Justification = "Public UPPER_SNAKE names ported from the Python reference (packages/security/rbac.py) and referenced across services; renaming them is a separate public API change.")]
 public static class RoleNormalization
 {
     // Legacy constants

@@ -364,7 +364,7 @@ public static partial class DeidComplianceService
             .Order(StringComparer.Ordinal);
     }
 
-    private static IEnumerable<string> TrackedFiles(string repoRoot)
+    private static string[] TrackedFiles(string repoRoot)
     {
         var startInfo = new ProcessStartInfo("git", "ls-files -z")
         {

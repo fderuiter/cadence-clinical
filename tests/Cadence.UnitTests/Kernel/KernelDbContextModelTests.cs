@@ -52,7 +52,7 @@ public class KernelDbContextModelTests
         entityTypes.Should().OnlyContain(e => e.GetSchema() == KernelDbContext.Schema);
         entityTypes.SelectMany(e => e.GetProperties())
             .Select(p => p.GetColumnName())
-            .Should().OnlyContain(c => c == c.ToLowerInvariant() && !c.Contains(' '));
+            .Should().OnlyContain(c => !c.Any(char.IsUpper) && !c.Contains(' '));
     }
 
     /// <summary>

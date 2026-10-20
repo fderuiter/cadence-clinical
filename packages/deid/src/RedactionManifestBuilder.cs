@@ -38,7 +38,7 @@ public static class RedactionManifestBuilder
         };
     }
 
-    private static object CreatePayloadWithoutSignature(RedactionManifest manifest)
+    private static Dictionary<string, object?> CreatePayloadWithoutSignature(RedactionManifest manifest)
     {
         return new Dictionary<string, object?>
         {

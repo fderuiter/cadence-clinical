@@ -522,7 +522,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionPostgresAp
 
     // ---- Model-kind handlers (generic) ----------------------------------------------------------------
 
-    private Task ReplaySubjectCreateModelAsync(GoldenMasterScenario scenario)
+    private static Task ReplaySubjectCreateModelAsync(GoldenMasterScenario scenario)
     {
         JsonElement args = scenario.Input!.Value.GetProperty("args");
         var subjectCode = new SubjectCode(args.GetProperty("subject_id").GetString()!);
@@ -953,7 +953,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionPostgresAp
         {
             body.TryGetProperty("errors", out JsonElement errors).Should().BeTrue(
                 "ValidationFilter<T> short-circuits with Results.ValidationProblem(...), an 'errors'-dictionary " +
-                "shape, not the bare {\"detail\": ...} envelope");
+                "shape, not the bare \"detail\"-only envelope");
             errors.ToString().Should().Contain(scenario.ExpectedDetail!);
             return;
         }
@@ -1175,7 +1175,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionPostgresAp
     /// <c>DbUpdateException</c> from <c>SaveChangesAsync</c> produces) completely untouched, rather than
     /// downgrading it to 400 the way the legacy bug this fixture is based on did.
     /// </summary>
-    private Task ReplayInjectedRepositoryFaultContractAsync(GoldenMasterScenario scenario)
+    private static Task ReplayInjectedRepositoryFaultContractAsync(GoldenMasterScenario scenario)
     {
         var problemDetails = new ProblemDetails { Status = StatusCodes.Status500InternalServerError };
 

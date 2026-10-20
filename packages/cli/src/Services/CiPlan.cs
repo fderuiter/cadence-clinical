@@ -193,7 +193,9 @@ public static class CiPlan
 
     /// <summary><c>dotnet run [--no-build] --project packages/cli/... -- args</c>, as the CI steps call the CLI.</summary>
     private static CiCommand CadenceCli(bool noBuild, params string[] args) =>
-        Dotnet([.. new[] { "run" }, .. noBuild ? new[] { "--no-build" } : [], "--project", Cli, "--", .. args]);
+        noBuild
+            ? Dotnet(["run", "--no-build", "--project", Cli, "--", .. args])
+            : Dotnet(["run", "--project", Cli, "--", .. args]);
 
     private static List<CiJob> BuildJobs()
     {

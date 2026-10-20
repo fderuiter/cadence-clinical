@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Globalization;
 using System.Text.Json;
 
 using Cadence.Core.Domain;
@@ -93,8 +94,8 @@ public class KernelIdentifierTests
         string stringVal = original.ToString();
 
         // Act
-        var parsedFromString = StudyId.Parse(stringVal);
-        var parsedFromSpan = StudyId.Parse(stringVal.AsSpan());
+        var parsedFromString = StudyId.Parse(stringVal, CultureInfo.InvariantCulture);
+        var parsedFromSpan = StudyId.Parse(stringVal.AsSpan(), CultureInfo.InvariantCulture);
         bool tryParseSuccess = StudyId.TryParse(stringVal, null, out var tryParsed);
         bool tryParseFail = StudyId.TryParse("invalid-guid", null, out var failedId);
 

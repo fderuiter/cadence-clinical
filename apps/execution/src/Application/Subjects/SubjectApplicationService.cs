@@ -543,7 +543,7 @@ public sealed class SubjectApplicationService(
     /// <c>birthdate</c>, <c>gender</c>, <c>race</c>) so a decrypted round-trip matches the legacy shape byte
     /// for byte.
     /// </summary>
-    private static IReadOnlyDictionary<string, object?> ToDictionary(DemographicsPayload demographics) =>
+    private static Dictionary<string, object?> ToDictionary(DemographicsPayload demographics) =>
         new Dictionary<string, object?>
         {
             ["name"] = demographics.Name,

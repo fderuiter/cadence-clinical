@@ -385,7 +385,7 @@ internal sealed class KernelLineageStore(
         /// The start's versions: the named one, or for an unversioned start every version the walk left from (or the
         /// unversioned reference itself when no edge touches the object).
         /// </summary>
-        public IReadOnlyList<NodeRef> StartNodes()
+        public List<NodeRef> StartNodes()
         {
             if (Query.Node.Version is not null)
             {

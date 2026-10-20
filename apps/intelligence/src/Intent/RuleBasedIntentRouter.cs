@@ -12,6 +12,13 @@ namespace Cadence.Modules.Intelligence.Intent;
 /// </summary>
 public static class RuleBasedIntentRouter
 {
+    private static readonly string[] SiteAndMonitoringRoles = ["investigator", "principal_investigator", "crc", "sponsor_dm", "cra", "monitor"];
+    private static readonly string[] TicketRoles = ["cra", "monitor", "investigator", "principal_investigator", "crc", "sponsor_dm"];
+    private static readonly string[] EtmfRoles = ["cra", "monitor", "auditor", "sponsor_dm"];
+    private static readonly string[] LabRoles = ["investigator", "principal_investigator", "crc", "sponsor_dm", "cra", "monitor", "sponsor_designer", "sysadmin"];
+    private static readonly string[] CtmsRoles = ["cra", "monitor", "sponsor_dm"];
+    private static readonly string[] AuditRoles = ["auditor", "sponsor_dm"];
+
     private static readonly Regex LogAeRegex = new(
         @"(?:log|report|add|record)\s+(?:an?\s+)?(?:adverse\s+event|ae)(?:\s+(?:for|on)\s+(?:subject\s+|patient\s+|subj-?|sub-?)?([a-zA-Z0-9_-]+))?",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -73,7 +80,7 @@ public static class RuleBasedIntentRouter
                 TargetRoute: targetRoute,
                 Action: "log_ae",
                 Confidence: 1.0,
-                Roles: new[] { "investigator", "principal_investigator", "crc", "sponsor_dm", "cra", "monitor" }
+                Roles: SiteAndMonitoringRoles
             ));
         }
 
@@ -130,7 +137,7 @@ public static class RuleBasedIntentRouter
                 TargetRoute: $"/tickets?{string.Join("&", queryParams)}",
                 Action: "create_ticket",
                 Confidence: 1.0,
-                Roles: new[] { "cra", "monitor", "investigator", "principal_investigator", "crc", "sponsor_dm" }
+                Roles: TicketRoles
             ));
         }
 
@@ -166,7 +173,7 @@ public static class RuleBasedIntentRouter
                 TargetRoute: targetRoute,
                 Action: "open_ecrf",
                 Confidence: 1.0,
-                Roles: new[] { "investigator", "principal_investigator", "crc", "sponsor_dm", "cra", "monitor" }
+                Roles: SiteAndMonitoringRoles
             ));
         }
 
@@ -182,7 +189,7 @@ public static class RuleBasedIntentRouter
                 TargetRoute: "/etmf",
                 Action: "open_etmf",
                 Confidence: 1.0,
-                Roles: new[] { "cra", "monitor", "auditor", "sponsor_dm" }
+                Roles: EtmfRoles
             ));
         }
 
@@ -198,7 +205,7 @@ public static class RuleBasedIntentRouter
                 TargetRoute: "/labs",
                 Action: "open_labs",
                 Confidence: 1.0,
-                Roles: new[] { "investigator", "principal_investigator", "crc", "sponsor_dm", "cra", "monitor", "sponsor_designer", "sysadmin" }
+                Roles: LabRoles
             ));
         }
 
@@ -214,7 +221,7 @@ public static class RuleBasedIntentRouter
                 TargetRoute: "/ctms",
                 Action: "open_ctms",
                 Confidence: 1.0,
-                Roles: new[] { "cra", "monitor", "sponsor_dm" }
+                Roles: CtmsRoles
             ));
         }
 
@@ -230,7 +237,7 @@ public static class RuleBasedIntentRouter
                 TargetRoute: "/audit",
                 Action: "open_audit",
                 Confidence: 1.0,
-                Roles: new[] { "auditor", "sponsor_dm" }
+                Roles: AuditRoles
             ));
         }
 

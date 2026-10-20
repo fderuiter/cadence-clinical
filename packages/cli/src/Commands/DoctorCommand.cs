@@ -34,7 +34,7 @@ public static class DoctorCommand
             using var p = Process.Start(psi);
             string output = p?.StandardOutput.ReadToEnd().Trim() ?? "";
             p?.WaitForExit();
-            if (output.StartsWith("10."))
+            if (output.StartsWith("10.", StringComparison.Ordinal))
                 AnsiConsole.MarkupLine($"  .NET 10 SDK: [green]Active ({output})[/]");
             else if (!string.IsNullOrEmpty(output))
                 AnsiConsole.MarkupLine($"  .NET SDK: [yellow]Active ({output}) - .NET 10 preview recommended[/]");

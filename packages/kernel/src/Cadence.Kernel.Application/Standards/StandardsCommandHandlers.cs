@@ -96,20 +96,20 @@ internal sealed class StandardVersionGovernanceHandler(IAttestationVerifier atte
     ICommandHandler<DeprecateStandardVersion, StandardVersionId>
 {
     public Task<CommandResult<StandardVersionId>> HandleAsync(ApproveStandardVersion command, ICommandContext context, CancellationToken cancellationToken) =>
-        ChangeAsync(command.StandardVersionId, command.AttestationId, AttestationMeaning.Approved, context, cancellationToken, (v, a) =>
-            v.Approve(a) ?? Raise(context, new StandardVersionApproved(command.TenantId, v.Id, a)));
+        ChangeAsync(command.StandardVersionId, command.AttestationId, AttestationMeaning.Approved, context, (v, a) =>
+            v.Approve(a) ?? Raise(context, new StandardVersionApproved(command.TenantId, v.Id, a)), cancellationToken);
 
     public Task<CommandResult<StandardVersionId>> HandleAsync(DeprecateStandardVersion command, ICommandContext context, CancellationToken cancellationToken) =>
-        ChangeAsync(command.StandardVersionId, command.AttestationId, AttestationMeaning.Responsibility, context, cancellationToken, (v, a) =>
-            v.Deprecate(a) ?? Raise(context, new StandardVersionDeprecated(command.TenantId, v.Id, a)));
+        ChangeAsync(command.StandardVersionId, command.AttestationId, AttestationMeaning.Responsibility, context, (v, a) =>
+            v.Deprecate(a) ?? Raise(context, new StandardVersionDeprecated(command.TenantId, v.Id, a)), cancellationToken);
 
     private async Task<CommandResult<StandardVersionId>> ChangeAsync(
         StandardVersionId id,
         AttestationId attestation,
         AttestationMeaning meaning,
         ICommandContext context,
-        CancellationToken cancellationToken,
-        Func<StandardVersion, AttestationId, KernelError?> change)
+        Func<StandardVersion, AttestationId, KernelError?> change,
+        CancellationToken cancellationToken)
     {
         var version = await context.Work.FindAsync<StandardVersion>(id, cancellationToken).ConfigureAwait(false);
         if (version is null)
@@ -206,20 +206,20 @@ internal sealed class LibraryItemGovernanceHandler(IAttestationVerifier attestat
     ICommandHandler<DeprecateLibraryItem, LibraryItemVersion>
 {
     public Task<CommandResult<LibraryItemVersion>> HandleAsync(ApproveLibraryItem command, ICommandContext context, CancellationToken cancellationToken) =>
-        ChangeAsync(command.LibraryItemId, command.AttestationId, AttestationMeaning.Approved, context, cancellationToken, (i, a) =>
-            i.Approve(a) ?? Raise(context, new LibraryItemApproved(command.TenantId, i.Id, i.Kind, i.Key, i.ItemVersion, a)));
+        ChangeAsync(command.LibraryItemId, command.AttestationId, AttestationMeaning.Approved, context, (i, a) =>
+            i.Approve(a) ?? Raise(context, new LibraryItemApproved(command.TenantId, i.Id, i.Kind, i.Key, i.ItemVersion, a)), cancellationToken);
 
     public Task<CommandResult<LibraryItemVersion>> HandleAsync(DeprecateLibraryItem command, ICommandContext context, CancellationToken cancellationToken) =>
-        ChangeAsync(command.LibraryItemId, command.AttestationId, AttestationMeaning.Responsibility, context, cancellationToken, (i, a) =>
-            i.Deprecate(a) ?? Raise(context, new LibraryItemDeprecated(command.TenantId, i.Id, i.Kind, i.Key, i.ItemVersion, a)));
+        ChangeAsync(command.LibraryItemId, command.AttestationId, AttestationMeaning.Responsibility, context, (i, a) =>
+            i.Deprecate(a) ?? Raise(context, new LibraryItemDeprecated(command.TenantId, i.Id, i.Kind, i.Key, i.ItemVersion, a)), cancellationToken);
 
     private async Task<CommandResult<LibraryItemVersion>> ChangeAsync(
         LibraryItemId id,
         AttestationId attestation,
         AttestationMeaning meaning,
         ICommandContext context,
-        CancellationToken cancellationToken,
-        Func<LibraryItem, AttestationId, KernelError?> change)
+        Func<LibraryItem, AttestationId, KernelError?> change,
+        CancellationToken cancellationToken)
     {
         var item = await context.Work.FindAsync<LibraryItem>(id, cancellationToken).ConfigureAwait(false);
         if (item is null)

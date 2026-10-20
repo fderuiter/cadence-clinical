@@ -59,7 +59,7 @@ public class EisfDocumentRecord
     public string FilePath { get; set; } = string.Empty;
     public string Sha256Checksum { get; set; } = string.Empty;
     public int VersionMajor { get; set; } = 1;
-    public int VersionMinor { get; set; } = 0;
+    public int VersionMinor { get; set; }
     public string Status { get; set; } = "DRAFT";
     public DateTimeOffset? ExpirationDate { get; set; }
     public required DateTimeOffset CreatedAt { get; set; }
@@ -67,5 +67,5 @@ public class EisfDocumentRecord
     public string ReasonForChange { get; set; } = "Initial Document Ingestion";
     public int VersionIndex { get; set; } = 1;
     public bool IsActive { get; set; } = true;
-    public bool IsDeleted { get; set; } = false;
+    public bool IsDeleted { get; set; }
 }

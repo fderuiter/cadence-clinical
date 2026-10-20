@@ -273,8 +273,7 @@ version = ""1.0.0""
         string executedBy = "user:biostat";
 
         string sealPayload = $"{runId}|{studyId}|{programId}|{snapshotId}|{scriptDigest}|{lockDigest}|{containerImageDigest}|{artifactsDigest}|{executedBy}";
-        using var sha256 = System.Security.Cryptography.SHA256.Create();
-        string manifestSeal = Convert.ToHexStringLower(sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(sealPayload)));
+        string manifestSeal = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(sealPayload)));
 
         var record = new ExecutionRunRecord
         {
@@ -305,7 +304,7 @@ version = ""1.0.0""
 
         var fetched = await _db.ExecutionRunRecords.FirstAsync(r => r.RunId == runId, ct);
         string computedPayload = $"{fetched.RunId}|{fetched.StudyId}|{fetched.ProgramId}|{fetched.SnapshotId}|{fetched.ScriptCodeDigest}|{fetched.LockfileDigest}|{fetched.ContainerImageDigest}|{fetched.OutputArtifactsDigest}|{fetched.ExecutedBy}";
-        string recomputedSeal = Convert.ToHexStringLower(sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(computedPayload)));
+        string recomputedSeal = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(computedPayload)));
 
         recomputedSeal.Should().Be(fetched.ManifestSha256Seal);
     }

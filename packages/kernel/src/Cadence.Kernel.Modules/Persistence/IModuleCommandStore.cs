@@ -1,5 +1,6 @@
 using System;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +18,8 @@ namespace Cadence.Kernel.Modules;
 public interface IModuleCommandStore
 {
     /// <summary>The module's name, lower snake case; it prefixes the aggregate type on audit entries (<c>execution.FormRecord</c>).</summary>
+    [SuppressMessage("Naming", "CA1716:Identifiers should not match keywords",
+        Justification = "Kernel module SDK vocabulary (ADR-2600); modules are written in C#, where it is not a keyword.")]
     string Module { get; }
 
     /// <summary>Creates the module's context on <paramref name="connection"/>, with no retrying execution strategy.</summary>

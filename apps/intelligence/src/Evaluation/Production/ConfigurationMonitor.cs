@@ -121,7 +121,7 @@ public static class ConfigurationMonitor
         return new MonitoringReport(configuration, metrics, Breaches(metrics, window, thresholds));
     }
 
-    private static ProductionMetrics Measure(IReadOnlyList<ProposalOutcomeRecord> window)
+    private static ProductionMetrics Measure(List<ProposalOutcomeRecord> window)
     {
         var approved = window.Where(o => o.Decision == ProposalDecision.Approved).ToList();
         var decided = window.Count(o => o.Decision != ProposalDecision.Lapsed);

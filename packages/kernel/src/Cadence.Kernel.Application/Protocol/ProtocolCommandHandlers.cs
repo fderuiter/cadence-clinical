@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -101,9 +102,9 @@ internal sealed class ReviseProtocolDraftHandler : ICommandHandler<ReviseProtoco
 {
     public Task<CommandResult<ProtocolVersionState>> HandleAsync(
         ReviseProtocolDraft command, ICommandContext context, CancellationToken cancellationToken) =>
-        ProtocolVersionStates.ChangeAsync(context, command.ProtocolVersionId, cancellationToken, version =>
+        ProtocolVersionStates.ChangeAsync(context, command.ProtocolVersionId, version =>
             version.Revise(command.Content, command.Amendment)
-            ?? Raise(context, new ProtocolVersionRevised(version.TenantId, version.StudyId, version.Id)));
+            ?? Raise(context, new ProtocolVersionRevised(version.TenantId, version.StudyId, version.Id)), cancellationToken);
 
     private static KernelError? Raise(ICommandContext context, object domainEvent)
     {
@@ -193,7 +194,7 @@ internal sealed class ReturnProtocolVersionToDraftHandler : ICommandHandler<Retu
 {
     public Task<CommandResult<ProtocolVersionState>> HandleAsync(
         ReturnProtocolVersionToDraft command, ICommandContext context, CancellationToken cancellationToken) =>
-        ProtocolVersionStates.ChangeAsync(context, command.ProtocolVersionId, cancellationToken, version =>
+        ProtocolVersionStates.ChangeAsync(context, command.ProtocolVersionId, version =>
         {
             if (version.ReturnToDraft() is { } error)
             {
@@ -202,7 +203,7 @@ internal sealed class ReturnProtocolVersionToDraftHandler : ICommandHandler<Retu
 
             context.Work.Raise(new ProtocolVersionReturnedToDraft(version.TenantId, version.StudyId, version.Id));
             return null;
-        });
+        }, cancellationToken);
 }
 
 /// <summary>
@@ -250,14 +251,14 @@ internal sealed class ApproveProtocolVersionHandler(IAttestationVerifier verifie
         {
             try
             {
-                if (TryCompileUsdm(version.Content, version.StudyId.Value.ToString(), version.Number.ToString()) is { } compiled)
+                if (TryCompileUsdm(version.Content, version.StudyId.Value.ToString(), version.Number.ToString(CultureInfo.InvariantCulture)) is { } compiled)
                 {
                     var snapshot = new FormVersionSnapshot(
                         FormVersionSnapshotId.New(),
                         version.TenantId,
                         version.StudyId,
                         version.Id,
-                        version.Number.ToString(),
+                        version.Number.ToString(CultureInfo.InvariantCulture),
                         compiled.FormId,
                         compiled.FormHash,
                         compiled.OpenRosaXml,
@@ -270,7 +271,7 @@ internal sealed class ApproveProtocolVersionHandler(IAttestationVerifier verifie
                         version.TenantId,
                         version.StudyId,
                         version.Id,
-                        version.Number.ToString(),
+                        version.Number.ToString(CultureInfo.InvariantCulture),
                         compiled.FormId,
                         compiled.FormHash,
                         compiled.OpenRosaXml,
@@ -382,8 +383,8 @@ internal static class ProtocolVersionStates
     public static async Task<CommandResult<ProtocolVersionState>> ChangeAsync(
         ICommandContext context,
         ProtocolVersionId id,
-        CancellationToken cancellationToken,
-        Func<ProtocolVersion, KernelError?> change)
+        Func<ProtocolVersion, KernelError?> change,
+        CancellationToken cancellationToken)
     {
         if (await context.Work.FindAsync<ProtocolVersion>(id, cancellationToken).ConfigureAwait(false) is not { } version)
         {

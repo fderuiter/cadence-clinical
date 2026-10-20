@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
 using System.Security.Cryptography;
@@ -12,6 +13,10 @@ namespace Cadence.Apps.Etmf.Services;
 
 public static class EtmfExportPackager
 {
+    private static readonly JsonSerializerOptions ManifestJsonOptions = new() { WriteIndented = true };
+
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "Member names are the keys of the export package's manifest.json and manifest.csv, which TMF reference model consumers read.")]
     public record ExportManifestItem(
         string document_id,
         string filename,
@@ -24,6 +29,8 @@ public static class EtmfExportPackager
         string path
     );
 
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "Member names are the keys of the export package's manifest.json and manifest.csv, which TMF reference model consumers read.")]
     public record ExportManifestRoot(
         string export_id,
         string study_id,
@@ -97,8 +104,7 @@ public static class EtmfExportPackager
     {
         var jsonEntry = zipArchive.CreateEntry("manifest.json", CompressionLevel.Optimal);
         using var jsonWriter = new StreamWriter(jsonEntry.Open(), Encoding.UTF8);
-        var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
-        jsonWriter.Write(JsonSerializer.Serialize(manifestRoot, jsonOptions));
+        jsonWriter.Write(JsonSerializer.Serialize(manifestRoot, ManifestJsonOptions));
     }
 
     private static void AddManifestCsvToZip(ZipArchive zipArchive, List<ExportManifestItem> manifestItems)

@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Text.Json.Serialization;
 
 namespace Cadence.Kernel.Knowledge;
@@ -39,8 +40,8 @@ public readonly record struct ConceptRef
     {
         if (string.IsNullOrWhiteSpace(text)) return New();
         var parts = text.Split('@');
-        return parts.Length == 2 && int.TryParse(parts[1], out var v)
-            ? new ConceptRef(ConceptId.Parse(parts[0]), v)
+        return parts.Length == 2 && int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var v)
+            ? new ConceptRef(ConceptId.Parse(parts[0], CultureInfo.InvariantCulture), v)
             : New();
     }
 

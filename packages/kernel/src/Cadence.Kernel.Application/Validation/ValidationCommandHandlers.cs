@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -92,7 +93,7 @@ internal sealed class RecordValidationRunHandler(IStandardsRegistry registry, IV
 
         foreach (var input in run!.Inputs)
         {
-            context.Work.LinkInput(NodeRef.Parse(input.Input), LineageEdgeKind.ValidatedBy);
+            context.Work.LinkInput(NodeRef.Parse(input.Input, CultureInfo.InvariantCulture), LineageEdgeKind.ValidatedBy);
         }
 
         context.Work.Raise(new ValidationRunCompleted(
@@ -127,29 +128,29 @@ internal sealed class FindingDecisionHandler(IValidationLedgerSource ledger, IAt
     ICommandHandler<ReopenFinding, ValidationFindingId>
 {
     public Task<CommandResult<ValidationFindingId>> HandleAsync(InvestigateFinding command, ICommandContext context, CancellationToken cancellationToken) =>
-        DecideAsync(command.FindingId, context, cancellationToken, (finding, state) => Task.FromResult(
+        DecideAsync(command.FindingId, context, (finding, state) => Task.FromResult(
             finding.Investigate(state.Status, context.Actor.Id, context.RecordedAt)
-            ?? Raise(context, new FindingInvestigationStarted(command.TenantId, command.FindingId))));
+            ?? Raise(context, new FindingInvestigationStarted(command.TenantId, command.FindingId))), cancellationToken);
 
     public Task<CommandResult<ValidationFindingId>> HandleAsync(ClassifyFinding command, ICommandContext context, CancellationToken cancellationToken) =>
-        DecideAsync(command.FindingId, context, cancellationToken, (finding, state) => Task.FromResult(
+        DecideAsync(command.FindingId, context, (finding, state) => Task.FromResult(
             finding.Classify(state.Status, command.Classification)
-            ?? Raise(context, new FindingClassified(command.TenantId, command.FindingId, command.Classification))));
+            ?? Raise(context, new FindingClassified(command.TenantId, command.FindingId, command.Classification))), cancellationToken);
 
     public Task<CommandResult<ValidationFindingId>> HandleAsync(AcceptFinding command, ICommandContext context, CancellationToken cancellationToken) =>
-        DecideAsync(command.FindingId, context, cancellationToken, (finding, state) => ConcludeAsync(
-            finding, state, FindingStatus.Accepted, AttestationMeaning.Responsibility, command.Rationale, command.AttestationId, context, cancellationToken,
-            new FindingAccepted(command.TenantId, command.FindingId, state.LastDetectedRun, command.AttestationId)));
+        DecideAsync(command.FindingId, context, (finding, state) => ConcludeAsync(
+            finding, state, FindingStatus.Accepted, AttestationMeaning.Responsibility, command.Rationale, command.AttestationId, context,
+            new FindingAccepted(command.TenantId, command.FindingId, state.LastDetectedRun, command.AttestationId), cancellationToken), cancellationToken);
 
     public Task<CommandResult<ValidationFindingId>> HandleAsync(ExplainFinding command, ICommandContext context, CancellationToken cancellationToken) =>
-        DecideAsync(command.FindingId, context, cancellationToken, (finding, state) => ConcludeAsync(
-            finding, state, FindingStatus.Explained, AttestationMeaning.Approved, command.Explanation, command.AttestationId, context, cancellationToken,
-            new FindingExplained(command.TenantId, command.FindingId, state.LastDetectedRun, command.AttestationId)));
+        DecideAsync(command.FindingId, context, (finding, state) => ConcludeAsync(
+            finding, state, FindingStatus.Explained, AttestationMeaning.Approved, command.Explanation, command.AttestationId, context,
+            new FindingExplained(command.TenantId, command.FindingId, state.LastDetectedRun, command.AttestationId), cancellationToken), cancellationToken);
 
     public Task<CommandResult<ValidationFindingId>> HandleAsync(ReopenFinding command, ICommandContext context, CancellationToken cancellationToken) =>
-        DecideAsync(command.FindingId, context, cancellationToken, (finding, state) => Task.FromResult(
+        DecideAsync(command.FindingId, context, (finding, state) => Task.FromResult(
             finding.Reopen(state.Status, context.Actor.Id, context.RecordedAt)
-            ?? Raise(context, new FindingReopened(command.TenantId, command.FindingId, state.Status))));
+            ?? Raise(context, new FindingReopened(command.TenantId, command.FindingId, state.Status))), cancellationToken);
 
     /// <summary>Accepts or explains a finding once the attestation over the decision's content is verified (K-FIND-2).</summary>
     private async Task<KernelError?> ConcludeAsync(
@@ -160,8 +161,8 @@ internal sealed class FindingDecisionHandler(IValidationLedgerSource ledger, IAt
         string text,
         AttestationId attestation,
         ICommandContext context,
-        CancellationToken cancellationToken,
-        object decided)
+        object decided,
+        CancellationToken cancellationToken)
     {
         if (!FindingText.IsValid(text))
         {
@@ -185,7 +186,7 @@ internal sealed class FindingDecisionHandler(IValidationLedgerSource ledger, IAt
     /// record is added only when the decision succeeds.
     /// </summary>
     private async Task<CommandResult<ValidationFindingId>> DecideAsync(
-        ValidationFindingId id, ICommandContext context, CancellationToken cancellationToken, Func<ValidationFinding, FindingState, Task<KernelError?>> decide)
+        ValidationFindingId id, ICommandContext context, Func<ValidationFinding, FindingState, Task<KernelError?>> decide, CancellationToken cancellationToken)
     {
         var data = await ledger.LoadFindingAsync(context.TenantId, id, cancellationToken).ConfigureAwait(false);
         if (data?.Derive().SingleOrDefault(f => f.Finding == id) is not { } state)

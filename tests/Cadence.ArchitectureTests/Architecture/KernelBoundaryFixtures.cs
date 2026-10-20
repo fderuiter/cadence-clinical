@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -31,6 +32,8 @@ public sealed class SyntheticSiteRegistration
 
     public string StudyId { get; set; } = string.Empty;
 
+    [SuppressMessage("Design", "CA1051:Do not declare visible instance fields",
+        Justification = "A deliberately forbidden public field: the K-XS-1 boundary test must find string IDs declared as fields too.")]
     public string? PrimarySiteId;
 
     public Guid TypedStudyId { get; set; }
@@ -38,6 +41,8 @@ public sealed class SyntheticSiteRegistration
     internal string InternalStudyId { get; set; } = string.Empty;
 
     /// <summary>Public string field, also forbidden.</summary>
+    [SuppressMessage("Design", "CA1051:Do not declare visible instance fields",
+        Justification = "A deliberately forbidden public field: the K-XS-1 boundary test must find string IDs declared as fields too.")]
     public string ParticipantId = string.Empty;
 
     /// <summary>A const is a name (e.g. a header), not an ID value, so it is allowed.</summary>

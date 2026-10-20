@@ -15,6 +15,7 @@ using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -196,7 +197,7 @@ public static class TrainingEndpoints
         return app;
     }
 
-    private static IResult OutsideStudy() =>
+    private static ProblemHttpResult OutsideStudy() =>
         TypedResults.Problem(
             title: "Outside your studies",
             detail: "You are not assigned to this study.",

@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Cadence.Security.Audit;
 
@@ -8,6 +9,8 @@ namespace Cadence.Security.Audit;
 /// </summary>
 public record AuditLogRecord : AuditLogPayload
 {
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "Public UPPER_SNAKE names ported from the Python reference (packages/security/rbac.py) and referenced across services; renaming them is a separate public API change.")]
     public const string GENESIS_BLOCK = "GENESIS_BLOCK_0000000000000000000000000000000000000000000000000000000000000000";
 
     public string EventId { get; init; } = Guid.NewGuid().ToString();

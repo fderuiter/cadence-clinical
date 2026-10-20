@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace Cadence.Deid;
@@ -23,6 +24,8 @@ public static class DetectorCategory
     public const string DeviceSerial = "device_serial";
 }
 
+[SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+    Justification = "Member names are the serialized enum values shared with the API and the Python reference; renaming them would change the wire format.")]
 public enum ComplianceProfile
 {
     HIPAA,

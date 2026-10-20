@@ -14,6 +14,7 @@ using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
@@ -72,7 +73,7 @@ public static class DicomWebEndpoints
     private static string OperatorIdentity(HttpContext httpContext) =>
         CallerScope.UserId(httpContext) ?? throw new InvalidOperationException("An admitted imaging upload has no signed caller.");
 
-    private static IResult OutsideStudy() =>
+    private static ProblemHttpResult OutsideStudy() =>
         TypedResults.Problem(
             title: "Outside your studies",
             detail: "You are not assigned to this study.",

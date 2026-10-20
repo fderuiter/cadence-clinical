@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -702,15 +703,15 @@ public static partial class RtmGeneratorService
         int qualified = byState[RequirementState.Qualified].Count();
 
         sb.AppendLine("## 1. Traceability Summary\n");
-        sb.AppendLine($"- **Total Documented Requirements (PRD):** {total}");
-        sb.AppendLine($"- **Qualified (every mapped test passed):** {qualified}");
-        sb.AppendLine($"- **Failed (a mapped test failed):** {byState[RequirementState.Failed].Count()}");
-        sb.AppendLine($"- **Not Verified (a mapped test was skipped or not executed):** {byState[RequirementState.NotVerified].Count()}");
-        sb.AppendLine($"- **Not Verified (needs PostgreSQL evidence, no database test mapped):** {byState[RequirementState.NeedsDatabaseEvidence].Count()}");
-        sb.AppendLine($"- **Planned (no mapped tests):** {byState[RequirementState.Planned].Count()}");
-        sb.AppendLine($"- **Traceability Aliases (Trace and SRS IDs):** {aliases.Count}");
-        sb.AppendLine($"- **Unknown Requirement IDs Declared by Tests:** {unknownTags.Count}");
-        sb.AppendLine($"- **Qualified Coverage:** {(total > 0 ? qualified * 100.0 / total : 0):F1}%\n");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Total Documented Requirements (PRD):** {total}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Qualified (every mapped test passed):** {qualified}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Failed (a mapped test failed):** {byState[RequirementState.Failed].Count()}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Not Verified (a mapped test was skipped or not executed):** {byState[RequirementState.NotVerified].Count()}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Not Verified (needs PostgreSQL evidence, no database test mapped):** {byState[RequirementState.NeedsDatabaseEvidence].Count()}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Planned (no mapped tests):** {byState[RequirementState.Planned].Count()}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Traceability Aliases (Trace and SRS IDs):** {aliases.Count}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Unknown Requirement IDs Declared by Tests:** {unknownTags.Count}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Qualified Coverage:** {(total > 0 ? qualified * 100.0 / total : 0):F1}%\n");
 
         sb.AppendLine("## 2. Requirements with Mapped Tests\n");
         sb.AppendLine("| Requirement ID | Source Document | Title / Description | Mapped Test Cases | Status |");
@@ -718,7 +719,7 @@ public static partial class RtmGeneratorService
 
         foreach (var req in canonical.Where(r => mappings.ContainsKey(r.Id) && mappings[r.Id].Count > 0))
         {
-            sb.AppendLine($"| {req.Id} | {SourceDoc(req)} | **{req.Title}** | {MappedTests(mappings[req.Id], results)} | {StateLabel(Classify(req.Id, mappings, results, req.RequiresDatabase), draft)} |");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"| {req.Id} | {SourceDoc(req)} | **{req.Title}** | {MappedTests(mappings[req.Id], results)} | {StateLabel(Classify(req.Id, mappings, results, req.RequiresDatabase), draft)} |");
         }
 
         sb.AppendLine("\n## 3. Planned Requirements (No Mapped Tests)\n");
@@ -727,7 +728,7 @@ public static partial class RtmGeneratorService
 
         foreach (var req in byState[RequirementState.Planned])
         {
-            sb.AppendLine($"| {req.Id} | {SourceDoc(req)} | **{req.Title}** | Sprint Roadmap |");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"| {req.Id} | {SourceDoc(req)} | **{req.Title}** | Sprint Roadmap |");
         }
 
         sb.AppendLine("\n## 4. Traceability Aliases (Trace and SRS IDs)\n");
@@ -740,7 +741,7 @@ public static partial class RtmGeneratorService
         {
             string parent = alias.ParentPrdId ?? "N/A";
             string tests = mappings.TryGetValue(alias.Id, out var own) && own.Count > 0 ? MappedTests(own, results) : "None";
-            sb.AppendLine($"| `{alias.Id}` | `{parent}` | {alias.Title} | {tests} | {StateLabel(Classify(alias.Id, mappings, results, alias.RequiresDatabase), draft)} |");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"| `{alias.Id}` | `{parent}` | {alias.Title} | {tests} | {StateLabel(Classify(alias.Id, mappings, results, alias.RequiresDatabase), draft)} |");
         }
 
         sb.AppendLine("\n## 5. Unknown Requirement IDs Declared by Tests\n");
@@ -755,7 +756,7 @@ public static partial class RtmGeneratorService
             sb.AppendLine("| :--- | :--- |");
             foreach (var kv in unknownTags)
             {
-                sb.AppendLine($"| `{kv.Key}` | {string.Join("<br>", kv.Value.Select(t => $"`{t.MethodName}` ({t.File})"))} |");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"| `{kv.Key}` | {string.Join("<br>", kv.Value.Select(t => $"`{t.MethodName}` ({t.File})"))} |");
             }
         }
 
@@ -818,12 +819,12 @@ public static partial class RtmGeneratorService
         sb.AppendLine("### Validation Result Summary\n");
         sb.AppendLine("Counts cover the requirement-tagged test methods in section 3. Whole-suite totals are in the TRX files under");
         sb.AppendLine("`TestResults/gxp/`, so this report only changes when a tagged test or its result changes.\n");
-        sb.AppendLine($"- **Requirement-Tagged Test Methods:** {tagged.Count}");
-        sb.AppendLine($"- **Passed:** {passedRun} 🟢");
-        sb.AppendLine($"- **Failed/Errors:** {failedRun} 🔴");
-        sb.AppendLine($"- **Skipped:** {skippedRun} ⚪");
-        sb.AppendLine($"- **Not Executed:** {notExecuted}");
-        sb.AppendLine($"- **Pass Rate (of executed):** {(executed > 0 ? passedRun * 100.0 / executed : 0):F2}%\n");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Requirement-Tagged Test Methods:** {tagged.Count}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Passed:** {passedRun} 🟢");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Failed/Errors:** {failedRun} 🔴");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Skipped:** {skippedRun} ⚪");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Not Executed:** {notExecuted}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- **Pass Rate (of executed):** {(executed > 0 ? passedRun * 100.0 / executed : 0):F2}%\n");
 
         sb.AppendLine("## 2. Installation Qualification (IQ)\n");
         sb.AppendLine("The Installation Qualification records the environment the tests ran in: the tested revision, the database and the");
@@ -839,14 +840,14 @@ public static partial class RtmGeneratorService
         {
             var res = results.GetValueOrDefault(test.FullName) ?? new TestResultInfo();
             string className = test.FullName[..test.FullName.LastIndexOf('.')];
-            sb.AppendLine($"| `{test.MethodName}` | `{className}` | {string.Join(", ", test.RequirementIds)} | {Emoji(res.Status)} {res.Status} |");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"| `{test.MethodName}` | `{className}` | {string.Join(", ", test.RequirementIds)} | {Emoji(res.Status)} {res.Status} |");
         }
 
         var canonical = reqs.Values.Where(r => !r.IsLegacyAlias).ToList();
         int qualified = canonical.Count(r => Classify(r.Id, mappings, results, r.RequiresDatabase) == RequirementState.Qualified);
 
         sb.AppendLine("\n## 4. Performance Qualification (PQ) & Scenario Validation\n");
-        sb.AppendLine($"Qualified Requirements: {qualified} of {canonical.Count}\n");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"Qualified Requirements: {qualified} of {canonical.Count}\n");
 
         sb.AppendLine("## 5. Qualification Review & Authorization\n");
         sb.AppendLine("```");

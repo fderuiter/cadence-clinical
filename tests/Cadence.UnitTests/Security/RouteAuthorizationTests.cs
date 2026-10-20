@@ -234,7 +234,7 @@ public sealed class RouteAuthorizationTests
                 .Where(p => p is not null && p.StartsWith(PermissionPolicyProvider.PolicyPrefix, StringComparison.Ordinal))
                 .Take(1)
                 .Select(p => new PermissionRoute(
-                    e.Metadata.GetMetadata<IHttpMethodMetadata>()?.HttpMethods.FirstOrDefault() ?? HttpMethods.Get,
+                    e.Metadata.GetMetadata<IHttpMethodMetadata>()?.HttpMethods is { Count: > 0 } methods ? methods[0] : HttpMethods.Get,
                     e.RoutePattern,
                     p![PermissionPolicyProvider.PolicyPrefix.Length..])))
             .ToList();

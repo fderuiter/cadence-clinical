@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Security.Claims;
@@ -79,7 +80,7 @@ public static class SynonymEndpoints
         }
 
         var form = await httpContext.Request.ReadFormAsync(cancellationToken);
-        var file = form.Files.GetFile("file") ?? form.Files.FirstOrDefault();
+        var file = form.Files.GetFile("file") ?? (form.Files.Count > 0 ? form.Files[0] : null);
         if (file == null || file.Length == 0)
         {
             return TypedResults.Problem(
@@ -132,7 +133,7 @@ public static class SynonymEndpoints
         }
 
         var form = await httpContext.Request.ReadFormAsync(cancellationToken);
-        var file = form.Files.GetFile("file") ?? form.Files.FirstOrDefault();
+        var file = form.Files.GetFile("file") ?? (form.Files.Count > 0 ? form.Files[0] : null);
         if (file == null || file.Length == 0)
         {
             return TypedResults.Problem(
@@ -180,6 +181,8 @@ public static class SynonymEndpoints
         }
     }
 
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "Parameter names bind the snake_case route and query-string names of the published API; renaming them would change the API.")]
     public static async Task<IResult> GetActiveSynonymRulesAsync(
         ISynonymImportService synonymService,
         string? study_id,
@@ -191,6 +194,8 @@ public static class SynonymEndpoints
         return TypedResults.Ok(rules);
     }
 
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "Parameter names bind the snake_case route and query-string names of the published API; renaming them would change the API.")]
     public static async Task<IResult> GetSynonymImportJobsAsync(
         ISynonymImportService synonymService,
         string? study_id,

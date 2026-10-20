@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Collections.Generic;
 
 using Cadence.Core.Domain;
@@ -10,7 +11,7 @@ namespace Cadence.Apps.Execution.Domain.Subjects;
 /// </summary>
 public static class SubjectTransitionGraph
 {
-    private static readonly IReadOnlyDictionary<SubjectState, IReadOnlySet<SubjectState>> Allowed =
+    private static readonly FrozenDictionary<SubjectState, IReadOnlySet<SubjectState>> Allowed =
         new Dictionary<SubjectState, IReadOnlySet<SubjectState>>
         {
             [SubjectState.Screening] = new HashSet<SubjectState> { SubjectState.ScreenFailed, SubjectState.Enrolled, SubjectState.Withdrawn, SubjectState.ReconsentRequired },
@@ -22,7 +23,7 @@ public static class SubjectTransitionGraph
             [SubjectState.ScreenFailed] = new HashSet<SubjectState>(),
             [SubjectState.Completed] = new HashSet<SubjectState>(),
             [SubjectState.Withdrawn] = new HashSet<SubjectState>(),
-        };
+        }.ToFrozenDictionary();
 
     /// <summary>
     /// Rule 9 order of checks, exactly: (1) same-state is always a silent no-op — including terminal states;

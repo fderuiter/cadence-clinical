@@ -147,7 +147,7 @@ public sealed class DeviceApplicationService(
         else if (!string.IsNullOrEmpty(request.SerialNumber))
         {
             var items = await repository.ListInventoryAsync(request.StudyId, request.SiteId, null, null, null, request.SerialNumber, ct).ConfigureAwait(false);
-            device = items.FirstOrDefault();
+            device = items.Count > 0 ? items[0] : null;
         }
 
         if (device is null)

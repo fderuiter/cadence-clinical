@@ -108,7 +108,7 @@ public class SiteComplianceCacheConfigurationTests
         // acceptance criterion: distinguishing this field from the separate shadow `_version` EF token.
         domainVersion.IsConcurrencyToken.Should().BeFalse();
         domainVersion.IsShadowProperty().Should().BeFalse();
-        domainVersion.ClrType.Should().Be(typeof(int));
+        domainVersion.ClrType.Should().Be<int>();
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public class SiteComplianceCacheConfigurationTests
         // domain Version counter asserted false above, proving the two are not conflated.
         shadowVersion.IsConcurrencyToken.Should().BeTrue();
         shadowVersion.IsShadowProperty().Should().BeTrue();
-        shadowVersion.ClrType.Should().Be(typeof(long));
+        shadowVersion.ClrType.Should().Be<long>();
     }
 
     // ---- Round-trip persistence -------------------------------------------------------------------

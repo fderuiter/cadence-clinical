@@ -332,7 +332,7 @@ public static class UsdmCompiler
     }
 
     // A compiler warning in the shape of the Python reference's CompilerWarning.to_dict().
-    private static IReadOnlyDictionary<string, object?> Warning(string field, object? generatedValue, string reason) =>
+    private static Dictionary<string, object?> Warning(string field, object? generatedValue, string reason) =>
         new Dictionary<string, object?>(StringComparer.Ordinal)
         {
             ["field"] = field,

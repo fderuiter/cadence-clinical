@@ -29,7 +29,7 @@ public sealed class LabReferenceRange : IGxPAuditable
     public double? CriticalHigh { get; private set; }
     public string? LoincCode { get; private set; }
     public bool IsActive { get; private set; } = true;
-    public bool IsDeleted { get; private set; } = false;
+    public bool IsDeleted { get; private set; }
 
     // IGxPAuditable properties
     public DateTime CreatedAt { get; set; }

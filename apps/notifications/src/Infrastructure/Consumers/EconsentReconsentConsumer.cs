@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -14,6 +15,7 @@ using MassTransit;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Cadence.Apps.Notifications.Infrastructure.Consumers;
@@ -23,7 +25,7 @@ namespace Cadence.Apps.Notifications.Infrastructure.Consumers;
 /// Dispatches multi-channel alerts (SMS, Mobile Push, Email) and records idempotent <see cref="NotificationRecord"/> entries.
 /// @req:PRD-SYS-001
 /// </summary>
-public sealed class EconsentReconsentConsumer(
+public sealed partial class EconsentReconsentConsumer(
     NotificationsDbContext dbContext,
     ITemplateRenderer templateRenderer,
     IOptions<NotificationBrandingOptions> branding,
@@ -31,13 +33,15 @@ public sealed class EconsentReconsentConsumer(
     IClock? clock = null,
     ILogger<EconsentReconsentConsumer>? logger = null) : IConsumer<EconsentReconsentRequired>
 {
+    private readonly ILogger _log = (ILogger?)logger ?? NullLogger.Instance;
+
     public async Task Consume(ConsumeContext<EconsentReconsentRequired> context)
     {
         var msg = context.Message;
 
         if (string.IsNullOrWhiteSpace(msg.StudyId) || string.IsNullOrWhiteSpace(msg.TemplateId))
         {
-            logger?.LogWarning("Received malformed EconsentReconsentRequired event with empty StudyId or TemplateId.");
+            LogMalformedEvent(_log);
             return;
         }
 
@@ -49,7 +53,7 @@ public sealed class EconsentReconsentConsumer(
 
         if (existing)
         {
-            logger?.LogInformation("Notification records for EconsentReconsent event {EventKeyPrefix} already exist. Skipping duplicate dispatch.", eventKeyPrefix);
+            LogDuplicateDispatchSkipped(_log, eventKeyPrefix);
             return;
         }
 
@@ -61,10 +65,10 @@ public sealed class EconsentReconsentConsumer(
         {
             ["study_id"] = msg.StudyId,
             ["event_id"] = $"evt-{msg.TemplateId}-{msg.VersionIndex}",
-            ["timestamp_utc"] = now.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+            ["timestamp_utc"] = now.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
             ["payload"] = new NotificationPayload(
                 ProtocolVersion: msg.ProtocolVersion ?? $"v{msg.VersionIndex}.0",
-                VersionIndex: msg.VersionIndex.ToString(),
+                VersionIndex: msg.VersionIndex.ToString(CultureInfo.InvariantCulture),
                 ChangeSummary: msg.ChangeSummary
             ),
             ["brand_name"] = options.BrandName,
@@ -131,6 +135,15 @@ public sealed class EconsentReconsentConsumer(
 
         await dbContext.SaveChangesAsync(context.CancellationToken);
 
-        logger?.LogInformation("Successfully processed EconsentReconsentRequired event for {EventKeyPrefix} across {Count} subject(s).", eventKeyPrefix, enrolledSubjects.Count);
+        LogProcessed(_log, eventKeyPrefix, enrolledSubjects.Count);
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Received malformed EconsentReconsentRequired event with empty StudyId or TemplateId.")]
+    private static partial void LogMalformedEvent(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Notification records for EconsentReconsent event {EventKeyPrefix} already exist. Skipping duplicate dispatch.")]
+    private static partial void LogDuplicateDispatchSkipped(ILogger logger, string eventKeyPrefix);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Successfully processed EconsentReconsentRequired event for {EventKeyPrefix} across {Count} subject(s).")]
+    private static partial void LogProcessed(ILogger logger, string eventKeyPrefix, int count);
 }

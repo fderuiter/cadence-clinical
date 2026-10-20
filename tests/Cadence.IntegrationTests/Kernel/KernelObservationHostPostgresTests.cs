@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -79,7 +80,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
             observed_at = SystemClock.Instance.UtcNow.AddHours(-1),
         }, HttpStatusCode.Created, ct);
         recorded.Version.Should().Be(1);
-        var observation = NodeRef.Parse(recorded.Ref).Unversioned();
+        var observation = NodeRef.Parse(recorded.Ref, CultureInfo.InvariantCulture).Unversioned();
 
         var corrected = await SendAsync<KernelObservationStateResponse>(crc, HttpMethod.Post, $"observations/{observation}/corrections", CorrectionReason,
             Correction(enrollment, 128, 1), HttpStatusCode.OK, ct);
@@ -125,7 +126,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
             value = Systolic(182),
             observed_at = SystemClock.Instance.UtcNow.AddHours(-1),
         }, HttpStatusCode.Created, ct);
-        var observation = NodeRef.Parse(recorded.Ref).Unversioned();
+        var observation = NodeRef.Parse(recorded.Ref, CultureInfo.InvariantCulture).Unversioned();
 
         (await ProblemAsync(stranger, $"observations/{observation}/corrections", CorrectionReason, Correction(enrollment, 128, 1), ct))
             .Should().Be((HttpStatusCode.Forbidden, KernelErrors.AuthorizationDenied.Code));
@@ -162,7 +163,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
             value = Systolic(182),
             observed_at = SystemClock.Instance.UtcNow.AddHours(-1),
         }, HttpStatusCode.Created, ct);
-        var observation = NodeRef.Parse(recorded.Ref).Unversioned();
+        var observation = NodeRef.Parse(recorded.Ref, CultureInfo.InvariantCulture).Unversioned();
         const string Detail = "source reads 128 – transcription slip";
 
         await using (var proxy = await SigningProxy.StartAsync(crc, ct))

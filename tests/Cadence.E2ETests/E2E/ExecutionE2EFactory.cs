@@ -98,6 +98,7 @@ public class ExecutionE2EFactory : WebApplicationFactory<Cadence.Apps.Execution.
     public new async ValueTask DisposeAsync()
     {
         await base.DisposeAsync().ConfigureAwait(false);
+        GC.SuppressFinalize(this);
 
         if (_databaseName is not null && _adminConnectionString is not null)
         {

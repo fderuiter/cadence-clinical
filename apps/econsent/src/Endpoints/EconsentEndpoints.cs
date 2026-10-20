@@ -16,6 +16,7 @@ using MassTransit;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 
@@ -68,6 +69,8 @@ public sealed record CaptureConsentResponse(
 /// </summary>
 public static class EconsentEndpoints
 {
+    private static readonly string[] DefaultReconsentChannels = ["SMS", "Mobile Push", "Email"];
+
     public const string CaptureConsentSemanticAction = "econsent.consent.capture";
 
     public static string CaptureConsentAction(string templateId, int versionIndex) =>
@@ -117,7 +120,7 @@ public static class EconsentEndpoints
     private static string Caller(HttpContext httpContext) =>
         CallerScope.UserId(httpContext) ?? throw new InvalidOperationException("An admitted eConsent request has no signed caller.");
 
-    private static IResult OutsideStudy() =>
+    private static ProblemHttpResult OutsideStudy() =>
         TypedResults.Problem(
             title: "Outside your studies",
             detail: "You are not assigned to this study.",
@@ -426,7 +429,7 @@ public static class EconsentEndpoints
                 TemplateId: template.TemplateId,
                 VersionIndex: template.VersionIndex,
                 ChangeSummary: changeSummary,
-                Channels: request?.Channels ?? new[] { "SMS", "Mobile Push", "Email" },
+                Channels: request?.Channels ?? DefaultReconsentChannels,
                 ProtocolVersion: template.ProtocolVersion,
                 OccurredAt: now
             );

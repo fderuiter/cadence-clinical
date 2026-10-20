@@ -34,11 +34,15 @@ public interface IEntityId<TSelf> : IEntityId,
     /// <summary>
     /// Creates a new identifier with a cryptographically ordered UUIDv7 at current UTC time.
     /// </summary>
+    [SuppressMessage("Naming", "CA1716:Identifiers should not match keywords",
+        Justification = "New() is the established factory name on every kernel ID; the interface is static abstract and is only implemented in C#, so the VB keyword clash does not arise.")]
     static abstract TSelf New();
 
     /// <summary>
     /// Creates a new identifier with a cryptographically ordered UUIDv7 at the specified timestamp.
     /// </summary>
+    [SuppressMessage("Naming", "CA1716:Identifiers should not match keywords",
+        Justification = "New() is the established factory name on every kernel ID; the interface is static abstract and is only implemented in C#, so the VB keyword clash does not arise.")]
     static abstract TSelf New(DateTimeOffset timestamp);
 
     /// <summary>

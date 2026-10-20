@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -231,7 +232,7 @@ internal sealed class KernelActivityStore(KernelTenantDbContextFactory contexts)
             a.OccurredValid,
             a.ActorId,
             a.SubjectKind,
-            a.Subject is null ? null : NodeRef.Parse(a.Subject),
+            a.Subject is null ? null : NodeRef.Parse(a.Subject, CultureInfo.InvariantCulture),
             Masked: null,
             a.CorrelationId))];
     }

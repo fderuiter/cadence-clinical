@@ -35,7 +35,7 @@ public static class QueryLinterService
             {
                 string line = lines[i];
                 string trimmed = line.TrimStart();
-                if (trimmed.StartsWith("//") || trimmed.StartsWith("/*") || trimmed.StartsWith('*') || trimmed.StartsWith('#'))
+                if (trimmed.StartsWith("//", StringComparison.Ordinal) || trimmed.StartsWith("/*", StringComparison.Ordinal) || trimmed.StartsWith('*') || trimmed.StartsWith('#'))
                 {
                     continue;
                 }

@@ -6,6 +6,8 @@ namespace Cadence.ToolingCore.Services;
 
 public static class ImportValidatorService
 {
+    private static readonly char[] UsingSeparators = [' ', ';'];
+
     public static int ValidateImports(string? repoRoot = null)
     {
         repoRoot ??= FindRepoRoot();
@@ -38,11 +40,11 @@ public static class ImportValidatorService
                     string line = lines[lineNo].Trim();
                     if (line.StartsWith("using Cadence.Apps.", StringComparison.Ordinal))
                     {
-                        var parts = line.Split(new[] { ' ', ';' }, StringSplitOptions.RemoveEmptyEntries);
+                        var parts = line.Split(UsingSeparators, StringSplitOptions.RemoveEmptyEntries);
                         if (parts.Length >= 2)
                         {
                             string ns = parts[1];
-                            var subParts = ns.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
+                            var subParts = ns.Split('.', StringSplitOptions.RemoveEmptyEntries);
                             if (subParts.Length >= 3)
                             {
                                 string targetApp = subParts[2].ToLowerInvariant();

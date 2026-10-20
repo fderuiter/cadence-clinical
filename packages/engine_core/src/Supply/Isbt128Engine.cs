@@ -1,4 +1,6 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Linq;
 
 namespace Cadence.Core.Domain.Supply;
@@ -7,6 +9,8 @@ public static class Isbt128Engine
 {
     private const string Iso7064Charset = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*";
 
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "Named after the ISO/IEC 7064 'MOD 37-2' check character system that ISBT 128 specifies.")]
     public static char CalculateIso7064Mod37_2(string data)
     {
         if (string.IsNullOrEmpty(data))
@@ -55,7 +59,7 @@ public static class Isbt128Engine
 
         int currentYear = year is >= 0 and <= 99 ? year.Value : defaultYear;
         int seq = sequenceNum is > 0 ? sequenceNum.Value : (Random.Shared.Next(100000, 999999)); // deid-ignore
-        string seqStr = (seq % 1000000).ToString("D6"); // deid-ignore
+        string seqStr = (seq % 1000000).ToString("D6", CultureInfo.InvariantCulture); // deid-ignore
 
         string coreDin = $"{fac}{currentYear:D2}{seqStr}";
         char chk1 = CalculateIso7064Mod37_2(coreDin);

@@ -27,7 +27,7 @@ using Xunit;
 
 namespace Cadence.UnitTests.Ctms;
 
-public sealed class VisitLetterPdfPipelineTests
+public sealed class VisitLetterPdfPipelineTests : IDisposable
 {
     private readonly CtmsDbContext _ctmsDb;
     private readonly EtmfDbContext _etmfDb;
@@ -219,5 +219,12 @@ public sealed class VisitLetterPdfPipelineTests
         notif!.RecipientUserId.Should().Be("investigator@site017.org");
         notif.Category.Should().Be("VISIT_LETTER_DISPATCH");
         notif.MessageContent.Should().Contain(dto.PdfAccessUrl);
+    }
+
+    public void Dispose()
+    {
+        _ctmsDb.Dispose();
+        _etmfDb.Dispose();
+        _notifDb.Dispose();
     }
 }

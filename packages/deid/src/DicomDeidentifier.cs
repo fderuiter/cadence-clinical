@@ -180,6 +180,7 @@ public class DicomDeidentifier
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SonarAnalyzer.CSharp", "S2325:Methods should be static", Justification = "Instance method API consistency")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Instance method API consistency; callers use the de-identifier instance.")]
     public List<PixelMaskBoundingBox> MaskBurnedInPixels(
         DicomDataset dataset,
         List<PixelMaskBoundingBox>? customMasks = null,
@@ -445,7 +446,7 @@ public class DicomDeidentifier
         );
     }
 
-    private static object CreateCertPayloadWithoutSignature(DicomDeidCertificate cert)
+    private static Dictionary<string, object?> CreateCertPayloadWithoutSignature(DicomDeidCertificate cert)
     {
         return new Dictionary<string, object?>
         {

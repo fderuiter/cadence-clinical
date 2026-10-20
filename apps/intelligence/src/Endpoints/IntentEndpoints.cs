@@ -19,7 +19,7 @@ namespace Cadence.Modules.Intelligence.Endpoints;
 /// authenticated caller; each recommendation is filtered by the caller's verified role claims. No model
 /// is called and nothing is written.
 /// </summary>
-public static class IntentEndpoints
+public static partial class IntentEndpoints
 {
     /// <summary>
     /// Maps the intent routing endpoints on the web application.
@@ -80,12 +80,11 @@ public static class IntentEndpoints
         var response = RuleBasedIntentRouter.ClassifyIntent(request.Query, userRoles, request.Context);
 
         // The query is free text a user may fill with participant details, so only its length is logged.
-        logger.LogInformation(
-            "Intent routing: user {UserId} sent a {QueryLength}-character query that matched {Count} navigation recommendations.",
-            userId,
-            request.Query.Length,
-            response.Recommendations.Count);
+        LogIntentRouted(logger, userId, request.Query.Length, response.Recommendations.Count);
 
         return TypedResults.Ok(response);
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Intent routing: user {UserId} sent a {QueryLength}-character query that matched {Count} navigation recommendations.")]
+    private static partial void LogIntentRouted(ILogger logger, string? userId, int queryLength, int count);
 }

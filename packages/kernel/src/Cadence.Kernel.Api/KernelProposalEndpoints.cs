@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -254,7 +255,7 @@ public sealed record KernelProposalResponse(
                 ? new KernelProposalPlanResponse(plan.ToString(), null, null, null, null, planMask.ToString())
                 : new KernelProposalPlanResponse(
                     plan.ToString(), proposal.Plan.Title, proposal.Plan.Number, proposal.Plan.MediaType, proposal.Plan.ContentHash, null),
-            [.. proposal.Affected.Select(a => new KernelProposalAffectedResponse(a, masks.For(NodeRef.Parse(a))?.ToString()))],
+            [.. proposal.Affected.Select(a => new KernelProposalAffectedResponse(a, masks.For(NodeRef.Parse(a, CultureInfo.InvariantCulture))?.ToString()))],
             proposal.SimulatedImpact,
             proposal.RequestedCapabilities,
             proposal.ProposedAt,

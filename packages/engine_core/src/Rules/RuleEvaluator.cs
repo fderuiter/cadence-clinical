@@ -569,7 +569,7 @@ public partial class RuleEvaluator
             var d = ParseDate(Evaluate(operands[0], context));
             var days = ToNumber(Evaluate(operands[1], context));
             if (!d.HasValue || !days.HasValue) return null;
-            return d.Value.AddDays(days.Value).ToString("yyyy-MM-dd");
+            return d.Value.AddDays(days.Value).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         }
         if (op == "is_future")
         {

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Xml;
 using System.Xml.XPath;
 
 using Cadence.Ddf;
@@ -61,7 +62,7 @@ public class DdfRulesTests
         string literal = RuleXPathCompiler.Literal(text);
 
         literal.Should().Be(expected);
-        new XPathDocument(new System.IO.StringReader("<r/>")).CreateNavigator().Evaluate(literal).Should().Be(text);
+        new XPathDocument(XmlReader.Create(new System.IO.StringReader("<r/>"), new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit })).CreateNavigator().Evaluate(literal).Should().Be(text);
     }
 
     [Theory]

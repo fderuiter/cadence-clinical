@@ -391,7 +391,7 @@ public static partial class IcsrConformance
             }
         }
 
-        public IReadOnlyDictionary<string, string[]> ToDictionary() =>
+        public Dictionary<string, string[]> ToDictionary() =>
             _errors.ToDictionary(e => e.Key, e => e.Value.ToArray(), StringComparer.Ordinal);
     }
 }

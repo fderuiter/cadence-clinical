@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -169,7 +170,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
                 SiteId = siteId,
                 SubjectId = subjectId,
                 ModalitiesJson = JsonSerializer.Serialize(new[] { deidResult.Modality }),
-                StudyDate = now.ToString("yyyyMMdd"),
+                StudyDate = now.ToString("yyyyMMdd", CultureInfo.InvariantCulture),
                 StudyDescription = "Anonymized Clinical Trial DICOM Study",
                 SeriesCount = 1,
                 InstanceCount = 1,
@@ -399,7 +400,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
                 SiteId = siteId,
                 SubjectId = subjectId,
                 ModalitiesJson = JsonSerializer.Serialize(allModalities),
-                StudyDate = now.ToString("yyyyMMdd"),
+                StudyDate = now.ToString("yyyyMMdd", CultureInfo.InvariantCulture),
                 StudyDescription = "Anonymized Clinical Trial DICOM Study",
                 SeriesCount = seriesGroups.Count,
                 InstanceCount = validList.Count,

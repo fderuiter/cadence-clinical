@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text.Json;
 
 using Microsoft.AspNetCore.Authorization;
@@ -246,7 +247,7 @@ public static partial class CadenceTelemetryExtensions
         ArgumentNullException.ThrowIfNull(statusSummary);
 
         string pascalRoutePrefix = routePrefix.Length > 0
-            ? char.ToUpper(routePrefix[0]) + routePrefix[1..]
+            ? char.ToUpper(routePrefix[0], CultureInfo.InvariantCulture) + routePrefix[1..]
             : routePrefix;
 
         app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service = serviceName }))

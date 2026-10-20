@@ -221,6 +221,7 @@ internal sealed record RouteTarget(
 /// <summary>A provider's long-lived client, handed out per call without being disposed with the call.</summary>
 internal sealed class SharedChatClient(IChatClient innerClient) : DelegatingChatClient(innerClient)
 {
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2215:Dispose methods should call base class dispose", Justification = "DelegatingChatClient.Dispose disposes the inner client, which the provider owns and shares across calls.")]
     protected override void Dispose(bool disposing)
     {
         // The provider owns the inner client; a call's wrapper must not dispose it.

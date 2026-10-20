@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,8 +25,8 @@ namespace Cadence.UnitTests.Kernel.Rules;
 public class ParallelBatchRuleValidatorTests
 {
     private static readonly DateOnly AsOf = new(2026, 10, 1);
-    private static readonly TenantId TestTenant = TenantId.Parse("00000000-0000-0000-0000-000000000001");
-    private static readonly StudyId TestStudy = StudyId.Parse("00000000-0000-0000-0000-000000000002");
+    private static readonly TenantId TestTenant = TenantId.Parse("00000000-0000-0000-0000-000000000001", CultureInfo.InvariantCulture);
+    private static readonly StudyId TestStudy = StudyId.Parse("00000000-0000-0000-0000-000000000002", CultureInfo.InvariantCulture);
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 

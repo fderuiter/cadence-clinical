@@ -292,7 +292,7 @@ public class SiteComplianceApplicationServiceTests
         MethodInfo method = typeof(ISiteComplianceApplicationService)
             .GetMethod(nameof(ISiteComplianceApplicationService.GetComplianceStatusAsync))!;
 
-        method.ReturnType.Should().Be(typeof(Task<ComplianceStatusResponse>));
+        method.ReturnType.Should().Be<Task<ComplianceStatusResponse>>();
     }
 
     [Fact]

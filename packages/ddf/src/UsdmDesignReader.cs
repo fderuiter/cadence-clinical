@@ -149,7 +149,8 @@ internal sealed class UsdmDesignReader(UsdmImportOptions options)
     {
         var titles = Usdm.Arr(version, "titles");
         var official = titles.FirstOrDefault(t => Usdm.Decode(t, "type") is { } type && type.Contains("official", StringComparison.OrdinalIgnoreCase));
-        var title = Usdm.Str(official.ValueKind == JsonValueKind.Object ? official : titles.FirstOrDefault(), "text") ?? Usdm.Str(study, "name");
+        var firstTitle = titles.Count > 0 ? titles[0] : default;
+        var title = Usdm.Str(official.ValueKind == JsonValueKind.Object ? official : firstTitle, "text") ?? Usdm.Str(study, "name");
         if (title is null)
         {
             _problems.Add("The study has no title and no name.");
@@ -358,7 +359,7 @@ internal sealed class UsdmDesignReader(UsdmImportOptions options)
             Note(intervention, "product codes are not carried; the design names a product by concept.");
         }
 
-        var first = administrations.FirstOrDefault();
+        var first = administrations.Count > 0 ? administrations[0] : default;
         var administered = first.ValueKind == JsonValueKind.Object;
         return new Intervention(
             id,
@@ -408,7 +409,7 @@ internal sealed class UsdmDesignReader(UsdmImportOptions options)
         var main = timelines.FirstOrDefault(t => t.TryGetProperty("mainTimeline", out var flag) && flag.ValueKind == JsonValueKind.True);
         if (main.ValueKind != JsonValueKind.Object)
         {
-            main = timelines.FirstOrDefault();
+            main = timelines.Count > 0 ? timelines[0] : default;
         }
 
         foreach (var other in timelines.Where(t => Usdm.Id(t) != (main.ValueKind == JsonValueKind.Object ? Usdm.Id(main) : null)))

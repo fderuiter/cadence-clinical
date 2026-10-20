@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Collections.Generic;
 
 using Cadence.Core.Domain;
@@ -44,14 +45,14 @@ public static class DomainErrorHttpMapping
     /// <c>INVALID_STATE_TRANSITION</c> and <c>RECONSENT_REQUIRED</c> are the subject overrides: each deviates from
     /// what its own <see cref="ErrorType"/> would otherwise produce (409, 400 and 403, respectively).
     /// </summary>
-    private static readonly IReadOnlyDictionary<string, int> StatusByCode = new Dictionary<string, int>
+    private static readonly FrozenDictionary<string, int> StatusByCode = new Dictionary<string, int>
     {
         ["SUBJECT_NOT_FOUND"] = StatusCodes.Status404NotFound,
         ["LOCKED_FACTOR_MUTATION"] = StatusCodes.Status422UnprocessableEntity,
         ["INVALID_STATE_TRANSITION"] = StatusCodes.Status422UnprocessableEntity,
         ["RECONSENT_REQUIRED"] = StatusCodes.Status423Locked,
         ["CONCURRENCY_CONFLICT"] = StatusCodes.Status409Conflict,
-    };
+    }.ToFrozenDictionary();
 
     /// <summary>
     /// Resolves the canonical HTTP status for <paramref name="error"/>: a named-<c>Code</c> override when one

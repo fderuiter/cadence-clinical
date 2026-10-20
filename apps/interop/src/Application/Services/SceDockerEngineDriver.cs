@@ -290,7 +290,7 @@ public class SceDockerEngineDriver : ISceDockerEngineDriver
         foreach (var file in files)
         {
             string fileName = Path.GetFileName(file);
-            if (fileName.StartsWith("script.")) continue;
+            if (fileName.StartsWith("script.", StringComparison.Ordinal)) continue;
 
             var fi = new FileInfo(file);
             string content = File.ReadAllText(file);

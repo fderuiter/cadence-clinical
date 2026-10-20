@@ -108,7 +108,7 @@ public static class DatabaseResetService
         {
             var parts = url.Split("://", 2);
             string scheme = parts[0];
-            if (scheme.StartsWith("sqlite")) return;
+            if (scheme.StartsWith("sqlite", StringComparison.Ordinal)) return;
 
             string remainder = parts[1];
             try
@@ -143,12 +143,12 @@ public static class DatabaseResetService
                 "POSTGRES_CONNECTION_STRING (or DATABASE_URL) is not set. Export it (see .env.example) before resetting databases.");
         }
 
-        if (connStr.StartsWith("postgresql+asyncpg://"))
+        if (connStr.StartsWith("postgresql+asyncpg://", StringComparison.Ordinal))
         {
             connStr = connStr.Replace("postgresql+asyncpg://", "postgresql://");
         }
 
-        if (connStr.StartsWith("postgresql://"))
+        if (connStr.StartsWith("postgresql://", StringComparison.Ordinal))
         {
             try
             {

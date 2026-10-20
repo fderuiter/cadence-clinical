@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Cadence.Kernel.Commands;
 
@@ -23,8 +24,12 @@ public readonly record struct CommandResult<TResult>
 
     public bool IsSuccess => Error is null;
 
+    [SuppressMessage("Design", "CA1000:Do not declare static members on generic types",
+        Justification = "Factory methods are the only way to build a CommandResult; callers write CommandResult<T>.Success(value), and the implicit conversion from KernelError covers the common failure path.")]
     public static CommandResult<TResult> Success(TResult value) => new(value, null, false);
 
+    [SuppressMessage("Design", "CA1000:Do not declare static members on generic types",
+        Justification = "Factory methods are the only way to build a CommandResult; callers write CommandResult<T>.Success(value), and the implicit conversion from KernelError covers the common failure path.")]
     public static CommandResult<TResult> Failure(KernelError error)
     {
         ArgumentNullException.ThrowIfNull(error);
@@ -32,6 +37,8 @@ public readonly record struct CommandResult<TResult>
     }
 
     /// <summary>The stored result of an earlier execution with the same idempotency key.</summary>
+    [SuppressMessage("Design", "CA1000:Do not declare static members on generic types",
+        Justification = "Factory methods are the only way to build a CommandResult; callers write CommandResult<T>.Success(value), and the implicit conversion from KernelError covers the common failure path.")]
     public static CommandResult<TResult> Replay(TResult value) => new(value, null, true);
 
     public static implicit operator CommandResult<TResult>(KernelError error) => Failure(error);

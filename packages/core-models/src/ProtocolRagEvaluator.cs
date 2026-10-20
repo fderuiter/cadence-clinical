@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -173,7 +174,7 @@ Please formulate a helpful, concise clinical response strictly citing the excerp
             var rawMarker = match.Value;
             var vRaw = match.Groups[1].Value;
             var secNum = match.Groups[2].Success ? match.Groups[2].Value : null;
-            var pageNum = int.Parse(match.Groups[3].Value);
+            var pageNum = int.Parse(match.Groups[3].Value, CultureInfo.InvariantCulture);
 
             var vNorm = vRaw.StartsWith("v", StringComparison.OrdinalIgnoreCase)
                 ? vRaw.ToLowerInvariant()

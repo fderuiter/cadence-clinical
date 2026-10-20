@@ -13,7 +13,7 @@ public record Principal
     public IReadOnlyList<string> Roles { get; init; } = Array.Empty<string>();
     public IReadOnlyList<string> AssignedSites { get; init; } = Array.Empty<string>();
     public IReadOnlyList<string> AssignedStudies { get; init; } = Array.Empty<string>();
-    public bool UnblindedAccess { get; init; } = false;
+    public bool UnblindedAccess { get; init; }
     public string? SponsorId { get; init; }
     public string? ChangeReason { get; init; }
     public IReadOnlyList<string> RawRoles { get; init; } = Array.Empty<string>();

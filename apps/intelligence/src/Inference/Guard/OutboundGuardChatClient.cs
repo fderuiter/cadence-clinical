@@ -192,7 +192,7 @@ public sealed class OutboundGuardChatClient : DelegatingChatClient
         };
     }
 
-    private object? ScrubValue(object? value, Dictionary<string, int> counts) => value switch
+    private JsonNode? ScrubValue(object? value, Dictionary<string, int> counts) => value switch
     {
         null => null,
         string s => Scrub(s, counts),

@@ -56,3 +56,19 @@ dotnet_naming_style.pascal_case_style.capitalization = pascal_case
 [*.{json,yaml,yml,xml,md}]
 indent_size = 2
 
+
+# EF Core scaffolded migrations (dotnet ef migrations add). They are generated code that runs once per database, so
+# the per-call allocation rules do not apply to their constant column arrays (CA1861, CA1825), and their class names
+# are the migration names (CA1711, for example KernelActivityStream).
+[**/Migrations/*.cs]
+dotnet_diagnostic.CA1711.severity = none
+dotnet_diagnostic.CA1825.severity = none
+dotnet_diagnostic.CA1861.severity = none
+
+# Tests. Test method names follow Method_Scenario_ExpectedResult, so they contain underscores (CA1707). A test runs
+# its arrange data once, so constant array arguments (CA1861) cost nothing, and a test declares the interface it
+# exercises rather than the concrete type (CA1859).
+[tests/**/*.cs]
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CA1859.severity = none
+dotnet_diagnostic.CA1861.severity = none

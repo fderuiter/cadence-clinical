@@ -80,8 +80,8 @@ public sealed record RunChatClient(IChatClient Client, AgentRunInference? Infere
 /// </summary>
 public interface IRunChatClientFactory
 {
-    /// <summary>The client for <paramref name="call"/>, or the registered error saying why there is none.</summary>
-    Task<CommandResult<RunChatClient>> CreateAsync(AgentRunCall call, CancellationToken cancellationToken);
+    /// <summary>The client for <paramref name="agentCall"/>, or the registered error saying why there is none.</summary>
+    Task<CommandResult<RunChatClient>> CreateAsync(AgentRunCall agentCall, CancellationToken cancellationToken);
 }
 
 /// <summary>Reads the interaction ledger and the agent controls, within one tenant (Row-Level Security).</summary>

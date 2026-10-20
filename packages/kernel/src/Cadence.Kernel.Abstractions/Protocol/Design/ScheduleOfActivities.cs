@@ -178,7 +178,7 @@ public static class ScheduleOfActivities
 
         public IReadOnlyList<SoaFootnote> All => _all;
 
-        public IReadOnlyList<int> OfColumn(PlannedActivity activity)
+        public List<int> OfColumn(PlannedActivity activity)
         {
             var numbers = new List<int>();
             if (activity.Timing is not { } timing)
@@ -201,7 +201,7 @@ public static class ScheduleOfActivities
             return numbers;
         }
 
-        public IReadOnlyList<int> OfRow(CollectionSpec spec, int frequency)
+        public List<int> OfRow(CollectionSpec spec, int frequency)
         {
             var numbers = new List<int>();
             if (spec.Purpose?.OperationalNeed is { Length: > 0 } need)

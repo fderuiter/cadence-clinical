@@ -167,11 +167,11 @@ public sealed class IndicatorEvaluator(IRuleEvaluator rules)
             ["node"] = r.Key,
             ["values"] = new JsonObject(r.Record.Values
                 .OrderBy(v => v.Key, StringComparer.Ordinal)
-                .Select(v => KeyValuePair.Create(v.Key, ValueNode(v.Value)))),
+                .Select(v => KeyValuePair.Create<string, JsonNode?>(v.Key, ValueNode(v.Value)))),
         })]),
     };
 
-    private static JsonNode? ValueNode(RuleValue value)
+    private static JsonValue? ValueNode(RuleValue value)
     {
         if (value.TryGetNumber(out var number))
         {

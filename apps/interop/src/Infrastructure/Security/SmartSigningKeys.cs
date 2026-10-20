@@ -17,7 +17,7 @@ public interface ISmartSigningKeys
     /// Returns the RSA private key named <paramref name="keyRef"/>, which the caller disposes, or false with the reason
     /// when the reference is missing, not configured, or not a usable RSA private key of at least 2048 bits.
     /// </summary>
-    bool TryGetPrivateKey(string? keyRef, [NotNullWhen(true)] out RSA? key, out string error);
+    bool TryGetPrivateKey(string? keyRef, [NotNullWhen(true)] out RSA? key, out string reason);
 }
 
 /// <summary>
@@ -37,18 +37,18 @@ public sealed partial class ConfigurationSmartSigningKeys(IConfiguration configu
     public static bool IsValidReference(string? keyRef) => keyRef is not null && KeyRefPattern().IsMatch(keyRef);
 
     /// <inheritdoc />
-    public bool TryGetPrivateKey(string? keyRef, [NotNullWhen(true)] out RSA? key, out string error)
+    public bool TryGetPrivateKey(string? keyRef, [NotNullWhen(true)] out RSA? key, out string reason)
     {
         key = null;
         if (string.IsNullOrWhiteSpace(keyRef))
         {
-            error = "The endpoint has no signing key reference.";
+            reason = "The endpoint has no signing key reference.";
             return false;
         }
 
         if (!IsValidReference(keyRef) || configuration[$"{SectionName}:{keyRef}"] is not { Length: > 0 } pem)
         {
-            error = $"Signing key '{keyRef}' is not configured.";
+            reason = $"Signing key '{keyRef}' is not configured.";
             return false;
         }
 
@@ -62,19 +62,19 @@ public sealed partial class ConfigurationSmartSigningKeys(IConfiguration configu
         catch (Exception ex) when (ex is ArgumentException or CryptographicException)
         {
             rsa.Dispose();
-            error = $"Signing key '{keyRef}' is not a valid RSA private key in PEM form.";
+            reason = $"Signing key '{keyRef}' is not a valid RSA private key in PEM form.";
             return false;
         }
 
         if (rsa.KeySize < MinimumKeySizeBits)
         {
             rsa.Dispose();
-            error = $"Signing key '{keyRef}' is shorter than {MinimumKeySizeBits} bits.";
+            reason = $"Signing key '{keyRef}' is shorter than {MinimumKeySizeBits} bits.";
             return false;
         }
 
         key = rsa;
-        error = string.Empty;
+        reason = string.Empty;
         return true;
     }
 

@@ -10,6 +10,7 @@ using MassTransit;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cadence.Apps.Etmf.Infrastructure.Consumers;
 
@@ -18,11 +19,13 @@ namespace Cadence.Apps.Etmf.Infrastructure.Consumers;
 /// Synchronizes consent completion records into the eTMF filing ledger idempotently.
 /// @req:PRD-SYS-001
 /// </summary>
-public sealed class EConsentCompletedConsumer(
+public sealed partial class EConsentCompletedConsumer(
     EtmfDbContext dbContext,
     IClock? clock = null,
     ILogger<EConsentCompletedConsumer>? logger = null) : IConsumer<EConsentCompleted>
 {
+    private readonly ILogger _log = (ILogger?)logger ?? NullLogger.Instance;
+
     private readonly IClock _clock = clock ?? SystemClock.Instance;
 
     public async Task Consume(ConsumeContext<EConsentCompleted> context)
@@ -31,7 +34,7 @@ public sealed class EConsentCompletedConsumer(
 
         if (string.IsNullOrWhiteSpace(msg.SubjectId) || string.IsNullOrWhiteSpace(msg.StudyId))
         {
-            logger?.LogWarning("Received malformed EConsentCompleted event in eTMF with empty SubjectId or StudyId.");
+            LogMalformedEvent(_log);
             return;
         }
 
@@ -43,7 +46,7 @@ public sealed class EConsentCompletedConsumer(
 
         if (existing)
         {
-            logger?.LogInformation("eTMF document for eConsent completion key {Key} already exists. Skipping duplicate filing.", key);
+            LogDuplicateFilingSkipped(_log, key);
             return;
         }
 
@@ -78,6 +81,15 @@ public sealed class EConsentCompletedConsumer(
         dbContext.TmfDocuments.Add(doc);
         await dbContext.SaveChangesAsync(context.CancellationToken);
 
-        logger?.LogInformation("Successfully created eTMF document {DocumentId} for completed eConsent key {Key}.", docId, key);
+        LogDocumentCreated(_log, docId, key);
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Received malformed EConsentCompleted event in eTMF with empty SubjectId or StudyId.")]
+    private static partial void LogMalformedEvent(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "eTMF document for eConsent completion key {Key} already exists. Skipping duplicate filing.")]
+    private static partial void LogDuplicateFilingSkipped(ILogger logger, string key);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Successfully created eTMF document {DocumentId} for completed eConsent key {Key}.")]
+    private static partial void LogDocumentCreated(ILogger logger, string documentId, string key);
 }

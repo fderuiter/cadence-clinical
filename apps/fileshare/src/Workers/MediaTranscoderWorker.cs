@@ -34,7 +34,7 @@ public sealed partial class MediaTranscoderWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("MediaTranscoderWorker started.");
+        LogStarted(_logger);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -50,7 +50,7 @@ public sealed partial class MediaTranscoderWorker : BackgroundService
             await Delay(_options.TranscodePollInterval, stoppingToken).ConfigureAwait(false);
         }
 
-        _logger.LogInformation("MediaTranscoderWorker stopping.");
+        LogStopping(_logger);
     }
 
     public async Task ProcessPendingTranscodesAsync(CancellationToken ct)
@@ -118,7 +118,7 @@ public sealed partial class MediaTranscoderWorker : BackgroundService
             catch (Exception ex)
             {
                 lastError = ex.Message;
-                _logger.LogWarning(ex, "Transcode attempt {Attempt}/{MaxRetries} failed for FileRecord {RecordId}", attempt, _options.MaxRetryCount, record.Id);
+                LogTranscodeAttemptFailed(_logger, ex, attempt, _options.MaxRetryCount, record.Id);
 
                 if (attempt < _options.MaxRetryCount)
                 {
@@ -157,4 +157,13 @@ public sealed partial class MediaTranscoderWorker : BackgroundService
 
     [LoggerMessage(Level = LogLevel.Error, Message = "MediaTranscoderWorker pass failed; retrying after poll interval.")]
     private static partial void LogPassFailed(ILogger logger, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "MediaTranscoderWorker started.")]
+    private static partial void LogStarted(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "MediaTranscoderWorker stopping.")]
+    private static partial void LogStopping(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Transcode attempt {Attempt}/{MaxRetries} failed for FileRecord {RecordId}")]
+    private static partial void LogTranscodeAttemptFailed(ILogger logger, Exception exception, int attempt, int maxRetries, string recordId);
 }

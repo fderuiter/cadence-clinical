@@ -21,7 +21,7 @@ public class EtmfArchivalDelivery
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Status { get; set; } = "PENDING";
-    public int Attempts { get; set; } = 0;
+    public int Attempts { get; set; }
     public string? LastError { get; set; }
     public DateTimeOffset? NextRetryAt { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }

@@ -106,7 +106,7 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
     /// form shows as signed is exactly what was signed.
     /// </summary>
     private static List<SignedValueView>? SignedValues(
-        CollectionInstance instance, IReadOnlyDictionary<ObservationId, Observation> observations, DateTimeOffset signedAt, string signedHash)
+        CollectionInstance instance, Dictionary<ObservationId, Observation> observations, DateTimeOffset signedAt, string signedHash)
     {
         var signed = instance.Members
             .Where(m => m.JoinedAt <= signedAt)

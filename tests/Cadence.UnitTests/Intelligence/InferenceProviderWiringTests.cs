@@ -34,7 +34,7 @@ namespace Cadence.UnitTests.Intelligence;
 /// recording HTTP handlers in place of the network (ADR-2636): what leaves the process, to which host, and what the
 /// sandbox refuses. No request reaches a real endpoint.
 /// </summary>
-public sealed class InferenceProviderWiringTests
+public sealed class InferenceProviderWiringTests : IDisposable
 {
     private const string LocalEndpoint = "http://vllm.ai.svc.cluster.local:8000/v1/";
     private static readonly TenantId Tenant = TenantId.New();
@@ -43,6 +43,13 @@ public sealed class InferenceProviderWiringTests
     private readonly RecordingHandler _bedrock = new("{}");
     private readonly RecordingHandler _other = new("{}");
     private readonly StubPolicies _policies = new();
+
+    public void Dispose()
+    {
+        _local.Dispose();
+        _bedrock.Dispose();
+        _other.Dispose();
+    }
 
     /// <summary>
     /// A local-only tenant's run goes to the in-deployment endpoint, scrubbed, and Bedrock (configured for the

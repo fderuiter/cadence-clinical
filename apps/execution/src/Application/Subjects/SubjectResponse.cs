@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 using Cadence.Apps.Execution.Domain.Subjects;
@@ -24,6 +25,8 @@ namespace Cadence.Apps.Execution.Application.Subjects;
 /// unblinded caller (#5607).
 /// @req:PRD-SUB-001
 /// </summary>
+[SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+    Justification = "The trailing underscore keeps the property apart from the SubjectId type of Id; the JSON name is subject_id.")]
 public sealed record SubjectResponse(
     SubjectId Id,
     [property: JsonPropertyName("subject_id")] SubjectCode SubjectId_,

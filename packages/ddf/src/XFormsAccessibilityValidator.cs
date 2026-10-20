@@ -214,10 +214,10 @@ public sealed class XFormsAccessibilityValidator : IAccessibilityValidator
         nodes.Add(node);
     }
 
-    private static IReadOnlyDictionary<string, object?> Node(XElement element, string target) =>
+    private static Dictionary<string, object?> Node(XElement element, string target) =>
         new Dictionary<string, object?>(StringComparer.Ordinal) { ["target"] = target, ["html"] = Snippet(element) };
 
-    private static IReadOnlyDictionary<string, object?> Rule(string id, string description, List<IReadOnlyDictionary<string, object?>> nodes) =>
+    private static Dictionary<string, object?> Rule(string id, string description, List<IReadOnlyDictionary<string, object?>> nodes) =>
         new Dictionary<string, object?>(StringComparer.Ordinal) { ["id"] = id, ["description"] = description, ["nodes"] = nodes };
 
     private static string Snippet(XElement element)

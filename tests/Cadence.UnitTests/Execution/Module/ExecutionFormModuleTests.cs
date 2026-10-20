@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 using Cadence.Kernel;
@@ -12,6 +13,10 @@ using Cadence.Modules.Execution.Infrastructure;
 using FluentAssertions;
 
 using Xunit;
+
+[assembly: SuppressMessage("Naming", "CA1716:Identifiers should not match keywords", Scope = "namespace",
+    Target = "~N:Cadence.UnitTests.Execution.Module",
+    Justification = "The namespace mirrors the Cadence.Modules.Execution module it tests; a test assembly has no Visual Basic consumers.")]
 
 namespace Cadence.UnitTests.Execution.Module;
 

@@ -24,7 +24,7 @@ using Xunit;
 
 namespace Cadence.UnitTests.Ctms;
 
-public sealed class StartupGreenlightEndpointsTests
+public sealed class StartupGreenlightEndpointsTests : IDisposable
 {
     private const string Study = "PROTOCOL-2026-01";
 
@@ -233,7 +233,7 @@ public sealed class StartupGreenlightEndpointsTests
         // Distinct HMAC-SHA256 tokens
         var tokens = response.CertifiedSites.Select(s => s.GreenlightToken).ToList();
         tokens.Distinct().Count().Should().Be(compliantSiteIds.Count);
-        tokens.All(t => t.Contains(".")).Should().BeTrue();
+        tokens.All(t => t.Contains('.')).Should().BeTrue();
 
         // Individual Audit Log entries
         var auditLogs = await _db.CtmsAuditLogs
@@ -413,4 +413,6 @@ public sealed class StartupGreenlightEndpointsTests
         };
         return httpContext;
     }
+
+    public void Dispose() => _db.Dispose();
 }

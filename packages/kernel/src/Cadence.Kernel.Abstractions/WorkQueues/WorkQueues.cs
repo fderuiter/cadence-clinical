@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -47,6 +48,8 @@ public sealed record WorkQueueQuery(NodeRef? Within = null, IReadOnlyCollection<
 /// True when there may be more items than returned: the actor has more than the limit, or the source had more
 /// candidates than one read examines (<see cref="WorkQueueQuery.MaxLimit"/>).
 /// </param>
+[SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix",
+    Justification = "'Work queue' is kernel specification vocabulary (Canvas D10, ADR-2486); it is not a System.Collections.Queue.")]
 public sealed record WorkQueue(
     NodeRef Definition,
     string Code,

@@ -19,20 +19,20 @@ namespace Cadence.Modules.Intelligence.Inference.Routing;
 internal sealed partial class InferenceRunChatClientFactory(IInferenceRouter router, ILogger<InferenceRunChatClientFactory> logger)
     : IRunChatClientFactory
 {
-    public async Task<CommandResult<RunChatClient>> CreateAsync(AgentRunCall call, CancellationToken cancellationToken)
+    public async Task<CommandResult<RunChatClient>> CreateAsync(AgentRunCall agentCall, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(call);
+        ArgumentNullException.ThrowIfNull(agentCall);
         var routing = await router.ResolveAsync(
-            new InferenceRequest(call.Tenant, [new ModelRoute(call.Provider.Name, call.Model)]), cancellationToken).ConfigureAwait(false);
+            new InferenceRequest(agentCall.Tenant, [new ModelRoute(agentCall.Provider.Name, agentCall.Model)]), cancellationToken).ConfigureAwait(false);
         if (!routing.IsRouted)
         {
-            LogRefused(logger, call.RunId, call.Configuration.Key, call.Provider.Name, routing.Refusal);
+            LogRefused(logger, agentCall.RunId, agentCall.Configuration.Key, agentCall.Provider.Name, routing.Refusal);
             return IntelligenceErrors.InferenceRefused;
         }
 
         var route = routing.Routes[0];
         return CommandResult<RunChatClient>.Success(new RunChatClient(
-            new SandboxScopeChatClient(routing.Client!, call.Tenant, call.RunId),
+            new SandboxScopeChatClient(routing.Client!, agentCall.Tenant, agentCall.RunId),
             new AgentRunInference(route.SupplierId, route.Locality.ToString(), route.Mode.ToString(), route.TenantResidency)));
     }
 

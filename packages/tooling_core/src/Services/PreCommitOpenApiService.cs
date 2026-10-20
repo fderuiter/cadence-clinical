@@ -8,6 +8,8 @@ namespace Cadence.ToolingCore.Services;
 
 public static class PreCommitOpenApiService
 {
+    private static readonly char[] LineBreaks = ['\r', '\n'];
+
     /// <summary>
     /// The <c>openapi</c> gate. When staged C# files exist, exports specs for affected services.
     /// When no C# files are staged, skips service host startup for sub-second execution.
@@ -85,7 +87,7 @@ public static class PreCommitOpenApiService
             process.WaitForExit();
             if (process.ExitCode != 0) return new List<string>();
 
-            return output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            return output.Split(LineBreaks, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .ToList();
         }
         catch

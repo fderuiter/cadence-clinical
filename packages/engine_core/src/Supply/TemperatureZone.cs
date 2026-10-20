@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Json.Serialization;
 
 namespace Cadence.Core.Domain.Supply;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
+[SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+    Justification = "Member names are the serialized enum values shared with the API and the Python reference; renaming them would change the wire format.")]
 public enum TemperatureZone
 {
     CRYOGENIC,

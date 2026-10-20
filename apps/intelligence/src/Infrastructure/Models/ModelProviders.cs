@@ -62,9 +62,9 @@ internal sealed class ModelProviderRegistry : IModelProviderRegistry
 /// <summary>The run client without the inference layer: the provider's own client, with no route recorded.</summary>
 internal sealed class ProviderRunChatClientFactory : IRunChatClientFactory
 {
-    public Task<CommandResult<RunChatClient>> CreateAsync(AgentRunCall call, CancellationToken cancellationToken)
+    public Task<CommandResult<RunChatClient>> CreateAsync(AgentRunCall agentCall, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(call);
-        return Task.FromResult(CommandResult<RunChatClient>.Success(new RunChatClient(call.Provider.Client, null)));
+        ArgumentNullException.ThrowIfNull(agentCall);
+        return Task.FromResult(CommandResult<RunChatClient>.Success(new RunChatClient(agentCall.Provider.Client, null)));
     }
 }

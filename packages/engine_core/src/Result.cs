@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Cadence.Core.Domain;
 
@@ -66,7 +67,12 @@ public readonly record struct Result<TValue>
         Error = error;
     }
 
+    [SuppressMessage("Design", "CA1000:Do not declare static members on generic types",
+        Justification = "Factory methods are the way to build a Result; callers write Result<T>.Success(value), and the implicit conversions cover the common path.")]
     public static Result<TValue> Success(TValue value) => new(value);
+
+    [SuppressMessage("Design", "CA1000:Do not declare static members on generic types",
+        Justification = "Factory methods are the way to build a Result; callers write Result<T>.Success(value), and the implicit conversions cover the common path.")]
     public static Result<TValue> Failure(DomainError error) => new(error);
 
     public static implicit operator Result<TValue>(TValue value) => Success(value);

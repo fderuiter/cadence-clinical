@@ -83,8 +83,13 @@ public sealed partial class KernelAuthorization(
         }
 
         decision = await DecideAsync(actor, tenant, capability, resource, cancellationToken).ConfigureAwait(false);
-        LogDryRun(logger, tenant, actor.ToString(), capability.Token, resource, decision.Permitted,
-            string.Join(',', decision.Conditions.Where(c => !c.Met).Select(c => c.Code)));
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            var actorText = actor.ToString();
+            var unmet = string.Join(',', decision.Conditions.Where(c => !c.Met).Select(c => c.Code));
+            LogDryRun(logger, tenant, actorText, capability.Token, resource, decision.Permitted, unmet);
+        }
+
         return decision;
     }
 
