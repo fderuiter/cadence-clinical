@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Golden output of apps/safety/Templates/e2b_r3_icsr.xml.liquid for IcsrRenderTests.CompleteReport (#5464).
+     Compared after parsing, so indentation and blank lines are not significant. Synthetic data only. -->
+<ichicsr xmlns="urn:hl7-org:v3" version_index="1" reason_for_change="Initial ICSR transmission">
+  <header>
+    <message_id>MSG-FIX-0001</message_id>
+    <sender_organization>Cadence Sponsor</sender_organization>
+    <receiver_organization>Regulatory Agency</receiver_organization>
+    <transmission_date>20261020</transmission_date>
+    <message_type>ichicsr</message_type>
+  </header>
+  <safety_report>
+    <worldwide_unique_case_id>XX-CADENCE-FIX-0001</worldwide_unique_case_id>
+    <local_report_id>LOCAL-FIX-0001</local_report_id>
+    <first_sender_type>1</first_sender_type>
+  </safety_report>
+  <patient>
+    <patient_id>PT-FIX-0001</patient_id>
+    <sex>2</sex>
+    <age>54</age>
+    <age_unit>a</age_unit>
+  </patient>
+  <reactions>
+    <reaction>
+      <reaction_term>Hepatic failure</reaction_term>
+      <meddra_coding>
+        <llt_code>10019663</llt_code>
+        <llt_name>Hepatic failure</llt_name>
+        <pt_code>10019663</pt_code>
+        <pt_name>Hepatic failure</pt_name>
+        <hlt_code>10019654</hlt_code>
+        <hlt_name>Hepatic failure and associated disorders</hlt_name>
+        <hlgt_code>10019805</hlgt_code>
+        <hlgt_name>Hepatic and hepatobiliary disorders</hlgt_name>
+        <soc_code>10019805</soc_code>
+        <soc_name>Hepatobiliary disorders</soc_name>
+        <primary_soc_flag>Y</primary_soc_flag>
+        <score>1.0</score>
+      </meddra_coding>
+      <start_date>20250619</start_date>
+      <outcome>5</outcome>
+      <seriousness_death>1</seriousness_death>
+      <seriousness_life_threatening>0</seriousness_life_threatening>
+      <seriousness_hospitalization>1</seriousness_hospitalization>
+      <seriousness_disability>0</seriousness_disability>
+      <seriousness_congenital_anomaly>0</seriousness_congenital_anomaly>
+      <seriousness_other_medically_important>0</seriousness_other_medically_important>
+    </reaction>
+    <reaction>
+      <reaction_term>Nausea</reaction_term>
+      <start_date>20250414</start_date>
+      <end_date>20250420</end_date>
+      <outcome>1</outcome>
+      <seriousness_death>0</seriousness_death>
+      <seriousness_life_threatening>0</seriousness_life_threatening>
+      <seriousness_hospitalization>0</seriousness_hospitalization>
+      <seriousness_disability>0</seriousness_disability>
+      <seriousness_congenital_anomaly>0</seriousness_congenital_anomaly>
+      <seriousness_other_medically_important>0</seriousness_other_medically_important>
+    </reaction>
+  </reactions>
+  <suspect_drugs>
+    <suspect_drug>
+      <drug_name>Fixture-Compound 10 mg tablet</drug_name>
+      <active_substance_name>Fixture-Compound</active_substance_name>
+      <dosage_text>10 mg once daily</dosage_text>
+      <route_of_administration>048</route_of_administration>
+      <action_taken_with_drug>1</action_taken_with_drug>
+      <drug_role>suspect</drug_role>
+    </suspect_drug>
+  </suspect_drugs>
+</ichicsr>

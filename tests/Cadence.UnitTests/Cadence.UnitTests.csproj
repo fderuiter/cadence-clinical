@@ -58,6 +58,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Golden ICSR XML for IcsrRenderTests (#5464). -->
+    <EmbeddedResource Include="Safety\Golden\*.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio" />
