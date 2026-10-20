@@ -4,6 +4,7 @@ using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Endpoints;
 using Cadence.Apps.Safety.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Database.Signatures;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
@@ -26,6 +27,8 @@ builder.AddCadencePostgresDbContext<SafetyDbContext>(configureOptions: (sp, opti
         () => sp.GetRequiredService<IHttpContextAccessor>().HttpContext?.User.VerifiedUserId()
             ?? throw new InvalidOperationException("A safety audit entry needs a verified caller."),
         sp.GetRequiredService<IClock>())));
+// DSUR approval is e-signed; each token is single use across instances and restarts (ADR-2515, #5434, #5462).
+builder.Services.AddCadenceDurableSigTokenStore<SafetyDbContext>();
 builder.Services.AddFluidTemplating();
 
 FluidTemplateRenderer.RegisterType<IcsrHeader>();

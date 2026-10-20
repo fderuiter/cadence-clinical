@@ -69,8 +69,9 @@ signature in the Part 11 sense:
 
 - **Positive Impact:** a DSUR approval is attributable to one re-authenticated, authorised person who did not compile it,
   with a reason for change on the record and in the audit chain.
-- **Negative Impact / Technical Debt:** safety keeps the process-local `ReplayCache`, so a token is single use within
-  one safety process only (ADR-2515 §4.2), until safety folds into the single host (#5315).
+- **Token single use:** safety stores used token ids in its own `consumed_signature_tokens` table through
+  `AddCadenceDurableSigTokenStore<SafetyDbContext>()`, so a token is single use across instances and restarts
+  (ADR-2515, #5434).
 - **Mitigation Strategy:** host tests on the real safety `Program` and a PostgreSQL integration test.
 
 ## 6. Implementation & Verification

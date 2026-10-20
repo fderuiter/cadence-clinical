@@ -51,8 +51,8 @@ Safety and pharmacovigilance scaffold. It holds the safety case, ICSR reporting 
 The DSUR operations record `DSUR_COMPILED`, `DSUR_UPDATED` and `DSUR_APPROVED` through `AuditActions`, and the
 interceptor writes them as hash-chained `audit_log_entries` (chain `PeriodicSafetyReportRecord`) naming the verified
 caller and the reason for change. The interceptor's actor is the request's verified caller; a save with audited work
-outside a verified request fails. E-signature tokens are single use within one safety process (the process-local
-`ReplayCache`), not across instances or restarts (ADR-2515 §4.2).
+outside a verified request fails. E-signature tokens are single use across instances and restarts: used token ids are stored in
+`consumed_signature_tokens` (`AddCadenceDurableSigTokenStore<SafetyDbContext>()`, ADR-2515, #5434).
 
 ## Key dependencies
 

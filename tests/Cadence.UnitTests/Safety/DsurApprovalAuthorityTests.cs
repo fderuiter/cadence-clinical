@@ -266,6 +266,10 @@ public sealed class DsurApprovalAuthorityTests(DsurApprovalAuthorityTests.Safety
                         () => sp.GetRequiredService<IHttpContextAccessor>().HttpContext?.User.FindFirst(CadenceClaimTypes.Subject)?.Value
                             ?? "test-seeding",
                         sp.GetRequiredService<IClock>())));
+
+                // The durable token store needs PostgreSQL; DsurApprovalPostgresTests covers it.
+                services.RemoveAll<ISigTokenUseStore>();
+                services.AddSingleton<ISigTokenUseStore>(sp => new ReplayCache(sp.GetRequiredService<IClock>()));
             });
         }
     }
