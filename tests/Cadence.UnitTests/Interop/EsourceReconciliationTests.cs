@@ -214,15 +214,21 @@ public class EsourceReconciliationTests
     [Theory]
     [InlineData(null, null)]
     [InlineData("METRO_GENERAL", null)]
-    [InlineData("METRO_GENERAL", "-----BEGIN PRIVATE KEY-----\nnot a key\n-----END PRIVATE KEY-----")]
+    [InlineData("METRO_GENERAL", "malformed")]
     [InlineData("METRO_GENERAL", "public")]
-    public async Task GenerateSmartAssertion_WithoutAUsableKey_IsRefusedAndSignsNothing(string? keyRef, string? pem)
+    public async Task GenerateSmartAssertion_WithoutAUsableKey_IsRefusedAndSignsNothing(string? keyRef, string? key)
     {
         var ct = TestContext.Current.CancellationToken;
         using var db = CreateDbContext($"SmartNoKey_{Guid.NewGuid():N}");
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
         using var rsa = RSA.Create(2048);
-        string? configured = pem == "public" ? rsa.ExportSubjectPublicKeyInfoPem() : pem;
+        // The case names stand in for the PEMs, so no private-key header reaches the test results the secret scanner reads.
+        string? configured = key switch
+        {
+            "public" => rsa.ExportSubjectPublicKeyInfoPem(),
+            "malformed" => "-----BEGIN PRIVATE KEY-----\nnot a key\n-----END PRIVATE KEY-----",
+            _ => null,
+        };
         var keys = configured is null ? Keys() : Keys(("METRO_GENERAL", configured));
         string endpointId = await RegisterSmartEndpointAsync(db, clock, keyRef);
 
