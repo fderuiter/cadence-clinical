@@ -87,7 +87,7 @@ public static class HookCommands
     /// </summary>
     public static int Stop(TextWriter error)
     {
-        if (RtmGeneratorService.GenerateRtm(draft: true, validateOnly: true, requireCurrentSnapshot: GxpSnapshotPolicy.IsSnapshotMode()) == 0)
+        if (RtmGeneratorService.GenerateRtm(draft: true, validateOnly: true, requireCurrentSnapshot: GxpSnapshotPolicy.IsSnapshotMode(), requireRecordedEvidence: true) == 0)
         {
             return 0;
         }

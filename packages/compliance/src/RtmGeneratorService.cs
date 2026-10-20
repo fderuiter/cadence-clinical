@@ -16,6 +16,13 @@ public class RequirementInfo
     public string Source { get; set; } = string.Empty;
     public string? ParentPrdId { get; set; }
     public bool IsLegacyAlias { get; set; }
+
+    /// <summary>
+    /// The requirement's behaviour lives in the database (row-level security, triggers, constraints, transactions), so
+    /// only a PostgreSQL test can prove it. Declared in the PRD with an <c>**Evidence:** PostgreSQL</c> line under
+    /// the requirement's heading (#5324).
+    /// </summary>
+    public bool RequiresDatabase { get; set; }
 }
 
 public class TestMappingInfo
@@ -65,6 +72,12 @@ public enum RequirementState
     /// </summary>
     NotVerified,
 
+    /// <summary>
+    /// Every mapped test passed, but the requirement needs PostgreSQL evidence (<see cref="RequirementInfo.RequiresDatabase"/>)
+    /// and none of its tests is a database test: in-memory or SQLite doubles can't exercise it.
+    /// </summary>
+    NeedsDatabaseEvidence,
+
     /// <summary>No test declares this requirement.</summary>
     Planned,
 }
@@ -87,6 +100,9 @@ public static partial class RtmGeneratorService
     /// </summary>
     public const string DefaultResultsDir = "TestResults/gxp";
 
+    /// <summary>The banner a draft RTM or IQ/OQ/PQ report opens with. A committed document never carries it.</summary>
+    public const string DraftBanner = "DRAFT ONLY — UNVERIFIED GxP COMPLIANCE DOCUMENT";
+
     public static int GenerateRtm(
         string outputDir = "docs/SDLC",
         string reportPath = DefaultResultsDir,
@@ -95,7 +111,8 @@ public static partial class RtmGeneratorService
         string? repoRoot = null,
         bool honorDraftEnvironment = true,
         RtmEvidenceContext? evidence = null,
-        bool requireCurrentSnapshot = true)
+        bool requireCurrentSnapshot = true,
+        bool requireRecordedEvidence = false)
     {
         repoRoot ??= FindRepoRoot();
         outputDir = Path.Combine(repoRoot, outputDir);
@@ -210,6 +227,13 @@ public static partial class RtmGeneratorService
 
         foreach (string generatedDoc in new[] { checkedInRtm, Path.Combine(outputDir, "IQ_OQ_PQ_Execution_Report.md") })
         {
+            // The gates and sync pass requireRecordedEvidence: a committed snapshot is evidence only from a recorded run (#5324).
+            if (requireRecordedEvidence && File.Exists(generatedDoc) && IsUnverifiedSnapshot(File.ReadAllText(generatedDoc)))
+            {
+                Console.WriteLine($"[RTM ERROR] {Path.GetRelativePath(repoRoot, generatedDoc)} is a draft or records no tested revision, so it is not validation evidence. Take a new snapshot with `pnpm cadence gxp snapshot`.");
+                exitCode = 1;
+            }
+
             if (File.Exists(generatedDoc) && !GxPSigner.VerifyStamp(File.ReadAllText(generatedDoc)))
             {
                 Console.WriteLine($"[RTM ERROR] {Path.GetRelativePath(repoRoot, generatedDoc)} does not match its integrity stamp: it was edited by hand or predates the stamp. Take a new snapshot with `pnpm cadence gxp snapshot`.");
@@ -218,7 +242,7 @@ public static partial class RtmGeneratorService
         }
 
         var failedReqs = allRequirements.Values
-            .Where(r => Classify(r.Id, testMappings, testResults) == RequirementState.Failed)
+            .Where(r => Classify(r.Id, testMappings, testResults, r.RequiresDatabase) == RequirementState.Failed)
             .Select(r => r.Id)
             .ToList();
         if (failedReqs.Count > 0)
@@ -231,7 +255,7 @@ public static partial class RtmGeneratorService
         if (strictAll && !draft)
         {
             var unqualified = allRequirements.Values
-                .Where(r => !r.IsLegacyAlias && Classify(r.Id, testMappings, testResults) != RequirementState.Qualified)
+                .Where(r => !r.IsLegacyAlias && Classify(r.Id, testMappings, testResults, r.RequiresDatabase) != RequirementState.Qualified)
                 .Select(r => r.Id)
                 .ToList();
             if (unqualified.Count > 0)
@@ -350,7 +374,8 @@ public static partial class RtmGeneratorService
     public static RequirementState Classify(
         string requirementId,
         IReadOnlyDictionary<string, List<TestMappingInfo>> mappings,
-        IReadOnlyDictionary<string, TestResultInfo> results)
+        IReadOnlyDictionary<string, TestResultInfo> results,
+        bool requiresDatabase = false)
     {
         if (!mappings.TryGetValue(requirementId, out var mapped) || mapped.Count == 0)
         {
@@ -361,9 +386,20 @@ public static partial class RtmGeneratorService
         // not execute leaves it unverified however many others passed.
         var statuses = mapped.Select(m => StatusOf(m.FullName, results)).ToList();
         if (statuses.Contains(TestStatus.Failed)) return RequirementState.Failed;
-        if (statuses.TrueForAll(s => s == TestStatus.Passed)) return RequirementState.Qualified;
-        return RequirementState.NotVerified;
+        if (!statuses.TrueForAll(s => s == TestStatus.Passed)) return RequirementState.NotVerified;
+
+        // A requirement that lives in the database qualifies only with at least one PostgreSQL test among its mapped tests.
+        if (requiresDatabase && !mapped.Exists(m => DatabaseTestEvidence.IsDatabaseTestFile(m.File))) return RequirementState.NeedsDatabaseEvidence;
+        return RequirementState.Qualified;
     }
+
+    /// <summary>
+    /// True when a generated document carries the draft banner or an evidence block that names no tested revision
+    /// (<see cref="RtmEvidenceContext.NotRecorded"/>): it was not produced from a recorded test run (#5324).
+    /// </summary>
+    public static bool IsUnverifiedSnapshot(string document) =>
+        document.Contains(DraftBanner, StringComparison.Ordinal)
+        || document.Contains($"- **Tested revision:** {RtmEvidenceContext.NotRecorded.Revision}", StringComparison.Ordinal);
 
     private static string StatusOf(string fullName, IReadOnlyDictionary<string, TestResultInfo> results) =>
         results.TryGetValue(fullName, out var res) ? res.Status : TestStatus.NotExecuted;
@@ -487,6 +523,7 @@ public static partial class RtmGeneratorService
 
         var headingPattern = new Regex(@"#{1,6}\s*(PRD-[A-Z0-9]+-\d+)\s*:\s*(.*)", RegexOptions.Compiled);
         var boldPattern = new Regex(@"[-*]\s*\*\*(PRD-[A-Z0-9]+-\d+)\s*:\s*(.+?)\*\*", RegexOptions.Compiled);
+        var databaseEvidencePattern = new Regex(@"^\s*(?:[-*]\s*)?\*\*Evidence:\*\*\s*PostgreSQL\b", RegexOptions.Compiled);
 
         var mdFiles = Directory.GetFiles(sdlcDir, "*.md", SearchOption.AllDirectories);
         foreach (var file in mdFiles)
@@ -496,19 +533,29 @@ public static partial class RtmGeneratorService
 
             string relPath = GetRelativePath(file, FindRepoRoot()).Replace('\\', '/');
             string[] lines = File.ReadAllLines(file);
+            RequirementInfo? current = null;
 
             foreach (var line in lines)
             {
+                if (line.StartsWith('#'))
+                {
+                    current = null;
+                }
+
                 var hmatch = headingPattern.Match(line);
                 if (hmatch.Success)
                 {
                     string reqId = hmatch.Groups[1].Value.Trim();
-                    reqs[reqId] = new RequirementInfo
+                    reqs[reqId] = current = new RequirementInfo
                     {
                         Id = reqId,
                         Title = hmatch.Groups[2].Value.Trim(),
                         Source = relPath
                     };
+                }
+                else if (current is not null && databaseEvidencePattern.IsMatch(line))
+                {
+                    current.RequiresDatabase = true;
                 }
                 else
                 {
@@ -636,7 +683,7 @@ public static partial class RtmGeneratorService
         sb.AppendLine("---\nsearch: false\n---\n");
         if (draft)
         {
-            sb.AppendLine("> ⚠️ **DRAFT ONLY — UNVERIFIED GxP COMPLIANCE DOCUMENT** ⚠️");
+            sb.AppendLine($"> ⚠️ **{DraftBanner}** ⚠️");
             sb.AppendLine("> *This document was generated in draft mode with missing test results. It is NOT eligible for GxP production release.*\n");
         }
         sb.AppendLine("# Requirements Traceability Matrix (RTM)\n");
@@ -649,7 +696,7 @@ public static partial class RtmGeneratorService
 
         var canonical = reqs.Values.Where(r => !r.IsLegacyAlias).OrderBy(r => r.Id, StringComparer.Ordinal).ToList();
         var aliases = reqs.Values.Where(r => r.IsLegacyAlias).OrderBy(r => r.Id, StringComparer.Ordinal).ToList();
-        var byState = canonical.ToLookup(r => Classify(r.Id, mappings, results));
+        var byState = canonical.ToLookup(r => Classify(r.Id, mappings, results, r.RequiresDatabase));
 
         int total = canonical.Count;
         int qualified = byState[RequirementState.Qualified].Count();
@@ -659,6 +706,7 @@ public static partial class RtmGeneratorService
         sb.AppendLine($"- **Qualified (every mapped test passed):** {qualified}");
         sb.AppendLine($"- **Failed (a mapped test failed):** {byState[RequirementState.Failed].Count()}");
         sb.AppendLine($"- **Not Verified (a mapped test was skipped or not executed):** {byState[RequirementState.NotVerified].Count()}");
+        sb.AppendLine($"- **Not Verified (needs PostgreSQL evidence, no database test mapped):** {byState[RequirementState.NeedsDatabaseEvidence].Count()}");
         sb.AppendLine($"- **Planned (no mapped tests):** {byState[RequirementState.Planned].Count()}");
         sb.AppendLine($"- **Traceability Aliases (Trace and SRS IDs):** {aliases.Count}");
         sb.AppendLine($"- **Unknown Requirement IDs Declared by Tests:** {unknownTags.Count}");
@@ -670,7 +718,7 @@ public static partial class RtmGeneratorService
 
         foreach (var req in canonical.Where(r => mappings.ContainsKey(r.Id) && mappings[r.Id].Count > 0))
         {
-            sb.AppendLine($"| {req.Id} | {SourceDoc(req)} | **{req.Title}** | {MappedTests(mappings[req.Id], results)} | {StateLabel(Classify(req.Id, mappings, results), draft)} |");
+            sb.AppendLine($"| {req.Id} | {SourceDoc(req)} | **{req.Title}** | {MappedTests(mappings[req.Id], results)} | {StateLabel(Classify(req.Id, mappings, results, req.RequiresDatabase), draft)} |");
         }
 
         sb.AppendLine("\n## 3. Planned Requirements (No Mapped Tests)\n");
@@ -692,7 +740,7 @@ public static partial class RtmGeneratorService
         {
             string parent = alias.ParentPrdId ?? "N/A";
             string tests = mappings.TryGetValue(alias.Id, out var own) && own.Count > 0 ? MappedTests(own, results) : "None";
-            sb.AppendLine($"| `{alias.Id}` | `{parent}` | {alias.Title} | {tests} | {StateLabel(Classify(alias.Id, mappings, results), draft)} |");
+            sb.AppendLine($"| `{alias.Id}` | `{parent}` | {alias.Title} | {tests} | {StateLabel(Classify(alias.Id, mappings, results, alias.RequiresDatabase), draft)} |");
         }
 
         sb.AppendLine("\n## 5. Unknown Requirement IDs Declared by Tests\n");
@@ -726,6 +774,7 @@ public static partial class RtmGeneratorService
         RequirementState.Qualified => "✅ **Qualified**",
         RequirementState.Failed => "❌ **Failed**",
         RequirementState.Planned => "📋 **Planned**",
+        RequirementState.NeedsDatabaseEvidence => "⚠️ **Not Verified (needs PostgreSQL evidence)**",
         _ => draft ? "⚠️ **Unverified**" : "⚠️ **Not Verified**",
     };
 
@@ -744,7 +793,7 @@ public static partial class RtmGeneratorService
         sb.AppendLine("---\nsearch: false\n---\n");
         if (draft)
         {
-            sb.AppendLine("> ⚠️ **DRAFT ONLY — UNVERIFIED GxP COMPLIANCE DOCUMENT** ⚠️");
+            sb.AppendLine($"> ⚠️ **{DraftBanner}** ⚠️");
             sb.AppendLine("> *This document was generated in draft mode with missing test results. It is NOT eligible for GxP production release.*\n");
         }
         sb.AppendLine("# GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report\n");
@@ -794,7 +843,7 @@ public static partial class RtmGeneratorService
         }
 
         var canonical = reqs.Values.Where(r => !r.IsLegacyAlias).ToList();
-        int qualified = canonical.Count(r => Classify(r.Id, mappings, results) == RequirementState.Qualified);
+        int qualified = canonical.Count(r => Classify(r.Id, mappings, results, r.RequiresDatabase) == RequirementState.Qualified);
 
         sb.AppendLine("\n## 4. Performance Qualification (PQ) & Scenario Validation\n");
         sb.AppendLine($"Qualified Requirements: {qualified} of {canonical.Count}\n");

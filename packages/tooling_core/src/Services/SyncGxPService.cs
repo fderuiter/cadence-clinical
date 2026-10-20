@@ -40,10 +40,18 @@ public static class SyncGxPService
         else if (snapshot) Console.WriteLine(commit ? "Mode: SNAPSHOT + COMMIT (writes and commits docs/SDLC)" : "Mode: SNAPSHOT (writes and stages docs/SDLC)");
         else Console.WriteLine($"Mode: BRANCH (writes a preview to {GxpSnapshotPolicy.PreviewDir}; docs/SDLC is the baseline's snapshot and is left alone)");
 
+        // A snapshot is validation evidence: it always comes from a full test run, never from a draft (#5324).
+        if (snapshot && draft)
+        {
+            Console.WriteLine("[ERROR] A snapshot can't be a draft: it runs every test against PostgreSQL. Run `pnpm cadence gxp snapshot` without --draft.");
+            return 1;
+        }
+
         if (dryRun)
         {
             return RtmGeneratorService.GenerateRtm(
-                draft: true, validateOnly: true, repoRoot: repoRoot, requireCurrentSnapshot: snapshot || GxpSnapshotPolicy.IsSnapshotMode());
+                draft: true, validateOnly: true, repoRoot: repoRoot, requireCurrentSnapshot: snapshot || GxpSnapshotPolicy.IsSnapshotMode(),
+                requireRecordedEvidence: true);
         }
 
         // Step 1: Tests
@@ -102,7 +110,7 @@ public static class SyncGxPService
         // Only snapshot mode also requires the committed mapping to be current.
         int validation = RtmGeneratorService.GenerateRtm(
             outputDir: "docs/SDLC", draft: draft, validateOnly: true, reportPath: resultsDir, repoRoot: repoRoot, honorDraftEnvironment: false,
-            requireCurrentSnapshot: snapshot);
+            requireCurrentSnapshot: snapshot, requireRecordedEvidence: true);
         if (validation != 0) return validation;
 
         // A run that skipped database tests never exercised them (#5324, #5325): the documents show the skips, but

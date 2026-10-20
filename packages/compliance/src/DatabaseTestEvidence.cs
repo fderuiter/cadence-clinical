@@ -24,6 +24,16 @@ public static class DatabaseTestEvidence
     public static readonly IReadOnlySet<string> DatabaseAssemblies =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Cadence.IntegrationTests.dll", "Cadence.E2ETests.dll" };
 
+    /// <summary>The test project directories (repository-relative, forward slashes) whose tests all need PostgreSQL.</summary>
+    public static readonly IReadOnlyList<string> DatabaseTestDirectories = ["tests/Cadence.IntegrationTests/", "tests/Cadence.E2ETests/"];
+
+    /// <summary>True when <paramref name="relativePath"/> is a source file of a test project whose tests all need PostgreSQL.</summary>
+    public static bool IsDatabaseTestFile(string relativePath)
+    {
+        string path = relativePath.Replace('\\', '/');
+        return DatabaseTestDirectories.Any(dir => path.StartsWith(dir, StringComparison.OrdinalIgnoreCase));
+    }
+
     /// <summary>
     /// Tests that are skipped by design even with a database, because they need a separate opt-in: the 10M-edge
     /// lineage benchmark (<c>CADENCE_LINEAGE_BENCHMARK=1</c>). Each one is named here so the exemption is reviewed.

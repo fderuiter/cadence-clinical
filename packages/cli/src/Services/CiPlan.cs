@@ -387,7 +387,7 @@ public static class CiPlan
                         ? generated
                         : RtmGeneratorService.GenerateRtm(
                             outputDir: outputDir, validateOnly: true, reportPath: results, repoRoot: repoRoot, honorDraftEnvironment: false,
-                            requireCurrentSnapshot: snapshot);
+                            requireCurrentSnapshot: snapshot, requireRecordedEvidence: true);
                 },
                 InProcessDisplay = $"generate the RTM and IQ/OQ/PQ report from {RtmGeneratorService.DefaultResultsDir} into {GxpSnapshotPolicy.PreviewDir} " +
                     $"(docs/SDLC with {GxpSnapshotPolicy.SnapshotEnvironmentVariable}=1) and validate tags and results; nothing is staged",
