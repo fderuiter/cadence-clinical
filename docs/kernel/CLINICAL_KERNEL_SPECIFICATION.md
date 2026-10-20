@@ -929,10 +929,9 @@ reason)`, append-only. Meanings: `Authored`, `Reviewed`, `Approved`, `Verified`,
   are `sha256:` and lower-case hex over canonical JSON, for protocol versions and standards metadata alike.
 - A form signature targets a `CollectionInstance` with the hash of its members' sorted `(ObservationId, Revision,
 value)`, so it names the exact revisions signed. A correction never alters an Attestation: the signature stays bound
-  to what it covered and is shown as superseded until someone signs again (ADR-2622).
-- _Not implemented yet (#5463):_ no attestation target check is registered for a `CollectionInstance`, so `Attest`
-  refuses a form signature (`TargetKindUnsupported`). The targets that can be signed today are lock statements,
-  validation finding decisions, Proposals and agent task configurations.
+  to what it covered and is shown as superseded until someone signs again (ADR-2622). **Implemented** (#5463):
+  `SignCollectionInstance`, authorized at the form's enrollment (`collection.sign`), records it under the form
+  instance's lock; the tenant-wide `Attest` refuses this target kind.
 
 ### 9.6 Lineage graph (ADR-2255)
 

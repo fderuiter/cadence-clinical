@@ -18,13 +18,31 @@ export type EcrfForm = Schemas["Kernel_FormResponse"];
 export type EcrfFormItem = Schemas["Kernel_FormItemResponse"];
 export type EcrfFormLock = Schemas["Kernel_FormLockResponse"];
 export type EcrfFormAssertion = Schemas["Kernel_FormAssertionResponse"];
+/** A signature on the form; `superseded` once a later correction changed what it signed (then `signed_values` says what that was). */
 export type EcrfFormSignature = Schemas["Kernel_FormSignatureResponse"];
+export type EcrfFormSignedValue = Schemas["Kernel_FormSignedValueResponse"];
 export type EcrfFormSaved = Schemas["Kernel_FormSavedResponse"];
 export type EcrfFormValue = Schemas["Kernel_FormValueRequest"];
 
 /** The kernel error codes a page save answers with (CollectionErrors). */
 export const REVISION_STALE = "K.Collection.RevisionStale";
 export const VALUES_INVALID = "K.Collection.ValuesInvalid";
+
+/** The kernel error codes a form signature answers with (CollectionErrors, TrustErrors). */
+export const TARGET_CONTENT_CHANGED = "K.Trust.TargetContentChanged";
+export const TARGET_NOT_SIGNABLE = "K.Trust.TargetNotSignable";
+export const SIGNATURE_MEANING_INVALID = "K.Collection.SignatureMeaningInvalid";
+
+/** What a form signature means (21 CFR 11.50): the signer approves the values, or takes responsibility for them. */
+export type EcrfSignatureMeaning = "approved" | "responsibility";
+
+/** The gateway step-up action a form signature's X-Sig-Token must be issued for: the signing URL itself. */
+export function formSignatureAction(formId: string): string {
+  return `/api/v1/execution/forms/${formId.toLowerCase()}/signatures`;
+}
+
+/** The semantic action a form signature's X-Sig-Token must be issued for. */
+export const FORM_SIGN_SEMANTIC_ACTION = "execution.form.sign";
 
 export interface OpenEcrfForm {
   /** The enrollment's id (a UUID, without the `enrollment:` prefix). */
@@ -46,6 +64,14 @@ export interface SaveEcrfFormValues {
   values: EcrfFormValue[];
   reason: string;
   idempotencyKey: string;
+}
+
+export interface SignEcrfForm {
+  meaning: EcrfSignatureMeaning;
+  /** The form's `content_hash` as it was read; the kernel refuses (409) if the form changed since. */
+  contentHash: string;
+  /** The new signature's id; reuse it when retrying with the same idempotency key. */
+  signatureId?: string | null;
 }
 
 /** The kernel error code of a failed form call (`K.Collection.RevisionStale`, …), or null. */
@@ -128,6 +154,35 @@ export const ecrfFormsApi = {
         params: { path: { formId } },
         body: { values },
         headers: writeHeaders(reason, idempotencyKey),
+      })
+    );
+  },
+  /**
+   * Signs the form's current values (POST /api/v1/execution/forms/{formId}/signatures) with a gateway step-up token
+   * issued for {@link formSignatureAction} and {@link FORM_SIGN_SEMANTIC_ACTION}. Rejects with an ApiError of status
+   * 401 (the token is missing, expired or replayed), 403 (the caller may not sign: `collection.sign`), 409
+   * (`K.Trust.TargetContentChanged`: the form changed since it was read) or 422/409 (`K.Collection.SignatureMeaningInvalid`,
+   * `K.Trust.TargetNotSignable`: the form has no values).
+   */
+  signForm(
+    formId: string,
+    { meaning, contentHash, signatureId }: SignEcrfForm,
+    sigToken: string,
+    reason: string,
+    idempotencyKey: string
+  ): Promise<EcrfFormSignature> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/forms/{formId}/signatures", {
+        params: { path: { formId } },
+        body: {
+          meaning,
+          content_hash: contentHash,
+          signature_id: signatureId ?? null,
+        },
+        headers: {
+          ...writeHeaders(reason, idempotencyKey),
+          "X-Sig-Token": sigToken,
+        },
       })
     );
   },

@@ -628,10 +628,10 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<int>("TotalSaes")
-                        .HasColumnType("integer");
+                    b.Property<double>("TotalPatientYearsExposure")
+                        .HasColumnType("double precision");
 
-                    b.Property<int>("TotalSubjectExposure")
+                    b.Property<int>("TotalSaes")
                         .HasColumnType("integer");
 
                     b.Property<int>("VersionIndex")

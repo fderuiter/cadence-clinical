@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Trust;
 
 namespace Cadence.Kernel.Commands;
 
@@ -64,6 +65,42 @@ public sealed record RecordCollectedValues(
     IReadOnlyList<CollectedValue> Values,
     string IdempotencyKey,
     string ReasonForChange) : ICommand<CollectedValuesState>;
+
+/// <summary>
+/// Signs a form instance (spec §9.5, 21 CFR 11.50, 11.70, #5463): the acting person attests <c>Meaning</c> about the
+/// exact revisions of the form's values that <c>ContentHash</c> names, which must be the form's current content. The
+/// signature is an <c>Attestation</c> targeting the instance; a later correction never alters it, so the form then shows
+/// it as superseded beside the corrected values. Only a person signs, after a fresh authentication. The command is
+/// authorized against the form's enrollment, so a grant at the study site signs that site's forms.
+/// </summary>
+/// <remarks>
+/// <para><c>Meaning</c>: <c>Approved</c> for an investigator's sign-off, or <c>Responsibility</c> where the protocol asks
+/// the signer to take responsibility for the data.</para>
+/// <para><c>ContentHash</c>: The form's content hash as the signer read it (<c>content_hash</c> on the form read).</para>
+/// <para><c>AuthenticatedAt</c> and <c>Method</c>: When and how the signer re-authenticated to sign.</para>
+/// </remarks>
+[KernelCapability("collection.sign", VerbClass.Execute, Resource = nameof(SignCollectionInstance.EnrollmentId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.ReasonForChangeRequired))]
+[RaisesKernelErrors(typeof(CollectionErrors), nameof(CollectionErrors.SignatureMeaningInvalid))]
+[RaisesKernelErrors(
+    typeof(TrustErrors),
+    nameof(TrustErrors.PersonRequired),
+    nameof(TrustErrors.MethodRequired),
+    nameof(TrustErrors.AuthenticationStale),
+    nameof(TrustErrors.TargetNotSignable),
+    nameof(TrustErrors.TargetContentChanged))]
+public sealed record SignCollectionInstance(
+    TenantId TenantId,
+    AttestationId AttestationId,
+    CollectionInstanceId CollectionInstanceId,
+    EnrollmentId EnrollmentId,
+    AttestationMeaning Meaning,
+    string ContentHash,
+    DateTimeOffset AuthenticatedAt,
+    string Method,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<AttestationId>;
 
 /// <summary>One value of a form page save.</summary>
 /// <param name="ItemId">The CollectionSpec item the value is collected for; the observation records the item's concept.</param>
@@ -127,7 +164,10 @@ public static class CollectionErrors
     public static readonly KernelError RevisionStale =
         new("K.Collection.RevisionStale", 409, "The form changed since you opened it; reload it and edit the current values.");
 
+    public static readonly KernelError SignatureMeaningInvalid =
+        new("K.Collection.SignatureMeaningInvalid", 422, "A form is signed as Approved or Responsibility.");
+
     /// <summary>Every form instance error, for the API's documented problem set.</summary>
     public static IReadOnlyList<KernelError> All { get; } =
-        [EnrollmentUnknown, CollectedAtInvalid, NoGoverningVersion, SpecUnknown, ValuesInvalid, RevisionStale];
+        [EnrollmentUnknown, CollectedAtInvalid, NoGoverningVersion, SpecUnknown, ValuesInvalid, RevisionStale, SignatureMeaningInvalid];
 }

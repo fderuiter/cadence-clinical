@@ -377,30 +377,161 @@
         </li>
       </ul>
 
-      <h3>Signatures</h3>
-      <p v-if="form.signatures.length === 0" data-testid="ecrf-no-signatures">
-        Not signed. Form signatures are recorded as kernel attestations; signing
-        from this screen is not available yet.
-      </p>
-      <ul v-else data-testid="ecrf-form-signatures">
-        <li
-          v-for="signature in form.signatures"
-          :key="signature.attestation_id"
+      <section
+        id="ecrf-form-signatures-section"
+        aria-labelledby="ecrf-form-signatures-title"
+      >
+        <h3 id="ecrf-form-signatures-title">Signatures</h3>
+        <p v-if="form.signatures.length === 0" data-testid="ecrf-no-signatures">
+          Not signed. Signing records a kernel attestation over the form's
+          current values; a later correction to a signed value supersedes the
+          signature.
+        </p>
+        <ul v-else class="ecrf-signatures" data-testid="ecrf-form-signatures">
+          <li
+            v-for="signature in form.signatures"
+            :key="signature.attestation_id"
+            :class="[
+              'ecrf-signature',
+              signature.superseded
+                ? 'ecrf-signature--superseded'
+                : 'ecrf-signature--current',
+            ]"
+            :data-signature="signature.attestation_id"
+          >
+            <div>
+              <strong>{{ meaningLabel(signature.meaning) }}</strong> by
+              {{ signature.signed_by }} at {{ signature.signed_at }}:
+              {{ signature.reason }}
+              <span
+                v-if="signature.superseded"
+                class="ecrf-signature-state ecrf-signature-state--superseded"
+                data-testid="ecrf-signature-superseded"
+                >Superseded by a later correction</span
+              >
+              <span v-else class="ecrf-signature-state">Current</span>
+            </div>
+            <table
+              v-if="signature.superseded && signature.signed_values?.length"
+              class="ecrf-signed-values"
+              data-testid="ecrf-signed-values"
+            >
+              <caption>
+                What this signature signed, beside the current values
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Item</th>
+                  <th scope="col">Signed value</th>
+                  <th scope="col">Signed revision</th>
+                  <th scope="col">Current value</th>
+                  <th scope="col">Current revision</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="signed in signature.signed_values"
+                  :key="signed.item_id"
+                  :data-signed-item="signed.item_id"
+                  :class="{
+                    'ecrf-signed-changed': changedSince(signed),
+                  }"
+                >
+                  <th scope="row">{{ signed.item_id }}</th>
+                  <td>{{ formatObservationValue(signed.value) }}</td>
+                  <td>{{ signed.revision }}</td>
+                  <td>{{ currentValueText(signed.item_id) }}</td>
+                  <td>{{ currentOf(signed.item_id)?.revision ?? "None" }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </li>
+        </ul>
+
+        <div class="ecrf-form-row">
+          <label for="ecrf-sign-meaning">Meaning</label>
+          <select
+            id="ecrf-sign-meaning"
+            v-model="signMeaning"
+            :disabled="signing"
+          >
+            <option value="approved">Approved</option>
+            <option value="responsibility">Responsibility</option>
+          </select>
+          <button
+            id="ecrf-form-sign"
+            class="btn btn-primary"
+            type="button"
+            :disabled="!canSign"
+            :aria-describedby="signHint ? 'ecrf-sign-hint' : undefined"
+            @click="showSignModal = true"
+          >
+            {{ signing ? "Signing…" : "Sign form" }}
+          </button>
+          <span
+            v-if="signHint"
+            id="ecrf-sign-hint"
+            class="ecrf-form-hint"
+            data-testid="ecrf-sign-hint"
+            >{{ signHint }}</span
+          >
+        </div>
+
+        <div
+          v-if="signOutcome"
+          data-testid="ecrf-sign-outcome"
+          :class="[
+            'ecrf-form-outcome',
+            `ecrf-form-outcome--${signOutcome.kind === 'signed' ? 'saved' : 'failed'}`,
+          ]"
+          :role="signOutcome.kind === 'signed' ? 'status' : 'alert'"
         >
-          {{ signature.meaning }} by {{ signature.signed_by }} at
-          {{ signature.signed_at }}: {{ signature.reason }}
-        </li>
-      </ul>
+          <template v-if="signOutcome.kind === 'signed'">
+            Form signed: {{ meaningLabel(signOutcome.meaning) }}.
+          </template>
+          <template v-else>{{ signOutcome.message }}</template>
+          <button
+            v-if="signOutcome.kind === 'changed'"
+            id="ecrf-sign-reload"
+            class="btn btn-secondary"
+            type="button"
+            @click="reloadAfterStale"
+          >
+            Reload form
+          </button>
+        </div>
+      </section>
+
+      <SignatureCaptureModal
+        v-if="showSignModal"
+        :is-open="showSignModal"
+        signer-role="Investigator"
+        :action-url="formSignatureAction(form.form_id)"
+        :semantic-action="FORM_SIGN_SEMANTIC_ACTION"
+        :on-sign="signWithToken"
+        @cancel="showSignModal = false"
+        @success="showSignModal = false"
+      />
     </template>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
-import { MISSING_REASONS } from "../../api/observationValue";
-import type { EcrfFormItem } from "../../api/ecrfFormsApi";
+import {
+  formatObservationValue,
+  MISSING_REASONS,
+} from "../../api/observationValue";
+import {
+  FORM_SIGN_SEMANTIC_ACTION,
+  formSignatureAction,
+  type EcrfFormItem,
+  type EcrfFormSignedValue,
+  type EcrfSignatureMeaning,
+} from "../../api/ecrfFormsApi";
 import { useEcrfForm } from "../../composables/useEcrfForm";
 import { isLiveQuery, useFormQueries } from "../../composables/useFormQueries";
+import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import FormQueryList from "./FormQueryList.vue";
 
 const props = defineProps<{
@@ -426,6 +557,9 @@ const {
   openError,
   saving,
   outcome,
+  signing,
+  signOutcome,
+  canSign,
   locked,
   dirty,
   editedItems,
@@ -434,6 +568,7 @@ const {
   reload,
   open,
   save,
+  sign,
   close,
 } = useEcrfForm();
 
@@ -522,6 +657,47 @@ async function reloadAfterStale() {
   queries.outcome = null;
   await reload();
   await queries.reload();
+}
+
+// Signing the form (#5463): the user chooses the meaning, the signature dialog verifies them again at the gateway for
+// this form's signing URL, and the signature binds the form's content hash as it was read.
+const signMeaning = ref<EcrfSignatureMeaning>("approved");
+const showSignModal = ref(false);
+
+const MEANING_LABELS: Record<string, string> = {
+  approved: "Approved",
+  responsibility: "Responsibility",
+};
+
+function meaningLabel(meaning: string): string {
+  return MEANING_LABELS[meaning.toLowerCase()] ?? meaning;
+}
+
+/** Why the form cannot be signed now, or null when it can. */
+const signHint = computed(() => {
+  if (!form.value || signing.value) return null;
+  if (dirty.value) return "Save or discard your changes before signing.";
+  if (!form.value.content_hash) return "The form has no values to sign yet.";
+  return null;
+});
+
+function currentOf(itemId: string): EcrfFormItem | undefined {
+  return items.value.find((i) => i.item_id === itemId);
+}
+
+function currentValueText(itemId: string): string {
+  const value = currentOf(itemId)?.value;
+  return value ? formatObservationValue(value) : "No value";
+}
+
+function changedSince(signed: EcrfFormSignedValue): boolean {
+  const current = currentOf(signed.item_id);
+  return !current || Number(current.revision) !== Number(signed.revision);
+}
+
+/** The signature dialog's callback: it has the step-up token and the signing reason the user chose. */
+async function signWithToken(sigToken: string, signingReason: string) {
+  return sign(signMeaning.value, sigToken, signingReason);
 }
 
 async function submit() {
@@ -651,6 +827,56 @@ watch(dirty, (value) => emit("dirty-change", value));
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+}
+.ecrf-signatures {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+.ecrf-signature {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+.ecrf-signature--superseded {
+  background-color: #f8fafc;
+  color: #475569;
+}
+.ecrf-signature-state {
+  margin-left: 8px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background-color: #f0fdf4;
+  color: #166534;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.ecrf-signature-state--superseded {
+  background-color: #fffbeb;
+  color: #92400e;
+}
+.ecrf-signed-values {
+  margin-top: 6px;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.ecrf-signed-values caption {
+  text-align: left;
+  font-weight: 600;
+  padding-bottom: 4px;
+}
+.ecrf-signed-values th,
+.ecrf-signed-values td {
+  border-bottom: 1px solid var(--border);
+  padding: 4px 6px;
+  text-align: left;
+}
+.ecrf-signed-changed {
+  background-color: #fffbeb;
 }
 .ecrf-form-outcome--saved {
   background-color: #f0fdf4;

@@ -1,5 +1,7 @@
 using System;
 
+using Cadence.Core.Domain;
+
 namespace Cadence.Apps.Safety.Domain;
 
 public class IcsrReportingEvaluation
@@ -242,7 +244,11 @@ public class SafetySignalAlert
     public int VersionIndex { get; set; } = 1;
 }
 
-public class PeriodicSafetyReportRecord
+/// <summary>
+/// A periodic safety report (DSUR). It is <see cref="IGxPAuditable"/>, so each compile, update and approval writes an
+/// audit entry carrying the record's own <see cref="VersionIndex"/> (#5573).
+/// </summary>
+public class PeriodicSafetyReportRecord : IGxPAuditable
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string ReportType { get; set; } = "DSUR";
@@ -251,7 +257,11 @@ public class PeriodicSafetyReportRecord
     public DateTimeOffset PeriodStart { get; set; }
     public DateTimeOffset PeriodEnd { get; set; }
     public string Status { get; set; } = "DRAFT";
-    public int TotalSubjectExposure { get; set; }
+
+    /// <summary>Patient-years of exposure in the reporting period, unrounded (formerly the rounded TotalSubjectExposure).</summary>
+    public double TotalPatientYearsExposure { get; set; }
+
+    /// <summary>The serious adverse events among the cases compiled.</summary>
     public int TotalSaes { get; set; }
     public string ReportPayloadJson { get; set; } = "{}";
     public string? ApprovedByUserId { get; set; }
@@ -261,6 +271,10 @@ public class PeriodicSafetyReportRecord
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
+
+    DateTime IGxPAuditable.CreatedAt => CreatedAt.UtcDateTime;
+
+    long IGxPAuditable.VersionIndex => VersionIndex;
 }
 
 public class DeviceSafetyInvestigation
@@ -297,73 +311,3 @@ public class DeviceSafetyInvestigation
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
 }
-
-public record IcsrHeader(
-    string MessageId,
-    string SenderOrganization,
-    string ReceiverOrganization,
-    string TransmissionDate,
-    string MessageType = "ichicsr"
-);
-
-public record IcsrReportIdentifiers(
-    string WorldwideUniqueCaseId,
-    string? LocalReportId = null,
-    string? FirstSenderType = null
-);
-
-public record IcsrPatient(
-    string PatientId,
-    string Sex,
-    int? Age = null,
-    string? AgeUnit = null,
-    string? BirthDate = null
-);
-
-public record IcsrMeddraCoding(
-    string LltCode,
-    string LltName,
-    string PtCode,
-    string PtName,
-    string HltCode,
-    string HltName,
-    string HlgtCode,
-    string HlgtName,
-    string SocCode,
-    string SocName,
-    string? PrimarySocFlag = null,
-    string Score = "1.0"
-);
-
-public record IcsrReaction(
-    string ReactionTerm,
-    IcsrMeddraCoding? MeddraCoding = null,
-    string? StartDate = null,
-    string? EndDate = null,
-    string? Outcome = null,
-    string SeriousnessDeath = "0",
-    string SeriousnessLifeThreatening = "0",
-    string SeriousnessHospitalization = "0",
-    string SeriousnessDisability = "0",
-    string SeriousnessCongenitalAnomaly = "0",
-    string SeriousnessOtherMedicallyImportant = "0"
-);
-
-public record IcsrSuspectDrug(
-    string DrugName,
-    string? ActiveSubstanceName = null,
-    string? DosageText = null,
-    string? RouteOfAdministration = null,
-    string? ActionTakenWithDrug = null,
-    string DrugRole = "suspect"
-);
-
-public record IcsrReport(
-    IcsrHeader Header,
-    IcsrReportIdentifiers ReportIdentifiers,
-    IcsrPatient Patient,
-    IReadOnlyList<IcsrReaction> Reactions,
-    IReadOnlyList<IcsrSuspectDrug> SuspectDrugs,
-    int VersionIndex = 1,
-    string? ReasonForChange = null
-);

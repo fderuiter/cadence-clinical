@@ -63,6 +63,8 @@ public sealed record FormStateResponse(
 /// <param name="Locks">The locks in force over the form, widest scope first (spec §10.5).</param>
 /// <param name="Assertions">Verifications, queries and answers about its values, oldest first (spec §8.2).</param>
 /// <param name="Signatures">The signatures over it, oldest first (spec §9.5).</param>
+/// <param name="ContentHash">The hash a signature over the current values binds to: send it to sign them (#5463); null while
+/// the form has no values.</param>
 public sealed record FormResponse(
     Guid FormId,
     Guid EnrollmentId,
@@ -81,7 +83,8 @@ public sealed record FormResponse(
     IReadOnlyList<FormItemResponse> Items,
     IReadOnlyList<FormLockResponse> Locks,
     IReadOnlyList<FormAssertionResponse> Assertions,
-    IReadOnlyList<FormSignatureResponse> Signatures)
+    IReadOnlyList<FormSignatureResponse> Signatures,
+    string? ContentHash)
 {
     /// <summary>
     /// Shapes the kernel's record for a form screen: items in <paramref name="layout"/> order (the specification's order
@@ -119,7 +122,8 @@ public sealed record FormResponse(
             [.. record.Locks.Select(l => new FormLockResponse(l.LockId.Value, l.Kind.ToString(), l.Scope.ToString(), l.LockedAt, l.LockedBy, l.ReasonForChange))],
             [.. record.Assertions.Select(a => new FormAssertionResponse(
                 a.AssertionId.Value, a.Kind.ToString(), a.Target.ToString(), a.Revision, a.Text, a.AssertedBy, a.AssertedAt, a.ReasonForChange, a.RetractedAt))],
-            [.. record.Attestations.Select(s => new FormSignatureResponse(s.AttestationId.Value, s.Meaning.ToString(), s.SignedBy, s.SignedAt, s.Reason))]);
+            [.. record.Attestations.Select(FormSignatureResponse.From)],
+            record.ContentHash);
     }
 }
 
@@ -182,13 +186,51 @@ public sealed record FormLockResponse(Guid LockId, string Kind, string Scope, Da
 public sealed record FormAssertionResponse(
     Guid AssertionId, string Kind, string Target, int? Revision, string? Text, string AssertedBy, DateTimeOffset AssertedAt, string Reason, DateTimeOffset? RetractedAt);
 
+/// <summary>Body of <c>POST /api/v1/execution/forms/{formId}/signatures</c> (#5463).</summary>
+/// <param name="Meaning"><c>approved</c> for an investigator's sign-off, or <c>responsibility</c>.</param>
+/// <param name="ContentHash">The form's <c>content_hash</c> as the signer read it; a form changed since is refused with 409.</param>
+/// <param name="SignatureId">The signature's id, when the client chooses it; otherwise the server does.</param>
+public sealed record SignFormRequest(string Meaning, string ContentHash, Guid? SignatureId);
+
 /// <summary>A signature over a form.</summary>
 /// <param name="AttestationId">The signature.</param>
 /// <param name="Meaning">What the signer attested.</param>
 /// <param name="SignedBy">Who signed.</param>
 /// <param name="SignedAt">When.</param>
 /// <param name="Reason">The signer's reason.</param>
-public sealed record FormSignatureResponse(Guid AttestationId, string Meaning, string SignedBy, DateTimeOffset SignedAt, string Reason);
+/// <param name="ContentHash">The hash of the revisions it signed.</param>
+/// <param name="Superseded">True once the form changed after it was signed: it stands for the revisions it signed, and the
+/// form needs a new signature for its current values.</param>
+/// <param name="SignedValues">The revisions it signed, by item id, to show beside the current values; null when they cannot
+/// be rebuilt from the values' history.</param>
+public sealed record FormSignatureResponse(
+    Guid AttestationId,
+    string Meaning,
+    string SignedBy,
+    DateTimeOffset SignedAt,
+    string Reason,
+    string ContentHash,
+    bool Superseded,
+    IReadOnlyList<FormSignedValueResponse>? SignedValues)
+{
+    internal static FormSignatureResponse From(FormAttestationView signature) =>
+        new(
+            signature.AttestationId.Value,
+            signature.Meaning.ToString(),
+            signature.SignedBy,
+            signature.SignedAt,
+            signature.Reason,
+            signature.ContentHash,
+            signature.Superseded,
+            signature.SignedValues?.Select(v => new FormSignedValueResponse(v.ItemId, v.ObservationId.Value, v.Revision, v.Value)).ToList());
+}
+
+/// <summary>One value as a signature signed it.</summary>
+/// <param name="ItemId">The item.</param>
+/// <param name="ObservationId">The observation holding the value.</param>
+/// <param name="Revision">The revision signed.</param>
+/// <param name="Value">That revision's value.</param>
+public sealed record FormSignedValueResponse(string ItemId, Guid ObservationId, int Revision, ObservationValue Value);
 
 /// <summary>A form after a page save: every value it holds, so the client marks values saved only from this answer.</summary>
 /// <param name="FormId">The form.</param>

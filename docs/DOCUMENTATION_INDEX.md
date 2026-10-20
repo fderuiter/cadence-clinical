@@ -217,7 +217,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2352: Global Library Object Instantiation in Clinical Studies](adr/2026-08-09-global-library-object-instantiation.md) | Current | Also known as: ADR-062 (former number) |
 | [ADR-2353: Medical Coding Engine and Query Subsystem Integration](adr/2026-08-09-medical-coding-engine-query-integration.md) | Current | Also known as: ADR-065 (former number) |
 | [ADR-067: Signed NCI Thesaurus CT Web Client](adr/2026-08-09-nci-thesaurus-signed-web-client.md) | Current | - Status: Accepted |
-| [ADR-064: E2B(R3) ICSR XML Export and Structural Validation](adr/2026-08-09-safety-e2b-icsr-xml-export-pipeline.md) | Current | - Status: Accepted |
+| [ADR-064: E2B(R3) ICSR XML Export and Structural Validation](adr/2026-08-09-safety-e2b-icsr-xml-export-pipeline.md) | Current | - Status: Superseded by [ADR-2464](adr/2026-10-20-icsr-render-emits-ich-e2br3-validated-against-the-ich-schema.md) |
 | [ADR-2354: Debounced Clinical Code Lookup UI Primitive](adr/2026-08-10-debounced-clinical-code-lookup-ui-primitive.md) | Current | Also known as: ADR-065 (former number) |
 | [ADR-185: Dynamic Dependency Matching and Clinical De-identification Consolidation](adr/2026-08-10-dynamic-dependency-matching-and-clinical-deid-consolidation.md) | Current | - Status: Accepted |
 | [ADR-2167: AST-based Offline Schema Drift Detection and Babel Parser Dependency](adr/2026-08-11-ast-based-offline-schema-drift-detection.md) | Current | - Status: Accepted |
@@ -537,6 +537,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2534: Quality Gates Live in One Registry and Each Must Be Able to Fail](adr/2026-10-20-quality-gates-live-in-one-registry-and-each-must-be-able-to-fail.md) | Current | - Status: Accepted |
 | [ADR-2519: Safety Signature Manifests Are Stored as Text](adr/2026-10-20-safety-signature-manifests-are-stored-as-text.md) | Current | - Status: Accepted |
 | [ADR-2640: Randomisation Allocates from Approved, Encrypted Scheme Versions](adr/2026-10-20-randomisation-allocates-from-approved-encrypted-scheme-versions.md) | Current | - Status: Accepted |
+| [ADR-2464: ICSR Render Emits ICH E2B(R3) Validated Against the ICH Schema](adr/2026-10-20-icsr-render-emits-ich-e2br3-validated-against-the-ich-schema.md) | Current | - Status: Accepted |
 ## Developing and running
 
 | Document | Status | What it is |

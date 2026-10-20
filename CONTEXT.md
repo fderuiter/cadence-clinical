@@ -105,9 +105,16 @@ _Avoid_: empty strings or sentinels for missing values, units in a separate fiel
 The kernel side of one filled-in form: which Observations were collected together, for which participant
 and visit, under which CollectionSpec version (K-FACT-6, ADR-2622). It holds membership only; the form's
 layout, workflow and screen state are the EDC application's **FormInstance**. One command saves a whole
-page of its values and form locks apply at its scope. A form signature is meant to name its members' exact
-revisions, but attestations over a `collection_instance` are refused until its target check lands (#5463).
+page of its values, form locks apply at its scope, and a form signature names its members' exact revisions.
 _Avoid_: page IDs or visit strings on Observations, server-side form drafts
+
+### Form signature
+
+An investigator's kernel `Attestation` (meaning Approved or Responsibility) over a Collection Instance's content
+hash, the hash of its values' exact revisions, recorded by `SignCollectionInstance` after a single-use step-up
+re-authentication (#5463). A later correction never alters it: the form shows it as **superseded**, with the values
+it signed, until someone signs again.
+_Avoid_: unsigning, a form status of `SIGNED` or `MODIFIED_POST_SIGNATURE`, signing a payload copy
 
 ### FormInstance
 
@@ -721,7 +728,7 @@ A chartered, independent panel of clinical specialists responsible for evaluatin
 
 ### Aggregate Safety Compilation Engine
 
-An automated pharmacovigilance reporting system that calculates cumulative and interval patient-years of exposure, tabulates SAE and SUSAR line listings by MedDRA System Organ Class and Preferred Term against Reference Safety Information (RSI), and compiles structured annual Development Safety Update Reports (DSUR), Periodic Safety Update Reports (PSUR), and investigator safety notifications.
+An automated pharmacovigilance reporting system that calculates cumulative and interval patient-years of exposure, tabulates SAE and SUSAR line listings by MedDRA System Organ Class and Preferred Term against Reference Safety Information (RSI), and compiles structured annual Development Safety Update Reports (DSUR), Periodic Safety Update Reports (PSUR), and investigator safety notifications. In a DSUR, `TotalSaes` counts serious cases only, exposure is stored as unrounded patient-years, and placebo, comparator and investigational arms are grouped one way for both exposure and the tabulation (#5573).
 
 ### Medical Device Investigation Lifecycle
 
@@ -948,6 +955,11 @@ _Avoid_: Manual lab report grading, un-staged automatic regulatory transmissions
 
 A B2B electronic regulatory transmission pipeline in `apps/safety` that compiles Individual Case Safety Reports (ICSR) into ISO 27953-2 compliant ICH E2B(R3) XML payloads and transmits them over RFC 4130 AS2 with SHA-256 S/MIME encryption, digital signatures, and synchronous MDN verification.
 _Avoid_: Unencrypted email attachments, manual un-tracked agency portal uploads
+
+### ICH E2B(R3) ICSR message
+
+The HL7 v3 `MCCI_IN200100UV01` batch, holding one `PORR_IN049016UV` message per case, that `POST /api/v1/safety/icsr/render` emits. The request names the E2B(R3) data elements it carries (N.1 to H.1); the ICH business rules are checked before rendering and the output is validated against the ICH schema vendored, unmodified, in `apps/safety/Schemas/ich-e2b-r3` (ADR-2464). MedDRA codes are checked for form only; the dictionary is licensed and not in the repository.
+_Avoid_: An `<ichicsr>` root or other simplified element layout; calling an unvalidated message E2B(R3)
 
 ### Centralized Statistical Monitoring (CSM) Forensics
 

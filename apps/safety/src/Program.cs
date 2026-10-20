@@ -32,11 +32,15 @@ builder.Services.AddCadenceDurableSigTokenStore<SafetyDbContext>();
 builder.Services.AddFluidTemplating();
 
 FluidTemplateRenderer.RegisterType<IcsrHeader>();
-FluidTemplateRenderer.RegisterType<IcsrReportIdentifiers>();
+FluidTemplateRenderer.RegisterType<IcsrSafetyReport>();
+FluidTemplateRenderer.RegisterType<IcsrOtherCaseIdentifier>();
+FluidTemplateRenderer.RegisterType<IcsrPrimarySource>();
+FluidTemplateRenderer.RegisterType<IcsrSender>();
+FluidTemplateRenderer.RegisterType<IcsrStudy>();
 FluidTemplateRenderer.RegisterType<IcsrPatient>();
 FluidTemplateRenderer.RegisterType<IcsrMeddraCoding>();
 FluidTemplateRenderer.RegisterType<IcsrReaction>();
-FluidTemplateRenderer.RegisterType<IcsrSuspectDrug>();
+FluidTemplateRenderer.RegisterType<IcsrDrug>();
 FluidTemplateRenderer.RegisterType<IcsrReport>();
 
 var app = builder.Build();
