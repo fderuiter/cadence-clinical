@@ -12,7 +12,8 @@ migration application.
 
 - `AddCadencePostgresDbContext<TContext>()`: registers the service's DbContext against PostgreSQL in its own
   module schema, with transient-failure retries, a readiness health check (tag `ready`, served at `/healthz/ready`)
-  and migrations.
+  and migrations. The optional `configureOptions(serviceProvider, options)` runs per scope after the provider is set,
+  so a host can add a `GxPAuditInterceptor` whose actor is the request's verified caller (the safety service does).
 - `WithModuleSchema(connectionString, schema)`: scopes a connection to one module schema (search path
   `<schema>,public`, ADR-2447). `ModuleSchemaFor<TContext>()` derives the default name (`CtmsDbContext` is `ctms`).
 - `ResolvePostgresConnectionString(...)`: reads `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`.

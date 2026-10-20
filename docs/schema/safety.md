@@ -7,6 +7,7 @@ Generated from the EF Core model of `Cadence.Apps.Safety.Infrastructure.Persiste
 | Table | Entity | Columns |
 | --- | --- | --- |
 | [`safety.audit_log_entries`](#safetyaudit_log_entries) | `AuditLogEntry` | 11 |
+| [`safety.consumed_signature_tokens`](#safetyconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
 | [`safety.device_safety_investigations`](#safetydevice_safety_investigations) | `DeviceSafetyInvestigation` | 31 |
 | [`safety.periodic_safety_reports`](#safetyperiodic_safety_reports) | `PeriodicSafetyReportRecord` | 17 |
 | [`safety.sae_discrepancies`](#safetysae_discrepancies) | `SaeDiscrepancy` | 12 |
@@ -43,6 +44,20 @@ Entity: `AuditLogEntry`
 Indexes:
 
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+
+## safety.consumed_signature_tokens
+
+Entity: `ConsumedSignatureToken`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `TokenId` | `character varying(128)` | no |  | PK |
+| `ConsumedAt` | `timestamp with time zone` | no |  |  |
+| `RetainUntil` | `timestamp with time zone` | no |  |  |
+
+Indexes:
+
+- `IX_consumed_signature_tokens_RetainUntil`: (`RetainUntil`)
 
 ## safety.device_safety_investigations
 
@@ -107,7 +122,7 @@ Entity: `PeriodicSafetyReportRecord`
 | `CompoundName` | `character varying(255)` | no |  |  |
 | `CreatedAt` | `timestamp with time zone` | no |  |  |
 | `CreatedBy` | `character varying(255)` | no |  |  |
-| `EsignatureManifestId` | `character varying(255)` | yes |  |  |
+| `EsignatureManifestId` | `text` | yes |  |  |
 | `PeriodEnd` | `timestamp with time zone` | no |  |  |
 | `PeriodStart` | `timestamp with time zone` | no |  |  |
 | `ReasonForChange` | `character varying(1000)` | no |  |  |

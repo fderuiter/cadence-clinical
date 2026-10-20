@@ -296,7 +296,8 @@ public class PeriodicSafetyReportRecordConfiguration : IEntityTypeConfiguration<
         builder.HasIndex(x => x.Status);
         builder.Property(x => x.ReportPayloadJson).HasColumnType("jsonb");
         builder.Property(x => x.ApprovedByUserId).HasMaxLength(255);
-        builder.Property(x => x.EsignatureManifestId).HasMaxLength(255);
+        // Holds the whole signed GxPSigner manifest, far longer than 255 characters (#5462).
+        builder.Property(x => x.EsignatureManifestId).HasColumnType("text");
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
     }

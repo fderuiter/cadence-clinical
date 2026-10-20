@@ -21,5 +21,5 @@ Each page lists the operations a .NET service serves. The specs come from the se
 | [org](org.md) | 2 |
 | [payments](payments.md) | 32 |
 | [quality](quality.md) | 2 |
-| [safety](safety.md) | 14 |
+| [safety](safety.md) | 13 |
 | [tickets](tickets.md) | 2 |
