@@ -31,7 +31,7 @@ public sealed class ServiceTopologyTests
         services.Select(s => s.Name).Should().OnlyHaveUniqueItems();
         services.Select(s => s.Port).Should().OnlyHaveUniqueItems().And.OnlyContain(p => p > ServiceTopology.GatewayPort);
         services.Select(s => s.UrlVariable).Should().OnlyHaveUniqueItems();
-        services.SelectMany(s => s.RoutePrefixes).Should().OnlyHaveUniqueItems().And.OnlyContain(p => Regex.IsMatch(p, "^[a-z][a-z0-9-]*$"));
+        services.SelectMany(s => s.RoutePrefixes).Should().OnlyHaveUniqueItems().And.OnlyContain(p => Regex.IsMatch(p, "^[a-z][a-z0-9-]*(/[a-z][a-z0-9-]*)?$"));
         foreach (var service in services)
         {
             service.UrlVariable.Should().Be($"{service.Name.Replace('-', '_').ToUpperInvariant()}_SERVICE_URL");

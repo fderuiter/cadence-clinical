@@ -3,7 +3,6 @@ using Cadence.Apps.Execution.Domain.Cgt;
 using Cadence.Apps.Execution.Domain.Coding;
 using Cadence.Apps.Execution.Domain.Compliance;
 using Cadence.Apps.Execution.Domain.Devices;
-using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
@@ -22,7 +21,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 
 /// <summary>
 /// EF Core 10 persistence gateway for the Execution bounded context.
-/// Exposes aggregates for subjects, observations, form submissions, clinical queries, CEC dossiers, CGT chain of custody records, devices, staged adverse event reviews, and IP kit batch reconciliations.
+/// Exposes aggregates for subjects, consent, site compliance, clinical queries, lab reference ranges, CEC dossiers, CGT chain of custody records, devices, staged adverse event reviews, and IP kit batch reconciliations.
 /// @req:PRD-SUB-001
 /// @req:PRD-DEV-001
 /// @req:PRD-DEV-002
@@ -45,12 +44,6 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
     public DbSet<SubjectConsent> SubjectConsents => Set<SubjectConsent>();
 
     public DbSet<SiteComplianceCache> SiteComplianceCaches => Set<SiteComplianceCache>();
-
-    public DbSet<ClinicalObservation> ClinicalObservations => Set<ClinicalObservation>();
-
-    public DbSet<FormSubmission> FormSubmissions => Set<FormSubmission>();
-
-    public DbSet<PublishedFormVersionRegistry> PublishedFormVersionRegistries => Set<PublishedFormVersionRegistry>();
 
     public DbSet<ClinicalQuery> ClinicalQueries => Set<ClinicalQuery>();
 
@@ -102,9 +95,6 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new ClinicalSubjectConfiguration());
         modelBuilder.ApplyConfiguration(new SubjectConsentConfiguration());
         modelBuilder.ApplyConfiguration(new SiteComplianceCacheConfiguration());
-        modelBuilder.ApplyConfiguration(new ClinicalObservationConfiguration());
-        modelBuilder.ApplyConfiguration(new FormSubmissionConfiguration());
-        modelBuilder.ApplyConfiguration(new PublishedFormVersionRegistryConfiguration());
         modelBuilder.ApplyConfiguration(new ClinicalQueryConfiguration());
         modelBuilder.ApplyConfiguration(new StagedAdverseEventReviewConfiguration());
         modelBuilder.ApplyConfiguration(new CecDossierConfiguration());

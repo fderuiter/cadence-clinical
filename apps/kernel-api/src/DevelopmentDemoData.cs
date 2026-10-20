@@ -50,7 +50,7 @@ internal static class DevelopmentDemoData
     /// <summary>The roles the realm's users are granted: code, name and capabilities.</summary>
     internal static readonly (string Code, string Name, string[] Capabilities)[] Roles =
     [
-        ("DEMO_CRC", "Clinical research coordinator", ["participant.register", "participant.screen", "enrollment.change_status", "observation.record", "observation.correct"]),
+        ("DEMO_CRC", "Clinical research coordinator", ["participant.register", "participant.screen", "enrollment.change_status", "observation.record", "observation.correct", "collection.open", "collection.record"]),
         ("DEMO_MONITOR", "Clinical research associate", ["validation_finding.investigate", "validation_finding.classify", "validation_finding.explain"]),
         ("DEMO_DATA_MANAGER", "Data manager", ["validation_run.record", "validation_finding.accept", "validation_finding.reopen", "observation.lock"]),
         ("DEMO_DESIGNER", "Study designer", ["protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.amend"]),
@@ -72,6 +72,9 @@ internal static class DevelopmentDemoData
         ("safety.officer", "3d290711-4167-4da5-b55a-4c75760bd27c", "DEMO_SAFETY", null), // deid-ignore: a demo realm user's fixed subject id, not a telephone number
         ("auditor.lead", "d43095eb-1912-40dd-a528-fa04335a2342", "DEMO_AUDITOR", null),
     ];
+
+    /// <summary>The role of the Execution module's form consumer, <c>svc:execution-forms</c>.</summary>
+    private const string ExecutionFormsRole = "DEMO_EXECUTION_FORMS";
 
     /// <summary>The capabilities the bootstrap grants itself, tenant-wide, to write the demo study.</summary>
     private static readonly string[] SeederCapabilities =
@@ -126,6 +129,15 @@ internal static class DevelopmentDemoData
             roles[code] = (await seeder.SendAsync(
                 new DefineRole(tenant, ids.Role(code), code, name, capabilities, Key($"role:{code}"), Reason), cancellationToken).ConfigureAwait(false)).RoleId;
         }
+
+        // The Execution module opens its side of every form the kernel opens, as its consumer's service account
+        // (ADR-2622 §4.1); it needs that one capability across the tenant.
+        var executionForms = await seeder.SendAsync(
+            new DefineRole(tenant, ids.Role(ExecutionFormsRole), ExecutionFormsRole, "Execution forms consumer", ["execution.form.open"], Key($"role:{ExecutionFormsRole}"), Reason),
+            cancellationToken).ConfigureAwait(false);
+        await seeder.SendAsync(
+            new IssueGrant(tenant, ids.Grant("svc:execution-forms"), Actor.ServiceAccount("execution-forms"), null, executionForms.RoleId, AuthorityScope.Tenant(), Epoch, null, false, Key("grant:svc:execution-forms"), Reason),
+            cancellationToken).ConfigureAwait(false);
 
         foreach (var (username, subject, role, site) in Users)
         {

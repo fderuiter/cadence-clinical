@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
 
-using Cadence.Apps.Execution.Infrastructure.EditChecks;
 using Cadence.Rules.Evaluation;
 using Cadence.Rules.Expressions;
 using Cadence.Testing;
@@ -16,7 +14,7 @@ namespace Cadence.UnitTests.Kernel.Rules;
 
 /// <summary>
 /// The rule expression language (spec §10.1, K-RULE-3): parsing is strict, the canonical form round-trips, the
-/// semantics are the documented Kleene and comparison rules, and the EDC grammar it grew from gives the same results.
+/// semantics are the documented Kleene and comparison rules.
 /// </summary>
 public class RuleExpressionTests
 {
@@ -154,43 +152,6 @@ public class RuleExpressionTests
     public void ExpressionVariablesListsEachReadOnceInOrder() =>
         RuleExpressionJson.Variables(Parse("""{"op":"and","args":[{"op":"<","args":[{"var":"SYS"},{"var":"DIA"}]},{"op":"is_empty","args":[{"var":"SYS"}]},{"var":"FLAG"}]}"""))
             .Should().Equal("SYS", "DIA", "FLAG");
-
-    /// <summary>
-    /// The EDC engine's grammar is the seed (K-RULE-3): for well-typed inputs (numbers, booleans, null and
-    /// non-numeric text) both engines agree on the logical, comparison and arithmetic operators. (The seed's FUNCTION
-    /// branch is unreachable, because it treats any "operator" as a binary operator first, so functions have no seed
-    /// behaviour to match.)
-    /// </summary>
-    [Theory(DisplayName = "Expression_OverTypedValues_MatchesTheEdcSeedEngine")]
-    [Trait("Category", "Unit")]
-    [KernelRule("K-RULE-3")]
-    [InlineData("""{"op":"and","args":[{"op":">","args":[{"var":"SYS"},100]},{"op":"<","args":[{"var":"DIA"},90]}]}""")]
-    [InlineData("""{"op":"or","args":[{"op":"==","args":[{"var":"NOTHING"},1]},{"var":"FLAG"}]}""")]
-    [InlineData("""{"op":"and","args":[{"var":"FLAG"},{"var":"NOTHING"}]}""")]
-    [InlineData("""{"op":"or","args":[false,{"var":"NOTHING"}]}""")]
-    [InlineData("""{"op":"not","args":[{"op":"<=","args":[{"var":"SYS"},{"var":"DIA"}]}]}""")]
-    [InlineData("""{"op":"==","args":[{"var":"NOTHING"},null]}""")]
-    [InlineData("""{"op":"!=","args":[{"var":"NAME"},"SUPINE"]}""")]
-    [InlineData("""{"op":">","args":[{"var":"NAME"},"SITTING"]}""")]
-    [InlineData("""{"op":"-","args":[{"var":"SYS"},{"var":"DIA"}]}""")]
-    [InlineData("""{"op":"/","args":[{"var":"SYS"},0]}""")]
-    public void ExpressionOverTypedValuesMatchesTheEdcSeedEngine(string json)
-    {
-        using var document = JsonDocument.Parse(json);
-        var context = Values.ToDictionary(p => p.Key, p => Seed(p.Value), StringComparer.Ordinal);
-
-        var seed = new AstEditCheckEngine().EvaluateAst(document.RootElement, context);
-
-        Seed(Evaluate(json)).Should().Be(seed);
-    }
-
-    private static object? Seed(RuleValue value) => value.Kind switch
-    {
-        RuleValueKind.Null => null,
-        RuleValueKind.Boolean => value.IsTrue,
-        RuleValueKind.Number => value.TryGetNumber(out var n) ? n : null,
-        _ => value.ToString(),
-    };
 
     private static RuleExpression Parse(string json)
     {

@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Cadence.Modules.Execution</RootNamespace>
+    <AssemblyName>Cadence.Modules.Execution</AssemblyName>
+    <Description>Execution as a module of the kernel composition host (ADR-2601): eCRF form instances over kernel CollectionInstances (ADR-2622). Its writes are kernel commands in the kernel's transaction (ADR-2600).</Description>
+    <CadenceRequireXmlDocs>true</CadenceRequireXmlDocs>
+  </PropertyGroup>
+
+  <!-- Modules map their own endpoints (ADR-2601). -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!-- A module references the kernel's abstractions and module SDK only, never Application or Persistence (K-XS-2). -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\packages\kernel\src\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\packages\kernel\src\Cadence.Kernel.Modules\Cadence.Kernel.Modules.csproj" />
+    <ProjectReference Include="..\..\..\packages\engine_core\src\Cadence.Core.Domain.csproj" />
+    <ProjectReference Include="..\..\..\packages\security\src\Cadence.Security.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Design-time only, for `dotnet ef migrations add`. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Cadence.UnitTests" />
+    <InternalsVisibleTo Include="Cadence.IntegrationTests" />
+  </ItemGroup>
+</Project>

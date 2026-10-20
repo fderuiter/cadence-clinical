@@ -15,7 +15,7 @@ using Xunit;
 namespace Cadence.UnitTests.Execution.Endpoints;
 
 /// <summary>
-/// The gateway proxies Execution's undocumented legacy aliases (<c>/api/v1/forms</c>, <c>/api/v1/queries</c>), so each
+/// The gateway proxies Execution's undocumented legacy aliases (<c>/api/v1/queries</c>), so each
 /// alias that changes data refuses a request without <c>X-Change-Reason</c>, as its documented route does. Without the
 /// header the audit trail would record the fallback "system_operation" as the reason for the change (#5060).
 /// </summary>
@@ -24,16 +24,11 @@ public sealed class LegacyAliasChangeReasonTests(ExecutionApiFactory factory) : 
     private const string Id = "00000000-0000-0000-0000-000000000001";
 
     private const string Investigator = "Site Investigator";
-    private const string DataManager = "Data Manager";
     private const string Cra = "CRA";
 
     /// <summary>Each changing route, with the role of a caller the route admits (ADR-2516), so the request reaches the reason check.</summary>
     public static TheoryData<string, string, string, string> ChangingRoutes => new()
     {
-        { "PUT", $"/api/v1/forms/{Id}", """{"payload":"{}"}""", Investigator },
-        { "PUT", $"/api/v1/execution/forms/{Id}", """{"payload":"{}"}""", Investigator },
-        { "POST", $"/api/v1/forms/{Id}/unlock", """{"reason":"Late lab result"}""", DataManager },
-        { "POST", $"/api/v1/execution/forms/{Id}/unlock", """{"reason":"Late lab result"}""", DataManager },
         { "POST", $"/api/v1/queries/{Id}/reopen", """{"reason":"Needs re-check"}""", Cra },
         { "POST", $"/api/v1/execution/queries/{Id}/reopen", """{"reason":"Needs re-check"}""", Cra },
         { "POST", $"/api/v1/queries/{Id}/cancel", """{"reason":"Raised in error"}""", Cra },

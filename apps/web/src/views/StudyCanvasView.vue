@@ -49,11 +49,6 @@
               {{ zoomParticipant.subject_id }}
             </router-link>
           </li>
-          <li v-if="selectedObservation">
-            <span id="zoom-observation" aria-current="page">{{
-              selectedObservation.test_name
-            }}</span>
-          </li>
         </ol>
       </nav>
 
@@ -151,9 +146,7 @@
             <ParticipantRecord
               v-if="recordParticipant"
               :participant="recordParticipant"
-              :selected-observation-id="selectedObservation?.id ?? ''"
               :can-manage="canManage"
-              @select-observation="selectObservation"
               @retry="canvas.loadRecord(recordParticipant.subject_id)"
             />
             <p v-else id="record-not-loaded" class="stage-empty">
@@ -240,7 +233,6 @@
           :participant="inspectedParticipant"
           :node-ref="inspectedNodeText"
           :missing="Boolean(selectedNode) && !selectedParticipant"
-          :observation="selectedObservation"
           :protocol-version="inspectedVersion"
           :protocol-version-error="inspectedVersionError"
           :record-location="
@@ -248,13 +240,7 @@
               ? recordLocationFor(inspectedParticipant)
               : null
           "
-          :can-verify="canVerify"
-          :verify-sdv="canvas.verifySdv"
-          :flag-sdv="canvas.flagSdv"
-          :can-manage="canManage"
           :can-manage-participants="canChangeParticipants"
-          :observation-queries="observationQueries"
-          :raise-query="canvas.raiseQuery"
         />
       </div>
     </template>
@@ -302,7 +288,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter, type LocationQueryRaw } from "vue-router";
-import type { Observation, SubjectSummary } from "../api/executionApi";
+import type { SubjectSummary } from "../api/executionApi";
 import { kernelApi, type KernelProtocolVersion } from "../api/kernelApi";
 import {
   STAGES,
@@ -316,11 +302,7 @@ import {
   tryNodeRef,
   type NodeRef,
 } from "../canvas/nodeRef";
-import {
-  canManageParticipants,
-  canManageQueries,
-  canVerifySource,
-} from "../canvas/authority";
+import { canManageParticipants, canManageQueries } from "../canvas/authority";
 import type { PaletteTarget } from "../canvas/palette";
 import { UNAVAILABLE_SCREENS_ISSUE } from "../router/availability.js";
 import { useAuthStore } from "../stores/auth";
@@ -340,9 +322,8 @@ import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue"
  * service; what no service serves yet is absent rather than mocked (§6.1).
  *
  * The URL holds the whole state, so every view is addressable (UX-2):
- * `/studies/:studyCode?stage=&section=&status=&site=&node=&participant=&observation=`. `node` (the participant or
- * protocol version in the inspector) and `participant` (the participant whose data is open) are kernel NodeRefs (ADR-2481);
- * `observation` is Execution's observation id, which has no kernel reference yet.
+ * `/studies/:studyCode?stage=&section=&status=&site=&node=&participant=`. `node` (the participant or protocol version in
+ * the inspector) and `participant` (the participant whose data is open) are kernel NodeRefs (ADR-2481).
  */
 interface StudyQuery {
   stage?: string;
@@ -351,7 +332,6 @@ interface StudyQuery {
   site?: string;
   node?: string;
   participant?: string;
-  observation?: string;
 }
 
 const route = useRoute();
@@ -425,11 +405,6 @@ const recordParticipant = computed<SubjectSummary | null>(() =>
     ? (canvas.knownParticipants[recordRef.value.id] ?? null)
     : null
 );
-const selectedObservation = computed<Observation | null>(() => {
-  const id = single(route.query.observation);
-  if (!id || !recordParticipant.value) return null;
-  return canvas.record.observations.find((o) => o.id === id) ?? null;
-});
 const inspectedParticipant = computed(
   () => selectedParticipant.value ?? recordParticipant.value
 );
@@ -438,14 +413,6 @@ const inspectedNodeText = computed(() => {
   const node = participant ? tryNodeRef("participant", participant.id) : null;
   return node ? formatNodeRef(node) : "";
 });
-const canVerify = computed(() => canVerifySource(authStore));
-const observationQueries = computed(() =>
-  selectedObservation.value
-    ? canvas.record.queries.filter(
-        (q) => q.observation_id === selectedObservation.value?.id
-      )
-    : []
-);
 const canManage = computed(() => canManageQueries(authStore));
 const canChangeParticipants = computed(() => canManageParticipants(authStore));
 
@@ -460,7 +427,6 @@ const zoomSite = computed(
   () => zoomParticipant.value?.site_id || siteFilter.value || ""
 );
 const zoomCurrent = computed(() => {
-  if (selectedObservation.value) return "observation";
   if (recordParticipant.value) return "participant";
   if (selectedParticipant.value) return "participant";
   return zoomSite.value ? "site" : "study";
@@ -509,21 +475,6 @@ function recordLocationFor(participant: SubjectSummary) {
   const node = tryNodeRef("participant", participant.id);
   const text = node ? formatNodeRef(node) : "";
   return studyLocation({ stage: "conduct", participant: text });
-}
-
-function selectObservation(observation: Observation) {
-  router.push(
-    studyLocation({
-      stage: "conduct",
-      participant: single(route.query.participant),
-      observation: observation.id,
-    })
-  );
-  nextTick(() =>
-    document.getElementById("canvas-inspector")?.scrollIntoView?.({
-      block: "nearest",
-    })
-  );
 }
 
 function selectVersion(version: KernelProtocolVersion) {

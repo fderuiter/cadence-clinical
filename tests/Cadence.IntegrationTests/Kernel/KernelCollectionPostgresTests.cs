@@ -85,7 +85,7 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
     /// A first page records two values and a second records a third and corrects one, leaving one unchanged: each save
     /// is one activity that writes the form, its changed observations, their audit links and events together; every new
     /// observation version has a GovernedBy edge from the protocol version; and the result and the form read return
-    /// every value at its current revision.
+    /// every value at its current revision, with the specification's items in their order.
     /// </summary>
     [Fact(DisplayName = "Save_RecordsAndCorrectsAPage_AsOneActivity")]
     [KernelRule("K-FACT-6")]
@@ -114,6 +114,7 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
             .Should().Equal(
                 (Comment, (ObservationValue)new TextValue("Left arm, seated"), 1), (Diastolic, (ObservationValue)Mmhg(91), 1), (Systolic, (ObservationValue)Mmhg(128), 2));
         record.Locks.Should().BeEmpty();
+        record.Items.Select(i => (i.Id, i.Required)).Should().Equal((Systolic, true), (Diastolic, true), (Comment, false));
 
         await using var db = fixture.CreateContext(form.Subject.Tenant);
         var instanceKey = form.Instance.ToString();

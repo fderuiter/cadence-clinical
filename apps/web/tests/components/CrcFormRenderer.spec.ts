@@ -64,10 +64,8 @@ describe("CrcFormRenderer.vue", () => {
         lookupStatuses: {},
         getValidationError: () => null,
         isCraUser: false,
-        isAuthorizedForBulkSdv: false,
         sdvStates: {},
         getSdvKey: (id: string) => `sdv_${id}`,
-        selectedBatchFields: [],
         ...customProps,
       },
       global: {

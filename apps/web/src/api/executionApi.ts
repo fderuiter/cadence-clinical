@@ -2,13 +2,11 @@ import { encodeChangeReason } from "./changeReason";
 import { createOpenApiClient, unwrapResponse } from "./client";
 import type { components, paths } from "./generated/execution";
 
-/** The reason for change recorded when a monitor verifies an observation against its source. */
-export const SDV_VERIFY_REASON = "Verified against source documents";
-
 /**
  * Typed client for the .NET Execution service, generated from docs/openapi/execution_openapi.json.
  *
- * Every Execution call in the web app goes through this client (docs/web/API_MIGRATION.md).
+ * Every Execution call in the web app goes through this client (docs/web/API_MIGRATION.md). eCRF forms are not here:
+ * they are kernel form instances served by the kernel host (ecrfFormsApi.ts, ADR-2622).
  */
 type Schemas = components["schemas"];
 
@@ -17,33 +15,14 @@ export type SubjectList = Schemas["Execution_SubjectListResponse"];
 export type Subject = Schemas["Execution_SubjectResponse"];
 export type ComplianceStatus = Schemas["Execution_ComplianceStatusResponse"];
 export type OperationEnvelope = Schemas["Execution_OperationEnvelopeResponse"];
-export type Observation = Schemas["Execution_ObservationResponse"];
-export type FormSubmission = Schemas["Execution_FormSubmissionResponse"];
 export type ClinicalQuery = Schemas["Execution_ClinicalQueryResponse"];
 export type BatchQueryResponse = Schemas["Execution_BatchQueryResponse"];
-
-export interface RaiseQuery {
-  studyId: string;
-  subjectCode: string;
-  observation: Observation;
-  explanation: string;
-}
 
 export interface AddSubject {
   studyId: string;
   subjectCode: string;
   siteId?: string;
   reason: string;
-}
-
-export interface CreateFormSubmission {
-  studyId: string;
-  subjectId: string;
-  formId: string;
-  siteId?: string | null;
-  visitId?: string | null;
-  protocolVersion?: string | null;
-  payload?: string | null;
 }
 
 export interface ListSubjectsQuery {
@@ -137,129 +116,11 @@ export const executionApi = {
     );
   },
 
-  /** A participant's observations (GET /api/v1/execution/observations/subject/{studyId}/{subjectId}), by subject code. */
-  listObservations(
-    studyId: string,
-    subjectCode: string
-  ): Promise<Observation[]> {
-    return unwrapResponse(
-      client.GET(
-        "/api/v1/execution/observations/subject/{studyId}/{subjectId}",
-        {
-          params: { path: { studyId, subjectId: subjectCode } },
-        }
-      )
-    );
-  },
-
-  /** A participant's form submissions (GET /api/v1/execution/forms/subject/{studyId}/{subjectId}), by subject code. */
-  listFormSubmissions(
-    studyId: string,
-    subjectCode: string
-  ): Promise<FormSubmission[]> {
-    return unwrapResponse(
-      client.GET("/api/v1/execution/forms/subject/{studyId}/{subjectId}", {
-        params: { path: { studyId, subjectId: subjectCode } },
-      })
-    );
-  },
-
-  /** Creates an initial form submission (POST /api/v1/execution/forms). */
-  createFormSubmission({
-    studyId,
-    subjectId,
-    formId,
-    siteId,
-    visitId,
-    protocolVersion,
-    payload,
-  }: CreateFormSubmission): Promise<FormSubmission> {
-    return unwrapResponse(
-      client.POST("/api/v1/execution/forms", {
-        body: {
-          study_id: studyId,
-          subject_id: subjectId,
-          form_id: formId,
-          site_id: siteId ?? null,
-          visit_id: visitId ?? null,
-          protocol_version: protocolVersion ?? null,
-          payload: payload ?? null,
-        },
-      })
-    );
-  },
-
-  /** Finalizes submission state on backend server (POST /api/v1/execution/forms/{id}/complete). */
-  completeFormSubmission(id: string): Promise<FormSubmission> {
-    return unwrapResponse(
-      client.POST("/api/v1/execution/forms/{id}/complete", {
-        params: { path: { id } },
-      })
-    );
-  },
-
-  /**
-   * Records that the signed-in user verified an observation against its source. Execution records who and
-   * when, refuses (403) anyone but a CRA, monitor or data manager, and requires a reason for change (#4920).
-   */
-  verifyObservationSdv(
-    id: string,
-    reason: string = SDV_VERIFY_REASON
-  ): Promise<Observation> {
-    return unwrapResponse(
-      client.POST("/api/v1/execution/observations/{id}/sdv", {
-        params: { path: { id } },
-        headers: { "X-Change-Reason": encodeChangeReason(reason) },
-      })
-    );
-  },
-
-  /**
-   * Flags an observation for re-verification, clearing any earlier verification. The reason is recorded on the
-   * observation and sent as the reason for change.
-   */
-  flagObservationSdv(id: string, reason: string): Promise<Observation> {
-    return unwrapResponse(
-      client.POST("/api/v1/execution/observations/{id}/sdv/flag", {
-        params: { path: { id } },
-        body: { reason },
-        headers: { "X-Change-Reason": encodeChangeReason(reason) },
-      })
-    );
-  },
-
   /** Queries on a participant (GET /api/v1/execution/queries?study_id=&subject_id=), by subject code. */
   listQueries(studyId: string, subjectCode: string): Promise<ClinicalQuery[]> {
     return unwrapResponse(
       client.GET("/api/v1/execution/queries", {
         params: { query: { study_id: studyId, subject_id: subjectCode } },
-      })
-    );
-  },
-
-  /** Raises a query on one observation. Execution records the signed-in user as its author. */
-  raiseQuery({
-    studyId,
-    subjectCode,
-    observation,
-    explanation,
-  }: RaiseQuery): Promise<ClinicalQuery> {
-    return unwrapResponse(
-      client.POST("/api/v1/execution/queries", {
-        body: {
-          study_id: studyId,
-          subject_id: subjectCode,
-          test_code: observation.test_code,
-          domain: observation.domain,
-          observation_id: observation.id,
-          visit_id: observation.visit_id ?? null,
-          site_id: observation.site_id ?? null,
-          explanation,
-          // Execution's own defaults for a query a person raises.
-          status: "OPEN",
-          origin: "MANUAL",
-          priority: "MEDIUM",
-        },
       })
     );
   },

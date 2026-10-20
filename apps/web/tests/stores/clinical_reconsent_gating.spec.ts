@@ -54,7 +54,9 @@ describe("Shared Clinical Store State & Reactive Subject Re-Consent Gating Speci
     const amendmentSubjectIds = amendmentWrapper.vm.subjectsList.map(
       (s: any) => s.id
     );
-    const ecrfSubjectIds = ecrfWrapper.vm.availableSubjects;
+    const ecrfSubjectIds = ecrfWrapper
+      .findAll("#ecrf-subject-selector option")
+      .map((option) => option.attributes("value"));
 
     expect(amendmentSubjectIds).toEqual(storeSubjectIds);
     expect(ecrfSubjectIds).toEqual(storeSubjectIds);

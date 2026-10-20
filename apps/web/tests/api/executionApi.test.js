@@ -132,7 +132,7 @@ describe("executionApi site activation", () => {
   });
 });
 
-describe("executionApi: participant data, SDV and queries (#4828)", () => {
+describe("executionApi: participant queries (#4828)", () => {
   let fetchSpy;
 
   beforeEach(() => {
@@ -156,122 +156,15 @@ describe("executionApi: participant data, SDV and queries (#4828)", () => {
     };
   }
 
-  it("reads a participant's observations, forms and queries by study and subject code", async () => {
-    fetchSpy
-      .mockResolvedValueOnce(jsonResponse(200, []))
-      .mockResolvedValueOnce(jsonResponse(200, []))
-      .mockResolvedValueOnce(jsonResponse(200, []));
+  it("reads a participant's queries by study and subject code", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, []));
 
-    await executionApi.listObservations("CAD-101", "017-0001");
-    await executionApi.listFormSubmissions("CAD-101", "017-0001");
     await executionApi.listQueries("CAD-101", "017-0001");
 
-    expect((await sent(0)).path).toBe(
-      "/api/v1/execution/observations/subject/CAD-101/017-0001"
-    );
-    expect((await sent(1)).path).toBe(
-      "/api/v1/execution/forms/subject/CAD-101/017-0001"
-    );
-    expect(await sent(2)).toMatchObject({
+    expect(await sent(0)).toMatchObject({
       method: "GET",
       path: "/api/v1/execution/queries",
       search: { study_id: "CAD-101", subject_id: "017-0001" },
-    });
-  });
-
-  it("dispatches POST /api/v1/execution/forms and POST /api/v1/execution/forms/{id}/complete", async () => {
-    const draftSubmission = { id: "sub-123", status: "DRAFT" };
-    const completedSubmission = { id: "sub-123", status: "COMPLETED" };
-    fetchSpy
-      .mockResolvedValueOnce(jsonResponse(201, draftSubmission))
-      .mockResolvedValueOnce(jsonResponse(200, completedSubmission));
-
-    const draftResult = await executionApi.createFormSubmission({
-      studyId: "STUDY-101",
-      subjectId: "SUBJ-001",
-      formId: "VS_DEMO",
-      siteId: "SITE-101",
-      visitId: "Screening",
-      protocolVersion: "1.0.0",
-      payload: '{"SYSBP":120}',
-    });
-
-    const completedResult = await executionApi.completeFormSubmission(
-      draftResult.id
-    );
-
-    expect(draftResult).toEqual(draftSubmission);
-    expect(completedResult).toEqual(completedSubmission);
-
-    const firstReq = await sent(0);
-    expect(firstReq.method).toBe("POST");
-    expect(firstReq.path).toBe("/api/v1/execution/forms");
-    expect(firstReq.body).toEqual({
-      study_id: "STUDY-101",
-      subject_id: "SUBJ-001",
-      form_id: "VS_DEMO",
-      site_id: "SITE-101",
-      visit_id: "Screening",
-      protocol_version: "1.0.0",
-      payload: '{"SYSBP":120}',
-    });
-
-    const secondReq = await sent(1);
-    expect(secondReq.method).toBe("POST");
-    expect(secondReq.path).toBe("/api/v1/execution/forms/sub-123/complete");
-  });
-
-  it("verifies without a body and flags with the reason, each with a reason for change", async () => {
-    fetchSpy
-      .mockResolvedValueOnce(jsonResponse(200, { id: "o1" }))
-      .mockResolvedValueOnce(jsonResponse(200, { id: "o1" }));
-
-    await executionApi.verifyObservationSdv("o1");
-    await executionApi.flagObservationSdv("o1", "Unit differs");
-
-    expect(await sent(0)).toMatchObject({
-      method: "POST",
-      path: "/api/v1/execution/observations/o1/sdv",
-      body: null,
-      reason: "Verified against source documents",
-    });
-    expect(await sent(1)).toMatchObject({
-      path: "/api/v1/execution/observations/o1/sdv/flag",
-      body: { reason: "Unit differs" },
-      reason: "Unit differs",
-    });
-  });
-
-  it("raises a query on an observation with Execution's defaults and no author of its own", async () => {
-    fetchSpy.mockResolvedValueOnce(jsonResponse(201, { id: "q1" }));
-
-    await executionApi.raiseQuery({
-      studyId: "CAD-101",
-      subjectCode: "017-0001",
-      observation: {
-        id: "o1",
-        test_code: "SYSBP",
-        domain: "VS",
-        visit_id: "Week 12",
-        site_id: "017",
-      },
-      explanation: "Confirm the cuff size",
-    });
-
-    const request = await sent();
-    expect(request.path).toBe("/api/v1/execution/queries");
-    expect(request.body).toEqual({
-      study_id: "CAD-101",
-      subject_id: "017-0001",
-      test_code: "SYSBP",
-      domain: "VS",
-      observation_id: "o1",
-      visit_id: "Week 12",
-      site_id: "017",
-      explanation: "Confirm the cuff size",
-      status: "OPEN",
-      origin: "MANUAL",
-      priority: "MEDIUM",
     });
   });
 

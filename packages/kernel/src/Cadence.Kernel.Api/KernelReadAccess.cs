@@ -1,0 +1,24 @@
+using System.Threading;
+using System.Threading.Tasks;
+
+using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Modules;
+using Cadence.Kernel.References;
+
+namespace Cadence.Kernel.Api;
+
+/// <summary>
+/// <see cref="IKernelReadAccess"/> over the same masking as the kernel's reads (<see cref="KernelReadMasking"/>), for a
+/// host that registers module read endpoints.
+/// </summary>
+/// <param name="visibility">The host's visibility.</param>
+/// <param name="actor">The request's verified actor.</param>
+public sealed class KernelReadAccess(INodeVisibility visibility, ICurrentActor actor) : IKernelReadAccess
+{
+    /// <inheritdoc />
+    public async ValueTask<bool> CanSeeAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken)
+    {
+        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [node], cancellationToken).ConfigureAwait(false);
+        return masks.For(node) is null;
+    }
+}

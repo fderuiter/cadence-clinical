@@ -29,6 +29,7 @@
     <ProjectReference Include="..\..\apps\payments\src\Cadence.Apps.Payments.csproj" />
     <ProjectReference Include="..\..\apps\econsent\src\Cadence.Apps.Econsent.csproj" />
     <ProjectReference Include="..\..\apps\execution\src\Cadence.Apps.Execution.csproj" />
+    <ProjectReference Include="..\..\apps\execution\module\Cadence.Modules.Execution.csproj" />
     <ProjectReference Include="..\..\apps\apphost\src\Cadence.AppHost.csproj" />
     <ProjectReference Include="..\..\packages\topology\src\Cadence.Topology.csproj" />
     <ProjectReference Include="..\..\apps\gateway\src\Cadence.Apps.Gateway.csproj" />

@@ -3,10 +3,6 @@
  * the lower-case hex SHA-256 of exactly the targets it signs, computed the same way as the service.
  */
 
-/** The action and semantic action a batch PI form sign-off token is bound to. */
-export const BATCH_SIGN_OFF_ACTION = "/api/v1/execution/batch-sign-off";
-export const BATCH_SIGN_OFF_SEMANTIC_ACTION = "execution.form.approve";
-
 /** The action and semantic action a delegation-log sign-off token is bound to. */
 export const DELEGATION_SIGN_OFF_ACTION =
   "/api/v1/training/delegations/bulk-signoff";
@@ -26,19 +22,6 @@ async function sha256Hex(text: string): Promise<string> {
   return Array.from(new Uint8Array(digest))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
-}
-
-/** `sha256(study:TYPE:sortedIds:reason)` for `/api/v1/execution/batch-sign-off`. */
-export function executionBatchBindingId(
-  studyId: string,
-  targetType: string,
-  targetIds: string[],
-  signingReason: string
-): Promise<string> {
-  const ids = ordinalSort(targetIds.map((id) => String(id).trim())).join(",");
-  return sha256Hex(
-    `${studyId.trim()}:${targetType.trim().toUpperCase()}:${ids}:${signingReason.trim()}`
-  );
 }
 
 /** `sha256(sortedIds joined with ",")` for the delegation-log sign-off. */

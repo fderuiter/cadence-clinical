@@ -1,6 +1,5 @@
 using System;
 
-using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
@@ -21,7 +20,6 @@ public sealed class StagedAdverseEventReview : AggregateRoot<string>
     public SubjectCode SubjectId { get; private set; }
     public string? VisitId { get; private set; }
     public ObservationId? ObservationId { get; private set; }
-    public FormSubmissionId? FormSubmissionId { get; private set; }
     public QueryId? QueryId { get; private set; }
     public TestCode TestCode { get; private set; }
     public string TestName { get; private set; } = string.Empty;
@@ -59,7 +57,6 @@ public sealed class StagedAdverseEventReview : AggregateRoot<string>
         SiteCode? siteId = null,
         string? visitId = null,
         ObservationId? observationId = null,
-        FormSubmissionId? formSubmissionId = null,
         QueryId? queryId = null,
         string gradingScale = "CTCAE_V5")
     {
@@ -71,7 +68,6 @@ public sealed class StagedAdverseEventReview : AggregateRoot<string>
             SiteId = siteId,
             VisitId = visitId,
             ObservationId = observationId,
-            FormSubmissionId = formSubmissionId,
             QueryId = queryId,
             TestCode = testCode,
             TestName = testName,
@@ -88,12 +84,6 @@ public sealed class StagedAdverseEventReview : AggregateRoot<string>
             Version = 1,
             IsDeleted = false
         };
-    }
-
-    public void LinkReferences(FormSubmissionId? formSubmissionId, QueryId? queryId)
-    {
-        if (formSubmissionId.HasValue) FormSubmissionId = formSubmissionId.Value;
-        if (queryId.HasValue) QueryId = queryId.Value;
     }
 
     public void Confirm(string reviewedBy, string? notes, string reasonForChange, DateTimeOffset reviewedAt)

@@ -160,7 +160,6 @@ apps/web/src/components/quality/StatisticalForensicsViewer.vue|zip_geographic|8d
 apps/web/src/components/quality/StatisticalForensicsViewer.vue|zip_geographic|d6d20fb139e917b0
 apps/web/src/utils/cryoLoggerParser.ts|zip_geographic|6cdd56b8d91e7d1e
 apps/web/src/views/CtmsView.vue|zip_geographic|0b509a92449d75a2
-apps/web/src/views/EcrfView.vue|zip_geographic|c4b83887170e04cb
 apps/web/src/views/ImagingView.vue|dates|2d78dd6dcf0188e7
 apps/web/src/views/ImagingView.vue|dates|dfd8e7dd1e622c8f
 apps/web/src/views/ImagingView.vue|ip_mac_addresses|17f71c0537087b11

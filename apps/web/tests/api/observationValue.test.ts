@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
+  MISSING_REASONS,
   formatObservationValue,
   parseCorrection,
+  parseFormEntry,
   sameObservationValue,
   type KernelObservationValue,
 } from "@/api/observationValue";
@@ -101,5 +103,62 @@ describe("observation values (ADR-2623)", () => {
         { type: "text", value: "b" }
       )
     ).toBe(false);
+  });
+});
+
+describe("parseFormEntry (ADR-2622)", () => {
+  it("keeps the kind of an item's current value", () => {
+    expect(
+      parseFormEntry("130", {
+        value_kind: "Quantity",
+        unit: "mm[Hg]",
+        value: { type: "quantity", value: 120, unit: "mm[Hg]" },
+      })
+    ).toEqual({
+      ok: true,
+      value: {
+        type: "quantity",
+        value: "130",
+        unit: "mm[Hg]",
+        comparator: null,
+      },
+    });
+  });
+
+  it("reads a first value by the item's value kind", () => {
+    const item = (value_kind: string | null, unit: string | null = null) => ({
+      value_kind,
+      unit,
+      value: null,
+    });
+    expect(parseFormEntry("82", item("Quantity", "mm[Hg]"))).toMatchObject({
+      ok: true,
+      value: { type: "quantity", value: "82", unit: "mm[Hg]" },
+    });
+    expect(parseFormEntry("yes", item("Boolean"))).toEqual({
+      ok: true,
+      value: { type: "boolean", value: true },
+    });
+    expect(parseFormEntry("2027-03-14", item("DateTime"))).toEqual({
+      ok: true,
+      value: { type: "dateTime", value: "2027-03-14" },
+    });
+    expect(parseFormEntry("note", item(null))).toEqual({
+      ok: true,
+      value: { type: "text", value: "note" },
+    });
+    expect(parseFormEntry("82", item("Quantity"))).toEqual({
+      ok: false,
+      message: "This item names no unit.",
+    });
+    expect(parseFormEntry("C123", item("Coded")).ok).toBe(false);
+  });
+
+  it("offers the missing reasons a user may record, not the kernel's Masked", () => {
+    expect(MISSING_REASONS.map((r) => r.reason)).not.toContain("Masked");
+    expect(MISSING_REASONS).toContainEqual({
+      reason: "NotDone",
+      text: "Not done",
+    });
   });
 });

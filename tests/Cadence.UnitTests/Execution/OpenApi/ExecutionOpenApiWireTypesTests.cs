@@ -41,7 +41,6 @@ public sealed class ExecutionOpenApiWireTypesTests(ExecutionApiFactory factory) 
     }
 
     [Theory]
-    [InlineData("FormSubmissionStatus", new[] { "DRAFT", "COMPLETED", "APPROVED" })]
     [InlineData("QueryStatus", new[] { "NONE", "CANDIDATE", "DRAFT_AI", "OPEN", "ANSWERED", "RESOLVED", "CLOSED", "REOPENED", "CANCELLED" })]
     public async Task Statuses_AreDescribedAsTheirWireCodes(string schemaName, string[] codes)
     {

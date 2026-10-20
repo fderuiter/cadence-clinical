@@ -6,8 +6,6 @@ using Cadence.Apps.Execution.Application.Cgt;
 using Cadence.Apps.Execution.Application.Coding;
 using Cadence.Apps.Execution.Application.Compliance;
 using Cadence.Apps.Execution.Application.Devices;
-using Cadence.Apps.Execution.Application.EditChecks;
-using Cadence.Apps.Execution.Application.Forms;
 using Cadence.Apps.Execution.Application.Observations;
 using Cadence.Apps.Execution.Application.Queries;
 using Cadence.Apps.Execution.Application.Serialization;
@@ -20,7 +18,6 @@ using Cadence.Apps.Execution.Domain.Toxicity;
 using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure;
 using Cadence.Apps.Execution.Infrastructure.Consumers;
-using Cadence.Apps.Execution.Infrastructure.EditChecks;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
 using Cadence.Apps.Execution.Infrastructure.OpenApi;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
@@ -118,9 +115,6 @@ builder.Services.AddSingleton<IDemographicsEncryptionService, AesGcmDemographics
 builder.Services.AddSingleton<IDemographicsNormalizationService, DemographicsNormalizationService>();
 builder.Services.AddSingleton<IUcumNormalizationService, UcumNormalizationService>();
 builder.Services.AddSingleton<ILabRangeService>(sp => new LabRangeService(sp.GetRequiredService<IServiceScopeFactory>()));
-builder.Services.AddSingleton<IOutlierDetectionService, OutlierDetectionService>();
-builder.Services.AddScoped<IBatchEvaluationContextLoader, BatchEvaluationContextLoader>();
-builder.Services.AddSingleton<IEditCheckEngine, AstEditCheckEngine>();
 
 // ExecutionDbContext (Scoped, the EF Core default `AddDbContext` lifetime) -- the connection string mirrors
 // ExecutionDbContextFactory's own design-time convention exactly (same POSTGRES_CONNECTION_STRING
@@ -164,9 +158,6 @@ builder.Services.AddCadenceDurableSigTokenStore<ExecutionDbContext>();
 builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();
 builder.Services.AddScoped<IConsentRepository, ConsentRepository>();
 builder.Services.AddScoped<ISiteComplianceRepository, SiteComplianceRepository>();
-builder.Services.AddScoped<IObservationRepository, ObservationRepository>();
-builder.Services.AddScoped<IFormSubmissionRepository, FormSubmissionRepository>();
-builder.Services.AddScoped<IPublishedFormVersionRegistryRepository, PublishedFormVersionRegistryRepository>();
 builder.Services.AddScoped<IClinicalQueryRepository, ClinicalQueryRepository>();
 builder.Services.AddScoped<IStagedAdverseEventReviewRepository, StagedAdverseEventReviewRepository>();
 builder.Services.AddScoped<ICecRepository, CecRepository>();
@@ -195,10 +186,7 @@ builder.Services.AddScoped<IAuditActorScope>(sp => sp.GetRequiredService<Ambient
 // this slice yet).
 builder.Services.AddScoped<ISubjectApplicationService, SubjectApplicationService>();
 builder.Services.AddScoped<ISiteComplianceApplicationService, SiteComplianceApplicationService>();
-builder.Services.AddScoped<IObservationApplicationService, ObservationApplicationService>();
-builder.Services.AddScoped<IFormSubmissionApplicationService, FormSubmissionApplicationService>();
 builder.Services.AddScoped<IClinicalQueryApplicationService, ClinicalQueryApplicationService>();
-builder.Services.AddScoped<IAutoQueryDispatchService, AutoQueryDispatchService>();
 builder.Services.AddScoped<ILabToxicityGovernanceService, LabToxicityGovernanceService>();
 builder.Services.AddScoped<ILabRangeImportService, LabRangeImportService>();
 builder.Services.AddScoped<ICecApplicationService, CecApplicationService>();
@@ -243,7 +231,6 @@ builder.Services.AddMassTransit(x =>
     });
 
     x.AddConsumer<EConsentCompletedConsumer>();
-    x.AddConsumer<FormVersionPublishedConsumer>();
 
     x.UsingInMemory((context, cfg) => cfg.ConfigureEndpoints(context));
 });
@@ -261,8 +248,6 @@ app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service =
 // Route-group registrations
 app.MapSubjectEndpoints();
 app.MapSiteComplianceEndpoints();
-app.MapObservationEndpoints();
-app.MapFormEndpoints();
 app.MapQueryEndpoints();
 app.MapLabToxicityEndpoints();
 app.MapLabRangeEndpoints();

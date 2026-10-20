@@ -1,4 +1,3 @@
-using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
@@ -41,10 +40,6 @@ public sealed class StagedAdverseEventReviewConfiguration : IEntityTypeConfigura
         builder.Property(r => r.ObservationId)
             .HasColumnName("observation_id")
             .HasConversion(c => c.HasValue ? c.Value.Value.ToString() : null, v => string.IsNullOrEmpty(v) ? (ObservationId?)null : ObservationId.Parse(v));
-
-        builder.Property(r => r.FormSubmissionId)
-            .HasColumnName("form_submission_id")
-            .HasConversion(c => c.HasValue ? c.Value.Value.ToString() : null, v => string.IsNullOrEmpty(v) ? (FormSubmissionId?)null : FormSubmissionId.Parse(v));
 
         builder.Property(r => r.QueryId)
             .HasColumnName("query_id")

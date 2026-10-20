@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
-using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Toxicity;
 using Cadence.Contracts;
@@ -19,7 +18,6 @@ namespace Cadence.Apps.Execution.Application.Toxicity;
 
 public sealed class LabToxicityGovernanceService(
     IStagedAdverseEventReviewRepository stagedReviewRepository,
-    IFormSubmissionRepository formSubmissionRepository,
     IClinicalQueryRepository queryRepository,
     IPublishEndpoint publishEndpoint,
     IClock clock,
@@ -62,15 +60,6 @@ public sealed class LabToxicityGovernanceService(
         {
             review.Confirm(reviewerId, request.InvestigatorNotes, request.ReasonForChange, now);
 
-            if (review.FormSubmissionId.HasValue)
-            {
-                var form = await formSubmissionRepository.GetForUpdateAsync(review.FormSubmissionId.Value, cancellationToken).ConfigureAwait(false);
-                if (form != null && form.Status == FormSubmissionStatus.Draft)
-                {
-                    form.Complete();
-                }
-            }
-
             if (review.QueryId.HasValue)
             {
                 var query = await queryRepository.GetForUpdateAsync(review.QueryId.Value, cancellationToken).ConfigureAwait(false);
@@ -93,25 +82,15 @@ public sealed class LabToxicityGovernanceService(
                 CtcaeGrade: review.CtcaeGrade,
                 ToxicityTerm: review.ToxicityTerm,
                 IsHysLawWarning: review.IsHysLawWarning,
-                FormSubmissionId: review.FormSubmissionId?.ToString(),
                 QueryId: review.QueryId?.ToString(),
                 DetectedAt: now
             ), cancellationToken).ConfigureAwait(false);
 
-            msg = "Staged AE review confirmed successfully and draft AE form submission promoted.";
+            msg = "Staged AE review confirmed successfully.";
         }
         else if (actionUpper == "DISMISS")
         {
             review.Dismiss(reviewerId, request.InvestigatorNotes, request.ReasonForChange, now);
-
-            if (review.FormSubmissionId.HasValue)
-            {
-                var form = await formSubmissionRepository.GetForUpdateAsync(review.FormSubmissionId.Value, cancellationToken).ConfigureAwait(false);
-                if (form != null)
-                {
-                    form.Deactivate();
-                }
-            }
 
             if (review.QueryId.HasValue)
             {
@@ -127,15 +106,6 @@ public sealed class LabToxicityGovernanceService(
         else if (actionUpper == "ESCALATE_SAE")
         {
             review.Escalate(reviewerId, request.InvestigatorNotes, request.ReasonForChange, now);
-
-            if (review.FormSubmissionId.HasValue)
-            {
-                var form = await formSubmissionRepository.GetForUpdateAsync(review.FormSubmissionId.Value, cancellationToken).ConfigureAwait(false);
-                if (form != null && form.Status == FormSubmissionStatus.Draft)
-                {
-                    form.Complete();
-                }
-            }
 
             if (review.QueryId.HasValue)
             {
@@ -158,7 +128,6 @@ public sealed class LabToxicityGovernanceService(
                 CtcaeGrade: review.CtcaeGrade,
                 ToxicityTerm: review.ToxicityTerm,
                 IsHysLawWarning: review.IsHysLawWarning,
-                FormSubmissionId: review.FormSubmissionId?.ToString(),
                 QueryId: review.QueryId?.ToString(),
                 DetectedAt: now
             ), cancellationToken).ConfigureAwait(false);
@@ -176,7 +145,6 @@ public sealed class LabToxicityGovernanceService(
             Id: review.Id,
             ReviewStatus: review.ReviewStatus,
             ActionTaken: actionUpper,
-            FormSubmissionId: review.FormSubmissionId?.ToString(),
             QueryId: review.QueryId?.ToString(),
             Message: msg,
             Timestamp: now
@@ -241,7 +209,6 @@ public sealed class LabToxicityGovernanceService(
             SubjectId: r.SubjectId.Value,
             VisitId: r.VisitId,
             ObservationId: r.ObservationId?.ToString(),
-            FormSubmissionId: r.FormSubmissionId?.ToString(),
             QueryId: r.QueryId?.ToString(),
             TestCode: r.TestCode.Value,
             TestName: r.TestName,

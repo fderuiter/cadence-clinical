@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 
 using Microsoft.EntityFrameworkCore;
@@ -51,6 +52,15 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
         var memberGuids = memberIds.Select(m => m.Value).ToHashSet();
         var assertions = scoped.About(a => a.TargetKind == NodeKinds.Observation && memberGuids.Contains(a.TargetId));
 
+        // The form's layout: the specification's items in the version that governs it.
+        var content = await db.ProtocolVersions.AsNoTracking()
+            .Where(v => v.Id == found.ProtocolVersionId)
+            .Select(v => v.Content)
+            .SingleAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var items = ProtocolDesignDocument.Read(content).Design?.CollectionSpecs
+            .FirstOrDefault(s => string.Equals(s.Id, found.CollectionSpecId, StringComparison.Ordinal))?.Items ?? [];
+
         var instanceGuid = found.Id.Value;
         var attestations = await db.Attestations.AsNoTracking()
             .Where(a => a.TargetKind == NodeKinds.CollectionInstance && a.TargetId == instanceGuid)
@@ -72,6 +82,7 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             found.OpenedBy,
             found.OpenedAt,
             found.VersionIndex,
+            items,
             values,
             scoped.Locks(),
             assertions,

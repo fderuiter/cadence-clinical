@@ -71,7 +71,6 @@ describe("eCRF queries outside a demo build", () => {
 
       expect(JSON.parse(JSON.stringify(store.formQueries))).toEqual(before);
       expect(ledger).not.toHaveBeenCalled();
-      expect(view.vm.showReauthModal).toBe(false);
       expect(useToastStore().toasts[0]).toMatchObject({
         tone: "error",
         title: `${action} isn't available yet`,
