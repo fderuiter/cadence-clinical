@@ -43,8 +43,8 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.11" />
 
     <!-- Asynchronous Messaging & Transactional Outbox -->
-    <PackageVersion Include="MassTransit" Version="8.3.6" />
-    <PackageVersion Include="MassTransit.EntityFrameworkCore" Version="8.3.6" />
+    <PackageVersion Include="MassTransit" Version="8.5.11" />
+    <PackageVersion Include="MassTransit.EntityFrameworkCore" Version="8.5.11" />
 
     <!-- CLI & Developer Experience -->
     <PackageVersion Include="Spectre.Console" Version="0.49.1" />
