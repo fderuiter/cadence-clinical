@@ -9,7 +9,6 @@ namespace Cadence.Apps.Execution.Domain.Ports;
 /// Persistence port for CEC dossier aggregates and Chair adjudication determination records.
 /// @req:PRD-CEC-001
 /// @req:PRD-CEC-002
-/// @req:PRD-SYS-053
 /// </summary>
 public interface ICecRepository
 {

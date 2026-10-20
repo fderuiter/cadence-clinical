@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Cadence.Apps.Notifications.Infrastructure.Consumers;
 using Cadence.Apps.Notifications.Infrastructure.Persistence;
 using Cadence.Contracts;
-using Cadence.Testing;
 using Cadence.Testing.Time;
 
 using FluentAssertions;
@@ -37,7 +36,6 @@ public class ClinicalQueryRaisedConsumerTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public async Task Consume_ValidClinicalQueryRaised_CreatesNotificationRecord()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -77,7 +75,6 @@ public class ClinicalQueryRaisedConsumerTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public async Task Consume_DuplicateClinicalQueryRaised_IsIdempotent()
     {
         var ct = TestContext.Current.CancellationToken;

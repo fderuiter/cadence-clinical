@@ -65,7 +65,6 @@ public sealed record CaptureConsentResponse(
 /// <summary>
 /// Minimal API route definitions for eConsent capture and step-up signature verification.
 /// Gated by 21 CFR Part 11 step-up e-signature token verification (X-Sig-Token).
-/// @req:PRD-SYS-053
 /// </summary>
 public static class EconsentEndpoints
 {

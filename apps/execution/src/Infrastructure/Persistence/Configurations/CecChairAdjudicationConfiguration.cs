@@ -15,7 +15,6 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Configurations;
 /// EF Core 10 entity mapping for the <c>cec_chair_adjudications</c> table.
 /// Configures Chair tie-breaker determinations and embedded e-signature manifests.
 /// @req:PRD-CEC-002
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class CecChairAdjudicationConfiguration : IEntityTypeConfiguration<CecChairAdjudication>
 {

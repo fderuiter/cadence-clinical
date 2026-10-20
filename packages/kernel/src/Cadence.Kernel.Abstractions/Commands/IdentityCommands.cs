@@ -7,7 +7,6 @@ namespace Cadence.Kernel.Commands;
 /// <see cref="ICommand.TenantId"/> is the new tenant's id, chosen by the caller (UUIDv7). <c>Residency</c> is the
 /// region the tenant's direct identifiers must stay in (spec §13, ADR-2458), two to eight upper-case letters, or null
 /// when unrestricted.
-/// @req:PRD-SYS-053
 /// </summary>
 [KernelCapability("tenant.provision", VerbClass.Execute, InCatalogue = false)]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
@@ -21,7 +20,6 @@ public sealed record ProvisionTenant(
 
 /// <summary>
 /// Registers an organization (sponsor, CRO, site institution, vendor, …) in a tenant (spec §7.1).
-/// @req:PRD-SYS-053
 /// </summary>
 [KernelCapability("organization.register", VerbClass.Execute)]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]

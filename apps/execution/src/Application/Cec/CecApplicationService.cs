@@ -20,7 +20,6 @@ namespace Cadence.Apps.Execution.Application.Cec;
 /// 21 CFR Part 11 electronic signature manifest generation, and hash-sealed audit trail persistence.
 /// @req:PRD-CEC-001
 /// @req:PRD-CEC-002
-/// @req:PRD-SYS-053
 /// @req:PRD-SYS-124
 /// </summary>
 public sealed class CecApplicationService(

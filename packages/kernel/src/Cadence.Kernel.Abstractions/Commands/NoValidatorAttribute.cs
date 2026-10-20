@@ -6,7 +6,6 @@ namespace Cadence.Kernel.Commands;
 /// Declares that a command has no FluentValidation validator, and why (ADR-2600 §4.4). The pipeline runs every
 /// registered <c>IValidator&lt;TCommand&gt;</c> after resolving the actor and before authorization; a catalog test
 /// fails when a command has neither a validator nor this attribute, or has both.
-/// @req:PRD-SYS-053
 /// </summary>
 /// <param name="reason">Why the command needs no validator beyond the pipeline-wide checks.</param>
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]

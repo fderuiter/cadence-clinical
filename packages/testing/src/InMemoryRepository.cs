@@ -11,7 +11,6 @@ namespace Cadence.Testing;
 
 /// <summary>
 /// Thread-safe in-memory repository fake providing atomic simulation of entity persistence for unit testing.
-/// @req:PRD-SYS-053
 /// </summary>
 public class InMemoryRepository<TEntity, TId> where TEntity : AggregateRoot<TId> where TId : notnull
 {

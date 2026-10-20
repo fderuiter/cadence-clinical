@@ -9,7 +9,6 @@ namespace Cadence.Templating;
 /// A module's closed allow-list of renderable templates: each public key maps to exactly one Liquid
 /// template embedded in the module's own assembly. Callers can only name a key; they can never name a
 /// resource, reach another assembly, or traverse paths.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class TemplateCatalog
 {

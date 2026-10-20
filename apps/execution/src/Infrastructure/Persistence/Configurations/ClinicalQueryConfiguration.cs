@@ -14,7 +14,6 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Configurations;
 /// EF Core 10 entity mapping for the <c>clinical_queries</c> table.
 /// Configures strongly-typed value objects, target coordinates index, and status escalation tracking.
 /// @req:PRD-SYS-007
-/// @req:PRD-SYS-053
 /// @req:SRS-EDC-004
 /// </summary>
 public sealed class ClinicalQueryConfiguration : IEntityTypeConfiguration<ClinicalQuery>

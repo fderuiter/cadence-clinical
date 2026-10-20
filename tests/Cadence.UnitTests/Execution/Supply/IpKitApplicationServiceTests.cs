@@ -93,7 +93,6 @@ public sealed class IpKitApplicationServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public async Task ValidateScannedBarcodeAsync_DetectsLotMismatch()
     {
         var ct = TestContext.Current.CancellationToken;

@@ -22,7 +22,6 @@ namespace Cadence.Apps.Execution.Application.Queries;
 /// <summary>
 /// Application service implementing clinical discrepancy query workflows, state transitions, and GxP role enforcement.
 /// @req:PRD-SYS-007
-/// @req:PRD-SYS-053
 /// @req:SRS-EDC-004
 /// </summary>
 public sealed class ClinicalQueryApplicationService(

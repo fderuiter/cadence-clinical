@@ -9,7 +9,6 @@ namespace Cadence.Kernel;
 
 /// <summary>
 /// Strongly-typed UUIDv7 identifier for a StudySite (association of Study x Site with lifecycle and protocol version effectivity).
-/// @req:PRD-SYS-053
 /// </summary>
 [TypeConverter(typeof(StudySiteIdTypeConverter))]
 [JsonConverter(typeof(StudySiteIdJsonConverter))]

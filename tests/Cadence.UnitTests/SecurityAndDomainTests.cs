@@ -101,7 +101,7 @@ public class SecurityAndDomainTests
     /// </summary>
     [Fact(DisplayName = "AuditLogEntry_ComputesDeterministicMerkleHash_ChainedToPredecessor")]
     [Trait("Category", "Unit")]
-    [GxPRequirement("PRD-SYS-001")]
+    [GxPRequirement("PRD-SYS-003")]
     public void AuditLogEntryComputesDeterministicMerkleHashChainedToPredecessor()
     {
         // Arrange

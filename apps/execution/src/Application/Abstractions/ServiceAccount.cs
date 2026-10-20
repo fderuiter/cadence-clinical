@@ -3,7 +3,6 @@ namespace Cadence.Apps.Execution.Application.Abstractions;
 /// <summary>
 /// A named non-human actor that background work runs as. Its id always carries the <c>svc:</c> prefix so audit
 /// entries written by automation are distinguishable from people at a glance.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed record ServiceAccount
 {
@@ -29,7 +28,6 @@ public sealed record ServiceAccount
 
 /// <summary>
 /// The execution service's declared service accounts. Adding background work means adding its account here.
-/// @req:PRD-SYS-053
 /// </summary>
 public static class ServiceAccounts
 {

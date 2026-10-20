@@ -46,7 +46,6 @@ public record PublishAmendmentResponseDto(string? AmendmentId, string? SummaryOf
 /// amendment publish flow (docs/migration/phase0/03_migration_plan.md, MIG-03);
 /// no C# service implements or consumes it yet. This is a contract/DTO surface
 /// only: request signing, retry, rollback and serving are not built.
-/// @req:PRD-SYS-053
 /// </summary>
 public interface IExecutionAmendmentApiClient
 {

@@ -11,7 +11,6 @@ namespace Cadence.Apps.Execution.Infrastructure.Security;
 /// with <see cref="RunAs"/> wins; otherwise the actor is the authenticated caller's <c>sub</c> claim and the
 /// reason comes from the <c>X-Change-Reason</c> header, decoded by <see cref="ChangeReasonHeader"/>. With neither, <see cref="UserId"/> throws rather than
 /// defaulting to an anonymous identity.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class AmbientAuditContextAccessor(IHttpContextAccessor httpContextAccessor)
     : ICurrentAuditContextAccessor, IAuditActorScope

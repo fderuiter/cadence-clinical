@@ -38,7 +38,6 @@ public interface ICommandContext
 /// The command's single aggregate and its events. Touching a second aggregate throws (K-TX-1): multi-aggregate
 /// processes are sagas driven by events. Kernel and module handlers see the same unit of work; the pipeline decides
 /// which store holds an aggregate type (ADR-2600).
-/// @req:PRD-SYS-053
 /// </summary>
 public interface IKernelUnitOfWork
 {

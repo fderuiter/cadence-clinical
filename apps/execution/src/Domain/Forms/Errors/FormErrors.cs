@@ -6,7 +6,6 @@ namespace Cadence.Apps.Execution.Domain.Forms.Errors;
 /// Domain error factory for form submissions and 21 CFR Part 11 electronic sign-off.
 /// @req:PRD-SYS-001
 /// @req:PRD-SYS-002
-/// @req:PRD-SYS-053
 /// @req:SRS-EDC-002
 /// @req:SRS-EDC-003
 /// </summary>

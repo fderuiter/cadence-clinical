@@ -15,7 +15,6 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Configurations;
 /// Configures strongly-typed value objects, JSONB payload, signature manifest, and coordinates index.
 /// @req:PRD-SYS-001
 /// @req:PRD-SYS-002
-/// @req:PRD-SYS-053
 /// @req:SRS-EDC-002
 /// @req:SRS-EDC-003
 /// </summary>

@@ -17,9 +17,7 @@ namespace Cadence.UnitTests.Execution.Persistence;
 /// Coverage for the single audit writer (#4768): <see cref="EfAuditLogWriter"/> only labels the next save, and
 /// <see cref="GxPAuditInterceptor"/> writes exactly one entry per changed entity on one chain per aggregate
 /// type, which <see cref="AuditLogChainVerifier"/> verifies end to end.
-/// @req:PRD-SYS-001
 /// </summary>
-[GxPRequirement("PRD-SYS-001")]
 public class EfAuditLogWriterTests
 {
     private const string Actor = "qa.reviewer@site.org";
@@ -115,7 +113,6 @@ public class EfAuditLogWriterTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public async Task WriteAsync_DoesNotItselfSave()
     {
         await using var context = CreateContext(Guid.NewGuid().ToString());
@@ -127,7 +124,7 @@ public class EfAuditLogWriterTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
+    [GxPRequirement("PRD-SYS-003")]
     public void Verifier_DetectsATamperedEntry()
     {
         var chain = BuildChain("ClinicalSubject", 3);
@@ -155,7 +152,7 @@ public class EfAuditLogWriterTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
+    [GxPRequirement("PRD-SYS-003")]
     public void Verifier_DetectsAFork()
     {
         var chain = BuildChain("ClinicalSubject", 2);
@@ -168,7 +165,7 @@ public class EfAuditLogWriterTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
+    [GxPRequirement("PRD-SYS-003")]
     public void Verifier_VerifiesLegacyTableNameChainsAlongsideNewOnes_WithoutRewritingThem()
     {
         // Rows written before #4768 by the old explicit writer are keyed by table name ("clinical_subjects").

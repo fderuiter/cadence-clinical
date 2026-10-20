@@ -4,7 +4,6 @@ namespace Cadence.Kernel.Domain.Entities;
 
 /// <summary>
 /// Canonical Site aggregate root representing a durable physical or institutional location.
-/// @req:PRD-SYS-053
 /// </summary>
 public class Site : AggregateRoot<SiteId>
 {

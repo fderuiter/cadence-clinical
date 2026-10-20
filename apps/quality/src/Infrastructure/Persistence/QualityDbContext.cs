@@ -9,7 +9,6 @@ namespace Cadence.Apps.Quality.Infrastructure.Persistence;
 
 /// <summary>
 /// EF Core 10 DbContext for Quality microservice persistence gateway.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class QualityDbContext(DbContextOptions<QualityDbContext> options) : DbContext(options)
 {

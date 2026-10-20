@@ -10,7 +10,6 @@ namespace Cadence.Kernel.Commands;
 /// major <see cref="SchemaVersion"/> and consumers tolerate unknown fields (K-EVT-1); events are the integration
 /// contract, never replayed to rebuild clinical state (K-EVT-2). <see cref="Subject"/> names the aggregate the command
 /// changed, pinned to its new version (ADR-2481); it is null for events about no aggregate, such as a denial.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed record EventEnvelope(
     Guid EventId,

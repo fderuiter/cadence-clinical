@@ -6,7 +6,6 @@ namespace Cadence.Kernel.Domain.Bitemporal;
 /// Immutable bitemporal period: <see cref="Valid"/> time (when it was true in the trial) and <see cref="Recorded"/>
 /// time (when Cadence asserted it, until superseded). Persisted as the <c>valid_period</c> and
 /// <c>recorded_period</c> <c>tstzrange</c> columns (ADR-2246, spec §4.1, K-TIME-1/K-TIME-2).
-/// @req:PRD-SYS-053
 /// </summary>
 public readonly record struct TemporalPeriod
 {

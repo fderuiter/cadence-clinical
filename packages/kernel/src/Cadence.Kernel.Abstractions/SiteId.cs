@@ -9,7 +9,6 @@ namespace Cadence.Kernel;
 
 /// <summary>
 /// Strongly-typed UUIDv7 identifier for a Site (physical/operational trial location belonging to an Institution Organization).
-/// @req:PRD-SYS-053
 /// </summary>
 [TypeConverter(typeof(SiteIdTypeConverter))]
 [JsonConverter(typeof(SiteIdJsonConverter))]

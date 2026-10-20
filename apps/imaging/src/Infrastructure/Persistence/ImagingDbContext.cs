@@ -9,7 +9,6 @@ namespace Cadence.Apps.Imaging.Infrastructure.Persistence;
 
 /// <summary>
 /// EF Core 10 DbContext for Imaging microservice persistence gateway.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class ImagingDbContext(DbContextOptions<ImagingDbContext> options) : DbContext(options)
 {

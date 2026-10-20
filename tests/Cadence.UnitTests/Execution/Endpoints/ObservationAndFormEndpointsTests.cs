@@ -34,7 +34,6 @@ namespace Cadence.UnitTests.Execution.Endpoints;
 
 /// <summary>
 /// Unit tests for ASP.NET Core 10 Minimal API endpoint handlers governing observations, forms, and discrepancy queries.
-/// @req:SRS-EDC-003
 /// </summary>
 public sealed class ObservationAndFormEndpointsTests
 {

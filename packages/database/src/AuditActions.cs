@@ -9,7 +9,6 @@ namespace Cadence.Database;
 /// of a <see cref="DbContext"/>. <see cref="GxPAuditInterceptor"/> is the only audit writer: it puts the action
 /// on the audit entry of the changed entity with the same name and id, or writes an action-only entry when
 /// nothing changed (for example <c>BLOCKED_ENROLLMENT</c>).
-/// @req:PRD-SYS-053
 /// </summary>
 /// <param name="EntityName">The chain key: the aggregate's CLR type name, e.g. <c>ClinicalSubject</c>.</param>
 /// <param name="EntityId">The record id, formatted the way the interceptor formats the primary key.</param>
@@ -27,7 +26,6 @@ public sealed record AuditAction(
 
 /// <summary>
 /// Holds <see cref="AuditAction"/>s per <see cref="DbContext"/> until its next save.
-/// @req:PRD-SYS-053
 /// </summary>
 public static class AuditActions
 {

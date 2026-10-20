@@ -37,7 +37,6 @@ namespace Cadence.Kernel.Application.Commands;
 /// (ADR-2600 §4.4) → authorize (K-AUTH-1, denials audited) → idempotency (K-TX-3) → the approved proposal the command
 /// executes, when its metadata names one (K-AI-2) → handler decides on one aggregate (K-TX-1) → one transaction for state,
 /// provenance, events, audit and outbox (K-TX-2).
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class KernelCommandPipeline(
     IServiceProvider services,

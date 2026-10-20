@@ -21,7 +21,6 @@ namespace Cadence.UnitTests.Packages;
 
 /// <summary>
 /// The e-signature step-up token: what the gateway issues and what a signature-gated endpoint accepts.
-/// @req:SRS-SYS-005
 /// </summary>
 public class SignatureTokenTests
 {

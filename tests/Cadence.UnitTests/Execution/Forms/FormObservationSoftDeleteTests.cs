@@ -26,9 +26,6 @@ namespace Cadence.UnitTests.Execution.Forms;
 /// <summary>
 /// Unit tests verifying observation soft deletion and invalidation on form payload updates.
 /// Ensures clinical data integrity by soft-deleting previous observations upon form edits while preserving historical records for audit trails.
-/// @req:PRD-SYS-001
-/// @req:PRD-SYS-042
-/// @req:SRS-EDC-001
 /// </summary>
 public sealed class FormObservationSoftDeleteTests
 {

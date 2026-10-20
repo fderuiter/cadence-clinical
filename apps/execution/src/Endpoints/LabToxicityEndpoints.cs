@@ -17,7 +17,6 @@ namespace Cadence.Apps.Execution.Endpoints;
 /// <summary>
 /// Minimal API route definitions for laboratory toxicity governance, review queue, investigator actions, and real-time evaluation.
 /// @req:PRD-SYS-001
-/// @req:PRD-SYS-053
 /// @req:SRS-EDC-001
 /// </summary>
 public static class LabToxicityEndpoints

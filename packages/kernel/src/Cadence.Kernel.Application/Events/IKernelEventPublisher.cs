@@ -9,7 +9,6 @@ namespace Cadence.Kernel.Application.Events;
 /// Where the outbox relay delivers committed kernel events (spec §5.1 "Outbox relay → subscribers"). The host provides
 /// it: a message bus, in-process projections, or both. Delivery is at-least-once, so a subscriber deduplicates on
 /// <see cref="EventEnvelope.EventId"/>. Throwing leaves the event in the outbox for a later retry.
-/// @req:PRD-SYS-053
 /// </summary>
 public interface IKernelEventPublisher
 {

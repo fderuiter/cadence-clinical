@@ -17,7 +17,6 @@ namespace Cadence.UnitTests.Execution.EditChecks;
 /// <summary>
 /// Unit test coverage for the AST edit check engine, Kleene 3-valued boolean logic,
 /// arithmetic and comparison operators, inline reference constraints, and cross-visit batch physiology checks.
-/// @req:SRS-EDC-002
 /// </summary>
 public sealed class AstEditCheckTests
 {

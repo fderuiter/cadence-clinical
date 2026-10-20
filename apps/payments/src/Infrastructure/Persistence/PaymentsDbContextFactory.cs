@@ -10,7 +10,6 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence;
 /// <summary>
 /// Design-time-only factory that lets the <c>dotnet ef</c> CLI construct a <see cref="PaymentsDbContext"/>.
 /// It uses <see cref="DesignTimeFieldEncryptor"/>, which can build the model but refuses to encrypt or decrypt.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class PaymentsDbContextFactory : IDesignTimeDbContextFactory<PaymentsDbContext>
 {

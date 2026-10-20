@@ -30,7 +30,6 @@ internal sealed record AuditChainVerification(
 /// gaps, each link names its predecessor's hash, each hash recomputes from the stored fields, the chain head matches
 /// the last link, and every seal still matches the link it sealed (so a chain cut back below a seal is caught).
 /// Runs as an inspector tool and as the first step of <see cref="Audit.KernelAuditChainSealer"/>.
-/// @req:PRD-SYS-053
 /// </summary>
 /// <remarks>
 /// The head is read first and only links up to it are checked. A link and its head update commit together, so

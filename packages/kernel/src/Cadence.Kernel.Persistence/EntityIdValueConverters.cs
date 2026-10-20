@@ -7,7 +7,6 @@ namespace Cadence.Kernel.Persistence;
 
 /// <summary>
 /// EF Core ValueComparer providing change-tracking and snapshot comparisons for strongly-typed UUIDv7 identifiers.
-/// @req:PRD-SYS-053
 /// </summary>
 public class EntityIdValueComparer<TId>() : ValueComparer<TId>(
     (l, r) => l.Equals(r),

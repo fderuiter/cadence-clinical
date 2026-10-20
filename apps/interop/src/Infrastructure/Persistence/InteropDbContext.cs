@@ -9,7 +9,6 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence;
 
 /// <summary>
 /// EF Core 10 DbContext for Interop microservice persistence gateway.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class InteropDbContext(DbContextOptions<InteropDbContext> options) : DbContext(options)
 {

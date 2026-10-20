@@ -11,7 +11,6 @@ namespace Cadence.Kernel.Persistence.Configurations;
 /// tenant-scoped table also has a unique <c>(tenant_id, id)</c> key, and every reference between tenant-scoped tables
 /// is a composite <c>(tenant_id, x_id)</c> foreign key, so a row can never point at another tenant's row. Row-Level
 /// Security is added by the <c>TenantIsolation</c> migration (<see cref="Tenancy.TenantIsolationSql"/>).
-/// @req:PRD-SYS-053
 /// </summary>
 internal sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
 {
@@ -27,7 +26,7 @@ internal sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
     }
 }
 
-/// <summary>EF Core mapping for <c>kernel.organizations</c>. @req:PRD-SYS-053</summary>
+/// <summary>EF Core mapping for <c>kernel.organizations</c>.</summary>
 internal sealed class OrganizationConfiguration : IEntityTypeConfiguration<Organization>
 {
     public void Configure(EntityTypeBuilder<Organization> builder)
@@ -48,7 +47,7 @@ internal sealed class OrganizationConfiguration : IEntityTypeConfiguration<Organ
 /// EF Core mapping for <c>kernel.people</c>: tenant-independent, pseudonymous identity (K-ID-4), the one kernel table
 /// without a <c>tenant_id</c>. It holds no direct identifier: names and contact details are in the IdentityVault
 /// (ADR-2458). Its row-level policy shows a person only to tenants the person has a <see cref="TenantMembership"/>
-/// in. @req:PRD-SYS-053
+/// in.
 /// </summary>
 internal sealed class PersonConfiguration : IEntityTypeConfiguration<Person>
 {
@@ -60,7 +59,7 @@ internal sealed class PersonConfiguration : IEntityTypeConfiguration<Person>
     }
 }
 
-/// <summary>EF Core mapping for <c>kernel.sites</c>; <c>SiteCode</c> is unique per institution. @req:PRD-SYS-053</summary>
+/// <summary>EF Core mapping for <c>kernel.sites</c>; <c>SiteCode</c> is unique per institution.</summary>
 internal sealed class SiteConfiguration : IEntityTypeConfiguration<Site>
 {
     public void Configure(EntityTypeBuilder<Site> builder)
@@ -80,7 +79,7 @@ internal sealed class SiteConfiguration : IEntityTypeConfiguration<Site>
     }
 }
 
-/// <summary>EF Core mapping for <c>kernel.studies</c>; <c>StudyCode</c> is unique per tenant. @req:PRD-SYS-053</summary>
+/// <summary>EF Core mapping for <c>kernel.studies</c>; <c>StudyCode</c> is unique per tenant.</summary>
 internal sealed class StudyConfiguration : IEntityTypeConfiguration<Study>
 {
     public void Configure(EntityTypeBuilder<Study> builder)
@@ -100,7 +99,7 @@ internal sealed class StudyConfiguration : IEntityTypeConfiguration<Study>
     }
 }
 
-/// <summary>EF Core mapping for <c>kernel.study_sites</c>; one row per Study × Site. @req:PRD-SYS-053</summary>
+/// <summary>EF Core mapping for <c>kernel.study_sites</c>; one row per Study × Site.</summary>
 internal sealed class StudySiteConfiguration : IEntityTypeConfiguration<StudySite>
 {
     public void Configure(EntityTypeBuilder<StudySite> builder)
@@ -126,7 +125,7 @@ internal sealed class StudySiteConfiguration : IEntityTypeConfiguration<StudySit
 
 /// <summary>
 /// EF Core mapping for <c>kernel.tenant_memberships</c>: one row per person per tenant (K-ID-4). The person reference
-/// is a plain foreign key because <c>people</c> is tenant-independent. @req:PRD-SYS-053
+/// is a plain foreign key because <c>people</c> is tenant-independent.
 /// </summary>
 internal sealed class TenantMembershipConfiguration : IEntityTypeConfiguration<TenantMembership>
 {

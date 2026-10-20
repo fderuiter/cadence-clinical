@@ -9,7 +9,6 @@ namespace Cadence.Kernel;
 
 /// <summary>
 /// Strongly-typed UUIDv7 identifier for an Observation (clinical fact, form item data, lab result, ePRO answer).
-/// @req:PRD-SYS-053
 /// </summary>
 [TypeConverter(typeof(ObservationIdTypeConverter))]
 [JsonConverter(typeof(ObservationIdJsonConverter))]

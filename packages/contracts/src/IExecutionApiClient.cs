@@ -24,7 +24,6 @@ public record ObservationSummaryDto(string Id, string SubjectId, string Code, st
 /// <summary>
 /// Strongly-typed REST client interface for the Cadence Execution Engine (EDC). No service implements or consumes it
 /// yet; under ADR-2244 most cross-service calls give way to shared kernel concepts, so check that before building on it.
-/// @req:PRD-SYS-053
 /// </summary>
 public interface IExecutionApiClient
 {

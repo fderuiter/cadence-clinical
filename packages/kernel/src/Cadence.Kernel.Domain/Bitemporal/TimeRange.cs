@@ -6,7 +6,6 @@ namespace Cadence.Kernel.Domain.Bitemporal;
 /// A half-open time interval <c>[Start, End)</c> in UTC; a null <see cref="End"/> is unbounded (still open). Persisted
 /// as a PostgreSQL <c>tstzrange</c> (ADR-2246, spec §4.1). <see cref="Contains"/> and <see cref="Overlaps"/> have the
 /// same semantics as the SQL <c>@&gt;</c> and <c>&amp;&amp;</c> operators, and translate to them in kernel queries.
-/// @req:PRD-SYS-053
 /// </summary>
 public readonly record struct TimeRange
 {

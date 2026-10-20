@@ -13,7 +13,6 @@ namespace Cadence.Apps.Execution.Domain.Forms;
 /// Enforces strict 21 CFR Part 11 locking upon approval and audited unlock reversion.
 /// @req:PRD-SYS-001
 /// @req:PRD-SYS-002
-/// @req:PRD-SYS-053
 /// @req:SRS-EDC-002
 /// @req:SRS-EDC-003
 /// </summary>

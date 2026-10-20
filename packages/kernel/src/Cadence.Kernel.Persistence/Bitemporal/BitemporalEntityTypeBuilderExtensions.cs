@@ -9,7 +9,6 @@ namespace Cadence.Kernel.Persistence.Bitemporal;
 /// Maps <see cref="IBitemporalEntity.Period"/> to the <c>valid_period</c> and <c>recorded_period</c>
 /// <c>tstzrange</c> columns (spec §4.1, ADR-2246). Every bitemporal table also needs
 /// <see cref="BitemporalMigrationBuilderExtensions.CreateBitemporalGuards"/> in its migration (K-TIME-1, K-TIME-2).
-/// @req:PRD-SYS-053
 /// </summary>
 internal static class BitemporalEntityTypeBuilderExtensions
 {

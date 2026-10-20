@@ -16,7 +16,6 @@ namespace Cadence.Kernel.Persistence;
 /// Deployment operations on the kernel schema: applying migrations as the owning role, and granting the application
 /// role exactly what the kernel needs (ADR-2250 rule 1). Hosts call these from their migration step, never from a
 /// request path.
-/// @req:PRD-SYS-053
 /// </summary>
 public static class KernelDatabase
 {
