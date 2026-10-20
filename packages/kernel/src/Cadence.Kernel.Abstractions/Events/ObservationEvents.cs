@@ -31,11 +31,3 @@ public sealed record ObservationCorrected(
     int Supersedes,
     ObservationValue Value,
     string ReasonForChange);
-
-/// <summary>An observation was locked (Quality family); no correction commits after it.</summary>
-[KernelEvent("ObservationLocked", 1)]
-public sealed record ObservationLocked(
-    TenantId TenantId,
-    ObservationLockId LockId,
-    ObservationId ObservationId,
-    EnrollmentId EnrollmentId);

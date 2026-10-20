@@ -24,7 +24,7 @@ public static class NodeKinds
     public const string Enrollment = "enrollment";
     public const string ProtocolVersion = "protocol_version";
     public const string Observation = "observation";
-    public const string ObservationLock = "observation_lock";
+    public const string Assertion = "assertion";
     public const string Attestation = "attestation";
     public const string Artifact = "artifact";
     public const string ArtifactVersion = "artifact_version";
@@ -60,7 +60,7 @@ public static class NodeKinds
         [typeof(EnrollmentId)] = Enrollment,
         [typeof(ProtocolVersionId)] = ProtocolVersion,
         [typeof(ObservationId)] = Observation,
-        [typeof(ObservationLockId)] = ObservationLock,
+        [typeof(AssertionId)] = Assertion,
         [typeof(AttestationId)] = Attestation,
         [typeof(ArtifactId)] = Artifact,
         [typeof(ArtifactVersionId)] = ArtifactVersion,

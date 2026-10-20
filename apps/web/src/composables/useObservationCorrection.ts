@@ -44,7 +44,7 @@ export function useObservationCorrection(observationRef: () => string) {
   } | null = null;
 
   const version = computed(() => Number(observation.value?.version ?? 0));
-  const locked = computed(() => observation.value?.locked != null);
+  const locked = computed(() => (observation.value?.locks.length ?? 0) > 0);
 
   async function load(): Promise<void> {
     loading.value = true;

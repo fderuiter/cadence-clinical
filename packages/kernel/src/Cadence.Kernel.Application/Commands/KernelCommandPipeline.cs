@@ -260,6 +260,7 @@ public static class KernelApplicationServiceCollectionExtensions
         services.AddKernelStudyHandlers();
         services.AddKernelEvidenceHandlers();
         services.AddKernelObservationHandlers();
+        services.AddKernelAssertionHandlers();
         services.AddKernelAuthorityHandlers();
         services.AddKernelWorkQueueHandlers();
         services.AddKernelEffectivityHandlers();

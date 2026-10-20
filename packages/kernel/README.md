@@ -392,23 +392,50 @@ Commands in `Commands/ObservationCommands.cs`, each authorized against the obser
 | -------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | `RecordObservation`  | Records the first value; participant and study come from the enrollment                                          |
 | `CorrectObservation` | Appends a revision with the reason; refused when locked (423), stale (`ExpectedVersion`, 409) or unchanged (422) |
-| `LockObservation`    | Adds the observation's `ObservationLock` (kernel Quality); no unlock yet                                         |
 
 - Revisions (`observation_revisions`) are insert-only (`KA001`); revision _n_ is recorded until revision _n+1_.
-- A correction changes one aggregate (K-TX-1). It and the lock both take the `ObservationLock` advisory lock first
-  (K-TX-4), and the correction reads the lock under it, so no correction commits after a lock.
-- `IObservationRecords` reads an observation with its revisions, lock and kernel audit entries.
+- A correction changes one aggregate (K-TX-1). Record and correct are refused (423) while a lock covers the
+  observation (see below).
+- `IObservationRecords` reads an observation with its revisions, the locks covering it, the assertions about it and
+  its kernel audit entries.
 - Reactions (the eCRF projection, edit checks, queries, SDV) consume `ObservationCorrected` after commit.
 - The value is a typed `ObservationValue` (`Evidence/ObservationValue.cs`, ADR-2623): `quantity` (UCUM unit,
   optional comparator), `coded` (code-system version and code), `text`, `boolean`, `dateTime` (partial ISO 8601) or
   `missing` (null flavor and detail), with a `type` discriminator, stored as `jsonb`. `CollectionItem.Admits` checks a
   value against the protocol's item, and `MappingInput.From` feeds it to the SDTM mapping (`--STAT`/`--REASND` for a
   missing value).
-- Coming under #4729 (ADR-2621): `LockObservation` and `ObservationLock` give way to scoped `Locked`/`Frozen`
-  Assertions with unlock, `LockApplied`/`LockReleased` events and shared scope locks; value Assertions will cite the
-  revision they judged.
 - Coming under #5459 (ADR-2622): a `CollectionInstance` groups the observations of one form, and
   `RecordCollectedValues` records and corrects all of them in one command, each against the revision it was edited from.
+
+## Assertions and scoped locks (ADR-2621)
+
+An `Assertion` (`kernel.assertions`, insert-only) is a statement about an observation, another assertion or a lock
+scope (spec §8.2, §10.5). Nothing about the observation changes when something is asserted about it, and an assertion
+is never changed: a later assertion of the same kind retracts it (`RetractsId`, at most one retraction each). Commands
+in `Commands/AssertionCommands.cs`:
+
+| Command             | Does                                                                                                             |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `ApplyLock`         | `Locked` or `Frozen` at a study, study site, enrollment or observation (`lock.apply`, Approve), with a signature |
+| `ReleaseLock`       | Releases a lock with its own reason and signature (`lock.release`, Approve)                                      |
+| `VerifyObservation` | SDV of one revision, `target = (ObservationId, Revision)`; refused for a revision that is not current (409)      |
+| `RaiseQuery`        | A query about an observation; it names the `ObservationId` only, so it stays open across corrections             |
+| `AnswerQuery`       | Answers an open query                                                                                            |
+| `RetractAssertion`  | Withdraws a verification or an answer, or closes a query; locks are released with `ReleaseLock` instead          |
+
+- A lock's signer attests the canonical `LockStatement.Apply` (or `.Release`) for the assertion id first, meaning
+  `Approved` or `Responsibility`; the attestation targets `assertion:<id>` before it exists, the way a finding
+  decision is signed (K-FIND-2), and the command recomputes the hash from its own inputs.
+- Both lock kinds refuse `RecordObservation` and `CorrectObservation` in their scope; `Locked` also refuses new
+  assertions about the observations there, while `Frozen` still allows review.
+- Concurrency: a write that a lock can cover takes shared advisory locks on its covering scopes, widest first
+  (`IKernelUnitOfWork.ShareScopesAsync`, `LockScopes.Covering`), then reads the locks in force; `ApplyLock` and
+  `ReleaseLock` take the exclusive lock on their own scope (`LockScopeAsync`). Either the write commits before the lock
+  or it is refused, which `KernelObservationPostgresTests` races at every scope. A correction first takes the observation's
+  own exclusive lock, so two corrections of one value run one after another; a command that locks a scope exclusively
+  shares none.
+- Events: `LockApplied` and `LockReleased` (Quality), `AssertionMade` and `AssertionRetracted` (Evidence).
+- The HTTP surface for locks, queries and SDV comes with #5466, #5461 and #5465; a form-instance scope with #5459.
 
 ## Object references and navigation (ADR-2481)
 

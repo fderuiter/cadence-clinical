@@ -88,7 +88,7 @@ public sealed class KernelErrorContractTests
         var declared = endpoint.Metadata.GetRequiredMetadata<KernelErrorsMetadata>().Errors;
 
         declared.Should().Contain(KernelErrors.CommandPipeline).And.Contain([ObservationErrors.Locked, ObservationErrors.VersionStale, KernelErrors.NotFound]);
-        declared.Should().NotContain(ObservationErrors.AlreadyLocked, "only LockObservation raises it");
+        declared.Should().NotContain(AssertionErrors.AlreadyLocked, "only ApplyLock raises it");
         declared.Select(e => e.HttpStatus).Should().BeInAscendingOrder();
         endpoint.Metadata.OfType<IProducesResponseTypeMetadata>().Select(m => m.StatusCode)
             .Should().Contain([401, 403, 404, 409, 422, 423]);
@@ -119,7 +119,9 @@ public sealed class KernelErrorContractTests
 
         RaisesKernelErrorsAttribute.Of(typeof(RecordObservation)).Should().NotBeNull();
         RaisesKernelErrorsAttribute.Of(typeof(CorrectObservation)).Should().NotBeNull();
-        RaisesKernelErrorsAttribute.Of(typeof(LockObservation)).Should().Equal(KernelErrors.NotFound, ObservationErrors.AlreadyLocked);
+        RaisesKernelErrorsAttribute.Of(typeof(ApplyLock)).Should().Equal(
+            KernelErrors.AlreadyExists, AssertionErrors.ScopeInvalid, AssertionErrors.ScopeUnknown, AssertionErrors.AlreadyLocked,
+            AssertionErrors.AttestationRejected);
         var misnamed = () => RaisesKernelErrorsAttribute.Of(typeof(MisdeclaredCommand));
         misnamed.Should().Throw<InvalidOperationException>().WithMessage("*ObservationErrors.NoSuchError*");
     }
@@ -131,11 +133,11 @@ public sealed class KernelErrorContractTests
     [Fact(DisplayName = "DeclaredKernelErrors_RefusesAnUndeclaredError")]
     public void DeclaredKernelErrorsRefusesAnUndeclaredError()
     {
-        DeclaredKernelErrors.Undeclared(typeof(LockObservation), ObservationErrors.AlreadyLocked).Should().BeNull();
-        DeclaredKernelErrors.Undeclared(typeof(LockObservation), KernelErrors.AuthorizationDenied).Should().BeNull();
-        DeclaredKernelErrors.Undeclared(typeof(LockObservation), KernelErrors.HandlerMissing).Should().BeNull();
-        DeclaredKernelErrors.Undeclared(typeof(LockObservation), ObservationErrors.VersionStale.WithMessage("Stale."))
-            .Should().Be("LockObservation returned K.Observation.VersionStale (409), which it does not declare with [RaisesKernelErrors].");
+        DeclaredKernelErrors.Undeclared(typeof(ApplyLock), AssertionErrors.AlreadyLocked).Should().BeNull();
+        DeclaredKernelErrors.Undeclared(typeof(ApplyLock), KernelErrors.AuthorizationDenied).Should().BeNull();
+        DeclaredKernelErrors.Undeclared(typeof(ApplyLock), KernelErrors.HandlerMissing).Should().BeNull();
+        DeclaredKernelErrors.Undeclared(typeof(ApplyLock), ObservationErrors.VersionStale.WithMessage("Stale."))
+            .Should().Be("ApplyLock returned K.Observation.VersionStale (409), which it does not declare with [RaisesKernelErrors].");
         DeclaredKernelErrors.Undeclared(typeof(ProvisionTenant), ObservationErrors.VersionStale).Should().BeNull();
     }
 
@@ -194,7 +196,7 @@ public sealed class KernelErrorContractTests
             }
         }
 
-        checkedOperations.Should().BeGreaterThanOrEqualTo(4, "the observation commands and the simulation are kernel endpoints with kernel errors");
+        checkedOperations.Should().BeGreaterThanOrEqualTo(3, "record, correct and the simulation are kernel endpoints with kernel errors");
     }
 
     private static string RepositoryRoot()

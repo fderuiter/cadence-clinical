@@ -341,7 +341,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
 
     /// <summary>
     /// Validates spec §5.3 item 2: the audit, event, provenance, idempotency, seal, attestation, terminology, lineage,
-    /// artifact version, role, work-queue definition, validation run and observation revision tables reject UPDATE, DELETE and TRUNCATE in the database itself (SQLSTATE KA001).
+    /// artifact version, role, work-queue definition, validation run, observation revision and assertion tables reject UPDATE, DELETE and TRUNCATE in the database itself (SQLSTATE KA001).
     /// </summary>
     [Theory(DisplayName = "InsertOnlyTables_RejectUpdateDeleteAndTruncate")]
     [MemberData(nameof(InsertOnlyTables))]
@@ -385,6 +385,11 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
         if (table == "observation_revisions")
         {
             await KernelObservationPostgresTests.SeedAsync(fixture, ct);
+        }
+
+        if (table == "assertions")
+        {
+            await KernelAssertionPostgresTests.SeedAsync(fixture, ct);
         }
 
         if (table.StartsWith("validation_", StringComparison.Ordinal))

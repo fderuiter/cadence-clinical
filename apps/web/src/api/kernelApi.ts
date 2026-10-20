@@ -119,7 +119,7 @@ function unversioned(nodeRef: string): string {
 }
 
 export const kernelApi = {
-  /** One observation with its revisions, lock and kernel audit trail (GET /api/v1/kernel/observations/{observationRef}). */
+  /** One observation with its revisions, the locks covering it, the assertions about it and its kernel audit trail (GET /api/v1/kernel/observations/{observationRef}). */
   getObservation(observationRef: string): Promise<KernelObservation> {
     return unwrapResponse(
       client.GET("/api/v1/kernel/observations/{observationRef}", {

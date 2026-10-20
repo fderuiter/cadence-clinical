@@ -22,9 +22,15 @@
           <dd>{{ observation.observed_at }}</dd>
           <dt>Status</dt>
           <dd data-testid="observation-status">
-            <template v-if="observation.locked">
-              Locked by {{ observation.locked.locked_by }} at
-              {{ observation.locked.locked_at }}
+            <template v-if="observation.locks.length > 0">
+              <span
+                v-for="held in observation.locks"
+                :key="String(held.lock_id)"
+                class="observation-lock"
+              >
+                {{ held.kind }} at {{ lockScopeLabel(held.scope) }} by
+                {{ held.locked_by }} at {{ held.locked_at }}
+              </span>
             </template>
             <template v-else> Open for correction </template>
           </dd>
@@ -163,7 +169,8 @@ import {
 /**
  * Corrects one kernel observation (ADR-2620). The value shown is always the kernel's: the screen keeps no local
  * copy, and reports a correction as saved only after the kernel has committed it. A correction keeps the current
- * value's kind (ADR-2623): a quantity is corrected in its unit, a code in its code system version.
+ * value's kind (ADR-2623): a quantity is corrected in its unit, a code in its code system version. A Locked or
+ * Frozen lock at the value, its participant, its site or its study (ADR-2621) closes it to correction.
  */
 const props = defineProps<{ observationRef: string }>();
 
@@ -177,6 +184,19 @@ const {
   load,
   correct,
 } = useObservationCorrection(() => props.observationRef);
+
+/** What a lock covers, in the words a data manager uses (spec §10.5). */
+const SCOPE_LABELS: Record<string, string> = {
+  study: "study level",
+  study_site: "site level",
+  enrollment: "participant level",
+  observation: "this value",
+};
+
+function lockScopeLabel(scope: unknown): string {
+  const kind = String(scope).split(":")[0];
+  return SCOPE_LABELS[kind] ?? kind;
+}
 
 const newValue = ref("");
 const reasonOpen = ref(false);

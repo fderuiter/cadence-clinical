@@ -58,9 +58,9 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
     public void Dispose() => _host?.Dispose();
 
     /// <summary>
-    /// A coordinator granted record, correct and lock at their study site records a value, corrects it with a reason, and
+    /// A coordinator granted record and correct at their study site records a value, corrects it with a reason, and
     /// reads the correction back with the reason in the kernel audit trail. A stale version is 409, a missing reason 422,
-    /// and after the lock a correction is 423. Each refusal carries its stable code.
+    /// and after a study lock a correction is 423 and the read shows the lock. Each refusal carries its stable code.
     /// </summary>
     [Fact(DisplayName = "HostCorrection_RecordsCorrectsAndAuditsTheReason_AndRefusesStaleMissingReasonAndLocked")]
     [GxPRequirement("PRD-SYS-001")]
@@ -68,7 +68,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
     {
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
-        var (code, _, enrollment) = await SeedAsync(grant: true, ct);
+        var (code, tenant, enrollment) = await SeedAsync(grant: true, ct);
         using var crc = Client(code, Crc);
 
         var recorded = await SendAsync<KernelObservationStateResponse>(crc, HttpMethod.Post, "observations", "Initial entry", new
@@ -96,10 +96,14 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
         (await ProblemAsync(crc, $"observations/{observation}/corrections", null, Correction(enrollment, 129, 2), ct))
             .Should().Be(((HttpStatusCode)422, KernelErrors.ReasonForChangeRequired.Code));
 
-        await SendAsync<KernelObservationLockResponse>(crc, HttpMethod.Post, $"observations/{observation}/lock", "Data review complete",
-            new { enrollment_ref = NodeRef.For(enrollment).ToString() }, HttpStatusCode.OK, ct);
+        // Database lock, signed by the data manager through the kernel (ADR-2621); its HTTP surface is #5466.
+        var observations = new KernelObservationScenario(fixture);
+        var study = (await fixture.ObservationRecords.FindAsync(tenant, ObservationId.FromGuid(observation.Id), ct))!.StudyId;
+        var locked = await _scenario.OkAsync(await observations.LockAsync(tenant, study, NodeRef.For(study), ct), ct);
         (await ProblemAsync(crc, $"observations/{observation}/corrections", CorrectionReason, Correction(enrollment, 129, 2), ct))
             .Should().Be(((HttpStatusCode)423, ObservationErrors.Locked.Code));
+        var lockedRead = await SendAsync<KernelObservationResponse>(crc, HttpMethod.Get, $"observations/{observation}", null, null, HttpStatusCode.OK, ct);
+        lockedRead.Locks.Should().ContainSingle().Which.LockId.Should().Be(locked.LockId);
     }
 
     /// <summary>
@@ -213,7 +217,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
             new ScreenParticipant(tenant, EnrollmentId.New(), participant, studySite, subject, Tick(), KernelProtocolScenario.Key(), "Screening visit"), ct);
         if (grant)
         {
-            foreach (var capability in new[] { "observation.record", "observation.correct", "observation.lock" })
+            foreach (var capability in new[] { "observation.record", "observation.correct" })
             {
                 await _scenario.OkAsync(
                     new IssueGrant(tenant, GrantId.New(), Actor.Person(Crc), capability, null, AuthorityScope.StudySite(studySite), Tick(), null, false,

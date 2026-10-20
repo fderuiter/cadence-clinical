@@ -75,9 +75,9 @@ public class ObservationIdValueConverter() : ValueConverter<ObservationId, Guid>
     guid => new ObservationId(guid)
 );
 
-public class ObservationLockIdValueConverter() : ValueConverter<ObservationLockId, Guid>(
+public class AssertionIdValueConverter() : ValueConverter<AssertionId, Guid>(
     id => id.Value,
-    guid => new ObservationLockId(guid)
+    guid => new AssertionId(guid)
 );
 
 public class AttestationIdValueConverter() : ValueConverter<AttestationId, Guid>(

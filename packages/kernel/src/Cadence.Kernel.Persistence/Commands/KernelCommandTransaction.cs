@@ -84,6 +84,8 @@ internal sealed class KernelCommandTransaction(
     private readonly List<(IModuleCommandStore Store, ModuleDbContext Context)> _modules = [];
     private (Type Type, string Key)? _claimed;
     private long? _lockKey;
+    private bool _scopeLocked;
+    private readonly List<long> _sharedKeys = [];
     private bool _connectionHeld;
     private AuthorizationDecision? _permit;
 
@@ -139,7 +141,39 @@ internal sealed class KernelCommandTransaction(
         where TAggregate : AggregateRootBase
     {
         ArgumentNullException.ThrowIfNull(id);
-        var key = AdvisoryLockKey(Command.TenantId, typeof(TAggregate), KeyText(id));
+        await LockExclusiveAsync(AdvisoryLockKey(Command.TenantId, typeof(TAggregate), KeyText(id)), cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task ShareScopesAsync(IReadOnlyList<NodeRef> scopes, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(scopes);
+
+        // An aggregate's exclusive lock may come first: nothing that holds a shared scope lock waits for an aggregate's
+        // lock, and a lock command holds its exclusive scope lock alone, so this cannot deadlock. A scope's exclusive lock
+        // excludes shared ones (ADR-2621).
+        if (_scopeLocked)
+        {
+            throw new InvalidOperationException(
+                $"K-TX-4: {execution.CommandType} holds a lock scope exclusively; it cannot also share scope locks, so locks cannot deadlock (ADR-2621).");
+        }
+
+        await HoldConnectionAsync(cancellationToken).ConfigureAwait(false);
+        foreach (var key in scopes.Select(scope => ScopeLockKey(Command.TenantId, scope)).Where(key => !_sharedKeys.Contains(key)))
+        {
+            // Shared locks never wait on each other, only on a lock command's exclusive one, which holds nothing else.
+            await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_lock_shared({key})", cancellationToken).ConfigureAwait(false);
+            _sharedKeys.Add(key);
+        }
+    }
+
+    public async Task LockScopeAsync(NodeRef scope, CancellationToken cancellationToken)
+    {
+        await LockExclusiveAsync(ScopeLockKey(Command.TenantId, scope), cancellationToken).ConfigureAwait(false);
+        _scopeLocked = true;
+    }
+
+    private async Task LockExclusiveAsync(long key, CancellationToken cancellationToken)
+    {
         if (_lockKey is { } held)
         {
             if (held == key)
@@ -148,7 +182,13 @@ internal sealed class KernelCommandTransaction(
             }
 
             throw new InvalidOperationException(
-                $"K-TX-4: {execution.CommandType} already holds an aggregate lock; a command takes at most one, so locks cannot deadlock.");
+                $"K-TX-4: {execution.CommandType} already holds an exclusive lock; a command takes at most one, so locks cannot deadlock.");
+        }
+
+        if (_sharedKeys.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"K-TX-4: {execution.CommandType} shares scope locks; it cannot also take an exclusive lock (ADR-2621).");
         }
 
         // A session lock on a connection this command keeps open: the handler's reads, its commit and the release all run
@@ -387,6 +427,11 @@ internal sealed class KernelCommandTransaction(
             {
                 await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_unlock({key})").ConfigureAwait(false);
             }
+
+            foreach (var shared in _sharedKeys)
+            {
+                await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_unlock_shared({shared})").ConfigureAwait(false);
+            }
         }
         catch (NpgsqlException)
         {
@@ -478,6 +523,17 @@ internal sealed class KernelCommandTransaction(
     internal static long AdvisoryLockKey(TenantId tenant, Type aggregateType, string id)
     {
         var digest = SHA256.HashData(Encoding.UTF8.GetBytes($"{tenant}:{aggregateType.FullName}:{id}"));
+        return BinaryPrimitives.ReadInt64BigEndian(digest);
+    }
+
+    /// <summary>
+    /// The advisory lock key of one lock scope in one tenant (ADR-2621), in its own namespace so it never collides with an
+    /// aggregate's key: a study's scope lock is not the study aggregate's numbering lock.
+    /// </summary>
+    internal static long ScopeLockKey(TenantId tenant, NodeRef scope)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        var digest = SHA256.HashData(Encoding.UTF8.GetBytes($"{tenant}:lock-scope:{scope.Kind}:{scope.Id}"));
         return BinaryPrimitives.ReadInt64BigEndian(digest);
     }
 

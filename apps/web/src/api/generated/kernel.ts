@@ -350,7 +350,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** An observation with its revisions, its lock and its kernel audit entries. */
+    /** An observation with its revisions, the locks covering it, the assertions about it and its kernel audit entries. */
     get: operations["KernelGetObservation"];
     put?: never;
     post?: never;
@@ -394,23 +394,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/kernel/observations/{observationRef}/lock": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Locks an observation so no correction commits after it (observation.lock). */
-    post: operations["KernelLockObservation"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -441,6 +424,33 @@ export interface components {
       intervention_ids: string[];
     };
     Kernel_ArmType: number;
+    Kernel_AssertionId: unknown;
+    /** @enum {unknown} */
+    Kernel_AssertionKind:
+      | "Verified"
+      | "Reviewed"
+      | "Queried"
+      | "QueryAnswered"
+      | "CodedAs"
+      | "Adjudicated"
+      | "Frozen"
+      | "Locked";
+    Kernel_AssertionView: {
+      assertion_id: components["schemas"]["Kernel_AssertionId"];
+      kind: components["schemas"]["Kernel_AssertionKind"];
+      target: components["schemas"]["Kernel_NodeRef"];
+      /** Format: int32 */
+      revision: null | number | string;
+      text: null | string;
+      asserted_by: string;
+      /** Format: date-time */
+      asserted_at: string;
+      reason_for_change: string;
+      retracted_by: null | components["schemas"]["Kernel_AssertionId"];
+      /** Format: date-time */
+      retracted_at: null | string;
+    };
+    Kernel_AttestationId: unknown;
     Kernel_CandidateKind: number;
     Kernel_CandidateSummary: {
       kind: components["schemas"]["Kernel_CandidateKind"];
@@ -709,9 +719,6 @@ export interface components {
       edges: components["schemas"]["Kernel_KernelLineageEdgeResponse"][];
       truncated: boolean;
     };
-    Kernel_KernelLockObservationRequest: {
-      enrollment_ref: string;
-    };
     Kernel_KernelNextActionResponse: {
       description: string;
       capability: null | string;
@@ -725,12 +732,6 @@ export interface components {
       status: null | string;
       mask: null | string;
     };
-    Kernel_KernelObservationLockResponse: {
-      observation_ref: string;
-      /** Format: date-time */
-      locked_at: string;
-      locked_by: string;
-    };
     Kernel_KernelObservationResponse: {
       ref: string;
       enrollment_ref: string;
@@ -740,8 +741,9 @@ export interface components {
       observed_at: string;
       /** Format: int64 */
       version: number | string;
-      locked: null | components["schemas"]["Kernel_ObservationLockView"];
+      locks: components["schemas"]["Kernel_LockView"][];
       revisions: components["schemas"]["Kernel_ObservationRevisionView"][];
+      assertions: components["schemas"]["Kernel_AssertionView"][];
       audit: components["schemas"]["Kernel_ObservationAuditView"][];
     };
     Kernel_KernelObservationStateResponse: {
@@ -881,6 +883,18 @@ export interface components {
       distance: number | string;
       is_masked?: boolean;
     };
+    /** @enum {unknown} */
+    Kernel_LockKind: "Frozen" | "Locked";
+    Kernel_LockView: {
+      lock_id: components["schemas"]["Kernel_AssertionId"];
+      kind: components["schemas"]["Kernel_LockKind"];
+      scope: components["schemas"]["Kernel_NodeRef"];
+      attestation_id: components["schemas"]["Kernel_AttestationId"];
+      /** Format: date-time */
+      locked_at: string;
+      locked_by: string;
+      reason_for_change: string;
+    };
     Kernel_MaskedPart: {
       part: string;
       reason: components["schemas"]["Kernel_MaskReason"];
@@ -924,12 +938,6 @@ export interface components {
       subject: string;
       /** Format: int64 */
       version: null | number | string;
-      reason_for_change: string;
-    };
-    Kernel_ObservationLockView: {
-      /** Format: date-time */
-      locked_at: string;
-      locked_by: string;
       reason_for_change: string;
     };
     Kernel_ObservationRevisionView: {
@@ -2143,6 +2151,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
+      /** @description Locked. Kernel errors: `K.Observation.Locked`. */
+      423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
     };
   };
   KernelCorrectObservation: {
@@ -2225,86 +2242,6 @@ export interface operations {
       };
       /** @description Locked. Kernel errors: `K.Observation.Locked`. */
       423: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
-        };
-      };
-    };
-  };
-  KernelLockObservation: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        observationRef: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Kernel_KernelLockObservationRequest"];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Kernel_KernelObservationLockResponse"];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
-        };
-      };
-      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
-        };
-      };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`. */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
-        };
-      };
-      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`. */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
-        };
-      };
-      /** @description Conflict. Kernel errors: `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Observation.AlreadyLocked`. */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
-        };
-      };
-      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. */
-      422: {
         headers: {
           [name: string]: unknown;
         };

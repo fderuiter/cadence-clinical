@@ -20,7 +20,7 @@ function observation(overrides: Record<string, unknown> = {}) {
     value: mmhg(182),
     observed_at: "2026-10-15T09:00:00Z",
     version: 1,
-    locked: null,
+    locks: [],
     revisions: [
       {
         number: 1,
@@ -31,6 +31,7 @@ function observation(overrides: Record<string, unknown> = {}) {
         recorded_until: null,
       },
     ],
+    assertions: [],
     audit: [],
     ...overrides,
   };
@@ -177,11 +178,17 @@ describe("ObservationView (ADR-2620)", () => {
 
   it("reports a locked observation and offers no correction", async () => {
     const lockedView = observation({
-      locked: {
-        locked_at: "2026-10-15T10:00:00Z",
-        locked_by: "dm@sponsor.test",
-        reason_for_change: "Data review complete",
-      },
+      locks: [
+        {
+          lock_id: "0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d72",
+          kind: "Locked",
+          scope: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d73",
+          attestation_id: "0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d74",
+          locked_at: "2026-10-15T10:00:00Z",
+          locked_by: "dm@sponsor.test",
+          reason_for_change: "Data review complete",
+        },
+      ],
     });
     vi.spyOn(kernelApi, "getObservation")
       .mockResolvedValueOnce(observation())
@@ -197,7 +204,7 @@ describe("ObservationView (ADR-2620)", () => {
       "locked"
     );
     expect(wrapper.find("[data-testid=observation-status]").text()).toContain(
-      "Locked by dm@sponsor.test"
+      "Locked at study level by dm@sponsor.test"
     );
     expect(wrapper.find("form.observation-correction").exists()).toBe(false);
     wrapper.unmount();

@@ -127,7 +127,8 @@ reset" of ADR-2620 §4.1 Q4 runs; that reset becomes a projection, not a correct
 - **Harder:** every lockable command takes up to five shared advisory locks; ADR-2453's rule changes from "at most one
   advisory lock" to "at most one exclusive lock, shared scope locks in a fixed order".
 - **Revisit:** whether `Frozen` (data entry blocked, review allowed) and `Locked` (everything blocked) differ in what
-  they deny, when form approval (#5365) uses `Frozen`.
+  they deny, when form approval (#5365) uses `Frozen`. The first implementation (#4729) draws the line that way: both
+  deny record and correct, and only `Locked` denies new assertions (SDV, queries, answers, retractions).
 
 ## 6. Implementation & Verification
 
@@ -135,8 +136,8 @@ The spec and ADR amendments land with this ADR. The code change is tracked by #4
 
 1. [x] Amend the kernel spec §4 table, §8.1 (K-FACT-1 and record shape), §8.2 (value Assertions cite a revision),
        §10.5 (scope keys and shared locks) and §5.1 (ADR-2453 lock rule); link this ADR from ADR-2620 and ADR-2453 (K034).
-2. [ ] Build the Assertion aggregate (#4729) with `Locked`/`Frozen` and retraction; replace `ObservationLock`,
+2. [x] Build the Assertion aggregate (#4729) with `Locked`/`Frozen` and retraction; replace `ObservationLock`,
        its table, `LockObservation` and `ObservationLocked`; regenerate the schema doc and the web client.
-3. [ ] Keep `KernelObservationPostgresTests` green and add: a study-scope lock refuses both record and correct;
+3. [x] Keep `KernelObservationPostgresTests` green and add: a study-scope lock refuses both record and correct;
        unlock with a reason re-allows them; the lock-versus-correction race at each scope.
 4. [ ] Update #4729's remaining scope and the K-FACT-1 test wording; close #5404.

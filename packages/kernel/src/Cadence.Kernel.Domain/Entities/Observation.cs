@@ -18,8 +18,8 @@ namespace Cadence.Kernel.Domain.Entities;
 /// <see cref="ObservationRevision"/> with its reason; <see cref="Value"/> repeats the current revision.</item>
 /// <item>A revision is recorded from its <see cref="ObservationRevision.RecordedAt"/> until the next one's, so the
 /// pre-correction view is read without changing any history row.</item>
-/// <item>Locks are a separate aggregate (<see cref="ObservationLock"/>); the correction command reads it under its
-/// advisory lock (K-TX-4).</item>
+/// <item>Locks and judgements about it are <see cref="Assertion"/>s (spec §8.2, §10.5); the record and correction
+/// commands read the locks in force under shared scope locks (ADR-2621).</item>
 /// </list>
 /// Expected failures return a <see cref="KernelError"/>.
 /// </summary>
@@ -177,30 +177,4 @@ public class ObservationRevision
 
     /// <summary>When the kernel recorded this value; it holds until the next revision's.</summary>
     public DateTimeOffset RecordedAt { get; private set; }
-}
-
-/// <summary>
-/// The lock on one observation (kernel Quality, ADR-2620). Its existence means the observation is locked; it carries
-/// the observation's UUID (<see cref="ObservationLockId.For"/>), so there is at most one.
-/// </summary>
-public class ObservationLock : AggregateRoot<ObservationLockId>
-{
-    protected ObservationLock() { }
-
-    public ObservationLock(ObservationId observationId, TenantId tenantId, EnrollmentId enrollmentId, DateTimeOffset lockedAt)
-        : base(ObservationLockId.For(observationId))
-    {
-        TenantId = tenantId;
-        ObservationId = observationId;
-        EnrollmentId = enrollmentId;
-        LockedAt = KernelTimestamps.ToStoredPrecision(lockedAt);
-    }
-
-    public TenantId TenantId { get; private set; }
-
-    public ObservationId ObservationId { get; private set; }
-
-    public EnrollmentId EnrollmentId { get; private set; }
-
-    public DateTimeOffset LockedAt { get; private set; }
 }

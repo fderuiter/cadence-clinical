@@ -6,13 +6,17 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Modules;
 
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cadence.Kernel.Application.Evidence;
 
-/// <summary>Handles <see cref="RecordObservation"/>: the participant and study come from the enrollment.</summary>
+/// <summary>
+/// Handles <see cref="RecordObservation"/>: the participant and study come from the enrollment, and no lock may cover
+/// the enrollment, its study site or its study (spec §10.5).
+/// </summary>
 internal sealed class RecordObservationHandler : ICommandHandler<RecordObservation, ObservationState>
 {
     public async Task<CommandResult<ObservationState>> HandleAsync(RecordObservation command, ICommandContext context, CancellationToken cancellationToken)
@@ -25,6 +29,13 @@ internal sealed class RecordObservationHandler : ICommandHandler<RecordObservati
         if (await context.Work.ReadAsync<Enrollment>(command.EnrollmentId, cancellationToken).ConfigureAwait(false) is not { } enrollment)
         {
             return ObservationErrors.EnrollmentUnknown;
+        }
+
+        if (await LocksInForce.AnyAsync(
+            context.Work, LockScopes.Covering(enrollment.StudyId, enrollment.StudySiteId, enrollment.Id), LocksInForce.DenyingWrites, cancellationToken)
+            .ConfigureAwait(false))
+        {
+            return ObservationErrors.Locked;
         }
 
         var recorded = Observation.Record(
@@ -57,17 +68,25 @@ internal sealed class RecordObservationHandler : ICommandHandler<RecordObservati
 }
 
 /// <summary>
-/// Handles <see cref="CorrectObservation"/> (ADR-2620): under the observation's lock-aggregate advisory lock (K-TX-4) it
-/// reads the lock, then checks the expected version, then appends the revision. The version is also the commit-time
-/// concurrency token, so a change between this read and the commit is refused.
+/// Handles <see cref="CorrectObservation"/> (ADR-2620, ADR-2621): under the observation's advisory lock, so corrections
+/// of one observation run one after another, and shared locks on the scopes that cover it, it reads the locks in force,
+/// then checks the expected version, then appends the revision. The version is also the commit-time concurrency token.
 /// </summary>
 internal sealed class CorrectObservationHandler : ICommandHandler<CorrectObservation, ObservationState>
 {
     public async Task<CommandResult<ObservationState>> HandleAsync(CorrectObservation command, ICommandContext context, CancellationToken cancellationToken)
     {
-        var lockId = ObservationLockId.For(command.ObservationId);
-        await context.Work.LockAsync<ObservationLock>(lockId, cancellationToken).ConfigureAwait(false);
-        if (await context.Work.ReadAsync<ObservationLock>(lockId, cancellationToken).ConfigureAwait(false) is not null)
+        await context.Work.LockAsync<Observation>(command.ObservationId, cancellationToken).ConfigureAwait(false);
+        if (await context.Work.ReadAsync<Enrollment>(command.EnrollmentId, cancellationToken).ConfigureAwait(false) is not { } enrollment)
+        {
+            return KernelErrors.NotFound;
+        }
+
+        if (await LocksInForce.AnyAsync(
+            context.Work,
+            LockScopes.Covering(enrollment.StudyId, enrollment.StudySiteId, enrollment.Id, command.ObservationId),
+            LocksInForce.DenyingWrites,
+            cancellationToken).ConfigureAwait(false))
         {
             return ObservationErrors.Locked;
         }
@@ -99,31 +118,6 @@ internal sealed class CorrectObservationHandler : ICommandHandler<CorrectObserva
     }
 }
 
-/// <summary>Handles <see cref="LockObservation"/> under the same advisory lock as corrections (K-TX-4).</summary>
-internal sealed class LockObservationHandler : ICommandHandler<LockObservation, ObservationLockState>
-{
-    public async Task<CommandResult<ObservationLockState>> HandleAsync(LockObservation command, ICommandContext context, CancellationToken cancellationToken)
-    {
-        var lockId = ObservationLockId.For(command.ObservationId);
-        await context.Work.LockAsync<ObservationLock>(lockId, cancellationToken).ConfigureAwait(false);
-        if (await context.Work.ExistsAsync<ObservationLock>(lockId, cancellationToken).ConfigureAwait(false))
-        {
-            return ObservationErrors.AlreadyLocked;
-        }
-
-        if (await context.Work.ReadAsync<Observation>(command.ObservationId, cancellationToken).ConfigureAwait(false) is not { } observation
-            || observation.EnrollmentId != command.EnrollmentId)
-        {
-            return KernelErrors.NotFound;
-        }
-
-        var locked = new ObservationLock(observation.Id, observation.TenantId, observation.EnrollmentId, context.RecordedAt);
-        context.Work.Add(locked);
-        context.Work.Raise(new ObservationLocked(locked.TenantId, locked.Id, locked.ObservationId, locked.EnrollmentId));
-        return CommandResult<ObservationLockState>.Success(new ObservationLockState(locked.Id, locked.ObservationId, locked.LockedAt, context.Actor.Id));
-    }
-}
-
 /// <summary>Shared steps of the observation handlers.</summary>
 internal static class ObservationStates
 {
@@ -141,7 +135,6 @@ public static class ObservationServiceCollectionExtensions
     {
         services.AddTransient<ICommandHandler<RecordObservation, ObservationState>, RecordObservationHandler>();
         services.AddTransient<ICommandHandler<CorrectObservation, ObservationState>, CorrectObservationHandler>();
-        services.AddTransient<ICommandHandler<LockObservation, ObservationLockState>, LockObservationHandler>();
         return services;
     }
 }

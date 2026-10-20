@@ -66,10 +66,25 @@ public interface IKernelUnitOfWork
     /// Takes the advisory lock of the aggregate <typeparamref name="TAggregate"/> <paramref name="id"/> and holds it until
     /// the command has committed or failed (K-TX-4). Commands that decide from the same aggregate's state, such as
     /// numbering within a study, take its lock first and then read, so they run one after another. The lock neither
-    /// claims nor changes the aggregate. A command takes at most one lock.
+    /// claims nor changes the aggregate. A command takes at most one exclusive lock; it may then share the scope locks that
+    /// cover what it writes (<see cref="ShareScopesAsync"/>), never take this lock after them.
     /// </summary>
     Task LockAsync<TAggregate>(object id, CancellationToken cancellationToken)
         where TAggregate : AggregateRootBase;
+
+    /// <summary>
+    /// Takes shared advisory locks on the lock scopes that cover what the command writes, in the order given (widest
+    /// first, <c>LockScopes.Covering</c>), and holds them until the command has committed or failed (ADR-2621). Writes
+    /// share them; a lock command takes one exclusively (<see cref="LockScopeAsync"/>), so either the write commits
+    /// before the lock or the lock commits first and the write, reading it, is refused. Then read the locks in force.
+    /// </summary>
+    Task ShareScopesAsync(IReadOnlyList<NodeRef> scopes, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Takes the exclusive advisory lock on one lock scope (ADR-2621), for a command that applies or releases a lock
+    /// there. It is the command's only lock: a command that holds it shares no scope lock.
+    /// </summary>
+    Task LockScopeAsync(NodeRef scope, CancellationToken cancellationToken);
 
     /// <summary>Adds a new aggregate.</summary>
     void Add(AggregateRootBase aggregate);

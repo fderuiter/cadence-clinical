@@ -9,7 +9,8 @@ namespace Cadence.Kernel.Commands;
 
 /// <summary>
 /// Records a clinical fact for the participant of an enrollment (spec §8.1): this concept had this value, observed at
-/// <c>ObservedAt</c>. The value is the authoritative one; an eCRF field is a representation of it (ADR-2620).
+/// <c>ObservedAt</c>. The value is the authoritative one; an eCRF field is a representation of it (ADR-2620). Refused
+/// when a lock covers the enrollment, its study site or its study (spec §10.5).
 /// </summary>
 /// <remarks>
 /// <para><c>EnrollmentId</c>: The enrollment the fact is about; the participant and study are taken from it, and the
@@ -24,7 +25,8 @@ namespace Cadence.Kernel.Commands;
     typeof(ObservationErrors),
     nameof(ObservationErrors.EnrollmentUnknown),
     nameof(ObservationErrors.ValueInvalid),
-    nameof(ObservationErrors.ObservedAtInvalid))]
+    nameof(ObservationErrors.ObservedAtInvalid),
+    nameof(ObservationErrors.Locked))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RecordObservation(
     TenantId TenantId,
@@ -38,7 +40,7 @@ public sealed record RecordObservation(
 
 /// <summary>
 /// Corrects an observation's value (K-FACT-1): a new revision supersedes the current one, with the reason for change.
-/// Refused when the observation is locked at commit time, when <c>ExpectedVersion</c> is not its current version, or
+/// Refused when a lock covers the observation (spec §10.5), when <c>ExpectedVersion</c> is not its current version, or
 /// when the value is unchanged (ADR-2620).
 /// </summary>
 /// <remarks>
@@ -63,21 +65,6 @@ public sealed record CorrectObservation(
     string IdempotencyKey,
     string ReasonForChange) : ICommand<ObservationState>;
 
-/// <summary>
-/// Locks an observation's value (kernel Quality, ADR-2620). Once locked, every correction is refused. There is no
-/// unlock in the reference slice.
-/// </summary>
-[KernelCapability("observation.lock", VerbClass.Execute, Resource = nameof(LockObservation.EnrollmentId))]
-[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound))]
-[RaisesKernelErrors(typeof(ObservationErrors), nameof(ObservationErrors.AlreadyLocked))]
-[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
-public sealed record LockObservation(
-    TenantId TenantId,
-    ObservationId ObservationId,
-    EnrollmentId EnrollmentId,
-    string IdempotencyKey,
-    string ReasonForChange) : ICommand<ObservationLockState>;
-
 /// <summary>An observation's current value after a command.</summary>
 /// <remarks>
 /// <para><c>Version</c>: The observation's version; a correction names it as its expected version.</para>
@@ -92,9 +79,6 @@ public sealed record ObservationState(
     ObservationValue Value,
     long Version,
     int Revision);
-
-/// <summary>An observation's lock after <see cref="LockObservation"/>.</summary>
-public sealed record ObservationLockState(ObservationLockId LockId, ObservationId ObservationId, DateTimeOffset LockedAt, string LockedBy);
 
 /// <summary>Errors raised by the observation commands (spec §8.1, ADR-2620).</summary>
 public static class ObservationErrors
@@ -115,12 +99,9 @@ public static class ObservationErrors
         new("K.Observation.VersionStale", 409, "The observation changed since you read it; reload it and correct the current value.");
 
     public static readonly KernelError Locked =
-        new("K.Observation.Locked", 423, "The observation is locked; it cannot be corrected.");
-
-    public static readonly KernelError AlreadyLocked =
-        new("K.Observation.AlreadyLocked", 409, "The observation is already locked.");
+        new("K.Observation.Locked", 423, "A lock covers this observation's scope; nothing is recorded or corrected there.");
 
     /// <summary>Every observation error, for the API's documented problem set.</summary>
     public static IReadOnlyList<KernelError> All { get; } =
-        [ValueInvalid, ObservedAtInvalid, EnrollmentUnknown, ValueUnchanged, VersionStale, Locked, AlreadyLocked];
+        [ValueInvalid, ObservedAtInvalid, EnrollmentUnknown, ValueUnchanged, VersionStale, Locked];
 }

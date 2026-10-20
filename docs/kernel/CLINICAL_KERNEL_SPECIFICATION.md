@@ -715,6 +715,11 @@ coordinates (inventory §3 item 10). An Assertion that judges a value (`Verified
 `Adjudicated`) names the revision it judged, `(ObservationId, Revision)`, so it never applies to a later correction;
 a Query and a lock name only the `ObservationId` (ADR-2621).
 
+**Implemented** (ADR-2621, #4729): an insert-only `Assertion` (`kernel.assertions`) with `Verified` (naming the
+revision), `Queried`, `QueryAnswered`, `Frozen` and `Locked`. A retraction is an assertion of the same kind naming the
+one it retracts, at most once. `Reviewed`, `CodedAs` and `Adjudicated` (several adjudicators may each assert one) use
+the same aggregate when their applications arrive; the other kinds above are not yet implemented.
+
 ### 8.3 Source and Artifact
 
 - `Source`: `ManualEntry(actor, collection_spec) | Device(device_id, firmware) | LabFeed(lab_org, batch,
@@ -1089,6 +1094,11 @@ reason and an Attestation. Applying or releasing one emits `LockApplied` or `Loc
 lock is `Locked` at Study scope; EDC form approval and read-only display are application workflow over it. A covered
 write holds shared advisory locks on its covering scope keys and the lock command the exclusive one (§5.1), so either
 the write commits before the lock or the lock commits first and the write is refused (ADR-2621).
+
+**Implemented** (#4729): `ApplyLock` and `ReleaseLock` at study, study site, enrollment and observation scope; the
+form-instance scope arrives with `CollectionInstance` (#5459). The signer attests the lock statement (the assertion
+id, the kind and the scope, or the lock released) before the command records it. Both kinds deny recording and
+correcting; `Locked` also denies new assertions about the covered observations, while `Frozen` leaves review open.
 
 ---
 

@@ -71,7 +71,7 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
 
     public DbSet<ObservationRevision> ObservationRevisions => Set<ObservationRevision>();
 
-    public DbSet<ObservationLock> ObservationLocks => Set<ObservationLock>();
+    public DbSet<Assertion> Assertions => Set<Assertion>();
 
     public DbSet<Role> Roles => Set<Role>();
 

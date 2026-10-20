@@ -1332,7 +1332,7 @@
         "tags": [
           "Kernel observations"
         ],
-        "summary": "An observation with its revisions, its lock and its kernel audit entries.",
+        "summary": "An observation with its revisions, the locks covering it, the assertions about it and its kernel audit entries.",
         "operationId": "KernelGetObservation",
         "parameters": [
           {
@@ -1475,6 +1475,16 @@
                 }
               }
             }
+          },
+          "423": {
+            "description": "Locked. Kernel errors: \u0060K.Observation.Locked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
           }
         },
         "x-kernel-errors": [
@@ -1525,6 +1535,10 @@
           {
             "code": "K.Observation.ValueInvalid",
             "status": 422
+          },
+          {
+            "code": "K.Observation.Locked",
+            "status": 423
           }
         ]
       }
@@ -1693,149 +1707,6 @@
           }
         ]
       }
-    },
-    "/api/v1/kernel/observations/{observationRef}/lock": {
-      "post": {
-        "tags": [
-          "Kernel observations"
-        ],
-        "summary": "Locks an observation so no correction commits after it (observation.lock).",
-        "operationId": "KernelLockObservation",
-        "parameters": [
-          {
-            "name": "observationRef",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Kernel_KernelLockObservationRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Kernel_KernelObservationLockResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict. Kernel errors: \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Observation.AlreadyLocked\u0060.",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "x-kernel-errors": [
-          {
-            "code": "K.Actor.Unresolved",
-            "status": 401
-          },
-          {
-            "code": "K.Authorization.Denied",
-            "status": 403
-          },
-          {
-            "code": "K.Aggregate.NotFound",
-            "status": 404
-          },
-          {
-            "code": "K.Aggregate.ConcurrencyConflict",
-            "status": 409
-          },
-          {
-            "code": "K.Command.IdempotencyConflict",
-            "status": 409
-          },
-          {
-            "code": "K.Observation.AlreadyLocked",
-            "status": 409
-          },
-          {
-            "code": "K.Command.IdempotencyKeyRequired",
-            "status": 422
-          },
-          {
-            "code": "K.Command.Invalid",
-            "status": 422
-          },
-          {
-            "code": "K.Command.ReasonForChangeRequired",
-            "status": 422
-          },
-          {
-            "code": "K.Command.TenantRequired",
-            "status": 422
-          }
-        ]
-      }
     }
   },
   "components": {
@@ -1927,6 +1798,88 @@
       "Kernel_ArmType": {
         "type": "integer"
       },
+      "Kernel_AssertionId": {},
+      "Kernel_AssertionKind": {
+        "enum": [
+          "Verified",
+          "Reviewed",
+          "Queried",
+          "QueryAnswered",
+          "CodedAs",
+          "Adjudicated",
+          "Frozen",
+          "Locked"
+        ]
+      },
+      "Kernel_AssertionView": {
+        "required": [
+          "assertion_id",
+          "kind",
+          "target",
+          "revision",
+          "text",
+          "asserted_by",
+          "asserted_at",
+          "reason_for_change",
+          "retracted_by",
+          "retracted_at"
+        ],
+        "type": "object",
+        "properties": {
+          "assertion_id": {
+            "$ref": "#/components/schemas/Kernel_AssertionId"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/Kernel_AssertionKind"
+          },
+          "target": {
+            "$ref": "#/components/schemas/Kernel_NodeRef"
+          },
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "text": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "asserted_by": {
+            "type": "string"
+          },
+          "asserted_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "retracted_by": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_AssertionId"
+              }
+            ]
+          },
+          "retracted_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "Kernel_AttestationId": {},
       "Kernel_CandidateKind": {
         "type": "integer"
       },
@@ -3125,17 +3078,6 @@
           }
         }
       },
-      "Kernel_KernelLockObservationRequest": {
-        "required": [
-          "enrollment_ref"
-        ],
-        "type": "object",
-        "properties": {
-          "enrollment_ref": {
-            "type": "string"
-          }
-        }
-      },
       "Kernel_KernelNextActionResponse": {
         "required": [
           "description",
@@ -3207,26 +3149,6 @@
           }
         }
       },
-      "Kernel_KernelObservationLockResponse": {
-        "required": [
-          "observation_ref",
-          "locked_at",
-          "locked_by"
-        ],
-        "type": "object",
-        "properties": {
-          "observation_ref": {
-            "type": "string"
-          },
-          "locked_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "locked_by": {
-            "type": "string"
-          }
-        }
-      },
       "Kernel_KernelObservationResponse": {
         "required": [
           "ref",
@@ -3235,8 +3157,9 @@
           "value",
           "observed_at",
           "version",
-          "locked",
+          "locks",
           "revisions",
+          "assertions",
           "audit"
         ],
         "type": "object",
@@ -3265,20 +3188,22 @@
             ],
             "format": "int64"
           },
-          "locked": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_ObservationLockView"
-              }
-            ]
+          "locks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_LockView"
+            }
           },
           "revisions": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Kernel_ObservationRevisionView"
+            }
+          },
+          "assertions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_AssertionView"
             }
           },
           "audit": {
@@ -4000,6 +3925,48 @@
           }
         }
       },
+      "Kernel_LockKind": {
+        "enum": [
+          "Frozen",
+          "Locked"
+        ]
+      },
+      "Kernel_LockView": {
+        "required": [
+          "lock_id",
+          "kind",
+          "scope",
+          "attestation_id",
+          "locked_at",
+          "locked_by",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "lock_id": {
+            "$ref": "#/components/schemas/Kernel_AssertionId"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/Kernel_LockKind"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/Kernel_NodeRef"
+          },
+          "attestation_id": {
+            "$ref": "#/components/schemas/Kernel_AttestationId"
+          },
+          "locked_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "locked_by": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": "string"
+          }
+        }
+      },
       "Kernel_MaskedPart": {
         "required": [
           "part",
@@ -4142,26 +4109,6 @@
               "string"
             ],
             "format": "int64"
-          },
-          "reason_for_change": {
-            "type": "string"
-          }
-        }
-      },
-      "Kernel_ObservationLockView": {
-        "required": [
-          "locked_at",
-          "locked_by",
-          "reason_for_change"
-        ],
-        "type": "object",
-        "properties": {
-          "locked_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "locked_by": {
-            "type": "string"
           },
           "reason_for_change": {
             "type": "string"

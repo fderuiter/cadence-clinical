@@ -360,6 +360,10 @@ public sealed partial class KernelCommandPipelineTests
             where TAggregate : AggregateRootBase =>
             Task.CompletedTask;
 
+        public Task ShareScopesAsync(IReadOnlyList<NodeRef> scopes, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task LockScopeAsync(NodeRef scope, CancellationToken cancellationToken) => Task.CompletedTask;
+
         public Task<bool> ExistsAsync<TAggregate>(object id, CancellationToken cancellationToken)
             where TAggregate : AggregateRootBase =>
             Task.FromResult(TenantExists);
