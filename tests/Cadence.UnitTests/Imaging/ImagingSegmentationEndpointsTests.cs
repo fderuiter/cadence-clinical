@@ -15,8 +15,9 @@ using Xunit;
 namespace Cadence.UnitTests.Imaging;
 
 /// <summary>
-/// Segmentation writes an annotation on a stored series. The clinical study, site and subject come from the stored scan,
-/// and the caller's signed study scope must admit that study (ADR-2516, #5441).
+/// Segmentation on a stored series: the clinical study comes from the stored scan and the caller's signed study scope
+/// must admit it (ADR-2516, #5441); with no model that reads the image, an in-scope request is refused and nothing is
+/// written, so no fabricated measurement becomes study evidence (#5426).
 /// </summary>
 public sealed class ImagingSegmentationEndpointsTests
 {
@@ -53,32 +54,28 @@ public sealed class ImagingSegmentationEndpointsTests
     }
 
     [Fact]
-    public async Task SegmentRoiAsync_WritesTheAnnotationUnderTheStoredScansStudySiteAndSubject()
+    public async Task SegmentRoiAsync_InScope_IsRefusedAndWritesNoMeasurement()
     {
         var ct = TestContext.Current.CancellationToken;
         await using var dbContext = await CreateContextWithStoredScanAsync();
-        var segmentationService = new ImagingSegmentationService(dbContext, Clock);
+        var segmentationService = new ImagingSegmentationService(dbContext);
 
         var outcome = await segmentationService.SegmentRoiAsync(
             StudyUid,
             SeriesUid,
-            new SegmentRoiRequest(SeedX: 150.0, SeedY: 140.0, SliceIndex: 12, LesionId: "TL1", OrganSite: "LIVER"),
+            new SegmentRoiRequest(
+                SeedX: 100.0,
+                SeedY: 100.0,
+                SliceIndex: 10,
+                BoundingBox: new BoundingBoxDto(XMin: 80.0, YMin: 80.0, XMax: 120.0, YMax: 120.0),
+                LesionId: "TL2",
+                OrganSite: "LUNG_RIGHT"),
             callerId: "dr.central.reader",
             canAccessStudy: studyId => studyId == "STUDY-001",
             cancellationToken: ct);
 
-        outcome.Status.Should().Be(SegmentationStatus.Segmented);
-        var result = outcome.Result!;
-        result.LesionId.Should().Be("TL1");
-        result.FittedCalipers.Should().HaveCount(2);
-        result.Timestamp.Should().Be(Clock.UtcNow);
-
-        var stored = await dbContext.ImagingAnnotations.AsNoTracking().SingleAsync(a => a.Id == result.AnnotationId, ct);
-        stored.StudyId.Should().Be("STUDY-001");
-        stored.SiteId.Should().Be("SITE-01");
-        stored.SubjectId.Should().Be("SUBJ-ONC-001");
-        stored.ReaderId.Should().Be("dr.central.reader");
-        stored.LongestDiameterMm.Should().Be(result.LongestDiameterMm);
+        outcome.Status.Should().Be(SegmentationStatus.ModelUnavailable);
+        (await dbContext.ImagingAnnotations.CountAsync(ct)).Should().Be(0);
     }
 
     [Fact]
@@ -86,7 +83,7 @@ public sealed class ImagingSegmentationEndpointsTests
     {
         var ct = TestContext.Current.CancellationToken;
         await using var dbContext = await CreateContextWithStoredScanAsync();
-        var segmentationService = new ImagingSegmentationService(dbContext, Clock);
+        var segmentationService = new ImagingSegmentationService(dbContext);
 
         var outcome = await segmentationService.SegmentRoiAsync(
             StudyUid,
@@ -107,7 +104,7 @@ public sealed class ImagingSegmentationEndpointsTests
     {
         var ct = TestContext.Current.CancellationToken;
         await using var dbContext = await CreateContextWithStoredScanAsync();
-        var segmentationService = new ImagingSegmentationService(dbContext, Clock);
+        var segmentationService = new ImagingSegmentationService(dbContext);
 
         var outcome = await segmentationService.SegmentRoiAsync(
             studyUid,
@@ -119,34 +116,5 @@ public sealed class ImagingSegmentationEndpointsTests
 
         outcome.Status.Should().Be(SegmentationStatus.NotFound);
         (await dbContext.ImagingAnnotations.CountAsync(ct)).Should().Be(0);
-    }
-
-    [Fact]
-    public async Task SegmentRoiAsync_RespectsBoundingBoxInput_WhenProvided()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        await using var dbContext = await CreateContextWithStoredScanAsync();
-        var segmentationService = new ImagingSegmentationService(dbContext, Clock);
-
-        var outcome = await segmentationService.SegmentRoiAsync(
-            StudyUid,
-            SeriesUid,
-            new SegmentRoiRequest(
-                SeedX: 100.0,
-                SeedY: 100.0,
-                SliceIndex: 10,
-                BoundingBox: new BoundingBoxDto(XMin: 80.0, YMin: 80.0, XMax: 120.0, YMax: 120.0),
-                LesionId: "TL2",
-                OrganSite: "LUNG_RIGHT",
-                TimepointName: "CYCLE_2_DAY_1"),
-            callerId: "dr.central.reader2",
-            canAccessStudy: _ => true,
-            cancellationToken: ct);
-
-        var result = outcome.Result!;
-        result.LesionId.Should().Be("TL2");
-        result.OrganSite.Should().Be("LUNG_RIGHT");
-        result.BoundingBox.XMin.Should().BeLessThan(100.0);
-        result.BoundingBox.XMax.Should().BeGreaterThan(100.0);
     }
 }

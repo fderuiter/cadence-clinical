@@ -25,7 +25,7 @@ public static class ImagingSegmentationEndpoints
             .RequirePermission("imaging_adjudication:submit")
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .Produces<SegmentationResultDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status501NotImplemented)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
         return routes;
@@ -63,8 +63,11 @@ public static class ImagingSegmentationEndpoints
 
         return outcome.Status switch
         {
-            SegmentationStatus.Segmented when outcome.Result is not null => TypedResults.Ok(outcome.Result),
             SegmentationStatus.OutsideCallerStudies => OutsideStudy(),
+            SegmentationStatus.ModelUnavailable => TypedResults.Problem(
+                title: "Automatic segmentation is not available",
+                detail: "No segmentation model reads the image, so nothing was measured or stored. Measure the lesion with the calipers.",
+                statusCode: StatusCodes.Status501NotImplemented),
             _ => TypedResults.Problem(
                 title: "Series not found",
                 detail: "No stored scan has this study and series.",
