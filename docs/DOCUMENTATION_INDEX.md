@@ -40,6 +40,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [Clock migration backlog](kernel/CLOCK_MIGRATION_BACKLOG.md) | Current | Remaining `DateTime.Now/UtcNow` call sites to move to `IClock` (K-TIME-3) |
 | [Clinical Canvas](ux/CLINICAL_CANVAS.md) | Current | UI interaction model (study-centric navigation, three panes, six verbs) and the kernel read APIs the UI needs |
 | [AI agents](ai/AI_AGENTS.md) | Current | The AI agent catalogue by lifecycle stage, research-type packs, the autonomy ladder and the regulatory map (ADR-2630) |
+| [Agent tools, grounding and the MCP server](ai/AGENT_TOOLS.md) | Current | The read tools agents call as their requester, tool allow-lists, the citation verifier, the Proposal writer and the MCP endpoint (ADR-2633) |
 | [Evaluating AI task configurations](ai/EVALUATION.md) | Current | Evaluation sets, deterministic checks, the calibrated judge, run records for qualification and production signals (ADR-2634) |
 
 ## Architecture decision records
@@ -533,6 +534,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2632: Agents Act for One Person, and Approved Proposals Execute as Their Approver](adr/2026-10-20-agents-act-for-one-person-and-approved-proposals-execute-as-their-approver.md) | Current | - Status: Accepted |
 | [ADR-2518: DSUR Approval Is Its Own Capability, Signed by the Verified Caller](adr/2026-10-19-dsur-approval-is-its-own-capability-signed-by-the-verified-caller.md) | Current | - Status: Accepted |
 | [ADR-2631: Agent Task Configurations Are Versioned and Qualified per Tenant](adr/2026-10-20-agent-task-configurations-are-versioned-and-qualified-per-tenant.md) | Current | - Status: Accepted |
+| [ADR-2633: Agent Tools Read as the Requester, and Every Claim Cites What Was Read](adr/2026-10-20-agent-tools-read-as-the-requester-and-every-claim-cites-what-was-read.md) | Current | - Status: Accepted |
 | [ADR-2634: AI Task Configurations Are Measured by Versioned Evaluations and Production Signals](adr/2026-10-20-ai-task-configurations-are-measured-by-versioned-evaluations-and-production-signals.md) | Current | - Status: Accepted |
 | [ADR-2534: Quality Gates Live in One Registry and Each Must Be Able to Fail](adr/2026-10-20-quality-gates-live-in-one-registry-and-each-must-be-able-to-fail.md) | Current | - Status: Accepted |
 | [ADR-2519: Safety Signature Manifests Are Stored as Text](adr/2026-10-20-safety-signature-manifests-are-stored-as-text.md) | Current | - Status: Accepted |

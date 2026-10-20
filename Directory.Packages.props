@@ -82,6 +82,8 @@
     <!-- Resilience & HTTP Clients -->
     <PackageVersion Include="Polly" Version="8.5.2" />
     <PackageVersion Include="Microsoft.Extensions.Http.Polly" Version="10.0.13" />
+    <!-- AI agent tools (ADR-2633): the provider-neutral function abstraction and the official MCP C# SDK. -->
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
 
     <!-- Media, Storage & Antivirus Integrations -->
