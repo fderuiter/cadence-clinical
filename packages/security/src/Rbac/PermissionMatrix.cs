@@ -430,6 +430,7 @@ public static partial class PermissionMatrix
         AddEconsentGrants();
         AddKnowledgeGrants();
         AddCtmsGrants();
+        AddSafetyGrants();
     }
 
     private static partial void AddExecutionGrants();
@@ -447,6 +448,8 @@ public static partial class PermissionMatrix
     private static partial void AddKnowledgeGrants();
 
     private static partial void AddCtmsGrants();
+
+    private static partial void AddSafetyGrants();
 
     /// <summary>
     /// True when at least one role holds <paramref name="permission"/> (<c>resource:action</c>). A route permission no

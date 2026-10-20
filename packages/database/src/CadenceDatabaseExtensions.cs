@@ -36,10 +36,15 @@ public static partial class CadenceDatabaseExtensions
     /// <param name="builder">The web application builder.</param>
     /// <param name="schema">The module's PostgreSQL schema; defaults to the context name without "DbContext", lower-cased.</param>
     /// <param name="connectionName">The <c>ConnectionStrings</c> entry to read.</param>
+    /// <param name="configureOptions">
+    /// Optional per-scope options configuration, run after the provider is set, for example to add a
+    /// <see cref="GxPAuditInterceptor"/> whose actor comes from the scope's request.
+    /// </param>
     public static WebApplicationBuilder AddCadencePostgresDbContext<TDbContext>(
         this WebApplicationBuilder builder,
         string? schema = null,
-        string connectionName = DefaultConnectionName)
+        string connectionName = DefaultConnectionName,
+        Action<IServiceProvider, DbContextOptionsBuilder>? configureOptions = null)
         where TDbContext : DbContext
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -48,8 +53,11 @@ public static partial class CadenceDatabaseExtensions
             ResolvePostgresConnectionString(builder.Configuration, builder.Environment, connectionName),
             schema ?? ModuleSchemaFor<TDbContext>());
 
-        builder.Services.AddCadenceDbContext<TDbContext>(options =>
-            options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure()));
+        builder.Services.AddCadenceDbContext<TDbContext>((sp, options) =>
+        {
+            options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure());
+            configureOptions?.Invoke(sp, options);
+        });
 
         builder.Services.AddHealthChecks()
             .AddDbContextCheck<TDbContext>(name: typeof(TDbContext).Name, tags: [ReadinessTag]);
