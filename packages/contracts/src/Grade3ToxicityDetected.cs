@@ -19,6 +19,5 @@ public record Grade3ToxicityDetected(
     int CtcaeGrade,
     string ToxicityTerm,
     bool IsHysLawWarning,
-    string? QueryId,
     DateTimeOffset DetectedAt
 );

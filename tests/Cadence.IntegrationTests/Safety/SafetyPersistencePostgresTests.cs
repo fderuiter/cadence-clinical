@@ -72,7 +72,7 @@ public sealed class SafetyPersistencePostgresTests(SafetyPostgresApiFactory fact
     /// <c>timestamp with time zone</c> and read back as the same UTC instants, including period bounds given with
     /// +02:00 and -05:00 offsets (which PostgreSQL refused with a 500 before the engine normalised them, #5464). Each
     /// write carries the verified caller, its reason and the next version index, and the audit entries name the caller
-    /// of each write at the clock's time in UTC.
+    /// of each write at the clock's time in UTC and carry the record's version after that write.
     /// </summary>
     [Fact]
     [GxPRequirement("PRD-SYS-001")]
@@ -160,12 +160,89 @@ public sealed class SafetyPersistencePostgresTests(SafetyPostgresApiFactory fact
             .Where(e => e.EntityName == DsurCompilerEngine.AuditEntityName && e.EntityId == id)
             .OrderBy(e => e.Timestamp)
             .ToListAsync(Ct);
-        entries.Select(e => (e.Action, e.UserId, e.ReasonForChange, e.Timestamp)).Should().Equal(
-            (DsurCompilerEngine.CompiledAuditAction, Compiler.UserId, "Annual DSUR compilation", compiledAt.UtcDateTime),
-            (DsurCompilerEngine.UpdatedAuditAction, Editor.UserId, "Corrected study identifier", updatedAt.UtcDateTime),
-            (DsurCompilerEngine.ApprovedAuditAction, Approver.UserId, "DSUR medical review complete", approvedAt.UtcDateTime));
+        // The record is IGxPAuditable, so each entry carries the version the write produced, not 0 (#5573).
+        entries.Select(e => (e.Action, e.UserId, e.ReasonForChange, e.Timestamp, e.VersionIndex)).Should().Equal(
+            (DsurCompilerEngine.CompiledAuditAction, Compiler.UserId, "Annual DSUR compilation", compiledAt.UtcDateTime, 1L),
+            (DsurCompilerEngine.UpdatedAuditAction, Editor.UserId, "Corrected study identifier", updatedAt.UtcDateTime, 2L),
+            (DsurCompilerEngine.ApprovedAuditAction, Approver.UserId, "DSUR medical review complete", approvedAt.UtcDateTime, 3L));
         entries.Should().OnlyContain(e => e.Timestamp.Kind == DateTimeKind.Utc && !string.IsNullOrEmpty(e.BlockHash));
     }
+
+    /// <summary>
+    /// The report stores its exposure as unrounded patient-years in a <c>double precision</c> column (formerly an integer
+    /// named TotalSubjectExposure, #5573), and counts only the serious cases as SAEs. One subject enrolled for the whole
+    /// of 2025 is exposed 365 / 365.25 = 0.9993 patient-years.
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-PVG-004")]
+    public async Task Compile_StoresUnroundedPatientYearsAndCountsOnlySeriousCases()
+    {
+        factory.SkipIfUnavailable();
+        string id;
+        using (var client = factory.CreateSignedClient(Compiler))
+        {
+            using var response = await client.PostAsJsonAsync(
+                "/api/v1/safety/dsur/compile",
+                new
+                {
+                    compoundName = "Cadence-Compound-Exposure",
+                    studyId = "STUDY-EXPOSURE",
+                    periodStart = "2025-01-01T00:00:00Z",
+                    periodEnd = "2026-01-01T00:00:00Z",
+                    reasonForChange = "Annual DSUR compilation",
+                    subjectEnrollments = new[]
+                    {
+                        new { subjectId = "SUBJ-PG-1", studyId = "STUDY-EXPOSURE", treatmentArm = "Investigational Drug", enrollmentDate = "2024-06-01T00:00:00Z" },
+                    },
+                    safetyCases = new[] { PgCase("CASE-PG-1", isSerious: true), PgCase("CASE-PG-2", isSerious: false) },
+                },
+                Ct);
+            response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync(Ct));
+            id = (await response.Content.ReadFromJsonAsync<PeriodicSafetyReportRecord>(Ct))!.Id;
+        }
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<SafetyDbContext>();
+        var record = await db.PeriodicSafetyReports.AsNoTracking().SingleAsync(r => r.Id == id, Ct);
+        record.TotalPatientYearsExposure.Should().Be(0.9993);
+        record.TotalSaes.Should().Be(1, "CASE-PG-2 is not serious");
+
+        var connection = db.Database.GetDbConnection();
+        await db.Database.OpenConnectionAsync(Ct);
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT pg_typeof(\"TotalPatientYearsExposure\")::text FROM periodic_safety_reports WHERE \"Id\" = @id";
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "id";
+            parameter.Value = id;
+            command.Parameters.Add(parameter);
+            (await command.ExecuteScalarAsync(Ct)).Should().Be("double precision");
+        }
+        finally
+        {
+            await db.Database.CloseConnectionAsync();
+        }
+    }
+
+    private static object PgCase(string caseId, bool isSerious) => new
+    {
+        caseId,
+        subjectId = "SUBJ-PG-1",
+        studyId = "STUDY-EXPOSURE",
+        receiptDate = "2025-06-01T00:00:00Z",
+        aeTerm = "Nausea",
+        meddraPt = "Nausea",
+        meddraSoc = "Gastrointestinal disorders",
+        isSerious,
+        isFatal = false,
+        isAesi = false,
+        causality = "CAUSAL",
+        expectedness = "EXPECTED",
+        treatmentArm = "Investigational Drug",
+        actionTaken = "DOSE_NOT_CHANGED",
+        onsetDate = "2025-05-30T00:00:00Z",
+    };
 
     private static string Iso(DateTimeOffset instant) =>
         instant.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'", System.Globalization.CultureInfo.InvariantCulture);

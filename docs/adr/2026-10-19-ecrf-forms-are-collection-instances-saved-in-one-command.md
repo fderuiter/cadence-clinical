@@ -117,6 +117,15 @@ alters an Attestation: the signature stays bound to the revisions it covered and
 needs a new signature before it can be frozen again. Unlocking is a retracting lock Assertion (ADR-2621), never an
 erased signature.
 
+As built (#5463), the signature is recorded by its own command, `SignCollectionInstance`, rather than the generic
+`Attest`: `Attest` is authorized tenant-wide, while a form is signed by an investigator whose grant is at the study
+site, so `collection.sign` is authorized against the form's enrollment. The command takes the form instance's lock
+without claiming the instance (it adds one Attestation, K-TX-1), so no save can change the content between the hash
+check and the commit. The route needs a single-use gateway step-up token bound to the form (`X-Sig-Token`,
+`execution.form.sign`), spent in a durable store in the Execution module's schema; the form read reports its
+`content_hash`, and each signature's `superseded` flag and, rebuilt from the revision history, the values it signed.
+`Attest` refuses the `CollectionInstance` kind.
+
 ## 5. Consequences & Trade-offs
 
 - **Easier:** one copy of every value; atomic page saves with honest 409s; one scope for form locks and signatures;
@@ -136,6 +145,8 @@ The spec amendment lands with this ADR. The code is tracked under #5365, one pul
 2. [x] #5363 typed values; #4729 Assertions and scoped locks.
 3. [x] #5459 `CollectionInstance` and `RecordCollectedValues`, with PostgreSQL tests for atomicity, per-value 409,
        lock races at each scope and replay.
-4. [ ] #5460 Execution as a module over the kernel (done: `apps/execution/module`); #5368 edit checks; #5461 queries; #5465 SDV; #5463 signatures;
+4. [ ] #5460 Execution as a module over the kernel (done: `apps/execution/module`); #5368 edit checks; #5461 queries (done:
+       `FormQuery`, mirrored by `MirrorFormQueryToKernel`; Execution's own `ClinicalQuery` stack retired by migration
+       `RetireClinicalQueries`); #5465 SDV; #5463 signatures (done: `SignCollectionInstance`, §4.5);
        #5466 locks; #5369 and #5469 the web screen.
 5. [ ] #5365's definition-of-done suite on PostgreSQL as the application role, with RTM evidence (#5324).

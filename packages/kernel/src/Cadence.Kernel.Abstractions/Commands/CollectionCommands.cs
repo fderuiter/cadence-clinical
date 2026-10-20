@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Trust;
 
 namespace Cadence.Kernel.Commands;
 
@@ -10,7 +11,8 @@ namespace Cadence.Kernel.Commands;
 /// Opens a form instance for a participant (spec §8.1, K-FACT-6, ADR-2622): a <c>CollectionInstance</c> that will hold
 /// the values collected under one CollectionSpec. The governing protocol version is resolved by the kernel, not named
 /// by the caller: the highest-numbered version in force at the enrollment's study site at <c>CollectedAt</c> (K-TIME-8),
-/// whose design must contain the CollectionSpec. Refused when a lock covers the enrollment (spec §10.5).
+/// whose design must contain the CollectionSpec. Refused when a lock covers the enrollment (spec §10.5) and when the
+/// participant is withdrawn (spec §7.4, <see cref="ObservationErrors.ParticipantWithdrawn"/>).
 /// </summary>
 /// <remarks>
 /// <para><c>CollectionSpecId</c>: The id of the CollectionSpec in the protocol design: what the form collects.</para>
@@ -26,7 +28,7 @@ namespace Cadence.Kernel.Commands;
     nameof(CollectionErrors.CollectedAtInvalid),
     nameof(CollectionErrors.NoGoverningVersion),
     nameof(CollectionErrors.SpecUnknown))]
-[RaisesKernelErrors(typeof(ObservationErrors), nameof(ObservationErrors.Locked))]
+[RaisesKernelErrors(typeof(ObservationErrors), nameof(ObservationErrors.Locked), nameof(ObservationErrors.ParticipantWithdrawn))]
 public sealed record OpenCollectionInstance(
     TenantId TenantId,
     CollectionInstanceId CollectionInstanceId,
@@ -43,7 +45,9 @@ public sealed record OpenCollectionInstance(
 /// revision it was edited from; one stale revision refuses the whole save (409), so a stale browser never overwrites a
 /// value it did not see. A value equal to the current one is left as it is. Structural checks (the item exists, the
 /// value's kind, UCUM unit and code-system version) refuse the save with 422 and an error per item; edit checks run after
-/// commit. Refused when a lock covers the form or any of its values (spec §10.5).
+/// commit. Refused when a lock covers the form or any of its values (spec §10.5). After the participant's withdrawal a
+/// save that only corrects values captured before it is accepted, and one with a new value is refused whole
+/// (<see cref="ObservationErrors.ParticipantWithdrawn"/>).
 /// </summary>
 /// <remarks>
 /// <para><c>EnrollmentId</c>: The form instance's enrollment; the command is authorized against it.</para>
@@ -52,7 +56,8 @@ public sealed record OpenCollectionInstance(
 [KernelCapability("collection.record", VerbClass.Execute, Resource = nameof(RecordCollectedValues.EnrollmentId))]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound), nameof(KernelErrors.AlreadyExists))]
 [RaisesKernelErrors(typeof(CollectionErrors), nameof(CollectionErrors.ValuesInvalid), nameof(CollectionErrors.RevisionStale))]
-[RaisesKernelErrors(typeof(ObservationErrors), nameof(ObservationErrors.Locked), nameof(ObservationErrors.ObservedAtInvalid))]
+[RaisesKernelErrors(
+    typeof(ObservationErrors), nameof(ObservationErrors.Locked), nameof(ObservationErrors.ObservedAtInvalid), nameof(ObservationErrors.ParticipantWithdrawn))]
 public sealed record RecordCollectedValues(
     TenantId TenantId,
     CollectionInstanceId CollectionInstanceId,
@@ -60,6 +65,42 @@ public sealed record RecordCollectedValues(
     IReadOnlyList<CollectedValue> Values,
     string IdempotencyKey,
     string ReasonForChange) : ICommand<CollectedValuesState>;
+
+/// <summary>
+/// Signs a form instance (spec §9.5, 21 CFR 11.50, 11.70, #5463): the acting person attests <c>Meaning</c> about the
+/// exact revisions of the form's values that <c>ContentHash</c> names, which must be the form's current content. The
+/// signature is an <c>Attestation</c> targeting the instance; a later correction never alters it, so the form then shows
+/// it as superseded beside the corrected values. Only a person signs, after a fresh authentication. The command is
+/// authorized against the form's enrollment, so a grant at the study site signs that site's forms.
+/// </summary>
+/// <remarks>
+/// <para><c>Meaning</c>: <c>Approved</c> for an investigator's sign-off, or <c>Responsibility</c> where the protocol asks
+/// the signer to take responsibility for the data.</para>
+/// <para><c>ContentHash</c>: The form's content hash as the signer read it (<c>content_hash</c> on the form read).</para>
+/// <para><c>AuthenticatedAt</c> and <c>Method</c>: When and how the signer re-authenticated to sign.</para>
+/// </remarks>
+[KernelCapability("collection.sign", VerbClass.Execute, Resource = nameof(SignCollectionInstance.EnrollmentId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.ReasonForChangeRequired))]
+[RaisesKernelErrors(typeof(CollectionErrors), nameof(CollectionErrors.SignatureMeaningInvalid))]
+[RaisesKernelErrors(
+    typeof(TrustErrors),
+    nameof(TrustErrors.PersonRequired),
+    nameof(TrustErrors.MethodRequired),
+    nameof(TrustErrors.AuthenticationStale),
+    nameof(TrustErrors.TargetNotSignable),
+    nameof(TrustErrors.TargetContentChanged))]
+public sealed record SignCollectionInstance(
+    TenantId TenantId,
+    AttestationId AttestationId,
+    CollectionInstanceId CollectionInstanceId,
+    EnrollmentId EnrollmentId,
+    AttestationMeaning Meaning,
+    string ContentHash,
+    DateTimeOffset AuthenticatedAt,
+    string Method,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<AttestationId>;
 
 /// <summary>One value of a form page save.</summary>
 /// <param name="ItemId">The CollectionSpec item the value is collected for; the observation records the item's concept.</param>
@@ -123,7 +164,10 @@ public static class CollectionErrors
     public static readonly KernelError RevisionStale =
         new("K.Collection.RevisionStale", 409, "The form changed since you opened it; reload it and edit the current values.");
 
+    public static readonly KernelError SignatureMeaningInvalid =
+        new("K.Collection.SignatureMeaningInvalid", 422, "A form is signed as Approved or Responsibility.");
+
     /// <summary>Every form instance error, for the API's documented problem set.</summary>
     public static IReadOnlyList<KernelError> All { get; } =
-        [EnrollmentUnknown, CollectedAtInvalid, NoGoverningVersion, SpecUnknown, ValuesInvalid, RevisionStale];
+        [EnrollmentUnknown, CollectedAtInvalid, NoGoverningVersion, SpecUnknown, ValuesInvalid, RevisionStale, SignatureMeaningInvalid];
 }

@@ -34,7 +34,5 @@ public static class ExecutionJsonSerialization
 
         options.Converters.Add(new DomainCodeJsonConverter());
         options.Converters.Add(new TestCodeJsonConverter());
-        options.Converters.Add(new QueryIdJsonConverter());
-        options.Converters.Add(new QueryStatusJsonConverter());
     }
 }

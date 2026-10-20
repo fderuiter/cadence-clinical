@@ -95,6 +95,7 @@ public sealed class DsurCompilationTests(DsurApprovalAuthorityTests.SafetyFactor
         exposure.TotalPatientYearsExposure.Should().Be(1.9986);
         exposure.InvestigationalArmPatientYears.Should().Be(1.5003);
         exposure.PlaceboArmPatientYears.Should().Be(0.4983);
+        exposure.ComparatorArmPatientYears.Should().Be(0.0, "no subject is in a comparator arm");
         exposure.ExposureDetails.Select(d => (d.SubjectId, d.StartDate, d.EndDate, d.ExposureDays, d.PatientYears)).Should().Equal(
             ("SUBJ-201", PeriodStart, PeriodEnd, 365.0, 0.9993),
             ("SUBJ-202", Utc(2025, 7, 2), PeriodEnd, 183.0, 0.5010),
@@ -112,8 +113,98 @@ public sealed class DsurCompilationTests(DsurApprovalAuthorityTests.SafetyFactor
         result.Payload.TotalSusars.Should().Be(2, "CASE-03 and CASE-04 are serious, unexpected and causal; CASE-06 is not causal");
         result.Payload.TotalAesi.Should().Be(1);
         result.Payload.LineListings.Select(l => l.CaseId).Should().Equal("CASE-01", "CASE-02", "CASE-03", "CASE-04", "CASE-05", "CASE-06");
+        result.Payload.TotalSubjectsEnrolled.Should().Be(5);
         result.Record.TotalSaes.Should().Be(6);
+        result.Record.TotalPatientYearsExposure.Should().Be(1.9986, "the record keeps the unrounded patient-years");
         result.Record.CreatedAt.Should().Be(clock.UtcNow);
+    }
+
+    /// <summary>
+    /// Only serious cases count as SAEs (ICH E2F), though every case is listed; and a comparator arm is one group in
+    /// both exposure and the tabulation (#5573). Over 2025: SUBJ-301 (investigational) 365 d = 0.9993, SUBJ-302 (active
+    /// comparator) from 2025-07-02, 183 d = 0.5010, SUBJ-303 (placebo comparator, counted as placebo) from 2025-10-01,
+    /// 92 d = 0.2519; total 1.7522. Each tabulated case falls in exactly one arm column.
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-PVG-004")]
+    public async Task Compile_CountsSeriousCasesAsSaesAndGroupsComparatorArmsOnce()
+    {
+        var clock = new FakeClock(new DateTimeOffset(2026, 10, 20, 9, 0, 0, TimeSpan.Zero));
+        await using var db = InMemoryContext(clock);
+        var engine = new DsurCompilerEngine(db, clock);
+        const string Gi = "Gastrointestinal disorders";
+        const string Nervous = "Nervous system disorders";
+        var request = new DsurCompileRequest(
+            "Fixture-Compound",
+            "STUDY-FIX",
+            PeriodStart,
+            PeriodEnd,
+            "Comparator fixture",
+            [
+                new("SUBJ-301", "STUDY-FIX", "Investigational Drug", Utc(2024, 6, 1), null),
+                new("SUBJ-302", "STUDY-FIX", "Active Comparator", Utc(2025, 7, 2), null),
+                new("SUBJ-303", "STUDY-FIX", "Placebo Comparator", Utc(2025, 10, 1), null),
+            ],
+            [
+                Case("CASE-11", "SUBJ-301", "Nausea", Gi, "Investigational Drug", "CAUSAL", "EXPECTED"),
+                Case("CASE-12", "SUBJ-302", "Nausea", Gi, "Active Comparator", "CAUSAL", "EXPECTED", isSerious: false),
+                Case("CASE-13", "SUBJ-303", "Nausea", Gi, "Placebo Comparator", "NOT_CAUSAL", "EXPECTED", isSerious: false),
+                Case("CASE-14", "SUBJ-302", "Headache", Nervous, "Active Comparator", "CAUSAL", "UNEXPECTED"),
+            ]);
+
+        var result = await engine.CompileDsurAsync(request, "fixture-compiler", Ct);
+
+        result.Payload.TotalSaes.Should().Be(2, "CASE-12 and CASE-13 are not serious");
+        result.Record.TotalSaes.Should().Be(2);
+        result.Payload.LineListings.Select(l => l.CaseId).Should().Equal("CASE-11", "CASE-12", "CASE-13", "CASE-14");
+        result.Payload.TotalSusars.Should().Be(1, "only CASE-14 is serious, unexpected and causal");
+
+        var exposure = result.Payload.ExposureMetrics;
+        exposure.InvestigationalArmPatientYears.Should().Be(0.9993);
+        exposure.ComparatorArmPatientYears.Should().Be(0.5010);
+        exposure.PlaceboArmPatientYears.Should().Be(0.2519);
+        exposure.TotalPatientYearsExposure.Should().Be(1.7522);
+        result.Payload.TotalSubjectsEnrolled.Should().Be(3);
+        result.Record.TotalPatientYearsExposure.Should().Be(1.7522);
+
+        result.Payload.SummaryTabulations.Should().Equal(
+            new DsurSummaryTabulationRow(Gi, "Nausea", false, null, false, 1, 1, 1, 3, "EXPECTED"),
+            new DsurSummaryTabulationRow(Nervous, "Headache", false, null, false, 0, 0, 1, 1, "UNEXPECTED"));
+        result.Payload.SummaryTabulations.Should().OnlyContain(
+            t => t.InvestigationalDrugCount + t.PlaceboCount + t.ComparatorCount == t.TotalCount);
+    }
+
+    /// <summary>
+    /// The report is GxP-auditable: its compile, update and approval entries carry the record's version after each
+    /// write (1, 2, 3), not 0 as action-only entries (#5573).
+    /// </summary>
+    [Fact]
+    public async Task CompileUpdateApprove_AuditEntriesCarryTheRecordVersion()
+    {
+        string id = await CompileAsync();
+        using (var editor = factory.CreateSignedClient(Compiler))
+        {
+            using var update = await editor.PutAsJsonAsync(
+                $"/api/v1/safety/dsur/{id}", new { studyId = "STUDY-2025-B", reasonForChange = "Corrected study identifier" }, Ct);
+            update.StatusCode.Should().Be(HttpStatusCode.OK, await update.Content.ReadAsStringAsync(Ct));
+        }
+
+        using (var approver = factory.CreateSignedClient(Approver))
+        {
+            using var approval = await ApproveAsync(approver, "/api/v1/safety/dsur", id);
+            approval.StatusCode.Should().Be(HttpStatusCode.OK, await approval.Content.ReadAsStringAsync(Ct));
+        }
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<SafetyDbContext>();
+        var entries = await db.AuditLogEntries.AsNoTracking()
+            .Where(e => e.EntityName == DsurCompilerEngine.AuditEntityName && e.EntityId == id)
+            .ToListAsync(Ct);
+        entries.OrderBy(e => e.VersionIndex).Select(e => (e.Action, e.VersionIndex)).Should().Equal(
+            (DsurCompilerEngine.CompiledAuditAction, 1L),
+            (DsurCompilerEngine.UpdatedAuditAction, 2L),
+            (DsurCompilerEngine.ApprovedAuditAction, 3L));
+        (await RecordAsync(id))!.VersionIndex.Should().Be(3);
     }
 
     /// <summary>
@@ -203,8 +294,8 @@ public sealed class DsurCompilationTests(DsurApprovalAuthorityTests.SafetyFactor
 
     private static SafetyCaseIcsrInput Case(
         string caseId, string subjectId, string pt, string soc, string arm, string causality, string expectedness,
-        bool isFatal = false, string? aesiCategory = null) =>
-        new(caseId, subjectId, "STUDY-FIX", Utc(2025, 6, 1), pt, pt, soc, IsSerious: true, isFatal, aesiCategory is not null,
+        bool isFatal = false, string? aesiCategory = null, bool isSerious = true) =>
+        new(caseId, subjectId, "STUDY-FIX", Utc(2025, 6, 1), pt, pt, soc, isSerious, isFatal, aesiCategory is not null,
             aesiCategory, causality, expectedness, arm, "DOSE_NOT_CHANGED", Utc(2025, 5, 30), null);
 
     private static SafetyDbContext InMemoryContext(FakeClock clock) => new(

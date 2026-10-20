@@ -208,6 +208,9 @@ public class KernelPostgresFixture : IAsyncLifetime
     /// <summary>The tenant code directory, as a host gets it.</summary>
     public ITenantDirectory TenantDirectory => Scope().GetRequiredService<ITenantDirectory>();
 
+    /// <summary>The tenant residency reader (ADR-2636), reading as the application role.</summary>
+    public ITenantResidencyReader TenantResidency => Scope().GetRequiredService<ITenantResidencyReader>();
+
     /// <summary>The Concept Registry read port, as applications get it.</summary>
     public IConceptRegistry ConceptRegistry => Scope().GetRequiredService<IConceptRegistry>();
 

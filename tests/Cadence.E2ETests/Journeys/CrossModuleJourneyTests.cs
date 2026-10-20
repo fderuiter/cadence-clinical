@@ -227,13 +227,15 @@ public sealed class CrossModuleJourneyTests(KernelHostJourneyFixture fixture) : 
     }
 
     /// <summary>
-    /// Withdrawal: a value captured while the participant takes part, then the investigator signs and records the
-    /// participant's withdrawal; the value captured before it stays readable, unchanged, with its history. One participant
-    /// throughout, every write audited as its caller.
+    /// Withdrawal: a value captured and a form opened while the participant takes part, then the investigator signs and
+    /// records the participant's withdrawal. New capture is then refused with 409 <c>K.Observation.ParticipantWithdrawn</c>
+    /// on the kernel's observation route and on the Execution module's form routes (opening a form, saving a new value),
+    /// and each refusal is audited as its caller; the value captured before the withdrawal stays readable, unchanged, with
+    /// its history (#5578). One participant throughout, every write audited as its caller.
     /// </summary>
     [Fact]
     [GxPRequirement("PRD-SYS-001")]
-    public async Task Withdrawal_DataCapturedBeforeStaysReadable_OneParticipantAndEveryWriteAuditedAsItsCaller()
+    public async Task Withdrawal_NewCaptureRefusedAndDataCapturedBeforeStaysReadable_OneParticipantAndEveryWriteAuditedAsItsCaller()
     {
         fixture.SkipUnlessPostgres();
         var ct = TestContext.Current.CancellationToken;
@@ -261,6 +263,12 @@ public sealed class CrossModuleJourneyTests(KernelHostJourneyFixture fixture) : 
         var observation = ObservationId.FromGuid(observationRef.Id);
         written.Add((observation.ToString(), JourneyStudy.Coordinator));
 
+        // A form opened at the visit, before the withdrawal, over the Execution module's route; no value saved yet.
+        var opened = await OpenFormAsync(crc, enrollment, JourneyStudy.VitalsSpec, JourneyStudy.Week12, "Week 12 visit performed", ct);
+        var formId = CollectionInstanceId.FromGuid(opened.FormId);
+        written.Add((formId.ToString(), JourneyStudy.Coordinator));
+        await AwaitFormConsumerAsync(study, formId, written, ct);
+
         // TODO(2026-10-20): withdraw consent (ConsentWithdrawn closing the withdrawn scopes' valid periods, K-CONS-2) once
         // the kernel has computable consent (#4777). What the kernel has today is the participant's withdrawal from the
         // study, signed by the investigator (spec §7.4), which the journey records.
@@ -279,14 +287,48 @@ public sealed class CrossModuleJourneyTests(KernelHostJourneyFixture fixture) : 
         read.Value.Should().Be(new QuantityValue(141m, "mm[Hg]"));
         read.Revisions.Should().ContainSingle().Which.RecordedBy.Should().Be(JourneyStudy.Coordinator);
 
-        // TODO(2026-10-20): assert that new capture for the withdrawn scope is refused in every module: a kernel
-        // observation or form save (K-CONS-1 evaluated in the command pipeline, #4777), Execution's capture routes once
-        // it is a module (#5563) and eConsent's (#5378). Today no consent scope exists to refuse it, and the kernel's
-        // RecordObservation and OpenCollectionInstance do not check the enrollment's status, so capture after a
-        // withdrawal is still accepted (#5578); asserting either outcome here would only pin today's gap.
+        // New capture after the withdrawal is refused on the kernel's route and on the Execution module's form routes,
+        // and nothing about it is written but the audited refusal.
+        await AssertCaptureRefusedAsync(crc, HttpMethod.Post, "observations", new
+        {
+            enrollment_ref = NodeRef.For(enrollment.EnrollmentId).ToString(),
+            concept = study.SystolicBloodPressure.ToString(),
+            value = new { type = "quantity", value = 150, unit = "mm[Hg]" },
+            observed_at = SystemClock.Instance.UtcNow.AddSeconds(-30),
+        }, ct);
+        await AssertCaptureRefusedAsync(crc, HttpMethod.Post, FormsRoute, new
+        {
+            enrollment_id = enrollment.EnrollmentId.Value,
+            collection_spec_id = JourneyStudy.VitalsSpec,
+            planned_activity_id = JourneyStudy.Week12,
+            collected_at = SystemClock.Instance.UtcNow.AddSeconds(-30),
+        }, ct);
+        await AssertCaptureRefusedAsync(crc, HttpMethod.Put, $"{FormsRoute}/{opened.FormId:D}/values", new
+        {
+            values = new[] { new { item_id = JourneyStudy.Systolic, value = (object)new { type = "quantity", value = 150, unit = "mm[Hg]" }, expected_revision = 0 } },
+        }, ct);
+        (await ReadFormAsync(crc, opened.FormId, ct)).Items.Should().ContainSingle().Which.Value.Should().BeNull("the refused save wrote nothing");
+        var refusals = (await fixture.AuditAsync(study.Tenant, ct)).Where(a => a.Action == "Refused").ToList();
+        refusals.Should().HaveCount(3).And.OnlyContain(a => a.ActorId == JourneyStudy.Coordinator && a.ReasonForChange.Length > 0);
 
-        await AssertOneParticipantAsync(participant, withdrawn, [("observations", observation.Value)], ct);
+        // TODO(2026-10-20): once consent scopes exist (#4777), refusal follows the withdrawn scopes (K-CONS-1, K-CONS-2)
+        // instead of the enrollment's status, and the same refusal is asserted on Execution's other capture routes once it
+        // is a module (#5563) and on eConsent's (#5378).
+
+        await AssertOneParticipantAsync(participant, withdrawn, [("observations", observation.Value), ("collection_instances", opened.FormId)], ct);
         await AssertAuditedAsync(study, written, ct);
+    }
+
+    /// <summary>New capture for a withdrawn participant is refused with 409 <c>K.Observation.ParticipantWithdrawn</c>.</summary>
+    private static async Task AssertCaptureRefusedAsync(HttpClient caller, HttpMethod method, string path, object body, CancellationToken ct)
+    {
+        var (response, problem) = await KernelHostJourneyFixture.CallAsync(caller, method, path, "Entered after the withdrawal", body, ct);
+        using (response)
+        {
+            response.StatusCode.Should().Be(HttpStatusCode.Conflict, problem);
+        }
+
+        problem.Should().Contain(ObservationErrors.ParticipantWithdrawn.Code, "{0} {1} names the refusal", method, path);
     }
 
     /// <summary>The coordinator registers, screens and enrolls a participant through the host; returns both ids.</summary>

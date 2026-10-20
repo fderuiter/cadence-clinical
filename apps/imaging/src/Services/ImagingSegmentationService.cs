@@ -1,41 +1,21 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Cadence.Apps.Imaging.Domain;
 using Cadence.Apps.Imaging.Infrastructure.Persistence;
-using Cadence.Kernel.Time;
 
 using Microsoft.EntityFrameworkCore;
 
 namespace Cadence.Apps.Imaging.Services;
 
+/// <summary>A reader's box around the lesion, in pixels.</summary>
 public record BoundingBoxDto(
     double XMin,
     double YMin,
     double XMax,
     double YMax);
 
-public record Point2DDto(
-    double X,
-    double Y);
-
-public record CaliperLineDto(
-    Point2DDto StartPoint,
-    Point2DDto EndPoint,
-    double LengthMm,
-    string CaliperType);
-
-public record HounsfieldStatsDto(
-    double MeanHu,
-    double MinHu,
-    double MaxHu,
-    double StdDevHu,
-    string ModelVersion);
-
+/// <summary>A request to segment the lesion at a seed point on a stored series.</summary>
 public record SegmentRoiRequest(
     double SeedX,
     double SeedY,
@@ -47,30 +27,14 @@ public record SegmentRoiRequest(
     string? LesionType = null,
     string? TimepointName = null);
 
-public record SegmentationResultDto(
-    string AnnotationId,
-    string StudyInstanceUid,
-    string SeriesInstanceUid,
-    string LesionId,
-    string OrganSite,
-    string LesionType,
-    double LongestDiameterMm,
-    double PerpendicularDiameterMm,
-    BoundingBoxDto BoundingBox,
-    List<Point2DDto> ContourPoints,
-    List<CaliperLineDto> FittedCalipers,
-    HounsfieldStatsDto HounsfieldStats,
-    string MeasurementType,
-    string ModelVersion,
-    bool IsAiAssisted,
-    DateTimeOffset Timestamp,
-    string ReaderId);
-
-/// <summary>Why a segmentation request was not carried out, or <see cref="Segmented"/> when it was.</summary>
+/// <summary>Why a segmentation request was not carried out.</summary>
 public enum SegmentationStatus
 {
-    /// <summary>The annotation was written.</summary>
-    Segmented,
+    /// <summary>
+    /// The request is in scope, but no segmentation model reads the image, so nothing is measured or written (#5426).
+    /// A measurement no model computed must never become study evidence.
+    /// </summary>
+    ModelUnavailable,
 
     /// <summary>No stored scan has that study instance UID, or the series is not one of its series.</summary>
     NotFound,
@@ -79,14 +43,17 @@ public enum SegmentationStatus
     OutsideCallerStudies,
 }
 
-/// <summary>The outcome of a segmentation request; <see cref="Result"/> is set only when it was segmented.</summary>
-public sealed record SegmentationOutcome(SegmentationStatus Status, SegmentationResultDto? Result = null);
+/// <summary>The outcome of a segmentation request.</summary>
+public sealed record SegmentationOutcome(SegmentationStatus Status);
 
+/// <summary>Lesion segmentation on stored series.</summary>
 public interface IImagingSegmentationService
 {
     /// <summary>
-    /// Segments a lesion on a stored series and writes the annotation. The clinical study, site and subject come from
-    /// the stored scan, never from the request, and <paramref name="canAccessStudy"/> must admit that study (ADR-2516).
+    /// Segments a lesion on a stored series. The clinical study comes from the stored scan, never from the request, and
+    /// <paramref name="canAccessStudy"/> must admit it (ADR-2516). No segmentation model is available, so an in-scope
+    /// request is refused with <see cref="SegmentationStatus.ModelUnavailable"/> and nothing is written (#5426); a model
+    /// will run through the Intelligence module and land as a Proposal a reader approves (ADR-2630).
     /// </summary>
     Task<SegmentationOutcome> SegmentRoiAsync(
         string studyUid,
@@ -97,15 +64,14 @@ public interface IImagingSegmentationService
         CancellationToken cancellationToken = default);
 }
 
+/// <summary>Checks segmentation requests against the stored scan and the caller's scope; measures nothing (#5426).</summary>
 public class ImagingSegmentationService : IImagingSegmentationService
 {
     private readonly ImagingDbContext _dbContext;
-    private readonly IClock _clock;
 
-    public ImagingSegmentationService(ImagingDbContext dbContext, IClock clock)
+    public ImagingSegmentationService(ImagingDbContext dbContext)
     {
         _dbContext = dbContext;
-        _clock = clock;
     }
 
     public async Task<SegmentationOutcome> SegmentRoiAsync(
@@ -144,178 +110,9 @@ public class ImagingSegmentationService : IImagingSegmentationService
             return new SegmentationOutcome(SegmentationStatus.NotFound);
         }
 
-        DateTimeOffset now = _clock.UtcNow;
-        string studyId = study.StudyId;
-        string siteId = study.SiteId;
-        string subjectId = study.SubjectId;
-        string timepointName = !string.IsNullOrWhiteSpace(request.TimepointName) ? request.TimepointName : "BASELINE";
-        string lesionId = !string.IsNullOrWhiteSpace(request.LesionId) ? request.LesionId : "TL1";
-        string organSite = !string.IsNullOrWhiteSpace(request.OrganSite) ? request.OrganSite : "LIVER";
-        string lesionType = !string.IsNullOrWhiteSpace(request.LesionType) ? request.LesionType : "TARGET";
-        int sliceIndex = request.SliceIndex ?? 24;
-
-        double seedX = request.SeedX;
-        double seedY = request.SeedY;
-
-        const int numPoints = 24;
-        const double mmPerPixel = 0.75;
-        double baseRadiusPx = 25.0;
-        if (request.BoundingBox != null)
-        {
-            double widthPx = Math.Abs(request.BoundingBox.XMax - request.BoundingBox.XMin);
-            double heightPx = Math.Abs(request.BoundingBox.YMax - request.BoundingBox.YMin);
-            if (widthPx > 5 && heightPx > 5)
-            {
-                baseRadiusPx = Math.Min(widthPx, heightPx) / 2.0;
-                seedX = (request.BoundingBox.XMin + request.BoundingBox.XMax) / 2.0;
-                seedY = (request.BoundingBox.YMin + request.BoundingBox.YMax) / 2.0;
-            }
-        }
-
-        var contourPoints = new List<Point2DDto>();
-        for (int i = 0; i < numPoints; i++)
-        {
-            double theta = (2.0 * Math.PI * i) / numPoints;
-            double radiusPx = baseRadiusPx * (1.0 + 0.15 * Math.Sin(3 * theta) + 0.08 * Math.Cos(5 * theta));
-            double px = Math.Round(seedX + radiusPx * Math.Cos(theta), 2);
-            double py = Math.Round(seedY + radiusPx * Math.Sin(theta), 2);
-            contourPoints.Add(new Point2DDto(px, py));
-        }
-
-        double xMin = contourPoints.Min(p => p.X);
-        double xMax = contourPoints.Max(p => p.X);
-        double yMin = contourPoints.Min(p => p.Y);
-        double yMax = contourPoints.Max(p => p.Y);
-        var boundingBox = new BoundingBoxDto(xMin, yMin, xMax, yMax);
-
-        Point2DDto p1 = contourPoints[0];
-        Point2DDto p2 = contourPoints[numPoints / 2];
-        double maxDistPx = 0;
-        for (int i = 0; i < contourPoints.Count; i++)
-        {
-            for (int j = i + 1; j < contourPoints.Count; j++)
-            {
-                double dx = contourPoints[i].X - contourPoints[j].X;
-                double dy = contourPoints[i].Y - contourPoints[j].Y;
-                double dist = Math.Sqrt(dx * dx + dy * dy);
-                if (dist > maxDistPx)
-                {
-                    maxDistPx = dist;
-                    p1 = contourPoints[i];
-                    p2 = contourPoints[j];
-                }
-            }
-        }
-        double longestDiameterMm = Math.Round(maxDistPx * mmPerPixel, 1);
-
-        double majorDx = p2.X - p1.X;
-        double majorDy = p2.Y - p1.Y;
-        double majorLen = Math.Sqrt(majorDx * majorDx + majorDy * majorDy);
-
-        Point2DDto perpP1 = contourPoints[numPoints / 4];
-        Point2DDto perpP2 = contourPoints[(3 * numPoints) / 4];
-        double maxPerpDistPx = 0;
-
-        if (majorLen > 0)
-        {
-            double ux = majorDx / majorLen;
-            double uy = majorDy / majorLen;
-
-            for (int i = 0; i < contourPoints.Count; i++)
-            {
-                for (int j = i + 1; j < contourPoints.Count; j++)
-                {
-                    double dx = contourPoints[i].X - contourPoints[j].X;
-                    double dy = contourPoints[i].Y - contourPoints[j].Y;
-                    double proj = Math.Abs(dx * ux + dy * uy);
-                    double perpDist = Math.Sqrt(Math.Max(0, dx * dx + dy * dy - proj * proj));
-                    if (perpDist > maxPerpDistPx && proj < 0.3 * majorLen)
-                    {
-                        maxPerpDistPx = perpDist;
-                        perpP1 = contourPoints[i];
-                        perpP2 = contourPoints[j];
-                    }
-                }
-            }
-        }
-
-        if (maxPerpDistPx <= 0)
-        {
-            maxPerpDistPx = maxDistPx * 0.72;
-        }
-        double perpendicularDiameterMm = Math.Round(maxPerpDistPx * mmPerPixel, 1);
-
-        var fittedCalipers = new List<CaliperLineDto>
-        {
-            new CaliperLineDto(p1, p2, longestDiameterMm, "LONGEST_DIAMETER"),
-            new CaliperLineDto(perpP1, perpP2, perpendicularDiameterMm, "PERPENDICULAR_DIAMETER")
-        };
-
-        const string modelVersion = "UNet-ResNet34-2D-v2.1";
-        var hounsfieldStats = new HounsfieldStatsDto(
-            MeanHu: 48.5,
-            MinHu: 12.0,
-            MaxHu: 88.5,
-            StdDevHu: 11.4,
-            ModelVersion: modelVersion);
-
-        var pointsPayload = new
-        {
-            Contour = contourPoints,
-            BoundingBox = boundingBox,
-            Calipers = fittedCalipers
-        };
-
-        string pointsJson = JsonSerializer.Serialize(pointsPayload);
-        string hounsfieldJson = JsonSerializer.Serialize(hounsfieldStats);
-
-        var annotation = new ImagingAnnotation
-        {
-            Id = Guid.NewGuid().ToString(),
-            StudyEnvelopeId = study.Id,
-            SeriesEnvelopeId = series.Id,
-            StudyId = studyId,
-            SiteId = siteId,
-            SubjectId = subjectId,
-            TimepointName = timepointName,
-            LesionId = lesionId,
-            LesionType = lesionType,
-            OrganSite = organSite,
-            MeasurementCriteria = "RECIST_1_1",
-            MeasurementType = "AI_AUTO_CONTOUR",
-            LongestDiameterMm = longestDiameterMm,
-            PerpendicularDiameterMm = perpendicularDiameterMm,
-            SliceIndex = sliceIndex,
-            SliceLocation = sliceIndex * 2.5,
-            PointsJson = pointsJson,
-            HounsfieldStatsJson = hounsfieldJson,
-            ReaderId = callerId,
-            Notes = $"AI Auto-Segment (Model: {modelVersion})",
-            CreatedAt = now,
-            CreatedBy = callerId,
-            UpdatedAt = now
-        };
-
-        _dbContext.ImagingAnnotations.Add(annotation);
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        return new SegmentationOutcome(SegmentationStatus.Segmented, new SegmentationResultDto(
-            AnnotationId: annotation.Id,
-            StudyInstanceUid: studyUid,
-            SeriesInstanceUid: seriesUid,
-            LesionId: lesionId,
-            OrganSite: organSite,
-            LesionType: lesionType,
-            LongestDiameterMm: longestDiameterMm,
-            PerpendicularDiameterMm: perpendicularDiameterMm,
-            BoundingBox: boundingBox,
-            ContourPoints: contourPoints,
-            FittedCalipers: fittedCalipers,
-            HounsfieldStats: hounsfieldStats,
-            MeasurementType: "AI_AUTO_CONTOUR",
-            ModelVersion: modelVersion,
-            IsAiAssisted: true,
-            Timestamp: now,
-            ReaderId: callerId));
+        // There is no model that reads the pixels. The earlier code drew a fixed shape around the seed and stored its
+        // "diameters" and constant Hounsfield statistics as an AI-assisted RECIST measurement under the reader's name
+        // (#5422). Refuse instead: readers measure with the calipers until a qualified model exists.
+        return new SegmentationOutcome(SegmentationStatus.ModelUnavailable);
     }
 }

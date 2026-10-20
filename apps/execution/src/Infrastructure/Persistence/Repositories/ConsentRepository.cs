@@ -46,6 +46,14 @@ public sealed class ConsentRepository(ExecutionDbContext context)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
+    public async Task<bool> HasCurrentConsentAsync(SubjectCode subjectCode, StudyCode studyCode, CancellationToken cancellationToken)
+    {
+        var consents = Context.SubjectConsents.AsNoTracking()
+            .Where(c => c.SubjectCode == subjectCode && c.ProtocolVersion.StudyCode == studyCode);
+        bool signed = await consents.AnyAsync(c => c.IcfSigned || c.IsPaperOverride, cancellationToken).ConfigureAwait(false);
+        return signed && !await consents.AnyAsync(c => c.RequiresReconsent, cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task AddAsync(SubjectConsent consent, CancellationToken cancellationToken) =>
         await Context.SubjectConsents.AddAsync(consent, cancellationToken).ConfigureAwait(false);
 }

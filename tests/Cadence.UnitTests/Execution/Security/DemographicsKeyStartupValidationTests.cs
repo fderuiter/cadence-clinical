@@ -31,10 +31,32 @@ public sealed class DemographicsKeyStartupValidationTests
         using var unconfigured = new StartupValidationFactory<Cadence.Apps.Execution.Program>(builder => builder
             .UseTestGatewaySecret()
             .UseTestPostgresConnectionString()
+            .UseTestRandomizationKey()
             .UseSetting("DemographicsEncryption:KeyBase64", keyBase64));
 
         unconfigured.ValidateStartup().Should().BeOfType<OptionsValidationException>()
             .Which.Message.Should().Contain("DemographicsEncryption__KeyBase64");
+    }
+
+    /// <summary>
+    /// The randomisation allocation key (#5607) is checked at boot the same way, so a host that would store arms
+    /// under no key, or a short one, never starts.
+    /// </summary>
+    [Theory]
+    [Trait("Category", "GxP_IQ")]
+    [InlineData("")]
+    [InlineData("not base64!")]
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAA==")]
+    public void HostStartup_WithoutAValidRandomizationKey_FailsFast(string keyBase64)
+    {
+        using var unconfigured = new StartupValidationFactory<Cadence.Apps.Execution.Program>(builder => builder
+            .UseTestGatewaySecret()
+            .UseTestPostgresConnectionString()
+            .UseTestDemographicsKey()
+            .UseSetting(AllocationProtectionOptions.ConfigurationKey, keyBase64));
+
+        unconfigured.ValidateStartup().Should().BeOfType<OptionsValidationException>()
+            .Which.Message.Should().Contain(AllocationProtectionOptions.ConfigurationKey);
     }
 
     /// <summary>The same host with a valid key passes startup validation, so the refusals above are the key's.</summary>
@@ -45,7 +67,7 @@ public sealed class DemographicsKeyStartupValidationTests
         using var configured = new StartupValidationFactory<Cadence.Apps.Execution.Program>(builder => builder
             .UseTestGatewaySecret()
             .UseTestPostgresConnectionString()
-            .UseTestDemographicsKey());
+            .UseTestDemographicsKey().UseTestRandomizationKey());
 
         configured.ValidateStartup().Should().BeNull();
     }

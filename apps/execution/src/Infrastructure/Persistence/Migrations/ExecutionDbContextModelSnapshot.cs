@@ -1499,145 +1499,227 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.ToTable("lab_reference_ranges", (string)null);
                 });
 
-            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Queries.ClinicalQuery", b =>
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Randomization.RandomizationAllocation", b =>
                 {
                     b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("ActionRequired")
+                    b.Property<DateTimeOffset>("AllocatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AllocatedBy")
+                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<string>("CancellationReason")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
+                    b.Property<string>("ArmCiphertext")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Domain")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<DateTimeOffset?>("EscalatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Explanation")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("FieldId")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<string>("FieldLink")
+                    b.Property<string>("KitNumber")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<string>("FormId")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("Message")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("ObservationId")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("Origin")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Priority")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("QueryType")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                    b.Property<Guid?>("ListSlotId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("ReasonForChange")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset?>("ResolvedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Resolver")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("Responder")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("Response")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<string>("RuleId")
+                    b.Property<Guid>("SchemeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SchemeVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SiteCode")
+                        .HasColumnType("text");
+
+                    b.Property<string>("StratificationFactorsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("StratumKey")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("StudyCode")
+                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<string>("SiteId")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("StudyId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("SubjectId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("TestCode")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid");
 
                     b.Property<long>("VersionIndex")
                         .HasColumnType("bigint");
 
-                    b.Property<string>("VisitId")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                    b.HasKey("Id");
 
-                    b.Property<long>("_version")
-                        .IsConcurrencyToken()
+                    b.HasIndex("SubjectId")
+                        .IsUnique();
+
+                    b.HasIndex("StudyCode", "AllocatedAt");
+
+                    b.HasIndex("SchemeId", "StratumKey", "Sequence")
+                        .IsUnique();
+
+                    b.ToTable("randomization_allocations", (string)null);
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Randomization.RandomizationListSlot", b =>
+                {
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasDefaultValue(0L)
-                        .HasColumnName("_version");
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AllocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ArmCiphertext")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SchemeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("StratumKey")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ObservationId")
-                        .HasDatabaseName("idx_query_observation_id");
+                    b.HasIndex("AllocationId")
+                        .IsUnique()
+                        .HasFilter("\"AllocationId\" IS NOT NULL");
 
-                    b.HasIndex("SiteId")
-                        .HasDatabaseName("ix_clinical_queries_site_id");
+                    b.HasIndex("SchemeId", "StratumKey", "Sequence")
+                        .IsUnique();
 
-                    b.HasIndex("SubjectId", "Status")
-                        .HasDatabaseName("idx_query_subject_status");
+                    b.ToTable("randomization_list_slots", (string)null);
+                });
 
-                    b.HasIndex("StudyId", "SubjectId", "VisitId", "Domain", "TestCode")
-                        .HasDatabaseName("idx_query_target");
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Randomization.RandomizationScheme", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
 
-                    b.ToTable("clinical_queries", (string)null);
+                    b.Property<string>("ApprovalReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ApprovedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ArmsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("BlockSizesJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("ConfigurationHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTimeOffset>("DraftedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DraftedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("ListSize")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<double>("PreferredArmProbability")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("RequiresKit")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("RetiredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("SlotsPerStratum")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("StratificationFactorsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("StudyCode")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("VersionIndex")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudyCode")
+                        .IsUnique()
+                        .HasDatabaseName("IX_randomization_schemes_StudyCode_Approved")
+                        .HasFilter("\"Status\" = 'Approved'");
+
+                    b.HasIndex("StudyCode", "Version")
+                        .IsUnique();
+
+                    b.ToTable("randomization_schemes", (string)null);
                 });
 
             modelBuilder.Entity("Cadence.Apps.Execution.Domain.Subjects.ClinicalSubject", b =>
@@ -1693,9 +1775,6 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
-
-                    b.Property<string>("TreatmentGroupCiphertext")
-                        .HasColumnType("text");
 
                     b.Property<DateTimeOffset?>("UnblindedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1813,6 +1892,16 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTimeOffset?>("AssignedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("AssignedRandomizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AssignedSubjectCode")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1875,10 +1964,17 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<string>("TreatmentArmCiphertext")
+                        .HasColumnType("text");
+
                     b.Property<long>("VersionIndex")
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AssignedRandomizationId")
+                        .IsUnique()
+                        .HasFilter("\"AssignedRandomizationId\" IS NOT NULL");
 
                     b.HasIndex("StudyId", "SiteId", "KitNumber")
                         .IsUnique();
@@ -2088,10 +2184,6 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.Property<string>("ObservationId")
                         .HasColumnType("text")
                         .HasColumnName("observation_id");
-
-                    b.Property<string>("QueryId")
-                        .HasColumnType("text")
-                        .HasColumnName("query_id");
 
                     b.Property<string>("ReasonForChange")
                         .IsRequired()
@@ -2398,6 +2490,30 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.HasIndex("Created");
 
                     b.ToTable("OutboxState");
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Randomization.RandomizationAllocation", b =>
+                {
+                    b.HasOne("Cadence.Apps.Execution.Domain.Randomization.RandomizationScheme", null)
+                        .WithMany()
+                        .HasForeignKey("SchemeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Cadence.Apps.Execution.Domain.Subjects.ClinicalSubject", null)
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Randomization.RandomizationListSlot", b =>
+                {
+                    b.HasOne("Cadence.Apps.Execution.Domain.Randomization.RandomizationScheme", null)
+                        .WithMany()
+                        .HasForeignKey("SchemeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxMessage", b =>

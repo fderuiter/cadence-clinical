@@ -1,7 +1,6 @@
 using System;
 
 using Cadence.Apps.Execution.Application.Abstractions;
-using Cadence.Apps.Execution.Domain.Queries.Errors;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
 using Cadence.Testing;
@@ -162,30 +161,6 @@ public class DomainErrorHttpMappingTests
         problemDetails.Status.Should().Be(StatusCodes.Status404NotFound);
     }
 
-    /// <summary>
-    /// The query errors whose status the code table pins.
-    /// </summary>
-    [Theory]
-    [InlineData("Query.NotFound", "QUERY_NOT_FOUND", StatusCodes.Status404NotFound)]
-    [InlineData("Query.ActiveQueryAlreadyExists", "ACTIVE_QUERY_EXISTS", StatusCodes.Status409Conflict)]
-    [InlineData("Query.UnauthorizedRole", "UNAUTHORIZED_QUERY_ROLE", StatusCodes.Status403Forbidden)]
-    public void ToProblemResult_MapsQueryErrorsToTheirPinnedStatus(string factory, string code, int expectedStatus)
-    {
-        var error = CreateOtherError(factory);
-        error.Code.Should().Be(code);
-
-        var result = error.ToProblemResult();
-
-        result.StatusCode.Should().Be(expectedStatus);
-        result.ProblemDetails.Status.Should().Be(expectedStatus);
-        result.ProblemDetails.Extensions.Should().ContainKey("code").WhoseValue.Should().Be(code);
-
-        var bare = new ProblemDetails { Status = StatusCodes.Status500InternalServerError };
-        bare.Extensions["code"] = code;
-        DomainErrorHttpMapping.ApplyKnownCodeStatus(bare);
-        bare.Status.Should().Be(expectedStatus, "the safety net recognizes the code without its DomainError");
-    }
-
     /// <summary>A concurrency conflict written by its exception handler keeps 409 through the safety net.</summary>
     [Fact]
     public void ApplyKnownCodeStatus_ConcurrencyConflictCode_Is409()
@@ -197,14 +172,6 @@ public class DomainErrorHttpMappingTests
 
         problemDetails.Status.Should().Be(StatusCodes.Status409Conflict);
     }
-
-    private static DomainError CreateOtherError(string factory) => factory switch
-    {
-        "Query.NotFound" => QueryErrors.NotFound("QRY-1"),
-        "Query.ActiveQueryAlreadyExists" => QueryErrors.ActiveQueryAlreadyExists("SUBJ-001/VS/SYSBP"),
-        "Query.UnauthorizedRole" => QueryErrors.UnauthorizedRole("CRA", "close"),
-        _ => throw new ArgumentOutOfRangeException(nameof(factory), factory, "Unknown error factory key."),
-    };
 
     private static DomainError CreateSubjectError(string factory) => factory switch
     {

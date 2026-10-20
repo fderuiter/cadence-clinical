@@ -10,7 +10,6 @@ public record StagedAdverseEventReviewResponse(
     [property: JsonPropertyName("subject_id")] string SubjectId,
     [property: JsonPropertyName("visit_id")] string? VisitId,
     [property: JsonPropertyName("observation_id")] string? ObservationId,
-    [property: JsonPropertyName("query_id")] string? QueryId,
     [property: JsonPropertyName("test_code")] string TestCode,
     [property: JsonPropertyName("test_name")] string TestName,
     [property: JsonPropertyName("lab_value")] double LabValue,
@@ -43,7 +42,6 @@ public record StagedAdverseEventActionResponse(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("review_status")] string ReviewStatus,
     [property: JsonPropertyName("action_taken")] string ActionTaken,
-    [property: JsonPropertyName("query_id")] string? QueryId,
     [property: JsonPropertyName("message")] string Message,
     [property: JsonPropertyName("timestamp")] DateTimeOffset Timestamp
 );

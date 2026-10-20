@@ -62,7 +62,7 @@ public class ValidationFilterTests
     public async Task InvokeAsync_ValidSubjectCreateRequest_InvokesNextAndReturnsItsResultUnchanged()
     {
         var services = BuildServices<SubjectCreateRequest>(new SubjectCreateRequestValidator());
-        var request = new SubjectCreateRequest("SUBJ-001", "STUDY-001", null, null, null);
+        var request = new SubjectCreateRequest("SUBJ-001", "STUDY-001", null, null);
         var context = CreateContext(services, request);
         var (next, invoked) = CreateTrackingNext();
 
@@ -76,7 +76,7 @@ public class ValidationFilterTests
     public async Task InvokeAsync_InvalidSubjectCreateRequest_ShortCircuitsWith400ValidationProblemAndNeverInvokesNext()
     {
         var services = BuildServices<SubjectCreateRequest>(new SubjectCreateRequestValidator());
-        var request = new SubjectCreateRequest("", "STUDY-001", null, null, null); // empty SubjectId fails NotEmpty()
+        var request = new SubjectCreateRequest("", "STUDY-001", null, null); // empty SubjectId fails NotEmpty()
         var context = CreateContext(services, request);
         var (next, invoked) = CreateTrackingNext();
 

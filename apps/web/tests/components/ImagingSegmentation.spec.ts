@@ -4,8 +4,8 @@ import OncologyCalipers from "../../src/components/imaging/OncologyCalipers.vue"
 import DicomMprViewer from "../../src/components/imaging/DicomMprViewer.vue";
 import ImagingView from "../../src/views/ImagingView.vue";
 
-describe("Interactive AI Lesion Auto-Segmentation & Caliper Fitting", () => {
-  it("selects AI Auto-Segment tool in OncologyCalipers and emits toolSelected", async () => {
+describe("Lesion calipers and AI-labelled annotations", () => {
+  it("offers no AI Auto-Segment tool while no segmentation model reads the image (#5426)", () => {
     const wrapper = mount(OncologyCalipers, {
       props: {
         annotations: [],
@@ -13,12 +13,7 @@ describe("Interactive AI Lesion Auto-Segmentation & Caliper Fitting", () => {
       },
     });
 
-    const aiBtn = wrapper.find(".btn-ai-segment");
-    expect(aiBtn.exists()).toBe(true);
-
-    await aiBtn.trigger("click");
-    expect(wrapper.emitted("toolSelected")).toBeTruthy();
-    expect(wrapper.emitted("toolSelected")![0]).toEqual(["AI_AUTO_SEGMENT"]);
+    expect(wrapper.find(".btn-ai-segment").exists()).toBe(false);
   });
 
   it("displays AI_AUTO method badge and HU stats for AI-generated annotations", () => {
@@ -77,35 +72,26 @@ describe("Interactive AI Lesion Auto-Segmentation & Caliper Fitting", () => {
     expect(updated.is_ai_assisted).toBe(true);
   });
 
-  it("sends ROI seed request and emits caliperCreated event in DicomMprViewer when activeTool is AI_AUTO_SEGMENT", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockRejectedValue(new Error("Network error"))
-    );
+  it("never draws or emits a measurement of its own when a seed is clicked (#5426)", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
 
     const wrapper = mount(DicomMprViewer, {
       props: {
         activeTool: "AI_AUTO_SEGMENT",
         timepoint: "BASELINE",
-        seriesUid: "1.2.840.113619.2.55.3.200.1",
+        seriesUid: "series-under-test",
       },
     });
 
-    const canvas = wrapper.find("canvas.mpr-canvas");
-    expect(canvas.exists()).toBe(true);
-
-    // Simulate clicking on the canvas viewport
-    await canvas.trigger("mousedown", { clientX: 180, clientY: 150 });
+    await wrapper
+      .find("canvas.mpr-canvas")
+      .trigger("mousedown", { clientX: 180, clientY: 150 });
     await flushPromises();
 
-    expect(wrapper.emitted("caliperCreated")).toBeTruthy();
-    const emittedEvent = wrapper.emitted("caliperCreated")![0][0] as any;
-    expect(emittedEvent.tool).toBe("AI_AUTO_SEGMENT");
-    expect(emittedEvent.measurementType).toBe("AI_AUTO_CONTOUR");
-    expect(emittedEvent.isAiAssisted).toBe(true);
-    expect(emittedEvent.longestDiameterMm).toBeGreaterThan(0);
-    expect(emittedEvent.points.length).toBeGreaterThan(2);
-    expect(emittedEvent.modelVersion).toBe("UNet-ResNet34-2D-v2.1");
+    expect(wrapper.emitted("caliperCreated")).toBeFalsy();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 
   it("includes AI assistance metadata when electronic signature assessment is submitted", async () => {

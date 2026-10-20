@@ -6,4 +6,6 @@ export interface PaletteTarget {
   stage?: string;
   section?: string;
   participant?: SubjectSummary;
+  /** A question for the inspector's Assist pane (ADR-2635). */
+  ask?: string;
 }

@@ -5,12 +5,12 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Domain.Cec;
 using Cadence.Apps.Execution.Domain.Compliance;
-using Cadence.Apps.Execution.Domain.Observations;
-using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
+using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database;
 using Cadence.Kernel.Time;
@@ -56,6 +56,23 @@ public class ExecutionRepositoryBaseTests
             .UseSqlite(connection, sqlite => sqlite.ExecutionStrategy(dependencies => new RetryTransientFailures(dependencies)))
             .AddInterceptors((IInterceptor[])[new ConcurrencyTokenIncrementInterceptor(), new GxPAuditInterceptor(() => actor, SystemClock.Instance), .. extra])
             .Options);
+
+    private static Result<bool> AdjudicateChair(CecDossier dossier, string chair, string classification)
+    {
+        var signedAt = new DateTime(2026, 2, 10, 12, 0, 0, DateTimeKind.Utc);
+        return dossier.AdjudicateChair(
+            finalClassification: classification,
+            finalSubtype: null,
+            finalAdjudicatedOnsetDate: "2026-02-10",
+            adjudicationRationale: "Chair determination",
+            signatureManifest: SignatureManifest.Create(
+                SignerId: chair,
+                SignerRole: "CEC_CHAIR",
+                SigningReason: "I confirm this clinical endpoint adjudication determination is final",
+                SignedAt: signedAt,
+                PayloadHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+            finalizedAt: signedAt);
+    }
 
     private static async Task SeedComplianceCacheAsync(SqliteConnection connection)
     {
@@ -123,37 +140,43 @@ public class ExecutionRepositoryBaseTests
     [Fact]
     [Trait("Category", "GxP_OQ")]
     [GxPRequirement("PRD-SYS-001")]
-    public async Task TwoConcurrentQueryAnswers_OneSucceeds_TheOtherConflicts_AndTheAuditShowsOneChange()
+    public async Task TwoConcurrentChairAdjudications_OneSucceeds_TheOtherConflicts_AndTheAuditShowsOneChange()
     {
         using var connection = OpenSqliteConnection();
-        QueryId queryId;
+        const string dossierId = "DOSSIER-RACE";
         await using (var setup = CreateContext(connection, "creator"))
         {
             await setup.Database.EnsureCreatedAsync(Ct);
-            var query = ClinicalQuery.Raise(Study, new SubjectCode("SUBJ-RACE"), new TestCode("SYSBP"), "Value out of range").Value!;
-            setup.ClinicalQueries.Add(query);
+            setup.CecDossiers.Add(CecDossier.Initialize(
+                dossierId: dossierId,
+                eventId: "EVT-RACE",
+                studyId: Study.Value,
+                subjectId: "SUBJ-RACE",
+                maskedSubjectId: "MASK-RACE",
+                candidateEventType: "CARDIOVASCULAR",
+                reportedTerm: "Myocardial Infarction",
+                reportedOnsetDate: "2026-02-10"));
             await setup.SaveChangesAsync(Ct);
-            queryId = query.Id;
         }
 
         await using var firstContext = CreateContext(connection, "first-editor");
         await using var secondContext = CreateContext(connection, "second-editor");
-        var first = new ClinicalQueryRepository(firstContext);
-        var second = new ClinicalQueryRepository(secondContext);
+        var first = new CecRepository(firstContext);
+        var second = new CecRepository(secondContext);
 
         // Both read the same version before either saves.
-        var firstCopy = (await first.GetForUpdateAsync(queryId, Ct))!;
-        var secondCopy = (await second.GetForUpdateAsync(queryId, Ct))!;
+        var firstCopy = (await first.GetDossierForUpdateAsync(dossierId, Ct))!;
+        var secondCopy = (await second.GetDossierForUpdateAsync(dossierId, Ct))!;
 
-        firstCopy.Answer("first answer", "first-editor").IsSuccess.Should().BeTrue();
+        AdjudicateChair(firstCopy, "first-editor", "ISCHEMIC_STROKE").IsSuccess.Should().BeTrue();
         await first.SaveChangesAsync(Ct);
 
-        secondCopy.Answer("second answer", "second-editor").IsSuccess.Should().BeTrue();
+        AdjudicateChair(secondCopy, "second-editor", "HEMORRHAGIC_STROKE").IsSuccess.Should().BeTrue();
         var act = async () => await second.SaveChangesAsync(Ct);
         await act.Should().ThrowAsync<ConcurrencyConflictException>();
 
         await using var verify = CreateContext(connection);
-        (await verify.ClinicalQueries.AsNoTracking().SingleAsync(Ct)).Response.Should().Be("first answer");
+        (await verify.CecDossiers.AsNoTracking().SingleAsync(Ct)).FinalConsensusClassification.Should().Be("ISCHEMIC_STROKE");
         var entries = await verify.AuditLogEntries.AsNoTracking().ToListAsync(Ct);
         entries.Select(e => e.UserId).Should().BeEquivalentTo(["creator", "first-editor"],
             "the rejected edit leaves no audit entry; only the create and the winning change are recorded");

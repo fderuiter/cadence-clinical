@@ -12,6 +12,7 @@ using Cadence.Apps.Notifications.Infrastructure;
 using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Endpoints;
 using Cadence.Templating;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -38,22 +39,25 @@ public sealed class TemplateOutputEncodingTests
     public async Task IcsrXml_StaysWellFormedAndKeepsHostileValues()
     {
         var report = new IcsrReport(
-            new IcsrHeader("MSG-1", "Sponsor & Co", "EMA <test>", "20260930"),
-            new IcsrReportIdentifiers("WW-1"),
-            new IcsrPatient(Hostile, "F"),
-            [new IcsrReaction("Rash</reaction_term><injected/>")],
-            [new IcsrSuspectDrug("Drug \"X\"")],
-            ReasonForChange: "fix \" onload=\"x");
+            new IcsrHeader("B-1\" onload=\"x", "SND", "RCV", "20250930120000+0000", "M-1", "SND", "RCV"),
+            new IcsrSafetyReport("XX-SPONSOR-1", "20250930110000+0000", "1", "20250929", "20250929", false, "XX-SPONSOR-1", "2"),
+            [new IcsrPrimarySource("1", PrimaryForRegulatoryPurposes: true)],
+            new IcsrSender("1", "Sponsor & Co"),
+            new IcsrPatient(PatientId: "A&B <x/>"),
+            [new IcsrReaction(new IcsrMeddraCoding("27.1", "10037844"), "1", ReactionTerm: "Rash</originalText><injected/>", ReactionTermLanguage: "eng")],
+            [new IcsrDrug("1", "Drug \"X\"")],
+            Hostile);
 
-        var result = await IcsrTemplateEndpoints.RenderIcsrAsync(report, FluidTemplateRenderer.Instance);
+        var result = await IcsrTemplateEndpoints.RenderIcsrAsync(
+            report, FluidTemplateRenderer.Instance, new FakeClock(new DateTimeOffset(2025, 10, 1, 0, 0, 0, TimeSpan.Zero)));
 
         var document = XDocument.Parse(result.Result.Should().BeOfType<ContentHttpResult>().Subject.ResponseContent!);
-        document.Descendants(Hl7 + "patient_id").Single().Value.Should().Be(Hostile);
-        document.Descendants(Hl7 + "reaction_term").Single().Value.Should().Be("Rash</reaction_term><injected/>");
-        document.Descendants(Hl7 + "drug_name").Single().Value.Should().Be("Drug \"X\"");
+        document.Descendants(Hl7 + "investigationEvent").Single().Element(Hl7 + "text")!.Value.Should().Be(Hostile);
+        document.Descendants(Hl7 + "originalText").Single().Value.Should().Be("Rash</originalText><injected/>");
+        document.Descendants(Hl7 + "kindOfProduct").Single().Element(Hl7 + "name")!.Value.Should().Be("Drug \"X\"");
         document.Descendants(Hl7 + "injected").Should().BeEmpty();
-        document.Root!.Attribute("reason_for_change")!.Value.Should().Be("fix \" onload=\"x");
-        document.Root.Attribute("onload").Should().BeNull();
+        document.Root!.Element(Hl7 + "id")!.Attribute("extension")!.Value.Should().Be("B-1\" onload=\"x");
+        document.Root.Element(Hl7 + "id")!.Attribute("onload").Should().BeNull();
     }
 
     [Fact]

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Tenancy;
 
 using FluentAssertions;
 
@@ -54,6 +55,28 @@ public sealed class KernelReadPortsPostgresTests(KernelPostgresFixture fixture) 
     }
 
     /// <summary>
+    /// Validates the residency reader the Intelligence module routes model calls by (ADR-2636): a tenant's residency
+    /// code reads back, an unrestricted tenant reads as a null region, and an unknown or deactivated tenant reads as
+    /// nothing, so a caller cannot mistake it for an unrestricted one.
+    /// </summary>
+    [Fact(DisplayName = "TenantResidencyReader_ReadsTheTenantsOwnResidency")]
+    public async Task TenantResidencyReaderReadsTheTenantsOwnResidency()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var eu = await ProvisionAsync(ct, "EU");
+        var open = await ProvisionAsync(ct);
+        var inactive = await ProvisionAsync(ct, "US");
+        await ExecuteAsAdminAsync($"UPDATE kernel.tenants SET is_active = false WHERE id = '{inactive.Id.Value}'", ct);
+        var reader = fixture.TenantResidency;
+
+        (await reader.FindAsync(eu.Id, ct)).Should().Be(new TenantResidency("EU"));
+        (await reader.FindAsync(open.Id, ct)).Should().Be(new TenantResidency(null));
+        (await reader.FindAsync(inactive.Id, ct)).Should().BeNull();
+        (await reader.FindAsync(TenantId.New(), ct)).Should().BeNull();
+    }
+
+    /// <summary>
     /// Validates the protocol version reader: a study's versions come newest first with their lineage, status, hash,
     /// amendment intent and approval; one version reads by id; another tenant sees neither.
     /// </summary>
@@ -83,11 +106,12 @@ public sealed class KernelReadPortsPostgresTests(KernelPostgresFixture fixture) 
         (await reader.ListForStudyAsync(other, study, ct)).Should().BeEmpty();
     }
 
-    private async Task<(TenantId Id, string Code)> ProvisionAsync(CancellationToken ct)
+    private async Task<(TenantId Id, string Code)> ProvisionAsync(CancellationToken ct, string? residency = null)
     {
         var id = TenantId.New();
         var code = $"T-{Guid.NewGuid():N}"[..20].ToUpperInvariant();
-        await _scenario.OkAsync(new ProvisionTenant(id, code, "Tenant", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
+        await _scenario.OkAsync(
+            new ProvisionTenant(id, code, "Tenant", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason, residency), ct);
         return (id, code);
     }
 

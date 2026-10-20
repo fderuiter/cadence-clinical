@@ -62,8 +62,9 @@ import. No command could create a study, site or study site until #5485.
   - the sponsor organization `CADENCE-PHARMA` and the study `CADENCE-101` (the study the Execution service seeds);
   - two sites, `SITE-101` and `SITE-102`, each with its institution, linked to the study;
   - participants `SUBJ-101-001` and `SUBJ-101-002` screened at `SITE-101`, and `SUBJ-102-001` at `SITE-102`;
-  - six roles and one grant for each realm user:
-    - `crc.site101` and `cra.monitor` at the `SITE-101` study site, the site in their `site_id` attribute;
+  - seven roles and one grant for each realm user:
+    - `crc.site101`, `pi.site101` (added by #5463 to sign forms) and `cra.monitor` at the `SITE-101` study site, the
+      site in their `site_id` attribute;
     - everyone else on the whole study.
 - **How it is written:** the bootstrap's service account first defines a `DEMO_SEEDER` role and grants it to itself,
   tenant-wide, because a platform operator holds only `tenant.provision`, `grant.issue` and `role.define` without a

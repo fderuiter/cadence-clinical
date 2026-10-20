@@ -146,7 +146,7 @@ public record CreateSubjectCommand(
 No MVC controllers. Group routes with `MapGroup("/api/v1/…")`, return `TypedResults`, declare
 `Produces`/`ProducesProblem`, and add endpoint filters for cross-cutting rules (for example
 `ChangeReasonHeaderFilter` in `apps/execution/src/Endpoints/Filters`). See
-`apps/execution/src/Endpoints/QueryEndpoints.cs` for a complete example.
+`apps/execution/module/Endpoints/FormQueryEndpoints.cs` for a complete example.
 
 ### 5. Identity and authorization
 

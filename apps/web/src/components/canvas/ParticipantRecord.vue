@@ -38,7 +38,7 @@
     <template v-else>
       <QueriesPanel
         :subject-code="participant.subject_id"
-        :queries="record.queries"
+        :enrollment-id="record.enrollmentId"
         :can-manage="canManage"
       />
 
@@ -72,8 +72,8 @@ import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import QueriesPanel from "./QueriesPanel.vue";
 
 /**
- * One participant's data: Execution's queries, and where the participant's forms open. Values and forms are kernel
- * form instances (ADR-2622), entered and read on the eCRF screen.
+ * One participant's data: the eCRF queries on the participant's kernel enrollment (#5461), and where the participant's
+ * forms open. Values and forms are kernel form instances (ADR-2622), entered and read on the eCRF screen.
  */
 defineProps<{
   participant: SubjectSummary;

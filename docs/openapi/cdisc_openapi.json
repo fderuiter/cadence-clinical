@@ -1928,17 +1928,18 @@
         }
       }
     },
-    "/api/v1/execution/queries": {
+    "/api/v1/execution/randomization/schemes": {
       "post": {
         "tags": [
-          "Queries"
+          "Randomization"
         ],
-        "operationId": "CreateClinicalQuery",
+        "summary": "Drafts the study\u0027s next randomisation scheme version.",
+        "operationId": "DraftRandomizationScheme",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Execution_QueryCreateRequest"
+                "$ref": "#/components/schemas/Execution_RandomizationSchemeDraftRequest"
               }
             }
           },
@@ -1950,7 +1951,58 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
+                  "$ref": "#/components/schemas/Execution_RandomizationSchemeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Randomization"
+        ],
+        "summary": "Lists a study\u0027s scheme versions, newest first, without lists or allocations.",
+        "operationId": "ListRandomizationSchemes",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_RandomizationSchemeResponse"
+                  }
                 }
               }
             }
@@ -1967,6 +2019,58 @@
           },
           "403": {
             "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/randomization/schemes/{schemeId}/approve": {
+      "post": {
+        "tags": [
+          "Randomization"
+        ],
+        "summary": "Approves a draft version for go-live, retiring the previous one and generating its list.",
+        "operationId": "ApproveRandomizationScheme",
+        "parameters": [
+          {
+            "name": "schemeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_RandomizationSchemeResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1986,128 +2090,18 @@
             }
           }
         }
-      },
-      "get": {
-        "tags": [
-          "Queries"
-        ],
-        "operationId": "ListClinicalQueries",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "subject_id",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "visit_id",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-                  }
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
       }
     },
-    "/api/v1/execution/queries/{id}": {
-      "get": {
-        "tags": [
-          "Queries"
-        ],
-        "operationId": "GetClinicalQueryById",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/queries/{id}/respond": {
+    "/api/v1/execution/subjects/{subjectId}/randomize": {
       "post": {
         "tags": [
-          "Queries"
+          "Subjects"
         ],
-        "operationId": "RespondClinicalQuery",
+        "summary": "Randomises an enrolled participant under the live scheme and assigns a kit when it needs one.",
+        "operationId": "RandomizeSubject",
         "parameters": [
           {
-            "name": "id",
+            "name": "subjectId",
             "in": "path",
             "required": true,
             "schema": {
@@ -2119,7 +2113,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Execution_QueryRespondRequest"
+                "$ref": "#/components/schemas/Execution_RandomizeSubjectRequest"
               }
             }
           },
@@ -2131,267 +2125,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/queries/{id}/close": {
-      "post": {
-        "tags": [
-          "Queries"
-        ],
-        "operationId": "CloseClinicalQuery",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/queries/{id}/reopen": {
-      "post": {
-        "tags": [
-          "Queries"
-        ],
-        "operationId": "ReopenClinicalQuery",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Execution_QueryReopenRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/queries/{id}/cancel": {
-      "post": {
-        "tags": [
-          "Queries"
-        ],
-        "operationId": "CancelClinicalQuery",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Execution_QueryCancelRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/queries/batch-close": {
-      "post": {
-        "tags": [
-          "Queries"
-        ],
-        "operationId": "BatchCloseClinicalQueries",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Execution_BatchQueryRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_BatchQueryResponse"
+                  "$ref": "#/components/schemas/Execution_RandomizationResponse"
                 }
               }
             }
@@ -2425,119 +2159,9 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/queries/batch-cancel": {
-      "post": {
-        "tags": [
-          "Queries"
-        ],
-        "operationId": "BatchCancelClinicalQueries",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Execution_BatchQueryRequest"
-              }
-            }
           },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_BatchQueryResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/queries/batch-respond": {
-      "post": {
-        "tags": [
-          "Queries"
-        ],
-        "operationId": "BatchRespondClinicalQueries",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Execution_BatchQueryRespondRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_BatchQueryResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
+          "409": {
+            "description": "Conflict",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -5030,12 +4654,12 @@
               }
             }
           },
-          "200": {
-            "description": "OK",
+          "501": {
+            "description": "Not Implemented",
             "content": {
-              "application/json": {
+              "application/problem\u002Bjson": {
                 "schema": {
-                  "$ref": "#/components/schemas/Imaging_SegmentationResultDto"
+                  "$ref": "#/components/schemas/Imaging_ProblemDetails"
                 }
               }
             }
@@ -7395,47 +7019,6 @@
         ]
       }
     },
-    "/api/v1/kernel/protocols/generate-proposal": {
-      "post": {
-        "tags": [
-          "Kernel"
-        ],
-        "summary": "Generates a complete USDM protocol proposal from a trial brief with reasoning lineage.",
-        "operationId": "KernelGenerateProtocolProposal",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Kernel_GenerateProtocolProposalRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Kernel_GenerativeProtocolProposal"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/kernel/protocols/matrix-gap-check": {
       "post": {
         "tags": [
@@ -7610,7 +7193,7 @@
             }
           },
           "409": {
-            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Observation.ParticipantWithdrawn\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -7663,6 +7246,10 @@
           },
           {
             "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Observation.ParticipantWithdrawn",
             "status": 409
           },
           {
@@ -7857,6 +7444,288 @@
           {
             "code": "K.Observation.Locked",
             "status": 423
+          }
+        ]
+      }
+    },
+    "/api/v1/kernel/studies/{studyRef}/proposals": {
+      "get": {
+        "tags": [
+          "Kernel proposals"
+        ],
+        "summary": "A study\u0027s proposals, newest first, optionally only those with one status (Open, Approved, Rejected, Withdrawn, Expired).",
+        "description": "A study the caller may not see is refused; a proposal the caller may not see is masked in place (ADR-2471).",
+        "operationId": "KernelListProposals",
+        "parameters": [
+          {
+            "name": "studyRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kernel_KernelProposalResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kernel/proposals/{proposalRef}": {
+      "get": {
+        "tags": [
+          "Kernel proposals"
+        ],
+        "summary": "One proposal with its intent, plan, affected objects, requested capabilities, model, content hash and decision.",
+        "operationId": "KernelGetProposal",
+        "parameters": [
+          {
+            "name": "proposalRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelProposalResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kernel/proposals/{proposalRef}/rejection": {
+      "post": {
+        "tags": [
+          "Kernel proposals"
+        ],
+        "summary": "Rejects an open proposal; the signed reason for change is the rejection reason (proposal.reject).",
+        "operationId": "KernelRejectProposal",
+        "parameters": [
+          {
+            "name": "proposalRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelProposalStateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Proposal.Expired\u0060, \u0060K.Proposal.NotOpen\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Proposal.Expired",
+            "status": 409
+          },
+          {
+            "code": "K.Proposal.NotOpen",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
           }
         ]
       }
@@ -8761,7 +8630,7 @@
             }
           },
           "409": {
-            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Collection.NoGoverningVersion\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Collection.NoGoverningVersion\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Observation.ParticipantWithdrawn\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -8818,6 +8687,10 @@
           },
           {
             "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Observation.ParticipantWithdrawn",
             "status": 409
           },
           {
@@ -8983,7 +8856,7 @@
             }
           },
           "409": {
-            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Collection.RevisionStale\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Collection.RevisionStale\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Observation.ParticipantWithdrawn\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -9043,6 +8916,10 @@
             "status": 409
           },
           {
+            "code": "K.Observation.ParticipantWithdrawn",
+            "status": 409
+          },
+          {
             "code": "K.Collection.ValuesInvalid",
             "status": 422
           },
@@ -9069,6 +8946,1061 @@
           {
             "code": "K.Observation.Locked",
             "status": 423
+          }
+        ]
+      }
+    },
+    "/api/v1/execution/forms/queries": {
+      "get": {
+        "tags": [
+          "Execution queries"
+        ],
+        "summary": "Lists the queries on every form of an enrollment, oldest first.",
+        "operationId": "ExecutionListEnrollmentQueries",
+        "parameters": [
+          {
+            "name": "enrollment_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kernel_FormQueryResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/forms/{formId}/queries": {
+      "get": {
+        "tags": [
+          "Execution queries"
+        ],
+        "summary": "Lists a form\u0027s queries, oldest first, each with whether its value changed since it was raised.",
+        "operationId": "ExecutionListFormQueries",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kernel_FormQueryResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Execution queries"
+        ],
+        "summary": "Raises a query on the current revision of one of the form\u0027s values (execution.query.raise).",
+        "operationId": "ExecutionRaiseFormQuery",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_RaiseFormQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_FormQueryResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060M.Execution.Form.CollectionInstanceUnknown\u0060, \u0060M.Execution.Query.ObservationUnknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060M.Execution.Query.RevisionStale\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked. Kernel errors: \u0060K.Assertion.Locked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "M.Execution.Form.CollectionInstanceUnknown",
+            "status": 404
+          },
+          {
+            "code": "M.Execution.Query.ObservationUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "M.Execution.Query.RevisionStale",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Assertion.Locked",
+            "status": 423
+          }
+        ]
+      }
+    },
+    "/api/v1/execution/forms/{formId}/queries/{queryId}/answer": {
+      "post": {
+        "tags": [
+          "Execution queries"
+        ],
+        "summary": "Answers an open query (execution.query.answer).",
+        "operationId": "ExecutionAnswerFormQuery",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "queryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_FormQueryTextRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_FormQueryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060M.Execution.Query.InvalidTransition\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked. Kernel errors: \u0060K.Assertion.Locked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "M.Execution.Query.InvalidTransition",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Assertion.Locked",
+            "status": 423
+          }
+        ]
+      }
+    },
+    "/api/v1/execution/forms/{formId}/queries/{queryId}/reopen": {
+      "post": {
+        "tags": [
+          "Execution queries"
+        ],
+        "summary": "Reopens an answered or closed query with why it is not settled (execution.query.manage).",
+        "operationId": "ExecutionReopenFormQuery",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "queryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_FormQueryTextRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_FormQueryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060M.Execution.Query.InvalidTransition\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked. Kernel errors: \u0060K.Assertion.Locked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "M.Execution.Query.InvalidTransition",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Assertion.Locked",
+            "status": 423
+          }
+        ]
+      }
+    },
+    "/api/v1/execution/forms/{formId}/queries/{queryId}/close": {
+      "post": {
+        "tags": [
+          "Execution queries"
+        ],
+        "summary": "Closes an open or answered query; the change reason is the closing note (execution.query.manage).",
+        "operationId": "ExecutionCloseFormQuery",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "queryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_FormQueryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060M.Execution.Query.InvalidTransition\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked. Kernel errors: \u0060K.Assertion.Locked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "M.Execution.Query.InvalidTransition",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Assertion.Locked",
+            "status": 423
+          }
+        ]
+      }
+    },
+    "/api/v1/execution/forms/{formId}/queries/{queryId}/cancel": {
+      "post": {
+        "tags": [
+          "Execution queries"
+        ],
+        "summary": "Cancels an open or answered query raised in error (execution.query.manage).",
+        "operationId": "ExecutionCancelFormQuery",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "queryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_FormQueryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060M.Execution.Query.InvalidTransition\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked. Kernel errors: \u0060K.Assertion.Locked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "M.Execution.Query.InvalidTransition",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Assertion.Locked",
+            "status": 423
+          }
+        ]
+      }
+    },
+    "/api/v1/execution/forms/{formId}/signatures": {
+      "post": {
+        "tags": [
+          "Execution forms"
+        ],
+        "summary": "Signs the form\u0027s current values with an X-Sig-Token step-up token (collection.sign); 409 when the form changed since it was read.",
+        "operationId": "ExecutionSignForm",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_SignFormRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_FormSignatureResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060, \u0060K.Trust.AuthenticationStale\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Trust.PersonRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Trust.TargetContentChanged\u0060, \u0060K.Trust.TargetNotSignable\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Collection.SignatureMeaningInvalid\u0060, \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Trust.MethodRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Trust.AuthenticationStale",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Trust.PersonRequired",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Trust.TargetContentChanged",
+            "status": 409
+          },
+          {
+            "code": "K.Trust.TargetNotSignable",
+            "status": 409
+          },
+          {
+            "code": "K.Collection.SignatureMeaningInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Trust.MethodRequired",
+            "status": 422
           }
         ]
       }
@@ -10517,7 +11449,7 @@
         "tags": [
           "IcsrTemplateEndpoints"
         ],
-        "summary": "Renders an ICSR E2B(R3) safety report as Liquid XML; a report missing a mandatory element is refused with 400 naming each one.",
+        "summary": "Renders an ICH E2B(R3) ICSR as an HL7 v3 MCCI_IN200100UV01 message validated against the ICH schema; a report that breaks an E2B(R3) conformance rule is refused with 400 naming each member.",
         "operationId": "RenderIcsrReport",
         "requestBody": {
           "content": {
@@ -10552,6 +11484,16 @@
           },
           "403": {
             "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -12842,73 +13784,6 @@
           }
         }
       },
-      "Execution_BatchQueryRequest": {
-        "required": [
-          "query_ids"
-        ],
-        "type": "object",
-        "properties": {
-          "query_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "reason": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Execution_BatchQueryRespondRequest": {
-        "required": [
-          "query_ids",
-          "response"
-        ],
-        "type": "object",
-        "properties": {
-          "query_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "response": {
-            "type": "string"
-          },
-          "reason": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Execution_BatchQueryResponse": {
-        "required": [
-          "queries",
-          "count"
-        ],
-        "type": "object",
-        "properties": {
-          "queries": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-            }
-          },
-          "count": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          }
-        }
-      },
       "Execution_BulkLabRangeDryRunResponse": {
         "required": [
           "is_success",
@@ -14125,177 +15000,6 @@
           }
         }
       },
-      "Execution_ClinicalQueryResponse": {
-        "required": [
-          "id",
-          "study_id",
-          "subject_id",
-          "test_code",
-          "status"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "study_id": {
-            "type": "string"
-          },
-          "subject_id": {
-            "type": "string"
-          },
-          "test_code": {
-            "type": "string"
-          },
-          "status": {
-            "$ref": "#/components/schemas/Execution_QueryStatus"
-          },
-          "site_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "visit_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "domain": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "explanation": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "response": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "observation_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "field_link": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "message": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "origin": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "priority": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "rule_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "created_by": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "responder": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "resolver": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "resolved_at": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          },
-          "cancellation_reason": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "escalated_at": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          },
-          "form_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "field_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "query_type": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "action_required": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "created_at": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          },
-          "version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int64",
-            "default": 1
-          }
-        }
-      },
       "Execution_ComplianceStatusResponse": {
         "required": [
           "study_id",
@@ -15336,56 +16040,6 @@
           }
         }
       },
-      "Execution_IpKitInventoryResponse": {
-        "required": [
-          "kit_number",
-          "study_id",
-          "site_id",
-          "lot_number",
-          "expiration_date",
-          "status"
-        ],
-        "type": "object",
-        "properties": {
-          "kit_number": {
-            "type": "string"
-          },
-          "study_id": {
-            "type": "string"
-          },
-          "site_id": {
-            "type": "string"
-          },
-          "lot_number": {
-            "type": "string"
-          },
-          "expiration_date": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "status": {
-            "type": "string"
-          },
-          "residual_volume_ml": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "null",
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "residual_volume_percentage": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "null",
-              "number",
-              "string"
-            ],
-            "format": "double"
-          }
-        }
-      },
       "Execution_IpKitItemReconcileRequest": {
         "required": [
           "kit_number",
@@ -15457,6 +16111,56 @@
             "type": "string"
           },
           "scanned_lot_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_IpKitSeedItem": {
+        "required": [
+          "kit_number",
+          "lot_number",
+          "expiration_date"
+        ],
+        "type": "object",
+        "properties": {
+          "kit_number": {
+            "type": "string"
+          },
+          "lot_number": {
+            "type": "string"
+          },
+          "expiration_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "residual_volume_ml": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "residual_volume_percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "treatment_arm": {
             "type": [
               "null",
               "string"
@@ -16126,162 +16830,284 @@
           }
         }
       },
-      "Execution_QueryCancelRequest": {
+      "Execution_RandomizationResponse": {
         "required": [
-          "reason"
+          "randomization_id",
+          "subject_id",
+          "study_id",
+          "scheme_version",
+          "stratum_key",
+          "kit_number",
+          "status",
+          "randomized_at"
         ],
         "type": "object",
         "properties": {
-          "reason": {
+          "randomization_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subject_id": {
+            "$ref": "#/components/schemas/Execution_SubjectCode"
+          },
+          "study_id": {
+            "$ref": "#/components/schemas/Execution_StudyCode"
+          },
+          "scheme_version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "stratum_key": {
             "type": "string"
+          },
+          "kit_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "randomized_at": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
-      "Execution_QueryCreateRequest": {
+      "Execution_RandomizationSchemeDraftRequest": {
         "required": [
           "study_id",
-          "subject_id",
-          "test_code",
-          "explanation"
+          "method",
+          "arms",
+          "stratification_factors",
+          "block_sizes",
+          "slots_per_stratum",
+          "preferred_arm_probability",
+          "requires_kit"
         ],
         "type": "object",
         "properties": {
           "study_id": {
+            "$ref": "#/components/schemas/Execution_StudyCode"
+          },
+          "method": {
             "type": "string"
           },
-          "subject_id": {
-            "type": "string"
+          "arms": {
+            "type": "object",
+            "additionalProperties": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
           },
-          "test_code": {
-            "type": "string"
+          "stratification_factors": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           },
-          "explanation": {
+          "block_sizes": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "slots_per_stratum": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "preferred_arm_probability": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "requires_kit": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Execution_RandomizationSchemeResponse": {
+        "required": [
+          "id",
+          "study_id",
+          "version",
+          "method",
+          "status",
+          "arms",
+          "stratification_factors",
+          "block_sizes",
+          "slots_per_stratum",
+          "preferred_arm_probability",
+          "requires_kit",
+          "list_size",
+          "configuration_hash",
+          "drafted_by",
+          "drafted_at",
+          "approved_by",
+          "approved_at",
+          "retired_at"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "study_id": {
+            "$ref": "#/components/schemas/Execution_StudyCode"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "method": {
             "type": "string"
           },
           "status": {
+            "type": "string"
+          },
+          "arms": {
+            "type": "object",
+            "additionalProperties": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "stratification_factors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "block_sizes": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "slots_per_stratum": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "preferred_arm_probability": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "requires_kit": {
+            "type": "boolean"
+          },
+          "list_size": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "configuration_hash": {
+            "type": "string"
+          },
+          "drafted_by": {
+            "type": "string"
+          },
+          "drafted_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "approved_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "approved_at": {
             "type": [
               "null",
               "string"
             ],
-            "default": "OPEN"
+            "format": "date-time"
           },
-          "site_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "visit_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "domain": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "observation_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "field_link": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "message": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "origin": {
+          "retired_at": {
             "type": [
               "null",
               "string"
             ],
-            "default": "MANUAL"
-          },
-          "priority": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "default": "MEDIUM"
-          },
-          "rule_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "form_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "field_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "query_type": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "action_required": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "format": "date-time"
           }
         }
       },
-      "Execution_QueryReopenRequest": {
+      "Execution_RandomizeSubjectRequest": {
         "required": [
-          "reason"
+          "stratification_factors"
         ],
         "type": "object",
         "properties": {
-          "reason": {
-            "type": "string"
+          "stratification_factors": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         }
-      },
-      "Execution_QueryRespondRequest": {
-        "required": [
-          "response"
-        ],
-        "type": "object",
-        "properties": {
-          "response": {
-            "type": "string"
-          }
-        }
-      },
-      "Execution_QueryStatus": {
-        "enum": [
-          "NONE",
-          "CANDIDATE",
-          "DRAFT_AI",
-          "OPEN",
-          "ANSWERED",
-          "RESOLVED",
-          "CLOSED",
-          "REOPENED",
-          "CANCELLED"
-        ],
-        "type": "string"
       },
       "Execution_SeedInventoryRequest": {
         "required": [
@@ -16300,7 +17126,7 @@
           "kits": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Execution_IpKitInventoryResponse"
+              "$ref": "#/components/schemas/Execution_IpKitSeedItem"
             }
           }
         }
@@ -16396,7 +17222,6 @@
           "id",
           "review_status",
           "action_taken",
-          "query_id",
           "message",
           "timestamp"
         ],
@@ -16410,12 +17235,6 @@
           },
           "action_taken": {
             "type": "string"
-          },
-          "query_id": {
-            "type": [
-              "null",
-              "string"
-            ]
           },
           "message": {
             "type": "string"
@@ -16434,7 +17253,6 @@
           "subject_id",
           "visit_id",
           "observation_id",
-          "query_id",
           "test_code",
           "test_name",
           "lab_value",
@@ -16478,12 +17296,6 @@
             ]
           },
           "observation_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "query_id": {
             "type": [
               "null",
               "string"
@@ -16686,7 +17498,6 @@
           "subject_id",
           "study_id",
           "site_id",
-          "arm_id",
           "demographics"
         ],
         "type": "object",
@@ -16698,12 +17509,6 @@
             "type": "string"
           },
           "site_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "arm_id": {
             "type": [
               "null",
               "string"
@@ -16847,7 +17652,6 @@
           "subject_id",
           "study_id",
           "site_id",
-          "treatment_group",
           "status",
           "active_protocol_version",
           "encrypted_demographics"
@@ -16871,12 +17675,6 @@
               {
                 "$ref": "#/components/schemas/Execution_SiteCode"
               }
-            ]
-          },
-          "treatment_group": {
-            "type": [
-              "null",
-              "string"
             ]
           },
           "status": {
@@ -17382,34 +18180,6 @@
           }
         }
       },
-      "Imaging_CaliperLineDto": {
-        "required": [
-          "startPoint",
-          "endPoint",
-          "lengthMm",
-          "caliperType"
-        ],
-        "type": "object",
-        "properties": {
-          "startPoint": {
-            "$ref": "#/components/schemas/Imaging_Point2DDto"
-          },
-          "endPoint": {
-            "$ref": "#/components/schemas/Imaging_Point2DDto"
-          },
-          "lengthMm": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "caliperType": {
-            "type": "string"
-          }
-        }
-      },
       "Imaging_CertificateResponse": {
         "required": [
           "certificate",
@@ -17532,53 +18302,6 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
-          }
-        }
-      },
-      "Imaging_HounsfieldStatsDto": {
-        "required": [
-          "meanHu",
-          "minHu",
-          "maxHu",
-          "stdDevHu",
-          "modelVersion"
-        ],
-        "type": "object",
-        "properties": {
-          "meanHu": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "minHu": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "maxHu": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "stdDevHu": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "modelVersion": {
-            "type": "string"
           }
         }
       },
@@ -17963,31 +18686,6 @@
           }
         }
       },
-      "Imaging_Point2DDto": {
-        "required": [
-          "x",
-          "y"
-        ],
-        "type": "object",
-        "properties": {
-          "x": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "y": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          }
-        }
-      },
       "Imaging_ProblemDetails": {
         "type": "object",
         "properties": {
@@ -18068,98 +18766,6 @@
             "items": {
               "type": "string"
             }
-          }
-        }
-      },
-      "Imaging_SegmentationResultDto": {
-        "required": [
-          "annotationId",
-          "studyInstanceUid",
-          "seriesInstanceUid",
-          "lesionId",
-          "organSite",
-          "lesionType",
-          "longestDiameterMm",
-          "perpendicularDiameterMm",
-          "boundingBox",
-          "contourPoints",
-          "fittedCalipers",
-          "hounsfieldStats",
-          "measurementType",
-          "modelVersion",
-          "isAiAssisted",
-          "timestamp",
-          "readerId"
-        ],
-        "type": "object",
-        "properties": {
-          "annotationId": {
-            "type": "string"
-          },
-          "studyInstanceUid": {
-            "type": "string"
-          },
-          "seriesInstanceUid": {
-            "type": "string"
-          },
-          "lesionId": {
-            "type": "string"
-          },
-          "organSite": {
-            "type": "string"
-          },
-          "lesionType": {
-            "type": "string"
-          },
-          "longestDiameterMm": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "perpendicularDiameterMm": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "boundingBox": {
-            "$ref": "#/components/schemas/Imaging_BoundingBoxDto"
-          },
-          "contourPoints": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Imaging_Point2DDto"
-            }
-          },
-          "fittedCalipers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Imaging_CaliperLineDto"
-            }
-          },
-          "hounsfieldStats": {
-            "$ref": "#/components/schemas/Imaging_HounsfieldStatsDto"
-          },
-          "measurementType": {
-            "type": "string"
-          },
-          "modelVersion": {
-            "type": "string"
-          },
-          "isAiAssisted": {
-            "type": "boolean"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "readerId": {
-            "type": "string"
           }
         }
       },
@@ -19555,43 +20161,6 @@
           }
         }
       },
-      "Kernel_ActivityLocation": {
-        "type": "integer"
-      },
-      "Kernel_ActivityTiming": {
-        "required": [
-          "day"
-        ],
-        "type": "object",
-        "properties": {
-          "day": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "window_before": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32",
-            "default": 0
-          },
-          "window_after": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32",
-            "default": 0
-          }
-        }
-      },
       "Kernel_AgentControlRequest": {
         "required": [
           "enabled",
@@ -19887,35 +20456,6 @@
           }
         }
       },
-      "Kernel_Arm": {
-        "required": [
-          "id",
-          "name",
-          "type",
-          "intervention_ids"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "type": {
-            "$ref": "#/components/schemas/Kernel_ArmType"
-          },
-          "intervention_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "Kernel_ArmType": {
-        "type": "integer"
-      },
       "Kernel_AssertionId": {},
       "Kernel_AssertionKind": {
         "enum": [
@@ -20049,174 +20589,6 @@
         }
       },
       "Kernel_CodeSystemVersionId": {},
-      "Kernel_Cohort": {
-        "required": [
-          "id",
-          "name",
-          "arm_ids"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "arm_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "description": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Kernel_CollectionItem": {
-        "required": [
-          "id",
-          "concept"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "concept": {
-            "$ref": "#/components/schemas/Kernel_ConceptRef"
-          },
-          "unit": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "terminology": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_TerminologyBinding"
-              }
-            ]
-          },
-          "required": {
-            "type": "boolean",
-            "default": false
-          },
-          "purpose": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_DataPurpose"
-              }
-            ]
-          },
-          "value_kind": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_ObservationValueKind"
-              }
-            ]
-          }
-        }
-      },
-      "Kernel_CollectionSpec": {
-        "required": [
-          "id",
-          "name",
-          "items"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_CollectionItem"
-            }
-          },
-          "purpose": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_DataPurpose"
-              }
-            ]
-          }
-        }
-      },
-      "Kernel_ConceptId": {},
-      "Kernel_ConceptRef": {
-        "required": [
-          "concept_id",
-          "version"
-        ],
-        "type": "object",
-        "properties": {
-          "concept_id": {
-            "$ref": "#/components/schemas/Kernel_ConceptId"
-          },
-          "version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          }
-        }
-      },
-      "Kernel_CriterionCategory": {
-        "type": "integer"
-      },
-      "Kernel_DataPurpose": {
-        "type": "object",
-        "properties": {
-          "endpoint_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "estimand_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "safety_rule_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "operational_need": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "Kernel_DateTimePrecision": {
         "enum": [
           "Year",
@@ -20304,42 +20676,6 @@
           }
         }
       },
-      "Kernel_DesignReference": {
-        "required": [
-          "id",
-          "title"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "artifact": {}
-        }
-      },
-      "Kernel_Dose": {
-        "required": [
-          "amount",
-          "unit"
-        ],
-        "type": "object",
-        "properties": {
-          "amount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "unit": {
-            "type": "string"
-          }
-        }
-      },
       "Kernel_ElementChange": {
         "required": [
           "element_id",
@@ -20372,71 +20708,6 @@
       "Kernel_ElementChangeKind": {
         "type": "integer"
       },
-      "Kernel_EligibilityCriterion": {
-        "required": [
-          "id",
-          "category",
-          "text",
-          "concepts"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "category": {
-            "$ref": "#/components/schemas/Kernel_CriterionCategory"
-          },
-          "text": {
-            "type": "string"
-          },
-          "concepts": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_ConceptRef"
-            }
-          },
-          "expression": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Kernel_Endpoint": {
-        "required": [
-          "id",
-          "objective_id",
-          "level",
-          "text"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "objective_id": {
-            "type": "string"
-          },
-          "level": {
-            "$ref": "#/components/schemas/Kernel_ObjectiveLevel"
-          },
-          "text": {
-            "type": "string"
-          },
-          "concept": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_ConceptRef"
-              }
-            ]
-          }
-        }
-      },
       "Kernel_EngineVersion": {
         "required": [
           "name",
@@ -20449,80 +20720,6 @@
           },
           "version": {
             "type": "string"
-          }
-        }
-      },
-      "Kernel_Epoch": {
-        "required": [
-          "id",
-          "name",
-          "order"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "order": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          }
-        }
-      },
-      "Kernel_Estimand": {
-        "required": [
-          "id",
-          "endpoint_id",
-          "population_id",
-          "arm_ids",
-          "variable",
-          "intercurrent_events",
-          "summary_measure"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "endpoint_id": {
-            "type": "string"
-          },
-          "population_id": {
-            "type": "string"
-          },
-          "arm_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "variable": {
-            "type": "string"
-          },
-          "intercurrent_events": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_IntercurrentEvent"
-            }
-          },
-          "summary_measure": {
-            "type": "string"
-          },
-          "intervention_ids": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "type": "string"
-            }
           }
         }
       },
@@ -20855,6 +21052,128 @@
           }
         }
       },
+      "Kernel_FormQueryMessageResponse": {
+        "required": [
+          "kind",
+          "text",
+          "by",
+          "at"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "by": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Kernel_FormQueryResponse": {
+        "required": [
+          "query_id",
+          "form_id",
+          "enrollment_id",
+          "item_id",
+          "observation_id",
+          "revision",
+          "current_revision",
+          "value_changed",
+          "status",
+          "text",
+          "messages",
+          "raised_by",
+          "raised_at",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "query_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "form_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "enrollment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string"
+          },
+          "observation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "current_revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "value_changed": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_FormQueryMessageResponse"
+            }
+          },
+          "raised_by": {
+            "type": "string"
+          },
+          "raised_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "Kernel_FormQueryTextRequest": {
+        "required": [
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        }
+      },
       "Kernel_FormResponse": {
         "required": [
           "form_id",
@@ -20874,7 +21193,8 @@
           "items",
           "locks",
           "assertions",
-          "signatures"
+          "signatures",
+          "content_hash"
         ],
         "type": "object",
         "properties": {
@@ -20962,6 +21282,12 @@
             "items": {
               "$ref": "#/components/schemas/Kernel_FormSignatureResponse"
             }
+          },
+          "content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -21032,7 +21358,10 @@
           "meaning",
           "signed_by",
           "signed_at",
-          "reason"
+          "reason",
+          "content_hash",
+          "superseded",
+          "signed_values"
         ],
         "type": "object",
         "properties": {
@@ -21052,6 +21381,50 @@
           },
           "reason": {
             "type": "string"
+          },
+          "content_hash": {
+            "type": "string"
+          },
+          "superseded": {
+            "type": "boolean"
+          },
+          "signed_values": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Kernel_FormSignedValueResponse"
+            }
+          }
+        }
+      },
+      "Kernel_FormSignedValueResponse": {
+        "required": [
+          "item_id",
+          "observation_id",
+          "revision",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string"
+          },
+          "observation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "value": {
+            "$ref": "#/components/schemas/Kernel_ObservationValue"
           }
         }
       },
@@ -21149,46 +21522,6 @@
           }
         }
       },
-      "Kernel_GenerateProtocolProposalRequest": {
-        "required": [
-          "trial_brief"
-        ],
-        "type": "object",
-        "properties": {
-          "trial_brief": {
-            "type": "string"
-          }
-        }
-      },
-      "Kernel_GenerativeProtocolProposal": {
-        "required": [
-          "design",
-          "design_json",
-          "reasoning_chain",
-          "initial_gap_check"
-        ],
-        "type": "object",
-        "properties": {
-          "design": {
-            "$ref": "#/components/schemas/Kernel_ProtocolDesign"
-          },
-          "design_json": {
-            "type": "string"
-          },
-          "reasoning_chain": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_ProtocolReasoningStep"
-            }
-          },
-          "initial_gap_check": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_MatrixGapFinding"
-            }
-          }
-        }
-      },
       "Kernel_IntentRecommendation": {
         "required": [
           "id",
@@ -21278,77 +21611,6 @@
             "items": {
               "$ref": "#/components/schemas/Kernel_IntentRecommendation"
             }
-          }
-        }
-      },
-      "Kernel_IntercurrentEvent": {
-        "required": [
-          "description",
-          "strategy"
-        ],
-        "type": "object",
-        "properties": {
-          "description": {
-            "type": "string"
-          },
-          "strategy": {
-            "$ref": "#/components/schemas/Kernel_IntercurrentEventStrategy"
-          },
-          "strategy_text": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Kernel_IntercurrentEventStrategy": {
-        "type": "integer"
-      },
-      "Kernel_Intervention": {
-        "required": [
-          "id",
-          "name"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "product": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_ConceptRef"
-              }
-            ]
-          },
-          "dose": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_Dose"
-              }
-            ]
-          },
-          "route": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "regimen": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
@@ -22082,6 +22344,298 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "Kernel_KernelProposalAffectedResponse": {
+        "required": [
+          "ref",
+          "mask"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "mask": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_KernelProposalPlanResponse": {
+        "required": [
+          "ref",
+          "title",
+          "number",
+          "media_type",
+          "content_hash",
+          "mask"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "number": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "media_type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mask": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_KernelProposalResponse": {
+        "required": [
+          "ref",
+          "study",
+          "intent",
+          "plan",
+          "affected",
+          "simulated_impact",
+          "requested_capabilities",
+          "proposed_at",
+          "expires_at",
+          "proposed_by",
+          "proposed_by_kind",
+          "requested_by",
+          "model_id",
+          "confidence_score",
+          "content_hash",
+          "status",
+          "decided_at",
+          "decided_by",
+          "approval_attestation",
+          "decision_reason",
+          "is_escalated",
+          "escalated_to",
+          "escalation_reason",
+          "mask"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "study": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "intent": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "plan": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelProposalPlanResponse"
+              }
+            ]
+          },
+          "affected": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelProposalAffectedResponse"
+            }
+          },
+          "simulated_impact": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "requested_capabilities": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "proposed_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "proposed_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "proposed_by_kind": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "requested_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "model_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "confidence_score": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "decided_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "decided_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "approval_attestation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "decision_reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "is_escalated": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "escalated_to": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "escalation_reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mask": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_KernelProposalStateResponse": {
+        "required": [
+          "ref",
+          "status",
+          "content_hash",
+          "decided_at",
+          "decided_by"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "content_hash": {
+            "type": "string"
+          },
+          "decided_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "decided_by": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -22880,28 +23434,6 @@
           "Masked"
         ]
       },
-      "Kernel_Objective": {
-        "required": [
-          "id",
-          "level",
-          "text"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "level": {
-            "$ref": "#/components/schemas/Kernel_ObjectiveLevel"
-          },
-          "text": {
-            "type": "string"
-          }
-        }
-      },
-      "Kernel_ObjectiveLevel": {
-        "type": "integer"
-      },
       "Kernel_ObservationAuditView": {
         "required": [
           "sequence",
@@ -23082,17 +23614,6 @@
           }
         }
       },
-      "Kernel_ObservationValueKind": {
-        "enum": [
-          "Quantity",
-          "Coded",
-          "Text",
-          "Boolean",
-          "DateTime",
-          "Missing",
-          null
-        ]
-      },
       "Kernel_ObservationValueMissingValue": {
         "required": [
           "reason"
@@ -23202,59 +23723,6 @@
           }
         }
       },
-      "Kernel_PlannedActivity": {
-        "required": [
-          "id",
-          "name",
-          "epoch_id",
-          "locations",
-          "collection_spec_ids"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "epoch_id": {
-            "type": "string"
-          },
-          "locations": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_ActivityLocation"
-            }
-          },
-          "collection_spec_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "timing": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_ActivityTiming"
-              }
-            ]
-          },
-          "purpose": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_DataPurpose"
-              }
-            ]
-          }
-        }
-      },
       "Kernel_PlannedVisit": {
         "required": [
           "activity_id",
@@ -23310,34 +23778,6 @@
           }
         }
       },
-      "Kernel_Population": {
-        "required": [
-          "id",
-          "name",
-          "criterion_ids"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "criterion_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "description": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "Kernel_ProblemDetails": {
         "type": "object",
         "properties": {
@@ -23369,183 +23809,6 @@
             ]
           },
           "instance": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Kernel_ProtocolDesign": {
-        "type": "object",
-        "properties": {
-          "schema_version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "title": {
-            "type": "string"
-          },
-          "objectives": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_Objective"
-            }
-          },
-          "endpoints": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_Endpoint"
-            }
-          },
-          "estimands": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_Estimand"
-            }
-          },
-          "populations": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_Population"
-            }
-          },
-          "eligibility_criteria": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_EligibilityCriterion"
-            }
-          },
-          "arms": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_Arm"
-            }
-          },
-          "epochs": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_Epoch"
-            }
-          },
-          "cohorts": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_Cohort"
-            }
-          },
-          "interventions": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_Intervention"
-            }
-          },
-          "planned_activities": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_PlannedActivity"
-            }
-          },
-          "collection_specs": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_CollectionSpec"
-            }
-          },
-          "safety_rules": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_ProtocolRule"
-            }
-          },
-          "discontinuation_rules": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_ProtocolRule"
-            }
-          },
-          "randomization_scheme": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_DesignReference"
-              }
-            ]
-          },
-          "statistical_design": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_DesignReference"
-              }
-            ]
-          }
-        }
-      },
-      "Kernel_ProtocolReasoningStep": {
-        "required": [
-          "step_number",
-          "step_type",
-          "summary",
-          "rationale",
-          "citations"
-        ],
-        "type": "object",
-        "properties": {
-          "step_number": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "step_type": {
-            "type": "string"
-          },
-          "summary": {
-            "type": "string"
-          },
-          "rationale": {
-            "type": "string"
-          },
-          "citations": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "Kernel_ProtocolRule": {
-        "required": [
-          "id",
-          "text",
-          "concepts"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "text": {
-            "type": "string"
-          },
-          "concepts": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_ConceptRef"
-            }
-          },
-          "expression": {
             "type": [
               "null",
               "string"
@@ -23624,6 +23887,39 @@
           null
         ]
       },
+      "Kernel_RaiseFormQueryRequest": {
+        "required": [
+          "observation_id",
+          "revision",
+          "text",
+          "query_id"
+        ],
+        "type": "object",
+        "properties": {
+          "observation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "text": {
+            "type": "string"
+          },
+          "query_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "Kernel_SaveFormValuesRequest": {
         "required": [
           "values"
@@ -23672,6 +23968,29 @@
                 "$ref": "#/components/schemas/Kernel_PlannedVisit"
               }
             ]
+          }
+        }
+      },
+      "Kernel_SignFormRequest": {
+        "required": [
+          "meaning",
+          "content_hash",
+          "signature_id"
+        ],
+        "type": "object",
+        "properties": {
+          "meaning": {
+            "type": "string"
+          },
+          "content_hash": {
+            "type": "string"
+          },
+          "signature_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -23855,23 +24174,6 @@
             "format": "date-time"
           },
           "suspension_reason": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Kernel_TerminologyBinding": {
-        "required": [
-          "code_system_version_id"
-        ],
-        "type": "object",
-        "properties": {
-          "code_system_version_id": {
-            "$ref": "#/components/schemas/Kernel_CodeSystemVersionId"
-          },
-          "codelist": {
             "type": [
               "null",
               "string"
@@ -25326,266 +25628,16 @@
           }
         }
       },
-      "Safety_IcsrHeader": {
+      "Safety_IcsrDrug": {
         "required": [
-          "messageId",
-          "senderOrganization",
-          "receiverOrganization",
-          "transmissionDate"
-        ],
-        "type": "object",
-        "properties": {
-          "messageId": {
-            "type": "string"
-          },
-          "senderOrganization": {
-            "type": "string"
-          },
-          "receiverOrganization": {
-            "type": "string"
-          },
-          "transmissionDate": {
-            "type": "string"
-          },
-          "messageType": {
-            "type": "string",
-            "default": "ichicsr"
-          }
-        }
-      },
-      "Safety_IcsrMeddraCoding": {
-        "required": [
-          "lltCode",
-          "lltName",
-          "ptCode",
-          "ptName",
-          "hltCode",
-          "hltName",
-          "hlgtCode",
-          "hlgtName",
-          "socCode",
-          "socName"
-        ],
-        "type": "object",
-        "properties": {
-          "lltCode": {
-            "type": "string"
-          },
-          "lltName": {
-            "type": "string"
-          },
-          "ptCode": {
-            "type": "string"
-          },
-          "ptName": {
-            "type": "string"
-          },
-          "hltCode": {
-            "type": "string"
-          },
-          "hltName": {
-            "type": "string"
-          },
-          "hlgtCode": {
-            "type": "string"
-          },
-          "hlgtName": {
-            "type": "string"
-          },
-          "socCode": {
-            "type": "string"
-          },
-          "socName": {
-            "type": "string"
-          },
-          "primarySocFlag": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "score": {
-            "type": "string",
-            "default": "1.0"
-          }
-        }
-      },
-      "Safety_IcsrPatient": {
-        "required": [
-          "patientId",
-          "sex"
-        ],
-        "type": "object",
-        "properties": {
-          "patientId": {
-            "type": "string"
-          },
-          "sex": {
-            "type": "string"
-          },
-          "age": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "null",
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "ageUnit": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "birthDate": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Safety_IcsrReaction": {
-        "required": [
-          "reactionTerm"
-        ],
-        "type": "object",
-        "properties": {
-          "reactionTerm": {
-            "type": "string"
-          },
-          "meddraCoding": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Safety_IcsrMeddraCoding"
-              }
-            ]
-          },
-          "startDate": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "endDate": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "outcome": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "seriousnessDeath": {
-            "type": "string",
-            "default": "0"
-          },
-          "seriousnessLifeThreatening": {
-            "type": "string",
-            "default": "0"
-          },
-          "seriousnessHospitalization": {
-            "type": "string",
-            "default": "0"
-          },
-          "seriousnessDisability": {
-            "type": "string",
-            "default": "0"
-          },
-          "seriousnessCongenitalAnomaly": {
-            "type": "string",
-            "default": "0"
-          },
-          "seriousnessOtherMedicallyImportant": {
-            "type": "string",
-            "default": "0"
-          }
-        }
-      },
-      "Safety_IcsrReport": {
-        "required": [
-          "header",
-          "reportIdentifiers",
-          "patient",
-          "reactions",
-          "suspectDrugs"
-        ],
-        "type": "object",
-        "properties": {
-          "header": {
-            "$ref": "#/components/schemas/Safety_IcsrHeader"
-          },
-          "reportIdentifiers": {
-            "$ref": "#/components/schemas/Safety_IcsrReportIdentifiers"
-          },
-          "patient": {
-            "$ref": "#/components/schemas/Safety_IcsrPatient"
-          },
-          "reactions": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Safety_IcsrReaction"
-            }
-          },
-          "suspectDrugs": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Safety_IcsrSuspectDrug"
-            }
-          },
-          "versionIndex": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32",
-            "default": 1
-          },
-          "reasonForChange": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Safety_IcsrReportIdentifiers": {
-        "required": [
-          "worldwideUniqueCaseId"
-        ],
-        "type": "object",
-        "properties": {
-          "worldwideUniqueCaseId": {
-            "type": "string"
-          },
-          "localReportId": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "firstSenderType": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Safety_IcsrSuspectDrug": {
-        "required": [
+          "drugRole",
           "drugName"
         ],
         "type": "object",
         "properties": {
+          "drugRole": {
+            "type": "string"
+          },
           "drugName": {
             "type": "string"
           },
@@ -25612,10 +25664,351 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Safety_IcsrHeader": {
+        "required": [
+          "batchNumber",
+          "batchSenderIdentifier",
+          "batchReceiverIdentifier",
+          "batchTransmissionDate",
+          "messageIdentifier",
+          "messageSenderIdentifier",
+          "messageReceiverIdentifier"
+        ],
+        "type": "object",
+        "properties": {
+          "batchNumber": {
+            "type": "string"
           },
-          "drugRole": {
-            "type": "string",
-            "default": "suspect"
+          "batchSenderIdentifier": {
+            "type": "string"
+          },
+          "batchReceiverIdentifier": {
+            "type": "string"
+          },
+          "batchTransmissionDate": {
+            "type": "string"
+          },
+          "messageIdentifier": {
+            "type": "string"
+          },
+          "messageSenderIdentifier": {
+            "type": "string"
+          },
+          "messageReceiverIdentifier": {
+            "type": "string"
+          }
+        }
+      },
+      "Safety_IcsrMeddraCoding": {
+        "required": [
+          "version",
+          "lltCode"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "lltCode": {
+            "type": "string"
+          }
+        }
+      },
+      "Safety_IcsrOtherCaseIdentifier": {
+        "required": [
+          "source",
+          "caseIdentifier"
+        ],
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "caseIdentifier": {
+            "type": "string"
+          }
+        }
+      },
+      "Safety_IcsrPatient": {
+        "type": "object",
+        "properties": {
+          "patientId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sex": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "age": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ageUnit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "birthDate": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Safety_IcsrPrimarySource": {
+        "required": [
+          "qualification"
+        ],
+        "type": "object",
+        "properties": {
+          "qualification": {
+            "type": "string"
+          },
+          "countryCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "primaryForRegulatoryPurposes": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "Safety_IcsrReaction": {
+        "required": [
+          "meddraCoding",
+          "outcome"
+        ],
+        "type": "object",
+        "properties": {
+          "meddraCoding": {
+            "$ref": "#/components/schemas/Safety_IcsrMeddraCoding"
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "reactionTerm": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reactionTermLanguage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "startDate": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "endDate": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resultsInDeath": {
+            "type": "boolean",
+            "default": false
+          },
+          "lifeThreatening": {
+            "type": "boolean",
+            "default": false
+          },
+          "causedOrProlongedHospitalisation": {
+            "type": "boolean",
+            "default": false
+          },
+          "disablingIncapacitating": {
+            "type": "boolean",
+            "default": false
+          },
+          "congenitalAnomalyBirthDefect": {
+            "type": "boolean",
+            "default": false
+          },
+          "otherMedicallyImportantCondition": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "Safety_IcsrReport": {
+        "required": [
+          "header",
+          "safetyReport",
+          "primarySources",
+          "sender",
+          "patient",
+          "reactions",
+          "drugs",
+          "narrative"
+        ],
+        "type": "object",
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/Safety_IcsrHeader"
+          },
+          "safetyReport": {
+            "$ref": "#/components/schemas/Safety_IcsrSafetyReport"
+          },
+          "primarySources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Safety_IcsrPrimarySource"
+            }
+          },
+          "sender": {
+            "$ref": "#/components/schemas/Safety_IcsrSender"
+          },
+          "patient": {
+            "$ref": "#/components/schemas/Safety_IcsrPatient"
+          },
+          "reactions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Safety_IcsrReaction"
+            }
+          },
+          "drugs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Safety_IcsrDrug"
+            }
+          },
+          "narrative": {
+            "type": "string"
+          },
+          "study": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Safety_IcsrStudy"
+              }
+            ]
+          }
+        }
+      },
+      "Safety_IcsrSafetyReport": {
+        "required": [
+          "senderSafetyReportId",
+          "creationDate",
+          "reportType",
+          "firstReceivedDate",
+          "mostRecentInformationDate",
+          "fulfilsLocalCriteriaForExpeditedReport",
+          "worldwideUniqueCaseId",
+          "firstSender"
+        ],
+        "type": "object",
+        "properties": {
+          "senderSafetyReportId": {
+            "type": "string"
+          },
+          "creationDate": {
+            "type": "string"
+          },
+          "reportType": {
+            "type": "string"
+          },
+          "firstReceivedDate": {
+            "type": "string"
+          },
+          "mostRecentInformationDate": {
+            "type": "string"
+          },
+          "fulfilsLocalCriteriaForExpeditedReport": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "worldwideUniqueCaseId": {
+            "type": "string"
+          },
+          "firstSender": {
+            "type": "string"
+          },
+          "documentsHeldBySender": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "otherCaseIdentifiers": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Safety_IcsrOtherCaseIdentifier"
+            }
+          }
+        }
+      },
+      "Safety_IcsrSender": {
+        "required": [
+          "senderType"
+        ],
+        "type": "object",
+        "properties": {
+          "senderType": {
+            "type": "string"
+          },
+          "organisation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Safety_IcsrStudy": {
+        "required": [
+          "studyType"
+        ],
+        "type": "object",
+        "properties": {
+          "studyType": {
+            "type": "string"
+          },
+          "sponsorStudyNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "studyName": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -25648,13 +26041,13 @@
           "status": {
             "type": "string"
           },
-          "totalSubjectExposure": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "totalPatientYearsExposure": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
             "type": [
-              "integer",
+              "number",
               "string"
             ],
-            "format": "int32"
+            "format": "double"
           },
           "totalSaes": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",

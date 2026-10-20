@@ -82,6 +82,8 @@ public sealed record ApproveProposal(
 
 /// <summary>Rejects an open, unexpired proposal; the reason for change is the rejection reason (ADR-2489 §4.2).</summary>
 [KernelCapability("proposal.reject", VerbClass.Approve, Resource = nameof(ProposalId))]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound))]
+[RaisesKernelErrors(typeof(ProposalErrors), nameof(ProposalErrors.NotOpen), nameof(ProposalErrors.Expired))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RejectProposal(
     TenantId TenantId,

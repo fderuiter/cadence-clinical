@@ -50,6 +50,7 @@ public sealed record StartAgentRun(
 /// <param name="CostUsd">What the tokens cost, when the model has a configured price.</param>
 /// <param name="IdempotencyKey">The command's idempotency key (K-TX-3).</param>
 /// <param name="ReasonForChange">Why the run is completed.</param>
+/// <param name="Inference">Where the model call went and what the outbound guard scrubbed (ADR-2636), or null without the inference layer.</param>
 [KernelCapability("agent_run.record", VerbClass.Propose)]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound))]
 [RaisesKernelErrors(typeof(IntelligenceErrors), nameof(IntelligenceErrors.RunCompleted), nameof(IntelligenceErrors.RunNotYours))]
@@ -63,7 +64,8 @@ public sealed record CompleteAgentRun(
     long OutputTokens,
     decimal? CostUsd,
     string IdempotencyKey,
-    string ReasonForChange) : ICommand<AgentRunStatus>;
+    string ReasonForChange,
+    AgentRunInference? Inference = null) : ICommand<AgentRunStatus>;
 
 /// <summary>
 /// Switches agents on or off for the whole tenant or one task, and sets the monthly token budget (ADR-2630 §4.2). It

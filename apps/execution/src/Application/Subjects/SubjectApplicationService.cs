@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Domain.Ports;
+using Cadence.Apps.Execution.Domain.Randomization;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
 using Cadence.Kernel.Time;
@@ -98,11 +99,8 @@ public sealed class SubjectApplicationService(
         {
             int enrollmentIndex = await subjects.EnrollNextIndexAsync(studyCode, token).ConfigureAwait(false);
 
-            // MIG-SUBJ-026 fix: request.ArmId was previously dropped entirely -- see ClinicalSubject.Create's own
-            // remarks for the full finding (confirmed against SCN-001-A's golden-master fixture) and why this is
-            // the enrollment-time arm_id, not an encrypted/blinded randomization output.
             var subject = ClinicalSubject.Create(subjectCode, studyCode, siteCode, enrollmentIndex,
-                encryptedDemographics, stratFactors: null, request.ArmId);
+                encryptedDemographics, stratFactors: null);
             // MIG-SUBJ-017: the .NET replacement for the legacy's own `current_change_reason.get() or "..."`
             // per-endpoint idiom is this one, uniformly-defaulting accessor — see ICurrentAuditContextAccessor's
             // own doc comment ("closing the legacy's two-idiom split... giving every reader exactly one
@@ -331,18 +329,12 @@ public sealed class SubjectApplicationService(
     /// <see cref="UpdateDemographicsAsync"/>/<see cref="DeleteDemographicsAsync"/> share: every fixture route
     /// exercising this method (e.g. <c>GET /api/v1/execution/subjects/SUBJ-DOES-NOT-EXIST</c>) passes a
     /// domain subject code, never a surrogate GUID, and <c>01_spec.md</c> Rule 9 lists only
-    /// <c>advance_subject_state</c>/<c>update_demographics</c> as dual-lookup call sites. Applies the RTSM
-    /// blinding filter for a blinded caller: <see cref="ClinicalSubject.TreatmentGroupCiphertext"/> is this
-    /// slice's only concrete RTSM-derived field today — the <c>AllocationKeyManager</c> decrypt mechanism
-    /// that would additionally populate a randomization seed / investigational product id belongs to the
-    /// out-of-scope randomization slice (this ticket's own boundary note: treat its output as an opaque,
-    /// already-decrypted value this method may redact but not itself decrypt) — so
-    /// <see cref="SubjectDetailResponse.RandomizationSeed"/>/<see cref="SubjectDetailResponse.InvestigationalProductId"/>
-    /// have no data source to redact yet on <see cref="ClinicalSubject"/> and are always <see langword="null"/>
-    /// regardless of <paramref name="isBlindedCaller"/>.
+    /// <c>advance_subject_state</c>/<c>update_demographics</c> as dual-lookup call sites. The treatment group,
+    /// randomisation seed and investigational product id are always null here: the arm lives only encrypted on the
+    /// randomisation allocation, and the endpoint asks <c>RandomizationApplicationService.RevealAsync</c> for it only
+    /// when the caller is unblinded (#5607).
     /// </summary>
-    public async Task<Result<SubjectDetailResponse>> GetDetailAsync(
-        string subjectId, bool isBlindedCaller, CancellationToken ct)
+    public async Task<Result<SubjectDetailResponse>> GetDetailAsync(string subjectId, CancellationToken ct)
     {
         var subject = await subjects.GetByCodeAsync(subjectId, ct).ConfigureAwait(false);
         if (subject is null)
@@ -350,10 +342,8 @@ public sealed class SubjectApplicationService(
             return SubjectErrors.NotFound(subjectId);
         }
 
-        string? treatmentGroup = isBlindedCaller ? null : subject.TreatmentGroupCiphertext;
-
         return new SubjectDetailResponse(subject.SubjectCode, subject.StudyCode,
-            SubjectStateCodec.ToCode(subject.Status), subject.SiteCode, treatmentGroup,
+            SubjectStateCodec.ToCode(subject.Status), subject.SiteCode, TreatmentGroup: null,
             RandomizationSeed: null, InvestigationalProductId: null);
     }
 
@@ -501,6 +491,12 @@ public sealed class SubjectApplicationService(
                 await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
                 return SubjectErrors.BlockedEnrollment(subject.SiteCode);
             }
+        }
+
+        // Randomisation allocates an arm and a kit, so it is its own command, never a bare state change (#5607).
+        if (target == SubjectState.Randomized)
+        {
+            return RandomizationErrors.RandomizeThroughAllocation();
         }
 
         // An emergency unblinding needs a clinical justification of at least 50 characters (PRD-SUB-005, #4982).

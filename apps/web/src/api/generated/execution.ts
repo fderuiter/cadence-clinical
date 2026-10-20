@@ -150,39 +150,25 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/execution/queries": {
+  "/api/v1/execution/randomization/schemes": {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    get: operations["ListClinicalQueries"];
+    /** Lists a study's scheme versions, newest first, without lists or allocations. */
+    get: operations["ListRandomizationSchemes"];
     put?: never;
-    post: operations["CreateClinicalQuery"];
+    /** Drafts the study's next randomisation scheme version. */
+    post: operations["DraftRandomizationScheme"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/execution/queries/{id}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get: operations["GetClinicalQueryById"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/execution/queries/{id}/respond": {
+  "/api/v1/execution/randomization/schemes/{schemeId}/approve": {
     parameters: {
       query?: never;
       header?: never;
@@ -191,14 +177,15 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: operations["RespondClinicalQuery"];
+    /** Approves a draft version for go-live, retiring the previous one and generating its list. */
+    post: operations["ApproveRandomizationScheme"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/execution/queries/{id}/close": {
+  "/api/v1/execution/subjects/{subjectId}/randomize": {
     parameters: {
       query?: never;
       header?: never;
@@ -207,87 +194,8 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: operations["CloseClinicalQuery"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/execution/queries/{id}/reopen": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations["ReopenClinicalQuery"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/execution/queries/{id}/cancel": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations["CancelClinicalQuery"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/execution/queries/batch-close": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations["BatchCloseClinicalQueries"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/execution/queries/batch-cancel": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations["BatchCancelClinicalQueries"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/execution/queries/batch-respond": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations["BatchRespondClinicalQueries"];
+    /** Randomises an enrolled participant under the live scheme and assigns a kit when it needs one. */
+    post: operations["RandomizeSubject"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1357,20 +1265,6 @@ export interface components {
       service: null | string;
       engine: null | string;
     };
-    Execution_BatchQueryRequest: {
-      query_ids: string[];
-      reason?: null | string;
-    };
-    Execution_BatchQueryRespondRequest: {
-      query_ids: string[];
-      response: string;
-      reason?: null | string;
-    };
-    Execution_BatchQueryResponse: {
-      queries: components["schemas"]["Execution_ClinicalQueryResponse"][];
-      /** Format: int32 */
-      count: number | string;
-    };
     Execution_BulkLabRangeDryRunResponse: {
       is_success: boolean;
       /** Format: int32 */
@@ -1663,43 +1557,6 @@ export interface components {
       electronic_signature: components["schemas"]["Execution_SignatureManifest"];
       finalized_at: string;
     };
-    Execution_ClinicalQueryResponse: {
-      id: string;
-      study_id: string;
-      subject_id: string;
-      test_code: string;
-      status: components["schemas"]["Execution_QueryStatus"];
-      site_id?: null | string;
-      visit_id?: null | string;
-      domain?: null | string;
-      explanation?: null | string;
-      response?: null | string;
-      observation_id?: null | string;
-      field_link?: null | string;
-      message?: null | string;
-      origin?: null | string;
-      priority?: null | string;
-      rule_id?: null | string;
-      created_by?: null | string;
-      responder?: null | string;
-      resolver?: null | string;
-      /** Format: date-time */
-      resolved_at?: null | string;
-      cancellation_reason?: null | string;
-      /** Format: date-time */
-      escalated_at?: null | string;
-      form_id?: null | string;
-      field_id?: null | string;
-      query_type?: null | string;
-      action_required?: null | string;
-      /** Format: date-time */
-      created_at?: null | string;
-      /**
-       * Format: int64
-       * @default 1
-       */
-      version: number | string;
-    };
     Execution_ComplianceStatusResponse: {
       study_id: components["schemas"]["Execution_StudyCode"];
       site_id: null | components["schemas"]["Execution_SiteCode"];
@@ -1953,19 +1810,6 @@ export interface components {
       /** @default Batch IP kit reconciliation */
       reason_for_change: string;
     };
-    Execution_IpKitInventoryResponse: {
-      kit_number: string;
-      study_id: string;
-      site_id: string;
-      lot_number: string;
-      /** Format: date-time */
-      expiration_date: string;
-      status: string;
-      /** Format: double */
-      residual_volume_ml?: null | number | string;
-      /** Format: double */
-      residual_volume_percentage?: null | number | string;
-    };
     Execution_IpKitItemReconcileRequest: {
       kit_number: string;
       lot_number: string;
@@ -1983,6 +1827,18 @@ export interface components {
       study_id: string;
       site_id: string;
       scanned_lot_number?: null | string;
+    };
+    Execution_IpKitSeedItem: {
+      kit_number: string;
+      lot_number: string;
+      /** Format: date-time */
+      expiration_date: string;
+      status?: null | string;
+      /** Format: double */
+      residual_volume_ml?: null | number | string;
+      /** Format: double */
+      residual_volume_percentage?: null | number | string;
+      treatment_arm?: null | string;
     };
     Execution_LabReferenceRangeCreateRequest: {
       study_id: string;
@@ -2137,53 +1993,76 @@ export interface components {
       /** Format: int32 */
       version_index: number | string;
     };
-    Execution_QueryCancelRequest: {
-      reason: string;
+    Execution_RandomizationResponse: {
+      /** Format: uuid */
+      randomization_id: string;
+      subject_id: components["schemas"]["Execution_SubjectCode"];
+      study_id: components["schemas"]["Execution_StudyCode"];
+      /** Format: int32 */
+      scheme_version: number | string;
+      stratum_key: string;
+      kit_number: null | string;
+      status: string;
+      /** Format: date-time */
+      randomized_at: string;
     };
-    Execution_QueryCreateRequest: {
-      study_id: string;
-      subject_id: string;
-      test_code: string;
-      explanation: string;
-      /** @default OPEN */
-      status: null | string;
-      site_id?: null | string;
-      visit_id?: null | string;
-      domain?: null | string;
-      observation_id?: null | string;
-      field_link?: null | string;
-      message?: null | string;
-      /** @default MANUAL */
-      origin: null | string;
-      /** @default MEDIUM */
-      priority: null | string;
-      rule_id?: null | string;
-      form_id?: null | string;
-      field_id?: null | string;
-      query_type?: null | string;
-      action_required?: null | string;
+    Execution_RandomizationSchemeDraftRequest: {
+      study_id: components["schemas"]["Execution_StudyCode"];
+      method: string;
+      arms: {
+        [key: string]: number | string;
+      };
+      stratification_factors: null | {
+        [key: string]: string[];
+      };
+      block_sizes: null | (number | string)[];
+      /** Format: int32 */
+      slots_per_stratum: null | number | string;
+      /** Format: double */
+      preferred_arm_probability: null | number | string;
+      requires_kit: boolean;
     };
-    Execution_QueryReopenRequest: {
-      reason: string;
+    Execution_RandomizationSchemeResponse: {
+      /** Format: uuid */
+      id: string;
+      study_id: components["schemas"]["Execution_StudyCode"];
+      /** Format: int32 */
+      version: number | string;
+      method: string;
+      status: string;
+      arms: {
+        [key: string]: number | string;
+      };
+      stratification_factors: {
+        [key: string]: string[];
+      };
+      block_sizes: (number | string)[];
+      /** Format: int32 */
+      slots_per_stratum: number | string;
+      /** Format: double */
+      preferred_arm_probability: number | string;
+      requires_kit: boolean;
+      /** Format: int32 */
+      list_size: number | string;
+      configuration_hash: string;
+      drafted_by: string;
+      /** Format: date-time */
+      drafted_at: string;
+      approved_by: null | string;
+      /** Format: date-time */
+      approved_at: null | string;
+      /** Format: date-time */
+      retired_at: null | string;
     };
-    Execution_QueryRespondRequest: {
-      response: string;
+    Execution_RandomizeSubjectRequest: {
+      stratification_factors: null | {
+        [key: string]: string;
+      };
     };
-    /** @enum {string} */
-    Execution_QueryStatus:
-      | "NONE"
-      | "CANDIDATE"
-      | "DRAFT_AI"
-      | "OPEN"
-      | "ANSWERED"
-      | "RESOLVED"
-      | "CLOSED"
-      | "REOPENED"
-      | "CANCELLED";
     Execution_SeedInventoryRequest: {
       study_id: string;
       site_id: string;
-      kits: components["schemas"]["Execution_IpKitInventoryResponse"][];
+      kits: components["schemas"]["Execution_IpKitSeedItem"][];
     };
     Execution_SignatureManifest: {
       signer_id: string;
@@ -2210,7 +2089,6 @@ export interface components {
       id: string;
       review_status: string;
       action_taken: string;
-      query_id: null | string;
       message: string;
       /** Format: date-time */
       timestamp: string;
@@ -2222,7 +2100,6 @@ export interface components {
       subject_id: string;
       visit_id: null | string;
       observation_id: null | string;
-      query_id: null | string;
       test_code: string;
       test_name: string;
       /** Format: double */
@@ -2280,7 +2157,6 @@ export interface components {
       subject_id: string;
       study_id: string;
       site_id: null | string;
-      arm_id: null | string;
       demographics:
         null | components["schemas"]["Execution_DemographicsPayload"];
     };
@@ -2313,7 +2189,6 @@ export interface components {
       subject_id: components["schemas"]["Execution_SubjectCode"];
       study_id: components["schemas"]["Execution_StudyCode"];
       site_id: null | components["schemas"]["Execution_SiteCode"];
-      treatment_group: null | string;
       status: string;
       active_protocol_version: null | string;
       encrypted_demographics: null | string;
@@ -2820,13 +2695,10 @@ export interface operations {
       };
     };
   };
-  ListClinicalQueries: {
+  ListRandomizationSchemes: {
     parameters: {
       query?: {
         study_id?: string;
-        subject_id?: string;
-        visit_id?: string;
-        status?: string;
       };
       header?: never;
       path?: never;
@@ -2840,40 +2712,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Execution_ClinicalQueryResponse"][];
-        };
-      };
-      /** @description Forbidden */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
-        };
-      };
-    };
-  };
-  CreateClinicalQuery: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Execution_QueryCreateRequest"];
-      };
-    };
-    responses: {
-      /** @description Created */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Execution_ClinicalQueryResponse"];
+          "application/json": components["schemas"]["Execution_RandomizationSchemeResponse"][];
         };
       };
       /** @description Bad Request */
@@ -2887,6 +2726,88 @@ export interface operations {
       };
       /** @description Forbidden */
       403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  DraftRandomizationScheme: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_RandomizationSchemeDraftRequest"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_RandomizationSchemeResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_HttpValidationProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ApproveRandomizationScheme: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        schemeId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_RandomizationSchemeResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };
@@ -2905,58 +2826,18 @@ export interface operations {
       };
     };
   };
-  GetClinicalQueryById: {
+  RandomizeSubject: {
     parameters: {
       query?: never;
       header?: never;
       path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Execution_ClinicalQueryResponse"];
-        };
-      };
-      /** @description Forbidden */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
-        };
-      };
-    };
-  };
-  RespondClinicalQuery: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
+        subjectId: string;
       };
       cookie?: never;
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["Execution_QueryRespondRequest"];
+        "application/json": components["schemas"]["Execution_RandomizeSubjectRequest"];
       };
     };
     responses: {
@@ -2966,7 +2847,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Execution_ClinicalQueryResponse"];
+          "application/json": components["schemas"]["Execution_RandomizationResponse"];
         };
       };
       /** @description Bad Request */
@@ -2996,307 +2877,8 @@ export interface operations {
           "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
-    };
-  };
-  CloseClinicalQuery: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Execution_ClinicalQueryResponse"];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
-        };
-      };
-      /** @description Forbidden */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
-        };
-      };
-    };
-  };
-  ReopenClinicalQuery: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Execution_QueryReopenRequest"];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Execution_ClinicalQueryResponse"];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
-        };
-      };
-      /** @description Forbidden */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
-        };
-      };
-    };
-  };
-  CancelClinicalQuery: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Execution_QueryCancelRequest"];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Execution_ClinicalQueryResponse"];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
-        };
-      };
-      /** @description Forbidden */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
-        };
-      };
-    };
-  };
-  BatchCloseClinicalQueries: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Execution_BatchQueryRequest"];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Execution_BatchQueryResponse"];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
-        };
-      };
-      /** @description Forbidden */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
-        };
-      };
-    };
-  };
-  BatchCancelClinicalQueries: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Execution_BatchQueryRequest"];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Execution_BatchQueryResponse"];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
-        };
-      };
-      /** @description Forbidden */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
-        };
-      };
-    };
-  };
-  BatchRespondClinicalQueries: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Execution_BatchQueryRespondRequest"];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Execution_BatchQueryResponse"];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
-        };
-      };
-      /** @description Forbidden */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
-        };
-      };
-      /** @description Not Found */
-      404: {
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };

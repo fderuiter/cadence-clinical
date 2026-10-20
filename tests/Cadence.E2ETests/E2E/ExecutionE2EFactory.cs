@@ -117,7 +117,7 @@ public class ExecutionE2EFactory : WebApplicationFactory<Cadence.Apps.Execution.
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseTestGatewaySecret().UseTestDemographicsKey();
+        builder.UseTestGatewaySecret().UseTestDemographicsKey().UseTestRandomizationKey();
         builder.UseTestPostgresConnectionString();
 
         builder.ConfigureServices(services =>

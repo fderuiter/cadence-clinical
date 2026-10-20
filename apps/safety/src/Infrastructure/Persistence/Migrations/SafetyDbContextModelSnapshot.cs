@@ -17,7 +17,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.11")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -312,8 +312,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(255)");
 
                     b.Property<string>("EsignatureManifestId")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                        .HasColumnType("text");
 
                     b.Property<bool>("FscaRequired")
                         .HasColumnType("boolean");
@@ -490,8 +489,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(255)");
 
                     b.Property<string>("EsignatureManifestId")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                        .HasColumnType("text");
 
                     b.Property<string>("EvaluationsJson")
                         .IsRequired()
@@ -630,10 +628,10 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<int>("TotalSaes")
-                        .HasColumnType("integer");
+                    b.Property<double>("TotalPatientYearsExposure")
+                        .HasColumnType("double precision");
 
-                    b.Property<int>("TotalSubjectExposure")
+                    b.Property<int>("TotalSaes")
                         .HasColumnType("integer");
 
                     b.Property<int>("VersionIndex")
@@ -919,8 +917,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(255)");
 
                     b.Property<string>("EsignatureManifestId")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                        .HasColumnType("text");
 
                     b.Property<string>("GroundedClaimsJson")
                         .IsRequired()
@@ -1038,8 +1035,7 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence.Migrations
                         .HasColumnType("double precision");
 
                     b.Property<string>("EsignatureManifestId")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                        .HasColumnType("text");
 
                     b.Property<double>("ExpectedCountE")
                         .HasColumnType("double precision");

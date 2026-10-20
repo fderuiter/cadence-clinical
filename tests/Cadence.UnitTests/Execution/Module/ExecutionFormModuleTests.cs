@@ -61,7 +61,10 @@ public sealed class ExecutionFormModuleTests
         complete.MissingRequired.Should().BeEmpty();
     }
 
-    /// <summary>The grant gives the role read, insert and update on the module's schema and refuses a name that is not a role.</summary>
+    /// <summary>
+    /// The grant gives the role read, insert and update on the module's schema, delete only on the used signature tokens,
+    /// and refuses a name that is not a role.
+    /// </summary>
     [Fact(DisplayName = "ExecutionModuleDatabase_GrantAppRoleSql_GrantsTheModuleSchema_AndRefusesBadNames")]
     public void ExecutionModuleDatabaseGrantAppRoleSqlGrantsTheModuleSchemaAndRefusesBadNames()
     {
@@ -70,7 +73,8 @@ public sealed class ExecutionFormModuleTests
 
         sql.Should().Contain("GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA \"execution\" TO \"cadence_app\"")
             .And.Contain("REVOKE ALL ON \"execution\".\"__ef_migrations_history\" FROM \"cadence_app\"")
-            .And.NotContain("DELETE");
+            .And.Contain("GRANT DELETE ON \"execution\".\"consumed_signature_tokens\" TO \"cadence_app\"");
+        sql.Split('\n').Where(line => line.Contains("DELETE", StringComparison.Ordinal)).Should().ContainSingle();
         injected.Should().Throw<ArgumentException>();
     }
 
@@ -87,5 +91,5 @@ public sealed class ExecutionFormModuleTests
     private static CollectionInstanceRecord Record(CollectionItem[] items, params CollectedValueView[] values) =>
         new(
             CollectionInstanceId.New(), EnrollmentId.New(), ParticipantId.New(), StudyId.New(), StudySiteId.New(), ProtocolVersionId.New(),
-            "cs.vitals", "act.week12", At, "crc@example.test", At, 1 + values.Length, items, values, [], [], []);
+            "cs.vitals", "act.week12", At, "crc@example.test", At, 1 + values.Length, items, values, [], [], [], null);
 }

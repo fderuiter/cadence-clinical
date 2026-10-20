@@ -44,7 +44,7 @@ Some checks record pre-existing debt in a checked-in baseline instead of failing
   `CADENCE_BASELINE_GROWTH="<reason>"`; the variable is honoured only in the pre-commit hook, and `pnpm cadence check`
   and CI still require the trailer.
 - Without `origin/main` (or with a shallow clone that shares no history with it) the gate is skipped locally with a
-  message and fails in CI (`CI` or `GITHUB_ACTIONS` set), so a missing ref never lets growth through.
+  message and fails in CI (`CI` or `GITHUB_ACTIONS` set to `true` or `1`), so a missing ref never lets growth through.
 
 ## Tests that need PostgreSQL
 
@@ -347,6 +347,8 @@ checks, writes both documents and `docs/SDLC/runs/`, stages them, and with `--co
   and CI run it on everything the branch changed since its merge base with `origin/main`. It admits the documents
   only when `CADENCE_GXP_SNAPSHOT=1`; outside the pre-commit hook it then compares the regenerated documents with the
   snapshot (`gxp diff`).
+- A copy identical to `origin/main`'s is the baseline's, not the branch's: merging `main` into a branch after a new
+  snapshot passes the gate, and only a document that differs from `main` is refused.
 - No custom merge driver or `merge=union` is used for them: GitHub ignores custom drivers, and union merges corrupt
   Markdown tables.
 

@@ -32,6 +32,7 @@ Reservation rule: since the kernel work of September 2026, a new ADR takes the n
 | 2610–2619 | Scaffold service dispositions                                                     |
 | 2620–2629 | The eCRF on the kernel observation path                                           |
 | 2630–2639 | AI agents                                                                         |
+| 2640–2649 | Clinical operations compliance (GCP workflows)                                    |
 | 2800–2899 | Google Stitch pull requests (closed; no new numbers)                              |
 
 An area with no block takes the next unused block of ten below 2800 and adds a row here in the same pull request.
@@ -137,6 +138,9 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2631: Agent Task Configurations Are Versioned and Qualified per Tenant](2026-10-20-agent-task-configurations-are-versioned-and-qualified-per-tenant.md) (2026-10-20)
 - [ADR-2632: Agents Act for One Person, and Approved Proposals Execute as Their Approver](2026-10-20-agents-act-for-one-person-and-approved-proposals-execute-as-their-approver.md) (2026-10-20)
 - [ADR-2633: Agent Tools Read as the Requester, and Every Claim Cites What Was Read](2026-10-20-agent-tools-read-as-the-requester-and-every-claim-cites-what-was-read.md) (2026-10-20)
+- [ADR-2634: AI Task Configurations Are Measured by Versioned Evaluations and Production Signals](2026-10-20-ai-task-configurations-are-measured-by-versioned-evaluations-and-production-signals.md) (2026-10-20)
+- [ADR-2635: AI in the Canvas Is Labelled, Scoped to the Selection and Ends in a Proposal](2026-10-20-ai-in-the-canvas-is-labelled-scoped-and-ends-in-a-proposal.md) (2026-10-20)
+- [ADR-2636: Inference Is Pluggable, Residency-Bound and Sandboxed](2026-10-20-inference-is-pluggable-residency-bound-and-sandboxed.md) (2026-10-20)
 
 ### 1. Core Platform & Execution Engine
 
@@ -226,7 +230,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2271: Dynamic OpenAPI Schema Aggregation at the Gateway](2026-07-22-gateway-openapi-aggregation.md) (2026-07-22)
 - [ADR-2276: Signature Re-Authentication](2026-07-22-signature-re-authentication.md) (2026-07-22)
 - [ADR-2281: Secure API Signatures with Canonical JSON (Version 2 Sole Standard)](2026-07-23-canonical-json-signatures-and-rolling-versioning.md) (2026-07-23)
-- [ADR-054: Clinical Query Workflow and Role Authorization](2026-07-24-clinical-query-workflow-authorization.md) (2026-07-24)
+- [ADR-054: Clinical Query Workflow and Role Authorization](2026-07-24-clinical-query-workflow-authorization.md) (2026-07-24) _(Superseded by ADR-2622)_
 - [ADR-057: Rolling Versioning and Transition Support for Canonical JSON Signatures](2026-07-24-rolling-upgrade-and-canonical-json-signatures.md) (2026-07-24)
 - [ADR-085: Backward-Compatible Gateway Signature Verification](2026-07-27-backward-compatible-gateway-signature-verification.md) (2026-07-27)
 - [ADR-095: CI Schema Introspection and Gateway Aggregation Resilience](2026-07-27-ci-schema-introspection-and-gateway-aggregation.md) (2026-07-27)
@@ -270,7 +274,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2380: Centralized Permission-Based Authorization and Dynamic Mappings](2026-08-17-centralized-permission-auth.md) (2026-08-17)
 - [ADR-2184: Localize datetime helpers in security package](2026-08-18-localize-datetime-helpers-in-security-package.md) (2026-08-18)
 - [ADR-110: eTMF Inbound-Email Webhook and Binder Routing](2026-08-21-etmf-inbound-email-webhook-and-binder-routing.md) (2026-08-21)
-- [ADR-2191: AI Gateway Microservice and Three-Tier Clinical Intelligence Architecture](2026-08-21-ai-gateway-microservice-and-three-tier-clinical-intelligence-architecture.md) (2026-08-21)
+- [ADR-2191: AI Gateway Microservice and Three-Tier Clinical Intelligence Architecture](2026-08-21-ai-gateway-microservice-and-three-tier-clinical-intelligence-architecture.md) (2026-08-21) _(Partly superseded by ADR-2610 and ADR-2630)_
 - [ADR-101: Role Authorization for Granular Data-Lock Actions and Trust Boundary Verification](2026-08-24-role-authorization-for-granular-data-lock-actions.md) (2026-08-24)
 - [ADR-2402: Hybrid Multi-Step Clinical Reasoning Core and Protocol Grounding Gate](2026-08-25-hybrid-multi-step-clinical-reasoning-core-and-protocol-grounding-gate.md) (2026-08-25)
 - [ADR-2437: Decommission Legacy V1 Signatures and Standalone Rendering Engine](2026-09-08-decommission-legacy-v1-signatures-and-rendering-engine.md) (2026-09-08)
@@ -290,7 +294,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-116: ePRO Sync Durable Reconciliation, Defeated Record Retention, and Structural Queries](2026-08-07-epro-sync-durable-reconciliation.md) (2026-08-07)
 - [ADR-065: Biomedical Concept Locks for Active-Recruiting Studies](2026-08-08-biomedical-concept-locks.md) (2026-08-08)
 - [ADR-2348: Expose Authenticated SDTM/ADaM Dataset-JSON Export Endpoints](2026-08-08-expose-authenticated-sdtm-adam-dataset-json-export-endpoints.md) (2026-08-08)
-- [ADR-064: E2B(R3) ICSR XML Export and Structural Validation](2026-08-09-safety-e2b-icsr-xml-export-pipeline.md) (2026-08-09)
+- [ADR-064: E2B(R3) ICSR XML Export and Structural Validation](2026-08-09-safety-e2b-icsr-xml-export-pipeline.md) (2026-08-09) _(Superseded by ADR-2464)_
 - [ADR-067: Signed NCI Thesaurus CT Web Client](2026-08-09-nci-thesaurus-signed-web-client.md) (2026-08-09)
 - [ADR-2353: Medical Coding Engine and Query Subsystem Integration](2026-08-09-medical-coding-engine-query-integration.md) (2026-08-09)
 - [ADR-086: Bidirectional Field Parity and RFC 7807 Validation Schemas](2026-08-11-bidirectional-field-parity-and-rfc7807-validation-schemas.md) (2026-08-11)
@@ -307,6 +311,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-115: Durable Dictionary-Import Worker and Recovery Contract](2026-08-26-durable-dictionary-import-worker.md) (2026-08-26)
 - [ADR-2409: SAE Reconciliation Architecture](2026-08-26-sae-reconciliation-architecture.md) (2026-08-26)
 - [ADR-2426: SAE Reconciliation & Safety Gateway (E2B)](2026-09-01-sae-reconciliation-safety-gateway-e2b.md) (2026-09-01)
+- [ADR-2464: ICSR Render Emits ICH E2B(R3) Validated Against the ICH Schema](2026-10-20-icsr-render-emits-ich-e2br3-validated-against-the-ich-schema.md) (2026-10-20)
 
 ### 4. Clinical Operations & Business Modules
 
@@ -362,6 +367,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2801: Automated Stipend Disbursement Threshold Rules for Participant Wallet](2026-10-01-automated-stipend-disbursement-threshold-rules.md) (2026-10-01)
 - [ADR-2232: Financial and Site Operations Engines Standard](2026-08-29-financial-and-site-operations-engines-standard.md) (2026-08-29)
 - [ADR-2425: Randomization and Trial Supply Management](2026-08-31-randomization-and-trial-supply-management.md) (2026-08-31)
+- [ADR-2640: Randomisation Allocates from Approved, Encrypted Scheme Versions](2026-10-20-randomisation-allocates-from-approved-encrypted-scheme-versions.md) (2026-10-20)
 
 ### 5. Compliance, Audit & Governance
 
@@ -391,7 +397,6 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2434: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](2026-09-06-gxp-compliance-reporting-ci-alignment.md) (2026-09-06)
 - [ADR-2261: Native C# De-Identification Engine and Cryptographic Canonical Signing Foundation](2026-09-29-native-csharp-deid-engine-and-canonical-signing.md) (2026-09-29)
 - [ADR-2541: Consolidate GxPAuditInterceptor on Cadence.Database and Remove Obsolete Security Interceptor](2026-09-30-consolidate-gxp-audit-interceptor-on-database-package.md) (2026-09-30)
-- [ADR-2634: AI Task Configurations Are Measured by Versioned Evaluations and Production Signals](2026-10-20-ai-task-configurations-are-measured-by-versioned-evaluations-and-production-signals.md) (2026-10-20)
 
 ### 6. Frontend & Design System
 
@@ -564,6 +569,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2516: Routes Are Denied Unless They Declare Who May Call Them](2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md) (2026-10-16)
 - [ADR-2517: SMART Client Assertions Are Signed Only With Server-Side Endpoint Keys](2026-10-19-smart-client-assertions-are-signed-only-with-server-side-endpoint-keys.md) (2026-10-19)
 - [ADR-2518: DSUR Approval Is Its Own Capability, Signed by the Verified Caller](2026-10-19-dsur-approval-is-its-own-capability-signed-by-the-verified-caller.md) (2026-10-19)
+- [ADR-2519: Safety Signature Manifests Are Stored as Text](2026-10-20-safety-signature-manifests-are-stored-as-text.md) (2026-10-20)
 - [ADR-2520: The Supply Unblinding Engine and Facade Are Not Carried Forward](2026-09-30-supply-unblinding-and-facade-not-carried-forward.md) (2026-09-30)
 - [ADR-2521: The Grant Payables Ledger Is Ported to Payments in Decimal with Kernel IDs](2026-09-30-grant-payables-ledger-in-decimal-with-kernel-ids.md) (2026-09-30)
 - [ADR-2522: Derived Variables Are Ported as Fixed Standard Formulas, and Custom Formulas Use the One Rule Language](2026-09-30-derived-variables-ported-as-fixed-standard-formulas.md) (2026-09-30)

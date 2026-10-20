@@ -177,7 +177,8 @@ The harness runs these checks on every case, in order, and the first failure fai
 - **Negative Impact / Technical Debt:**
   - Every agent needs reviewed, de-identified cases before it can be qualified, which costs reviewer time.
   - A judge needs a human-labelled sample per rubric and judge version; changing the judge model means recalibrating.
-  - Until the model port lands (#5374) the harness runs only on the fake provider and scripted targets.
+  - The model port landed with #5374, but the on-demand real-provider runner waits on the inference layer (#5550);
+    until it lands the harness runs only on the fake provider and scripted targets.
 - **Mitigation Strategy:**
   - Start each agent with a small reviewed set plus the shared adversarial categories, and grow it from real
     rejections (a rejected Proposal is a candidate case once de-identified and reviewed).

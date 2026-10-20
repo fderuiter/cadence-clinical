@@ -36,16 +36,9 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `POST` | `/api/v1/execution/labs/toxicity/evaluate` | EvaluateLabToxicityEndpoint | Evaluate Lab Toxicity Endpoint |
 | `GET` | `/api/v1/execution/labs/toxicity/review-queue` | ListStagedAeReviewQueue | List Staged Ae Review Queue |
 | `POST` | `/api/v1/execution/labs/toxicity/review/{review_id}/action` | ActionStagedAeReview | Action Staged Ae Review |
-| `GET` | `/api/v1/execution/queries` | ListClinicalQueries |  |
-| `POST` | `/api/v1/execution/queries` | CreateClinicalQuery |  |
-| `POST` | `/api/v1/execution/queries/batch-cancel` | BatchCancelClinicalQueries |  |
-| `POST` | `/api/v1/execution/queries/batch-close` | BatchCloseClinicalQueries |  |
-| `POST` | `/api/v1/execution/queries/batch-respond` | BatchRespondClinicalQueries |  |
-| `GET` | `/api/v1/execution/queries/{id}` | GetClinicalQueryById |  |
-| `POST` | `/api/v1/execution/queries/{id}/cancel` | CancelClinicalQuery |  |
-| `POST` | `/api/v1/execution/queries/{id}/close` | CloseClinicalQuery |  |
-| `POST` | `/api/v1/execution/queries/{id}/reopen` | ReopenClinicalQuery |  |
-| `POST` | `/api/v1/execution/queries/{id}/respond` | RespondClinicalQuery |  |
+| `GET` | `/api/v1/execution/randomization/schemes` | ListRandomizationSchemes | Lists a study's scheme versions, newest first, without lists or allocations. |
+| `POST` | `/api/v1/execution/randomization/schemes` | DraftRandomizationScheme | Drafts the study's next randomisation scheme version. |
+| `POST` | `/api/v1/execution/randomization/schemes/{schemeId}/approve` | ApproveRandomizationScheme | Approves a draft version for go-live, retiring the previous one and generating its list. |
 | `POST` | `/api/v1/execution/rtsm/cgt/apheresis` |  |  |
 | `POST` | `/api/v1/execution/rtsm/cgt/bedside-verify` |  |  |
 | `GET` | `/api/v1/execution/rtsm/cgt/certificates/{studyId}` |  |  |
@@ -70,6 +63,7 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `POST` | `/api/v1/execution/subjects/{subjectId}/consent` | RecordSubjectConsent |  |
 | `PUT` | `/api/v1/execution/subjects/{subjectId}/demographics` | UpdateSubjectDemographics |  |
 | `DELETE` | `/api/v1/execution/subjects/{subjectId}/demographics` | DeleteSubjectDemographics |  |
+| `POST` | `/api/v1/execution/subjects/{subjectId}/randomize` | RandomizeSubject | Randomises an enrolled participant under the live scheme and assigns a kit when it needs one. |
 | `PATCH` | `/api/v1/execution/subjects/{subjectId}/state` | UpdateSubjectState |  |
 | `POST` | `/api/v1/execution/webhooks/etmf` | EtmfCompletenessWebhook |  |
 | `GET` | `/healthz` | ExecutionHealthCheck | Execution engine health probe. |

@@ -51,7 +51,8 @@ scripts/local_stack_nodocker.sh down
 | Services   | gateway `:8000`, execution `:8002`, kernel `:8018`, web `http://localhost:3000/cadence-clinical/`            |
 | Dashboard  | `http://localhost:15000/login?t=…` (printed by `up`)                                                         |
 
-Realm users (password `password`): `crc.site101` (site investigator, can add participants), `dm.lead`,
+Realm users (password `password`): `crc.site101` (site coordinator, can add participants and fill in forms), `pi.site101` (site
+investigator, signs `SITE-101`'s forms), `dm.lead`,
 `cra.monitor`, `designer.lead`, `safety.officer`, `auditor.lead`. All carry `tenant_id=cadence-local`.
 
 ## Drive it (agent path)
@@ -126,7 +127,7 @@ The first takes about a minute (mostly the build), the second about 4 s. The ful
 ## Gotchas
 
 - **The demo study is `CADENCE-101`** (ADR-2543). The kernel host seeds it on start: sites `SITE-101` and `SITE-102`,
-  three screened participants, and a grant for each realm user. `crc.site101` and `cra.monitor` see only `SITE-101`;
+  three screened participants, and a grant for each realm user. `crc.site101`, `pi.site101` and `cra.monitor` see only `SITE-101`;
   the other study site and its enrollment show as hidden ("not permitted"). Check it with
   `fetch GET /api/v1/kernel/search?q=CADENCE-101`, then `nav studies/CADENCE-101`: Recent activity lists the seed's
   events. The Participants pane there reads Execution, which seeds nothing on a normal start, so it says "No

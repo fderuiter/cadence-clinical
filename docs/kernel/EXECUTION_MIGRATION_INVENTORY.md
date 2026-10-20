@@ -15,12 +15,13 @@ Dispositions: **KEEP** (unchanged in the EDC module) · **MIGRATE→KERNEL** (th
 (superseded by a kernel concept) · **DELETE** (dead code, duplicate or shim).
 
 "Kernel: exists" means a type is already present in `packages/kernel/src`. "Kernel: missing" means it has to be built.
-Today the kernel ships only IDs (`TenantId`, `OrganizationId`, `PersonId`, `StudyId`, `SiteId`, `StudySiteId`,
+When this inventory was written, the kernel shipped only IDs (`TenantId`, `OrganizationId`, `PersonId`, `StudyId`, `SiteId`, `StudySiteId`,
 `ParticipantId`, `ObservationId`, `AttestationId`, `ProtocolVersionId`), thin `Tenant/Organization/Person/Study/Site/
-StudySite/Participant/Observation/Attestation/ProtocolVersion` entities, `TemporalPeriod` and `AsOf()`. It has no
+StudySite/Participant/Observation/Attestation/ProtocolVersion` entities, `TemporalPeriod` and `AsOf()`. It had no
 Enrollment, Effectivity, Applicability, Consent, Assertion, Source, Artifact, Provenance, Grant/Capability,
-command pipeline, AuditEntry or outbox yet. The only kernel type that `apps/execution` references today is
-`ParticipantId`, and only through the dead shim `SubjectId.AsParticipantId()`.
+command pipeline, AuditEntry or outbox yet, and the only kernel type `apps/execution` referenced was `ParticipantId`,
+through the dead shim `SubjectId.AsParticipantId()`. The kernel has most of these now; the
+[kernel specification](CLINICAL_KERNEL_SPECIFICATION.md) marks each built part **Implemented**.
 
 ---
 
@@ -29,6 +30,14 @@ command pipeline, AuditEntry or outbox yet. The only kernel type that `apps/exec
 > endpoints, the published form version registry and the old edit-check and auto-query engines. eCRF forms are now kernel
 > collection instances served by the Execution module in the kernel host ([apps/execution/module](../../apps/execution/module/README.md)).
 > Rows below that name those files describe the state before that change.
+>
+> #5461 then deleted Execution's own clinical queries: `ClinicalQuery` and `Domain/Queries`, `IClinicalQueryRepository`,
+> `ClinicalQueryRepository`, `ClinicalQueryConfiguration`, `Application/Queries`, `QueryEndpoints` (every
+> `/api/v1/execution/queries` route and the `/api/v1/queries` alias), the query JSON converters, the `query_lifecycle`
+> permissions and the `ClinicalQueryRaised` event (migration `RetireClinicalQueries` drops `clinical_queries` and the
+> toxicity review's `query_id`). A query is now raised on a form value in the Execution module
+> (`/api/v1/execution/forms/{formId}/queries`). The query rows in §2.6, §2.7, §2.11, §2.12, §2.14 and §2.16 describe the
+> state before that change.
 
 ## 1. Summary
 
@@ -128,6 +137,8 @@ All paths are relative to `apps/execution/src/` unless they start with `packages
 
 ### 2.6 `Application` (root) and `Application/Queries`
 
+The query types in this section were deleted in #5461; queries now live in the Execution module.
+
 | File                                                      | Type(s)                            | Disposition         | Target / change                                                                                                                                                                                                        | Evidence / notes                                                                                                         |
 | --------------------------------------------------------- | ---------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `Application/OperationEnvelopeResponse.cs`                | `OperationEnvelopeResponse`        | KEEP                | Generic wire envelope.                                                                                                                                                                                                 | Used by compliance endpoints and tests. It becomes unused if those endpoints are removed.                                |
@@ -215,6 +226,8 @@ All paths are relative to `apps/execution/src/` unless they start with `packages
 
 ### 2.12 `Domain/Queries`
 
+The query types in this section were deleted in #5461; queries now live in the Execution module.
+
 | File                                   | Type(s)            | Disposition         | Target / change                                                                                                          | Evidence / notes                                                                                                      |
 | -------------------------------------- | ------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
 | `Domain/Queries/ClinicalQuery.cs`      | `ClinicalQuery`    | REMAIN EDC-SPECIFIC | Workflow stays and emits Assertions (§5.4). `ObservationId` becomes required and uses the kernel type. Re-key off codes. | `Open` overwrites the audit field `CreatedBy` (105). **K-TIME-3**: `DateTime.UtcNow` (141). `Escalate` has no caller. |
@@ -284,7 +297,7 @@ All paths are relative to `apps/execution/src/` unless they start with `packages
 | `Infrastructure/Persistence/EfAuditLogWriter.cs`                                  | `EfAuditLogWriter`                     | MIGRATE→KERNEL      | Kernel AuditEntry writer inside the command pipeline, with a per-**tenant** hash chain (§8.3.3). Kernel: `KernelCommandTransaction` + `KernelAuditChainVerifier` (ADR-2449); the module still has to move onto it. `AuditLogEntry` itself lives in `packages/engine_core/src/Audit/AuditLogEntry.cs` and has no `tenant_id`. | D6 fixed for #4768: labels the next save; `GxPAuditInterceptor` writes the only entry, chained per CLR type name.     |
 | `Infrastructure/Persistence/ExecutionDbContext.cs`                                | `ExecutionDbContext`                   | REMAIN EDC-SPECIFIC | Becomes `EdcDbContext` with `HasDefaultSchema("edc")`. Keeps only FormSubmissions, ClinicalQueries and projections. Remove `ClinicalSubjects`, `SubjectConsents`, `SiteComplianceCaches`, `ClinicalObservations` and `AuditLogEntries` (K-MOD-1, §9).                                                                        | The outbox tables (54) move to the kernel.                                                                            |
 | `Infrastructure/Persistence/ExecutionDbContextFactory.cs`                         | `ExecutionDbContextFactory`            | REMAIN EDC-SPECIFIC | Single `cadence` database, `edc` schema (ADR-2247).                                                                                                                                                                                                                                                                          | `Database=cadence_edc` (37) violates ADR-2247.                                                                        |
-| `Infrastructure/Persistence/ExecutionDbSeeder.cs`                                 | `ExecutionDbSeeder`                    | REPLACE             | Kernel fixtures via `dotnet cadence db seed`.                                                                                                                                                                                                                                                                                | Fabricated genesis `BlockHash` (76-77, D7). `DateTime.UtcNow` (71).                                                   |
+| `Infrastructure/Persistence/ExecutionDbSeeder.cs`                                 | `ExecutionDbSeeder`                    | REPLACE             | Kernel fixtures: the kernel host's development demo data (ADR-2543); `cadence db seed` was removed (ADR-2534).                                                                                                                                                                                                               | Fabricated genesis `BlockHash` (76-77, D7). `DateTime.UtcNow` (71).                                                   |
 | `Infrastructure/Persistence/Repositories/AdvisoryLockSql.cs`                      | `AdvisoryLockSql`                      | MIGRATE→KERNEL      | Kernel per-aggregate lock helper (K-TX-4).                                                                                                                                                                                                                                                                                   | Currently keyed per **study** code (`hashtext(studyCode)`), not per aggregate.                                        |
 | `Infrastructure/Persistence/Repositories/ClinicalQueryRepository.cs`              | `ClinicalQueryRepository`              | REMAIN EDC-SPECIFIC | Re-key. Tracked load for mutation.                                                                                                                                                                                                                                                                                           | D1 (37).                                                                                                              |
 | `Infrastructure/Persistence/Repositories/ConsentRepository.cs`                    | `ConsentRepository`                    | REPLACE             | Kernel.Persistence.                                                                                                                                                                                                                                                                                                          |                                                                                                                       |

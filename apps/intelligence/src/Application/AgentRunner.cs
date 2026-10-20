@@ -61,6 +61,7 @@ public sealed record AgentRunnerOptions(TimeSpan RequestTimeout)
 public sealed partial class AgentRunner(
     ITaskConfigurationCatalog catalog,
     IModelProviderRegistry providers,
+    IRunChatClientFactory clients,
     IAgentLedger ledger,
     IKernelCommandSender sender,
     IClock clock,
@@ -106,6 +107,13 @@ public sealed partial class AgentRunner(
             .. request.Messages,
         ];
         var runId = Guid.CreateVersion7(clock.UtcNow);
+        var routed = await clients.CreateAsync(new AgentRunCall(request.Tenant, runId, configuration, provider, model), cancellationToken)
+            .ConfigureAwait(false);
+        if (routed is not { IsSuccess: true, Value: { } run })
+        {
+            return routed.Error!;
+        }
+
         var reason = $"Agent run of {configuration.Key} v{configuration.Version}";
         var started = await sender.SendAsync(
             new StartAgentRun(request.Tenant, runId, configuration, model, RequestJson(messages), $"intelligence:run:{runId:N}:start", reason),
@@ -115,8 +123,8 @@ public sealed partial class AgentRunner(
             return started.Error!;
         }
 
-        var (succeeded, text, failure, inputTokens, outputTokens) = await CallModelAsync(provider, model, configuration, messages, cancellationToken)
-            .ConfigureAwait(false);
+        var (succeeded, text, failure, inputTokens, outputTokens, scrubbed) = await CallModelAsync(
+            provider, run.Client, model, configuration, messages, cancellationToken).ConfigureAwait(false);
         var completed = await sender.SendAsync(
             new CompleteAgentRun(
                 request.Tenant,
@@ -128,7 +136,8 @@ public sealed partial class AgentRunner(
                 outputTokens,
                 provider.Cost(model, inputTokens, outputTokens),
                 $"intelligence:run:{runId:N}:complete",
-                reason),
+                reason,
+                run.Inference is { } inference ? inference with { Scrubbed = scrubbed } : null),
             cancellationToken: CancellationToken.None).ConfigureAwait(false);
         if (!completed.IsSuccess)
         {
@@ -172,8 +181,9 @@ public sealed partial class AgentRunner(
         return null;
     }
 
-    private async Task<(bool Succeeded, string? Text, string? Failure, long InputTokens, long OutputTokens)> CallModelAsync(
+    private async Task<(bool Succeeded, string? Text, string? Failure, long InputTokens, long OutputTokens, IReadOnlyDictionary<string, int>? Scrubbed)> CallModelAsync(
         IModelProvider provider,
+        IChatClient client,
         string model,
         TaskConfiguration configuration,
         List<ChatMessage> messages,
@@ -183,26 +193,29 @@ public sealed partial class AgentRunner(
         timeout.CancelAfter(options.RequestTimeout);
         try
         {
-            var response = await provider.Client.GetResponseAsync(
+            var response = await client.GetResponseAsync(
                 messages,
                 new ChatOptions { ModelId = model, MaxOutputTokens = configuration.MaxOutputTokens },
                 timeout.Token).ConfigureAwait(false);
-            return (true, response.Text, null, response.Usage?.InputTokenCount ?? 0, response.Usage?.OutputTokenCount ?? 0);
+            object? counts = null;
+            response.AdditionalProperties?.TryGetValue(AgentRunInference.ScrubCountsKey, out counts);
+            var scrubbed = counts as IReadOnlyDictionary<string, int>;
+            return (true, response.Text, null, response.Usage?.InputTokenCount ?? 0, response.Usage?.OutputTokenCount ?? 0, scrubbed);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            return (false, null, "The request was cancelled before the model answered.", 0, 0);
+            return (false, null, "The request was cancelled before the model answered.", 0, 0, null);
         }
         catch (OperationCanceledException)
         {
-            return (false, null, $"The model did not answer within {options.RequestTimeout.TotalSeconds:0} seconds.", 0, 0);
+            return (false, null, $"The model did not answer within {options.RequestTimeout.TotalSeconds:0} seconds.", 0, 0, null);
         }
 #pragma warning disable CA1031 // Any provider failure fails the run and is recorded; it never escapes as a server error.
         catch (Exception ex)
 #pragma warning restore CA1031
         {
             LogModelCallFailed(logger, ex, provider.Name, model);
-            return (false, null, $"The {provider.Name} model call failed ({ex.GetType().Name}).", 0, 0);
+            return (false, null, $"The {provider.Name} model call failed ({ex.GetType().Name}).", 0, 0, null);
         }
     }
 

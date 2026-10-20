@@ -1,6 +1,11 @@
 # ADR-054: Clinical Query Workflow and Role Authorization
 
-- **Status:** Accepted
+> [!NOTE]
+> Superseded by [ADR-2622](2026-10-19-ecrf-forms-are-collection-instances-saved-in-one-command.md). Execution's own `ClinicalQuery` stack was retired (#5461): a query is now a `FormQuery` in the
+> Execution module about one revision of a kernel value, stated as kernel `Queried` and `QueryAnswered` assertions, and
+> who may raise, answer and manage it comes from kernel grants (`execution.query.raise`, `.answer`, `.manage`).
+
+- **Status:** Superseded by [ADR-2622](2026-10-19-ecrf-forms-are-collection-instances-saved-in-one-command.md)
 - **Date:** 2026-07-24
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter
@@ -30,20 +35,20 @@ This decision implements requirements under Trace-8.
 ### Option 1: Ad-hoc Role Gate checks in Endpoint Handlers
 
 - **Overview:** Validate user roles directly inside each endpoint function using local conditions.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Quick to implement initially.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Easy to miss security gates on new/cloned endpoints.
   - ❌ No role normalization logic, leading to subtle access issues due to claim formatting discrepancies.
 
 ### Option 2: Declarative Allow-List Dependency & Centralized Lifecycle Engine
 
 - **Overview:** Implement a generic, reusable FastAPI dependency `require_roles(...)` alongside a dedicated query state transition machine (`QueryService`).
-- ***Pros:***
+- _**Pros:**_
   - ✅ Secure-by-default architecture utilizing allow-lists.
   - ✅ Centralized role normalization (normalizes case, trims whitespace, maps synonym roles).
   - ✅ Guarantees state transition validation and transactional consistency across all entrypoints.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Introduces a small amount of abstraction and upfront boilerplate.
 
 ## 4. Decision Outcome

@@ -47,7 +47,7 @@ describe("Web App MSW Mock Gateway Interceptor Integration Tests", () => {
 
   it("intercepts signature-gated mutations missing X-Sig-Token and returns 401 REAUTHENTICATION_REQUIRED", async () => {
     const response = await runHandler(
-      "http://localhost:8000/api/v1/execution/queries/sync",
+      "http://localhost:8000/api/v1/execution/forms/form-a/queries/query-a/close",
       "POST",
       {
         "X-User-Roles": "Data Manager",

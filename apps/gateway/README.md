@@ -31,7 +31,7 @@ Only `/healthz` and `/api/v1/status` are anonymous on the gateway itself.
 ## Electronic signatures (step-up)
 
 21 CFR 11.200(a)(1) requires a signer to re-enter credentials when signing. Signature-gated endpoints (for example
-eConsent signing and training delegation sign-off; form signatures return as kernel attestations in #5463) need an
+eConsent signing and training delegation sign-off; eCRF form signing, `POST /api/v1/execution/forms/{formId}/signatures`, #5463) need an
 `X-Sig-Token` next to the bearer token:
 
 1. The signed-in client sends `POST /api/v1/auth/signature-verification` with
@@ -82,7 +82,6 @@ start without it. An address that is not an absolute http or https URL fails sta
 | ---------------------------- | ------------------------------------------------------------------------ | --------------------------- |
 | `/api/v1/studies/**`         | designer                                                                 | `DESIGNER_SERVICE_URL`      |
 | `/api/v1/protocols/**`       | designer                                                                 | `DESIGNER_SERVICE_URL`      |
-| `/api/v1/queries/**`         | execution                                                                | `EXECUTION_SERVICE_URL`     |
 | `/api/v1/execution/**`       | execution                                                                | `EXECUTION_SERVICE_URL`     |
 | `/api/v1/etmf/**`            | etmf                                                                     | `ETMF_SERVICE_URL`          |
 | `/api/v1/interop/**`         | interop                                                                  | `INTEROP_SERVICE_URL`       |

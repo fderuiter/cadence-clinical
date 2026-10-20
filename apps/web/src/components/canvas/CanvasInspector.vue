@@ -64,8 +64,16 @@
         {{ shownVerbNote }}
       </p>
 
+      <AssistPanel
+        v-if="currentVerb === 'assist' && kernelRef && aiEnabled"
+        :study-code="studyCode"
+        :node-ref="kernelRef"
+        :prefill="assistPrompt"
+        @act="choose('act')"
+      />
+
       <KernelActPanel
-        v-if="currentVerb === 'act' && kernelRef"
+        v-else-if="currentVerb === 'act' && kernelRef"
         :node-ref="kernelRef"
         @explain="explainCommand"
       />
@@ -160,47 +168,6 @@
           <p v-else style="font-size: 0.85rem; color: #28a745">
             ✓ No schedule matrix gaps detected.
           </p>
-
-          <div class="proposal-actions reasoning-modal-s-3">
-            <a
-              href="#"
-              class="inspect-reasoning-link reasoning-modal-s-4"
-              @click.prevent="showReasoningModal = true"
-            >
-              Inspect reasoning &amp; lineage provenance
-            </a>
-
-            <div style="display: flex; gap: 8px; margin-top: 4px">
-              <button
-                type="button"
-                class="btn btn-primary"
-                style="flex: 1; padding: 6px 12px; font-size: 0.85rem"
-                :disabled="proposalApproved"
-                @click="
-                  proposalApproved = true;
-                  proposalRejected = false;
-                "
-              >
-                {{
-                  proposalApproved ? "✓ Proposal Approved" : "Approve Proposal"
-                }}
-              </button>
-              <button
-                type="button"
-                class="btn btn-secondary"
-                style="flex: 1; padding: 6px 12px; font-size: 0.85rem"
-                :disabled="proposalRejected"
-                @click="
-                  proposalRejected = true;
-                  proposalApproved = false;
-                "
-              >
-                {{
-                  proposalRejected ? "✗ Proposal Rejected" : "Reject Proposal"
-                }}
-              </button>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -308,113 +275,12 @@
       <p class="inspector-empty">
         Select a participant to see its details here.
       </p>
+      <AssistPanel
+        v-if="assistPrompt && aiEnabled"
+        :study-code="studyCode"
+        :prefill="assistPrompt"
+      />
     </template>
-
-    <!-- Reasoning Inspection Modal -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -- backdrop click is a mouse shortcut; the dialog's own close control is the keyboard path -->
-    <div
-      v-if="showReasoningModal"
-      class="reasoning-modal-overlay reasoning-modal-s-5"
-      @click.self="showReasoningModal = false"
-    >
-      <div class="reasoning-modal-card reasoning-modal-s-6">
-        <header class="reasoning-modal-s-7">
-          <h3 style="margin: 0; font-size: 1.1rem; color: #111">
-            AI Proposal Reasoning &amp; Provenance Chain
-          </h3>
-          <button
-            type="button"
-            class="btn reasoning-modal-s-8"
-            @click="showReasoningModal = false"
-          >
-            ×
-          </button>
-        </header>
-
-        <div
-          class="reasoning-steps"
-          style="display: flex; flex-direction: column; gap: 12px"
-        >
-          <div
-            class="reasoning-step"
-            style="border-left: 3px solid #0056b3; padding-left: 10px"
-          >
-            <div style="font-weight: 600; font-size: 0.9rem; color: #0056b3">
-              Step 1: Structure Synthesis
-            </div>
-            <p style="margin: 4px 0; font-size: 0.85rem">
-              Synthesized core study objectives and endpoints from trial brief
-              in memory.
-            </p>
-            <div style="font-size: 0.75rem; color: #666">
-              <strong>Citations:</strong> ICH M11 §3.1 Primary Objectives, CDISC
-              USDM v3.0 Core Specification
-            </div>
-          </div>
-
-          <div
-            class="reasoning-step"
-            style="border-left: 3px solid #0056b3; padding-left: 10px"
-          >
-            <div style="font-weight: 600; font-size: 0.9rem; color: #0056b3">
-              Step 2: Epoch &amp; Arm Mapping
-            </div>
-            <p style="margin: 4px 0; font-size: 0.85rem">
-              Structured Screening (14d), Treatment (12wk), and Follow-up (4wk)
-              epochs with Experimental and Active Comparator arms.
-            </p>
-            <div style="font-size: 0.75rem; color: #666">
-              <strong>Citations:</strong> ICH M11 §4.1 Study Design, CDISC USDM
-              Arm/Epoch Taxonomy
-            </div>
-          </div>
-
-          <div
-            class="reasoning-step"
-            style="border-left: 3px solid #0056b3; padding-left: 10px"
-          >
-            <div style="font-weight: 600; font-size: 0.9rem; color: #0056b3">
-              Step 3: Schedule of Activities Grid
-            </div>
-            <p style="margin: 4px 0; font-size: 0.85rem">
-              Mapped vital signs, lab panels, ECGs, and adverse event monitoring
-              across planned visits with explicit UCUM units.
-            </p>
-            <div style="font-size: 0.75rem; color: #666">
-              <strong>Citations:</strong> ICH M11 §5.0 Schedule of Activities,
-              UCUM Unified Code for Units of Measure
-            </div>
-          </div>
-
-          <div
-            class="reasoning-step"
-            style="border-left: 3px solid #0056b3; padding-left: 10px"
-          >
-            <div style="font-weight: 600; font-size: 0.9rem; color: #0056b3">
-              Step 4: Matrix Gap Verification
-            </div>
-            <p style="margin: 4px 0; font-size: 0.85rem">
-              Verified all planned activities link to endpoints and safety rules
-              without orphan encounters or cyclic epoch transitions.
-            </p>
-            <div style="font-size: 0.75rem; color: #666">
-              <strong>Citations:</strong> K-PROT-3 Data Purpose Mapping, FDA
-              Technical Conformance Guide
-            </div>
-          </div>
-        </div>
-
-        <div style="margin-top: 16px; text-align: right">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="showReasoningModal = false"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
   </aside>
 </template>
 
@@ -429,6 +295,8 @@ import KernelExplanation from "./KernelExplanation.vue";
 import KernelLineagePanel from "./KernelLineagePanel.vue";
 import type { KernelCommand, KernelProtocolVersion } from "../../api/kernelApi";
 import { parseNodeRef } from "../../canvas/nodeRef";
+import { useAiAssistance } from "../../ai/aiAssistance";
+import AssistPanel from "../ai/AssistPanel.vue";
 
 /**
  * The Clinical Canvas inspector (docs/ux/CLINICAL_CANVAS.md §2.4, UX-3, UX-5): the selected object's kind,
@@ -453,7 +321,11 @@ const props = defineProps<{
   recordLocation?: RouteLocationRaw | null;
   /** Whether to offer changing the participant's state (Execution enforces who may, #4943). */
   canManageParticipants?: boolean;
+  /** A question from the palette's Ask entry: opens Assist with it (ADR-2635). */
+  assistPrompt?: string;
 }>();
+
+const { enabled: aiEnabled } = useAiAssistance();
 
 const NO_KERNEL_REF =
   "this selection has no kernel reference, so the kernel can't answer for it.";
@@ -475,7 +347,7 @@ const lineageMode = computed(() => {
 });
 
 interface Verb {
-  id: "trace" | "impact" | "explain" | "simulate" | "act";
+  id: "trace" | "impact" | "explain" | "simulate" | "act" | "assist";
   label: string;
   live: boolean;
   note: string;
@@ -512,9 +384,21 @@ const verbs = computed<Verb[]>(() => [
     live: Boolean(kernelRef.value),
     note: `Act offers the kernel's commands with your dry-run decisions (ADR-2483), but ${NO_KERNEL_REF}`,
   },
+  // Assist exists only while the viewer has AI assistance on; off, the inspector is exactly as before (ADR-2635).
+  ...(aiEnabled.value
+    ? [
+        {
+          id: "assist" as const,
+          label: "Assist",
+          live: Boolean(kernelRef.value),
+          note: `Assist reads about this object in the kernel (ADR-2635), but ${NO_KERNEL_REF}`,
+        },
+      ]
+    : []),
 ]);
 
-type VerbId = "details" | "trace" | "impact" | "act" | "explain" | "simulate";
+type VerbId =
+  "details" | "trace" | "impact" | "act" | "explain" | "simulate" | "assist";
 const currentVerb = ref<VerbId>("details");
 const explained = ref<KernelCommand | null>(null);
 const shownVerb = ref<string | null>(null);
@@ -522,9 +406,6 @@ const shownVerb = ref<string | null>(null);
 const simulationResult = ref<any>(null);
 const simulationLoading = ref(false);
 const simulationError = ref("");
-const showReasoningModal = ref(false);
-const proposalApproved = ref(false);
-const proposalRejected = ref(false);
 
 async function runSimulation() {
   if (!kernelRef.value) return;
@@ -572,6 +453,22 @@ watch(
     explained.value = null;
   }
 );
+
+// A question from the palette opens Assist on the selection; this runs after the reset above.
+watch(
+  () => [props.assistPrompt, props.nodeRef, props.protocolVersion?.ref],
+  () => {
+    if (props.assistPrompt && aiEnabled.value && kernelRef.value) {
+      choose("assist");
+    }
+  },
+  { immediate: true }
+);
+
+// Turning AI assistance off closes Assist.
+watch(aiEnabled, (on) => {
+  if (!on && currentVerb.value === "assist") choose("details");
+});
 </script>
 
 <style scoped>
@@ -588,56 +485,6 @@ watch(
   padding: 6px 8px;
   margin-bottom: 8px;
   background: #fff8e1;
-}
-
-.reasoning-modal-s-3 {
-  margin-top: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.reasoning-modal-s-4 {
-  color: var(--primary, #0056b3);
-  font-size: 0.85rem;
-  text-decoration: underline;
-}
-
-.reasoning-modal-s-5 {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-}
-
-.reasoning-modal-s-6 {
-  background: white;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 600px;
-  max-height: 85vh;
-  padding: 20px;
-  overflow-y: auto;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
-
-.reasoning-modal-s-7 {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 10px;
-  margin-bottom: 12px;
-}
-
-.reasoning-modal-s-8 {
-  border: none;
-  background: transparent;
-  font-size: 1.2rem;
-  cursor: pointer;
 }
 
 .inspector {

@@ -26,18 +26,15 @@ public record SimulateProtocolRequest(
     DateTimeOffset? ValidAt = null,
     DateTimeOffset? KnownAt = null);
 
-/// <summary>DTO request for generative protocol proposal drafting.</summary>
-public record GenerateProtocolProposalRequest(string TrialBrief);
-
 /// <summary>DTO request for real-time schedule matrix gap checking.</summary>
 public record MatrixGapCheckRequest(string ProtocolContent);
 
 /// <summary>
-/// Minimal API endpoints for in-memory protocol simulation, generative proposal authoring, and real-time matrix gap analysis.
+/// Minimal API endpoints for in-memory protocol simulation and real-time matrix gap analysis.
 /// </summary>
 public static class KernelSimulationEndpoints
 {
-    /// <summary>Maps simulation, generative proposal authoring, and matrix gap check endpoints.</summary>
+    /// <summary>Maps the simulation and matrix gap check endpoints.</summary>
     public static RouteGroupBuilder MapSimulationEndpoints(this RouteGroupBuilder kernel)
     {
         ArgumentNullException.ThrowIfNull(kernel);
@@ -54,11 +51,6 @@ public static class KernelSimulationEndpoints
                 SimulationErrors.BaseNotFrozen,
                 SimulationErrors.ContentInvalid,
                 SimulationErrors.ElementIdDuplicated);
-
-        group.MapPost("/protocols/generate-proposal", GenerateProposalAsync)
-            .WithName("KernelGenerateProtocolProposal")
-            .WithSummary("Generates a complete USDM protocol proposal from a trial brief with reasoning lineage.")
-            .ProducesProblem(StatusCodes.Status400BadRequest);
 
         group.MapPost("/protocols/matrix-gap-check", CheckMatrixGapsAsync)
             .WithName("KernelMatrixGapCheck")
@@ -124,12 +116,6 @@ public static class KernelSimulationEndpoints
         }
 
         return TypedResults.Ok(result.Value!);
-    }
-
-    internal static Ok<GenerativeProtocolProposal> GenerateProposalAsync(GenerateProtocolProposalRequest request)
-    {
-        var proposal = GenerativeProtocolAuthor.GenerateProposal(request?.TrialBrief ?? string.Empty);
-        return TypedResults.Ok(proposal);
     }
 
     internal static Results<Ok<IReadOnlyList<MatrixGapFinding>>, ProblemHttpResult> CheckMatrixGapsAsync(MatrixGapCheckRequest request)

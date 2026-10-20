@@ -21,6 +21,13 @@ public static class IntelligenceErrors
     public static readonly KernelError ProviderUnavailable =
         new("M.Intelligence.Provider.Unavailable", 503, "The AI provider for this task is not configured. The work can be done without AI.");
 
+    /// <summary>
+    /// The tenant's inference policy, its residency or the suppliers' status leave no provider the task may use
+    /// (ADR-2636 §4.2). Nothing was sent.
+    /// </summary>
+    public static readonly KernelError InferenceRefused =
+        new("M.Intelligence.Inference.Refused", 403, "No AI provider this organisation's policy allows can run this task. Nothing was sent; the work can be done without AI.");
+
     /// <summary>The run was completed already.</summary>
     public static readonly KernelError RunCompleted =
         new("M.Intelligence.Run.Completed", 409, "The agent run is already completed.");

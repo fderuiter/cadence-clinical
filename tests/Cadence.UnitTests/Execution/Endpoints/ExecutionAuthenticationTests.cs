@@ -20,11 +20,11 @@ namespace Cadence.UnitTests.Execution.Endpoints;
 /// <summary>
 /// Boots the real execution composition root and checks that it only acts on identity the gateway signed:
 /// anonymous and forged callers get 401 before anything is read or stored. Role checks and e-signatures on stored
-/// queries and forms run against PostgreSQL in <c>Cadence.IntegrationTests.Execution.ExecutionWriteAuthorizationTests</c>.
+/// records run against PostgreSQL in <c>Cadence.IntegrationTests.Execution.ExecutionWriteAuthorizationTests</c>.
 /// </summary>
 public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : IClassFixture<ExecutionApiFactory>
 {
-    private const string QueriesPath = "/api/v1/execution/queries/";
+    private const string ReviewQueuePath = "/api/v1/execution/labs/toxicity/review-queue";
 
     private static readonly GatewayIdentity Cra = TestSecurityContext.Identity("cra-01", "CRA");
 
@@ -44,7 +44,7 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
     public async Task ApiRequest_WithoutGatewaySignature_Returns401()
     {
         using var client = factory.CreateClient();
-        using var request = new HttpRequestMessage(HttpMethod.Get, QueriesPath);
+        using var request = new HttpRequestMessage(HttpMethod.Get, ReviewQueuePath);
         request.Headers.Add(GatewayHeaders.UserId, "cra-01");
         request.Headers.Add(GatewayHeaders.Roles, "CRA");
 
@@ -98,7 +98,7 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
     {
         using var client = factory.CreateSignedClient(Cra);
 
-        var response = await client.GetAsync(QueriesPath, TestContext.Current.CancellationToken);
+        var response = await client.GetAsync(ReviewQueuePath, TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
@@ -109,7 +109,7 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
     {
         using var unconfigured = new StartupValidationFactory<Cadence.Apps.Execution.Program>(builder => builder
             .UseTestPostgresConnectionString()
-            .UseTestDemographicsKey()
+            .UseTestDemographicsKey().UseTestRandomizationKey()
             .UseSetting("GATEWAY_SECRET", string.Empty));
 
         unconfigured.ValidateStartup().Should().BeOfType<OptionsValidationException>()
@@ -120,7 +120,7 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
         HttpClient client,
         System.Collections.Generic.IReadOnlyDictionary<string, string> headers)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, QueriesPath);
+        using var request = new HttpRequestMessage(HttpMethod.Get, ReviewQueuePath);
         foreach (var (name, value) in headers)
         {
             request.Headers.TryAddWithoutValidation(name, value);

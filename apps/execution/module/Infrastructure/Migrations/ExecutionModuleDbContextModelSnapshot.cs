@@ -23,6 +23,25 @@ namespace Cadence.Modules.Execution.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Cadence.Database.Signatures.ConsumedSignatureToken", b =>
+                {
+                    b.Property<string>("TokenId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset>("ConsumedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("RetainUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("TokenId");
+
+                    b.HasIndex("RetainUntil");
+
+                    b.ToTable("consumed_signature_tokens", "execution");
+                });
+
             modelBuilder.Entity("Cadence.Modules.Execution.Domain.FormInstance", b =>
                 {
                     b.Property<Guid>("Id")
@@ -96,6 +115,119 @@ namespace Cadence.Modules.Execution.Infrastructure.Migrations
                         .HasDatabaseName("ix_form_instances_tenant_enrollment");
 
                     b.ToTable("form_instances", "execution");
+                });
+
+            modelBuilder.Entity("Cadence.Modules.Execution.Domain.FormQuery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid>("EnrollmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("enrollment_id");
+
+                    b.Property<Guid>("FormId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("form_id");
+
+                    b.Property<string>("ItemId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("item_id");
+
+                    b.Property<Guid?>("KernelAnswerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("kernel_answer_id");
+
+                    b.Property<Guid>("KernelQueryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("kernel_query_id");
+
+                    b.Property<Guid>("ObservationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("observation_id");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason_for_change");
+
+                    b.Property<int>("Revision")
+                        .HasColumnType("integer")
+                        .HasColumnName("revision");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version_index");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "FormId")
+                        .HasDatabaseName("ix_form_queries_tenant_form");
+
+                    b.HasIndex("TenantId", "EnrollmentId", "Status")
+                        .HasDatabaseName("ix_form_queries_tenant_enrollment_status");
+
+                    b.ToTable("form_queries", "execution");
+                });
+
+            modelBuilder.Entity("Cadence.Modules.Execution.Domain.FormQuery", b =>
+                {
+                    b.OwnsMany("Cadence.Modules.Execution.Domain.FormQueryMessage", "Messages", b1 =>
+                        {
+                            b1.Property<Guid>("FormQueryId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<DateTimeOffset>("At");
+
+                            b1.Property<string>("By")
+                                .IsRequired();
+
+                            b1.Property<string>("Kind")
+                                .IsRequired();
+
+                            b1.Property<string>("Text")
+                                .IsRequired();
+
+                            b1.HasKey("FormQueryId", "__synthesizedOrdinal");
+
+                            b1.ToTable("form_queries", "execution");
+
+                            b1
+                                .ToJson("messages")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("FormQueryId");
+                        });
+
+                    b.Navigation("Messages");
                 });
 #pragma warning restore 612, 618
         }

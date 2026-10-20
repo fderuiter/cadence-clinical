@@ -19,10 +19,12 @@ public sealed class IpKitInventoryItemConfiguration : IEntityTypeConfiguration<I
         builder.Property(x => x.DispositionReason).HasMaxLength(255);
         builder.Property(x => x.LastReconciledBatchId).HasMaxLength(255);
         builder.Property(x => x.LastReconciledBy).HasMaxLength(255);
+        builder.Property(x => x.AssignedSubjectCode).HasMaxLength(255);
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
 
         builder.HasIndex(x => new { x.StudyId, x.SiteId, x.KitNumber }).IsUnique();
+        builder.HasIndex(x => x.AssignedRandomizationId).IsUnique().HasFilter("\"AssignedRandomizationId\" IS NOT NULL");
     }
 }
 

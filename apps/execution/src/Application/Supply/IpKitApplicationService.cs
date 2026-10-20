@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Domain.Supply;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Database;
@@ -18,7 +19,8 @@ namespace Cadence.Apps.Execution.Application.Supply;
 
 public sealed class IpKitApplicationService(
     ExecutionDbContext dbContext,
-    IClock clock) : IIpKitApplicationService
+    IClock clock,
+    IAllocationProtector allocationProtector) : IIpKitApplicationService
 {
     private readonly ExecutionDbContext _dbContext = dbContext;
     private readonly IClock _clock = clock;
@@ -261,7 +263,7 @@ public sealed class IpKitApplicationService(
             ResidualVolumePercentage: x.ResidualVolumePercentage)).ToList();
     }
 
-    public async Task<List<IpKitInventoryResponse>> SeedSiteInventoryAsync(string studyId, string siteId, List<IpKitInventoryResponse> kits, CancellationToken ct = default)
+    public async Task<List<IpKitInventoryResponse>> SeedSiteInventoryAsync(string studyId, string siteId, List<IpKitSeedItem> kits, CancellationToken ct = default)
     {
         var results = new List<IpKitInventoryResponse>();
         foreach (var k in kits)
@@ -269,6 +271,8 @@ public sealed class IpKitApplicationService(
             var existing = await _dbContext.IpKitInventoryItems
                 .FirstOrDefaultAsync(x => x.KitNumber == k.KitNumber && x.StudyId == studyId, ct);
 
+            var expiration = k.ExpirationDate != default ? k.ExpirationDate : _clock.UtcNow.AddMonths(12);
+            string status = k.Status ?? IpKitInventoryItem.ActiveAtSiteStatus;
             if (existing == null)
             {
                 var item = new IpKitInventoryItem(
@@ -277,17 +281,24 @@ public sealed class IpKitApplicationService(
                     studyId: studyId,
                     siteId: siteId,
                     lotNumber: k.LotNumber,
-                    expirationDate: k.ExpirationDate != default ? k.ExpirationDate : _clock.UtcNow.AddMonths(12),
-                    status: k.Status ?? "ACTIVE_AT_SITE",
+                    expirationDate: expiration,
+                    status: status,
                     residualVolumeMl: k.ResidualVolumeMl,
                     residualVolumePercentage: k.ResidualVolumePercentage,
                     createdBy: "seed_script",
                     reasonForChange: "Seeded IP kit inventory");
 
+                // The arm label is encrypted under the randomisation key and bound to this kit (#5607).
+                if (!string.IsNullOrWhiteSpace(k.TreatmentArm))
+                {
+                    item.LabelTreatment(allocationProtector.Protect(k.TreatmentArm.Trim(), IpKitInventoryItem.ArmPurpose(studyId, k.KitNumber)));
+                }
+
                 _dbContext.IpKitInventoryItems.Add(item);
             }
 
-            results.Add(k);
+            results.Add(new IpKitInventoryResponse(k.KitNumber, studyId, siteId, k.LotNumber, expiration, status,
+                k.ResidualVolumeMl, k.ResidualVolumePercentage));
         }
 
         await _dbContext.SaveChangesAsync(ct);

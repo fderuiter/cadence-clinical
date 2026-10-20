@@ -36,8 +36,9 @@ public interface ISubjectApplicationService
     /// <summary>Clears demographics, subject to the same post-randomization lock. Implemented by MIG-SUBJ-019.</summary>
     Task<Result<SubjectResponse>> DeleteDemographicsAsync(string subjectIdOrCode, string changeReason, CancellationToken ct);
 
-    /// <summary>Full subject detail, RTSM-blinding-redacted for a blinded caller. Implemented by MIG-SUBJ-019.</summary>
-    Task<Result<SubjectDetailResponse>> GetDetailAsync(string subjectId, bool isBlindedCaller, CancellationToken ct);
+    /// <summary>Subject detail without any treatment arm; the endpoint adds the arm for an unblinded caller from the
+    /// randomisation allocation (#5607).</summary>
+    Task<Result<SubjectDetailResponse>> GetDetailAsync(string subjectId, CancellationToken ct);
 
     /// <summary>
     /// Lists one page of a study's subjects in enrollment order, optionally narrowed to a site and a status.

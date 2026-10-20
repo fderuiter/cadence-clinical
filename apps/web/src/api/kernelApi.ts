@@ -6,8 +6,8 @@ import type { KernelObservationValue } from "./observationValue";
 /**
  * Typed client for the kernel API host, generated from docs/openapi/kernel_openapi.json (ADR-2540).
  *
- * Most calls read. `correctObservation` sends a kernel command (ADR-2620) with the reason as `X-Change-Reason`
- * and an `Idempotency-Key`, so a retried request is answered once. The host acts in the kernel tenant and as the
+ * Most calls read. `correctObservation` (ADR-2620) and `rejectProposal` (ADR-2635) send kernel commands with the
+ * reason as `X-Change-Reason` and an `Idempotency-Key`, so a retried request is answered once. The host acts in the kernel tenant and as the
  * person named by the gateway-signed identity, so nothing here names a tenant or an actor. NodeRefs travel as their canonical strings
  * (`kind:id@version`). An object the reader may not see comes back masked (ADR-2471): only its `kind` and `mask`,
  * everything else null; search leaves it out. Clients render the kernel's explanations and never compose one
@@ -41,7 +41,21 @@ export type KernelObservationRevision =
   Schemas["Kernel_ObservationRevisionView"];
 export type KernelObservationAuditEntry =
   Schemas["Kernel_ObservationAuditView"];
+export type KernelProposal = Schemas["Kernel_KernelProposalResponse"];
+export type KernelProposalState = Schemas["Kernel_KernelProposalStateResponse"];
 export type { KernelObservationValue };
+
+/** A proposal's status as the kernel derives it: an open proposal past its expiry reads as Expired (ADR-2489). */
+export type KernelProposalStatus =
+  "Open" | "Approved" | "Rejected" | "Withdrawn" | "Expired";
+
+/** A rejection of one proposal; the reason is stored as the decision reason and in the audit trail. */
+export interface KernelProposalRejection {
+  proposalRef: string;
+  reason: string;
+  /** One key per rejection the user confirms, reused if that request is retried. */
+  idempotencyKey: string;
+}
 
 /** A correction of one observation's value (ADR-2620). */
 export interface KernelObservationCorrection {
@@ -230,6 +244,54 @@ export const kernelApi = {
     );
   },
 
+  /**
+   * A study's proposals, newest first (GET /api/v1/kernel/studies/{studyRef}/proposals). A proposal the reader may
+   * not see comes back masked; an affected object they may not see keeps its place with its mask (ADR-2471).
+   */
+  listProposals(
+    studyRef: string,
+    query: { status?: KernelProposalStatus; limit?: number } = {}
+  ): Promise<KernelProposal[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/studies/{studyRef}/proposals", {
+        params: {
+          path: { studyRef },
+          query: { status: query.status, limit: query.limit },
+        },
+      })
+    );
+  },
+
+  /** One proposal with its plan, affected objects, requested capabilities, model, content hash and decision. */
+  getProposal(proposalRef: string): Promise<KernelProposal> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/proposals/{proposalRef}", {
+        params: { path: { proposalRef: unversioned(proposalRef) } },
+      })
+    );
+  },
+
+  /**
+   * Rejects an open proposal with a reason (POST /api/v1/kernel/proposals/{proposalRef}/rejection). Rejects with an
+   * ApiError of status 409 when the proposal is already decided or expired, 422 without a reason and 403 without
+   * proposal.reject in its study.
+   */
+  rejectProposal({
+    proposalRef,
+    reason,
+    idempotencyKey,
+  }: KernelProposalRejection): Promise<KernelProposalState> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/proposals/{proposalRef}/rejection", {
+        params: { path: { proposalRef: unversioned(proposalRef) } },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
   /** One protocol version, without content. */
   getProtocolVersion(versionRef: string): Promise<KernelProtocolVersion> {
     return unwrapResponse(
@@ -324,19 +386,6 @@ export const kernelApi = {
       }),
     }).then((res) => {
       if (!res.ok) throw new Error(`Simulation failed: ${res.statusText}`);
-      return res.json();
-    });
-  },
-
-  /** Generates a candidate USDM protocol proposal from a trial brief prompt. */
-  generateProposal(trialBrief: string): Promise<any> {
-    return fetch("/api/v1/kernel/protocols/generate-proposal", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ trial_brief: trialBrief }),
-    }).then((res) => {
-      if (!res.ok)
-        throw new Error(`Proposal generation failed: ${res.statusText}`);
       return res.json();
     });
   },

@@ -17,18 +17,30 @@
     <ProjectReference Include="..\..\..\packages\kernel\src\Cadence.Kernel.Modules\Cadence.Kernel.Modules.csproj" />
     <ProjectReference Include="..\..\..\packages\engine_core\src\Cadence.Core.Domain.csproj" />
     <ProjectReference Include="..\..\..\packages\security\src\Cadence.Security.csproj" />
+    <!-- Outbound scrubbing of direct identifiers before a model call leaves the deployment (ADR-2636 §4.3). -->
+    <ProjectReference Include="..\..\..\packages\deid\src\Cadence.Deid.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Anthropic" />
+    <PackageReference Include="Anthropic.Aws" />
+    <PackageReference Include="Anthropic.Bedrock" />
+    <PackageReference Include="Anthropic.Foundry" />
+    <PackageReference Include="Anthropic.Vertex" />
     <PackageReference Include="FluentValidation" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <PackageReference Include="Microsoft.Extensions.AI" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <!-- PrivateAssets: keeps the OpenAPI source generator out of the host's other projects (spec §2.4). -->
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" PrivateAssets="all" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- Supplier records (ADR-2636 §4.5) ship inside the assembly, so a deployment cannot lose or edit them unseen. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Inference\Suppliers\*.json" LogicalName="Cadence.Modules.Intelligence.Inference.Suppliers.%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

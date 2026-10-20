@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Safety.Domain;
+using Cadence.Apps.Safety.Infrastructure.Standards;
+using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Templating;
 
@@ -13,7 +15,7 @@ using Microsoft.AspNetCore.Routing;
 
 namespace Cadence.Apps.Safety.Endpoints;
 
-/// <summary>ICSR E2B(R3) rendering from this service's own template.</summary>
+/// <summary>ICH E2B(R3) ICSR rendering from this service's own template, checked against the ICH schema.</summary>
 public static class IcsrTemplateEndpoints
 {
     public const string IcsrTemplateKey = "e2b_r3_icsr";
@@ -32,10 +34,11 @@ public static class IcsrTemplateEndpoints
     {
         group.MapPost("/icsr/render", RenderIcsrAsync)
             .WithName("RenderIcsrReport")
-            .WithSummary("Renders an ICSR E2B(R3) safety report as Liquid XML; a report missing a mandatory element is refused with 400 naming each one.")
+            .WithSummary("Renders an ICH E2B(R3) ICSR as an HL7 v3 MCCI_IN200100UV01 message validated against the ICH schema; a report that breaks an E2B(R3) conformance rule is refused with 400 naming each member.")
             .Produces<string>(StatusCodes.Status200OK, "application/xml")
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status500InternalServerError)
             // A regulatory safety submission: medical monitors and system administrators (#4960, ADR-2511).
             .RequirePermission(RenderPermission);
 
@@ -43,23 +46,37 @@ public static class IcsrTemplateEndpoints
     }
 
     /// <summary>
-    /// Renders <paramref name="request"/>, or refuses it with a validation problem keyed by the rendered path of each
-    /// mandatory element it lacks, so an incomplete ICSR is never emitted with empty elements (#5464).
+    /// Renders <paramref name="request"/> as an ICH E2B(R3) ICSR, or refuses it with a validation problem keyed by the JSON
+    /// path of each member that breaks an E2B(R3) conformance rule (<see cref="IcsrConformance"/>). The rendered message is
+    /// validated against the vendored ICH schema before it is returned, so a message that does not conform is never
+    /// emitted: that is a defect of the template, answered with 500 (#5573, ADR-2464).
     /// </summary>
-    public static async Task<Results<ContentHttpResult, ValidationProblem>> RenderIcsrAsync(IcsrReport request, ITemplateRenderer renderer)
+    public static async Task<Results<ContentHttpResult, ValidationProblem, ProblemHttpResult>> RenderIcsrAsync(
+        IcsrReport request, ITemplateRenderer renderer, IClock clock)
     {
-        var missing = IcsrMandatoryElements.Missing(request);
-        if (missing.Count > 0)
+        var errors = IcsrConformance.Check(request, clock.UtcNow);
+        if (errors.Count > 0)
         {
             return TypedResults.ValidationProblem(
-                missing,
-                detail: $"The ICSR is missing mandatory E2B(R3) elements: {string.Join(", ", missing.Keys)}.",
-                title: "Mandatory ICSR elements are missing");
+                errors,
+                detail: $"The ICSR does not meet the ICH E2B(R3) conformance rules: {string.Join(", ", errors.Keys)}.",
+                title: "The ICSR breaks E2B(R3) conformance rules");
         }
 
         // The template reads the report as `icsr` (#4959).
         string rendered = await renderer.RenderAsync(
             Catalog, IcsrTemplateKey, new Dictionary<string, object?> { ["icsr"] = request });
+
+        var schemaErrors = IcsrSchema.Validate(rendered);
+        if (schemaErrors.Count > 0)
+        {
+            return TypedResults.Problem(
+                detail: "The rendered ICSR does not validate against the ICH E2B(R3) schema, so it was not returned.",
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "The rendered ICSR is not schema-valid",
+                extensions: new Dictionary<string, object?> { ["schemaErrors"] = schemaErrors });
+        }
+
         return TypedResults.Content(rendered, "application/xml");
     }
 }

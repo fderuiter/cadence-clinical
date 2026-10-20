@@ -78,7 +78,7 @@ Entity: `DeviceSafetyInvestigation`
 | `DeficiencyId` | `character varying(255)` | no |  |  |
 | `DeviceName` | `character varying(255)` | no |  |  |
 | `DeviceUdiDi` | `character varying(255)` | no |  |  |
-| `EsignatureManifestId` | `character varying(255)` | yes |  |  |
+| `EsignatureManifestId` | `text` | yes |  |  |
 | `FscaRequired` | `boolean` | no |  |  |
 | `InvestigationNotes` | `character varying(4000)` | yes |  |  |
 | `IsUsade` | `boolean` | no |  |  |
@@ -130,8 +130,8 @@ Entity: `PeriodicSafetyReportRecord`
 | `ReportType` | `character varying(50)` | no |  |  |
 | `Status` | `character varying(50)` | no |  |  |
 | `StudyId` | `character varying(255)` | no |  |  |
+| `TotalPatientYearsExposure` | `double precision` | no |  |  |
 | `TotalSaes` | `integer` | no |  |  |
-| `TotalSubjectExposure` | `integer` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
 
 Indexes:
@@ -352,7 +352,7 @@ Entity: `SafetyNarrative`
 | `ConfidenceScore` | `double precision` | no |  |  |
 | `CreatedAt` | `timestamp with time zone` | no |  |  |
 | `CreatedBy` | `character varying(255)` | no |  |  |
-| `EsignatureManifestId` | `character varying(255)` | yes |  |  |
+| `EsignatureManifestId` | `text` | yes |  |  |
 | `GroundedClaimsJson` | `jsonb` | no |  |  |
 | `ModelIdentifier` | `character varying(255)` | no |  |  |
 | `PromptHash` | `character varying(64)` | no |  |  |
@@ -390,7 +390,7 @@ Entity: `IcsrReportingEvaluation`
 | `Causality` | `character varying(50)` | no |  |  |
 | `CreatedAt` | `timestamp with time zone` | no |  |  |
 | `CreatedBy` | `character varying(255)` | no |  |  |
-| `EsignatureManifestId` | `character varying(255)` | yes |  |  |
+| `EsignatureManifestId` | `text` | yes |  |  |
 | `EvaluationsJson` | `jsonb` | no |  |  |
 | `Expectedness` | `character varying(50)` | no |  |  |
 | `IsCausal` | `boolean` | no |  |  |
@@ -435,7 +435,7 @@ Entity: `SafetySignalAlert`
 | `Eb05` | `double precision` | no |  |  |
 | `Eb95` | `double precision` | no |  |  |
 | `Ebgm` | `double precision` | no |  |  |
-| `EsignatureManifestId` | `character varying(255)` | yes |  |  |
+| `EsignatureManifestId` | `text` | yes |  |  |
 | `ExpectedCountE` | `double precision` | no |  |  |
 | `MeddraSoc` | `character varying(255)` | yes |  |  |
 | `MeddraTerm` | `character varying(255)` | no |  |  |

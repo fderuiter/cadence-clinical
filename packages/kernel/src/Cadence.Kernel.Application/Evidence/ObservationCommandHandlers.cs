@@ -14,8 +14,9 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Cadence.Kernel.Application.Evidence;
 
 /// <summary>
-/// Handles <see cref="RecordObservation"/>: the participant and study come from the enrollment, and no lock may cover
-/// the enrollment, its study site or its study (spec §10.5).
+/// Handles <see cref="RecordObservation"/>: the participant and study come from the enrollment, no lock may cover
+/// the enrollment, its study site or its study (spec §10.5), and the participant may not be withdrawn
+/// (<see cref="CaptureConditions"/>).
 /// </summary>
 internal sealed class RecordObservationHandler : ICommandHandler<RecordObservation, ObservationState>
 {
@@ -36,6 +37,11 @@ internal sealed class RecordObservationHandler : ICommandHandler<RecordObservati
             .ConfigureAwait(false))
         {
             return ObservationErrors.Locked;
+        }
+
+        if (await CaptureConditions.RefusalAsync(context.Work, enrollment.Id, nameof(RecordObservation), cancellationToken).ConfigureAwait(false) is { } refused)
+        {
+            return refused;
         }
 
         var recorded = Observation.Record(
@@ -71,6 +77,7 @@ internal sealed class RecordObservationHandler : ICommandHandler<RecordObservati
 /// Handles <see cref="CorrectObservation"/> (ADR-2620, ADR-2621): under the observation's advisory lock, so corrections
 /// of one observation run one after another, and shared locks on the scopes that cover it, it reads the locks in force,
 /// then checks the expected version, then appends the revision. The version is also the commit-time concurrency token.
+/// A withdrawal does not refuse a correction: the observation was captured before it (<see cref="CaptureConditions"/>).
 /// </summary>
 internal sealed class CorrectObservationHandler : ICommandHandler<CorrectObservation, ObservationState>
 {

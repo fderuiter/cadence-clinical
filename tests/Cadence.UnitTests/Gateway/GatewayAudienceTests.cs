@@ -32,7 +32,7 @@ namespace Cadence.UnitTests.Gateway;
 public sealed class GatewayAudienceTests
 {
     private const string Audience = "cadence-api";
-    private const string ProxiedPath = "/api/v1/queries/q-1";
+    private const string ProxiedPath = "/api/v1/execution/subjects/s-1";
 
     /// <summary>Outside Development the gateway refuses to start without an audience, naming the setting.</summary>
     [Fact]

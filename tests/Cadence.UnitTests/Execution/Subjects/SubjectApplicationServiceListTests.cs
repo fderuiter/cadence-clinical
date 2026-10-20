@@ -33,7 +33,7 @@ public class SubjectApplicationServiceListTests
     {
         var subject = ClinicalSubject.Create(new SubjectCode(subjectCode), new StudyCode(studyCode),
             siteCode is null ? null : new SiteCode(siteCode), enrollmentIndex, encryptedDemographics: "cipher",
-            stratFactors: null, treatmentGroup: "ARM-A");
+            stratFactors: null);
         if (status != SubjectState.Screening)
         {
             subject.TransitionTo(status).IsSuccess.Should().BeTrue();

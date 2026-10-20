@@ -13,10 +13,16 @@ The runtime, the Intelligence module (`apps/intelligence`, composed into the ker
 [#5374](https://github.com/fderuiter/cadence-clinical/issues/5374)), holds the model port, versioned task configurations
 qualified per tenant with a signature on evaluation evidence ([ADR-2631](../adr/2026-10-20-agent-task-configurations-are-versioned-and-qualified-per-tenant.md),
 [#5385](https://github.com/fderuiter/cadence-clinical/issues/5385)), the interaction ledger of agent runs, and
-per-tenant kill switches and token budgets, under `/api/v1/ai`. PHI scrubbing, data residency, more providers and a local-only mode follow in
-[#5550](https://github.com/fderuiter/cadence-clinical/issues/5550); the agent actor and requester-scoped grants in
-[#4783](https://github.com/fderuiter/cadence-clinical/issues/4783); the evaluation harness that produces qualification
-evidence and monitoring that suspends a configuration in [#5548](https://github.com/fderuiter/cadence-clinical/issues/5548).
+per-tenant kill switches and token budgets, under `/api/v1/ai`. The evaluation harness that produces qualification
+evidence (stored evaluation runs) and the monitoring that suspends a configuration are built
+([ADR-2634](../adr/2026-10-20-ai-task-configurations-are-measured-by-versioned-evaluations-and-production-signals.md),
+[#5548](https://github.com/fderuiter/cadence-clinical/issues/5548), [#5574](https://github.com/fderuiter/cadence-clinical/issues/5574)),
+and so is the kernel side of the agent actor and requester-scoped grants
+([ADR-2632](../adr/2026-10-20-agents-act-for-one-person-and-approved-proposals-execute-as-their-approver.md),
+[#4783](https://github.com/fderuiter/cadence-clinical/issues/4783)); the module does not act as an agent actor yet.
+The agent tools, the citation verifier and runs that write a Proposal follow in
+[#5547](https://github.com/fderuiter/cadence-clinical/issues/5547); PHI scrubbing, data residency, more providers and a
+local-only mode in [#5550](https://github.com/fderuiter/cadence-clinical/issues/5550).
 
 ## Principles
 
@@ -31,12 +37,12 @@ evidence and monitoring that suspends a configuration in [#5548](https://github.
 
 ## The autonomy ladder
 
-| Level                | The agent                                                    | Who acts                                                                      | Allowed for                        |
-| -------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------- | ---------------------------------- |
-| 0 Inform             | Answers, explains, summarizes, with citations                | Nobody; read only                                                             | Any task                           |
-| 1 Draft              | Writes a Proposal holding the draft                          | A person edits, approves, then executes                                       | Any task, clinical data included   |
-| 2 Approve-to-execute | Writes a Proposal holding the exact commands                 | A person approves, and the approval runs the commands as that person (K-AI-2) | Commands the approver could run    |
-| 3 Standing grant     | Executes inside a narrow, time-boxed grant a person approved | The agent, each action reviewable                                             | Operational commands only (K-AI-7) |
+| Level                | The agent                                                    | Who acts                                                                             | Allowed for                        |
+| -------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------ | ---------------------------------- |
+| 0 Inform             | Answers, explains, summarizes, with citations                | Nobody; read only                                                                    | Any task                           |
+| 1 Draft              | Writes a Proposal holding the draft                          | A person edits, approves, then executes                                              | Any task, clinical data included   |
+| 2 Approve-to-execute | Writes a Proposal holding the exact commands                 | A person approves, then sends each command as themself, naming the proposal (K-AI-2) | Commands the approver could run    |
+| 3 Standing grant     | Executes inside a narrow, time-boxed grant a person approved | The agent, each action reviewable                                                    | Operational commands only (K-AI-7) |
 
 ## Agents by lifecycle stage
 
@@ -83,6 +89,9 @@ change to what the study claims about a participant.
 
 ## How a run works
 
+Steps 1 and 2 and the ledger record in step 5 are built; the tools, the citation verifier and the Proposal a run writes
+(steps 3 to 5) come with [#5547](https://github.com/fderuiter/cadence-clinical/issues/5547).
+
 1. A person asks (Assist panel, command palette, a form) or a kernel event fires (new data, an SAE, an amendment, an
    indicator breach).
 2. The runtime picks the newest task configuration version the tenant has qualified on its current content (or
@@ -91,13 +100,13 @@ change to what the study claims about a participant.
 4. The citation verifier drops anything that does not trace to a node the run read.
 5. The runtime writes one kernel Proposal naming the model and configuration version, and records the run in the
    interaction ledger.
-6. A person reviews the diff and citations and approves with an attestation; the kernel executes the proposal's
-   commands as that person (K-AI-2).
+6. A person reviews the diff and citations and approves with an attestation. Approval runs nothing: the approver then
+   sends each of the proposal's commands as themself, naming the proposal (`CommandMetadata.Proposal`, K-AI-2).
 
 The kernel side of steps 3 and 6 is built ([ADR-2632](../adr/2026-10-20-agents-act-for-one-person-and-approved-proposals-execute-as-their-approver.md)):
-an agent acts for one person and is bounded by that person's grants and visibility, and each command a person sends
-under an approved proposal is linked to it in provenance, events and lineage. Standing grants (level 3) follow under
-the same ADR.
+an agent acts for one person and is bounded by that person's grants and visibility, and the kernel checks each command
+sent under an approved proposal against it and links it in provenance (`proposal_id`), events (`ProposalExecuted`) and
+lineage (`ExecutedUnder`). Standing grants (level 3) follow under the same ADR.
 
 ## The agent factory
 
@@ -107,6 +116,17 @@ grants and from MCP and APIs; agents run in sandboxed workers with pluggable inf
 deployment; orchestration routes each task to its qualified configuration under budgets; and access is the Canvas, the
 subject portal and an MCP server. Evaluation sets from real clinical workflows, a calibrated LLM judge and production
 signals measure every configuration, and improvements arrive as reviewed pull requests, never as self-modification.
+
+## Inference and data sovereignty
+
+[ADR-2636](../adr/2026-10-20-inference-is-pluggable-residency-bound-and-sandboxed.md) decides where models run. Claude
+is reached through the Claude API, Claude Platform on AWS, Amazon Bedrock, Google Cloud Vertex AI or Microsoft Foundry,
+and a tenant can be limited to models the operator runs inside the deployment through an OpenAI-compatible endpoint.
+One router applies each tenant's inference policy (`LocalOnly`, `ResidencyBound` by default, or `Open`), the tenant's
+residency, the supplier's approval status and the task configuration's qualified routes, and records the route on the
+run. Every outbound request refuses identity-layer content and scrubs direct identifiers from free text as a
+protective control. Agent runs execute in a sandbox with no network beyond the routed model endpoint and the kernel read
+ports. Each provider has a supplier record the sponsor's quality unit approves (Annex 11 §3).
 
 ## Regulatory map
 

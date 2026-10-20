@@ -1242,47 +1242,6 @@
         ]
       }
     },
-    "/api/v1/kernel/protocols/generate-proposal": {
-      "post": {
-        "tags": [
-          "Kernel"
-        ],
-        "summary": "Generates a complete USDM protocol proposal from a trial brief with reasoning lineage.",
-        "operationId": "KernelGenerateProtocolProposal",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Kernel_GenerateProtocolProposalRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Kernel_GenerativeProtocolProposal"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/kernel/protocols/matrix-gap-check": {
       "post": {
         "tags": [
@@ -1457,7 +1416,7 @@
             }
           },
           "409": {
-            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Observation.ParticipantWithdrawn\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1510,6 +1469,10 @@
           },
           {
             "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Observation.ParticipantWithdrawn",
             "status": 409
           },
           {
@@ -1704,6 +1667,288 @@
           {
             "code": "K.Observation.Locked",
             "status": 423
+          }
+        ]
+      }
+    },
+    "/api/v1/kernel/studies/{studyRef}/proposals": {
+      "get": {
+        "tags": [
+          "Kernel proposals"
+        ],
+        "summary": "A study\u0027s proposals, newest first, optionally only those with one status (Open, Approved, Rejected, Withdrawn, Expired).",
+        "description": "A study the caller may not see is refused; a proposal the caller may not see is masked in place (ADR-2471).",
+        "operationId": "KernelListProposals",
+        "parameters": [
+          {
+            "name": "studyRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kernel_KernelProposalResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kernel/proposals/{proposalRef}": {
+      "get": {
+        "tags": [
+          "Kernel proposals"
+        ],
+        "summary": "One proposal with its intent, plan, affected objects, requested capabilities, model, content hash and decision.",
+        "operationId": "KernelGetProposal",
+        "parameters": [
+          {
+            "name": "proposalRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelProposalResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kernel/proposals/{proposalRef}/rejection": {
+      "post": {
+        "tags": [
+          "Kernel proposals"
+        ],
+        "summary": "Rejects an open proposal; the signed reason for change is the rejection reason (proposal.reject).",
+        "operationId": "KernelRejectProposal",
+        "parameters": [
+          {
+            "name": "proposalRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelProposalStateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Proposal.Expired\u0060, \u0060K.Proposal.NotOpen\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Proposal.Expired",
+            "status": 409
+          },
+          {
+            "code": "K.Proposal.NotOpen",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
           }
         ]
       }
@@ -2608,7 +2853,7 @@
             }
           },
           "409": {
-            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Collection.NoGoverningVersion\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Collection.NoGoverningVersion\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Observation.ParticipantWithdrawn\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -2665,6 +2910,10 @@
           },
           {
             "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Observation.ParticipantWithdrawn",
             "status": 409
           },
           {
@@ -2830,7 +3079,7 @@
             }
           },
           "409": {
-            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Collection.RevisionStale\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Collection.RevisionStale\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Observation.ParticipantWithdrawn\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -2890,6 +3139,10 @@
             "status": 409
           },
           {
+            "code": "K.Observation.ParticipantWithdrawn",
+            "status": 409
+          },
+          {
             "code": "K.Collection.ValuesInvalid",
             "status": 422
           },
@@ -2916,6 +3169,1061 @@
           {
             "code": "K.Observation.Locked",
             "status": 423
+          }
+        ]
+      }
+    },
+    "/api/v1/execution/forms/queries": {
+      "get": {
+        "tags": [
+          "Execution queries"
+        ],
+        "summary": "Lists the queries on every form of an enrollment, oldest first.",
+        "operationId": "ExecutionListEnrollmentQueries",
+        "parameters": [
+          {
+            "name": "enrollment_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kernel_FormQueryResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/forms/{formId}/queries": {
+      "get": {
+        "tags": [
+          "Execution queries"
+        ],
+        "summary": "Lists a form\u0027s queries, oldest first, each with whether its value changed since it was raised.",
+        "operationId": "ExecutionListFormQueries",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kernel_FormQueryResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Execution queries"
+        ],
+        "summary": "Raises a query on the current revision of one of the form\u0027s values (execution.query.raise).",
+        "operationId": "ExecutionRaiseFormQuery",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_RaiseFormQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_FormQueryResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060M.Execution.Form.CollectionInstanceUnknown\u0060, \u0060M.Execution.Query.ObservationUnknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060M.Execution.Query.RevisionStale\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked. Kernel errors: \u0060K.Assertion.Locked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "M.Execution.Form.CollectionInstanceUnknown",
+            "status": 404
+          },
+          {
+            "code": "M.Execution.Query.ObservationUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "M.Execution.Query.RevisionStale",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Assertion.Locked",
+            "status": 423
+          }
+        ]
+      }
+    },
+    "/api/v1/execution/forms/{formId}/queries/{queryId}/answer": {
+      "post": {
+        "tags": [
+          "Execution queries"
+        ],
+        "summary": "Answers an open query (execution.query.answer).",
+        "operationId": "ExecutionAnswerFormQuery",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "queryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_FormQueryTextRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_FormQueryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060M.Execution.Query.InvalidTransition\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked. Kernel errors: \u0060K.Assertion.Locked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "M.Execution.Query.InvalidTransition",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Assertion.Locked",
+            "status": 423
+          }
+        ]
+      }
+    },
+    "/api/v1/execution/forms/{formId}/queries/{queryId}/reopen": {
+      "post": {
+        "tags": [
+          "Execution queries"
+        ],
+        "summary": "Reopens an answered or closed query with why it is not settled (execution.query.manage).",
+        "operationId": "ExecutionReopenFormQuery",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "queryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_FormQueryTextRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_FormQueryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060M.Execution.Query.InvalidTransition\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked. Kernel errors: \u0060K.Assertion.Locked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "M.Execution.Query.InvalidTransition",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Assertion.Locked",
+            "status": 423
+          }
+        ]
+      }
+    },
+    "/api/v1/execution/forms/{formId}/queries/{queryId}/close": {
+      "post": {
+        "tags": [
+          "Execution queries"
+        ],
+        "summary": "Closes an open or answered query; the change reason is the closing note (execution.query.manage).",
+        "operationId": "ExecutionCloseFormQuery",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "queryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_FormQueryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060M.Execution.Query.InvalidTransition\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked. Kernel errors: \u0060K.Assertion.Locked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "M.Execution.Query.InvalidTransition",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Assertion.Locked",
+            "status": 423
+          }
+        ]
+      }
+    },
+    "/api/v1/execution/forms/{formId}/queries/{queryId}/cancel": {
+      "post": {
+        "tags": [
+          "Execution queries"
+        ],
+        "summary": "Cancels an open or answered query raised in error (execution.query.manage).",
+        "operationId": "ExecutionCancelFormQuery",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "queryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_FormQueryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060M.Execution.Query.InvalidTransition\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked. Kernel errors: \u0060K.Assertion.Locked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "M.Execution.Query.InvalidTransition",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Assertion.Locked",
+            "status": 423
+          }
+        ]
+      }
+    },
+    "/api/v1/execution/forms/{formId}/signatures": {
+      "post": {
+        "tags": [
+          "Execution forms"
+        ],
+        "summary": "Signs the form\u0027s current values with an X-Sig-Token step-up token (collection.sign); 409 when the form changed since it was read.",
+        "operationId": "ExecutionSignForm",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_SignFormRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_FormSignatureResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060, \u0060K.Trust.AuthenticationStale\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Trust.PersonRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Trust.TargetContentChanged\u0060, \u0060K.Trust.TargetNotSignable\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Collection.SignatureMeaningInvalid\u0060, \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Trust.MethodRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Trust.AuthenticationStale",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Trust.PersonRequired",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Trust.TargetContentChanged",
+            "status": 409
+          },
+          {
+            "code": "K.Trust.TargetNotSignable",
+            "status": 409
+          },
+          {
+            "code": "K.Collection.SignatureMeaningInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Trust.MethodRequired",
+            "status": 422
           }
         ]
       }
@@ -2961,43 +4269,6 @@
               "string"
             ],
             "format": "double"
-          }
-        }
-      },
-      "Kernel_ActivityLocation": {
-        "type": "integer"
-      },
-      "Kernel_ActivityTiming": {
-        "required": [
-          "day"
-        ],
-        "type": "object",
-        "properties": {
-          "day": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "window_before": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32",
-            "default": 0
-          },
-          "window_after": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32",
-            "default": 0
           }
         }
       },
@@ -3296,35 +4567,6 @@
           }
         }
       },
-      "Kernel_Arm": {
-        "required": [
-          "id",
-          "name",
-          "type",
-          "intervention_ids"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "type": {
-            "$ref": "#/components/schemas/Kernel_ArmType"
-          },
-          "intervention_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "Kernel_ArmType": {
-        "type": "integer"
-      },
       "Kernel_AssertionId": {},
       "Kernel_AssertionKind": {
         "enum": [
@@ -3458,174 +4700,6 @@
         }
       },
       "Kernel_CodeSystemVersionId": {},
-      "Kernel_Cohort": {
-        "required": [
-          "id",
-          "name",
-          "arm_ids"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "arm_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "description": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Kernel_CollectionItem": {
-        "required": [
-          "id",
-          "concept"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "concept": {
-            "$ref": "#/components/schemas/Kernel_ConceptRef"
-          },
-          "unit": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "terminology": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_TerminologyBinding"
-              }
-            ]
-          },
-          "required": {
-            "type": "boolean",
-            "default": false
-          },
-          "purpose": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_DataPurpose"
-              }
-            ]
-          },
-          "value_kind": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_ObservationValueKind"
-              }
-            ]
-          }
-        }
-      },
-      "Kernel_CollectionSpec": {
-        "required": [
-          "id",
-          "name",
-          "items"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_CollectionItem"
-            }
-          },
-          "purpose": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_DataPurpose"
-              }
-            ]
-          }
-        }
-      },
-      "Kernel_ConceptId": {},
-      "Kernel_ConceptRef": {
-        "required": [
-          "concept_id",
-          "version"
-        ],
-        "type": "object",
-        "properties": {
-          "concept_id": {
-            "$ref": "#/components/schemas/Kernel_ConceptId"
-          },
-          "version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          }
-        }
-      },
-      "Kernel_CriterionCategory": {
-        "type": "integer"
-      },
-      "Kernel_DataPurpose": {
-        "type": "object",
-        "properties": {
-          "endpoint_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "estimand_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "safety_rule_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "operational_need": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "Kernel_DateTimePrecision": {
         "enum": [
           "Year",
@@ -3713,42 +4787,6 @@
           }
         }
       },
-      "Kernel_DesignReference": {
-        "required": [
-          "id",
-          "title"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "artifact": {}
-        }
-      },
-      "Kernel_Dose": {
-        "required": [
-          "amount",
-          "unit"
-        ],
-        "type": "object",
-        "properties": {
-          "amount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "unit": {
-            "type": "string"
-          }
-        }
-      },
       "Kernel_ElementChange": {
         "required": [
           "element_id",
@@ -3781,71 +4819,6 @@
       "Kernel_ElementChangeKind": {
         "type": "integer"
       },
-      "Kernel_EligibilityCriterion": {
-        "required": [
-          "id",
-          "category",
-          "text",
-          "concepts"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "category": {
-            "$ref": "#/components/schemas/Kernel_CriterionCategory"
-          },
-          "text": {
-            "type": "string"
-          },
-          "concepts": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_ConceptRef"
-            }
-          },
-          "expression": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Kernel_Endpoint": {
-        "required": [
-          "id",
-          "objective_id",
-          "level",
-          "text"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "objective_id": {
-            "type": "string"
-          },
-          "level": {
-            "$ref": "#/components/schemas/Kernel_ObjectiveLevel"
-          },
-          "text": {
-            "type": "string"
-          },
-          "concept": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_ConceptRef"
-              }
-            ]
-          }
-        }
-      },
       "Kernel_EngineVersion": {
         "required": [
           "name",
@@ -3858,80 +4831,6 @@
           },
           "version": {
             "type": "string"
-          }
-        }
-      },
-      "Kernel_Epoch": {
-        "required": [
-          "id",
-          "name",
-          "order"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "order": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          }
-        }
-      },
-      "Kernel_Estimand": {
-        "required": [
-          "id",
-          "endpoint_id",
-          "population_id",
-          "arm_ids",
-          "variable",
-          "intercurrent_events",
-          "summary_measure"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "endpoint_id": {
-            "type": "string"
-          },
-          "population_id": {
-            "type": "string"
-          },
-          "arm_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "variable": {
-            "type": "string"
-          },
-          "intercurrent_events": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_IntercurrentEvent"
-            }
-          },
-          "summary_measure": {
-            "type": "string"
-          },
-          "intervention_ids": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "type": "string"
-            }
           }
         }
       },
@@ -4264,6 +5163,128 @@
           }
         }
       },
+      "Kernel_FormQueryMessageResponse": {
+        "required": [
+          "kind",
+          "text",
+          "by",
+          "at"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "by": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Kernel_FormQueryResponse": {
+        "required": [
+          "query_id",
+          "form_id",
+          "enrollment_id",
+          "item_id",
+          "observation_id",
+          "revision",
+          "current_revision",
+          "value_changed",
+          "status",
+          "text",
+          "messages",
+          "raised_by",
+          "raised_at",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "query_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "form_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "enrollment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string"
+          },
+          "observation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "current_revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "value_changed": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_FormQueryMessageResponse"
+            }
+          },
+          "raised_by": {
+            "type": "string"
+          },
+          "raised_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "Kernel_FormQueryTextRequest": {
+        "required": [
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        }
+      },
       "Kernel_FormResponse": {
         "required": [
           "form_id",
@@ -4283,7 +5304,8 @@
           "items",
           "locks",
           "assertions",
-          "signatures"
+          "signatures",
+          "content_hash"
         ],
         "type": "object",
         "properties": {
@@ -4371,6 +5393,12 @@
             "items": {
               "$ref": "#/components/schemas/Kernel_FormSignatureResponse"
             }
+          },
+          "content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -4441,7 +5469,10 @@
           "meaning",
           "signed_by",
           "signed_at",
-          "reason"
+          "reason",
+          "content_hash",
+          "superseded",
+          "signed_values"
         ],
         "type": "object",
         "properties": {
@@ -4461,6 +5492,50 @@
           },
           "reason": {
             "type": "string"
+          },
+          "content_hash": {
+            "type": "string"
+          },
+          "superseded": {
+            "type": "boolean"
+          },
+          "signed_values": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Kernel_FormSignedValueResponse"
+            }
+          }
+        }
+      },
+      "Kernel_FormSignedValueResponse": {
+        "required": [
+          "item_id",
+          "observation_id",
+          "revision",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string"
+          },
+          "observation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "value": {
+            "$ref": "#/components/schemas/Kernel_ObservationValue"
           }
         }
       },
@@ -4558,46 +5633,6 @@
           }
         }
       },
-      "Kernel_GenerateProtocolProposalRequest": {
-        "required": [
-          "trial_brief"
-        ],
-        "type": "object",
-        "properties": {
-          "trial_brief": {
-            "type": "string"
-          }
-        }
-      },
-      "Kernel_GenerativeProtocolProposal": {
-        "required": [
-          "design",
-          "design_json",
-          "reasoning_chain",
-          "initial_gap_check"
-        ],
-        "type": "object",
-        "properties": {
-          "design": {
-            "$ref": "#/components/schemas/Kernel_ProtocolDesign"
-          },
-          "design_json": {
-            "type": "string"
-          },
-          "reasoning_chain": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_ProtocolReasoningStep"
-            }
-          },
-          "initial_gap_check": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_MatrixGapFinding"
-            }
-          }
-        }
-      },
       "Kernel_IntentRecommendation": {
         "required": [
           "id",
@@ -4687,77 +5722,6 @@
             "items": {
               "$ref": "#/components/schemas/Kernel_IntentRecommendation"
             }
-          }
-        }
-      },
-      "Kernel_IntercurrentEvent": {
-        "required": [
-          "description",
-          "strategy"
-        ],
-        "type": "object",
-        "properties": {
-          "description": {
-            "type": "string"
-          },
-          "strategy": {
-            "$ref": "#/components/schemas/Kernel_IntercurrentEventStrategy"
-          },
-          "strategy_text": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Kernel_IntercurrentEventStrategy": {
-        "type": "integer"
-      },
-      "Kernel_Intervention": {
-        "required": [
-          "id",
-          "name"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "product": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_ConceptRef"
-              }
-            ]
-          },
-          "dose": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_Dose"
-              }
-            ]
-          },
-          "route": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "regimen": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
@@ -5491,6 +6455,298 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "Kernel_KernelProposalAffectedResponse": {
+        "required": [
+          "ref",
+          "mask"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "mask": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_KernelProposalPlanResponse": {
+        "required": [
+          "ref",
+          "title",
+          "number",
+          "media_type",
+          "content_hash",
+          "mask"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "number": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "media_type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mask": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_KernelProposalResponse": {
+        "required": [
+          "ref",
+          "study",
+          "intent",
+          "plan",
+          "affected",
+          "simulated_impact",
+          "requested_capabilities",
+          "proposed_at",
+          "expires_at",
+          "proposed_by",
+          "proposed_by_kind",
+          "requested_by",
+          "model_id",
+          "confidence_score",
+          "content_hash",
+          "status",
+          "decided_at",
+          "decided_by",
+          "approval_attestation",
+          "decision_reason",
+          "is_escalated",
+          "escalated_to",
+          "escalation_reason",
+          "mask"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "study": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "intent": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "plan": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelProposalPlanResponse"
+              }
+            ]
+          },
+          "affected": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelProposalAffectedResponse"
+            }
+          },
+          "simulated_impact": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "requested_capabilities": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "proposed_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "proposed_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "proposed_by_kind": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "requested_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "model_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "confidence_score": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "decided_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "decided_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "approval_attestation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "decision_reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "is_escalated": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "escalated_to": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "escalation_reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mask": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_KernelProposalStateResponse": {
+        "required": [
+          "ref",
+          "status",
+          "content_hash",
+          "decided_at",
+          "decided_by"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "content_hash": {
+            "type": "string"
+          },
+          "decided_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "decided_by": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -6289,28 +7545,6 @@
           "Masked"
         ]
       },
-      "Kernel_Objective": {
-        "required": [
-          "id",
-          "level",
-          "text"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "level": {
-            "$ref": "#/components/schemas/Kernel_ObjectiveLevel"
-          },
-          "text": {
-            "type": "string"
-          }
-        }
-      },
-      "Kernel_ObjectiveLevel": {
-        "type": "integer"
-      },
       "Kernel_ObservationAuditView": {
         "required": [
           "sequence",
@@ -6491,17 +7725,6 @@
           }
         }
       },
-      "Kernel_ObservationValueKind": {
-        "enum": [
-          "Quantity",
-          "Coded",
-          "Text",
-          "Boolean",
-          "DateTime",
-          "Missing",
-          null
-        ]
-      },
       "Kernel_ObservationValueMissingValue": {
         "required": [
           "reason"
@@ -6611,59 +7834,6 @@
           }
         }
       },
-      "Kernel_PlannedActivity": {
-        "required": [
-          "id",
-          "name",
-          "epoch_id",
-          "locations",
-          "collection_spec_ids"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "epoch_id": {
-            "type": "string"
-          },
-          "locations": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_ActivityLocation"
-            }
-          },
-          "collection_spec_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "timing": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_ActivityTiming"
-              }
-            ]
-          },
-          "purpose": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_DataPurpose"
-              }
-            ]
-          }
-        }
-      },
       "Kernel_PlannedVisit": {
         "required": [
           "activity_id",
@@ -6719,34 +7889,6 @@
           }
         }
       },
-      "Kernel_Population": {
-        "required": [
-          "id",
-          "name",
-          "criterion_ids"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "criterion_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "description": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "Kernel_ProblemDetails": {
         "type": "object",
         "properties": {
@@ -6778,183 +7920,6 @@
             ]
           },
           "instance": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Kernel_ProtocolDesign": {
-        "type": "object",
-        "properties": {
-          "schema_version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "title": {
-            "type": "string"
-          },
-          "objectives": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_Objective"
-            }
-          },
-          "endpoints": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_Endpoint"
-            }
-          },
-          "estimands": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_Estimand"
-            }
-          },
-          "populations": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_Population"
-            }
-          },
-          "eligibility_criteria": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_EligibilityCriterion"
-            }
-          },
-          "arms": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_Arm"
-            }
-          },
-          "epochs": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_Epoch"
-            }
-          },
-          "cohorts": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_Cohort"
-            }
-          },
-          "interventions": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_Intervention"
-            }
-          },
-          "planned_activities": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_PlannedActivity"
-            }
-          },
-          "collection_specs": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_CollectionSpec"
-            }
-          },
-          "safety_rules": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_ProtocolRule"
-            }
-          },
-          "discontinuation_rules": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_ProtocolRule"
-            }
-          },
-          "randomization_scheme": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_DesignReference"
-              }
-            ]
-          },
-          "statistical_design": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_DesignReference"
-              }
-            ]
-          }
-        }
-      },
-      "Kernel_ProtocolReasoningStep": {
-        "required": [
-          "step_number",
-          "step_type",
-          "summary",
-          "rationale",
-          "citations"
-        ],
-        "type": "object",
-        "properties": {
-          "step_number": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "step_type": {
-            "type": "string"
-          },
-          "summary": {
-            "type": "string"
-          },
-          "rationale": {
-            "type": "string"
-          },
-          "citations": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "Kernel_ProtocolRule": {
-        "required": [
-          "id",
-          "text",
-          "concepts"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "text": {
-            "type": "string"
-          },
-          "concepts": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_ConceptRef"
-            }
-          },
-          "expression": {
             "type": [
               "null",
               "string"
@@ -7033,6 +7998,39 @@
           null
         ]
       },
+      "Kernel_RaiseFormQueryRequest": {
+        "required": [
+          "observation_id",
+          "revision",
+          "text",
+          "query_id"
+        ],
+        "type": "object",
+        "properties": {
+          "observation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "text": {
+            "type": "string"
+          },
+          "query_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "Kernel_SaveFormValuesRequest": {
         "required": [
           "values"
@@ -7081,6 +8079,29 @@
                 "$ref": "#/components/schemas/Kernel_PlannedVisit"
               }
             ]
+          }
+        }
+      },
+      "Kernel_SignFormRequest": {
+        "required": [
+          "meaning",
+          "content_hash",
+          "signature_id"
+        ],
+        "type": "object",
+        "properties": {
+          "meaning": {
+            "type": "string"
+          },
+          "content_hash": {
+            "type": "string"
+          },
+          "signature_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -7270,23 +8291,6 @@
             ]
           }
         }
-      },
-      "Kernel_TerminologyBinding": {
-        "required": [
-          "code_system_version_id"
-        ],
-        "type": "object",
-        "properties": {
-          "code_system_version_id": {
-            "$ref": "#/components/schemas/Kernel_CodeSystemVersionId"
-          },
-          "codelist": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
       }
     }
   },
@@ -7301,6 +8305,9 @@
       "name": "Kernel observations"
     },
     {
+      "name": "Kernel proposals"
+    },
+    {
       "name": "IntentEndpoints"
     },
     {
@@ -7308,6 +8315,9 @@
     },
     {
       "name": "Execution forms"
+    },
+    {
+      "name": "Execution queries"
     }
   ]
 }

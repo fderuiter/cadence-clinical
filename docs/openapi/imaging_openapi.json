@@ -544,12 +544,12 @@
               }
             }
           },
-          "200": {
-            "description": "OK",
+          "501": {
+            "description": "Not Implemented",
             "content": {
-              "application/json": {
+              "application/problem\u002Bjson": {
                 "schema": {
-                  "$ref": "#/components/schemas/Imaging_SegmentationResultDto"
+                  "$ref": "#/components/schemas/Imaging_ProblemDetails"
                 }
               }
             }
@@ -869,34 +869,6 @@
           }
         }
       },
-      "Imaging_CaliperLineDto": {
-        "required": [
-          "startPoint",
-          "endPoint",
-          "lengthMm",
-          "caliperType"
-        ],
-        "type": "object",
-        "properties": {
-          "startPoint": {
-            "$ref": "#/components/schemas/Imaging_Point2DDto"
-          },
-          "endPoint": {
-            "$ref": "#/components/schemas/Imaging_Point2DDto"
-          },
-          "lengthMm": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "caliperType": {
-            "type": "string"
-          }
-        }
-      },
       "Imaging_CertificateResponse": {
         "required": [
           "certificate",
@@ -1019,53 +991,6 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
-          }
-        }
-      },
-      "Imaging_HounsfieldStatsDto": {
-        "required": [
-          "meanHu",
-          "minHu",
-          "maxHu",
-          "stdDevHu",
-          "modelVersion"
-        ],
-        "type": "object",
-        "properties": {
-          "meanHu": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "minHu": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "maxHu": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "stdDevHu": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "modelVersion": {
-            "type": "string"
           }
         }
       },
@@ -1450,31 +1375,6 @@
           }
         }
       },
-      "Imaging_Point2DDto": {
-        "required": [
-          "x",
-          "y"
-        ],
-        "type": "object",
-        "properties": {
-          "x": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "y": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          }
-        }
-      },
       "Imaging_ProblemDetails": {
         "type": "object",
         "properties": {
@@ -1555,98 +1455,6 @@
             "items": {
               "type": "string"
             }
-          }
-        }
-      },
-      "Imaging_SegmentationResultDto": {
-        "required": [
-          "annotationId",
-          "studyInstanceUid",
-          "seriesInstanceUid",
-          "lesionId",
-          "organSite",
-          "lesionType",
-          "longestDiameterMm",
-          "perpendicularDiameterMm",
-          "boundingBox",
-          "contourPoints",
-          "fittedCalipers",
-          "hounsfieldStats",
-          "measurementType",
-          "modelVersion",
-          "isAiAssisted",
-          "timestamp",
-          "readerId"
-        ],
-        "type": "object",
-        "properties": {
-          "annotationId": {
-            "type": "string"
-          },
-          "studyInstanceUid": {
-            "type": "string"
-          },
-          "seriesInstanceUid": {
-            "type": "string"
-          },
-          "lesionId": {
-            "type": "string"
-          },
-          "organSite": {
-            "type": "string"
-          },
-          "lesionType": {
-            "type": "string"
-          },
-          "longestDiameterMm": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "perpendicularDiameterMm": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "boundingBox": {
-            "$ref": "#/components/schemas/Imaging_BoundingBoxDto"
-          },
-          "contourPoints": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Imaging_Point2DDto"
-            }
-          },
-          "fittedCalipers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Imaging_CaliperLineDto"
-            }
-          },
-          "hounsfieldStats": {
-            "$ref": "#/components/schemas/Imaging_HounsfieldStatsDto"
-          },
-          "measurementType": {
-            "type": "string"
-          },
-          "modelVersion": {
-            "type": "string"
-          },
-          "isAiAssisted": {
-            "type": "boolean"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "readerId": {
-            "type": "string"
           }
         }
       },

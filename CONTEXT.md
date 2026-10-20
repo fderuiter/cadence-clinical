@@ -63,7 +63,8 @@ ADR-2458).
 A participant's membership of one StudySite, with its state machine:
 `Screening → ScreenFailed`, `Screening → Enrolled → Randomized → Active → Completed`, `Enrolled → Active` for
 non-randomized studies, and withdrawal from any active state through a dedicated command that names a
-`Withdrawn` Attestation. The status history is bitemporal, so the status can be read as of any valid and known
+`Withdrawn` Attestation. After withdrawal no new data is captured for the enrollment (no observation, form or new form
+value), while data captured before it stays readable and correctable. The status history is bitemporal, so the status can be read as of any valid and known
 time. Entering `Enrolled` assigns the **enrollment number**, gap-free per study. `ReconsentRequired` and
 `Unblinded` are not enrollment states (ADR-2453).
 
@@ -107,6 +108,14 @@ layout, workflow and screen state are the EDC application's **FormInstance**. On
 page of its values, form locks apply at its scope, and a form signature names its members' exact revisions.
 _Avoid_: page IDs or visit strings on Observations, server-side form drafts
 
+### Form signature
+
+An investigator's kernel `Attestation` (meaning Approved or Responsibility) over a Collection Instance's content
+hash, the hash of its values' exact revisions, recorded by `SignCollectionInstance` after a single-use step-up
+re-authentication (#5463). A later correction never alters it: the form shows it as **superseded**, with the values
+it signed, until someone signs again.
+_Avoid_: unsigning, a form status of `SIGNED` or `MODIFIED_POST_SIGNATURE`, signing a payload copy
+
 ### FormInstance
 
 The Execution module's record of a form, one per Collection Instance and with the same id (#5460): the item order
@@ -114,6 +123,15 @@ snapshotted from the CollectionSpec when the kernel opened the form. The module 
 `CollectionInstanceOpened` event as `svc:execution-forms`. Completeness is derived on read (every required item has a
 value, a reasoned missing value included), never stored.
 _Avoid_: copying values, statuses or signatures into it; they stay in the kernel
+
+### Form Query
+
+A data query the Execution module keeps about one revision of one form value (#5461): the kernel
+`(ObservationId, Revision)` a monitor questioned, its status (open, answered, closed, cancelled) and its conversation.
+The workflow is EDC's (spec §11); each step is also stated as a kernel `Queried` or `QueryAnswered` Assertion, or a
+retraction of one, by `svc:execution-queries`, so other applications count open queries from the kernel. A correction
+past the questioned revision shows as "value changed".
+_Avoid_: a query that names a form field code or Execution's own observation copy; batch query commands
 
 ### Assertion
 
@@ -573,16 +591,23 @@ A modular architecture unifying repository sentinels (drift detection, duplicati
 
 ### Intelligence module (AI agent runtime)
 
-The one place AI agents run (ADR-2630): `Cadence.Modules.Intelligence` (`apps/intelligence`), an in-process module of the composition host (today the kernel API host) under `/api/v1/ai`, which replaced the `apps/ai_gateway` service and took over its command-palette intent router (#5374). It holds the provider-neutral model port, qualified **task configurations**, the agent tools, the citation verifier, the **interaction ledger** of every run, and budgets with a kill switch. Its only write into clinical data is a kernel Proposal.
+The one place AI agents run (ADR-2630): `Cadence.Modules.Intelligence` (`apps/intelligence`), an in-process module of the composition host (today the kernel API host) under `/api/v1/ai`, which replaced the `apps/ai_gateway` service and took over its command-palette intent router (#5374). It holds the provider-neutral model port, qualified **task configurations**, stored **evaluation runs** and production monitoring (ADR-2634), the **interaction ledger** of every run, and budgets with a kill switch. The agent tools, the citation verifier and runs that write a Proposal come with #5547; its only write into clinical data will be a kernel Proposal.
 
 A **task configuration** is the qualified unit for an AI task: model and version, prompt, tools, retrieval sources, output schema, evaluation set, acceptance criteria, autonomy level and approver role. It also carries the FDA credibility assessment (question of interest, context of use, model influence, decision consequence), which gives its **model risk class** (low, medium or high). Its kernel content hash covers every field, and every run records it (K-AI-5). Any change makes a new version that must be qualified again.
 
-A **task qualification** is one tenant's signed decision that a task configuration version is fit for use (ADR-2631): a person attests `Approved` over the version's content hash after an evaluation run against its pinned evaluation set met the acceptance criteria. Agents run only on a version the tenant qualified, and only while its content is unchanged; a **suspended** version is out of use until it is qualified again.
+A **task qualification** is one tenant's signed decision that a task configuration version is fit for use (ADR-2631): a person attests `Approved` over the version's content hash, and the command names a stored evaluation run of exactly that version against its pinned evaluation set that met the acceptance criteria (#5574). Agents run only on a version the tenant qualified, and only while its content is unchanged; a **suspended** version is out of use until it is qualified again.
+
+An **evaluation run** is one execution of a task configuration version against its pinned evaluation set (ADR-2634 §4.4): the case results, metrics and verdict, stored with `RecordEvaluationRun` in `intelligence.evaluation_runs` as canonical JSON with its kernel content hash. The server admits a run only when it evaluated a shipped version against exactly its pinned set, criteria and provider and its verdict follows from its case results, and a run is never changed. Qualification rests on a stored run, never on a caller saying a run passed.
 
 An **agent run** is one call of a task, recorded in the interaction ledger (the append-only `intelligence.agent_runs` table, isolated per tenant) through the `StartAgentRun` and `CompleteAgentRun` module commands, with the configuration hash, model, token use, cost and a content hash. An **agent control** (`intelligence.agent_controls`, set with `SetAgentControl`) is a tenant's kill switch and monthly token budget for one task key or, with scope `*`, for every task.
 
-The **autonomy level** of a task is how far its agent may go: 0 inform, 1 draft a Proposal, 2 a Proposal whose approval executes its commands as the approver (K-AI-2), 3 a standing grant for operational commands only (K-AI-7). See [docs/ai/AI_AGENTS.md](docs/ai/AI_AGENTS.md).
+The **autonomy level** of a task is how far its agent may go: 0 inform, 1 draft a Proposal, 2 a Proposal holding exact commands, which the approver then sends as themself, each naming the proposal (K-AI-2, ADR-2632), 3 a standing grant for operational commands only (K-AI-7). See [docs/ai/AI_AGENTS.md](docs/ai/AI_AGENTS.md).
+
+In the Canvas (ADR-2635), **Assist** is the inspector verb where agents answer about the selected object, and the **AI label** is the mark, words and reserved colour on every piece of agent output. The **proposal review** screen is where a person opens what an agent reasoned over and decides its proposal; **AI assistance** is each viewer's own switch for Assist and the palette's Ask, never for proposals already made.
 _Avoid_: "AI gateway microservice", AI draft states on regulated records, "the model" as the thing that is validated
+
+An **inference provider** is one way of reaching a model: the Claude API, Claude Platform on AWS, Amazon Bedrock, Vertex AI, Microsoft Foundry, or an OpenAI-compatible endpoint the operator runs inside the deployment. Each is `External` or `InDeployment`, declares the residency codes it serves and has a **supplier record** the sponsor's quality unit approves (ADR-2636). A tenant's **inference policy** (`LocalOnly`, `ResidencyBound` by default, or `Open`) decides which providers its runs may use; the **inference route** is the provider, model, region and supplier record a run actually used, recorded in the interaction ledger. An **agent sandbox** is the scope an agent run executes in, with no network beyond the routed model endpoint and the read ports.
+_Avoid_: "local mode" for a provider that is merely self-hosted somewhere public; "de-identified prompt" for a scrubbed one
 
 ### Three-Tier Model Routing Strategy
 
@@ -591,6 +616,7 @@ A cost-control and performance routing policy categorizing AI workloads into Tie
 ### In-Flight De-Identification Air-Gap
 
 A privacy protection pattern where outbound prompts sent to external cloud model providers are automatically scrubbed of Protected Health Information (PHI) and Personally Identifiable Information (PII) using surrogate tokens, with reverse unmasking executed in ephemeral memory or short-lived encrypted cache upon response reception.
+_Superseded_ by ADR-2636 for AI agents: the outbound guard replaces direct identifiers with one-way placeholders and never unmasks a response, so identifiers cannot flow back into a Proposal; identity-layer content refuses the call.
 
 ### Dual-Attribution AI Compliance Ledger
 
@@ -718,7 +744,7 @@ A chartered, independent panel of clinical specialists responsible for evaluatin
 
 ### Aggregate Safety Compilation Engine
 
-An automated pharmacovigilance reporting system that calculates cumulative and interval patient-years of exposure, tabulates SAE and SUSAR line listings by MedDRA System Organ Class and Preferred Term against Reference Safety Information (RSI), and compiles structured annual Development Safety Update Reports (DSUR), Periodic Safety Update Reports (PSUR), and investigator safety notifications.
+An automated pharmacovigilance reporting system that calculates cumulative and interval patient-years of exposure, tabulates SAE and SUSAR line listings by MedDRA System Organ Class and Preferred Term against Reference Safety Information (RSI), and compiles structured annual Development Safety Update Reports (DSUR), Periodic Safety Update Reports (PSUR), and investigator safety notifications. In a DSUR, `TotalSaes` counts serious cases only, exposure is stored as unrounded patient-years, and placebo, comparator and investigational arms are grouped one way for both exposure and the tabulation (#5573).
 
 ### Medical Device Investigation Lifecycle
 
@@ -945,6 +971,11 @@ _Avoid_: Manual lab report grading, un-staged automatic regulatory transmissions
 
 A B2B electronic regulatory transmission pipeline in `apps/safety` that compiles Individual Case Safety Reports (ICSR) into ISO 27953-2 compliant ICH E2B(R3) XML payloads and transmits them over RFC 4130 AS2 with SHA-256 S/MIME encryption, digital signatures, and synchronous MDN verification.
 _Avoid_: Unencrypted email attachments, manual un-tracked agency portal uploads
+
+### ICH E2B(R3) ICSR message
+
+The HL7 v3 `MCCI_IN200100UV01` batch, holding one `PORR_IN049016UV` message per case, that `POST /api/v1/safety/icsr/render` emits. The request names the E2B(R3) data elements it carries (N.1 to H.1); the ICH business rules are checked before rendering and the output is validated against the ICH schema vendored, unmodified, in `apps/safety/Schemas/ich-e2b-r3` (ADR-2464). MedDRA codes are checked for form only; the dictionary is licensed and not in the repository.
+_Avoid_: An `<ichicsr>` root or other simplified element layout; calling an unvalidated message E2B(R3)
 
 ### Centralized Statistical Monitoring (CSM) Forensics
 
@@ -1205,6 +1236,11 @@ _Avoid_: Rigid rule-based 3+3 designs unable to incorporate continuous Bayesian 
 A deterministic block allocation strategy that partitions subjects into discrete strata based on baseline factor combinations, generating variable-length balanced permutation blocks sealed with cryptographic checksums to guarantee allocation predictability prevention while maintaining exact target ratios.
 _Avoid_: Fixed-size unmasked blocks susceptible to clinical investigator selection bias
 
+### Randomisation Scheme Version and Allocation
+
+A study's randomisation configuration (method, arms and ratios, stratification factors, block sizes) is a versioned scheme that goes live only when someone other than its author approves it ([ADR-2640](docs/adr/2026-10-20-randomisation-allocates-from-approved-encrypted-scheme-versions.md)). A permuted-block version's list is generated once, on approval, and each slot's arm is stored encrypted. An allocation records which version, stratum, slot and kit a participant received; it is insert-only, and its arm is encrypted and readable only by an unblinded caller. The arm never sits on the subject (kernel specification §7.4).
+_Avoid_: An arm supplied in a create request, or a participant moved to `RANDOMIZED` by a plain state change
+
 ### Multi-Echelon Predictive Resupply Forecasting Engine
 
 A supply chain optimization runtime that models inventory across the complete clinical supply hierarchy (Primary Manufacturer $\to$ Central Depot $\to$ Regional Depot $\to$ Clinical Site), calculating lead-time safety buffers, lot shelf-life expiration run-out curves, and automated resupply orders to eliminate patient treatment interruption.
@@ -1251,7 +1287,7 @@ _Avoid_: Raw unmapped primitive input fields requiring post-hoc SAS/SDTM ETL map
 
 ### Automated UAT & Simulation Studio
 
-An automated qualification environment in the eCRF Designer that utilizes AI Gateway synthetic generation to construct thousands of targeted edge-case data payloads (nulls, boundary values, invalid dates, extreme laboratory spikes), evaluates them against the stateless Rules Evaluator, and compiles an immutable 21 CFR Part 11 compliant UAT Evidence Report in sub-30 seconds.
+An automated qualification environment in the eCRF Designer that would use synthetic generation (planned as an Intelligence module task, ADR-2630) to construct thousands of targeted edge-case data payloads (nulls, boundary values, invalid dates, extreme laboratory spikes), evaluates them against the stateless Rules Evaluator, and compiles an immutable 21 CFR Part 11 compliant UAT Evidence Report in sub-30 seconds.
 _Avoid_: Weeks of manual data entry and exploratory testing for study UAT sign-off
 
 ### In-Flight Patient Migration Matrix

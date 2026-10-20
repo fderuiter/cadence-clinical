@@ -13,8 +13,8 @@ namespace Cadence.Modules.Execution.Infrastructure;
 public static partial class ExecutionModuleDatabase
 {
     /// <summary>
-    /// SQL that grants <paramref name="role"/> read, insert and update on the module's tables, no delete, and nothing on
-    /// the migration history. Re-run it after every module migration that adds a table.
+    /// SQL that grants <paramref name="role"/> read, insert and update on the module's tables, delete only on the used
+    /// e-signature tokens (whose expired rows the token store removes), and nothing on the migration history. Re-run it after every module migration that adds a table.
     /// </summary>
     /// <param name="role">An existing lower-case role name, for example <c>cadence_app</c>.</param>
     public static string GrantAppRoleSql(string role)
@@ -28,6 +28,7 @@ public static partial class ExecutionModuleDatabase
         return $"""
             GRANT USAGE ON SCHEMA "{schema}" TO "{role}";
             GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA "{schema}" TO "{role}";
+            GRANT DELETE ON "{schema}"."consumed_signature_tokens" TO "{role}";
             REVOKE ALL ON "{schema}"."{ModuleMigrationServiceCollectionExtensions.MigrationsHistoryTable}" FROM "{role}";
             """;
     }

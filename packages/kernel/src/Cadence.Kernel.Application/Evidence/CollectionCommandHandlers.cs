@@ -14,6 +14,7 @@ using Cadence.Kernel.Modules;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
+using Cadence.Kernel.Trust;
 
 using FluentValidation;
 
@@ -25,7 +26,7 @@ namespace Cadence.Kernel.Application.Evidence;
 /// Handles <see cref="OpenCollectionInstance"/> (K-FACT-6, K-TIME-8): it resolves the protocol version governing the
 /// enrollment's study site at the collection time, checks that its design has the CollectionSpec (and that the planned
 /// activity collects it), and opens the form instance with a <see cref="LineageEdgeKind.GovernedBy"/> edge from that
-/// version.
+/// version. A withdrawn participant gets no new form (<see cref="CaptureConditions"/>).
 /// </summary>
 internal sealed class OpenCollectionInstanceHandler : ICommandHandler<OpenCollectionInstance, CollectionInstanceState>
 {
@@ -53,6 +54,11 @@ internal sealed class OpenCollectionInstanceHandler : ICommandHandler<OpenCollec
             .ConfigureAwait(false))
         {
             return ObservationErrors.Locked;
+        }
+
+        if (await CaptureConditions.RefusalAsync(context.Work, enrollment.Id, nameof(OpenCollectionInstance), cancellationToken).ConfigureAwait(false) is { } refused)
+        {
+            return refused;
         }
 
         if (await GoverningVersion.ResolveAsync(context.Work, enrollment, collectedAt, context.RecordedAt, cancellationToken).ConfigureAwait(false)
@@ -83,7 +89,8 @@ internal sealed class OpenCollectionInstanceHandler : ICommandHandler<OpenCollec
 /// <summary>
 /// Handles <see cref="RecordCollectedValues"/> (ADR-2622): under the form instance's exclusive lock and shared locks on
 /// every scope covering the form and its values, it checks every value against the CollectionSpec, then every expected
-/// revision, and only then records and corrects the values together. Any failure changes nothing.
+/// revision, and only then records and corrects the values together. Any failure changes nothing. After the participant's
+/// withdrawal, a save with a value for an item that has none is refused whole (<see cref="CaptureConditions"/>).
 /// </summary>
 internal sealed class RecordCollectedValuesHandler : ICommandHandler<RecordCollectedValues, CollectedValuesState>
 {
@@ -120,6 +127,13 @@ internal sealed class RecordCollectedValuesHandler : ICommandHandler<RecordColle
             cancellationToken).ConfigureAwait(false))
         {
             return ObservationErrors.Locked;
+        }
+
+        // A save that only corrects values captured before a withdrawal goes on; one with a new value is new capture.
+        if (values.Any(v => instance.MemberFor(v.ItemId) is null)
+            && await CaptureConditions.RefusalAsync(work, instance.EnrollmentId, nameof(RecordCollectedValues), cancellationToken).ConfigureAwait(false) is { } refused)
+        {
+            return refused;
         }
 
         var current = new Dictionary<string, Observation>(StringComparer.Ordinal);
@@ -350,6 +364,82 @@ internal static class CollectionSpecs
     }
 }
 
+/// <summary>
+/// Handles <see cref="SignCollectionInstance"/> (spec §9.5, #5463): under the form instance's advisory lock, so no save
+/// interleaves, it hashes the instance's current revisions and records the signature only when that is the hash the signer
+/// read. The attestation then names exactly those revisions; a later correction leaves it as it is. A form with no
+/// values has nothing to sign. Locks do not refuse a signature: signing a locked form is how an investigator signs off.
+/// </summary>
+internal sealed class SignCollectionInstanceHandler : ICommandHandler<SignCollectionInstance, AttestationId>
+{
+    public async Task<CommandResult<AttestationId>> HandleAsync(
+        SignCollectionInstance command, ICommandContext context, CancellationToken cancellationToken)
+    {
+        var work = context.Work;
+        if (command.Meaning is not (AttestationMeaning.Approved or AttestationMeaning.Responsibility))
+        {
+            return CollectionErrors.SignatureMeaningInvalid;
+        }
+
+        // The form instance's lock, without claiming the instance: a signature never changes the form, it adds one
+        // Attestation (K-TX-1), and it reads the content no save can change until it commits.
+        await work.LockAsync<CollectionInstance>(command.CollectionInstanceId, cancellationToken).ConfigureAwait(false);
+        if (await work.ExistsAsync<Attestation>(command.AttestationId, cancellationToken).ConfigureAwait(false))
+        {
+            return KernelErrors.AlreadyExists;
+        }
+
+        if (await work.ReadAsync<CollectionInstance>(command.CollectionInstanceId, cancellationToken).ConfigureAwait(false) is not { } instance
+            || instance.EnrollmentId != command.EnrollmentId)
+        {
+            // A form of another enrollment is reported as missing: the caller was authorized for this one only.
+            return KernelErrors.NotFound;
+        }
+
+        if (instance.Members.Count == 0)
+        {
+            return TrustErrors.TargetNotSignable;
+        }
+
+        var current = await CollectionContent.HashAsync(work, instance, cancellationToken).ConfigureAwait(false);
+        if (!string.Equals(current, command.ContentHash, StringComparison.Ordinal))
+        {
+            return TrustErrors.TargetContentChanged;
+        }
+
+        var signed = Attestation.Sign(
+            command.AttestationId,
+            command.TenantId,
+            context.Actor,
+            command.Meaning,
+            new AttestationTarget(NodeKinds.CollectionInstance, instance.Id.Value, current),
+            command.AuthenticatedAt,
+            command.Method,
+            context.RecordedAt,
+            command.ReasonForChange);
+        if (signed.Value is not { } attestation)
+        {
+            return signed.Error!;
+        }
+
+        work.Add(attestation);
+        work.Raise(new AttestationRecorded(attestation.TenantId, attestation.Id, attestation.ActorId, attestation.Meaning, attestation.Target));
+        return CommandResult<AttestationId>.Success(attestation.Id);
+    }
+}
+
+/// <summary>The content a form signature binds to (#5463).</summary>
+internal static class CollectionContent
+{
+    /// <summary>The content hash of <paramref name="instance"/>'s current revisions (<see cref="CollectionInstance.ContentHashOf"/>).</summary>
+    public static async Task<string> HashAsync(IKernelUnitOfWork work, CollectionInstance instance, CancellationToken cancellationToken)
+    {
+        var members = instance.Members.Select(m => m.ObservationId).ToList();
+        var observations = await work.ReadAllAsync<Observation>(o => members.Contains(o.Id), cancellationToken).ConfigureAwait(false);
+        return CollectionInstance.ContentHashOf(observations.Select(o => new CollectionContentEntry(o.Id, o.Revision, o.Value)));
+    }
+}
+
 /// <summary>Shared steps of the form instance handlers.</summary>
 internal static class CollectionStates
 {
@@ -387,6 +477,7 @@ public static class CollectionServiceCollectionExtensions
     {
         services.AddTransient<ICommandHandler<OpenCollectionInstance, CollectionInstanceState>, OpenCollectionInstanceHandler>();
         services.AddTransient<ICommandHandler<RecordCollectedValues, CollectedValuesState>, RecordCollectedValuesHandler>();
+        services.AddTransient<ICommandHandler<SignCollectionInstance, AttestationId>, SignCollectionInstanceHandler>();
         services.AddCommandValidator<OpenCollectionInstance, OpenCollectionInstanceValidator>();
         services.AddCommandValidator<RecordCollectedValues, RecordCollectedValuesValidator>();
         return services;

@@ -630,17 +630,18 @@
         }
       }
     },
-    "/api/v1/execution/queries": {
+    "/api/v1/execution/randomization/schemes": {
       "post": {
         "tags": [
-          "Queries"
+          "Randomization"
         ],
-        "operationId": "CreateClinicalQuery",
+        "summary": "Drafts the study\u0027s next randomisation scheme version.",
+        "operationId": "DraftRandomizationScheme",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Execution_QueryCreateRequest"
+                "$ref": "#/components/schemas/Execution_RandomizationSchemeDraftRequest"
               }
             }
           },
@@ -652,7 +653,58 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
+                  "$ref": "#/components/schemas/Execution_RandomizationSchemeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Randomization"
+        ],
+        "summary": "Lists a study\u0027s scheme versions, newest first, without lists or allocations.",
+        "operationId": "ListRandomizationSchemes",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_RandomizationSchemeResponse"
+                  }
                 }
               }
             }
@@ -669,6 +721,58 @@
           },
           "403": {
             "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/randomization/schemes/{schemeId}/approve": {
+      "post": {
+        "tags": [
+          "Randomization"
+        ],
+        "summary": "Approves a draft version for go-live, retiring the previous one and generating its list.",
+        "operationId": "ApproveRandomizationScheme",
+        "parameters": [
+          {
+            "name": "schemeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_RandomizationSchemeResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -688,128 +792,18 @@
             }
           }
         }
-      },
-      "get": {
-        "tags": [
-          "Queries"
-        ],
-        "operationId": "ListClinicalQueries",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "subject_id",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "visit_id",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-                  }
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
       }
     },
-    "/api/v1/execution/queries/{id}": {
-      "get": {
-        "tags": [
-          "Queries"
-        ],
-        "operationId": "GetClinicalQueryById",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/queries/{id}/respond": {
+    "/api/v1/execution/subjects/{subjectId}/randomize": {
       "post": {
         "tags": [
-          "Queries"
+          "Subjects"
         ],
-        "operationId": "RespondClinicalQuery",
+        "summary": "Randomises an enrolled participant under the live scheme and assigns a kit when it needs one.",
+        "operationId": "RandomizeSubject",
         "parameters": [
           {
-            "name": "id",
+            "name": "subjectId",
             "in": "path",
             "required": true,
             "schema": {
@@ -821,7 +815,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Execution_QueryRespondRequest"
+                "$ref": "#/components/schemas/Execution_RandomizeSubjectRequest"
               }
             }
           },
@@ -833,267 +827,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/queries/{id}/close": {
-      "post": {
-        "tags": [
-          "Queries"
-        ],
-        "operationId": "CloseClinicalQuery",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/queries/{id}/reopen": {
-      "post": {
-        "tags": [
-          "Queries"
-        ],
-        "operationId": "ReopenClinicalQuery",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Execution_QueryReopenRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/queries/{id}/cancel": {
-      "post": {
-        "tags": [
-          "Queries"
-        ],
-        "operationId": "CancelClinicalQuery",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Execution_QueryCancelRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/queries/batch-close": {
-      "post": {
-        "tags": [
-          "Queries"
-        ],
-        "operationId": "BatchCloseClinicalQueries",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Execution_BatchQueryRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_BatchQueryResponse"
+                  "$ref": "#/components/schemas/Execution_RandomizationResponse"
                 }
               }
             }
@@ -1127,119 +861,9 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/queries/batch-cancel": {
-      "post": {
-        "tags": [
-          "Queries"
-        ],
-        "operationId": "BatchCancelClinicalQueries",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Execution_BatchQueryRequest"
-              }
-            }
           },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_BatchQueryResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/queries/batch-respond": {
-      "post": {
-        "tags": [
-          "Queries"
-        ],
-        "operationId": "BatchRespondClinicalQueries",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Execution_BatchQueryRespondRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_BatchQueryResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
+          "409": {
+            "description": "Conflict",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -3229,73 +2853,6 @@
           }
         }
       },
-      "Execution_BatchQueryRequest": {
-        "required": [
-          "query_ids"
-        ],
-        "type": "object",
-        "properties": {
-          "query_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "reason": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Execution_BatchQueryRespondRequest": {
-        "required": [
-          "query_ids",
-          "response"
-        ],
-        "type": "object",
-        "properties": {
-          "query_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "response": {
-            "type": "string"
-          },
-          "reason": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Execution_BatchQueryResponse": {
-        "required": [
-          "queries",
-          "count"
-        ],
-        "type": "object",
-        "properties": {
-          "queries": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-            }
-          },
-          "count": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          }
-        }
-      },
       "Execution_BulkLabRangeDryRunResponse": {
         "required": [
           "is_success",
@@ -4512,177 +4069,6 @@
           }
         }
       },
-      "Execution_ClinicalQueryResponse": {
-        "required": [
-          "id",
-          "study_id",
-          "subject_id",
-          "test_code",
-          "status"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "study_id": {
-            "type": "string"
-          },
-          "subject_id": {
-            "type": "string"
-          },
-          "test_code": {
-            "type": "string"
-          },
-          "status": {
-            "$ref": "#/components/schemas/Execution_QueryStatus"
-          },
-          "site_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "visit_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "domain": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "explanation": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "response": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "observation_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "field_link": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "message": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "origin": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "priority": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "rule_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "created_by": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "responder": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "resolver": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "resolved_at": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          },
-          "cancellation_reason": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "escalated_at": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          },
-          "form_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "field_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "query_type": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "action_required": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "created_at": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          },
-          "version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int64",
-            "default": 1
-          }
-        }
-      },
       "Execution_ComplianceStatusResponse": {
         "required": [
           "study_id",
@@ -5723,56 +5109,6 @@
           }
         }
       },
-      "Execution_IpKitInventoryResponse": {
-        "required": [
-          "kit_number",
-          "study_id",
-          "site_id",
-          "lot_number",
-          "expiration_date",
-          "status"
-        ],
-        "type": "object",
-        "properties": {
-          "kit_number": {
-            "type": "string"
-          },
-          "study_id": {
-            "type": "string"
-          },
-          "site_id": {
-            "type": "string"
-          },
-          "lot_number": {
-            "type": "string"
-          },
-          "expiration_date": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "status": {
-            "type": "string"
-          },
-          "residual_volume_ml": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "null",
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "residual_volume_percentage": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "null",
-              "number",
-              "string"
-            ],
-            "format": "double"
-          }
-        }
-      },
       "Execution_IpKitItemReconcileRequest": {
         "required": [
           "kit_number",
@@ -5844,6 +5180,56 @@
             "type": "string"
           },
           "scanned_lot_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_IpKitSeedItem": {
+        "required": [
+          "kit_number",
+          "lot_number",
+          "expiration_date"
+        ],
+        "type": "object",
+        "properties": {
+          "kit_number": {
+            "type": "string"
+          },
+          "lot_number": {
+            "type": "string"
+          },
+          "expiration_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "residual_volume_ml": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "residual_volume_percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "treatment_arm": {
             "type": [
               "null",
               "string"
@@ -6513,162 +5899,284 @@
           }
         }
       },
-      "Execution_QueryCancelRequest": {
+      "Execution_RandomizationResponse": {
         "required": [
-          "reason"
+          "randomization_id",
+          "subject_id",
+          "study_id",
+          "scheme_version",
+          "stratum_key",
+          "kit_number",
+          "status",
+          "randomized_at"
         ],
         "type": "object",
         "properties": {
-          "reason": {
+          "randomization_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subject_id": {
+            "$ref": "#/components/schemas/Execution_SubjectCode"
+          },
+          "study_id": {
+            "$ref": "#/components/schemas/Execution_StudyCode"
+          },
+          "scheme_version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "stratum_key": {
             "type": "string"
+          },
+          "kit_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "randomized_at": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
-      "Execution_QueryCreateRequest": {
+      "Execution_RandomizationSchemeDraftRequest": {
         "required": [
           "study_id",
-          "subject_id",
-          "test_code",
-          "explanation"
+          "method",
+          "arms",
+          "stratification_factors",
+          "block_sizes",
+          "slots_per_stratum",
+          "preferred_arm_probability",
+          "requires_kit"
         ],
         "type": "object",
         "properties": {
           "study_id": {
+            "$ref": "#/components/schemas/Execution_StudyCode"
+          },
+          "method": {
             "type": "string"
           },
-          "subject_id": {
-            "type": "string"
+          "arms": {
+            "type": "object",
+            "additionalProperties": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
           },
-          "test_code": {
-            "type": "string"
+          "stratification_factors": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           },
-          "explanation": {
+          "block_sizes": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "slots_per_stratum": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "preferred_arm_probability": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "requires_kit": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Execution_RandomizationSchemeResponse": {
+        "required": [
+          "id",
+          "study_id",
+          "version",
+          "method",
+          "status",
+          "arms",
+          "stratification_factors",
+          "block_sizes",
+          "slots_per_stratum",
+          "preferred_arm_probability",
+          "requires_kit",
+          "list_size",
+          "configuration_hash",
+          "drafted_by",
+          "drafted_at",
+          "approved_by",
+          "approved_at",
+          "retired_at"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "study_id": {
+            "$ref": "#/components/schemas/Execution_StudyCode"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "method": {
             "type": "string"
           },
           "status": {
+            "type": "string"
+          },
+          "arms": {
+            "type": "object",
+            "additionalProperties": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "stratification_factors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "block_sizes": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "slots_per_stratum": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "preferred_arm_probability": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "requires_kit": {
+            "type": "boolean"
+          },
+          "list_size": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "configuration_hash": {
+            "type": "string"
+          },
+          "drafted_by": {
+            "type": "string"
+          },
+          "drafted_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "approved_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "approved_at": {
             "type": [
               "null",
               "string"
             ],
-            "default": "OPEN"
+            "format": "date-time"
           },
-          "site_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "visit_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "domain": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "observation_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "field_link": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "message": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "origin": {
+          "retired_at": {
             "type": [
               "null",
               "string"
             ],
-            "default": "MANUAL"
-          },
-          "priority": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "default": "MEDIUM"
-          },
-          "rule_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "form_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "field_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "query_type": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "action_required": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "format": "date-time"
           }
         }
       },
-      "Execution_QueryReopenRequest": {
+      "Execution_RandomizeSubjectRequest": {
         "required": [
-          "reason"
+          "stratification_factors"
         ],
         "type": "object",
         "properties": {
-          "reason": {
-            "type": "string"
+          "stratification_factors": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         }
-      },
-      "Execution_QueryRespondRequest": {
-        "required": [
-          "response"
-        ],
-        "type": "object",
-        "properties": {
-          "response": {
-            "type": "string"
-          }
-        }
-      },
-      "Execution_QueryStatus": {
-        "enum": [
-          "NONE",
-          "CANDIDATE",
-          "DRAFT_AI",
-          "OPEN",
-          "ANSWERED",
-          "RESOLVED",
-          "CLOSED",
-          "REOPENED",
-          "CANCELLED"
-        ],
-        "type": "string"
       },
       "Execution_SeedInventoryRequest": {
         "required": [
@@ -6687,7 +6195,7 @@
           "kits": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Execution_IpKitInventoryResponse"
+              "$ref": "#/components/schemas/Execution_IpKitSeedItem"
             }
           }
         }
@@ -6783,7 +6291,6 @@
           "id",
           "review_status",
           "action_taken",
-          "query_id",
           "message",
           "timestamp"
         ],
@@ -6797,12 +6304,6 @@
           },
           "action_taken": {
             "type": "string"
-          },
-          "query_id": {
-            "type": [
-              "null",
-              "string"
-            ]
           },
           "message": {
             "type": "string"
@@ -6821,7 +6322,6 @@
           "subject_id",
           "visit_id",
           "observation_id",
-          "query_id",
           "test_code",
           "test_name",
           "lab_value",
@@ -6865,12 +6365,6 @@
             ]
           },
           "observation_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "query_id": {
             "type": [
               "null",
               "string"
@@ -7073,7 +6567,6 @@
           "subject_id",
           "study_id",
           "site_id",
-          "arm_id",
           "demographics"
         ],
         "type": "object",
@@ -7085,12 +6578,6 @@
             "type": "string"
           },
           "site_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "arm_id": {
             "type": [
               "null",
               "string"
@@ -7234,7 +6721,6 @@
           "subject_id",
           "study_id",
           "site_id",
-          "treatment_group",
           "status",
           "active_protocol_version",
           "encrypted_demographics"
@@ -7258,12 +6744,6 @@
               {
                 "$ref": "#/components/schemas/Execution_SiteCode"
               }
-            ]
-          },
-          "treatment_group": {
-            "type": [
-              "null",
-              "string"
             ]
           },
           "status": {
@@ -7462,7 +6942,7 @@
       "name": "Subjects"
     },
     {
-      "name": "Queries"
+      "name": "Randomization"
     },
     {
       "name": "Laboratory Governance \u0026 Ingestion"

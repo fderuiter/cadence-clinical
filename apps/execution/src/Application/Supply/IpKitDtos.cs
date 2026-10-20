@@ -88,3 +88,17 @@ public record IpKitInventoryResponse(
     [property: JsonPropertyName("residual_volume_ml")] double? ResidualVolumeMl = null,
     [property: JsonPropertyName("residual_volume_percentage")] double? ResidualVolumePercentage = null
 );
+
+/// <summary>
+/// One kit to register at a site. <see cref="TreatmentArm"/> labels the kit for randomisation (#5607): it is stored
+/// only encrypted under the randomisation key and is never returned; a kit without it cannot be assigned.
+/// </summary>
+public record IpKitSeedItem(
+    [property: JsonPropertyName("kit_number")] string KitNumber,
+    [property: JsonPropertyName("lot_number")] string LotNumber,
+    [property: JsonPropertyName("expiration_date")] DateTimeOffset ExpirationDate,
+    [property: JsonPropertyName("status")] string? Status = null,
+    [property: JsonPropertyName("residual_volume_ml")] double? ResidualVolumeMl = null,
+    [property: JsonPropertyName("residual_volume_percentage")] double? ResidualVolumePercentage = null,
+    [property: JsonPropertyName("treatment_arm")] string? TreatmentArm = null
+);

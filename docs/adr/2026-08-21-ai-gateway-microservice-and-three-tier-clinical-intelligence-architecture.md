@@ -1,7 +1,9 @@
 # ADR-2191: AI Gateway Microservice and Three-Tier Clinical Intelligence Architecture
 
 > [!NOTE]
-> Partly superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md): the AI gateway runs as an in-process module in the composition host instead of a microservice (#5374). The feature decisions below stand.
+> Partly superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md): the AI gateway runs as an in-process module in the composition host instead of a microservice (#5374). The feature decisions below stand, except
+> where [ADR-2630](2026-10-20-ai-agents-act-through-proposals-in-one-governed-runtime.md) replaces them: the gateway's
+> hosting and its `DRAFT_AI` record state give way to the Intelligence module and kernel Proposals.
 
 - **Status:** Accepted
 - **Date:** 2026-08-21

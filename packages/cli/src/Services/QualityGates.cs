@@ -139,7 +139,7 @@ public static class QualityGates
         new("doc-index", ["validate-doc-index"], "Every Markdown document under `docs/` is listed in `docs/DOCUMENTATION_INDEX.md`",
             ctx => DocIndexSyncService.SyncDocIndex(check: true, repoRoot: ctx.RepoRoot) == 0),
         new("rtm", ["gxp-rtm-validate"],
-            "Requirement tags name known requirements and sit on test methods, and the generated documents match their integrity stamps",
+            "Requirement tags name known requirements and sit on test methods, and the generated documents match their integrity stamps and are not drafts",
             ctx => GxpRtmValidatorService.ValidateGxpRtm(ctx.RepoRoot)),
         new("gxp-snapshot", ["gxp-snapshot-guard"],
             "The branch does not change the generated RTM, IQ/OQ/PQ report or `docs/SDLC/runs/` unless `CADENCE_GXP_SNAPSHOT=1` (ADR-2532)",

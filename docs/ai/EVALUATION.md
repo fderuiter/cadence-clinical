@@ -175,8 +175,9 @@ limits on mean latency and cost. Two floors apply whatever it declares:
 - no case fails grounding or citations.
 
 The harness refuses any provider but the deterministic fake unless the request sets `AllowRealProvider`. CI never
-calls a model. The on-demand run against a real provider (`CADENCE_AI_EVAL_PROVIDER`) arrives with the model port
-(#5374); until then the harness runs on scripted and fake targets only.
+calls a model. There is no on-demand runner yet: the model port exists (#5374), but a run against a real provider
+waits on the inference layer (#5550), and nothing reads `CADENCE_AI_EVAL_PROVIDER` today. Until then the harness runs
+on scripted and fake targets only.
 
 ## Production signals
 
