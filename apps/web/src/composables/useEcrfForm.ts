@@ -5,9 +5,13 @@ import {
   formErrorCode,
   formFieldErrors,
   REVISION_STALE,
+  SIGNATURE_MEANING_INVALID,
+  TARGET_CONTENT_CHANGED,
+  TARGET_NOT_SIGNABLE,
   type EcrfForm,
   type EcrfFormItem,
   type EcrfFormValue,
+  type EcrfSignatureMeaning,
   type OpenEcrfForm,
 } from "../api/ecrfFormsApi";
 import {
@@ -27,6 +31,22 @@ export type EcrfSaveOutcome =
   | { kind: "locked"; message: string }
   | { kind: "failed"; message: string };
 
+/** What the screen tells the user after signing the form. */
+export type EcrfSignOutcome =
+  | { kind: "signed"; meaning: EcrfSignatureMeaning }
+  | { kind: "changed"; message: string }
+  | { kind: "denied"; message: string }
+  | { kind: "invalid"; message: string }
+  | { kind: "failed"; message: string };
+
+/** The message a 409 signature answers with: the form changed after it was read, so nothing was signed. */
+export const FORM_CHANGED_MESSAGE =
+  "This form changed after you opened it, so it was not signed. Reload the form to see the current values, then sign again.";
+
+/** The message a 403 signature answers with. */
+export const SIGN_DENIED_MESSAGE =
+  "You are not authorised to sign this form (collection.sign); it was not signed.";
+
 /** One item's unsaved entry: typed text, or a reason the value is missing. */
 export interface EcrfEntry {
   text: string;
@@ -42,7 +62,7 @@ function newKey(): string {
 }
 
 /**
- * One eCRF form instance (ADR-2622): open or reuse it, read it, and save a page of values.
+ * One eCRF form instance (ADR-2622): open or reuse it, read it, save a page of values, and sign it (#5463).
  *
  * Unsaved entries live only here, against the revisions the form was loaded at; nothing is shown as saved until the
  * kernel answers. A save sends each edited item with the revision it was edited from (0 for an item without a value),
@@ -63,6 +83,13 @@ export function useEcrfForm() {
   let pendingOpen: { request: string; formId: string; key: string } | null =
     null;
   let pendingSave: { request: string; key: string } | null = null;
+  const signing = ref(false);
+  const signOutcome = ref<EcrfSignOutcome | null>(null);
+  let pendingSign: {
+    request: string;
+    signatureId: string;
+    key: string;
+  } | null = null;
 
   const items = computed<EcrfFormItem[]>(() => form.value?.items ?? []);
   const locked = computed(() => (form.value?.locks.length ?? 0) > 0);
@@ -111,6 +138,15 @@ export function useEcrfForm() {
   const editedItems = computed(() => items.value.filter(isEdited));
   const dirty = computed(() => editedItems.value.length > 0);
 
+  /** A form can be signed as read: it has values (a content hash) and no unsaved entries. */
+  const canSign = computed(
+    () =>
+      !!form.value?.content_hash &&
+      !dirty.value &&
+      !saving.value &&
+      !signing.value
+  );
+
   async function load(formId: string): Promise<void> {
     loading.value = true;
     loadError.value = null;
@@ -129,7 +165,9 @@ export function useEcrfForm() {
   async function reload(): Promise<void> {
     if (!form.value) return;
     outcome.value = null;
+    signOutcome.value = null;
     pendingSave = null;
+    pendingSign = null;
     await load(form.value.form_id);
   }
 
@@ -257,11 +295,84 @@ export function useEcrfForm() {
     }
   }
 
+  /**
+   * Signs the form's values as they were read, with a gateway step-up token, then reads the form again.
+   *
+   * The signature binds the form's `content_hash`: if anyone saved a value since the form was read the kernel refuses
+   * it (409) and nothing is signed. A token the gateway refused (401) or a request that never reached the kernel is
+   * thrown, so the signature dialog can ask for the credentials again; every other answer is the returned outcome.
+   */
+  async function sign(
+    meaning: EcrfSignatureMeaning,
+    sigToken: string,
+    reason: string
+  ): Promise<EcrfSignOutcome | null> {
+    const current = form.value;
+    const contentHash = current?.content_hash;
+    if (!current || !contentHash || signing.value || dirty.value) return null;
+    signOutcome.value = null;
+
+    const sent = JSON.stringify({
+      form: current.form_id,
+      meaning,
+      contentHash,
+      reason,
+    });
+    if (pendingSign?.request !== sent) {
+      pendingSign = { request: sent, signatureId: newKey(), key: newKey() };
+    }
+    signing.value = true;
+    try {
+      await ecrfFormsApi.signForm(
+        current.form_id,
+        { meaning, contentHash, signatureId: pendingSign.signatureId },
+        sigToken,
+        reason,
+        pendingSign.key
+      );
+      pendingSign = null;
+      await load(current.form_id);
+      signOutcome.value = { kind: "signed", meaning };
+    } catch (error) {
+      const status = error instanceof ApiError ? error.status : null;
+      if (status !== null) pendingSign = null;
+      const code = formErrorCode(error);
+      if (status === null) throw error;
+      if (status === 401) {
+        throw new Error(`REAUTHENTICATION_REQUIRED: ${messageOf(error)}`, {
+          cause: error,
+        });
+      }
+      if (code === TARGET_NOT_SIGNABLE) {
+        signOutcome.value = {
+          kind: "invalid",
+          message: "This form has no values to sign; it was not signed.",
+        };
+      } else if (status === 409 || code === TARGET_CONTENT_CHANGED) {
+        signOutcome.value = { kind: "changed", message: FORM_CHANGED_MESSAGE };
+      } else if (status === 403) {
+        signOutcome.value = { kind: "denied", message: SIGN_DENIED_MESSAGE };
+      } else if (status === 422 || code === SIGNATURE_MEANING_INVALID) {
+        signOutcome.value = {
+          kind: "invalid",
+          message: `${messageOf(error)} The form was not signed.`,
+        };
+      } else {
+        signOutcome.value = { kind: "failed", message: messageOf(error) };
+      }
+    } finally {
+      signing.value = false;
+    }
+    return signOutcome.value;
+  }
+
   /** Closes the form on screen, discarding unsaved entries. */
   function close() {
     form.value = null;
     loadError.value = null;
     outcome.value = null;
+    signOutcome.value = null;
+    pendingSign = null;
     pendingSave = null;
     clearRecord(entries);
     clearRecord(itemErrors);
@@ -278,6 +389,9 @@ export function useEcrfForm() {
     openError,
     saving,
     outcome,
+    signing,
+    signOutcome,
+    canSign,
     locked,
     dirty,
     editedItems,
@@ -286,6 +400,7 @@ export function useEcrfForm() {
     reload,
     open,
     save,
+    sign,
     close,
   };
 }

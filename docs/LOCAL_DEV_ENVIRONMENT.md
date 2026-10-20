@@ -111,7 +111,7 @@ already run, so the core profile also works without Docker, for example in a clo
 PostgreSQL 18 cluster on port 5433, Keycloak from its release tarball with the `cadence` realm, and the core profile
 in tmux session `apphost` (`status` and `down` check and stop it). The kernel host provisions the `cadence-local`
 tenant the realm's users sign in to (ADR-2542) and seeds the demo study `CADENCE-101` with grants for them (ADR-2543):
-`crc.site101` sees `SITE-101` and its participants, and `SITE-102` stays masked. Keycloak imports the realm only when
+`crc.site101` sees `SITE-101` and its participants, `pi.site101` signs that site's forms, and `SITE-102` stays masked. Keycloak imports the realm only when
 it has none, so reset Keycloak's data once if it imported the realm before the users had fixed ids. Agents drive the running stack with
 [.claude/skills/run-cadence](../.claude/skills/run-cadence/SKILL.md).
 

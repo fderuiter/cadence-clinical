@@ -9351,6 +9351,174 @@
         ]
       }
     },
+    "/api/v1/execution/forms/{formId}/signatures": {
+      "post": {
+        "tags": [
+          "Execution forms"
+        ],
+        "summary": "Signs the form\u0027s current values with an X-Sig-Token step-up token (collection.sign); 409 when the form changed since it was read.",
+        "operationId": "ExecutionSignForm",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_SignFormRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_FormSignatureResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060, \u0060K.Trust.AuthenticationStale\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Trust.PersonRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Trust.TargetContentChanged\u0060, \u0060K.Trust.TargetNotSignable\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Collection.SignatureMeaningInvalid\u0060, \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Trust.MethodRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Trust.AuthenticationStale",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Trust.PersonRequired",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Trust.TargetContentChanged",
+            "status": 409
+          },
+          {
+            "code": "K.Trust.TargetNotSignable",
+            "status": 409
+          },
+          {
+            "code": "K.Collection.SignatureMeaningInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Trust.MethodRequired",
+            "status": 422
+          }
+        ]
+      }
+    },
     "/api/v1/knowledge/status": {
       "get": {
         "tags": [
@@ -20673,7 +20841,8 @@
           "items",
           "locks",
           "assertions",
-          "signatures"
+          "signatures",
+          "content_hash"
         ],
         "type": "object",
         "properties": {
@@ -20761,6 +20930,12 @@
             "items": {
               "$ref": "#/components/schemas/Kernel_FormSignatureResponse"
             }
+          },
+          "content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -20831,7 +21006,10 @@
           "meaning",
           "signed_by",
           "signed_at",
-          "reason"
+          "reason",
+          "content_hash",
+          "superseded",
+          "signed_values"
         ],
         "type": "object",
         "properties": {
@@ -20851,6 +21029,50 @@
           },
           "reason": {
             "type": "string"
+          },
+          "content_hash": {
+            "type": "string"
+          },
+          "superseded": {
+            "type": "boolean"
+          },
+          "signed_values": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Kernel_FormSignedValueResponse"
+            }
+          }
+        }
+      },
+      "Kernel_FormSignedValueResponse": {
+        "required": [
+          "item_id",
+          "observation_id",
+          "revision",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string"
+          },
+          "observation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "value": {
+            "$ref": "#/components/schemas/Kernel_ObservationValue"
           }
         }
       },
@@ -23504,6 +23726,29 @@
                 "$ref": "#/components/schemas/Kernel_PlannedVisit"
               }
             ]
+          }
+        }
+      },
+      "Kernel_SignFormRequest": {
+        "required": [
+          "meaning",
+          "content_hash",
+          "signature_id"
+        ],
+        "type": "object",
+        "properties": {
+          "meaning": {
+            "type": "string"
+          },
+          "content_hash": {
+            "type": "string"
+          },
+          "signature_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },

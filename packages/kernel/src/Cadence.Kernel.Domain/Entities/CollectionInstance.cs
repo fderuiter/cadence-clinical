@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 using Cadence.Core.Domain;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Time;
 
 namespace Cadence.Kernel.Domain.Entities;
@@ -24,6 +27,9 @@ public class CollectionInstance : AggregateRoot<CollectionInstanceId>
 {
     /// <summary>The longest protocol element id (a CollectionSpec, item or planned activity id) the kernel stores.</summary>
     public const int ElementIdMaxLength = 128;
+
+    // Values hash in the shape the API and events give them (ADR-2623), so an auditor can recompute a signed hash.
+    private static readonly JsonSerializerOptions ValueJson = new(JsonSerializerDefaults.Web);
 
     private readonly List<CollectionInstanceMember> _members = [];
 
@@ -131,6 +137,29 @@ public class CollectionInstance : AggregateRoot<CollectionInstanceId>
         _members.Add(new CollectionInstanceMember(this, itemId, observation, KernelTimestamps.ToStoredPrecision(joinedAt)));
     }
 
+    /// <summary>
+    /// The content hash a form signature binds to (spec §9.5, 21 CFR 11.70, #5463): the kernel content hash of
+    /// <c>{"values": [{"observation_id", "revision", "value"}, …]}</c>, one entry per member ordered by observation id. A
+    /// correction is a new revision, so it changes the hash, and a signature given before it no longer matches the form
+    /// while still naming the revisions it signed.
+    /// </summary>
+    public static string ContentHashOf(IEnumerable<CollectionContentEntry> values)
+    {
+        ArgumentNullException.ThrowIfNull(values);
+        var entries = new JsonArray();
+        foreach (var value in values.OrderBy(v => v.ObservationId.ToString(), StringComparer.Ordinal))
+        {
+            entries.Add(new JsonObject
+            {
+                ["observation_id"] = value.ObservationId.ToString(),
+                ["revision"] = value.Revision,
+                ["value"] = JsonSerializer.SerializeToNode(value.Value, ValueJson),
+            });
+        }
+
+        return Trust.ContentHash.Compute(new JsonObject { ["values"] = entries }.ToJsonString());
+    }
+
     /// <summary>Records that a save committed at <paramref name="savedAt"/>.</summary>
     public void Saved(DateTimeOffset savedAt)
     {
@@ -170,3 +199,6 @@ public class CollectionInstanceMember
 
     public DateTimeOffset JoinedAt { get; private set; }
 }
+
+/// <summary>One value as a form signature hashes it: the observation, the revision signed and that revision's value.</summary>
+public sealed record CollectionContentEntry(ObservationId ObservationId, int Revision, ObservationValue Value);

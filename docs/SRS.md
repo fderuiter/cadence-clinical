@@ -536,10 +536,10 @@ stateDiagram-v2
 #### SRS-PRD-EDC-003: 21 CFR Part 11 Electronic Signature Manifestation
 
 - **Parent PRD:** `PRD-EDC-003`
-- **Statement:** When an investigator signs an eCRF form, the system shall validate the 60-second step-up token, generate a persistent `SignatureManifestation` embedding signer name, UTC timestamp, and statement of intent, and transition form status to `SIGNED`.
+- **Statement:** When an investigator signs an eCRF form, the system shall verify and spend a single-use step-up token (60 seconds, bound to that form and to `execution.form.sign`) and record a kernel `Attestation` that names the signer, the UTC time, the meaning (Approved or Responsibility), the reason and the content hash of the exact value revisions signed, only while that hash is still the form's content (#5463, ADR-2622).
 - **Regulatory Basis:** 21 CFR Part 11 § 11.50, § 11.70.
 - **Verification Method & Qualification:** Test (T) [OQ].
-- **Verification Criteria:** Post-signature edits invalidate the signature manifest and transition form status back to `MODIFIED_POST_SIGNATURE`.
+- **Verification Criteria:** A later correction never alters the signature: the form shows it as superseded beside the corrected values, with the revisions it signed, and a signature against a stale hash is refused (409). A missing, expired, replayed or foreign token is refused (401).
 
 ---
 

@@ -210,6 +210,27 @@
       }
     },
     {
+      "id": "cf64a3b4-33cc-4925-8452-75e29ca9526e",
+      "username": "pi.site101",
+      "enabled": true,
+      "email": "pi.site101@example.com",
+      "firstName": "Principal",
+      "lastName": "Investigator",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["Site Investigator"],
+      "attributes": {
+        "tenant_id": ["cadence-local"],
+        "study_ids": ["*"],
+        "site_id": ["SITE-101"]
+      }
+    },
+    {
       "id": "ee2cfdb6-d893-4fb4-a10f-d50830b6728a",
       "username": "cra.monitor",
       "enabled": true,

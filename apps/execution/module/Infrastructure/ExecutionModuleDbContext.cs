@@ -1,5 +1,6 @@
 using System;
 
+using Cadence.Database.Signatures;
 using Cadence.Kernel;
 using Cadence.Kernel.Modules;
 using Cadence.Modules.Execution.Domain;
@@ -42,6 +43,10 @@ public sealed class ExecutionModuleDbContext(DbContextOptions<ExecutionModuleDbC
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
         modelBuilder.HasDefaultSchema(Schema);
+
+        // Used e-signature step-up tokens (ADR-2515): not tenant data, so no Row-Level Security; read and written only by
+        // ExecutionSignatureTokenDbContext.
+        modelBuilder.ApplyConfiguration(new ConsumedSignatureTokenConfiguration());
         modelBuilder.Entity<FormInstance>(form =>
         {
             form.ToTable(FormInstancesTable);
