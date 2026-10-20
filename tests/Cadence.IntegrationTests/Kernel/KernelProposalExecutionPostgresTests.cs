@@ -71,6 +71,7 @@ public sealed class KernelProposalExecutionPostgresTests : IClassFixture<KernelP
     /// </summary>
     [Fact(DisplayName = "ProposalExecution_ApproverExecutes_LinksProposalApprovalActivityAndEvents")]
     [GxPRequirement("PRD-SYS-051")]
+    [KernelRule("K-AI-2")]
     public async Task ProposalExecutionApproverExecutesLinksProposalApprovalActivityAndEvents()
     {
         _fixture.SkipIfUnavailable();
@@ -120,6 +121,7 @@ public sealed class KernelProposalExecutionPostgresTests : IClassFixture<KernelP
     /// </summary>
     [Fact(DisplayName = "ProposalExecution_RefusesEveryUnlinkedExecution")]
     [GxPRequirement("PRD-SYS-051")]
+    [KernelRule("K-AI-2")]
     public async Task ProposalExecutionRefusesEveryUnlinkedExecution()
     {
         _fixture.SkipIfUnavailable();
@@ -172,6 +174,7 @@ public sealed class KernelProposalExecutionPostgresTests : IClassFixture<KernelP
     /// </summary>
     [Fact(DisplayName = "Agent_ReadsAndProposes_OnlyWithinTheRequestingPersonsScope")]
     [GxPRequirement("PRD-SYS-051")]
+    [KernelRule("K-AI-6")]
     public async Task AgentReadsAndProposesOnlyWithinTheRequestingPersonsScope()
     {
         _fixture.SkipIfUnavailable();
