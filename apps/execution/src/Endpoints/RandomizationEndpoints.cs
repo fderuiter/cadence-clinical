@@ -77,7 +77,7 @@ public static class RandomizationEndpoints
     {
         var result = await svc.DraftSchemeAsync(request, ct).ConfigureAwait(false);
         return result.Match(
-            onSuccess: r => Results.Created($"/api/v1/execution/randomization/schemes?study_id={Uri.EscapeDataString(r.StudyId)}", r),
+            onSuccess: r => Results.Created($"/api/v1/execution/randomization/schemes?study_id={Uri.EscapeDataString(r.StudyId.Value)}", r),
             onFailure: e => e.ToProblemResult());
     }
 

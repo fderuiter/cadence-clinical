@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 
 using Cadence.Apps.Execution.Domain.Randomization;
+using Cadence.Apps.Execution.Domain.Subjects;
 
 using FluentValidation;
 
@@ -13,7 +14,7 @@ namespace Cadence.Apps.Execution.Application.Randomization;
 /// @req:PRD-SUB-001
 /// </summary>
 public sealed record RandomizationSchemeDraftRequest(
-    string StudyId,
+    StudyCode StudyId,
     string Method,
     Dictionary<string, int> Arms,
     Dictionary<string, List<string>>? StratificationFactors,
@@ -27,7 +28,7 @@ public sealed class RandomizationSchemeDraftRequestValidator : AbstractValidator
 {
     public RandomizationSchemeDraftRequestValidator()
     {
-        RuleFor(x => x.StudyId).NotEmpty().MaximumLength(255);
+        RuleFor(x => x.StudyId.Value).NotEmpty().WithName("study_id");
         RuleFor(x => x.Method).Must(m => RandomizationMethodCodec.TryParse(m, out _))
             .WithMessage("method must be 'permuted_block' or 'minimization'.");
         RuleFor(x => x.Arms).NotNull();
@@ -47,7 +48,7 @@ public sealed record RandomizeSubjectRequest(Dictionary<string, string>? Stratif
 /// </summary>
 public sealed record RandomizationSchemeResponse(
     Guid Id,
-    string StudyId,
+    StudyCode StudyId,
     int Version,
     string Method,
     string Status,
@@ -68,7 +69,7 @@ public sealed record RandomizationSchemeResponse(
     public static RandomizationSchemeResponse From(RandomizationScheme scheme)
     {
         ArgumentNullException.ThrowIfNull(scheme);
-        return new(scheme.Id, scheme.StudyCode.Value, scheme.Version, RandomizationMethodCodec.ToCode(scheme.Method),
+        return new(scheme.Id, scheme.StudyCode, scheme.Version, RandomizationMethodCodec.ToCode(scheme.Method),
             scheme.Status.ToString().ToUpperInvariant(), scheme.Arms(), scheme.StratificationFactors(), scheme.BlockSizes(),
             scheme.SlotsPerStratum, scheme.PreferredArmProbability, scheme.RequiresKit, scheme.ListSize, scheme.ConfigurationHash,
             scheme.DraftedBy, scheme.DraftedAt, scheme.ApprovedBy, scheme.ApprovedAt, scheme.RetiredAt);
@@ -82,8 +83,8 @@ public sealed record RandomizationSchemeResponse(
 /// </summary>
 public sealed record RandomizationResponse(
     Guid RandomizationId,
-    string SubjectId,
-    string StudyId,
+    SubjectCode SubjectId,
+    StudyCode StudyId,
     int SchemeVersion,
     string StratumKey,
     string? KitNumber,

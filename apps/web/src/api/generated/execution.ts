@@ -1996,8 +1996,8 @@ export interface components {
     Execution_RandomizationResponse: {
       /** Format: uuid */
       randomization_id: string;
-      subject_id: string;
-      study_id: string;
+      subject_id: components["schemas"]["Execution_SubjectCode"];
+      study_id: components["schemas"]["Execution_StudyCode"];
       /** Format: int32 */
       scheme_version: number | string;
       stratum_key: string;
@@ -2007,7 +2007,7 @@ export interface components {
       randomized_at: string;
     };
     Execution_RandomizationSchemeDraftRequest: {
-      study_id: string;
+      study_id: components["schemas"]["Execution_StudyCode"];
       method: string;
       arms: {
         [key: string]: number | string;
@@ -2025,7 +2025,7 @@ export interface components {
     Execution_RandomizationSchemeResponse: {
       /** Format: uuid */
       id: string;
-      study_id: string;
+      study_id: components["schemas"]["Execution_StudyCode"];
       /** Format: int32 */
       version: number | string;
       method: string;

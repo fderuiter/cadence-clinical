@@ -16607,10 +16607,10 @@
             "format": "uuid"
           },
           "subject_id": {
-            "type": "string"
+            "$ref": "#/components/schemas/Execution_SubjectCode"
           },
           "study_id": {
-            "type": "string"
+            "$ref": "#/components/schemas/Execution_StudyCode"
           },
           "scheme_version": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -16652,7 +16652,7 @@
         "type": "object",
         "properties": {
           "study_id": {
-            "type": "string"
+            "$ref": "#/components/schemas/Execution_StudyCode"
           },
           "method": {
             "type": "string"
@@ -16745,7 +16745,7 @@
             "format": "uuid"
           },
           "study_id": {
-            "type": "string"
+            "$ref": "#/components/schemas/Execution_StudyCode"
           },
           "version": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",

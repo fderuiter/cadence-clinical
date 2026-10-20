@@ -46,16 +46,7 @@ public sealed class RandomizationApplicationService(
             return RandomizationErrors.InvalidScheme("method must be 'permuted_block' or 'minimization'.");
         }
 
-        StudyCode studyCode;
-        try
-        {
-            studyCode = new StudyCode(request.StudyId);
-        }
-        catch (ArgumentException ex)
-        {
-            return DomainError.Validation("INVALID_STUDY_CODE", ex.Message);
-        }
-
+        StudyCode studyCode = request.StudyId;
         string reason = auditContext.ChangeReason;
         var drafted = await randomization.ExecuteInTransactionAsync(async token =>
         {
@@ -279,7 +270,7 @@ public sealed class RandomizationApplicationService(
             }
 
             await randomization.SaveChangesAsync(token).ConfigureAwait(false);
-            return new RandomizationResponse(allocationId, subject.SubjectCode.Value, studyCode.Value, scheme.Version,
+            return new RandomizationResponse(allocationId, subject.SubjectCode, studyCode, scheme.Version,
                 stratum.Value!, kit?.KitNumber, SubjectStateCodec.ToCode(subject.Status), now);
         }, ct).ConfigureAwait(false);
     }

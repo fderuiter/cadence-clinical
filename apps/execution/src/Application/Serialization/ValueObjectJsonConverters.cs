@@ -63,9 +63,20 @@ public sealed class StudyCodeJsonConverter : JsonConverter<StudyCode>
     public override StudyCode Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         string? raw = reader.GetString();
-        return raw is null
-            ? throw new JsonException("Expected a non-null JSON string for StudyCode.")
-            : new StudyCode(raw);
+        if (raw is null)
+        {
+            throw new JsonException("Expected a non-null JSON string for StudyCode.");
+        }
+
+        try
+        {
+            return new StudyCode(raw);
+        }
+        catch (ArgumentException ex)
+        {
+            // An invalid code in a request body is a 400, not a server error.
+            throw new JsonException(ex.Message, ex);
+        }
     }
 
     public override void Write(Utf8JsonWriter writer, StudyCode value, JsonSerializerOptions options) =>
