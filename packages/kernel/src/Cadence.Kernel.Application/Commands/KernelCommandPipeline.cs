@@ -261,6 +261,7 @@ public static class KernelApplicationServiceCollectionExtensions
         services.AddKernelEvidenceHandlers();
         services.AddKernelObservationHandlers();
         services.AddKernelAssertionHandlers();
+        services.AddKernelCollectionHandlers();
         services.AddKernelAuthorityHandlers();
         services.AddKernelWorkQueueHandlers();
         services.AddKernelEffectivityHandlers();

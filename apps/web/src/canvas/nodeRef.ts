@@ -22,6 +22,7 @@ export const NODE_KINDS = [
   "protocol_version",
   "observation",
   "assertion",
+  "collection_instance",
   "attestation",
   "artifact",
   "artifact_version",

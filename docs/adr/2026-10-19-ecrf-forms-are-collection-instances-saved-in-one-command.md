@@ -133,8 +133,8 @@ The spec amendment lands with this ADR. The code is tracked under #5365, one pul
 1. [x] Amend the kernel spec §5.1 (K-TX-1), §8.1 (new K-FACT-6, `CollectionInstance`), §9.5 (form signatures and
        re-signing), §10.2 (where checks run) and §10.5 (form scope key); record K035 in §17, ARCHITECTURE.md and the
        ADR index; add Collection Instance to CONTEXT.md.
-2. [ ] #5363 typed values; #4729 Assertions and scoped locks.
-3. [ ] #5459 `CollectionInstance` and `RecordCollectedValues`, with PostgreSQL tests for atomicity, per-value 409,
+2. [x] #5363 typed values; #4729 Assertions and scoped locks.
+3. [x] #5459 `CollectionInstance` and `RecordCollectedValues`, with PostgreSQL tests for atomicity, per-value 409,
        lock races at each scope and replay.
 4. [ ] #5460 Execution as a module over the kernel; #5368 edit checks; #5461 queries; #5465 SDV; #5463 signatures;
        #5466 locks; #5369 and #5469 the web screen.
