@@ -57,7 +57,7 @@
     "@vitest/coverage-v8": "^5.0.2",
     "axe-core": "^4.14.0",
     "concurrently": "^10.0.6",
-    "eslint": "^10.11.0",
+    "eslint": "^10.13.0",
     "eslint-plugin-vue": "^10.10.0",
     "eslint-plugin-vuejs-accessibility": "^2.6.2",
     "mermaid": "^11.17.2",
