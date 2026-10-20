@@ -4163,7 +4163,11 @@
         "required": [
           "status",
           "approved_submission_ids",
-          "skipped_submission_ids"
+          "skipped_submission_ids",
+          "study_id",
+          "signed_forms_count",
+          "signed_at",
+          "signatures"
         ],
         "type": "object",
         "properties": {
@@ -4182,23 +4186,8 @@
               "type": "string"
             }
           },
-          "signature_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
           "study_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "subject_id": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": "string"
           },
           "signed_forms_count": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -4206,26 +4195,32 @@
               "integer",
               "string"
             ],
-            "format": "int32",
-            "default": 0
+            "format": "int32"
           },
-          "content_digest": {
-            "type": [
-              "null",
-              "string"
-            ]
+          "signed_at": {
+            "type": "string",
+            "format": "date-time"
           },
-          "timestamp_utc": {
-            "type": [
-              "null",
-              "string"
-            ]
+          "signatures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution_BatchSignOffSignature"
+            }
+          }
+        }
+      },
+      "Execution_BatchSignOffSignature": {
+        "required": [
+          "form_submission_id",
+          "payload_hash"
+        ],
+        "type": "object",
+        "properties": {
+          "form_submission_id": {
+            "type": "string"
           },
-          "audit_tx": {
-            "type": [
-              "null",
-              "string"
-            ]
+          "payload_hash": {
+            "type": "string"
           }
         }
       },

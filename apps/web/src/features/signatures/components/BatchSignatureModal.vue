@@ -98,20 +98,21 @@
               color: #14532d;
             "
           >
-            <div>
-              <strong>Cert Serial:</strong>
-              {{ lastSignatureResult.signature_id }}
+            <div class="signed-count">
+              <strong>Signed forms:</strong>
+              {{ lastSignatureResult.signed_forms_count ?? 0 }}
             </div>
             <div>
-              <strong>Timestamp UTC:</strong>
-              {{ lastSignatureResult.timestamp_utc }}
+              <strong>Signed at (UTC):</strong>
+              {{ lastSignatureResult.signed_at }}
             </div>
-            <div>
-              <strong>Content Digest:</strong>
-              {{ lastSignatureResult.content_digest }}
-            </div>
-            <div>
-              <strong>Audit TX:</strong> {{ lastSignatureResult.audit_tx }}
+            <div
+              v-for="sig in lastSignatureResult.signatures || []"
+              :key="sig.form_submission_id"
+              class="stored-signature"
+            >
+              <strong>Form {{ sig.form_submission_id }}:</strong>
+              {{ sig.payload_hash }}
             </div>
           </div>
           <div style="margin-top: 12px; text-align: right">

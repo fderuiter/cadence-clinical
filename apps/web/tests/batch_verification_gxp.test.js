@@ -112,8 +112,9 @@ describe("Batch Source Data Verification and GxP Compliance Flow Tests", () => {
     });
     vi.mocked(soaClient.batchSignOff).mockResolvedValue({
       status: "SUCCESS",
-      signature_id: "sig-9999",
-      timestamp_utc: "2026-08-03T10:00:00Z",
+      signed_forms_count: 2,
+      signed_at: "2026-08-03T10:00:00Z",
+      signatures: [],
     });
 
     // Select vital signs fields for verification
