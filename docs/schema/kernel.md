@@ -17,6 +17,8 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.code_system_entries`](#kernelcode_system_entries) | `CodeSystemEntry` | 9 |
 | [`kernel.code_system_versions`](#kernelcode_system_versions) | `CodeSystemVersion` | 15 |
 | [`kernel.code_systems`](#kernelcode_systems) | `CodeSystem` | 10 |
+| [`kernel.collection_instance_members`](#kernelcollection_instance_members) | `CollectionInstanceMember` | 6 |
+| [`kernel.collection_instances`](#kernelcollection_instances) | `CollectionInstance` | 18 |
 | [`kernel.concept_mappings`](#kernelconcept_mappings) | `ConceptMapping` | 13 |
 | [`kernel.concept_revisions`](#kernelconcept_revisions) | `ConceptRevision` | 6 |
 | [`kernel.concepts`](#kernelconcepts) | `Concept` | 13 |
@@ -366,6 +368,68 @@ Indexes:
 
 - `AK_code_systems_tenant_id_id`: unique constraint (`tenant_id`, `id`)
 - `IX_code_systems_tenant_id_uri`: unique (`tenant_id`, `uri`)
+
+## kernel.collection_instance_members
+
+Entity: `CollectionInstanceMember`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `collection_instance_id` | `uuid` | no |  |  |
+| `item_id` | `character varying(128)` | no |  |  |
+| `joined_at` | `timestamp with time zone` | no |  |  |
+| `observation_id` | `uuid` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Foreign keys:
+
+- `FK_collection_instance_members_collection_instances_tenant_id_~`: (`tenant_id`, `collection_instance_id`) references `kernel.collection_instances` (`tenant_id`, `id`), on delete restrict
+- `FK_collection_instance_members_observations_tenant_id_observat~`: (`tenant_id`, `observation_id`) references `kernel.observations` (`tenant_id`, `id`), on delete restrict
+
+Indexes:
+
+- `IX_collection_instance_members_tenant_id_collection_instance_i~`: unique (`tenant_id`, `collection_instance_id`, `item_id`)
+- `IX_collection_instance_members_tenant_id_observation_id`: unique (`tenant_id`, `observation_id`)
+
+## kernel.collection_instances
+
+Entity: `CollectionInstance`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `collected_at` | `timestamp with time zone` | no |  |  |
+| `collection_spec_id` | `character varying(128)` | no |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `enrollment_id` | `uuid` | no |  |  |
+| `last_saved_at` | `timestamp with time zone` | no |  |  |
+| `opened_at` | `timestamp with time zone` | no |  |  |
+| `opened_by` | `character varying(255)` | no |  |  |
+| `participant_id` | `uuid` | no |  |  |
+| `planned_activity_id` | `character varying(128)` | yes |  |  |
+| `protocol_version_id` | `uuid` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `saves` | `integer` | no |  |  |
+| `study_id` | `uuid` | no |  |  |
+| `study_site_id` | `uuid` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_collection_instances_enrollments_tenant_id_enrollment_id_pa~`: (`tenant_id`, `enrollment_id`, `participant_id`, `study_site_id`) references `kernel.enrollments` (`tenant_id`, `id`, `participant_id`, `study_site_id`), on delete restrict
+- `FK_collection_instances_protocol_versions_tenant_id_protocol_v~`: (`tenant_id`, `protocol_version_id`) references `kernel.protocol_versions` (`tenant_id`, `id`), on delete restrict
+- `FK_collection_instances_study_sites_tenant_id_study_site_id_st~`: (`tenant_id`, `study_site_id`, `study_id`) references `kernel.study_sites` (`tenant_id`, `id`, `study_id`), on delete restrict
+- `FK_collection_instances_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_collection_instances_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_collection_instances_tenant_id_enrollment_id_participant_id~`: (`tenant_id`, `enrollment_id`, `participant_id`, `study_site_id`)
+- `IX_collection_instances_tenant_id_protocol_version_id`: (`tenant_id`, `protocol_version_id`)
+- `IX_collection_instances_tenant_id_study_site_id_study_id`: (`tenant_id`, `study_site_id`, `study_id`)
 
 ## kernel.concept_mappings
 

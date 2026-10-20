@@ -705,6 +705,14 @@ collection_spec_version, members)`: the kernel side of a form instance, naming w
   its members, each against the revision it was edited from, and a stale revision refuses the whole save (K-TX-1,
   ADR-2622).
 
+**Implemented** (ADR-2622, #5459): `CollectionInstance` (`kernel.collection_instances`, insert-only
+`collection_instance_members`) with `OpenCollectionInstance` and `RecordCollectedValues`. The governing protocol
+version is the highest-numbered one effective at the enrollment's study site at the collection time, recorded as a
+`GovernedBy` lineage input of the instance and of every observation version a save writes. The event is the design's
+planned activity id (null for an unscheduled or log form), and a save names CollectionSpec item ids rather than
+Concepts, so the Concept always comes from the governing item. Participant-level reconsent to an earlier version is not
+modelled yet.
+
 ### 8.2 Assertion
 
 A statement about a fact or another assertion by an actor with authority: `Verified(SDV)`, `Reviewed(SDR)`,
@@ -1095,8 +1103,8 @@ lock is `Locked` at Study scope; EDC form approval and read-only display are app
 write holds shared advisory locks on its covering scope keys and the lock command the exclusive one (§5.1), so either
 the write commits before the lock or the lock commits first and the write is refused (ADR-2621).
 
-**Implemented** (#4729): `ApplyLock` and `ReleaseLock` at study, study site, enrollment and observation scope; the
-form-instance scope arrives with `CollectionInstance` (#5459). The signer attests the lock statement (the assertion
+**Implemented** (#4729, #5459): `ApplyLock` and `ReleaseLock` at study, study site, enrollment, form-instance
+(`CollectionInstance`) and observation scope. The signer attests the lock statement (the assertion
 id, the kind and the scope, or the lock released) before the command records it. Both kinds deny recording and
 correcting; `Locked` also denies new assertions about the covered observations, while `Frozen` leaves review open.
 

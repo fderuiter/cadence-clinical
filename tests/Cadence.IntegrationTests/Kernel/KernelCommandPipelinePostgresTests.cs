@@ -392,6 +392,11 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
             await KernelAssertionPostgresTests.SeedAsync(fixture, ct);
         }
 
+        if (table == "collection_instance_members")
+        {
+            await KernelCollectionPostgresTests.SeedAsync(fixture, ct);
+        }
+
         if (table.StartsWith("validation_", StringComparison.Ordinal))
         {
             await ValidationFindingPostgresTests.SeedRunAsync(fixture, ct);

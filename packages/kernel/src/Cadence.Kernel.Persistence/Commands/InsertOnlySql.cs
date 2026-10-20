@@ -36,6 +36,9 @@ internal static class InsertOnlySql
         // Evidence: an assertion is never changed or removed; a later one retracts it, and a lock's release is one (ADR-2621).
         "assertions",
 
+        // Evidence: an observation joins one form instance for one item and never leaves it (K-FACT-6, ADR-2622).
+        "collection_instance_members",
+
         // Authority: a role never changes once defined, so grants under it keep their meaning (spec §9.3).
         "roles",
 

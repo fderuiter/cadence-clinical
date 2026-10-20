@@ -56,7 +56,8 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
             "grant_periods", "work_queue_definitions", "validation_runs", "validation_run_packs", "validation_run_datasets",
             "validation_run_inputs", "validation_detections", "validation_findings", "effectivities", "effectivity_status_periods",
             "qualifications", "qualification_periods", "qualification_requirements", "qualification_requirement_periods", "proposals",
-            "form_version_snapshots", "observations", "observation_revisions", "assertions");
+            "form_version_snapshots", "observations", "observation_revisions", "assertions", "collection_instances",
+            "collection_instance_members");
     }
 
     /// <summary>

@@ -64,6 +64,8 @@ public static class KernelEventFamilies
         ["ArtifactVersioned"] = EventFamily.Evidence,
         ["ObservationRecorded"] = EventFamily.Evidence,
         ["ObservationCorrected"] = EventFamily.Evidence,
+        ["CollectionInstanceOpened"] = EventFamily.Evidence,
+        ["CollectedValuesSaved"] = EventFamily.Evidence,
         ["AssertionMade"] = EventFamily.Evidence,
         ["AssertionRetracted"] = EventFamily.Evidence,
         ["LockApplied"] = EventFamily.Quality,
