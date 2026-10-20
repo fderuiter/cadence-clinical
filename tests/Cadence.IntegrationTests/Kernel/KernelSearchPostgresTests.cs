@@ -42,6 +42,7 @@ public sealed class KernelSearchPostgresTests(KernelPostgresFixture fixture) : I
     /// NodeRefs pinned to the version read, and an exact code ranks first.
     /// </summary>
     [Fact(DisplayName = "Search_FindsStudiesSitesAndOrganizations")]
+    [KernelRule("K-ID-8")]
     public async Task SearchFindsStudiesSitesAndOrganizations()
     {
         fixture.SkipIfUnavailable();
@@ -88,6 +89,8 @@ public sealed class KernelSearchPostgresTests(KernelPostgresFixture fixture) : I
     [Fact(DisplayName = "Search_NeverReturnsAnotherTenantsObjects")]
     [Trait("Category", "GxP_OQ")]
     [GxPRequirement("PRD-CRF-013")]
+    [KernelRule("K-ID-8")]
+    [KernelRule("K-ID-2")]
     public async Task SearchNeverReturnsAnotherTenantsObjects()
     {
         fixture.SkipIfUnavailable();

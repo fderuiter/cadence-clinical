@@ -15,7 +15,14 @@ namespace Cadence.Compliance;
 /// <param name="File">Repository-relative path of the source file.</param>
 /// <param name="Line">1-based line of the method signature.</param>
 /// <param name="RequirementIds">Requirement IDs declared on the method, sorted and de-duplicated.</param>
-public sealed record DiscoveredTest(string FullName, string MethodName, string File, int Line, IReadOnlyList<string> RequirementIds);
+public sealed record DiscoveredTest(string FullName, string MethodName, string File, int Line, IReadOnlyList<string> RequirementIds)
+{
+    /// <summary>
+    /// Clinical Kernel rules (<c>K-AREA-N</c>) the method declares with <c>[KernelRule("…")]</c>, sorted and
+    /// de-duplicated, exactly as written (an ill-formed value is kept so a check can report it).
+    /// </summary>
+    public IReadOnlyList<string> KernelRuleIds { get; init; } = [];
+}
 
 /// <summary>
 /// Finds xUnit test methods in C# source and the requirement IDs each one declares.
@@ -24,6 +31,11 @@ public sealed record DiscoveredTest(string FullName, string MethodName, string F
 /// <c>[GxPRequirement("…")]</c>, <c>[Trait("Requirement", "…")]</c>, or an <c>@req:</c> line in the method's
 /// doc comment (above the method or inside its body). Class-level tags are documentation and are ignored,
 /// so a class comment can never mark every test in the file as verifying a requirement.
+/// </para>
+/// <para>
+/// The same scan collects the Clinical Kernel rules a method declares with <c>[KernelRule("K-…")]</c>
+/// (<see cref="DiscoveredTest.KernelRuleIds"/>). Only the attribute on the method counts; a K-ID in a doc comment
+/// is documentation.
 /// </para>
 /// </summary>
 public static partial class RequirementTagScanner
@@ -36,6 +48,9 @@ public static partial class RequirementTagScanner
 
     [GeneratedRegex(@"Trait\s*\(\s*""Requirement""\s*,\s*""([^""]+)""\s*\)")]
     private static partial Regex RequirementTraitRegex();
+
+    [GeneratedRegex(@"\bKernelRule(?:Attribute)?\s*\(\s*""([^""]*)""\s*\)")]
+    private static partial Regex KernelRuleRegex();
 
     [GeneratedRegex(@"@req:(.*)")]
     private static partial Regex ReqDocRegex();
@@ -154,7 +169,10 @@ public static partial class RequirementTagScanner
 
                 string typeChain = string.Join('+', typeStack.Reverse().Select(t => t.Name));
                 string fullName = string.IsNullOrEmpty(ns) ? $"{typeChain}.{methodName}" : $"{ns}.{typeChain}.{methodName}";
-                results.Add(new DiscoveredTest(fullName, methodName, relativePath, i + 1, ids));
+                results.Add(new DiscoveredTest(fullName, methodName, relativePath, i + 1, ids)
+                {
+                    KernelRuleIds = CollectKernelRuleIds(attributes),
+                });
             }
 
             foreach (char c in codeLine)
@@ -217,6 +235,13 @@ public static partial class RequirementTagScanner
 
         return ids.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(id => id, StringComparer.Ordinal).ToList();
     }
+
+    private static IReadOnlyList<string> CollectKernelRuleIds(string attributeBlock) =>
+        KernelRuleRegex().Matches(attributeBlock)
+            .Select(m => m.Groups[1].Value.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToList();
 
     /// <summary>Returns the last line of the member starting at <paramref name="start"/>.</summary>
     private static int FindMemberEnd(string[] code, int start)

@@ -413,8 +413,7 @@ Commands in `Commands/ObservationCommands.cs`, each authorized against the obser
   `missing` (null flavor and detail), with a `type` discriminator, stored as `jsonb`. `CollectionItem.Admits` checks a
   value against the protocol's item, and `MappingInput.From` feeds it to the SDTM mapping (`--STAT`/`--REASND` for a
   missing value).
-- Coming under #5459 (ADR-2622): a `CollectionInstance` groups the observations of one form, and
-  `RecordCollectedValues` records and corrects all of them in one command, each against the revision it was edited from.
+- A form page saves its values in one command through a `CollectionInstance` (below).
 
 ## Assertions and scoped locks (ADR-2621)
 
@@ -423,14 +422,14 @@ scope (spec §8.2, §10.5). Nothing about the observation changes when something
 is never changed: a later assertion of the same kind retracts it (`RetractsId`, at most one retraction each). Commands
 in `Commands/AssertionCommands.cs`:
 
-| Command             | Does                                                                                                             |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `ApplyLock`         | `Locked` or `Frozen` at a study, study site, enrollment or observation (`lock.apply`, Approve), with a signature |
-| `ReleaseLock`       | Releases a lock with its own reason and signature (`lock.release`, Approve)                                      |
-| `VerifyObservation` | SDV of one revision, `target = (ObservationId, Revision)`; refused for a revision that is not current (409)      |
-| `RaiseQuery`        | A query about an observation; it names the `ObservationId` only, so it stays open across corrections             |
-| `AnswerQuery`       | Answers an open query                                                                                            |
-| `RetractAssertion`  | Withdraws a verification or an answer, or closes a query; locks are released with `ReleaseLock` instead          |
+| Command             | Does                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `ApplyLock`         | `Locked` or `Frozen` at a study, study site, enrollment, form or observation (`lock.apply`), with a signature |
+| `ReleaseLock`       | Releases a lock with its own reason and signature (`lock.release`, Approve)                                   |
+| `VerifyObservation` | SDV of one revision, `target = (ObservationId, Revision)`; refused for a revision that is not current (409)   |
+| `RaiseQuery`        | A query about an observation; it names the `ObservationId` only, so it stays open across corrections          |
+| `AnswerQuery`       | Answers an open query                                                                                         |
+| `RetractAssertion`  | Withdraws a verification or an answer, or closes a query; locks are released with `ReleaseLock` instead       |
 
 - A lock's signer attests the canonical `LockStatement.Apply` (or `.Release`) for the assertion id first, meaning
   `Approved` or `Responsibility`; the attestation targets `assertion:<id>` before it exists, the way a finding
@@ -444,7 +443,45 @@ in `Commands/AssertionCommands.cs`:
   own exclusive lock, so two corrections of one value run one after another; a command that locks a scope exclusively
   shares none.
 - Events: `LockApplied` and `LockReleased` (Quality), `AssertionMade` and `AssertionRetracted` (Evidence).
-- The HTTP surface for locks, queries and SDV comes with #5466, #5461 and #5465; a form-instance scope with #5459.
+- The HTTP surface for locks, queries and SDV comes with #5466, #5461 and #5465.
+
+## Form instances and page saves (ADR-2622)
+
+A `CollectionInstance` (`kernel.collection_instances`) is the kernel side of an eCRF form instance (spec §8.1,
+K-FACT-6): the observations collected together for one enrollment under one CollectionSpec of the protocol version
+that governed the collection. Its members (`collection_instance_members`, insert-only) name one observation per
+CollectionSpec item; an observation belongs to one instance and never leaves it. Layout, item order, workflow status
+and UI state stay with the application's form. Commands in `Commands/CollectionCommands.cs`, each authorized against
+the enrollment:
+
+| Command                  | Does                                                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `OpenCollectionInstance` | Opens a form for a CollectionSpec and optional planned activity (`collection.open`) at a collection time      |
+| `RecordCollectedValues`  | Saves a page: records new values and corrects existing ones in one commit, each against its expected revision |
+
+- The kernel, not the caller, picks the governing protocol version: the highest-numbered version effective at the
+  enrollment's study site at the collection time (K-TIME-8, through `EffectivityResolution`). Its design must have the
+  CollectionSpec, and the planned activity must list it (422 otherwise; 409 when no version is effective). The
+  version is a `GovernedBy` lineage input of the form and of every observation version a save writes.
+- A save names items by their CollectionSpec item id; the observation records the item's concept. The validator
+  refuses a malformed save (no values, an item or observation id named twice, a negative revision) with
+  `K.Command.Invalid`. The handler refuses, with an error per item, an item the spec lacks and a value the item does
+  not admit (kind, UCUM unit, code-system version; 422). Required items and ranges are edit checks that run after commit
+  (ADR-2622 §4.4).
+- One stale expected revision (0 for an item with no value yet) refuses the whole save with 409 and an error per
+  stale item; a value equal to the current one is left as it is. The result returns every value of the form with its
+  current revision, ordered by item id, so the client marks values saved only from it.
+- K-TX-1 as amended: the save takes the form's exclusive advisory lock (`IKernelUnitOfWork.LockCollectionAsync`), then
+  shared locks on every scope covering the form and its values; the commit writes the form first and its changed
+  member observations after it, with one audit link each, and refuses any other aggregate. Two users saving different
+  items both succeed one after the other; two saving one item get one success and one 409.
+- The form is a lock scope (spec §10.5): a lock on it refuses saves, and corrections and assertions of its values made
+  one at a time. `ICollectionInstanceRecords` reads a form's values with their revisions, the assertions about them,
+  the signatures over the form and the locks in force in one call.
+- Events: `CollectionInstanceOpened` and `CollectedValuesSaved` (Evidence), besides each value's `ObservationRecorded`
+  or `ObservationCorrected`. Edit checks consume `CollectedValuesSaved` (#5368).
+- `KernelCollectionPostgresTests` covers atomicity at every commit stage, per-value 409, concurrent saves, the
+  lock-versus-save race at every scope and replay. The HTTP surface comes with the Execution module (#5460).
 
 ## Object references and navigation (ADR-2481)
 

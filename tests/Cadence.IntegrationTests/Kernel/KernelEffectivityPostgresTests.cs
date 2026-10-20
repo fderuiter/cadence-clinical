@@ -44,6 +44,8 @@ public sealed class KernelEffectivityPostgresTests(KernelPostgresFixture fixture
     /// </summary>
     [Fact(DisplayName = "StudySite_Activation_NeedsAnEffectiveVersionOnApprovalEvidence")]
     [GxPRequirement("PRD-CTMS-005")]
+    [KernelRule("K-TIME-4")]
+    [KernelRule("K-TIME-5")]
     public async Task StudySiteActivationNeedsAnEffectiveVersionOnApprovalEvidence()
     {
         fixture.SkipIfUnavailable();
@@ -96,6 +98,7 @@ public sealed class KernelEffectivityPostgresTests(KernelPostgresFixture fixture
     /// evidence refuses any. An ethics approval moves a pending effectivity to EthicsApproved.
     /// </summary>
     [Fact(DisplayName = "Effectivity_ChangeStatus_ChecksEvidence")]
+    [KernelRule("K-TIME-5")]
     public async Task EffectivityChangeStatusChecksEvidence()
     {
         fixture.SkipIfUnavailable();
@@ -182,6 +185,7 @@ public sealed class KernelEffectivityPostgresTests(KernelPostgresFixture fixture
     /// KT001), and the scope check and the one-effectivity-per-scope index hold for rows written outside the kernel.
     /// </summary>
     [Fact(DisplayName = "EffectivityStatusPeriods_AreAppendOnly_ForEveryDatabaseUser")]
+    [KernelRule("K-TIME-1")]
     public async Task EffectivityStatusPeriodsAreAppendOnlyForEveryDatabaseUser()
     {
         fixture.SkipIfUnavailable();

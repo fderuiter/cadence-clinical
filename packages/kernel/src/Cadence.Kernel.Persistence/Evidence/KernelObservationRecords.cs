@@ -35,39 +35,15 @@ internal sealed class KernelObservationRecords(KernelTenantDbContextFactory cont
             .Select(e => e.StudySiteId)
             .SingleAsync(cancellationToken)
             .ConfigureAwait(false);
-        var scopes = LockScopes.Covering(found.StudyId, studySite, found.EnrollmentId, found.Id);
-        var scopeIds = scopes.Select(s => s.Id).ToList();
-
-        // The assertions about the observation, the answers to its queries, the locks at its scopes and every retraction
-        // of them: assertions are few per observation, so one read and an in-memory join.
-        var direct = await db.Assertions.AsNoTracking()
-            .Where(a => scopeIds.Contains(a.TargetId))
-            .ToListAsync(cancellationToken)
+        var instance = await db.CollectionInstances.AsNoTracking()
+            .Where(c => c.Members.Any(m => m.ObservationId == found.Id))
+            .Select(c => (CollectionInstanceId?)c.Id)
+            .SingleOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
-        var queryIds = direct.Where(a => a.Kind == AssertionKind.Queried && a.RetractsId == null).Select(a => a.Id.Value).ToList();
-        var answers = queryIds.Count == 0
-            ? []
-            : await db.Assertions.AsNoTracking()
-                .Where(a => a.Kind == AssertionKind.QueryAnswered && queryIds.Contains(a.TargetId))
-                .ToListAsync(cancellationToken)
-                .ConfigureAwait(false);
-        var all = direct.Concat(answers)
-            .Where(a => scopes.Any(s => s.Kind == a.TargetKind && s.Id == a.TargetId) || a.TargetKind == NodeKinds.Assertion)
-            .ToList();
-        var retractedBy = all.Where(a => a.RetractsId is not null).ToDictionary(a => a.RetractsId!.Value);
-        var stated = all.Where(a => a.RetractsId is null).OrderBy(a => a.AssertedAt).ThenBy(a => a.Id).ToList();
-
-        var locks = stated
-            .Where(a => a.IsLock && !retractedBy.ContainsKey(a.Id))
-            .OrderBy(a => Width(scopes, a))
-            .Select(a => new LockView(a.Id, (LockKind)a.Kind, a.Target, a.AttestationId!.Value, a.AssertedAt, a.AssertedBy, a.ReasonForChange))
-            .ToList();
-        var assertions = stated
-            .Where(a => !a.IsLock && (a.TargetId == found.Id.Value || a.TargetKind == NodeKinds.Assertion))
-            .Select(a => retractedBy.TryGetValue(a.Id, out var retraction)
-                ? View(a, retraction.Id, retraction.AssertedAt)
-                : View(a, null, null))
-            .ToList();
+        var scopes = LockScopes.Covering(found.StudyId, studySite, found.EnrollmentId, found.Id, instance);
+        var assertions = await ScopedAssertions.ReadAsync(db, scopes, cancellationToken).ConfigureAwait(false);
+        var locks = assertions.Locks();
+        var about = assertions.About(a => a.TargetId == found.Id.Value);
 
         // The transaction stamps AggregateId with the key's text, the observation's UUID.
         var key = observation.ToString();
@@ -94,23 +70,7 @@ internal sealed class KernelObservationRecords(KernelTenantDbContextFactory cont
             found.VersionIndex,
             locks,
             views,
-            assertions,
+            about,
             audit);
     }
-
-    private static int Width(IReadOnlyList<NodeRef> scopes, Assertion assertion)
-    {
-        for (var i = 0; i < scopes.Count; i++)
-        {
-            if (scopes[i].Kind == assertion.TargetKind && scopes[i].Id == assertion.TargetId)
-            {
-                return i;
-            }
-        }
-
-        return scopes.Count;
-    }
-
-    private static AssertionView View(Assertion a, AssertionId? retractedBy, DateTimeOffset? retractedAt) =>
-        new(a.Id, a.Kind, a.Target, a.TargetRevision, a.Text, a.AssertedBy, a.AssertedAt, a.ReasonForChange, retractedBy, retractedAt);
 }

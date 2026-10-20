@@ -20,6 +20,7 @@ using Cadence.Kernel.Trust;
 using Cadence.Kernel.Validation;
 using Cadence.Rules.Packs;
 using Cadence.Standards;
+using Cadence.Testing;
 using Cadence.TestSupport.Kernel.Protocol;
 using Cadence.TestSupport.Kernel.Rules;
 using Cadence.TestSupport.Kernel.Standards;
@@ -49,6 +50,7 @@ public sealed class MappingSpecificationPostgresTests(KernelPostgresFixture fixt
     /// DefinedBy input of the drafted version, written in the draft's transaction (K-LIN-2).
     /// </summary>
     [Fact(DisplayName = "Draft_ResolvesItsReferences_AndLinksThemAsDefinedBy")]
+    [KernelRule("K-LIN-2")]
     public async Task DraftResolvesItsReferencesAndLinksThemAsDefinedBy()
     {
         fixture.SkipIfUnavailable();
@@ -115,6 +117,7 @@ public sealed class MappingSpecificationPostgresTests(KernelPostgresFixture fixt
     /// Responsibility attestation, it can.
     /// </summary>
     [Fact(DisplayName = "Submit_UnmappedConcept_IsRefused_UntilTheGapIsAccepted")]
+    [KernelRule("K-STD-1")]
     public async Task SubmitUnmappedConceptIsRefusedUntilTheGapIsAccepted()
     {
         fixture.SkipIfUnavailable();
@@ -158,6 +161,8 @@ public sealed class MappingSpecificationPostgresTests(KernelPostgresFixture fixt
     /// version. A study that declared no standards has nothing to map into and submits as before.
     /// </summary>
     [Fact(DisplayName = "Submit_MappedDesign_GoesIntoReview_AndLinksItsMappingAsMappedBy")]
+    [KernelRule("K-STD-1")]
+    [KernelRule("K-LIN-2")]
     public async Task SubmitMappedDesignGoesIntoReviewAndLinksItsMappingAsMappedBy()
     {
         fixture.SkipIfUnavailable();

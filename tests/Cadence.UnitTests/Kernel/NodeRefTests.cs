@@ -4,6 +4,7 @@ using System.Text.Json;
 
 using Cadence.Kernel;
 using Cadence.Kernel.References;
+using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -45,6 +46,7 @@ public sealed class NodeRefTests
     /// malformed kinds, upper-case or braced UUIDs, the empty UUID, and zero, signed or zero-padded versions fail.
     /// </summary>
     [Theory(DisplayName = "NodeRef_RejectsNonCanonicalStrings")]
+    [KernelRule("K-ID-6")]
     [InlineData("")]
     [InlineData("study")]
     [InlineData("study:")]
@@ -104,6 +106,7 @@ public sealed class NodeRefTests
     /// referenced. Adding an identifier without registering its kind fails here.
     /// </summary>
     [Fact(DisplayName = "NodeKinds_CoverEveryKernelIdentifier")]
+    [KernelRule("K-ID-6")]
     public void NodeKindsCoverEveryKernelIdentifier()
     {
         var identifierTypes = typeof(TenantId).Assembly.GetTypes()

@@ -18,6 +18,7 @@ using Cadence.Kernel.References;
 using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
+using Cadence.Testing;
 using Cadence.TestSupport.Kernel.Protocol;
 
 using FluentAssertions;
@@ -65,6 +66,7 @@ public sealed class ProtocolElementLineagePostgresTests(KernelPostgresFixture fi
     /// with the scientific chain between them, so a forward trace from an objective reaches its endpoint and estimand.
     /// </summary>
     [Fact(DisplayName = "ApprovingAVersion_WritesItsElementsAsLineageNodes")]
+    [KernelRule("K-LIN-2")]
     public async Task ApprovingAVersionWritesItsElementsAsLineageNodes()
     {
         fixture.SkipIfUnavailable();
@@ -133,6 +135,7 @@ public sealed class ProtocolElementLineagePostgresTests(KernelPostgresFixture fi
     /// endpoint or what was collected for that endpoint. The report lists the elements actually changed.
     /// </summary>
     [Fact(DisplayName = "AmendmentImpact_FollowsOnlyTheChangedElements")]
+    [KernelRule("K-PROT-2")]
     public async Task AmendmentImpactFollowsOnlyTheChangedElements()
     {
         fixture.SkipIfUnavailable();

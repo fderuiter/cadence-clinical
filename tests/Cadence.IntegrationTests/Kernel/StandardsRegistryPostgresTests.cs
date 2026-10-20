@@ -107,6 +107,7 @@ public sealed class StandardsRegistryPostgresTests(KernelPostgresFixture fixture
     /// refused, and another tenant registers its own copy that the first tenant cannot see (K-ID-2).
     /// </summary>
     [Fact(DisplayName = "RegisterStandardVersion_IsOncePerTenant_AndTenantScoped")]
+    [KernelRule("K-ID-2")]
     public async Task RegisterStandardVersionIsOncePerTenantAndTenantScoped()
     {
         fixture.SkipIfUnavailable();
@@ -259,6 +260,7 @@ public sealed class StandardsRegistryPostgresTests(KernelPostgresFixture fixture
     /// </summary>
     [Fact(DisplayName = "TerminologyResolution_IsTenantScoped")]
     [GxPRequirement("PRD-CRF-013")]
+    [KernelRule("K-ID-2")]
     public async Task TerminologyResolutionIsTenantScoped()
     {
         fixture.SkipIfUnavailable();

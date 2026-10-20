@@ -73,6 +73,14 @@ public interface IKernelUnitOfWork
         where TAggregate : AggregateRootBase;
 
     /// <summary>
+    /// Takes the exclusive advisory lock of form instance <paramref name="instance"/> and lets this command change that
+    /// instance and the observations it holds, the one exception to "one aggregate per command" (K-TX-1 as amended,
+    /// ADR-2622). Call it before reading or adding anything; the command may then share the scope locks that cover the
+    /// form (<see cref="ShareScopesAsync"/>), and the commit refuses an observation that is not a member.
+    /// </summary>
+    Task LockCollectionAsync(CollectionInstanceId instance, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Takes shared advisory locks on the lock scopes that cover what the command writes, in the order given (widest
     /// first, <c>LockScopes.Covering</c>), and holds them until the command has committed or failed (ADR-2621). Writes
     /// share them; a lock command takes one exclusively (<see cref="LockScopeAsync"/>), so either the write commits

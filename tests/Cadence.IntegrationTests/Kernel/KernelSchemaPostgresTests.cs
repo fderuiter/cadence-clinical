@@ -56,7 +56,8 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
             "grant_periods", "work_queue_definitions", "validation_runs", "validation_run_packs", "validation_run_datasets",
             "validation_run_inputs", "validation_detections", "validation_findings", "effectivities", "effectivity_status_periods",
             "qualifications", "qualification_periods", "qualification_requirements", "qualification_requirement_periods", "proposals",
-            "form_version_snapshots", "observations", "observation_revisions", "assertions");
+            "form_version_snapshots", "observations", "observation_revisions", "assertions", "collection_instances",
+            "collection_instance_members");
     }
 
     /// <summary>
@@ -64,6 +65,8 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
     /// append-only triggers, so a migration that forgets <c>CreateBitemporalGuards</c> fails here.
     /// </summary>
     [Fact(DisplayName = "KernelBitemporalTables_AllCarryExclusionConstraint_AndAppendOnlyTriggers")]
+    [KernelRule("K-TIME-1")]
+    [KernelRule("K-TIME-2")]
     public async Task KernelBitemporalTablesAllCarryExclusionConstraintAndAppendOnlyTriggers()
     {
         fixture.SkipIfUnavailable();
@@ -107,6 +110,7 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
     /// no code path can change kernel state without provenance, an event and an audit link.
     /// </summary>
     [Fact(DisplayName = "KernelDbContext_SaveOutsidePipeline_IsRefused")]
+    [KernelRule("K-TX-2")]
     public async Task KernelDbContextSaveOutsidePipelineIsRefused()
     {
         fixture.SkipIfUnavailable();

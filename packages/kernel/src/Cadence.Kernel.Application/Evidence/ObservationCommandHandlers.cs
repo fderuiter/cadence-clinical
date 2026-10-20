@@ -82,9 +82,10 @@ internal sealed class CorrectObservationHandler : ICommandHandler<CorrectObserva
             return KernelErrors.NotFound;
         }
 
+        var instance = await CollectionMembership.InstanceOfAsync(context.Work, command.ObservationId, cancellationToken).ConfigureAwait(false);
         if (await LocksInForce.AnyAsync(
             context.Work,
-            LockScopes.Covering(enrollment.StudyId, enrollment.StudySiteId, enrollment.Id, command.ObservationId),
+            LockScopes.Covering(enrollment.StudyId, enrollment.StudySiteId, enrollment.Id, command.ObservationId, instance),
             LocksInForce.DenyingWrites,
             cancellationToken).ConfigureAwait(false))
         {

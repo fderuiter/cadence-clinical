@@ -37,6 +37,9 @@ clinical truth (K-TRUTH-1).
   [`BannedSymbols.txt`](BannedSymbols.txt), enforced solution-wide across all C# projects in root `Directory.Build.props`). Inject
   `Cadence.Kernel.Time.IClock`; in tests use `FakeClock` from `Cadence.Testing.Time`, or `SystemClock.Instance`
   where the code under test checks the real clock ([docs/TESTING.md](docs/TESTING.md#time-in-tests)).
+- **Every K-rule has a test that names it:** the test method that proves a rule carries `[KernelRule("K-…")]`
+  (`Cadence.Testing`). `KernelRuleCoverageTests` fails on a rule with no such test outside its shrink-only baseline
+  ([docs/TESTING.md](docs/TESTING.md#linking-a-test-to-a-kernel-rule)).
 - **Hold structural changes that contradict the spec.** If a change needs the spec to change, raise it
   on the kernel epic (#4719) instead of working around it.
 

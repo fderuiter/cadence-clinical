@@ -47,7 +47,7 @@ public class KernelDbContextModelTests
             "grant_periods", "work_queue_definitions", "validation_runs", "validation_run_packs", "validation_run_datasets",
             "validation_run_inputs", "validation_detections", "validation_findings", "effectivities", "effectivity_status_periods",
             "qualifications", "qualification_periods", "qualification_requirements", "qualification_requirement_periods", "proposals", "form_version_snapshots",
-            "observations", "observation_revisions", "assertions");
+            "observations", "observation_revisions", "assertions", "collection_instances", "collection_instance_members");
 
         entityTypes.Should().OnlyContain(e => e.GetSchema() == KernelDbContext.Schema);
         entityTypes.SelectMany(e => e.GetProperties())
@@ -65,6 +65,7 @@ public class KernelDbContextModelTests
     [Fact(DisplayName = "KernelDbContext_TenantScopedEntities_UseCompositeTenantForeignKeys")]
     [Trait("Category", "Unit")]
     [GxPRequirement("PRD-CRF-013")]
+    [KernelRule("K-ID-1")]
     public void KernelDbContextTenantScopedEntitiesUseCompositeTenantForeignKeys()
     {
         using var context = CreateContext();

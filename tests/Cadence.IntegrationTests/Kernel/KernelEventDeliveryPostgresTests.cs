@@ -9,6 +9,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Events;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Persistence.Background;
+using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -113,6 +114,7 @@ public sealed class KernelEventDeliveryPostgresTests(KernelEventDeliveryPostgres
     /// the idempotency key <c>&lt;consumer&gt;:&lt;event id&gt;</c> and the event as its causation.
     /// </summary>
     [Fact(DisplayName = "CommittedEvent_ReachesConsumer_WhoseCommandRunsAsItsServiceAccount")]
+    [KernelRule("K-TX-5")]
     public async Task CommittedEventReachesConsumerWhoseCommandRunsAsItsServiceAccount()
     {
         fixture.SkipIfUnavailable();
@@ -138,6 +140,7 @@ public sealed class KernelEventDeliveryPostgresTests(KernelEventDeliveryPostgres
     /// second organization. Redelivering a dispatched event replays again.
     /// </summary>
     [Fact(DisplayName = "RetriedAndRedeliveredEvents_ActOnceInEffect")]
+    [KernelRule("K-TX-3")]
     public async Task RetriedAndRedeliveredEventsActOnceInEffect()
     {
         fixture.SkipIfUnavailable();

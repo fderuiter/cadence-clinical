@@ -53,6 +53,7 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
     /// </summary>
     [Fact(DisplayName = "Correction_CommitsValueRevisionAuditEventAndOutbox_AsOneActivity")]
     [GxPRequirement("PRD-SYS-001")]
+    [KernelRule("K-FACT-1")]
     public async Task CorrectionCommitsValueRevisionAuditEventAndOutboxAsOneActivity()
     {
         fixture.SkipIfUnavailable();
@@ -96,6 +97,7 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
     /// the audit chain, the events and the outbox exactly as they were.
     /// </summary>
     [Theory(DisplayName = "Correction_FailingAtAnyCommitStage_ChangesNothing")]
+    [KernelRule("K-TX-2")]
     [MemberData(nameof(CommitStages))]
     public async Task CorrectionFailingAtAnyCommitStageChangesNothing(string stageName)
     {
@@ -177,6 +179,7 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
     /// </summary>
     [Theory(DisplayName = "LockAndCorrection_Race_NoCorrectionCommitsAfterTheLock")]
     [MemberData(nameof(LockScopeKinds))]
+    [KernelRule("K-TX-4")]
     public async Task LockAndCorrectionRaceNoCorrectionCommitsAfterTheLock(string scopeKind)
     {
         fixture.SkipIfUnavailable();
@@ -186,7 +189,7 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
         var subject = await _observations.NewEnrollmentAsync(ct);
         var recorded = await RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(182), ct);
         var lockCommand = await _observations.LockAsync(subject.Tenant, subject.Study, subject.Scope(scopeKind, recorded.ObservationId), ct);
-        using (var paused = new CommitPause(fixture))
+        using (var paused = new KernelCommitPause(fixture))
         {
             var correction = paused.HoldAsync(() => fixture.Sender.SendAsync(Correct(subject.Tenant, recorded, Mmhg(128)), cancellationToken: ct));
             await paused.Reached.WaitAsync(TimeSpan.FromSeconds(30), ct);
@@ -208,7 +211,7 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
         subject = await _observations.NewEnrollmentAsync(ct);
         recorded = await RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(182), ct);
         lockCommand = await _observations.LockAsync(subject.Tenant, subject.Study, subject.Scope(scopeKind, recorded.ObservationId), ct);
-        using (var paused = new CommitPause(fixture))
+        using (var paused = new KernelCommitPause(fixture))
         {
             var locking = paused.HoldAsync(() => fixture.Sender.SendAsync(lockCommand, cancellationToken: ct));
             await paused.Reached.WaitAsync(TimeSpan.FromSeconds(30), ct);
@@ -363,62 +366,4 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
     private Task<StudySiteId> AddStudySiteAsync(TenantId tenant, StudyId study, CancellationToken ct) => _observations.AddStudySiteAsync(tenant, study, ct);
 
     private Task<EnrollmentId> ScreenAsync(TenantId tenant, StudySiteId studySite, CancellationToken ct) => _observations.ScreenAsync(tenant, studySite, ct);
-
-    /// <summary>
-    /// Holds the command sent through <see cref="HoldAsync{T}"/> when it reaches its commit (at
-    /// <see cref="CommitStage.StateStamped"/>, inside the advisory lock and before any row is written) until
-    /// <see cref="Release"/>. Every other commit passes through, so no unrelated command can take the pause. The held
-    /// command runs on the thread pool, so its blocked thread is never one the test runner needs to resume the test, and
-    /// it stays held until the test releases it: a pause that ran out first would let it commit early and make the
-    /// "still waiting" assertions meaningless, so <see cref="Release"/> fails the test instead.
-    /// </summary>
-    private sealed class CommitPause : IDisposable
-    {
-        private readonly AsyncLocal<bool> _target = new();
-        private readonly KernelPostgresFixture _fixture;
-        private readonly TaskCompletionSource _reached = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private readonly ManualResetEventSlim _release = new();
-        private static readonly TimeSpan HoldLimit = TimeSpan.FromMinutes(5);
-
-        private int _held;
-        private volatile bool _expired;
-
-        public CommitPause(KernelPostgresFixture fixture)
-        {
-            _fixture = fixture;
-            fixture.UnitOfWork.FaultInjector = stage =>
-            {
-                if (stage == CommitStage.StateStamped && _target.Value && Interlocked.Exchange(ref _held, 1) == 0)
-                {
-                    _reached.TrySetResult();
-                    if (!_release.Wait(HoldLimit))
-                    {
-                        _expired = true;
-                    }
-                }
-            };
-        }
-
-        public Task Reached => _reached.Task;
-
-        /// <summary>Sends the command to hold; the flag flows only into this send's execution context.</summary>
-        public async Task<CommandResult<T>> HoldAsync<T>(Func<Task<CommandResult<T>>> send)
-        {
-            _target.Value = true;
-            return await Task.Run(send);
-        }
-
-        public void Release()
-        {
-            _expired.Should().BeFalse("the held command must still be held when the test releases it");
-            _release.Set();
-        }
-
-        public void Dispose()
-        {
-            _release.Set();
-            _fixture.UnitOfWork.FaultInjector = null;
-            _release.Dispose();
-        }
-    }
 }

@@ -41,6 +41,7 @@ public sealed partial class KernelCommandPipelineTests
     /// carry their prefix while people may not.
     /// </summary>
     [Theory(DisplayName = "Actor_RejectsUnaccountableIds")]
+    [KernelRule("K-TX-5")]
     [InlineData(ActorKind.Person, "system")]
     [InlineData(ActorKind.Person, "Anonymous")]
     [InlineData(ActorKind.Person, " ")]
@@ -72,6 +73,7 @@ public sealed partial class KernelCommandPipelineTests
     /// status in the 4xx/5xx range.
     /// </summary>
     [Fact(DisplayName = "KernelErrors_Registry_HasUniqueWellFormedCodes")]
+    [KernelRule("K-ERR-1")]
     public void KernelErrorsRegistryHasUniqueWellFormedCodes()
     {
         var errors = KernelErrors.All;
@@ -90,6 +92,7 @@ public sealed partial class KernelCommandPipelineTests
     /// K-TX-3 tell a replay from a conflicting reuse of a key.
     /// </summary>
     [Fact(DisplayName = "RequestHash_IsStable_AndCoversEveryField")]
+    [KernelRule("K-TX-3")]
     public void RequestHashIsStableAndCoversEveryField()
     {
         var command = NewTenant();
@@ -122,6 +125,7 @@ public sealed partial class KernelCommandPipelineTests
     /// lookup, each before any unit of work is opened.
     /// </summary>
     [Fact(DisplayName = "Pipeline_RefusesInvalidCommands_BeforeOpeningAUnitOfWork")]
+    [KernelRule("K-TX-5")]
     public async Task PipelineRefusesInvalidCommandsBeforeOpeningAUnitOfWork()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -154,6 +158,7 @@ public sealed partial class KernelCommandPipelineTests
     /// for the key again and return the winner's result as a replay.
     /// </summary>
     [Fact(DisplayName = "Pipeline_HandlerRefusal_AfterSameKeyCommit_ReplaysTheWinner")]
+    [KernelRule("K-TX-3")]
     public async Task PipelineHandlerRefusalAfterSameKeyCommitReplaysTheWinner()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -176,6 +181,7 @@ public sealed partial class KernelCommandPipelineTests
     /// conflict, and the pipeline returns the winner's stored result instead.
     /// </summary>
     [Fact(DisplayName = "Pipeline_ConcurrencyConflict_AfterSameKeyCommit_ReplaysTheWinner")]
+    [KernelRule("K-TX-3")]
     public async Task PipelineConcurrencyConflictAfterSameKeyCommitReplaysTheWinner()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -231,6 +237,7 @@ public sealed partial class KernelCommandPipelineTests
     /// a defect, never a silent success.
     /// </summary>
     [Theory(DisplayName = "Pipeline_UniqueConflictOrIdempotencyRace_ReplaysTheWinner_OrFails")]
+    [KernelRule("K-TX-3")]
     [InlineData(CommitOutcome.UniqueConflict)]
     [InlineData(CommitOutcome.IdempotencyRace)]
     public async Task PipelineUniqueConflictOrIdempotencyRaceReplaysTheWinnerOrFails(CommitOutcome outcome)
@@ -359,6 +366,8 @@ public sealed partial class KernelCommandPipelineTests
         public Task LockAsync<TAggregate>(object id, CancellationToken cancellationToken)
             where TAggregate : AggregateRootBase =>
             Task.CompletedTask;
+
+        public Task LockCollectionAsync(CollectionInstanceId instance, CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task ShareScopesAsync(IReadOnlyList<NodeRef> scopes, CancellationToken cancellationToken) => Task.CompletedTask;
 

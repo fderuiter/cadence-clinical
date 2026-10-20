@@ -118,8 +118,8 @@ of it, so a correction is not verified until someone verifies it (ADR-2621).
 
 ### Lock (Frozen, Locked)
 
-A `Frozen` or `Locked` Assertion at a scope: one observation, a participant's enrollment, a study site or the whole
-study (database lock). While it holds, nothing in the scope is recorded or corrected; `Locked` also stops new
+A `Frozen` or `Locked` Assertion at a scope: one observation, one form (Collection Instance), a participant's
+enrollment, a study site or the whole study (database lock). While it holds, nothing in the scope is recorded or corrected; `Locked` also stops new
 Assertions such as SDV or queries. A lock and its release are each signed. _Avoid_: per-record lock flags,
 unlocking without a reason or signature.
 

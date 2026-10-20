@@ -6,6 +6,7 @@ using System.Text.Json;
 using Cadence.Apps.Execution.Infrastructure.EditChecks;
 using Cadence.Rules.Evaluation;
 using Cadence.Rules.Expressions;
+using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -162,6 +163,7 @@ public class RuleExpressionTests
     /// </summary>
     [Theory(DisplayName = "Expression_OverTypedValues_MatchesTheEdcSeedEngine")]
     [Trait("Category", "Unit")]
+    [KernelRule("K-RULE-3")]
     [InlineData("""{"op":"and","args":[{"op":">","args":[{"var":"SYS"},100]},{"op":"<","args":[{"var":"DIA"},90]}]}""")]
     [InlineData("""{"op":"or","args":[{"op":"==","args":[{"var":"NOTHING"},1]},{"var":"FLAG"}]}""")]
     [InlineData("""{"op":"and","args":[{"var":"FLAG"},{"var":"NOTHING"}]}""")]

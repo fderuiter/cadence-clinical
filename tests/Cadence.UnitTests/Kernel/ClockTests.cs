@@ -116,6 +116,7 @@ public class ClockTests
     /// </summary>
     [Fact(DisplayName = "BannedSymbols_BanWallClock_AndKernelIsWired")]
     [Trait("Category", "GxP_OQ")]
+    [KernelRule("K-TIME-3")]
     public void BannedSymbolsBanWallClockAndKernelIsWired()
     {
         // Arrange
