@@ -2,6 +2,7 @@ using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
+using Cadence.Database.Signatures;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -32,6 +33,8 @@ public sealed class SafetyDbContext(DbContextOptions<SafetyDbContext> options) :
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        // Used e-signature tokens, single use across instances and restarts (ADR-2515, #5434, #5462).
+        modelBuilder.ApplyConfiguration(new ConsumedSignatureTokenConfiguration());
 
         modelBuilder.ApplyConfiguration(new IcsrReportingEvaluationConfiguration());
         modelBuilder.ApplyConfiguration(new SafetyCaseIcsrConfiguration());

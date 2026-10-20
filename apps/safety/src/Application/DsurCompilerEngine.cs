@@ -17,15 +17,34 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cadence.Apps.Safety.Application;
 
+/// <summary>
+/// Compiles, updates and approves DSUR periodic safety reports. Every operation acts as the verified caller the endpoint
+/// passes in; there is no default actor, and the caller is the audit actor of the entry each operation writes through
+/// <see cref="AuditActions"/> (#5462).
+/// </summary>
 public class DsurCompilerEngine
 {
+    /// <summary>The audit chain the report's entries join (the record's CLR type name).</summary>
+    public const string AuditEntityName = nameof(PeriodicSafetyReportRecord);
+
+    /// <summary>The audit action of a compilation.</summary>
+    public const string CompiledAuditAction = "DSUR_COMPILED";
+
+    /// <summary>The audit action of a draft update.</summary>
+    public const string UpdatedAuditAction = "DSUR_UPDATED";
+
+    /// <summary>The audit action of an approval, which signs and locks the report.</summary>
+    public const string ApprovedAuditAction = "DSUR_APPROVED";
+
+    private const string DefaultSigningReason = "Approval of ICH E2F DSUR Periodic Safety Report";
+
     private readonly SafetyDbContext _dbContext;
     private readonly IClock _clock;
 
-    public DsurCompilerEngine(SafetyDbContext dbContext, IClock? clock = null)
+    public DsurCompilerEngine(SafetyDbContext dbContext, IClock clock)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-        _clock = clock ?? SystemClock.Instance;
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
     }
 
     public async Task<DsurCompileResult> CompileDsurAsync(
@@ -34,6 +53,7 @@ public class DsurCompilerEngine
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(callerUserId);
         if (string.IsNullOrWhiteSpace(request.CompoundName))
         {
             throw new ArgumentException("CompoundName is required for DSUR compilation.", nameof(request));
@@ -84,12 +104,14 @@ public class DsurCompilerEngine
                 TotalSaes = lineListings.Count,
                 ReportPayloadJson = payloadJson,
                 CreatedAt = _clock.UtcNow,
-                CreatedBy = string.IsNullOrWhiteSpace(callerUserId) ? "safety-officer" : callerUserId,
+                CreatedBy = callerUserId,
                 ReasonForChange = string.IsNullOrWhiteSpace(request.ReasonForChange) ? "DSUR Automated Aggregation and Compilation" : request.ReasonForChange,
                 VersionIndex = 1
             };
 
             _dbContext.PeriodicSafetyReports.Add(record);
+            AuditActions.Record(_dbContext, new AuditAction(
+                AuditEntityName, record.Id, CompiledAuditAction, callerUserId, record.ReasonForChange));
             await _dbContext.SaveChangesAsync(cancellationToken);
 
             return new DsurCompileResult(record, payload);
@@ -99,12 +121,25 @@ public class DsurCompilerEngine
         return await _dbContext.ExecuteInTransactionAsync(_ => CompileCoreAsync(), IsolationLevel.ReadCommitted, cancellationToken);
     }
 
+    /// <summary>
+    /// Signs and locks a DRAFT report as <paramref name="callerUserId"/>, the verified caller who presented a step-up
+    /// signature token. The signer is always the caller; the report's compiler cannot approve it, a LOCKED report
+    /// cannot be signed again, and a reason for change is required.
+    /// </summary>
     public async Task<DsurApprovalResult> ApproveDsurAsync(
         string reportId,
         DsurApproveRequest request,
         string callerUserId,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(callerUserId);
+
+        if (string.IsNullOrWhiteSpace(request.ReasonForChange))
+        {
+            return new DsurApprovalResult(DsurOperationStatus.Invalid, "A reason for change is required to approve and lock a DSUR.");
+        }
+
         var record = await _dbContext.PeriodicSafetyReports.FirstOrDefaultAsync(r => r.Id == reportId, cancellationToken);
         if (record == null)
         {
@@ -116,25 +151,17 @@ public class DsurCompilerEngine
             return new DsurApprovalResult(DsurOperationStatus.Conflict, "Cannot approve or re-sign a periodic safety report record that is already LOCKED.");
         }
 
-        string signerId;
-        if (!string.IsNullOrWhiteSpace(request?.SignerUserId))
+        // Compiling and approving share the medical monitor role, so two people must do them (separation of duties).
+        if (string.Equals(record.CreatedBy, callerUserId, StringComparison.Ordinal))
         {
-            signerId = request.SignerUserId;
-        }
-        else if (!string.IsNullOrWhiteSpace(callerUserId))
-        {
-            signerId = callerUserId;
-        }
-        else
-        {
-            signerId = "safety-physician";
+            return new DsurApprovalResult(DsurOperationStatus.Forbidden, "The user who compiled this DSUR cannot also approve it.");
         }
 
-        var signingReason = string.IsNullOrWhiteSpace(request?.SigningReason)
-            ? "Approval of ICH E2F DSUR Periodic Safety Report"
-            : request.SigningReason;
-
-        var timestamp = _clock.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC", System.Globalization.CultureInfo.InvariantCulture);
+        string signerId = callerUserId;
+        string signingReason = string.IsNullOrWhiteSpace(request.SigningReason) ? DefaultSigningReason : request.SigningReason;
+        string reasonForChange = request.ReasonForChange;
+        var signedAt = _clock.UtcNow;
+        var timestamp = signedAt.ToString("yyyy-MM-dd HH:mm:ss UTC", System.Globalization.CultureInfo.InvariantCulture);
 
         var markdownBody = new StringBuilder()
             .AppendLine("# Development Safety Update Report (DSUR) - Regulatory Approval")
@@ -171,11 +198,23 @@ public class DsurCompilerEngine
         record.EsignatureManifestId = signedManifest;
         record.Status = "LOCKED";
         record.ApprovedByUserId = signerId;
-        record.ApprovedAt = _clock.UtcNow;
-        record.ReasonForChange = string.IsNullOrWhiteSpace(request?.ReasonForChange)
-            ? "Part 11 Electronic Signature Approval and Record Lock"
-            : request.ReasonForChange;
+        record.ApprovedAt = signedAt;
+        record.ReasonForChange = reasonForChange;
         record.VersionIndex += 1;
+
+        AuditActions.Record(_dbContext, new AuditAction(
+            AuditEntityName,
+            record.Id,
+            ApprovedAuditAction,
+            signerId,
+            reasonForChange,
+            JsonSerializer.Serialize(new Dictionary<string, object?>
+            {
+                ["signer_id"] = signerId,
+                ["signing_reason"] = signingReason,
+                ["signed_at"] = signedAt,
+                ["version_index"] = record.VersionIndex,
+            })));
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -188,6 +227,9 @@ public class DsurCompilerEngine
         string callerUserId,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(callerUserId);
+
         var record = await _dbContext.PeriodicSafetyReports.FirstOrDefaultAsync(r => r.Id == reportId, cancellationToken);
         if (record == null)
         {
@@ -198,6 +240,12 @@ public class DsurCompilerEngine
         if (string.Equals(record.Status, "LOCKED", StringComparison.OrdinalIgnoreCase))
         {
             return new DsurUpdateResult(DsurOperationStatus.Conflict, "Cannot edit or update a LOCKED periodic safety report record.");
+        }
+
+        // 21 CFR 11.10(e): a change to a regulated record states why it was made; no default reason is filled in.
+        if (string.IsNullOrWhiteSpace(request.ReasonForChange))
+        {
+            return new DsurUpdateResult(DsurOperationStatus.Invalid, "A reason for change is required to update a DSUR.");
         }
 
         if (!string.IsNullOrWhiteSpace(request.CompoundName))
@@ -220,10 +268,11 @@ public class DsurCompilerEngine
             record.PeriodEnd = request.PeriodEnd.Value;
         }
 
-        record.ReasonForChange = string.IsNullOrWhiteSpace(request.ReasonForChange)
-            ? "Draft DSUR record updated"
-            : request.ReasonForChange;
+        record.ReasonForChange = request.ReasonForChange;
         record.VersionIndex += 1;
+
+        AuditActions.Record(_dbContext, new AuditAction(
+            AuditEntityName, record.Id, UpdatedAuditAction, callerUserId, record.ReasonForChange));
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -391,7 +440,9 @@ public enum DsurOperationStatus
     Success,
     NotFound,
     Conflict,
-    Error
+    Error,
+    Invalid,
+    Forbidden
 }
 
 public record DsurCompileResult(PeriodicSafetyReportRecord Record, DsurReportPayload Payload);

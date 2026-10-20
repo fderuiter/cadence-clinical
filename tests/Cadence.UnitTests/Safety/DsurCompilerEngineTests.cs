@@ -10,8 +10,10 @@ using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Endpoints;
 using Cadence.Apps.Safety.Infrastructure.Persistence;
 using Cadence.Compliance;
+using Cadence.Database;
 using Cadence.Kernel.Time;
 using Cadence.Testing;
+using Cadence.Testing.Security;
 using Cadence.Testing.Time;
 
 using FluentAssertions;
@@ -26,14 +28,25 @@ namespace Cadence.UnitTests.Safety;
 
 public class DsurCompilerEngineTests
 {
-    private static SafetyDbContext CreateInMemoryDbContext()
+    /// <summary>The interceptor's own actor; every DSUR audit entry must name the verified caller instead.</summary>
+    private const string InterceptorActor = "interceptor-actor";
+
+    private static SafetyDbContext CreateInMemoryDbContext(IClock? clock = null)
     {
         var options = new DbContextOptionsBuilder<SafetyDbContext>()
             .UseInMemoryDatabase(databaseName: $"SafetyTestDb_{Guid.NewGuid()}")
+            .AddInterceptors(new GxPAuditInterceptor(() => InterceptorActor, clock ?? SystemClock.Instance))
             .Options;
 
         return new SafetyDbContext(options);
     }
+
+    private static DsurCompileRequest DraftRequest(string reason = "Draft for approval") => new(
+        CompoundName: "Cadence-Compound-77",
+        StudyId: "STUDY-2025",
+        PeriodStart: new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
+        PeriodEnd: new DateTimeOffset(2025, 12, 31, 23, 59, 59, TimeSpan.Zero),
+        ReasonForChange: reason);
 
     /// <summary>
     /// Validates that DSUR compilation accepts compound and period window, derives patient-years exposure,
@@ -117,8 +130,8 @@ public class DsurCompilerEngineTests
         var cancellationToken = TestContext.Current.CancellationToken;
 
         // Arrange
-        using var dbContext = CreateInMemoryDbContext();
         var fakeClock = new FakeClock(new DateTimeOffset(2026, 9, 30, 11, 0, 0, TimeSpan.Zero));
+        using var dbContext = CreateInMemoryDbContext(fakeClock);
         var engine = new DsurCompilerEngine(dbContext, fakeClock);
 
         var compileRequest = new DsurCompileRequest(
@@ -133,7 +146,6 @@ public class DsurCompilerEngineTests
         var reportId = compileResult.Record.Id;
 
         var approveRequest = new DsurApproveRequest(
-            SignerUserId: "qppv-physician-01",
             SigningReason: "Qualified Person Responsible for Pharmacovigilance (QPPV) Approval",
             ReasonForChange: "Final QPPV Approval and Lock"
         );
@@ -154,6 +166,7 @@ public class DsurCompilerEngineTests
         var verification = verifier.VerifySignature(Encoding.UTF8.GetBytes(approvalResult.Record.EsignatureManifestId!));
         verification.IsValid.Should().BeTrue();
         verification.Status.Should().Be("VALID");
+        approvalResult.Record.EsignatureManifestId.Should().Contain("qppv-physician-01");
     }
 
     /// <summary>
@@ -174,7 +187,8 @@ public class DsurCompilerEngineTests
         var compileResult = await engine.CompileDsurAsync(new DsurCompileRequest("Compound-X", "STUDY-1", new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2025, 12, 31, 0, 0, 0, TimeSpan.Zero), "Draft"), "officer", cancellationToken);
         var reportId = compileResult.Record.Id;
 
-        await engine.ApproveDsurAsync(reportId, new DsurApproveRequest("qppv-1", "Approve", "Locking"), "qppv-1", cancellationToken);
+        (await engine.ApproveDsurAsync(reportId, new DsurApproveRequest("Approve", "Locking"), "qppv-1", cancellationToken))
+            .Status.Should().Be(DsurOperationStatus.Success);
 
         // Act 1: Attempting to update locked record via engine
         var updateResult = await engine.UpdateDsurAsync(reportId, new DsurUpdateRequest("New-Name", null, null, null, "Edit attempt"), "officer", cancellationToken);
@@ -184,7 +198,7 @@ public class DsurCompilerEngineTests
         updateResult.Message.Should().Contain("LOCKED");
 
         // Act 2: Attempting to re-approve an already locked record
-        var reapproveResult = await engine.ApproveDsurAsync(reportId, new DsurApproveRequest("qppv-2", "Re-approve", "Re-approval attempt"), "qppv-2", cancellationToken);
+        var reapproveResult = await engine.ApproveDsurAsync(reportId, new DsurApproveRequest("Re-approve", "Re-approval attempt"), "qppv-2", cancellationToken);
 
         // Assert 2
         reapproveResult.Status.Should().Be(DsurOperationStatus.Conflict);
@@ -204,7 +218,8 @@ public class DsurCompilerEngineTests
         using var dbContext = CreateInMemoryDbContext();
         var fakeClock = new FakeClock(new DateTimeOffset(2026, 9, 30, 14, 0, 0, TimeSpan.Zero));
 
-        var httpContext = new DefaultHttpContext();
+        var compilerContext = new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal("mm-compiler", "Sponsor Medical Monitor") };
+        var approverContext = new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal("mm-approver", "Sponsor Medical Monitor") };
 
         var compileReq = new DsurCompileRequest(
             CompoundName: "Cadence-Compound-88",
@@ -215,7 +230,7 @@ public class DsurCompilerEngineTests
         );
 
         // Act 1: Compile via endpoint handler
-        var compileResult = await DsurEndpoints.CompileDsurAsync(compileReq, dbContext, fakeClock, httpContext, cancellationToken);
+        var compileResult = await DsurEndpoints.CompileDsurAsync(compileReq, dbContext, fakeClock, compilerContext, cancellationToken);
 
         // Assert 1
         compileResult.Should().BeOfType<Created<PeriodicSafetyReportRecord>>();
@@ -224,10 +239,11 @@ public class DsurCompilerEngineTests
         var createdRecord = createdResult.Value;
         createdRecord.Should().NotBeNull();
         createdRecord!.Status.Should().Be("DRAFT");
+        createdRecord.CreatedBy.Should().Be("mm-compiler");
 
         // Act 2: Approve via endpoint handler
-        var approveReq = new DsurApproveRequest("physician-user", "Regulatory Approval", "Final Signoff");
-        var approveResult = await DsurEndpoints.ApproveDsurAsync(createdRecord.Id, approveReq, dbContext, fakeClock, httpContext, cancellationToken);
+        var approveReq = new DsurApproveRequest("Regulatory Approval", "Final Signoff");
+        var approveResult = await DsurEndpoints.ApproveDsurAsync(createdRecord.Id, approveReq, dbContext, fakeClock, approverContext, cancellationToken);
 
         // Assert 2
         approveResult.Should().BeOfType<Ok<PeriodicSafetyReportRecord>>();
@@ -236,14 +252,135 @@ public class DsurCompilerEngineTests
         approvedRecord.Should().NotBeNull();
         approvedRecord!.Status.Should().Be("LOCKED");
         approvedRecord.EsignatureManifestId.Should().NotBeNullOrEmpty();
+        approvedRecord.ApprovedByUserId.Should().Be("mm-approver");
 
         // Act 3: Update locked record via endpoint handler
         var updateReq = new DsurUpdateRequest("Updated-Name", null, null, null, "Unauthorized Edit");
-        var updateResult = await DsurEndpoints.UpdateDsurAsync(createdRecord.Id, updateReq, dbContext, fakeClock, httpContext, cancellationToken);
+        var updateResult = await DsurEndpoints.UpdateDsurAsync(createdRecord.Id, updateReq, dbContext, fakeClock, compilerContext, cancellationToken);
 
         // Assert 3
         updateResult.Should().BeOfType<ProblemHttpResult>();
         var problemResult = (ProblemHttpResult)updateResult;
         problemResult.StatusCode.Should().Be(StatusCodes.Status409Conflict);
+    }
+
+    /// <summary>
+    /// The approval's audit entry names the verified caller as actor, carries the reason for change the caller gave, and
+    /// records the signer; the compilation's entry names the compiler. Neither falls back to the interceptor's actor.
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task ApproveDsur_WritesAuditEntryNamingTheCallerAndReason()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var fakeClock = new FakeClock(new DateTimeOffset(2026, 10, 19, 9, 0, 0, TimeSpan.Zero));
+        using var dbContext = CreateInMemoryDbContext(fakeClock);
+        var engine = new DsurCompilerEngine(dbContext, fakeClock);
+        var compiled = await engine.CompileDsurAsync(DraftRequest(), "mm-compiler", cancellationToken);
+
+        var result = await engine.ApproveDsurAsync(
+            compiled.Record.Id, new DsurApproveRequest(null, "Annual DSUR medical review complete"), "mm-approver", cancellationToken);
+
+        result.Status.Should().Be(DsurOperationStatus.Success);
+        var entries = await dbContext.AuditLogEntries.AsNoTracking()
+            .Where(e => e.EntityName == DsurCompilerEngine.AuditEntityName && e.EntityId == compiled.Record.Id)
+            .ToListAsync(cancellationToken);
+        entries.Should().ContainSingle(e => e.Action == DsurCompilerEngine.CompiledAuditAction)
+            .Which.UserId.Should().Be("mm-compiler");
+        var approval = entries.Should().ContainSingle(e => e.Action == DsurCompilerEngine.ApprovedAuditAction).Subject;
+        approval.UserId.Should().Be("mm-approver");
+        approval.ReasonForChange.Should().Be("Annual DSUR medical review complete");
+        approval.ChangesJson.Should().Contain("\"signer_id\":\"mm-approver\"");
+        entries.Should().NotContain(e => e.UserId == InterceptorActor);
+    }
+
+    /// <summary>The user who compiled a DSUR cannot approve it; the report stays a DRAFT and nothing is signed.</summary>
+    [Fact]
+    public async Task ApproveDsur_ByItsCompiler_IsForbiddenAndLeavesTheDraft()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var fakeClock = new FakeClock(new DateTimeOffset(2026, 10, 19, 9, 0, 0, TimeSpan.Zero));
+        using var dbContext = CreateInMemoryDbContext(fakeClock);
+        var engine = new DsurCompilerEngine(dbContext, fakeClock);
+        var compiled = await engine.CompileDsurAsync(DraftRequest(), "mm-compiler", cancellationToken);
+
+        var result = await engine.ApproveDsurAsync(
+            compiled.Record.Id, new DsurApproveRequest(null, "Self approval attempt"), "mm-compiler", cancellationToken);
+
+        result.Status.Should().Be(DsurOperationStatus.Forbidden);
+        var stored = await dbContext.PeriodicSafetyReports.AsNoTracking().SingleAsync(r => r.Id == compiled.Record.Id, cancellationToken);
+        stored.Status.Should().Be("DRAFT");
+        stored.ApprovedByUserId.Should().BeNull();
+        stored.EsignatureManifestId.Should().BeNull();
+    }
+
+    /// <summary>An approval without a reason for change is refused and does not lock the report.</summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task ApproveDsur_WithoutReasonForChange_IsRefused(string? reason)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var fakeClock = new FakeClock(new DateTimeOffset(2026, 10, 19, 9, 0, 0, TimeSpan.Zero));
+        using var dbContext = CreateInMemoryDbContext(fakeClock);
+        var engine = new DsurCompilerEngine(dbContext, fakeClock);
+        var compiled = await engine.CompileDsurAsync(DraftRequest(), "mm-compiler", cancellationToken);
+
+        var result = await engine.ApproveDsurAsync(compiled.Record.Id, new DsurApproveRequest(null, reason), "mm-approver", cancellationToken);
+
+        result.Status.Should().Be(DsurOperationStatus.Invalid);
+        (await dbContext.PeriodicSafetyReports.AsNoTracking().SingleAsync(r => r.Id == compiled.Record.Id, cancellationToken))
+            .Status.Should().Be("DRAFT");
+    }
+
+    /// <summary>The handlers refuse a request with no verified caller (401) instead of attributing it to a default user.</summary>
+    [Fact]
+    public async Task Endpoints_WithoutAVerifiedCaller_Return401AndWriteNothing()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var fakeClock = new FakeClock(new DateTimeOffset(2026, 10, 19, 9, 0, 0, TimeSpan.Zero));
+        using var dbContext = CreateInMemoryDbContext(fakeClock);
+        var engine = new DsurCompilerEngine(dbContext, fakeClock);
+        var compiled = await engine.CompileDsurAsync(DraftRequest(), "mm-compiler", cancellationToken);
+        var anonymous = new DefaultHttpContext();
+
+        var compile = await DsurEndpoints.CompileDsurAsync(DraftRequest(), dbContext, fakeClock, anonymous, cancellationToken);
+        var approve = await DsurEndpoints.ApproveDsurAsync(
+            compiled.Record.Id, new DsurApproveRequest(null, "Anonymous approval"), dbContext, fakeClock, anonymous, cancellationToken);
+        var update = await DsurEndpoints.UpdateDsurAsync(
+            compiled.Record.Id, new DsurUpdateRequest("Renamed", null, null, null, "Anonymous edit"), dbContext, fakeClock, anonymous, cancellationToken);
+
+        foreach (var result in new[] { compile, approve, update })
+        {
+            result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        }
+
+        var stored = await dbContext.PeriodicSafetyReports.AsNoTracking().ToListAsync(cancellationToken);
+        stored.Should().ContainSingle().Which.Status.Should().Be("DRAFT");
+    }
+
+    /// <summary>
+    /// Updating a draft DSUR without a reason for change is refused and changes nothing; the engine no longer fills in
+    /// a default reason (21 CFR 11.10(e), #5462).
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task UpdateDsur_WithoutReasonForChange_IsRefusedAndChangesNothing(string? reason)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var dbContext = CreateInMemoryDbContext();
+        var fakeClock = new FakeClock(new DateTimeOffset(2026, 9, 30, 12, 0, 0, TimeSpan.Zero));
+        var engine = new DsurCompilerEngine(dbContext, fakeClock);
+        var compiled = await engine.CompileDsurAsync(new DsurCompileRequest("Compound-X", "STUDY-1", new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2025, 12, 31, 0, 0, 0, TimeSpan.Zero), "Draft"), "officer", cancellationToken);
+
+        var result = await engine.UpdateDsurAsync(compiled.Record.Id, new DsurUpdateRequest("Renamed", null, null, null, reason), "officer", cancellationToken);
+
+        result.Status.Should().Be(DsurOperationStatus.Invalid);
+        var stored = await dbContext.PeriodicSafetyReports.AsNoTracking().SingleAsync(cancellationToken);
+        stored.CompoundName.Should().Be("Compound-X");
+        stored.VersionIndex.Should().Be(compiled.Record.VersionIndex);
     }
 }
