@@ -130,8 +130,8 @@ Entity: `PeriodicSafetyReportRecord`
 | `ReportType` | `character varying(50)` | no |  |  |
 | `Status` | `character varying(50)` | no |  |  |
 | `StudyId` | `character varying(255)` | no |  |  |
+| `TotalPatientYearsExposure` | `double precision` | no |  |  |
 | `TotalSaes` | `integer` | no |  |  |
-| `TotalSubjectExposure` | `integer` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
 
 Indexes:

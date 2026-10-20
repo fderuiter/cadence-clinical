@@ -64,6 +64,8 @@ public class DsurCompilerEngine
             var exposureMetrics = CalculatePatientYearsExposure(request);
             var (lineListings, summaryTabulations) = ProcessMedDraCrossTabulations(request);
 
+            // ICH E2F tabulates serious adverse events: a non-serious case is listed but not counted as an SAE (#5573).
+            var saeCount = lineListings.Count(l => l.IsSerious);
             var fatalCasesCount = lineListings.Count(l => l.IsFatal);
             var susarsCount = lineListings.Count(l => l.IsSerious && string.Equals(l.Expectedness, "UNEXPECTED", StringComparison.OrdinalIgnoreCase) && string.Equals(l.Causality, "CAUSAL", StringComparison.OrdinalIgnoreCase));
             var aesiCount = lineListings.Count(l => l.IsAesi);
@@ -82,8 +84,8 @@ public class DsurCompilerEngine
                 PeriodStart: periodStart,
                 PeriodEnd: periodEnd,
                 ExposureMetrics: exposureMetrics,
-                TotalSubjectExposure: exposureMetrics.TotalSubjectsEnrolled,
-                TotalSaes: lineListings.Count,
+                TotalSubjectsEnrolled: exposureMetrics.TotalSubjectsEnrolled,
+                TotalSaes: saeCount,
                 TotalFatalCases: fatalCasesCount,
                 TotalSusars: susarsCount,
                 TotalAesi: aesiCount,
@@ -104,8 +106,8 @@ public class DsurCompilerEngine
                 PeriodStart = periodStart,
                 PeriodEnd = periodEnd,
                 Status = "DRAFT",
-                TotalSubjectExposure = (int)Math.Round(exposureMetrics.TotalPatientYearsExposure),
-                TotalSaes = lineListings.Count,
+                TotalPatientYearsExposure = exposureMetrics.TotalPatientYearsExposure,
+                TotalSaes = saeCount,
                 ReportPayloadJson = payloadJson,
                 CreatedAt = _clock.UtcNow,
                 CreatedBy = callerUserId,
@@ -174,7 +176,7 @@ public class DsurCompilerEngine
             .AppendLine($" - **Compound Name:** {record.CompoundName}")
             .AppendLine($" - **Study Identifier:** {record.StudyId}")
             .AppendLine($" - **Reporting Period:** {record.PeriodStart:yyyy-MM-dd} to {record.PeriodEnd:yyyy-MM-dd}")
-            .AppendLine($" - **Total Patient-Years Exposure:** {record.TotalSubjectExposure}")
+            .AppendLine(System.Globalization.CultureInfo.InvariantCulture, $" - **Total Patient-Years Exposure:** {record.TotalPatientYearsExposure:0.####}")
             .AppendLine($" - **Total SAE Count:** {record.TotalSaes}")
             .AppendLine($" - **Regulatory Status:** APPROVED & LOCKED")
             .AppendLine()
@@ -206,19 +208,10 @@ public class DsurCompilerEngine
         record.ReasonForChange = reasonForChange;
         record.VersionIndex += 1;
 
+        // The record is IGxPAuditable, so this labels the record's own audit entry, which carries its version and changed
+        // values (approver, approval time, signed manifest) rather than a separate action-only entry (#5573).
         AuditActions.Record(_dbContext, new AuditAction(
-            AuditEntityName,
-            record.Id,
-            ApprovedAuditAction,
-            signerId,
-            reasonForChange,
-            JsonSerializer.Serialize(new Dictionary<string, object?>
-            {
-                ["signer_id"] = signerId,
-                ["signing_reason"] = signingReason,
-                ["signed_at"] = signedAt,
-                ["version_index"] = record.VersionIndex,
-            })));
+            AuditEntityName, record.Id, ApprovedAuditAction, signerId, reasonForChange));
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -288,13 +281,14 @@ public class DsurCompilerEngine
         var enrollments = request.SubjectEnrollments ?? [];
         if (enrollments.Count == 0)
         {
-            return new SubjectExposureMetrics(0, 0.0, 0.0, 0.0, []);
+            return new SubjectExposureMetrics(0, 0.0, 0.0, 0.0, 0.0, []);
         }
 
         var details = new List<SubjectExposureDetail>();
         double totalPatientYears = 0.0;
         double investigationalPatientYears = 0.0;
         double placeboPatientYears = 0.0;
+        double comparatorPatientYears = 0.0;
 
         foreach (var sub in enrollments)
         {
@@ -314,13 +308,17 @@ public class DsurCompilerEngine
             totalPatientYears += patientYears;
 
             var arm = sub.TreatmentArm ?? "Investigational Drug";
-            if (arm.Contains("Placebo", StringComparison.OrdinalIgnoreCase))
+            switch (TreatmentArmGroups.Of(arm))
             {
-                placeboPatientYears += patientYears;
-            }
-            else
-            {
-                investigationalPatientYears += patientYears;
+                case TreatmentArmGroup.Placebo:
+                    placeboPatientYears += patientYears;
+                    break;
+                case TreatmentArmGroup.Comparator:
+                    comparatorPatientYears += patientYears;
+                    break;
+                default:
+                    investigationalPatientYears += patientYears;
+                    break;
             }
 
             details.Add(new SubjectExposureDetail(
@@ -339,6 +337,7 @@ public class DsurCompilerEngine
             TotalPatientYearsExposure: Math.Round(totalPatientYears, 4),
             InvestigationalArmPatientYears: Math.Round(investigationalPatientYears, 4),
             PlaceboArmPatientYears: Math.Round(placeboPatientYears, 4),
+            ComparatorArmPatientYears: Math.Round(comparatorPatientYears, 4),
             ExposureDetails: details
         );
     }
@@ -376,9 +375,10 @@ public class DsurCompilerEngine
             .GroupBy(l => (l.MeddraSoc, l.MeddraPt))
             .Select(g =>
             {
-                var investigationalCount = g.Count(x => !x.TreatmentArm.Contains("Placebo", StringComparison.OrdinalIgnoreCase) && !x.TreatmentArm.Contains("Comparator", StringComparison.OrdinalIgnoreCase));
-                var placeboCount = g.Count(x => x.TreatmentArm.Contains("Placebo", StringComparison.OrdinalIgnoreCase));
-                var comparatorCount = g.Count(x => x.TreatmentArm.Contains("Comparator", StringComparison.OrdinalIgnoreCase));
+                // The same arm grouping as exposure, so each case is counted in exactly one column (#5573).
+                var investigationalCount = g.Count(x => TreatmentArmGroups.Of(x.TreatmentArm) == TreatmentArmGroup.Investigational);
+                var placeboCount = g.Count(x => TreatmentArmGroups.Of(x.TreatmentArm) == TreatmentArmGroup.Placebo);
+                var comparatorCount = g.Count(x => TreatmentArmGroups.Of(x.TreatmentArm) == TreatmentArmGroup.Comparator);
                 var totalCount = g.Count();
 
                 var isFatal = g.Any(x => x.IsFatal);

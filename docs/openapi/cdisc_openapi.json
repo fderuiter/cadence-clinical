@@ -10963,7 +10963,7 @@
         "tags": [
           "IcsrTemplateEndpoints"
         ],
-        "summary": "Renders an ICSR E2B(R3) safety report as Liquid XML; a report missing a mandatory element is refused with 400 naming each one.",
+        "summary": "Renders an ICH E2B(R3) ICSR as an HL7 v3 MCCI_IN200100UV01 message validated against the ICH schema; a report that breaks an E2B(R3) conformance rule is refused with 400 naming each member.",
         "operationId": "RenderIcsrReport",
         "requestBody": {
           "content": {
@@ -10998,6 +10998,16 @@
           },
           "403": {
             "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -25403,266 +25413,16 @@
           }
         }
       },
-      "Safety_IcsrHeader": {
+      "Safety_IcsrDrug": {
         "required": [
-          "messageId",
-          "senderOrganization",
-          "receiverOrganization",
-          "transmissionDate"
-        ],
-        "type": "object",
-        "properties": {
-          "messageId": {
-            "type": "string"
-          },
-          "senderOrganization": {
-            "type": "string"
-          },
-          "receiverOrganization": {
-            "type": "string"
-          },
-          "transmissionDate": {
-            "type": "string"
-          },
-          "messageType": {
-            "type": "string",
-            "default": "ichicsr"
-          }
-        }
-      },
-      "Safety_IcsrMeddraCoding": {
-        "required": [
-          "lltCode",
-          "lltName",
-          "ptCode",
-          "ptName",
-          "hltCode",
-          "hltName",
-          "hlgtCode",
-          "hlgtName",
-          "socCode",
-          "socName"
-        ],
-        "type": "object",
-        "properties": {
-          "lltCode": {
-            "type": "string"
-          },
-          "lltName": {
-            "type": "string"
-          },
-          "ptCode": {
-            "type": "string"
-          },
-          "ptName": {
-            "type": "string"
-          },
-          "hltCode": {
-            "type": "string"
-          },
-          "hltName": {
-            "type": "string"
-          },
-          "hlgtCode": {
-            "type": "string"
-          },
-          "hlgtName": {
-            "type": "string"
-          },
-          "socCode": {
-            "type": "string"
-          },
-          "socName": {
-            "type": "string"
-          },
-          "primarySocFlag": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "score": {
-            "type": "string",
-            "default": "1.0"
-          }
-        }
-      },
-      "Safety_IcsrPatient": {
-        "required": [
-          "patientId",
-          "sex"
-        ],
-        "type": "object",
-        "properties": {
-          "patientId": {
-            "type": "string"
-          },
-          "sex": {
-            "type": "string"
-          },
-          "age": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "null",
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "ageUnit": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "birthDate": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Safety_IcsrReaction": {
-        "required": [
-          "reactionTerm"
-        ],
-        "type": "object",
-        "properties": {
-          "reactionTerm": {
-            "type": "string"
-          },
-          "meddraCoding": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Safety_IcsrMeddraCoding"
-              }
-            ]
-          },
-          "startDate": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "endDate": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "outcome": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "seriousnessDeath": {
-            "type": "string",
-            "default": "0"
-          },
-          "seriousnessLifeThreatening": {
-            "type": "string",
-            "default": "0"
-          },
-          "seriousnessHospitalization": {
-            "type": "string",
-            "default": "0"
-          },
-          "seriousnessDisability": {
-            "type": "string",
-            "default": "0"
-          },
-          "seriousnessCongenitalAnomaly": {
-            "type": "string",
-            "default": "0"
-          },
-          "seriousnessOtherMedicallyImportant": {
-            "type": "string",
-            "default": "0"
-          }
-        }
-      },
-      "Safety_IcsrReport": {
-        "required": [
-          "header",
-          "reportIdentifiers",
-          "patient",
-          "reactions",
-          "suspectDrugs"
-        ],
-        "type": "object",
-        "properties": {
-          "header": {
-            "$ref": "#/components/schemas/Safety_IcsrHeader"
-          },
-          "reportIdentifiers": {
-            "$ref": "#/components/schemas/Safety_IcsrReportIdentifiers"
-          },
-          "patient": {
-            "$ref": "#/components/schemas/Safety_IcsrPatient"
-          },
-          "reactions": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Safety_IcsrReaction"
-            }
-          },
-          "suspectDrugs": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Safety_IcsrSuspectDrug"
-            }
-          },
-          "versionIndex": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32",
-            "default": 1
-          },
-          "reasonForChange": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Safety_IcsrReportIdentifiers": {
-        "required": [
-          "worldwideUniqueCaseId"
-        ],
-        "type": "object",
-        "properties": {
-          "worldwideUniqueCaseId": {
-            "type": "string"
-          },
-          "localReportId": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "firstSenderType": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Safety_IcsrSuspectDrug": {
-        "required": [
+          "drugRole",
           "drugName"
         ],
         "type": "object",
         "properties": {
+          "drugRole": {
+            "type": "string"
+          },
           "drugName": {
             "type": "string"
           },
@@ -25689,10 +25449,351 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Safety_IcsrHeader": {
+        "required": [
+          "batchNumber",
+          "batchSenderIdentifier",
+          "batchReceiverIdentifier",
+          "batchTransmissionDate",
+          "messageIdentifier",
+          "messageSenderIdentifier",
+          "messageReceiverIdentifier"
+        ],
+        "type": "object",
+        "properties": {
+          "batchNumber": {
+            "type": "string"
           },
-          "drugRole": {
-            "type": "string",
-            "default": "suspect"
+          "batchSenderIdentifier": {
+            "type": "string"
+          },
+          "batchReceiverIdentifier": {
+            "type": "string"
+          },
+          "batchTransmissionDate": {
+            "type": "string"
+          },
+          "messageIdentifier": {
+            "type": "string"
+          },
+          "messageSenderIdentifier": {
+            "type": "string"
+          },
+          "messageReceiverIdentifier": {
+            "type": "string"
+          }
+        }
+      },
+      "Safety_IcsrMeddraCoding": {
+        "required": [
+          "version",
+          "lltCode"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "lltCode": {
+            "type": "string"
+          }
+        }
+      },
+      "Safety_IcsrOtherCaseIdentifier": {
+        "required": [
+          "source",
+          "caseIdentifier"
+        ],
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "caseIdentifier": {
+            "type": "string"
+          }
+        }
+      },
+      "Safety_IcsrPatient": {
+        "type": "object",
+        "properties": {
+          "patientId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sex": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "age": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ageUnit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "birthDate": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Safety_IcsrPrimarySource": {
+        "required": [
+          "qualification"
+        ],
+        "type": "object",
+        "properties": {
+          "qualification": {
+            "type": "string"
+          },
+          "countryCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "primaryForRegulatoryPurposes": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "Safety_IcsrReaction": {
+        "required": [
+          "meddraCoding",
+          "outcome"
+        ],
+        "type": "object",
+        "properties": {
+          "meddraCoding": {
+            "$ref": "#/components/schemas/Safety_IcsrMeddraCoding"
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "reactionTerm": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reactionTermLanguage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "startDate": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "endDate": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resultsInDeath": {
+            "type": "boolean",
+            "default": false
+          },
+          "lifeThreatening": {
+            "type": "boolean",
+            "default": false
+          },
+          "causedOrProlongedHospitalisation": {
+            "type": "boolean",
+            "default": false
+          },
+          "disablingIncapacitating": {
+            "type": "boolean",
+            "default": false
+          },
+          "congenitalAnomalyBirthDefect": {
+            "type": "boolean",
+            "default": false
+          },
+          "otherMedicallyImportantCondition": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "Safety_IcsrReport": {
+        "required": [
+          "header",
+          "safetyReport",
+          "primarySources",
+          "sender",
+          "patient",
+          "reactions",
+          "drugs",
+          "narrative"
+        ],
+        "type": "object",
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/Safety_IcsrHeader"
+          },
+          "safetyReport": {
+            "$ref": "#/components/schemas/Safety_IcsrSafetyReport"
+          },
+          "primarySources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Safety_IcsrPrimarySource"
+            }
+          },
+          "sender": {
+            "$ref": "#/components/schemas/Safety_IcsrSender"
+          },
+          "patient": {
+            "$ref": "#/components/schemas/Safety_IcsrPatient"
+          },
+          "reactions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Safety_IcsrReaction"
+            }
+          },
+          "drugs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Safety_IcsrDrug"
+            }
+          },
+          "narrative": {
+            "type": "string"
+          },
+          "study": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Safety_IcsrStudy"
+              }
+            ]
+          }
+        }
+      },
+      "Safety_IcsrSafetyReport": {
+        "required": [
+          "senderSafetyReportId",
+          "creationDate",
+          "reportType",
+          "firstReceivedDate",
+          "mostRecentInformationDate",
+          "fulfilsLocalCriteriaForExpeditedReport",
+          "worldwideUniqueCaseId",
+          "firstSender"
+        ],
+        "type": "object",
+        "properties": {
+          "senderSafetyReportId": {
+            "type": "string"
+          },
+          "creationDate": {
+            "type": "string"
+          },
+          "reportType": {
+            "type": "string"
+          },
+          "firstReceivedDate": {
+            "type": "string"
+          },
+          "mostRecentInformationDate": {
+            "type": "string"
+          },
+          "fulfilsLocalCriteriaForExpeditedReport": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "worldwideUniqueCaseId": {
+            "type": "string"
+          },
+          "firstSender": {
+            "type": "string"
+          },
+          "documentsHeldBySender": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "otherCaseIdentifiers": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Safety_IcsrOtherCaseIdentifier"
+            }
+          }
+        }
+      },
+      "Safety_IcsrSender": {
+        "required": [
+          "senderType"
+        ],
+        "type": "object",
+        "properties": {
+          "senderType": {
+            "type": "string"
+          },
+          "organisation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Safety_IcsrStudy": {
+        "required": [
+          "studyType"
+        ],
+        "type": "object",
+        "properties": {
+          "studyType": {
+            "type": "string"
+          },
+          "sponsorStudyNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "studyName": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -25725,13 +25826,13 @@
           "status": {
             "type": "string"
           },
-          "totalSubjectExposure": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "totalPatientYearsExposure": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
             "type": [
-              "integer",
+              "number",
               "string"
             ],
-            "format": "int32"
+            "format": "double"
           },
           "totalSaes": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",

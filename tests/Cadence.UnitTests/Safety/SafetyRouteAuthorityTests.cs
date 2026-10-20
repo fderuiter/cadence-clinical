@@ -155,14 +155,7 @@ public sealed class SafetyRouteAuthorityTests(DsurApprovalAuthorityTests.SafetyF
     /// <summary>A valid body for each route, so a refusal can only come from authorization.</summary>
     private static object BodyFor(string route) => route switch
     {
-        _ when route.EndsWith("/icsr/render", StringComparison.Ordinal) => new
-        {
-            header = new { messageId = "MSG-ROUTE-1", senderOrganization = "Sponsor", receiverOrganization = "Agency", transmissionDate = "20261020" },
-            reportIdentifiers = new { worldwideUniqueCaseId = "XX-SPONSOR-ROUTE-1" },
-            patient = new { patientId = "PT-ROUTE-1", sex = "F" },
-            reactions = new[] { new { reactionTerm = "Headache" } },
-            suspectDrugs = new[] { new { drugName = "Study drug" } },
-        },
+        _ when route.EndsWith("/icsr/render", StringComparison.Ordinal) => IcsrFixture.CompleteReport(),
         _ when route.EndsWith("/compile", StringComparison.Ordinal) => new
         {
             compoundName = "Refused-Compound",

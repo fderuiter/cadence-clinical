@@ -29,15 +29,15 @@ This decision implements requirements under Trace-14.
 
 Expose database views from the execution/EDC service directly to the safety subsystem and perform SQL-level joins/compares.
 
-- ***Pros:*** Simpler implementation initially.
-- ***Cons:*** Violates service boundary isolation and introduces database-level cross-dependency.
+- _**Pros:**_ Simpler implementation initially.
+- _**Cons:**_ Violates service boundary isolation and introduces database-level cross-dependency.
 
 ### Option 2: API-Driven Gateway with Async Worker and Stable Keys (Selected)
 
 Utilize decoupled gateway API queries to fetch Dataset-JSON observations, perform localized stable comparison on PII-free keys, track executions via an asynchronous job state machine, and persist audit-tracked discrepancies.
 
-- ***Pros:*** Strictly preserves service boundaries, provides secure de-identified comparisons, and handles failures gracefully.
-- ***Cons:*** Requires custom normalization logic and stable key generation algorithm.
+- _**Pros:**_ Strictly preserves service boundaries, provides secure de-identified comparisons, and handles failures gracefully.
+- _**Cons:**_ Requires custom normalization logic and stable key generation algorithm.
 
 ---
 
@@ -75,7 +75,7 @@ Utilize decoupled gateway API queries to fetch Dataset-JSON observations, perfor
 - **Negative Impact:**
   - Extra processing cost of resolving MedDRA codes on the fly.
 - **Cross-Reference:**
-  - This decision works in conjunction with the outbound ICSR pipeline defined in [ADR-064](2026-08-09-safety-e2b-icsr-xml-export-pipeline.md).
+  - This decision works in conjunction with the outbound ICSR pipeline defined in [ADR-064](2026-08-09-safety-e2b-icsr-xml-export-pipeline.md), superseded by [ADR-2464](2026-10-20-icsr-render-emits-ich-e2br3-validated-against-the-ich-schema.md).
 
 ---
 

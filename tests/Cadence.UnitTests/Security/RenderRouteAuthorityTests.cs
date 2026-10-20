@@ -29,14 +29,8 @@ public sealed class RenderRouteAuthorityTests(
       IClassFixture<RenderRouteAuthorityTests.NotificationsFactory>,
       IClassFixture<RenderRouteAuthorityTests.CtmsFactory>
 {
-    private static readonly object Icsr = new
-    {
-        header = new { messageId = "MSG-1", senderOrganization = "Sponsor", receiverOrganization = "Agency", transmissionDate = "20260930" },
-        reportIdentifiers = new { worldwideUniqueCaseId = "US-SPONSOR-0001" },
-        patient = new { patientId = "017-0001", sex = "F" },
-        reactions = new[] { new { reactionTerm = "Headache" } },
-        suspectDrugs = new[] { new { drugName = "Study drug" } },
-    };
+    // A complete ICH E2B(R3) report, so a refusal can only come from authorization (#5573).
+    private static object Icsr => Cadence.UnitTests.Safety.IcsrFixture.CompleteReport();
 
     private static readonly object Notification = new
     {

@@ -1,66 +1,323 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ichicsr xmlns="urn:hl7-org:v3" version_index="{{ icsr.version_index }}"{% if icsr.reason_for_change != null and icsr.reason_for_change != "" %} reason_for_change="{{ icsr.reason_for_change }}"{% endif %}>
-    <header>
-        <message_id>{{ icsr.header.message_id }}</message_id>
-        <sender_organization>{{ icsr.header.sender_organization }}</sender_organization>
-        <receiver_organization>{{ icsr.header.receiver_organization }}</receiver_organization>
-        <transmission_date>{{ icsr.header.transmission_date }}</transmission_date>
-        <message_type>{{ icsr.header.message_type }}</message_type>
-    </header>
-    <safety_report>
-        <worldwide_unique_case_id>{{ icsr.report_identifiers.worldwide_unique_case_id }}</worldwide_unique_case_id>
-        {% if icsr.report_identifiers.local_report_id != null and icsr.report_identifiers.local_report_id != "" %}<local_report_id>{{ icsr.report_identifiers.local_report_id }}</local_report_id>{% endif %}
-        {% if icsr.report_identifiers.first_sender_type != null and icsr.report_identifiers.first_sender_type != "" %}<first_sender_type>{{ icsr.report_identifiers.first_sender_type }}</first_sender_type>{% endif %}
-    </safety_report>
-    <patient>
-        <patient_id>{{ icsr.patient.patient_id }}</patient_id>
-        <sex>{{ icsr.patient.sex }}</sex>
-        {% if icsr.patient.age != null %}<age>{{ icsr.patient.age }}</age>{% endif %}
-        {% if icsr.patient.age_unit != null and icsr.patient.age_unit != "" %}<age_unit>{{ icsr.patient.age_unit }}</age_unit>{% endif %}
-        {% if icsr.patient.birth_date != null and icsr.patient.birth_date != "" %}<birth_date>{{ icsr.patient.birth_date }}</birth_date>{% endif %}
-    </patient>
-    <reactions>
-        {% for reaction in icsr.reactions %}
-        <reaction>
-            <reaction_term>{{ reaction.reaction_term }}</reaction_term>
-            {% if reaction.meddra_coding != null %}
-            <meddra_coding>
-                <llt_code>{{ reaction.meddra_coding.llt_code }}</llt_code>
-                <llt_name>{{ reaction.meddra_coding.llt_name }}</llt_name>
-                <pt_code>{{ reaction.meddra_coding.pt_code }}</pt_code>
-                <pt_name>{{ reaction.meddra_coding.pt_name }}</pt_name>
-                <hlt_code>{{ reaction.meddra_coding.hlt_code }}</hlt_code>
-                <hlt_name>{{ reaction.meddra_coding.hlt_name }}</hlt_name>
-                <hlgt_code>{{ reaction.meddra_coding.hlgt_code }}</hlgt_code>
-                <hlgt_name>{{ reaction.meddra_coding.hlgt_name }}</hlgt_name>
-                <soc_code>{{ reaction.meddra_coding.soc_code }}</soc_code>
-                <soc_name>{{ reaction.meddra_coding.soc_name }}</soc_name>
-                {% if reaction.meddra_coding.primary_soc_flag != null and reaction.meddra_coding.primary_soc_flag != "" %}<primary_soc_flag>{{ reaction.meddra_coding.primary_soc_flag }}</primary_soc_flag>{% endif %}
-                <score>{{ reaction.meddra_coding.score }}</score>
-            </meddra_coding>
-            {% endif %}
-            {% if reaction.start_date != null and reaction.start_date != "" %}<start_date>{{ reaction.start_date }}</start_date>{% endif %}
-            {% if reaction.end_date != null and reaction.end_date != "" %}<end_date>{{ reaction.end_date }}</end_date>{% endif %}
-            {% if reaction.outcome != null and reaction.outcome != "" %}<outcome>{{ reaction.outcome }}</outcome>{% endif %}
-            <seriousness_death>{{ reaction.seriousness_death }}</seriousness_death>
-            <seriousness_life_threatening>{{ reaction.seriousness_life_threatening }}</seriousness_life_threatening>
-            <seriousness_hospitalization>{{ reaction.seriousness_hospitalization }}</seriousness_hospitalization>
-            <seriousness_disability>{{ reaction.seriousness_disability }}</seriousness_disability>
-            <seriousness_congenital_anomaly>{{ reaction.seriousness_congenital_anomaly }}</seriousness_congenital_anomaly>
-            <seriousness_other_medically_important>{{ reaction.seriousness_other_medically_important }}</seriousness_other_medically_important>
-        </reaction>
-        {% endfor %}
-    </reactions>
-    <suspect_drugs>
-        {% for drug in icsr.suspect_drugs %}
-        <suspect_drug>
-            <drug_name>{{ drug.drug_name }}</drug_name>
-            {% if drug.active_substance_name != null and drug.active_substance_name != "" %}<active_substance_name>{{ drug.active_substance_name }}</active_substance_name>{% endif %}
-            {% if drug.dosage_text != null and drug.dosage_text != "" %}<dosage_text>{{ drug.dosage_text }}</dosage_text>{% endif %}
-            {% if drug.route_of_administration != null and drug.route_of_administration != "" %}<route_of_administration>{{ drug.route_of_administration }}</route_of_administration>{% endif %}
-            {% if drug.action_taken_with_drug != null and drug.action_taken_with_drug != "" %}<action_taken_with_drug>{{ drug.action_taken_with_drug }}</action_taken_with_drug>{% endif %}
-            <drug_role>{{ drug.drug_role }}</drug_role>
-        </suspect_drug>
-        {% endfor %}
-    </suspect_drugs>
-</ichicsr>
+<!-- ICH E2B(R3) ICSR: an HL7 v3 MCCI_IN200100UV01 batch holding one PORR_IN049016UV message, laid out as in the ICH ICSR
+     Implementation Guide and its reference instances. The comments name the ICH E2B(R3) data elements. -->
+<MCCI_IN200100UV01 ITSVersion="XML_1.0" xmlns="urn:hl7-org:v3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <id extension="{{ icsr.header.batch_number }}" root="2.16.840.1.113883.3.989.2.1.3.22"/><!-- N.1.2 -->
+  <creationTime value="{{ icsr.header.batch_transmission_date }}"/><!-- N.1.5 -->
+  <responseModeCode code="D"/>
+  <interactionId extension="MCCI_IN200100UV01" root="2.16.840.1.113883.1.6"/>
+  <name code="1" codeSystem="2.16.840.1.113883.3.989.2.1.1.1"/><!-- N.1.1: ichicsr -->
+  <PORR_IN049016UV>
+    <id extension="{{ icsr.header.message_identifier }}" root="2.16.840.1.113883.3.989.2.1.3.1"/><!-- N.2.r.1 -->
+    <creationTime value="{{ icsr.safety_report.creation_date }}"/><!-- N.2.r.4: the same value as C.1.2 -->
+    <interactionId extension="PORR_IN049016UV" root="2.16.840.1.113883.1.6"/>
+    <processingCode code="P"/>
+    <processingModeCode code="T"/>
+    <acceptAckCode code="AL"/>
+    <receiver typeCode="RCV">
+      <device classCode="DEV" determinerCode="INSTANCE">
+        <id extension="{{ icsr.header.message_receiver_identifier }}" root="2.16.840.1.113883.3.989.2.1.3.12"/><!-- N.2.r.3 -->
+      </device>
+    </receiver>
+    <sender typeCode="SND">
+      <device classCode="DEV" determinerCode="INSTANCE">
+        <id extension="{{ icsr.header.message_sender_identifier }}" root="2.16.840.1.113883.3.989.2.1.3.11"/><!-- N.2.r.2 -->
+      </device>
+    </sender>
+    <controlActProcess classCode="CACT" moodCode="EVN">
+      <code code="PORR_TE049016UV" codeSystem="2.16.840.1.113883.1.18"/>
+      <effectiveTime value="{{ icsr.safety_report.creation_date }}"/><!-- C.1.2 -->
+      <subject typeCode="SUBJ">
+        <investigationEvent classCode="INVSTG" moodCode="EVN">
+          <id extension="{{ icsr.safety_report.sender_safety_report_id }}" root="2.16.840.1.113883.3.989.2.1.3.1"/><!-- C.1.1 -->
+          <id extension="{{ icsr.safety_report.worldwide_unique_case_id }}" root="2.16.840.1.113883.3.989.2.1.3.2"/><!-- C.1.8.1 -->
+          <code code="PAT_ADV_EVNT" codeSystem="2.16.840.1.113883.5.4"/>
+          <text>{{ icsr.narrative }}</text><!-- H.1 -->
+          <statusCode code="active"/>
+          <effectiveTime>
+            <low value="{{ icsr.safety_report.first_received_date }}"/><!-- C.1.4 -->
+          </effectiveTime>
+          <availabilityTime value="{{ icsr.safety_report.most_recent_information_date }}"/><!-- C.1.5 -->
+          {%- for document in icsr.safety_report.documents_held_by_sender %}
+          <reference typeCode="REFR">
+            <document classCode="DOC" moodCode="EVN">
+              <code code="1" codeSystem="2.16.840.1.113883.3.989.2.1.1.27"/>
+              <title>{{ document }}</title><!-- C.1.6.1.r.1 -->
+            </document>
+          </reference>
+          {%- endfor %}
+          <component typeCode="COMP">
+            <adverseEventAssessment classCode="INVSTG" moodCode="EVN">
+              <subject1 typeCode="SBJ">
+                <primaryRole classCode="INVSBJ">
+                  <player1 classCode="PSN" determinerCode="INSTANCE">
+                    <name nullFlavor="MSK"/><!-- D.1: patient name and initials are never transmitted -->
+                    {%- if icsr.patient.sex != null %}
+                    <administrativeGenderCode code="{{ icsr.patient.sex }}" codeSystem="1.0.5218"/><!-- D.5 -->
+                    {%- endif %}
+                    {%- if icsr.patient.birth_date != null %}
+                    <birthTime value="{{ icsr.patient.birth_date }}"/><!-- D.2.1 -->
+                    {%- endif %}
+                    {%- if icsr.patient.patient_id != null %}
+                    <asIdentifiedEntity classCode="IDENT">
+                      <id extension="{{ icsr.patient.patient_id }}" root="2.16.840.1.113883.3.989.2.1.3.10"/><!-- D.1.1.4 -->
+                      <code code="4" codeSystem="2.16.840.1.113883.3.989.2.1.1.4"/>
+                    </asIdentifiedEntity>
+                    {%- endif %}
+                  </player1>
+                  {%- if icsr.study != null %}
+                  <subjectOf1 typeCode="SBJ">
+                    <researchStudy classCode="CLNTRL" moodCode="EVN">
+                      {%- if icsr.study.sponsor_study_number != null %}
+                      <id extension="{{ icsr.study.sponsor_study_number }}" root="2.16.840.1.113883.3.989.2.1.3.5"/><!-- C.5.3 -->
+                      {%- endif %}
+                      <code code="{{ icsr.study.study_type }}" codeSystem="2.16.840.1.113883.3.989.2.1.1.8"/><!-- C.5.4 -->
+                      {%- if icsr.study.study_name != null %}
+                      <title>{{ icsr.study.study_name }}</title><!-- C.5.2 -->
+                      {%- endif %}
+                    </researchStudy>
+                  </subjectOf1>
+                  {%- endif %}
+                  {%- if icsr.patient.age != null %}
+                  <subjectOf2 typeCode="SBJ">
+                    <observation classCode="OBS" moodCode="EVN">
+                      <code code="3" codeSystem="2.16.840.1.113883.3.989.2.1.1.19"/>
+                      <value xsi:type="PQ" value="{{ icsr.patient.age }}" unit="{{ icsr.patient.age_unit }}"/><!-- D.2.2a, D.2.2b -->
+                    </observation>
+                  </subjectOf2>
+                  {%- endif %}
+                  {%- for reaction in icsr.reactions %}
+                  <subjectOf2 typeCode="SBJ">
+                    <observation classCode="OBS" moodCode="EVN">
+                      <id root="reaction-{{ forloop.index }}"/>
+                      <code code="29" codeSystem="2.16.840.1.113883.3.989.2.1.1.19"/>
+                      {%- if reaction.start_date != null or reaction.end_date != null %}
+                      <effectiveTime xsi:type="IVL_TS">
+                        {%- if reaction.start_date != null %}
+                        <low value="{{ reaction.start_date }}"/><!-- E.i.4 -->
+                        {%- endif %}
+                        {%- if reaction.end_date != null %}
+                        <high value="{{ reaction.end_date }}"/><!-- E.i.5 -->
+                        {%- endif %}
+                      </effectiveTime>
+                      {%- endif %}
+                      <value xsi:type="CE" code="{{ reaction.meddra_coding.llt_code }}" codeSystem="2.16.840.1.113883.6.163" codeSystemVersion="{{ reaction.meddra_coding.version }}"><!-- E.i.2.1b, E.i.2.1a -->
+                        {%- if reaction.reaction_term != null %}
+                        <originalText language="{{ reaction.reaction_term_language }}">{{ reaction.reaction_term }}</originalText><!-- E.i.1.1a, E.i.1.1b -->
+                        {%- endif %}
+                      </value>
+                      <outboundRelationship2 typeCode="PERT">
+                        <observation classCode="OBS" moodCode="EVN">
+                          <code code="34" codeSystem="2.16.840.1.113883.3.989.2.1.1.19"/>
+                          {% if reaction.results_in_death %}<value xsi:type="BL" value="true"/>{% else %}<value xsi:type="BL" nullFlavor="NI"/>{% endif %}<!-- E.i.3.2a -->
+                        </observation>
+                      </outboundRelationship2>
+                      <outboundRelationship2 typeCode="PERT">
+                        <observation classCode="OBS" moodCode="EVN">
+                          <code code="21" codeSystem="2.16.840.1.113883.3.989.2.1.1.19"/>
+                          {% if reaction.life_threatening %}<value xsi:type="BL" value="true"/>{% else %}<value xsi:type="BL" nullFlavor="NI"/>{% endif %}<!-- E.i.3.2b -->
+                        </observation>
+                      </outboundRelationship2>
+                      <outboundRelationship2 typeCode="PERT">
+                        <observation classCode="OBS" moodCode="EVN">
+                          <code code="33" codeSystem="2.16.840.1.113883.3.989.2.1.1.19"/>
+                          {% if reaction.caused_or_prolonged_hospitalisation %}<value xsi:type="BL" value="true"/>{% else %}<value xsi:type="BL" nullFlavor="NI"/>{% endif %}<!-- E.i.3.2c -->
+                        </observation>
+                      </outboundRelationship2>
+                      <outboundRelationship2 typeCode="PERT">
+                        <observation classCode="OBS" moodCode="EVN">
+                          <code code="35" codeSystem="2.16.840.1.113883.3.989.2.1.1.19"/>
+                          {% if reaction.disabling_incapacitating %}<value xsi:type="BL" value="true"/>{% else %}<value xsi:type="BL" nullFlavor="NI"/>{% endif %}<!-- E.i.3.2d -->
+                        </observation>
+                      </outboundRelationship2>
+                      <outboundRelationship2 typeCode="PERT">
+                        <observation classCode="OBS" moodCode="EVN">
+                          <code code="12" codeSystem="2.16.840.1.113883.3.989.2.1.1.19"/>
+                          {% if reaction.congenital_anomaly_birth_defect %}<value xsi:type="BL" value="true"/>{% else %}<value xsi:type="BL" nullFlavor="NI"/>{% endif %}<!-- E.i.3.2e -->
+                        </observation>
+                      </outboundRelationship2>
+                      <outboundRelationship2 typeCode="PERT">
+                        <observation classCode="OBS" moodCode="EVN">
+                          <code code="26" codeSystem="2.16.840.1.113883.3.989.2.1.1.19"/>
+                          {% if reaction.other_medically_important_condition %}<value xsi:type="BL" value="true"/>{% else %}<value xsi:type="BL" nullFlavor="NI"/>{% endif %}<!-- E.i.3.2f -->
+                        </observation>
+                      </outboundRelationship2>
+                      <outboundRelationship2 typeCode="PERT">
+                        <observation classCode="OBS" moodCode="EVN">
+                          <code code="27" codeSystem="2.16.840.1.113883.3.989.2.1.1.19"/>
+                          <value xsi:type="CE" code="{{ reaction.outcome }}" codeSystem="2.16.840.1.113883.3.989.2.1.1.11"/><!-- E.i.7 -->
+                        </observation>
+                      </outboundRelationship2>
+                    </observation>
+                  </subjectOf2>
+                  {%- endfor %}
+                  <subjectOf2 typeCode="SBJ">
+                    <organizer classCode="CATEGORY" moodCode="EVN">
+                      <code code="4" codeSystem="2.16.840.1.113883.3.989.2.1.1.20"/><!-- G.k: drug information -->
+                      {%- for drug in icsr.drugs %}
+                      <component typeCode="COMP">
+                        <substanceAdministration classCode="SBADM" moodCode="EVN">
+                          <id root="drug-{{ forloop.index }}"/>
+                          <consumable typeCode="CSM">
+                            <instanceOfKind classCode="INST">
+                              <kindOfProduct classCode="MMAT" determinerCode="KIND">
+                                <name>{{ drug.drug_name }}</name><!-- G.k.2.2 -->
+                                {%- if drug.active_substance_name != null %}
+                                <ingredient classCode="ACTI">
+                                  <ingredientSubstance classCode="MMAT" determinerCode="KIND">
+                                    <name>{{ drug.active_substance_name }}</name><!-- G.k.2.3.r.1 -->
+                                  </ingredientSubstance>
+                                </ingredient>
+                                {%- endif %}
+                              </kindOfProduct>
+                            </instanceOfKind>
+                          </consumable>
+                          {%- if drug.dosage_text != null or drug.route_of_administration != null %}
+                          <outboundRelationship2 typeCode="COMP">
+                            <substanceAdministration classCode="SBADM" moodCode="EVN">
+                              {%- if drug.dosage_text != null %}
+                              <text>{{ drug.dosage_text }}</text><!-- G.k.4.r.8 -->
+                              {%- endif %}
+                              {%- if drug.route_of_administration != null %}
+                              <routeCode code="{{ drug.route_of_administration }}" codeSystem="2.16.840.1.113883.3.989.2.1.1.14" codeSystemVersion="2.2"/><!-- G.k.4.r.10.2b, G.k.4.r.10.2a: ICH E2B code list 14 v2.2 -->
+                              {%- endif %}
+                            </substanceAdministration>
+                          </outboundRelationship2>
+                          {%- endif %}
+                          {%- if drug.action_taken_with_drug != null %}
+                          <inboundRelationship typeCode="CAUS">
+                            <act classCode="ACT" moodCode="EVN">
+                              <code code="{{ drug.action_taken_with_drug }}" codeSystem="2.16.840.1.113883.3.989.2.1.1.15"/><!-- G.k.8 -->
+                            </act>
+                          </inboundRelationship>
+                          {%- endif %}
+                        </substanceAdministration>
+                      </component>
+                      {%- endfor %}
+                    </organizer>
+                  </subjectOf2>
+                </primaryRole>
+              </subject1>
+              {%- for drug in icsr.drugs %}
+              <component typeCode="COMP">
+                <causalityAssessment classCode="OBS" moodCode="EVN">
+                  <code code="20" codeSystem="2.16.840.1.113883.3.989.2.1.1.19"/>
+                  <value xsi:type="CE" code="{{ drug.drug_role }}" codeSystem="2.16.840.1.113883.3.989.2.1.1.13"/><!-- G.k.1 -->
+                  <subject2 typeCode="SUBJ">
+                    <productUseReference classCode="SBADM" moodCode="EVN">
+                      <id root="drug-{{ forloop.index }}"/>
+                    </productUseReference>
+                  </subject2>
+                </causalityAssessment>
+              </component>
+              {%- endfor %}
+            </adverseEventAssessment>
+          </component>
+          <component typeCode="COMP">
+            <observationEvent classCode="OBS" moodCode="EVN">
+              <code code="1" codeSystem="2.16.840.1.113883.3.989.2.1.1.19"/>
+              {% if icsr.safety_report.documents_held_by_sender.size > 0 %}<value xsi:type="BL" value="true"/>{% else %}<value xsi:type="BL" value="false"/>{% endif %}<!-- C.1.6.1 -->
+            </observationEvent>
+          </component>
+          <component typeCode="COMP">
+            <observationEvent classCode="OBS" moodCode="EVN">
+              <code code="23" codeSystem="2.16.840.1.113883.3.989.2.1.1.19"/>
+              {% if icsr.safety_report.fulfils_local_criteria_for_expedited_report %}<value xsi:type="BL" value="true"/>{% else %}<value xsi:type="BL" value="false"/>{% endif %}<!-- C.1.7 -->
+            </observationEvent>
+          </component>
+          <outboundRelationship typeCode="SPRT">
+            <relatedInvestigation classCode="INVSTG" moodCode="EVN">
+              <code code="1" codeSystem="2.16.840.1.113883.3.989.2.1.1.22"/>
+              <subjectOf2 typeCode="SUBJ">
+                <controlActEvent classCode="CACT" moodCode="EVN">
+                  <author typeCode="AUT">
+                    <assignedEntity classCode="ASSIGNED">
+                      <code code="{{ icsr.safety_report.first_sender }}" codeSystem="2.16.840.1.113883.3.989.2.1.1.3"/><!-- C.1.8.2 -->
+                    </assignedEntity>
+                  </author>
+                </controlActEvent>
+              </subjectOf2>
+            </relatedInvestigation>
+          </outboundRelationship>
+          {%- for source in icsr.primary_sources %}
+          <outboundRelationship typeCode="SPRT">
+            {%- if source.primary_for_regulatory_purposes %}
+            <priorityNumber value="1"/><!-- C.2.r.5 -->
+            {%- endif %}
+            <relatedInvestigation classCode="INVSTG" moodCode="EVN">
+              <code code="2" codeSystem="2.16.840.1.113883.3.989.2.1.1.22"/>
+              <subjectOf2 typeCode="SUBJ">
+                <controlActEvent classCode="CACT" moodCode="EVN">
+                  <author typeCode="AUT">
+                    <assignedEntity classCode="ASSIGNED">
+                      <assignedPerson classCode="PSN" determinerCode="INSTANCE">
+                        <asQualifiedEntity classCode="QUAL">
+                          {% if source.qualification == "UNK" %}<code nullFlavor="UNK"/>{% else %}<code code="{{ source.qualification }}" codeSystem="2.16.840.1.113883.3.989.2.1.1.6"/>{% endif %}<!-- C.2.r.4 -->
+                        </asQualifiedEntity>
+                        {%- if source.country_code != null %}
+                        <asLocatedEntity classCode="LOCE">
+                          <location classCode="COUNTRY" determinerCode="INSTANCE">
+                            <code code="{{ source.country_code }}" codeSystem="1.0.3166.1.2.2"/><!-- C.2.r.3 -->
+                          </location>
+                        </asLocatedEntity>
+                        {%- endif %}
+                      </assignedPerson>
+                    </assignedEntity>
+                  </author>
+                </controlActEvent>
+              </subjectOf2>
+            </relatedInvestigation>
+          </outboundRelationship>
+          {%- endfor %}
+          <subjectOf1 typeCode="SUBJ">
+            <controlActEvent classCode="CACT" moodCode="EVN">
+              <author typeCode="AUT">
+                <assignedEntity classCode="ASSIGNED">
+                  <code code="{{ icsr.sender.sender_type }}" codeSystem="2.16.840.1.113883.3.989.2.1.1.7"/><!-- C.3.1 -->
+                  {%- if icsr.sender.organisation != null %}
+                  <representedOrganization classCode="ORG" determinerCode="INSTANCE">
+                    <assignedEntity classCode="ASSIGNED">
+                      <representedOrganization classCode="ORG" determinerCode="INSTANCE">
+                        <name>{{ icsr.sender.organisation }}</name><!-- C.3.2 -->
+                      </representedOrganization>
+                    </assignedEntity>
+                  </representedOrganization>
+                  {%- endif %}
+                </assignedEntity>
+              </author>
+            </controlActEvent>
+          </subjectOf1>
+          {%- for other in icsr.safety_report.other_case_identifiers %}
+          <subjectOf1 typeCode="SUBJ">
+            <controlActEvent classCode="CACT" moodCode="EVN">
+              <id assigningAuthorityName="{{ other.source }}" extension="{{ other.case_identifier }}" root="2.16.840.1.113883.3.989.2.1.3.3"/><!-- C.1.9.1.r.1, C.1.9.1.r.2 -->
+            </controlActEvent>
+          </subjectOf1>
+          {%- endfor %}
+          <subjectOf2 typeCode="SUBJ">
+            <investigationCharacteristic classCode="OBS" moodCode="EVN">
+              <code code="1" codeSystem="2.16.840.1.113883.3.989.2.1.1.23"/>
+              <value xsi:type="CE" code="{{ icsr.safety_report.report_type }}" codeSystem="2.16.840.1.113883.3.989.2.1.1.2"/><!-- C.1.3 -->
+            </investigationCharacteristic>
+          </subjectOf2>
+          <subjectOf2 typeCode="SUBJ">
+            <investigationCharacteristic classCode="OBS" moodCode="EVN">
+              <code code="2" codeSystem="2.16.840.1.113883.3.989.2.1.1.23"/>
+              {% if icsr.safety_report.other_case_identifiers.size > 0 %}<value xsi:type="BL" value="true"/>{% else %}<value xsi:type="BL" nullFlavor="NI"/>{% endif %}<!-- C.1.9.1 -->
+            </investigationCharacteristic>
+          </subjectOf2>
+        </investigationEvent>
+      </subject>
+    </controlActProcess>
+  </PORR_IN049016UV>
+  <receiver typeCode="RCV">
+    <device classCode="DEV" determinerCode="INSTANCE">
+      <id extension="{{ icsr.header.batch_receiver_identifier }}" root="2.16.840.1.113883.3.989.2.1.3.14"/><!-- N.1.4 -->
+    </device>
+  </receiver>
+  <sender typeCode="SND">
+    <device classCode="DEV" determinerCode="INSTANCE">
+      <id extension="{{ icsr.header.batch_sender_identifier }}" root="2.16.840.1.113883.3.989.2.1.3.13"/><!-- N.1.3 -->
+    </device>
+  </sender>
+</MCCI_IN200100UV01>

@@ -1,6 +1,11 @@
 # ADR-064: E2B(R3) ICSR XML Export and Structural Validation
 
-- **Status:** Accepted
+> [!NOTE]
+> **Superseded Notice (2026-10-20):** the simplified layout and structural check described here did not produce an
+> E2B(R3) message. The ICSR render now emits the HL7 v3 `MCCI_IN200100UV01` message and validates it against the
+> vendored ICH schema: [ADR-2464](2026-10-20-icsr-render-emits-ich-e2br3-validated-against-the-ich-schema.md).
+
+- **Status:** Superseded by [ADR-2464](2026-10-20-icsr-render-emits-ich-e2br3-validated-against-the-ich-schema.md)
 - **Date:** 2026-08-09
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter, @architect-lead
@@ -29,9 +34,9 @@ This decision implements requirements under Trace-8.
 
 Utilize Python's `lxml` and `xmlschema` to load the official ICH E2B(R3) XSD schema files and validate the rendered payloads against them.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Provides complete validation against the entire official schema specification.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Introduces complex C-extension dependencies (`lxml`) which complicate containerized builds and introduce security/maintenance overhead.
   - ❌ Requires downloading and managing large multi-file XSD schemas locally or fetching them dynamically over the network, violating offline testing constraints.
 
@@ -39,12 +44,12 @@ Utilize Python's `lxml` and `xmlschema` to load the official ICH E2B(R3) XSD sch
 
 Define a clean Jinja2-based XML template mapping to the Pydantic models in `sae_icsr`, and implement custom structural validation checks utilizing Python's standard `defusedxml.ElementTree`.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Zero external binary/system dependencies required.
   - ✅ Cryptographically safe and immune to XXE attacks out-of-the-box.
   - ✅ Extremely fast rendering and validation executing in milliseconds under unit test environments.
   - ✅ Fully decoupled from database or network layers.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires maintaining the E2B XML structure mapping inside a Jinja2 template and a custom validation routine.
 
 ---
