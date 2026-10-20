@@ -250,6 +250,14 @@ public static class QualityGateOrchestrator
             allPassed = false;
         }
 
+        // 22d. Ratchet baselines may only shrink (#5318)
+        AnsiConsole.MarkupLine("\nChecking that no ratchet baseline grew without a Baseline-Growth reason...");
+        if (BaselineRatchetService.Check(FindRepoRoot(), preCommit) != 0)
+        {
+            AnsiConsole.MarkupLine("[red]Gate (baseline-ratchet) failed![/]");
+            allPassed = false;
+        }
+
         if (!allPassed)
         {
             AnsiConsole.MarkupLine("\n[bold red]One or more quality gate checks failed.[/]");
@@ -292,6 +300,7 @@ public static class QualityGateOrchestrator
             "validate-dependencies" or "dependencies" => DependencyValidatorService.ValidateDependencies() == 0,
             "gxp-rtm-validate" or "rtm" => GxpRtmValidatorService.ValidateGxpRtm(),
             "gxp-snapshot-guard" or "gxp-snapshot" => GxpSnapshotGuardService.Check(FindRepoRoot(), preCommit) == 0,
+            "baseline-ratchet" or "baselines" => BaselineRatchetService.Check(FindRepoRoot(), preCommit) == 0,
             _ => ReportUnknownGate(gateName)
         };
 

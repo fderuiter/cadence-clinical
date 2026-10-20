@@ -74,11 +74,11 @@ pnpm cadence check <gate> <files>  # one gate, limited to these files
 pnpm cadence check --pre-commit    # what the pre-commit hook runs
 ```
 
-| Argument       | Description                                                                                                                                                                                                                                                                                                    |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `[gate]`       | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens.                                                                                                                                                                               |
-| `[files]`      | Files to check. Only some gates use them (duplication, sanitizer, markdown, security, deid, path-patterns, query-linter).                                                                                                                                                                                      |
-| `--pre-commit` | Quick variants for the pre-commit hook: the two format gates are skipped (the hook formats the staged files itself), the `openapi` gate checks `docs/api` against the committed specs instead of exporting specs from the services, and the `gxp-snapshot` gate checks the staged files instead of the branch. |
+| Argument       | Description                                                                                                                                                                                                                                                                                                                           |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[gate]`       | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens.                                                                                                                                                                                                      |
+| `[files]`      | Files to check. Only some gates use them (duplication, sanitizer, markdown, security, deid, path-patterns, query-linter).                                                                                                                                                                                                             |
+| `--pre-commit` | Quick variants for the pre-commit hook: the two format gates are skipped (the hook formats the staged files itself), the `openapi` gate checks `docs/api` against the committed specs instead of exporting specs from the services, and the `gxp-snapshot` and `baseline-ratchet` gates check the staged files instead of the branch. |
 
 With no gate, all 22 gates run in order. A failing gate does not stop the run. The command exits `1` if any gate failed.
 
@@ -91,6 +91,13 @@ anything under `docs/SDLC/runs/` is changed: the staged files with `--pre-commit
 since its merge base with `origin/main`, uncommitted changes included. With `CADENCE_GXP_SNAPSHOT=1` it admits them, and
 outside the pre-commit hook it then runs `cadence gxp diff` instead. A branch that changed them restores `main`'s copy
 with `git checkout origin/main -- docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md docs/SDLC/runs`.
+
+The `baseline-ratchet` gate (also `baselines`, #5318) fails when a ratchet baseline gained an entry since the merge
+base with `origin/main`: every tracked `*.baseline.txt` or `*-baseline.txt` file (comment lines ignored) and the
+`results` of `.secrets.baseline`, compared as multisets, so a reorder or a shrink passes. It reads the staged copies with
+`--pre-commit` and the working tree otherwise. A `Baseline-Growth: <reason>` trailer on any commit since the merge base
+admits the growth; in the pre-commit hook `CADENCE_BASELINE_GROWTH="<reason>"` admits it for the commit being made.
+Without `origin/main` it is skipped, except in CI (`CI` or `GITHUB_ACTIONS` set), where it fails.
 
 The `deid` gate scans the given files, or every file git tracks, with the full de-identification detector
 (`packages/deid`). Tests, docs, scripts and generated folders are skipped. A line containing `deid-ignore` is skipped. Findings print as

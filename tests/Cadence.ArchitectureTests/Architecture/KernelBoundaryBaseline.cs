@@ -14,7 +14,8 @@ namespace Cadence.ArchitectureTests.Architecture;
 ///
 /// Regenerate: <c>CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --filter "FullyQualifiedName~KernelBoundaryTests"</c>
 /// rewrites the file from the current violations. Only do that to delete paid-down lines; adding lines is
-/// accepting new kernel-boundary debt and needs review.
+/// accepting new kernel-boundary debt, and the <c>baseline-ratchet</c> gate (<c>pnpm cadence check baseline-ratchet</c>)
+/// fails it unless a commit on the branch carries a <c>Baseline-Growth: &lt;reason&gt;</c> trailer (docs/TESTING.md).
 /// </summary>
 public static class KernelBoundaryBaseline
 {

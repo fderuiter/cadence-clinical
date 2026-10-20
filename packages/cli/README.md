@@ -20,7 +20,7 @@ Common commands:
 
 | Command                                                                              | Purpose                                                                                                                                                                   |
 | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `check [gate] [files]`                                                               | Runs all quality gates, or one gate such as `readmes`, `markdown`, `adrs`, `arch-drift`, `imports`, `dependencies`, `gxp-snapshot`.                                       |
+| `check [gate] [files]`                                                               | Runs all quality gates, or one gate such as `readmes`, `markdown`, `adrs`, `arch-drift`, `imports`, `dependencies`, `gxp-snapshot`, `baseline-ratchet`.                   |
 | `fix`                                                                                | Runs the automatic fixers (`SelfHealService`).                                                                                                                            |
 | `test`                                                                               | Test runner wrapper.                                                                                                                                                      |
 | `ci [--job <job>] [--allow-skip] [--list]`                                           | Runs the jobs of `.github/workflows/ci.yml` locally with the same commands (`Services/CiPlan.cs`, `Services/LocalCiRunner.cs`).                                           |
@@ -63,4 +63,6 @@ not AOT-safe fails `dotnet publish packages/cli/src/Cadence.Cli.csproj -c Releas
   (`Services/AgentHookGuard.cs`).
 - `tests/Cadence.UnitTests/Packages/GxpSnapshotPolicyTests.cs`: the `gxp-snapshot` gate (`Services/GxpSnapshotGuardService.cs`)
   and branch validation: two branches with differently tagged tests pass and merge without a conflict on the GxP documents.
+- `tests/Cadence.UnitTests/Packages/BaselineRatchetServiceTests.cs`: the `baseline-ratchet` gate
+  (`Services/BaselineRatchetService.cs`): growth fails without a `Baseline-Growth` trailer, and shrinks and reorders pass.
 - Architecture rules cover the assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
