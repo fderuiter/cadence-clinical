@@ -592,6 +592,8 @@ An **evaluation run** is one execution of a task configuration version against i
 An **agent run** is one call of a task, recorded in the interaction ledger (the append-only `intelligence.agent_runs` table, isolated per tenant) through the `StartAgentRun` and `CompleteAgentRun` module commands, with the configuration hash, model, token use, cost and a content hash. An **agent control** (`intelligence.agent_controls`, set with `SetAgentControl`) is a tenant's kill switch and monthly token budget for one task key or, with scope `*`, for every task.
 
 The **autonomy level** of a task is how far its agent may go: 0 inform, 1 draft a Proposal, 2 a Proposal holding exact commands, which the approver then sends as themself, each naming the proposal (K-AI-2, ADR-2632), 3 a standing grant for operational commands only (K-AI-7). See [docs/ai/AI_AGENTS.md](docs/ai/AI_AGENTS.md).
+
+In the Canvas (ADR-2635), **Assist** is the inspector verb where agents answer about the selected object, and the **AI label** is the mark, words and reserved colour on every piece of agent output. The **proposal review** screen is where a person opens what an agent reasoned over and decides its proposal; **AI assistance** is each viewer's own switch for Assist and the palette's Ask, never for proposals already made.
 _Avoid_: "AI gateway microservice", AI draft states on regulated records, "the model" as the thing that is validated
 
 ### Three-Tier Model Routing Strategy

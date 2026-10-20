@@ -19,6 +19,7 @@ vi.mock("../../src/api/executionApi", () => ({
 
 vi.mock("../../src/api/kernelApi", () => ({
   kernelApi: {
+    listProposals: vi.fn(async () => []),
     getCommands: vi.fn(),
     search: vi.fn(),
     trace: vi.fn(),

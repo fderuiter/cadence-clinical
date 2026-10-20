@@ -916,6 +916,10 @@ decide anything else, and approving it does not run its plan (K-SIM-5).
   provenance activity, raises `ProposalExecuted` in that activity, and writes an `ExecutedUnder` lineage edge from the
   approved proposal version to the object version written. One approved proposal may cover several commands until it
   expires; the request hash covers the proposal.
+- **Reads (ADR-2635).** `IProposalReader` (`Cadence.Kernel.Intelligence`, `KernelProposalReader` in persistence) lists
+  a study's proposals newest first, filtered by status with `Expired` read from the clock, and reads one with its plan's
+  title and hash. The kernel API serves them and rejection; approval over HTTP waits on the signed-approval route
+  (#5552).
 - **Not yet:** standing grants for agents (K-AI-7, ADR-2632 §4.3), the `QueryStatus.DraftAi` migration and a proposals
   work-queue source (ADR-2489 §4.5).
 

@@ -17,6 +17,7 @@ vi.mock("../../src/api/executionApi", () => ({
 
 vi.mock("../../src/api/kernelApi", () => ({
   kernelApi: {
+    listProposals: vi.fn(async () => []),
     search: vi.fn(),
     listProtocolVersions: vi.fn(),
     getProtocolVersion: vi.fn(),

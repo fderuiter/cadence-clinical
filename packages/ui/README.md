@@ -11,7 +11,7 @@ Shared frontend package (JavaScript, TypeScript types and Vue 3 components) used
 - `accessibility-matcher.js`: `toBeAccessible` Vitest matcher built on `axe-core`.
 - `src/components/`: Vue components (`FileUploadModal`, `MediaPlayer`, and `clinical/` components such as `ClinicalFormField`, `ClinicalDataTable`, `ClinicalQueryPanel`, `AuditLogViewer`, `PersonaSwitcher`).
 - `src/composables/`: `useFocusTrap`, `useEscapeClose`. `src/types/cdash.ts`: CDASH types.
-- `tokens.css`, `responsive.css`: design tokens (including viewport-relative drawer width tiers `--drawer-width-sm` [440px], `--drawer-width-md` [480px], `--drawer-width-lg` [640px], `--drawer-width-xl` [920px] and semantic mappings `--semantic-drawer-width-*`) and responsive utilities (`.drawer-mobile-full` and `.drawer-panel-mobile-full` for <=640px viewports) (exported as `ui/tokens.css`, `ui/responsive.css`).
+- `tokens.css`, `responsive.css`: design tokens (including viewport-relative drawer width tiers `--drawer-width-sm` [440px], `--drawer-width-md` [480px], `--drawer-width-lg` [640px], `--drawer-width-xl` [920px] and semantic mappings `--semantic-drawer-width-*`, and the AI output colour `--semantic-color-ai`, `--semantic-color-ai-bg` and `--semantic-color-ai-border` reserved for agent output, UX-8 and ADR-2635) and responsive utilities (`.drawer-mobile-full` and `.drawer-panel-mobile-full` for <=640px viewports) (exported as `ui/tokens.css`, `ui/responsive.css`).
 - `index.d.ts`: type declarations; `scripts/generate-types.js` runs before the build.
 
 ## Scripts

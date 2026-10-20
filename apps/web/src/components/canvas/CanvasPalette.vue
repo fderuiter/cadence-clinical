@@ -86,12 +86,14 @@ import { kernelApi, type KernelSearchHit } from "../../api/kernelApi";
 import { STAGES, participantStateLabel } from "../../canvas/lifecycle";
 import type { SubjectSummary } from "../../api/executionApi";
 import type { PaletteTarget } from "../../canvas/palette";
+import { useAiAssistance } from "../../ai/aiAssistance";
 
 /**
  * The Clinical Canvas ⌘K palette (docs/ux/CLINICAL_CANVAS.md §2.5): navigation to stages, sections and the
  * participants the canvas has loaded, studies found by kernel search (ADR-2484, ADR-2540), and opening a study by
  * code. Kernel search leaves out what the reader may not see. The palette offers no action a service cannot run;
- * a participant's commands are under Act in the inspector.
+ * a participant's commands are under Act in the inspector. With AI assistance on, a sentence of three or more words
+ * is offered as a question for Assist (ADR-2635), which can only read or propose.
  */
 interface PaletteItem {
   key: string;
@@ -122,6 +124,9 @@ const MAX_RESULTS = 12;
 const MAX_KERNEL_HITS = 5;
 const MIN_SEARCH_LENGTH = 2;
 const SEARCH_DELAY_MS = 250;
+const MIN_ASK_WORDS = 3;
+
+const { enabled: aiEnabled } = useAiAssistance();
 
 const kernelHits = ref<KernelSearchHit[]>([]);
 const kernelNote = ref("");
@@ -235,6 +240,20 @@ const results = computed<PaletteItem[]>(() => {
       )
     : items.value;
   const shown = [...matches.slice(0, MAX_RESULTS), ...studyHits.value];
+  // A sentence is a question for Assist, which answers by reading or proposing, never by writing (ADR-2635).
+  if (
+    aiEnabled.value &&
+    props.studyCode &&
+    text.split(/\s+/).length >= MIN_ASK_WORDS
+  ) {
+    shown.push({
+      key: `ask:${text}`,
+      group: "Ask AI",
+      label: text,
+      detail: "Opens Assist. Nothing changes until a person decides.",
+      target: { studyCode: props.studyCode, ask: text },
+    });
+  }
   if (
     text &&
     text.length <= MAX_STUDY_CODE &&
