@@ -32,7 +32,9 @@ public class DicomDeidentifier
         DicomTag.PatientAddress,
         DicomTag.PatientMotherBirthName,
         DicomTag.PatientTelephoneNumbers,
-        DicomTag.EthnicGroup,
+        new DicomTag(0x0010, 0x2160), // EthnicGroup, retired by DICOM; fo-dicom 5.2 names it EthnicGroupRETIRED
+        DicomTag.EthnicGroupCodeSequence,
+        DicomTag.EthnicGroups,
         new DicomTag(0x0010, 0x1000), // OtherPatientIDs
         DicomTag.OtherPatientIDsSequence,
         DicomTag.OtherPatientNames,
