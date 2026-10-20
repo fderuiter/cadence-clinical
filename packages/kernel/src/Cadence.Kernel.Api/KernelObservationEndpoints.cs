@@ -46,7 +46,7 @@ public static class KernelObservationEndpoints
 
         group.MapGet("/{observationRef}", GetAsync)
             .WithName("KernelGetObservation")
-            .WithSummary("An observation with its revisions, its lock and its kernel audit entries.")
+            .WithSummary("An observation with its revisions, the locks covering it, the assertions about it and its kernel audit entries.")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
@@ -62,12 +62,6 @@ public static class KernelObservationEndpoints
             .WithSummary("Corrects an observation's value with the signed reason for change (observation.correct).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesKernelCommand<CorrectObservation>();
-
-        group.MapPost("/{observationRef}/lock", LockAsync)
-            .WithName("KernelLockObservation")
-            .WithSummary("Locks an observation so no correction commits after it (observation.lock).")
-            .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesKernelCommand<LockObservation>();
 
         return kernel;
     }
@@ -162,37 +156,6 @@ public static class KernelObservationEndpoints
         return result.Value is { } state ? TypedResults.Ok(KernelObservationStateResponse.From(state)) : Problem(result.Error!);
     }
 
-    internal static async Task<Results<Ok<KernelObservationLockResponse>, ProblemHttpResult>> LockAsync(
-        string observationRef,
-        KernelLockObservationRequest request,
-        HttpContext context,
-        IKernelCommandSender sender,
-        IKernelChangeReason changeReason,
-        CancellationToken cancellationToken)
-    {
-        if (ParseObservation(observationRef) is not { } observation)
-        {
-            return ObservationRefInvalid(observationRef);
-        }
-
-        if (request is null || !NodeRef.TryParse(request.EnrollmentRef, out var enrollment) || enrollment.Kind != NodeKinds.Enrollment)
-        {
-            return KernelProblems.BadRequest("Invalid lock", "Name the observation's enrollment as an enrollment NodeRef.");
-        }
-
-        var result = await sender.SendAsync(
-            new LockObservation(
-                KernelRequestTenant.Get(context),
-                observation,
-                EnrollmentId.FromGuid(enrollment.Id),
-                IdempotencyKey(context),
-                changeReason.Read(context) ?? string.Empty),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        return result.Value is { } state
-            ? TypedResults.Ok(new KernelObservationLockResponse(NodeRef.For(state.ObservationId).ToString(), state.LockedAt, state.LockedBy))
-            : Problem(result.Error!);
-    }
-
     /// <summary>A kernel error as RFC 9457 problem details, with its stable code (K-ERR-1) and any field errors.</summary>
     internal static ProblemHttpResult Problem(KernelError error) => KernelErrorEndpoints.Problem(error);
 
@@ -233,10 +196,6 @@ public sealed record KernelRecordObservationRequest(Guid? ObservationId, string 
 /// <param name="ExpectedVersion">The observation version the corrector saw; another version is refused with 409.</param>
 public sealed record KernelCorrectObservationRequest(string EnrollmentRef, ObservationValue? Value, long ExpectedVersion);
 
-/// <summary>Body of <c>POST /observations/{ref}/lock</c>.</summary>
-/// <param name="EnrollmentRef">The observation's enrollment, as a NodeRef.</param>
-public sealed record KernelLockObservationRequest(string EnrollmentRef);
-
 /// <summary>An observation's value after a command.</summary>
 /// <param name="Ref">The observation, as a NodeRef at its new version.</param>
 /// <param name="EnrollmentRef">Its enrollment.</param>
@@ -249,22 +208,17 @@ public sealed record KernelObservationStateResponse(string Ref, string Enrollmen
         new(NodeRef.For(state.ObservationId, state.Version).ToString(), NodeRef.For(state.EnrollmentId).ToString(), state.Value, state.Version, state.Revision);
 }
 
-/// <summary>An observation's lock.</summary>
-/// <param name="ObservationRef">The locked observation.</param>
-/// <param name="LockedAt">When the kernel recorded the lock.</param>
-/// <param name="LockedBy">Who locked it.</param>
-public sealed record KernelObservationLockResponse(string ObservationRef, DateTimeOffset LockedAt, string LockedBy);
-
-/// <summary>An observation with its correction history and audit trail.</summary>
+/// <summary>An observation with its correction history, the locks covering it, the assertions about it and its audit trail.</summary>
 /// <param name="Ref">The observation, as a NodeRef.</param>
 /// <param name="EnrollmentRef">Its enrollment.</param>
 /// <param name="Concept">What it means, as <c>&lt;concept id&gt;@&lt;version&gt;</c>.</param>
 /// <param name="Value">The current value.</param>
 /// <param name="ObservedAt">When the fact held in the trial world.</param>
 /// <param name="Version">The version a correction names as expected.</param>
-/// <param name="Locked">The lock, or null when the observation is not locked.</param>
+/// <param name="Locks">The locks in force at its study, study site, enrollment or itself, widest scope first (ADR-2621); empty when none covers it.</param>
 /// <param name="Revisions">Every revision, oldest first.</param>
-/// <param name="Audit">The kernel audit-chain entries about the observation and its lock, oldest first.</param>
+/// <param name="Assertions">Verifications, queries and answers about it, retracted ones included, oldest first.</param>
+/// <param name="Audit">The kernel audit-chain entries about the observation, oldest first.</param>
 public sealed record KernelObservationResponse(
     string Ref,
     string EnrollmentRef,
@@ -272,8 +226,9 @@ public sealed record KernelObservationResponse(
     ObservationValue Value,
     DateTimeOffset ObservedAt,
     long Version,
-    ObservationLockView? Locked,
+    IReadOnlyList<LockView> Locks,
     IReadOnlyList<ObservationRevisionView> Revisions,
+    IReadOnlyList<AssertionView> Assertions,
     IReadOnlyList<ObservationAuditView> Audit)
 {
     internal static KernelObservationResponse From(ObservationRecord record) =>
@@ -284,7 +239,8 @@ public sealed record KernelObservationResponse(
             record.Value,
             record.ObservedAt,
             record.Version,
-            record.Lock,
+            record.Locks.ToList(),
             record.Revisions.ToList(),
+            record.Assertions.ToList(),
             record.Audit.ToList());
 }

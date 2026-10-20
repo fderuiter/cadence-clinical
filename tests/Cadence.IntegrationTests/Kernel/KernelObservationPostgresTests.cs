@@ -23,20 +23,20 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// The eCRF correction through the kernel command pipeline on PostgreSQL (ADR-2620, #5366), as the application role
 /// under Row-Level Security: a correction, its reason, its audit link, its event and its outbox row commit together or
-/// not at all; a stale expected version is refused; and a lock and a correction serialise on the lock aggregate's
-/// advisory lock (K-TX-4), so no correction commits after a lock. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// not at all; a stale expected version is refused; and a lock and a correction serialise on the scope's advisory
+/// lock, exclusive for the lock and shared for the correction (ADR-2621), so no correction commits after a lock. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>, IDisposable
 {
-    private const string EntryReason = "Initial entry";
-    private const string CorrectionReason = "Transcription error: source document reads 128";
+    private const string EntryReason = KernelObservationScenario.EntryReason;
+    private const string CorrectionReason = KernelObservationScenario.CorrectionReason;
 
-    private static readonly ConceptRef SystolicBloodPressure = new(ConceptId.New(), 1);
-
-    private readonly KernelProtocolScenario _scenario = new(fixture);
+    private readonly KernelObservationScenario _observations = new(fixture);
 
     public static TheoryData<string> CommitStages => new(Enum.GetNames<CommitStage>());
+
+    public static TheoryData<string> LockScopeKinds => new(LockScopes.Kinds);
 
     public void Dispose()
     {
@@ -62,7 +62,7 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
         recorded.Version.Should().Be(1);
         Tick();
 
-        var corrected = await _scenario.OkAsync(Correct(tenant, recorded, Mmhg(128)), ct);
+        var corrected = await _observations.Protocol.OkAsync(Correct(tenant, recorded, Mmhg(128)), ct);
 
         corrected.Value.Should().Be(Mmhg(128));
         corrected.Version.Should().Be(2);
@@ -136,7 +136,7 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
         var ct = TestContext.Current.CancellationToken;
         var (tenant, enrollment) = await NewEnrollmentAsync(ct);
         var recorded = await RecordAsync(tenant, enrollment, Mmhg(182), ct);
-        await _scenario.OkAsync(Correct(tenant, recorded, Mmhg(128)), ct);
+        await _observations.Protocol.OkAsync(Correct(tenant, recorded, Mmhg(128)), ct);
         var before = await CountsAsync(tenant, ct);
 
         var stale = await fixture.Sender.SendAsync(Correct(tenant, recorded, Mmhg(129)), cancellationToken: ct);
@@ -169,55 +169,59 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
     }
 
     /// <summary>
-    /// The lock-versus-write race, made deterministic: a correction is held inside its commit while a lock is sent. The
-    /// lock waits for the correction's advisory lock, then commits after it; a correction sent after the lock is refused
-    /// with 423. In the other order, a lock held inside its commit makes a concurrent correction wait and then refuse.
-    /// Either way no correction commits after the lock (the "unlocked" check holds at commit time).
+    /// The lock-versus-write race at each scope that covers an observation (ADR-2621), made deterministic: a correction
+    /// is held inside its commit while a lock is sent. The lock waits for the correction's shared scope lock, then
+    /// commits after it; a correction sent after the lock is refused with 423. In the other order, a lock held inside its
+    /// commit makes a concurrent correction wait on its exclusive scope lock and then refuse. Either way no correction
+    /// commits after the lock (the "unlocked" check holds at commit time).
     /// </summary>
-    [Fact(DisplayName = "LockAndCorrection_Race_NoCorrectionCommitsAfterTheLock")]
-    public async Task LockAndCorrectionRaceNoCorrectionCommitsAfterTheLock()
+    [Theory(DisplayName = "LockAndCorrection_Race_NoCorrectionCommitsAfterTheLock")]
+    [MemberData(nameof(LockScopeKinds))]
+    public async Task LockAndCorrectionRaceNoCorrectionCommitsAfterTheLock(string scopeKind)
     {
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
 
         // 1. The correction is mid-commit when the lock arrives.
-        var (tenant, enrollment) = await NewEnrollmentAsync(ct);
-        var recorded = await RecordAsync(tenant, enrollment, Mmhg(182), ct);
+        var subject = await _observations.NewEnrollmentAsync(ct);
+        var recorded = await RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(182), ct);
+        var lockCommand = await _observations.LockAsync(subject.Tenant, subject.Study, subject.Scope(scopeKind, recorded.ObservationId), ct);
         using (var paused = new CommitPause(fixture))
         {
-            var correction = paused.HoldAsync(() => fixture.Sender.SendAsync(Correct(tenant, recorded, Mmhg(128)), cancellationToken: ct));
+            var correction = paused.HoldAsync(() => fixture.Sender.SendAsync(Correct(subject.Tenant, recorded, Mmhg(128)), cancellationToken: ct));
             await paused.Reached.WaitAsync(TimeSpan.FromSeconds(30), ct);
-            var locking = fixture.Sender.SendAsync(Lock(tenant, recorded), cancellationToken: ct);
+            var locking = fixture.Sender.SendAsync(lockCommand, cancellationToken: ct);
             await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
-            locking.IsCompleted.Should().BeFalse("the lock waits for the correction's advisory lock ({0})", Describe(locking));
+            locking.IsCompleted.Should().BeFalse("the lock waits for the correction's shared scope lock ({0})", Describe(locking));
             paused.Release();
 
             (await correction).IsSuccess.Should().BeTrue();
             (await locking).IsSuccess.Should().BeTrue();
         }
 
-        var after = await fixture.Sender.SendAsync(Correct(tenant, recorded, Mmhg(138), expectedVersion: 2), cancellationToken: ct);
+        var after = await fixture.Sender.SendAsync(Correct(subject.Tenant, recorded, Mmhg(138), expectedVersion: 2), cancellationToken: ct);
         after.Error!.Code.Should().Be(ObservationErrors.Locked.Code);
         after.Error.HttpStatus.Should().Be(423);
-        await AssertNoCorrectionAfterLockAsync(tenant, recorded.ObservationId, expectedCorrections: 1, ct);
+        await AssertNoCorrectionAfterLockAsync(subject.Tenant, recorded.ObservationId, lockCommand.AssertionId, expectedCorrections: 1, ct);
 
         // 2. The lock is mid-commit when the correction arrives.
-        (tenant, enrollment) = await NewEnrollmentAsync(ct);
-        recorded = await RecordAsync(tenant, enrollment, Mmhg(182), ct);
+        subject = await _observations.NewEnrollmentAsync(ct);
+        recorded = await RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(182), ct);
+        lockCommand = await _observations.LockAsync(subject.Tenant, subject.Study, subject.Scope(scopeKind, recorded.ObservationId), ct);
         using (var paused = new CommitPause(fixture))
         {
-            var locking = paused.HoldAsync(() => fixture.Sender.SendAsync(Lock(tenant, recorded), cancellationToken: ct));
+            var locking = paused.HoldAsync(() => fixture.Sender.SendAsync(lockCommand, cancellationToken: ct));
             await paused.Reached.WaitAsync(TimeSpan.FromSeconds(30), ct);
-            var correction = fixture.Sender.SendAsync(Correct(tenant, recorded, Mmhg(128)), cancellationToken: ct);
+            var correction = fixture.Sender.SendAsync(Correct(subject.Tenant, recorded, Mmhg(128)), cancellationToken: ct);
             await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
-            correction.IsCompleted.Should().BeFalse("the correction waits for the lock's advisory lock ({0})", Describe(correction));
+            correction.IsCompleted.Should().BeFalse("the correction waits for the lock's exclusive scope lock ({0})", Describe(correction));
             paused.Release();
 
             (await locking).IsSuccess.Should().BeTrue();
             (await correction).Error!.Code.Should().Be(ObservationErrors.Locked.Code);
         }
 
-        await AssertNoCorrectionAfterLockAsync(tenant, recorded.ObservationId, expectedCorrections: 0, ct);
+        await AssertNoCorrectionAfterLockAsync(subject.Tenant, recorded.ObservationId, lockCommand.AssertionId, expectedCorrections: 0, ct);
     }
 
     /// <summary>
@@ -273,7 +277,7 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
         }
 
         var missing = await RecordAsync(tenant, enrollment, new MissingValue(NullFlavor.NotDone, "Cuff unavailable"), ct);
-        var corrected = await _scenario.OkAsync(Correct(tenant, missing, Mmhg(118)), ct);
+        var corrected = await _observations.Protocol.OkAsync(Correct(tenant, missing, Mmhg(118)), ct);
         corrected.Value.Should().Be(Mmhg(118));
         var stored = await StoredJsonAsync(tenant, missing.ObservationId, ct);
         stored.Should().Contain("\"value\": 118").And.Contain("\"type\": \"quantity\"");
@@ -299,13 +303,17 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
     private static string Describe<T>(Task<CommandResult<T>> task) =>
         task.IsCompletedSuccessfully ? $"completed: {task.Result.Error?.Code ?? "success"} {task.Result.Error?.Message}" : task.Status.ToString();
 
-    private async Task AssertNoCorrectionAfterLockAsync(TenantId tenant, ObservationId observation, int expectedCorrections, CancellationToken ct)
+    private async Task AssertNoCorrectionAfterLockAsync(
+        TenantId tenant, ObservationId observation, AssertionId lockId, int expectedCorrections, CancellationToken ct)
     {
         await using var db = fixture.CreateContext(tenant);
         var key = observation.ToString();
-        var entries = await db.AuditEntries.AsNoTracking().Where(a => a.AggregateId == key).OrderBy(a => a.Sequence).ToListAsync(ct);
-        var lockSequence = entries.Single(a => a.AggregateType == nameof(ObservationLock)).Sequence;
-        var corrections = entries.Where(a => a.AggregateType == nameof(Observation) && a.Action == "Updated").ToList();
+        var lockKey = lockId.ToString();
+        var lockSequence = (await db.AuditEntries.AsNoTracking()
+            .SingleAsync(a => a.AggregateType == nameof(Assertion) && a.AggregateId == lockKey, ct)).Sequence;
+        var corrections = await db.AuditEntries.AsNoTracking()
+            .Where(a => a.AggregateType == nameof(Observation) && a.AggregateId == key && a.Action == "Updated")
+            .ToListAsync(ct);
         corrections.Should().HaveCount(expectedCorrections);
         corrections.Should().OnlyContain(c => c.Sequence < lockSequence, "no correction commits after the lock");
     }
@@ -330,22 +338,17 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
 
     private async Task<(TenantId Tenant, EnrollmentId Enrollment)> NewEnrollmentAsync(CancellationToken ct)
     {
-        var (tenant, study) = await _scenario.NewStudyAsync(ct);
-        return (tenant, await ScreenAsync(tenant, await AddStudySiteAsync(tenant, study, ct), ct));
+        var subject = await _observations.NewEnrollmentAsync(ct);
+        return (subject.Tenant, subject.Enrollment);
     }
 
-    private async Task<ObservationState> RecordAsync(TenantId tenant, EnrollmentId enrollment, ObservationValue value, CancellationToken ct) =>
-        await _scenario.OkAsync(
-            new RecordObservation(tenant, ObservationId.New(), enrollment, SystolicBloodPressure, value, Tick().AddMinutes(-5), KernelProtocolScenario.Key(), EntryReason),
-            ct);
+    private Task<ObservationState> RecordAsync(TenantId tenant, EnrollmentId enrollment, ObservationValue value, CancellationToken ct) =>
+        _observations.RecordAsync(tenant, enrollment, value, ct);
 
     private static CorrectObservation Correct(TenantId tenant, ObservationState observation, ObservationValue value, long expectedVersion = 1) =>
-        new(tenant, observation.ObservationId, observation.EnrollmentId, value, expectedVersion, KernelProtocolScenario.Key(), CorrectionReason);
+        KernelObservationScenario.Correct(tenant, observation, value, expectedVersion);
 
-    private static LockObservation Lock(TenantId tenant, ObservationState observation) =>
-        new(tenant, observation.ObservationId, observation.EnrollmentId, KernelProtocolScenario.Key(), "Data review complete; locking the value");
-
-    private static QuantityValue Mmhg(decimal value) => new(value, "mm[Hg]");
+    private static QuantityValue Mmhg(decimal value) => KernelObservationScenario.Mmhg(value);
 
     private async Task<string> StoredJsonAsync(TenantId tenant, ObservationId observation, CancellationToken ct)
     {
@@ -355,27 +358,11 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
             .SingleAsync(ct);
     }
 
-    private DateTimeOffset Tick() => fixture.Clock.Advance(TimeSpan.FromSeconds(1));
+    private void Tick() => _observations.Tick();
 
-    private async Task<StudySiteId> AddStudySiteAsync(TenantId tenant, StudyId study, CancellationToken ct)
-    {
-        await using var db = fixture.CreateContext(tenant);
-        var sponsor = await db.Studies.AsNoTracking().Where(s => s.Id == study).Select(s => s.SponsorId).SingleAsync(ct);
-        var suffix = Guid.NewGuid().ToString("N")[..10];
-        var site = new Site(SiteId.New(), tenant, sponsor, $"SITE-{suffix}", "Memorial Hospital", "US", KernelPostgresFixture.ActorId, "Seeded for test");
-        var studySite = new StudySite(StudySiteId.New(), tenant, study, site.Id, "Selected", KernelPostgresFixture.ActorId, "Seeded for test");
-        await fixture.SeedAsync(site, studySite);
-        return studySite.Id;
-    }
+    private Task<StudySiteId> AddStudySiteAsync(TenantId tenant, StudyId study, CancellationToken ct) => _observations.AddStudySiteAsync(tenant, study, ct);
 
-    private async Task<EnrollmentId> ScreenAsync(TenantId tenant, StudySiteId studySite, CancellationToken ct)
-    {
-        var participant = await _scenario.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Consented"), ct);
-        SubjectCode.TryFrom($"S-{Guid.NewGuid():N}"[..12].ToUpperInvariant(), out var code);
-        var enrollment = await _scenario.OkAsync(
-            new ScreenParticipant(tenant, EnrollmentId.New(), participant, studySite, code, Tick().AddDays(-1), KernelProtocolScenario.Key(), "Screening visit"), ct);
-        return enrollment.EnrollmentId;
-    }
+    private Task<EnrollmentId> ScreenAsync(TenantId tenant, StudySiteId studySite, CancellationToken ct) => _observations.ScreenAsync(tenant, studySite, ct);
 
     /// <summary>
     /// Holds the command sent through <see cref="HoldAsync{T}"/> when it reaches its commit (at

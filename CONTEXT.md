@@ -112,7 +112,16 @@ _Avoid_: page IDs or visit strings on Observations, server-side form drafts
 A statement by an actor with authority about an Observation or another Assertion: verified (SDV),
 reviewed, queried, coded as (MedDRA/WHODrug), eligibility, protocol deviation, causality, arm
 assigned, frozen, locked. Assertions are append-only; statuses such as "verified" are Assertions, not
-columns on the Observation. Queries target an `ObservationId`.
+columns on the Observation. A later Assertion of the same kind **retracts** an earlier one (closing a query,
+withdrawing a verification, releasing a lock). Queries target an `ObservationId`; a verification targets one revision
+of it, so a correction is not verified until someone verifies it (ADR-2621).
+
+### Lock (Frozen, Locked)
+
+A `Frozen` or `Locked` Assertion at a scope: one observation, a participant's enrollment, a study site or the whole
+study (database lock). While it holds, nothing in the scope is recorded or corrected; `Locked` also stops new
+Assertions such as SDV or queries. A lock and its release are each signed. _Avoid_: per-record lock flags,
+unlocking without a reason or signature.
 
 ### Source, Artifact and Specimen
 

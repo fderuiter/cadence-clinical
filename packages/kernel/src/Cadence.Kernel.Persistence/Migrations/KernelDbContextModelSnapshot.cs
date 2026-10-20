@@ -142,6 +142,110 @@ namespace Cadence.Kernel.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Assertion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("AssertedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("asserted_at");
+
+                    b.Property<string>("AssertedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("asserted_by");
+
+                    b.Property<Guid?>("AttestationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("attestation_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid?>("EnrollmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("enrollment_id");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason_for_change");
+
+                    b.Property<Guid?>("RetractsId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("retracts_id");
+
+                    b.Property<Guid>("StudyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("study_id");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("target_id");
+
+                    b.Property<string>("TargetKind")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("target_kind");
+
+                    b.Property<int?>("TargetRevision")
+                        .HasColumnType("integer")
+                        .HasColumnName("target_revision");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Text")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("text");
+
+                    b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version_index");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "AttestationId");
+
+                    b.HasIndex("TenantId", "EnrollmentId");
+
+                    b.HasIndex("TenantId", "RetractsId")
+                        .IsUnique()
+                        .HasFilter("retracts_id IS NOT NULL");
+
+                    b.HasIndex("TenantId", "StudyId");
+
+                    b.HasIndex("TenantId", "TargetId", "Kind");
+
+                    b.ToTable("assertions", "kernel", t =>
+                        {
+                            t.HasCheckConstraint("ck_assertions_lock_attested", "kind NOT IN ('Locked', 'Frozen') OR attestation_id IS NOT NULL");
+
+                            t.HasCheckConstraint("ck_assertions_target_revision", "target_revision IS NULL OR target_revision > 0");
+                        });
+                });
+
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Attestation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -797,57 +901,6 @@ namespace Cadence.Kernel.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_observations_revision", "revision > 0");
                         });
-                });
-
-            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.ObservationLock", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("created_by");
-
-                    b.Property<Guid>("EnrollmentId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("enrollment_id");
-
-                    b.Property<DateTimeOffset>("LockedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("locked_at");
-
-                    b.Property<Guid>("ObservationId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("observation_id");
-
-                    b.Property<string>("ReasonForChange")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("reason_for_change");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tenant_id");
-
-                    b.Property<long>("VersionIndex")
-                        .IsConcurrencyToken()
-                        .HasColumnType("bigint")
-                        .HasColumnName("version_index");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenantId", "ObservationId")
-                        .IsUnique();
-
-                    b.ToTable("observation_locks", "kernel");
                 });
 
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.ObservationRevision", b =>
@@ -3767,6 +3820,40 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Assertion", b =>
+                {
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Attestation", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "AttestationId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Enrollment", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "EnrollmentId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Assertion", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "RetractsId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Study", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "StudyId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Attestation", b =>
                 {
                     b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
@@ -3933,22 +4020,6 @@ namespace Cadence.Kernel.Persistence.Migrations
                     b.HasOne("Cadence.Kernel.Domain.Entities.Study", null)
                         .WithMany()
                         .HasForeignKey("TenantId", "StudyId")
-                        .HasPrincipalKey("TenantId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.ObservationLock", b =>
-                {
-                    b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Cadence.Kernel.Domain.Entities.Observation", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId", "ObservationId")
                         .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();

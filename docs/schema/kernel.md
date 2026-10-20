@@ -9,6 +9,7 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.activity_entries`](#kernelactivity_entries) | `ActivityEntryRecord` | 11 |
 | [`kernel.artifact_versions`](#kernelartifact_versions) | `ArtifactVersion` | 9 |
 | [`kernel.artifacts`](#kernelartifacts) | `Artifact` | 9 |
+| [`kernel.assertions`](#kernelassertions) | `Assertion` | 17 |
 | [`kernel.attestations`](#kernelattestations) | `Attestation` | 15 |
 | [`kernel.audit_chain_heads`](#kernelaudit_chain_heads) | `AuditChainHead` | 3 |
 | [`kernel.audit_chain_seals`](#kernelaudit_chain_seals) | `AuditChainSeal` | 6 |
@@ -31,7 +32,6 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.library_items`](#kernellibrary_items) | `LibraryItem` | 16 |
 | [`kernel.lineage_edges`](#kernellineage_edges) | `LineageEdgeRecord` | 12 |
 | [`kernel.lineage_nodes`](#kernellineage_nodes) | `LineageNodeRecord` | 7 |
-| [`kernel.observation_locks`](#kernelobservation_locks) | `ObservationLock` | 9 |
 | [`kernel.observation_revisions`](#kernelobservation_revisions) | `ObservationRevision` | 8 |
 | [`kernel.observations`](#kernelobservations) | `Observation` | 14 |
 | [`kernel.organizations`](#kernelorganizations) | `Organization` | 10 |
@@ -149,6 +149,52 @@ Indexes:
 
 - `AK_artifacts_tenant_id_id`: unique constraint (`tenant_id`, `id`)
 - `IX_artifacts_tenant_id_study_id_kind`: (`tenant_id`, `study_id`, `kind`)
+
+## kernel.assertions
+
+Entity: `Assertion`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `asserted_at` | `timestamp with time zone` | no |  |  |
+| `asserted_by` | `character varying(255)` | no |  |  |
+| `attestation_id` | `uuid` | yes |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `enrollment_id` | `uuid` | yes |  |  |
+| `kind` | `character varying(32)` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `retracts_id` | `uuid` | yes |  |  |
+| `study_id` | `uuid` | no |  |  |
+| `target_id` | `uuid` | no |  |  |
+| `target_kind` | `character varying(64)` | no |  |  |
+| `target_revision` | `integer` | yes |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `text` | `character varying(4000)` | yes |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_assertions_assertions_tenant_id_retracts_id`: (`tenant_id`, `retracts_id`) references `kernel.assertions` (`tenant_id`, `id`), on delete restrict
+- `FK_assertions_attestations_tenant_id_attestation_id`: (`tenant_id`, `attestation_id`) references `kernel.attestations` (`tenant_id`, `id`), on delete restrict
+- `FK_assertions_enrollments_tenant_id_enrollment_id`: (`tenant_id`, `enrollment_id`) references `kernel.enrollments` (`tenant_id`, `id`), on delete restrict
+- `FK_assertions_studies_tenant_id_study_id`: (`tenant_id`, `study_id`) references `kernel.studies` (`tenant_id`, `id`), on delete restrict
+- `FK_assertions_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_assertions_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_assertions_tenant_id_attestation_id`: (`tenant_id`, `attestation_id`)
+- `IX_assertions_tenant_id_enrollment_id`: (`tenant_id`, `enrollment_id`)
+- `IX_assertions_tenant_id_retracts_id`: unique (`tenant_id`, `retracts_id`) where `retracts_id IS NOT NULL`
+- `IX_assertions_tenant_id_study_id`: (`tenant_id`, `study_id`)
+- `IX_assertions_tenant_id_target_id_kind`: (`tenant_id`, `target_id`, `kind`)
+
+Check constraints:
+
+- `ck_assertions_lock_attested`: `kind NOT IN ('Locked', 'Frozen') OR attestation_id IS NOT NULL`
+- `ck_assertions_target_revision`: `target_revision IS NULL OR target_revision > 0`
 
 ## kernel.attestations
 
@@ -744,31 +790,6 @@ Foreign keys:
 Indexes:
 
 - `IX_lineage_nodes_tenant_id_derived`: (`tenant_id`, `derived`)
-
-## kernel.observation_locks
-
-Entity: `ObservationLock`
-
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `enrollment_id` | `uuid` | no |  |  |
-| `locked_at` | `timestamp with time zone` | no |  |  |
-| `observation_id` | `uuid` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
-
-Foreign keys:
-
-- `FK_observation_locks_observations_tenant_id_observation_id`: (`tenant_id`, `observation_id`) references `kernel.observations` (`tenant_id`, `id`), on delete restrict
-- `FK_observation_locks_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
-
-Indexes:
-
-- `IX_observation_locks_tenant_id_observation_id`: unique (`tenant_id`, `observation_id`)
 
 ## kernel.observation_revisions
 

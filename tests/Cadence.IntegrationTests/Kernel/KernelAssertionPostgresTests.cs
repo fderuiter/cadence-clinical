@@ -1,0 +1,242 @@
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
+using Cadence.Kernel;
+using Cadence.Kernel.Commands;
+using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Evidence;
+using Cadence.Kernel.References;
+using Cadence.Kernel.Trust;
+
+using FluentAssertions;
+
+using Microsoft.EntityFrameworkCore;
+
+using Xunit;
+
+namespace Cadence.IntegrationTests.Kernel;
+
+/// <summary>
+/// Assertions and scoped locks on PostgreSQL (spec §8.2, §10.5, ADR-2621), as the application role under Row-Level
+/// Security: a signed lock at a study, study site, enrollment or observation refuses recording and correcting within its
+/// scope until a signed release; verifications name the revision they judged; queries are answered and closed by
+/// retraction; and nothing about an observation changes when something is asserted about it. Skipped unless
+/// <c>CADENCE_TEST_POSTGRES</c> is set.
+/// </summary>
+[Trait("Category", "Integration")]
+public sealed class KernelAssertionPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>
+{
+    private readonly KernelObservationScenario _observations = new(fixture);
+
+    private static QuantityValue Mmhg(decimal value) => KernelObservationScenario.Mmhg(value);
+
+    /// <summary>
+    /// Database lock: a <see cref="LockKind.Locked"/> lock at study scope refuses recording a new observation and
+    /// correcting an existing one with 423. Releasing it with a reason and a signature allows both again, and the
+    /// released lock stays on record.
+    /// </summary>
+    [Fact(DisplayName = "StudyLock_RefusesRecordAndCorrect_UntilItIsReleased")]
+    public async Task StudyLockRefusesRecordAndCorrectUntilItIsReleased()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var subject = await _observations.NewEnrollmentAsync(ct);
+        var recorded = await _observations.RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(182), ct);
+
+        var locked = await _observations.Protocol.OkAsync(await _observations.LockAsync(subject.Tenant, subject.Study, NodeRef.For(subject.Study), ct), ct);
+
+        locked.Released.Should().BeFalse();
+        var record = await fixture.Sender.SendAsync(_observations.Record(subject.Tenant, subject.Enrollment, Mmhg(120)), cancellationToken: ct);
+        record.Error!.Code.Should().Be(ObservationErrors.Locked.Code);
+        record.Error.HttpStatus.Should().Be(423);
+        (await fixture.Sender.SendAsync(KernelObservationScenario.Correct(subject.Tenant, recorded, Mmhg(128)), cancellationToken: ct)).Error!.Code
+            .Should().Be(ObservationErrors.Locked.Code);
+        var view = await fixture.ObservationRecords.FindAsync(subject.Tenant, recorded.ObservationId, ct);
+        view!.Locks.Should().ContainSingle().Which.Should().Match<LockView>(l =>
+            l.LockId == locked.LockId && l.Kind == LockKind.Locked && l.Scope == NodeRef.For(subject.Study) && l.AttestationId == locked.AttestationId);
+
+        var released = await _observations.Protocol.OkAsync(await _observations.ReleaseAsync(subject.Tenant, subject.Study, locked.LockId, ct), ct);
+
+        released.Released.Should().BeTrue();
+        (await _observations.Protocol.OkAsync(KernelObservationScenario.Correct(subject.Tenant, recorded, Mmhg(128)), ct)).Revision.Should().Be(2);
+        await _observations.RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(120), ct);
+        (await fixture.ObservationRecords.FindAsync(subject.Tenant, recorded.ObservationId, ct))!.Locks.Should().BeEmpty();
+        await using var db = fixture.CreateContext(subject.Tenant);
+        var stored = await db.Assertions.AsNoTracking().Where(a => a.StudyId == subject.Study).OrderBy(a => a.AssertedAt).ToListAsync(ct);
+        stored.Select(a => (a.Kind, a.RetractsId)).Should().Equal((AssertionKind.Locked, (AssertionId?)null), (AssertionKind.Locked, locked.LockId));
+        var events = await db.DomainEvents.AsNoTracking().Where(e => e.Type == "LockApplied" || e.Type == "LockReleased").Select(e => e.Type).ToListAsync(ct);
+        events.Should().BeEquivalentTo("LockApplied", "LockReleased");
+    }
+
+    /// <summary>
+    /// A lock at one enrollment refuses only that enrollment's writes; a lock at one observation refuses only its
+    /// correction. Neighbouring enrollments and observations stay writable.
+    /// </summary>
+    [Fact(DisplayName = "NarrowLocks_RefuseOnlyTheirScope")]
+    public async Task NarrowLocksRefuseOnlyTheirScope()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var subject = await _observations.NewEnrollmentAsync(ct);
+        var neighbour = await _observations.ScreenAsync(subject.Tenant, subject.StudySite, ct);
+        var first = await _observations.RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(182), ct);
+        var second = await _observations.RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(140), ct);
+
+        await _observations.Protocol.OkAsync(await _observations.LockAsync(subject.Tenant, subject.Study, NodeRef.For(first.ObservationId), ct, LockKind.Frozen), ct);
+
+        (await fixture.Sender.SendAsync(KernelObservationScenario.Correct(subject.Tenant, first, Mmhg(128)), cancellationToken: ct)).Error!.Code
+            .Should().Be(ObservationErrors.Locked.Code);
+        await _observations.Protocol.OkAsync(KernelObservationScenario.Correct(subject.Tenant, second, Mmhg(130)), ct);
+        await _observations.RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(120), ct);
+
+        await _observations.Protocol.OkAsync(await _observations.LockAsync(subject.Tenant, subject.Study, NodeRef.For(subject.Enrollment), ct), ct);
+
+        (await fixture.Sender.SendAsync(_observations.Record(subject.Tenant, subject.Enrollment, Mmhg(120)), cancellationToken: ct)).Error!.Code
+            .Should().Be(ObservationErrors.Locked.Code);
+        await _observations.RecordAsync(subject.Tenant, neighbour, Mmhg(120), ct);
+        (await fixture.ObservationRecords.FindAsync(subject.Tenant, first.ObservationId, ct))!.Locks.Select(l => l.Scope.Kind)
+            .Should().Equal(NodeKinds.Enrollment, NodeKinds.Observation);
+    }
+
+    /// <summary>
+    /// A lock is refused when its signature signs a different statement, when its scope belongs to another study, and
+    /// when a lock of the same kind already holds there. A released lock is not released twice. None of these write.
+    /// </summary>
+    [Fact(DisplayName = "Lock_RefusesAWrongSignatureAForeignScopeAndADuplicate")]
+    public async Task LockRefusesAWrongSignatureAForeignScopeAndADuplicate()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var subject = await _observations.NewEnrollmentAsync(ct);
+        var (_, otherStudy) = await _observations.Protocol.NewStudyAsync(subject.Tenant, ct);
+        var scope = NodeRef.For(subject.StudySite);
+
+        var signedForFrozen = await _observations.LockAsync(subject.Tenant, subject.Study, scope, ct, LockKind.Frozen);
+        (await fixture.Sender.SendAsync(signedForFrozen with { Kind = LockKind.Locked }, cancellationToken: ct)).Error!.Code
+            .Should().Be(AssertionErrors.AttestationRejected.Code);
+        (await fixture.Sender.SendAsync(await _observations.LockAsync(subject.Tenant, otherStudy, scope, ct), cancellationToken: ct)).Error!.Code
+            .Should().Be(AssertionErrors.ScopeUnknown.Code);
+        (await fixture.Sender.SendAsync(await _observations.LockAsync(subject.Tenant, subject.Study, NodeRef.For(subject.StudySite, 2), ct), cancellationToken: ct))
+            .Error!.Code.Should().Be(AssertionErrors.ScopeInvalid.Code);
+
+        var locked = await _observations.Protocol.OkAsync(await _observations.LockAsync(subject.Tenant, subject.Study, scope, ct), ct);
+        (await fixture.Sender.SendAsync(await _observations.LockAsync(subject.Tenant, subject.Study, scope, ct), cancellationToken: ct)).Error!.Code
+            .Should().Be(AssertionErrors.AlreadyLocked.Code);
+        await _observations.Protocol.OkAsync(await _observations.ReleaseAsync(subject.Tenant, subject.Study, locked.LockId, ct), ct);
+        (await fixture.Sender.SendAsync(await _observations.ReleaseAsync(subject.Tenant, subject.Study, locked.LockId, ct), cancellationToken: ct)).Error!.Code
+            .Should().Be(AssertionErrors.AlreadyRetracted.Code);
+
+        await using var db = fixture.CreateContext(subject.Tenant);
+        (await db.Assertions.AsNoTracking().CountAsync(ct)).Should().Be(2, "only the lock and its release were recorded");
+    }
+
+    /// <summary>
+    /// A verification names the revision it judged (ADR-2621): verifying a revision that is no longer current is
+    /// refused, and after a correction the earlier verification still names revision 1, so nobody reads the corrected
+    /// value as verified. The observation's value and version are not changed by asserting something about it.
+    /// </summary>
+    [Fact(DisplayName = "Verification_NamesTheRevisionItJudged")]
+    public async Task VerificationNamesTheRevisionItJudged()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var subject = await _observations.NewEnrollmentAsync(ct);
+        var recorded = await _observations.RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(182), ct);
+
+        var verified = await _observations.Protocol.OkAsync(Verify(subject, recorded.ObservationId, 1), ct);
+        verified.Revision.Should().Be(1);
+        var corrected = await _observations.Protocol.OkAsync(KernelObservationScenario.Correct(subject.Tenant, recorded, Mmhg(128)), ct);
+        corrected.Version.Should().Be(2, "a verification does not change the observation");
+
+        var stale = await fixture.Sender.SendAsync(Verify(subject, recorded.ObservationId, 1), cancellationToken: ct);
+        stale.Error!.Code.Should().Be(AssertionErrors.RevisionStale.Code);
+        var view = await fixture.ObservationRecords.FindAsync(subject.Tenant, recorded.ObservationId, ct);
+        view!.Assertions.Should().ContainSingle().Which.Should().Match<AssertionView>(a =>
+            a.AssertionId == verified.AssertionId && a.Kind == AssertionKind.Verified && a.Revision == 1 && a.RetractedBy == null);
+    }
+
+    /// <summary>
+    /// A query is raised about an observation, answered, and closed by retracting it; a closed query takes no answer and
+    /// is not retracted twice. A <see cref="LockKind.Locked"/> lock refuses new assertions, while a
+    /// <see cref="LockKind.Frozen"/> one still allows review. A lock is released only with <see cref="ReleaseLock"/>.
+    /// </summary>
+    [Fact(DisplayName = "Query_IsAnsweredAndClosed_AndLocksDecideWhatMayStillBeAsserted")]
+    public async Task QueryIsAnsweredAndClosedAndLocksDecideWhatMayStillBeAsserted()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var subject = await _observations.NewEnrollmentAsync(ct);
+        var recorded = await _observations.RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(182), ct);
+
+        (await fixture.Sender.SendAsync(Query(subject, recorded.ObservationId, " "), cancellationToken: ct)).Error!.Code
+            .Should().Be(AssertionErrors.TextInvalid.Code);
+        var query = await _observations.Protocol.OkAsync(Query(subject, recorded.ObservationId, "Value above the expected range; please confirm."), ct);
+        var answer = await _observations.Protocol.OkAsync(Answer(subject, query.AssertionId, "Confirmed against the source document."), ct);
+        answer.Target.Should().Be(NodeRef.For(query.AssertionId));
+        (await fixture.Sender.SendAsync(Answer(subject, answer.AssertionId, "An answer to an answer"), cancellationToken: ct)).Error!.Code
+            .Should().Be(AssertionErrors.NotAQuery.Code);
+
+        var closed = await _observations.Protocol.OkAsync(Retract(subject, query.AssertionId), ct);
+        closed.Retracts.Should().Be(query.AssertionId);
+        (await fixture.Sender.SendAsync(Answer(subject, query.AssertionId, "Too late"), cancellationToken: ct)).Error!.Code
+            .Should().Be(AssertionErrors.AlreadyRetracted.Code);
+        (await fixture.Sender.SendAsync(Retract(subject, query.AssertionId), cancellationToken: ct)).Error!.Code
+            .Should().Be(AssertionErrors.AlreadyRetracted.Code);
+
+        var frozen = await _observations.Protocol.OkAsync(await _observations.LockAsync(subject.Tenant, subject.Study, NodeRef.For(subject.Enrollment), ct, LockKind.Frozen), ct);
+        await _observations.Protocol.OkAsync(Verify(subject, recorded.ObservationId, 1), ct);
+        (await fixture.Sender.SendAsync(Retract(subject, frozen.LockId), cancellationToken: ct)).Error!.Code
+            .Should().Be(AssertionErrors.NotRetractable.Code);
+        await _observations.Protocol.OkAsync(await _observations.LockAsync(subject.Tenant, subject.Study, NodeRef.For(subject.Study), ct), ct);
+        var refused = await fixture.Sender.SendAsync(Query(subject, recorded.ObservationId, "After lock"), cancellationToken: ct);
+        refused.Error!.Code.Should().Be(AssertionErrors.Locked.Code);
+        refused.Error.HttpStatus.Should().Be(423);
+
+        var view = await fixture.ObservationRecords.FindAsync(subject.Tenant, recorded.ObservationId, ct);
+        view!.Version.Should().Be(1, "asserting something about an observation never changes it");
+        view.Assertions.Select(a => (a.Kind, Closed: a.RetractedBy != null))
+            .Should().Equal((AssertionKind.Queried, true), (AssertionKind.QueryAnswered, false), (AssertionKind.Verified, false));
+        view.Assertions[0].RetractedBy.Should().Be(closed.AssertionId);
+        view.Locks.Select(l => l.Kind).Should().Equal(LockKind.Locked, LockKind.Frozen);
+    }
+
+    /// <summary>A lock statement is signed before it is recorded; an attestation naming an assertion already recorded is refused.</summary>
+    [Fact(DisplayName = "LockStatement_IsNotSignableOnceRecorded")]
+    public async Task LockStatementIsNotSignableOnceRecorded()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var subject = await _observations.NewEnrollmentAsync(ct);
+        var locked = await _observations.Protocol.OkAsync(await _observations.LockAsync(subject.Tenant, subject.Study, NodeRef.For(subject.Study), ct), ct);
+
+        var late = await fixture.Sender.SendAsync(
+            _observations.Protocol.AttestCommand(
+                subject.Tenant, AttestationMeaning.Approved,
+                LockStatement.Target(locked.LockId, LockStatement.Apply(locked.LockId, LockKind.Locked, NodeRef.For(subject.Study)))),
+            cancellationToken: ct);
+
+        late.Error!.Code.Should().Be(TrustErrors.TargetNotSignable.Code);
+    }
+
+    /// <summary>Records one observation with a query about it in a new tenant, for tests of the assertion table.</summary>
+    internal static async Task SeedAsync(KernelPostgresFixture fixture, CancellationToken ct)
+    {
+        var observations = new KernelObservationScenario(fixture);
+        var subject = await observations.NewEnrollmentAsync(ct);
+        var recorded = await observations.RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(120), ct);
+        await observations.Protocol.OkAsync(Query(subject, recorded.ObservationId, "Please confirm."), ct);
+    }
+
+    private static VerifyObservation Verify(KernelObservationScenario.Subject subject, ObservationId observation, int revision) =>
+        new(subject.Tenant, AssertionId.New(), subject.Enrollment, observation, revision, KernelProtocolScenario.Key(), "Source data verified");
+
+    private static RaiseQuery Query(KernelObservationScenario.Subject subject, ObservationId observation, string text) =>
+        new(subject.Tenant, AssertionId.New(), subject.Enrollment, observation, text, KernelProtocolScenario.Key(), "Data review");
+
+    private static AnswerQuery Answer(KernelObservationScenario.Subject subject, AssertionId query, string text) =>
+        new(subject.Tenant, AssertionId.New(), subject.Enrollment, query, text, KernelProtocolScenario.Key(), "Site response");
+
+    private static RetractAssertion Retract(KernelObservationScenario.Subject subject, AssertionId retracted) =>
+        new(subject.Tenant, AssertionId.New(), subject.Enrollment, retracted, KernelProtocolScenario.Key(), "Query resolved");
+}

@@ -33,6 +33,9 @@ internal static class InsertOnlySql
         // Evidence: an observation revision is never overwritten; a correction appends the next one (K-FACT-1, ADR-2620).
         "observation_revisions",
 
+        // Evidence: an assertion is never changed or removed; a later one retracts it, and a lock's release is one (ADR-2621).
+        "assertions",
+
         // Authority: a role never changes once defined, so grants under it keep their meaning (spec §9.3).
         "roles",
 
