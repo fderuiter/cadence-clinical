@@ -713,6 +713,12 @@ planned activity id (null for an unscheduled or log form), and a save names Coll
 Concepts, so the Concept always comes from the governing item. Participant-level reconsent to an earlier version is not
 modelled yet.
 
+**Implemented** (ADR-2623, #5363): an Observation's value is a typed `ObservationValue` (`Quantity` with a UCUM unit,
+the entered precision and an optional comparator, `Coded` naming its code-system version, `DateTime` at its ISO 8601
+precision, `Text`, `Boolean`, `Missing` with a null flavor and optional detail). A `CollectionItem` admits only the
+values it can hold, and a mapping writes `Missing` as `--STAT = NOT DONE` with `--REASND` (K-FACT-3). Derived
+normalisation, reference-range flags and toxicity grades (the rest of K-FACT-2) are not implemented yet.
+
 ### 8.2 Assertion
 
 A statement about a fact or another assertion by an actor with authority: `Verified(SDV)`, `Reviewed(SDR)`,
@@ -924,6 +930,9 @@ reason)`, append-only. Meanings: `Authored`, `Reviewed`, `Approved`, `Verified`,
 - A form signature targets a `CollectionInstance` with the hash of its members' sorted `(ObservationId, Revision,
 value)`, so it names the exact revisions signed. A correction never alters an Attestation: the signature stays bound
   to what it covered and is shown as superseded until someone signs again (ADR-2622).
+- _Not implemented yet (#5463):_ no attestation target check is registered for a `CollectionInstance`, so `Attest`
+  refuses a form signature (`TargetKindUnsupported`). The targets that can be signed today are lock statements,
+  validation finding decisions, Proposals and agent task configurations.
 
 ### 9.6 Lineage graph (ADR-2255)
 

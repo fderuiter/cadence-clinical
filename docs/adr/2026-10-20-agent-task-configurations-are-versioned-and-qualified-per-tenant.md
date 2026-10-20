@@ -1,5 +1,10 @@
 # ADR-2631: Agent Task Configurations Are Versioned and Qualified per Tenant
 
+> [!NOTE]
+> Amended 2026-10-20 by #5574 (PR #5580): qualification names an evaluation run stored with `RecordEvaluationRun`
+> ([ADR-2634](2026-10-20-ai-task-configurations-are-measured-by-versioned-evaluations-and-production-signals.md) §4.4)
+> instead of taking a caller-stated `passed` flag. §4.2 step 3 and the open items in §5 describe the amended rule.
+
 - **Status:** Accepted
 - **Date:** 2026-10-20
 - **Authors:** @fderuiter
@@ -120,7 +125,8 @@ the version exists and its content hash is current when someone signs it.
     on the server against a real provider waits on #5550.
   - There is no HTTP step-up signing route yet: the qualification route takes the id of an attestation made with the
     kernel `Attest` command.
-  - Evidence thresholds per risk class come with the harness; the risk class is recorded now.
+  - Evidence thresholds per risk class: the risk class is recorded on each qualification, but the evaluation harness
+    (ADR-2634) applies the configuration's own acceptance criteria and does not yet vary them by risk class.
   - K-AI-5 stays in the rule-coverage baseline until agent Proposals record the configuration reference (the first
     agents).
 

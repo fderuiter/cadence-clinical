@@ -44,7 +44,7 @@ Some checks record pre-existing debt in a checked-in baseline instead of failing
   `CADENCE_BASELINE_GROWTH="<reason>"`; the variable is honoured only in the pre-commit hook, and `pnpm cadence check`
   and CI still require the trailer.
 - Without `origin/main` (or with a shallow clone that shares no history with it) the gate is skipped locally with a
-  message and fails in CI (`CI` or `GITHUB_ACTIONS` set), so a missing ref never lets growth through.
+  message and fails in CI (`CI` or `GITHUB_ACTIONS` set to `true` or `1`), so a missing ref never lets growth through.
 
 ## Tests that need PostgreSQL
 

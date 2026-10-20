@@ -1,5 +1,10 @@
 # ADR-2630: AI Agents Act Through Proposals in One Governed Runtime
 
+> [!NOTE]
+> Detailed by [ADR-2632](2026-10-20-agents-act-for-one-person-and-approved-proposals-execute-as-their-approver.md):
+> approving a proposal does not run its commands. The approver sends each command and names the approved proposal in
+> `CommandMetadata.Proposal` (K-AI-2); the pipeline checks the link.
+
 - **Status:** Accepted
 - **Date:** 2026-10-20
 - **Authors:** @fderuiter
@@ -72,19 +77,19 @@ This ADR decides how agents are built, run and governed across the platform, and
 
 ## 4. Decision Outcome
 
-Option 3. It is kernel decision **K037** for the kernel-facing rules (§4.8); the rest is the Intelligence module's
+Option 3. It is kernel decision **K037** for the kernel-facing rules (§4.9); the rest is the Intelligence module's
 design.
 
 ### 4.1 The autonomy ladder
 
 Each task configuration declares the highest level its agent may reach, and its qualification caps it.
 
-| Level                | The agent                                                    | Who acts                                                                                          | Allowed for                                                            |
-| -------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| 0 Inform             | Answers, explains, summarizes, with citations                | Nobody; read only                                                                                 | Any task                                                               |
-| 1 Draft              | Writes a Proposal holding the draft                          | A person edits, approves, then executes                                                           | Any task, clinical data included                                       |
-| 2 Approve-to-execute | Writes a Proposal holding the exact commands                 | A person approves with an attestation, and the approval runs the commands as that person (K-AI-2) | Commands the approver could run                                        |
-| 3 Standing grant     | Executes inside a narrow, time-boxed grant a person approved | The agent, under that grant, each action reviewable                                               | Operational, non-clinical-truth commands only, after a security review |
+| Level                | The agent                                                    | Who acts                                                                                                 | Allowed for                                                            |
+| -------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| 0 Inform             | Answers, explains, summarizes, with citations                | Nobody; read only                                                                                        | Any task                                                               |
+| 1 Draft              | Writes a Proposal holding the draft                          | A person edits, approves, then executes                                                                  | Any task, clinical data included                                       |
+| 2 Approve-to-execute | Writes a Proposal holding the exact commands                 | A person approves with an attestation, then sends the commands as themself, naming the proposal (K-AI-2) | Commands the approver could run                                        |
+| 3 Standing grant     | Executes inside a narrow, time-boxed grant a person approved | The agent, under that grant, each action reviewable                                                      | Operational, non-clinical-truth commands only, after a security review |
 
 Level 3 never covers observations, eligibility, causality, seriousness, coding approval, signatures, unblinding or any
 command that changes what the study claims about a participant (K-AI-7). The owner chose on 2026-10-20 to allow level 3
@@ -106,7 +111,7 @@ owns, in its own schema:
 - **Budgets and a kill switch** per tenant and per agent. A budget stops AI spend; it never blocks clinical work.
 
 The module calls no kernel internals: it reads through kernel read ports and writes only by sending kernel commands
-(`Propose`, and later the K-AI-2 execute) through the module SDK.
+(`Propose`) through the module SDK. The person who approves a proposal sends the commands that execute it (ADR-2632).
 
 ### 4.3 Task configurations
 
