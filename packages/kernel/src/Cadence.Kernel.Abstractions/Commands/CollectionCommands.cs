@@ -10,7 +10,8 @@ namespace Cadence.Kernel.Commands;
 /// Opens a form instance for a participant (spec §8.1, K-FACT-6, ADR-2622): a <c>CollectionInstance</c> that will hold
 /// the values collected under one CollectionSpec. The governing protocol version is resolved by the kernel, not named
 /// by the caller: the highest-numbered version in force at the enrollment's study site at <c>CollectedAt</c> (K-TIME-8),
-/// whose design must contain the CollectionSpec. Refused when a lock covers the enrollment (spec §10.5).
+/// whose design must contain the CollectionSpec. Refused when a lock covers the enrollment (spec §10.5) and when the
+/// participant is withdrawn (spec §7.4, <see cref="ObservationErrors.ParticipantWithdrawn"/>).
 /// </summary>
 /// <remarks>
 /// <para><c>CollectionSpecId</c>: The id of the CollectionSpec in the protocol design: what the form collects.</para>
@@ -26,7 +27,7 @@ namespace Cadence.Kernel.Commands;
     nameof(CollectionErrors.CollectedAtInvalid),
     nameof(CollectionErrors.NoGoverningVersion),
     nameof(CollectionErrors.SpecUnknown))]
-[RaisesKernelErrors(typeof(ObservationErrors), nameof(ObservationErrors.Locked))]
+[RaisesKernelErrors(typeof(ObservationErrors), nameof(ObservationErrors.Locked), nameof(ObservationErrors.ParticipantWithdrawn))]
 public sealed record OpenCollectionInstance(
     TenantId TenantId,
     CollectionInstanceId CollectionInstanceId,
@@ -43,7 +44,9 @@ public sealed record OpenCollectionInstance(
 /// revision it was edited from; one stale revision refuses the whole save (409), so a stale browser never overwrites a
 /// value it did not see. A value equal to the current one is left as it is. Structural checks (the item exists, the
 /// value's kind, UCUM unit and code-system version) refuse the save with 422 and an error per item; edit checks run after
-/// commit. Refused when a lock covers the form or any of its values (spec §10.5).
+/// commit. Refused when a lock covers the form or any of its values (spec §10.5). After the participant's withdrawal a
+/// save that only corrects values captured before it is accepted, and one with a new value is refused whole
+/// (<see cref="ObservationErrors.ParticipantWithdrawn"/>).
 /// </summary>
 /// <remarks>
 /// <para><c>EnrollmentId</c>: The form instance's enrollment; the command is authorized against it.</para>
@@ -52,7 +55,8 @@ public sealed record OpenCollectionInstance(
 [KernelCapability("collection.record", VerbClass.Execute, Resource = nameof(RecordCollectedValues.EnrollmentId))]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound), nameof(KernelErrors.AlreadyExists))]
 [RaisesKernelErrors(typeof(CollectionErrors), nameof(CollectionErrors.ValuesInvalid), nameof(CollectionErrors.RevisionStale))]
-[RaisesKernelErrors(typeof(ObservationErrors), nameof(ObservationErrors.Locked), nameof(ObservationErrors.ObservedAtInvalid))]
+[RaisesKernelErrors(
+    typeof(ObservationErrors), nameof(ObservationErrors.Locked), nameof(ObservationErrors.ObservedAtInvalid), nameof(ObservationErrors.ParticipantWithdrawn))]
 public sealed record RecordCollectedValues(
     TenantId TenantId,
     CollectionInstanceId CollectionInstanceId,

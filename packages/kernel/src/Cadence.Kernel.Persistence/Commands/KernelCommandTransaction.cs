@@ -464,6 +464,41 @@ internal sealed class KernelCommandTransaction(
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task RecordRefusalAsync(KernelError refusal, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(refusal);
+
+        // Nothing the handler read or staged is written: the refusal is the only row besides its provenance.
+        db.ChangeTracker.Clear();
+        _events.Clear();
+        _inputs.Clear();
+        _parts.Clear();
+        _partEdges.Clear();
+        _vaultWrites.Clear();
+
+        using var writes = db.PermitPipelineWrites();
+#pragma warning disable RS0030 // Kernel contexts register no retrying execution strategy (KernelDatabase.UseKernelNpgsql; KernelExecutionStrategyTests), so EF permits this transaction and the commit pipeline keeps its own conflict handling.
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+#pragma warning restore RS0030
+
+        AddProvenance("Refused", aggregate: null, _permit);
+        var payload = JsonSerializer.SerializeToElement(
+            new
+            {
+                command = execution.CommandType,
+                idempotencyKey = Command.IdempotencyKey,
+                code = refusal.Code,
+                reason = refusal.Message,
+                producer = refusal.Explanation?.Producer,
+                conditions = refusal.Explanation?.Conditions.Select(c => new { c.Code, c.Description, c.Met, evidence = c.Evidence.Select(e => e.ToString()) }),
+            },
+            KernelCommandPipelineJson.Options);
+        await AppendAuditAsync("Refused", aggregate: null, cancellationToken, changes: payload.GetRawText()).ConfigureAwait(false);
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     public async ValueTask DisposeAsync()
     {
         try

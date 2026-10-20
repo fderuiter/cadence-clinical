@@ -220,6 +220,16 @@ var enrolled = await sender.SendAsync(
   and not after it is recorded. `ChangeEnrollmentStatus` cannot withdraw: `WithdrawParticipant` names an attestation
   with meaning `Withdrawn` over the enrollment's current `ContentHash` (`Attest` accepts `enrollment` targets), signed
   by the person executing the command.
+- **Capture after withdrawal (#5578).** Once the participant is withdrawn, `RecordObservation`, `OpenCollectionInstance`
+  and a `RecordCollectedValues` save with a value for an item that has none are refused with 409
+  `K.Observation.ParticipantWithdrawn`, explained by the producer `kernel.capture` (condition
+  `participation.not-withdrawn`, evidence the enrollment) and audited as `Refused`. The spec is silent on late entry
+  and corrections, so the kernel refuses all new capture whatever its observed-at time, and accepts corrections of
+  values captured before the withdrawal (`CorrectObservation`, a save that only corrects); those values stay readable
+  (K-CONS-2). `WithdrawParticipant` takes the enrollment's scope lock exclusively and capture shares it before it reads
+  the status, so no new value commits after the withdrawal (ADR-2621). The check is
+  `Evidence/CaptureConditions.cs`: with computable consent (#4777) it becomes `ConsentAllows` over the withdrawn
+  scopes (K-CONS-1), not yet.
 - **History.** Every change closes the current row of `enrollment_status_periods` and records the old status up to
   the change and the new status from it. `IEnrollmentDirectory.StatusAsOfAsync(tenant, enrollment, validAt, knownAt)`
   reads it, and `ResolveParticipantAsync(tenant, study, code)` resolves a subject code (K-ID-5).
@@ -291,7 +301,10 @@ if (!result.IsSuccess) return result.Error;   // KernelError: stable code + HTTP
 
 The pipeline validates the command (tenant, idempotency key, reason for change), resolves the actor from
 `ICurrentActor` (no actor, no write: K-TX-5), authorizes with `IAuthorizer` (a denial is itself audited), replays or
-rejects a used idempotency key (K-TX-3), runs the handler, and commits in one PostgreSQL transaction:
+rejects a used idempotency key (K-TX-3), runs the handler, and commits in one PostgreSQL transaction. A handler
+refusal that carries a `KernelError.Explanation` (a refusal decided by a condition, such as capture for a withdrawn
+participant) is audited too: a `Refused` audit entry with the command, error code, reason and evaluated conditions, on a
+provenance activity that keeps the command's permit, and nothing else is written.
 
 | Written in the same transaction                                                                  | Table                                   | Mutable?                    |
 | ------------------------------------------------------------------------------------------------ | --------------------------------------- | --------------------------- |
@@ -401,7 +414,7 @@ Commands in `Commands/ObservationCommands.cs`, each authorized against the obser
 
 | Command              | Does                                                                                                             |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `RecordObservation`  | Records the first value; participant and study come from the enrollment                                          |
+| `RecordObservation`  | Records the first value; participant and study come from the enrollment; refused (409) once it is withdrawn      |
 | `CorrectObservation` | Appends a revision with the reason; refused when locked (423), stale (`ExpectedVersion`, 409) or unchanged (422) |
 
 - Revisions (`observation_revisions`) are insert-only (`KA001`); revision _n_ is recorded until revision _n+1_.
@@ -477,6 +490,8 @@ the enrollment:
   shared locks on every scope covering the form and its values; the commit writes the form first and its changed
   member observations after it, with one audit link each, and refuses any other aggregate. Two users saving different
   items both succeed one after the other; two saving one item get one success and one 409.
+- After the participant's withdrawal no form opens and a save with a new value is refused whole (409
+  `K.Observation.ParticipantWithdrawn`); a save that only corrects values goes on (see Participants and enrollment).
 - The form is a lock scope (spec §10.5): a lock on it refuses saves, and corrections and assertions of its values made
   one at a time. `ICollectionInstanceRecords` reads a form's items (the CollectionSpec's, in the governing version's
   order), its values with their revisions, the assertions about them, the signatures over the form and the locks in
@@ -588,6 +603,10 @@ AuthorizationDecision.Deny("Protocol v3 training is not current.",
 
 A denied command returns `K.auth.denied` with `KernelError.Explanation` set, and the `DecisionDenied` event and
 audit entry record the reason and each condition with its evidence.
+
+A handler that refuses a command on a condition explains it the same way: capture for a withdrawn participant returns
+`K.Observation.ParticipantWithdrawn` with an explanation from `kernel.capture`, and the pipeline audits every handler
+refusal that carries an explanation as a `Refused` audit entry (no event).
 
 ## Authorization and dry runs (ADR-2483)
 

@@ -115,6 +115,13 @@ public interface IKernelCommandTransaction : IAsyncDisposable
     /// decided on (K-AUTH-2).
     /// </summary>
     Task RecordDenialAsync(AuthorizationDecision denial, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Records a refusal the handler decided by a condition and explained (K-EXP-1), such as new capture for a withdrawn
+    /// participant, as its own audit entry with the error code, the reason and the evaluated conditions, and discards
+    /// whatever the handler staged. The command was authorized, so the provenance activity keeps its permit.
+    /// </summary>
+    Task RecordRefusalAsync(KernelError refusal, CancellationToken cancellationToken);
 }
 
 /// <summary>A result previously stored under the same tenant and idempotency key.</summary>

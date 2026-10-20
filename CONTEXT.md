@@ -63,7 +63,8 @@ ADR-2458).
 A participant's membership of one StudySite, with its state machine:
 `Screening → ScreenFailed`, `Screening → Enrolled → Randomized → Active → Completed`, `Enrolled → Active` for
 non-randomized studies, and withdrawal from any active state through a dedicated command that names a
-`Withdrawn` Attestation. The status history is bitemporal, so the status can be read as of any valid and known
+`Withdrawn` Attestation. After withdrawal no new data is captured for the enrollment (no observation, form or new form
+value), while data captured before it stays readable and correctable. The status history is bitemporal, so the status can be read as of any valid and known
 time. Entering `Enrolled` assigns the **enrollment number**, gap-free per study. `ReconsentRequired` and
 `Unblinded` are not enrollment states (ADR-2453).
 

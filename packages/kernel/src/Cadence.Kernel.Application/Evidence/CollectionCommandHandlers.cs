@@ -25,7 +25,7 @@ namespace Cadence.Kernel.Application.Evidence;
 /// Handles <see cref="OpenCollectionInstance"/> (K-FACT-6, K-TIME-8): it resolves the protocol version governing the
 /// enrollment's study site at the collection time, checks that its design has the CollectionSpec (and that the planned
 /// activity collects it), and opens the form instance with a <see cref="LineageEdgeKind.GovernedBy"/> edge from that
-/// version.
+/// version. A withdrawn participant gets no new form (<see cref="CaptureConditions"/>).
 /// </summary>
 internal sealed class OpenCollectionInstanceHandler : ICommandHandler<OpenCollectionInstance, CollectionInstanceState>
 {
@@ -53,6 +53,11 @@ internal sealed class OpenCollectionInstanceHandler : ICommandHandler<OpenCollec
             .ConfigureAwait(false))
         {
             return ObservationErrors.Locked;
+        }
+
+        if (await CaptureConditions.RefusalAsync(context.Work, enrollment.Id, nameof(OpenCollectionInstance), cancellationToken).ConfigureAwait(false) is { } refused)
+        {
+            return refused;
         }
 
         if (await GoverningVersion.ResolveAsync(context.Work, enrollment, collectedAt, context.RecordedAt, cancellationToken).ConfigureAwait(false)
@@ -83,7 +88,8 @@ internal sealed class OpenCollectionInstanceHandler : ICommandHandler<OpenCollec
 /// <summary>
 /// Handles <see cref="RecordCollectedValues"/> (ADR-2622): under the form instance's exclusive lock and shared locks on
 /// every scope covering the form and its values, it checks every value against the CollectionSpec, then every expected
-/// revision, and only then records and corrects the values together. Any failure changes nothing.
+/// revision, and only then records and corrects the values together. Any failure changes nothing. After the participant's
+/// withdrawal, a save with a value for an item that has none is refused whole (<see cref="CaptureConditions"/>).
 /// </summary>
 internal sealed class RecordCollectedValuesHandler : ICommandHandler<RecordCollectedValues, CollectedValuesState>
 {
@@ -120,6 +126,13 @@ internal sealed class RecordCollectedValuesHandler : ICommandHandler<RecordColle
             cancellationToken).ConfigureAwait(false))
         {
             return ObservationErrors.Locked;
+        }
+
+        // A save that only corrects values captured before a withdrawal goes on; one with a new value is new capture.
+        if (values.Any(v => instance.MemberFor(v.ItemId) is null)
+            && await CaptureConditions.RefusalAsync(work, instance.EnrollmentId, nameof(RecordCollectedValues), cancellationToken).ConfigureAwait(false) is { } refused)
+        {
+            return refused;
         }
 
         var current = new Dictionary<string, Observation>(StringComparer.Ordinal);
