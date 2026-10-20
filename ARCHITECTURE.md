@@ -301,8 +301,9 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
   ([ADR-2523](docs/adr/2026-10-19-explicit-transactions-run-inside-the-execution-strategy.md)).
 - **Messaging:** Execution, eTMF, eConsent and Notifications publish integration events through the MassTransit EF Core
   transactional outbox ([ADR-2814](docs/adr/2026-10-07-standardize-masstransit-ef-core-transactional-outbox-across-core-services.md)).
-  Kernel events use the kernel outbox (ADR-2449). MassTransit stays on 8.x, which is Apache 2.0; 9.x is a commercial
-  product that needs a licence key, so Dependabot does not offer it (#5520).
+  Kernel events use the kernel outbox (ADR-2449). MassTransit stays on the Apache 2.0 8.x line; 9.x is a commercial
+  product that needs a licence key, so Dependabot does not offer it
+  ([ADR-2524](docs/adr/2026-10-19-messaging-stays-on-the-apache-licensed-masstransit-8-line.md)).
 
 ## 6. Cross-cutting building blocks
 

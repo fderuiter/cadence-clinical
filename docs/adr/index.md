@@ -556,6 +556,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2521: The Grant Payables Ledger Is Ported to Payments in Decimal with Kernel IDs](2026-09-30-grant-payables-ledger-in-decimal-with-kernel-ids.md) (2026-09-30)
 - [ADR-2522: Derived Variables Are Ported as Fixed Standard Formulas, and Custom Formulas Use the One Rule Language](2026-09-30-derived-variables-ported-as-fixed-standard-formulas.md) (2026-09-30)
 - [ADR-2523: Explicit Transactions Run Inside the Execution Strategy](2026-10-19-explicit-transactions-run-inside-the-execution-strategy.md) (2026-10-19)
+- [ADR-2524: Messaging Stays on the Apache-Licensed MassTransit 8 Line](2026-10-19-messaging-stays-on-the-apache-licensed-masstransit-8-line.md) (2026-10-19)
 - [ADR-2530: Measure Web Coverage over All Source with a Ratchet Floor](2026-09-30-measure-web-coverage-over-all-source-with-a-ratchet-floor.md) (2026-09-30)
 - [ADR-2531: Every Mapped Test Is Mandatory Evidence, and Reports Name What They Tested](2026-10-15-every-mapped-test-is-mandatory-evidence.md) (2026-10-15) _(Amended by [ADR-2532](2026-10-16-feature-branches-never-commit-the-gxp-snapshot.md))_
 - [ADR-2532: Feature Branches Never Commit the GxP Snapshot](2026-10-16-feature-branches-never-commit-the-gxp-snapshot.md) (2026-10-16)
