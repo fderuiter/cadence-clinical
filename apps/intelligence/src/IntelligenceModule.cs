@@ -94,7 +94,11 @@ public static class IntelligenceModule
             services.AddSingleton<IModelProvider>(new ChatClientModelProvider(FakeChatClient.ProviderName, new FakeChatClient(), tiers, prices));
         }
 
+        // Providers beyond Anthropic, tenant policy, residency, supplier records, the outbound guard and the sandbox (ADR-2636).
+        services.AddIntelligenceInference(configuration, environment);
+
         services.TryAddSingleton<IModelProviderRegistry, ModelProviderRegistry>();
+        services.TryAddSingleton<IRunChatClientFactory, ProviderRunChatClientFactory>();
         services.TryAddSingleton<ITaskConfigurationCatalog>(sp => new RegisteredTaskConfigurations(sp.GetServices<TaskConfiguration>()));
         services.TryAddSingleton<EfAgentLedger>();
         services.TryAddSingleton<IAgentLedger>(sp => sp.GetRequiredService<EfAgentLedger>());

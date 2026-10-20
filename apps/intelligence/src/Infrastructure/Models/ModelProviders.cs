@@ -2,7 +2,10 @@ using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
+using Cadence.Kernel.Commands;
 using Cadence.Modules.Intelligence.Application;
 using Cadence.Modules.Intelligence.Domain;
 
@@ -54,4 +57,14 @@ internal sealed class ModelProviderRegistry : IModelProviderRegistry
     public IReadOnlyCollection<string> Names => [.. _providers.Keys.Order(StringComparer.Ordinal)];
 
     public IModelProvider? Find(string name) => name is null ? null : _providers.GetValueOrDefault(name);
+}
+
+/// <summary>The run client without the inference layer: the provider's own client, with no route recorded.</summary>
+internal sealed class ProviderRunChatClientFactory : IRunChatClientFactory
+{
+    public Task<CommandResult<RunChatClient>> CreateAsync(AgentRunCall call, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(call);
+        return Task.FromResult(CommandResult<RunChatClient>.Success(new RunChatClient(call.Provider.Client, null)));
+    }
 }

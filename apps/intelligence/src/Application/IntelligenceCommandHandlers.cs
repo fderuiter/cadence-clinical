@@ -82,11 +82,11 @@ internal sealed class CompleteAgentRunHandler : ICommandHandler<CompleteAgentRun
 
         if (command.Succeeded)
         {
-            run.Succeed(command.ResponseText!, command.InputTokens, command.OutputTokens, command.CostUsd, context.RecordedAt);
+            run.Succeed(command.ResponseText!, command.InputTokens, command.OutputTokens, command.CostUsd, context.RecordedAt, command.Inference);
         }
         else
         {
-            run.Fail(command.FailureReason!, command.InputTokens, command.OutputTokens, command.CostUsd, context.RecordedAt);
+            run.Fail(command.FailureReason!, command.InputTokens, command.OutputTokens, command.CostUsd, context.RecordedAt, command.Inference);
         }
 
         context.Work.Raise(new AgentRunCompleted(run.Id, run.TaskKey, run.TaskVersion, run.Status, run.InputTokens, run.OutputTokens));
@@ -330,6 +330,14 @@ internal sealed class CompleteAgentRunValidator : AbstractValidator<CompleteAgen
         RuleFor(c => c.InputTokens).GreaterThanOrEqualTo(0);
         RuleFor(c => c.OutputTokens).GreaterThanOrEqualTo(0);
         RuleFor(c => c.CostUsd).GreaterThanOrEqualTo(0).When(c => c.CostUsd is not null);
+        When(c => c.Inference is not null, () =>
+        {
+            RuleFor(c => c.Inference!.Supplier).NotEmpty().MaximumLength(64);
+            RuleFor(c => c.Inference!.Locality).NotEmpty().MaximumLength(16);
+            RuleFor(c => c.Inference!.Policy).NotEmpty().MaximumLength(16);
+            RuleFor(c => c.Inference!.Residency).MaximumLength(8);
+            RuleFor(c => c.Inference!.Scrubbed).Must(s => s is null || s.Values.All(n => n >= 0)).WithMessage("Scrub counts are never negative.");
+        });
     }
 }
 

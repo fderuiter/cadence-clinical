@@ -76,13 +76,13 @@ regions** its configured endpoint serves, its **supplier record**, and `CreateCl
 
 | Provider id         | Service                                                         | Operated by  | Client                                                        | Locality     | Residency comes from                                  |
 | ------------------- | --------------------------------------------------------------- | ------------ | ------------------------------------------------------------- | ------------ | ----------------------------------------------------- |
-| `anthropic`         | Claude API                                                      | Anthropic    | `Anthropic` SDK, `AsIChatClient` (Foundation, #5374)          | External     | Configured; `inference_geo` pins where inference runs |
+| `anthropic`         | Claude API                                                      | Anthropic    | `Anthropic` SDK, `AsIChatClient` (Foundation, #5374)          | External     | None declared: serves tenants without a residency     |
 | `anthropic-aws`     | Claude Platform on AWS                                          | Anthropic    | `Anthropic.Aws` `AnthropicAwsClient`                          | External     | The configured AWS region                             |
 | `bedrock`           | Claude on Amazon Bedrock                                        | AWS          | `Anthropic.Bedrock` `AnthropicBedrockMantleClient`            | External     | The configured AWS region                             |
-| `vertex`            | Claude on Google Cloud Vertex AI                                | Google       | `Anthropic.Vertex` `VertexBackend`                            | External     | The configured region; `global` is unrestricted only  |
+| `vertex`            | Claude on Google Cloud Vertex AI                                | Google       | `Anthropic.Vertex` `AnthropicVertexClient`                    | External     | The configured region; `global` is unrestricted only  |
 | `foundry`           | Claude on Microsoft Foundry                                     | Microsoft    | `Anthropic.Foundry` `AnthropicFoundryClient`                  | External     | The configured Azure resource's region                |
 | `openai-compatible` | A model the operator runs (vLLM, llama.cpp server, Ollama, TGI) | The operator | `Microsoft.Extensions.AI.OpenAI` with the endpoint's base URL | InDeployment | The deployment's own region                           |
-| `fake`              | Deterministic test provider                                     | Cadence      | In-process (Foundation, #5374)                                | InDeployment | Any                                                   |
+| `fake`              | Deterministic test provider                                     | Cadence      | In-process (Foundation, #5374)                                | InDeployment | Any: sends nothing, so no residency or supplier check |
 
 - **Residency is declared, not guessed.** Each configured provider names the residency codes it may serve (`EU`,
   `US`, …, the same two-to-eight upper-case codes as `Tenant.Residency`). Which cloud region counts as which
@@ -211,10 +211,13 @@ named secret; there is no default credential anywhere (ADR-2260). Each key is li
 ## 6. Implementation & Verification
 
 - **Slices** (issue #5550, after the Foundation's model port, #5374):
-  1. this ADR;
-  2. the provider abstraction, router, tenant policy command, residency read port, outbound guard, the cloud and local
-     providers, supplier records, configuration and documentation;
-  3. the agent sandbox and egress handler, and the worker-process role with its deployment guide.
+  1. this ADR and its first implementation, in one pull request: the provider abstraction on the Foundation's
+     `IModelProvider` registry, the router behind `IRunChatClientFactory`, the residency read port, the outbound guard,
+     the cloud and local providers, supplier records, the sandbox scope and egress handler, the route and scrub counts
+     on the ledger entry, configuration and documentation. Until slice 2, every tenant has the default policy
+     (`ResidencyBound`, direct-identifier scrubbing);
+  2. the tenant policy record and its `Approve` command;
+  3. the worker-process role with its deployment guide.
 - **Verification Plan** (all on the fake provider or a recording HTTP handler; no test calls a model):
   - a `LocalOnly` tenant's run never reaches an external provider, including when the local provider fails;
   - a `ResidencyBound` tenant is never routed to a provider without its residency, and failover stays inside the

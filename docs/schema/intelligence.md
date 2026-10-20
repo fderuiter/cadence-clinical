@@ -7,7 +7,7 @@ Generated from the EF Core model of `Cadence.Modules.Intelligence.Infrastructure
 | Table | Entity | Columns |
 | --- | --- | --- |
 | [`intelligence.agent_controls`](#intelligenceagent_controls) | `AgentControl` | 9 |
-| [`intelligence.agent_runs`](#intelligenceagent_runs) | `AgentRun` | 22 |
+| [`intelligence.agent_runs`](#intelligenceagent_runs) | `AgentRun` | 27 |
 | [`intelligence.evaluation_runs`](#intelligenceevaluation_runs) | `EvaluationRun` | 21 |
 | [`intelligence.task_qualifications`](#intelligencetask_qualifications) | `TaskQualification` | 20 |
 
@@ -45,6 +45,10 @@ Entity: `AgentRun`
 | `created_at` | `timestamp with time zone` | no |  |  |
 | `created_by` | `character varying(255)` | no |  |  |
 | `failure_reason` | `character varying(2000)` | yes |  |  |
+| `inference_locality` | `character varying(16)` | yes |  |  |
+| `inference_policy` | `character varying(16)` | yes |  |  |
+| `inference_residency` | `character varying(8)` | yes |  |  |
+| `inference_supplier` | `character varying(64)` | yes |  |  |
 | `input_tokens` | `bigint` | no |  |  |
 | `model` | `character varying(200)` | no |  |  |
 | `output_tokens` | `bigint` | no |  |  |
@@ -53,6 +57,7 @@ Entity: `AgentRun`
 | `request_json` | `text` | no |  |  |
 | `requested_by` | `character varying(255)` | no |  |  |
 | `response_text` | `text` | yes |  |  |
+| `scrub_counts` | `text` | yes |  |  |
 | `started_at` | `timestamp with time zone` | no |  |  |
 | `status` | `character varying(16)` | no |  |  |
 | `task_key` | `character varying(96)` | no |  |  |

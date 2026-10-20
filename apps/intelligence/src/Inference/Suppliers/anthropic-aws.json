@@ -1,0 +1,27 @@
+{
+  "id": "anthropic-aws",
+  "version": 1,
+  "supplier": "Anthropic",
+  "operatedBy": "Anthropic, on Amazon Web Services infrastructure",
+  "service": "Claude Platform on AWS",
+  "endpoint": "aws-external-anthropic.{region}.api.aws",
+  "notes": "Region chosen by configuration; billed through AWS Marketplace; IAM access control.",
+  "status": "Draft",
+  "dataProcessingTerms": null,
+  "trainsOnCustomerData": null,
+  "retention": null,
+  "regionsOffered": [],
+  "statedCertifications": [],
+  "assessedOn": null,
+  "assessedBy": null,
+  "nextReviewOn": null,
+  "assessmentQuestions": [
+    "Which data-processing agreement covers this service, and is a HIPAA business associate agreement available?",
+    "Is customer data used to train models, and how is that excluded contractually?",
+    "How long are prompts and outputs retained, and is zero data retention available for the models in use?",
+    "Which regions does the contract allow, and which jurisdiction serves each configured endpoint?",
+    "Which certifications and audit reports (for example SOC 2 Type II, ISO/IEC 27001, ISO/IEC 42001) cover the service today?",
+    "How are model versions changed or retired, and how much notice is given?",
+    "How are incidents and personal-data breaches notified?"
+  ]
+}

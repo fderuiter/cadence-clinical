@@ -2,17 +2,18 @@
 
 The Intelligence engine's runtime for AI agents ([ADR-2630](../../docs/adr/2026-10-20-ai-agents-act-through-proposals-in-one-governed-runtime.md), #5374). It is a kernel module ([ADR-2600](../../docs/adr/index.md)) composed into the kernel host [`apps/kernel-api`](../kernel-api/README.md), not a service of its own; it replaces the retired `apps/ai_gateway` ([ADR-2610](../../docs/adr/2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md)).
 
-**Status:** foundation. The module calls a model, records every call in an append-only ledger, and enforces per-tenant kill switches and token budgets. Agents run only on task configuration versions the tenant has qualified ([ADR-2631](../../docs/adr/2026-10-20-agent-task-configurations-are-versioned-and-qualified-per-tenant.md), #5385). Agents do not yet act on clinical records: when they do, they act only through kernel Proposals (K-AI-1..8). Qualification rests on stored evaluation runs, and production signals suspend a configuration ([ADR-2634](../../docs/adr/2026-10-20-ai-task-configurations-are-measured-by-versioned-evaluations-and-production-signals.md), #5548, #5574). The kernel side of the agent actor is built (`Actor.ActingFor`, requester-scoped grants, [ADR-2632](../../docs/adr/2026-10-20-agents-act-for-one-person-and-approved-proposals-execute-as-their-approver.md), #4783), but the module does not act as an agent actor yet; that comes with the agent tools, the citation verifier and Proposal-writing runs (#5547). PHI scrubbing, data residency, more providers and a local-only mode with #5550.
+**Status:** foundation. The module calls a model, records every call in an append-only ledger, and enforces per-tenant kill switches and token budgets. Agents run only on task configuration versions the tenant has qualified ([ADR-2631](../../docs/adr/2026-10-20-agent-task-configurations-are-versioned-and-qualified-per-tenant.md), #5385). Agents do not yet act on clinical records: when they do, they act only through kernel Proposals (K-AI-1..8). Qualification rests on stored evaluation runs, and production signals suspend a configuration ([ADR-2634](../../docs/adr/2026-10-20-ai-task-configurations-are-measured-by-versioned-evaluations-and-production-signals.md), #5548, #5574). The kernel side of the agent actor is built (`Actor.ActingFor`, requester-scoped grants, [ADR-2632](../../docs/adr/2026-10-20-agents-act-for-one-person-and-approved-proposals-execute-as-their-approver.md), #4783), but the module does not act as an agent actor yet; that comes with the agent tools, the citation verifier and Proposal-writing runs (#5547). Every call is routed by tenant policy, residency and supplier status, scrubbed of direct identifiers, and run inside an egress-locked sandbox ([ADR-2636](../../docs/adr/2026-10-20-inference-is-pluggable-residency-bound-and-sandboxed.md)).
 
 ## Project
 
-- Project: `apps/intelligence/src/Cadence.Modules.Intelligence.csproj` (namespace `Cadence.Modules.Intelligence`). It references `Cadence.Kernel.Abstractions` and the module SDK `Cadence.Kernel.Modules` only (K-XS-2).
+- Project: `apps/intelligence/src/Cadence.Modules.Intelligence.csproj` (namespace `Cadence.Modules.Intelligence`). Of the kernel it references `Cadence.Kernel.Abstractions` and the module SDK `Cadence.Kernel.Modules` only (K-XS-2); `packages/deid` supplies the outbound scrubber.
 - `IntelligenceModule`: `AddCadenceIntelligenceModule(configuration, environment, connectionString)` registers the module, its command store, migrations, tenant-scoped read context, handlers, providers and the `AgentRunner`; `AddAgentTask(TaskConfiguration)` registers a task version (several versions of a key may be registered; one version twice fails at startup); `MapIntelligenceModule()` maps the endpoints.
 - `Domain/`: `TaskConfiguration` (key, version, provider, model or `tier:` alias, instructions template, output limit, autonomy level; tools, retrieval sources, output schema, pinned evaluation set, acceptance criteria, approver role and the FDA credibility assessment with its risk class; and a kernel `ContentHash` over all of them, K-AI-5), `TaskQualification` (one tenant's signed qualification of one version, or its suspension), `EvaluationRun` (a stored evaluation run record a qualification rests on, admitted only when `EvaluationRun.Problems` finds nothing), `PromptTemplate` (strict `{{name}}` rendering), `AgentRun` (one ledger entry with its own content hash), `AgentControl` (a kill switch and monthly token budget for all tasks, `*`, or one task key), `IntelligenceErrors`.
-- `Application/`: the module commands `StartAgentRun`, `CompleteAgentRun` (capability `agent_run.record`, verb Propose), `SetAgentControl` (capability `agent_control.set`, verb Execute), `RecordEvaluationRun` (capability `evaluation_run.record`, verb Execute), `QualifyTaskConfiguration` (capability `task_configuration.qualify`, verb Approve, so people only) and `SuspendTaskConfiguration` (capability `task_configuration.suspend`, verb Execute) with their handlers and validators; the `task_configuration` attestation target check; the ports `ITaskConfigurationCatalog`, `IModelProvider`, `IModelProviderRegistry`, `IAgentLedger`, `IEvaluationRuns`, `ITaskConfigurationSuspension`; and `AgentRunner`.
+- `Application/`: the module commands `StartAgentRun`, `CompleteAgentRun` (capability `agent_run.record`, verb Propose), `SetAgentControl` (capability `agent_control.set`, verb Execute), `RecordEvaluationRun` (capability `evaluation_run.record`, verb Execute), `QualifyTaskConfiguration` (capability `task_configuration.qualify`, verb Approve, so people only) and `SuspendTaskConfiguration` (capability `task_configuration.suspend`, verb Execute) with their handlers and validators; the `task_configuration` attestation target check; the ports `ITaskConfigurationCatalog`, `IModelProvider`, `IModelProviderRegistry`, `IRunChatClientFactory`, `IAgentLedger`, `IEvaluationRuns`, `ITaskConfigurationSuspension`; and `AgentRunner`.
 - `Infrastructure/Models/`: the model port is Microsoft.Extensions.AI `IChatClient`. The Anthropic provider uses the official `Anthropic` SDK and is configured only when an API key is set; `FakeChatClient` answers deterministically and is allowed only in `Development` and `Testing`, so CI never calls a real model.
 - `Infrastructure/Persistence/`: `IntelligenceDbContext` (schema `intelligence`, tables `agent_runs`, `agent_controls`, `task_qualifications` and `evaluation_runs`, all under tenant Row-Level Security), its migrations, `EfAgentLedger` and `IntelligenceDatabase.GrantAppRoleSql`.
 - `Evaluation/`: the measurement layer ([ADR-2634](../../docs/adr/2026-10-20-ai-task-configurations-are-measured-by-versioned-evaluations-and-production-signals.md), [guide](../../docs/ai/EVALUATION.md)): versioned evaluation sets, deterministic checks, the calibrated LLM judge, the `EvaluationHarness` and its hashed run records, improvement comparisons, and production signals per configuration version (`ConfigurationMonitor`, `ProductionSignalRecorder`). `AddIntelligenceEvaluation()` registers the harness.
+- `Inference/` and `Sandbox/`: the inference layer of ADR-2636, registered by `AddIntelligenceInference` (see [Inference and data sovereignty](#inference-and-data-sovereignty)).
 - `Intent/` and `Endpoints/IntentEndpoints.cs`: the rule-based command-palette intent router, moved from the AI gateway unchanged.
 
 ## Qualification
@@ -28,9 +29,61 @@ A configuration version runs in a tenant only after a person qualifies it there,
 
 ## How a run works
 
-`AgentRunner.RunAsync` picks the newest version of the task the tenant has qualified on its current content (or refuses, saying why: not qualified, suspended, or changed since qualification), resolves its provider and model, refuses the run when a control is off or the tenant's monthly tokens are spent, renders the instructions, and records `StartAgentRun` through the kernel command pipeline before it calls the model. The model call has a timeout (`Intelligence:RequestTimeoutSeconds`); success, failure and cancellation are all recorded with `CompleteAgentRun`, with token counts and cost, and raise `intelligence.AgentRunCompleted`. The start command re-checks the kill switch, the configuration's content and its qualification inside its transaction. Logs carry ids and counts only, never prompts or answers.
+`AgentRunner.RunAsync` picks the newest version of the task the tenant has qualified on its current content (or refuses, saying why: not qualified, suspended, or changed since qualification), resolves its provider and model, refuses the run when a control is off or the tenant's monthly tokens are spent, asks `IRunChatClientFactory` for the run's client (refused with `M.Intelligence.Inference.Refused` when no allowed route is left), renders the instructions, and records `StartAgentRun` through the kernel command pipeline before it calls the model. The model call has a timeout (`Intelligence:RequestTimeoutSeconds`); success, failure and cancellation are all recorded with `CompleteAgentRun`, with token counts and cost, and raise `intelligence.AgentRunCompleted`. The start command re-checks the kill switch, the configuration's content and its qualification inside its transaction. Logs carry ids and counts only, never prompts or answers.
 
-Every ledger entry holds the task version and configuration hash, the resolved model, the requester, the request and the answer. It is written only through the pipeline (audit columns, idempotency, authorization) and the application role cannot delete it. Only the person who started a run can complete it or read it.
+Every ledger entry holds the task version and configuration hash, the resolved model, the requester, the request and the answer, and where the call went (supplier, locality, tenant policy and residency) with the outbound guard's counts per category. It is written only through the pipeline (audit columns, idempotency, authorization) and the application role cannot delete it. Only the person who started a run can complete it or read it.
+
+## Inference and data sovereignty
+
+ADR-2636 decides where an agent's model call may go and what it may carry. Everything below is in `src/Inference`
+and `src/Sandbox`, and `AddCadenceIntelligenceModule` wires it with `AddIntelligenceInference(configuration, environment)`. It replaces the default `IRunChatClientFactory`, which hands a run the provider's own client.
+
+### Providers
+
+| Id                  | Reaches                              | Locality     | Supplier record     |
+| ------------------- | ------------------------------------ | ------------ | ------------------- |
+| `anthropic-aws`     | Claude Platform on AWS               | External     | `anthropic-aws`     |
+| `bedrock`           | Amazon Bedrock                       | External     | `aws-bedrock`       |
+| `vertex`            | Google Vertex AI                     | External     | `google-vertex`     |
+| `foundry`           | Microsoft Foundry                    | External     | `microsoft-foundry` |
+| `openai-compatible` | a model server inside the deployment | InDeployment | `operator-hosted`   |
+
+A provider is registered only when its configuration section is present ([configuration keys](../../docs/ENVIRONMENT_VARIABLES.md#intelligence-inference)).
+Each one gets a named `IHttpClientFactory` client (`cadence-inference:<id>`) that refuses any host the provider did
+not declare. Each one is also an `IModelProvider` in the registry, so a task configuration names it like `anthropic` or `fake`; model ids stay first-party in the ledger and price list. Another module adds a provider with `services.AddInferenceProvider(id, factory)`.
+
+### Routing
+
+`IInferenceRouter.ResolveAsync` builds the client for one agent run. The module's `anthropic` provider is routed as the external supplier `anthropic` and the `fake` provider as in-process, which needs no residency or supplier. It refuses, in this order:
+
+1. every external provider when the deployment runs with `Intelligence:Inference:Mode = LocalOnly`;
+2. the tenant's policy: `LocalOnly`, `ResidencyBound` (the default) or `Open`, with an optional list of allowed suppliers;
+3. a provider that does not declare the tenant's residency (read through the kernel's `ITenantResidencyReader`);
+4. a supplier that is not `Approved` outside Development, and a `Suspended` supplier everywhere;
+5. models the task configuration did not qualify.
+
+Failover happens only between the routes that are left. Every response carries the route it used under
+`cadence.inference_route`.
+
+### Outbound guard
+
+Before anything leaves, `OutboundGuardChatClient` refuses identity-layer content (`IdentityLayerMark`) and binary or
+file content it cannot inspect. It then scrubs direct identifiers one way with `packages/deid`. It does not scrub dates,
+ages or postcodes by default, because the clinical reasoning needs them. The counts are recorded under
+`cadence.outbound_scrub`.
+
+### Sandbox
+
+`AgentSandbox.Enter(tenant, runId, limits)` opens the scope for one run. Inside it, every `IHttpClientFactory` client
+except the inference clients and `Intelligence:Sandbox:AllowedClients` is refused, and the run stops at its wall-clock,
+model-call or token limit. `InferenceSandboxBoundaryTests` keeps sockets, hand-built `HttpClient`s, processes and file
+access out of this code.
+
+### Supplier records
+
+`src/Inference/Suppliers/*.json` ship as `Draft`, with the Annex 11 assessment questions open. The sponsor's QA approves
+a supplier in configuration (`Intelligence:Inference:Suppliers:<id>`), and an approval must name who assessed it, when,
+and the next review date.
 
 ## HTTP surface
 
@@ -59,9 +112,11 @@ Section `Intelligence` ([docs/ENVIRONMENT_VARIABLES.md](../../docs/ENVIRONMENT_V
 - `FakeProvider`: registers the fake provider; refused outside `Development` and `Testing`.
 - `RequestTimeoutSeconds`: the model call's timeout (default 120).
 - `Prices:<model>:InputPerMillion|OutputPerMillion`: USD prices for the ledger's cost; without a price the cost is left empty.
+- `Inference:*` and `Sandbox:AllowedClients`: providers, deployment mode, supplier approvals and the sandbox's extra clients ([Intelligence inference](../../docs/ENVIRONMENT_VARIABLES.md#intelligence-inference)). Outside Development an external provider, the Claude API included, is used only once its supplier is approved.
 
 ## Tests
 
 - `tests/Cadence.UnitTests/Intelligence/Evaluation`: the set loader's refusals, each deterministic check, judge calibration, the harness floors and run records, comparisons, and the production monitor.
-- `tests/Cadence.UnitTests/Intelligence`: domain (hash coverage, risk matrix, qualification gaps and usability), runner (qualification routing and refusals, kill switch, budget, timeout, failure), providers and the intent router.
-- `tests/Cadence.IntegrationTests/Intelligence`: the module on PostgreSQL 18 through the kernel command pipeline: ledger hash and audit, kill switch in the runner and the command, budget, Row-Level Security between tenants, requester checks, qualification (unqualified, changed and suspended configurations refused; the qualifier's own signature, accepted evidence and a complete configuration required), and the application role's missing `DELETE`.
+- `tests/Cadence.UnitTests/Intelligence`: domain (hash coverage, risk matrix, qualification gaps and usability), runner (qualification routing and refusals, kill switch, budget, timeout, failure, refused route, recorded route), providers, the inference router, outbound guard, sandbox, supplier records and the intent router. No test calls a model.
+- `tests/Cadence.ArchitectureTests/Architecture/InferenceSandboxBoundaryTests.cs`: no socket, hand-built `HttpClient`, process or file access in `Inference/` and `Sandbox/`.
+- `tests/Cadence.IntegrationTests/Intelligence`: the module on PostgreSQL 18 through the kernel command pipeline: ledger hash and audit, kill switch in the runner and the command, budget, the recorded route and scrub counts, Row-Level Security between tenants, requester checks, qualification (unqualified, changed and suspended configurations refused; the qualifier's own signature, accepted evidence and a complete configuration required), and the application role's missing `DELETE`.

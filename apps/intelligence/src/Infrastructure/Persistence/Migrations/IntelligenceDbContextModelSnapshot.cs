@@ -118,6 +118,26 @@ namespace Cadence.Modules.Intelligence.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("failure_reason");
 
+                    b.Property<string>("InferenceLocality")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("inference_locality");
+
+                    b.Property<string>("InferencePolicy")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("inference_policy");
+
+                    b.Property<string>("InferenceResidency")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("inference_residency");
+
+                    b.Property<string>("InferenceSupplier")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("inference_supplier");
+
                     b.Property<long>("InputTokens")
                         .HasColumnType("bigint")
                         .HasColumnName("input_tokens");
@@ -158,6 +178,10 @@ namespace Cadence.Modules.Intelligence.Infrastructure.Persistence.Migrations
                     b.Property<string>("ResponseText")
                         .HasColumnType("text")
                         .HasColumnName("response_text");
+
+                    b.Property<string>("ScrubCounts")
+                        .HasColumnType("text")
+                        .HasColumnName("scrub_counts");
 
                     b.Property<DateTimeOffset>("StartedAt")
                         .HasColumnType("timestamp with time zone")

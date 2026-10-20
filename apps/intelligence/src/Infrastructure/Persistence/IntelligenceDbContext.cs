@@ -72,6 +72,12 @@ public sealed class IntelligenceDbContext(DbContextOptions<IntelligenceDbContext
             run.Property(r => r.CostUsd).HasColumnName("cost_usd").HasPrecision(18, 6);
             run.Property(r => r.CompletedAt).HasColumnName("completed_at");
             run.Property(r => r.ContentHash).HasColumnName("content_hash").HasMaxLength(64);
+            run.Property(r => r.InferenceSupplier).HasColumnName("inference_supplier").HasMaxLength(64);
+            run.Property(r => r.InferenceLocality).HasColumnName("inference_locality").HasMaxLength(16);
+            run.Property(r => r.InferencePolicy).HasColumnName("inference_policy").HasMaxLength(16);
+            run.Property(r => r.InferenceResidency).HasColumnName("inference_residency").HasMaxLength(8);
+            // text, not jsonb, for the same reason as request_json: it must read back exactly as it was hashed.
+            run.Property(r => r.ScrubCounts).HasColumnName("scrub_counts");
             run.HasCommandAuditColumns();
             run.Property(r => r.CreatedAt).HasColumnName("created_at");
             run.Property(r => r.CreatedBy).HasColumnName("created_by");
