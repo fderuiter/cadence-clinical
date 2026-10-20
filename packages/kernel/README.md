@@ -482,9 +482,9 @@ the enrollment:
   order), its values with their revisions, the assertions about them, the signatures over the form and the locks in
   force in one call.
 - Events: `CollectionInstanceOpened` and `CollectedValuesSaved` (Evidence), besides each value's `ObservationRecorded`
-  or `ObservationCorrected`. Edit checks consume `CollectedValuesSaved` (#5368).
+  or `ObservationCorrected`. Nothing consumes `CollectedValuesSaved` yet; edit checks will (#5368).
 - `KernelCollectionPostgresTests` covers atomicity at every commit stage, per-value 409, concurrent saves, the
-  lock-versus-save race at every scope and replay. The HTTP surface comes with the Execution module (#5460).
+  lock-versus-save race at every scope and replay. The HTTP surface is the Execution module's `/api/v1/execution/forms` routes (#5460), composed into the kernel host.
 
 ## Object references and navigation (ADR-2481)
 

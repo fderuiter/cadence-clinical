@@ -4,8 +4,9 @@ This document describes the system in two views: the **target architecture** (ke
 applications) and the **running system today** (a gateway in front of 16 ASP.NET Core product services and the kernel API host). The
 gap between them is closed by the kernel roadmap and by
 [ADR-2610](docs/adr/2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md), which turns the product services
-into modules of one composition host. The kernel API host becomes that host (ADR-2601, #5315); so far it composes one
-module, Intelligence (#5374), and every service below still runs as its own process.
+into modules of one composition host. The kernel API host becomes that host (ADR-2601, #5315); so far it composes two
+modules, Intelligence (#5374) and Execution (eCRF forms and their data queries, #5460, #5461), and every service below
+still runs as its own process.
 
 The normative source for the target is the
 [Clinical Research OS kernel specification v0.2](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md).
