@@ -2,7 +2,6 @@ using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
@@ -116,34 +115,6 @@ public sealed class TestCodeJsonConverter : JsonConverter<TestCode>
         writer.WriteStringValue(value.Value);
 }
 
-public sealed class FormSubmissionIdJsonConverter : JsonConverter<FormSubmissionId>
-{
-    public override FormSubmissionId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        string? raw = reader.GetString();
-        return raw is null
-            ? throw new JsonException("Expected a non-null JSON string for FormSubmissionId.")
-            : new FormSubmissionId(Guid.Parse(raw));
-    }
-
-    public override void Write(Utf8JsonWriter writer, FormSubmissionId value, JsonSerializerOptions options) =>
-        writer.WriteStringValue(value.Value);
-}
-
-public sealed class FormIdJsonConverter : JsonConverter<FormId>
-{
-    public override FormId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        string? raw = reader.GetString();
-        return raw is null
-            ? throw new JsonException("Expected a non-null JSON string for FormId.")
-            : new FormId(raw);
-    }
-
-    public override void Write(Utf8JsonWriter writer, FormId value, JsonSerializerOptions options) =>
-        writer.WriteStringValue(value.Value);
-}
-
 public sealed class QueryIdJsonConverter : JsonConverter<QueryId>
 {
     public override QueryId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -156,20 +127,6 @@ public sealed class QueryIdJsonConverter : JsonConverter<QueryId>
 
     public override void Write(Utf8JsonWriter writer, QueryId value, JsonSerializerOptions options) =>
         writer.WriteStringValue(value.Value);
-}
-
-public sealed class FormSubmissionStatusJsonConverter : JsonConverter<FormSubmissionStatus>
-{
-    public override FormSubmissionStatus Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        string? raw = reader.GetString();
-        return FormSubmissionStatusCodec.TryParse(raw, out var status)
-            ? status
-            : throw new JsonException($"Invalid FormSubmissionStatus value: '{raw}'.");
-    }
-
-    public override void Write(Utf8JsonWriter writer, FormSubmissionStatus value, JsonSerializerOptions options) =>
-        writer.WriteStringValue(FormSubmissionStatusCodec.ToCode(value));
 }
 
 public sealed class QueryStatusJsonConverter : JsonConverter<QueryStatus>

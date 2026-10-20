@@ -291,8 +291,6 @@ export const soaClient = {
     if (!semantic) {
       if (action.includes("capture-consent")) {
         semantic = "econsent.consent.capture";
-      } else if (action.includes("/api/v1/execution/batch-sign-off")) {
-        semantic = "execution.form.approve";
       } else if (action.includes("sign-off")) {
         semantic = "etmf.document.sign_off";
       } else if (action.includes("chair-adjudicate")) {
@@ -312,41 +310,6 @@ export const soaClient = {
           semantic_action: semantic,
           batch_id: batchId ?? undefined,
         },
-      })
-    );
-  },
-
-  async batchSignOff(
-    {
-      studyId,
-      targetType,
-      targetIds,
-      signingReason,
-    }: {
-      studyId: string;
-      targetType: string;
-      targetIds: string[];
-      signingReason: string;
-    },
-    {
-      changeReason = "",
-      sigToken = "",
-    }: { changeReason?: string; sigToken?: string } = {}
-  ) {
-    const headers: Record<string, string> = {};
-    if (sigToken) headers["X-Sig-Token"] = sigToken;
-    if (changeReason)
-      headers["X-Change-Reason"] = encodeChangeReason(changeReason);
-
-    return unwrapResponse(
-      openApiClient.POST("/api/v1/execution/batch-sign-off", {
-        body: {
-          study_id: studyId,
-          target_type: targetType,
-          target_ids: targetIds,
-          signing_reason: signingReason,
-        },
-        headers,
       })
     );
   },

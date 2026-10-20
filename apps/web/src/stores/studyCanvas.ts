@@ -2,8 +2,6 @@ import { defineStore } from "pinia";
 import {
   executionApi,
   type ClinicalQuery,
-  type FormSubmission,
-  type Observation,
   type SubjectSummary,
 } from "../api/executionApi";
 import { PARTICIPANT_STATES, participantStateLabel } from "../canvas/lifecycle";
@@ -80,11 +78,9 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     pulse: null as { total: number; byState: PulseCount[] } | null,
     pulseLoading: false,
     pulseError: false,
-    /** The open participant's record: what Execution holds for one participant, by subject code. */
+    /** The open participant's record: Execution's queries on one participant, by subject code. */
     record: {
       subjectCode: "",
-      observations: [] as Observation[],
-      forms: [] as FormSubmission[],
       queries: [] as ClinicalQuery[],
       loading: false,
       error: false,
@@ -305,28 +301,20 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       ]);
     },
 
-    /** Loads a participant's observations, form submissions and queries together. */
+    /** Loads a participant's queries. Values and forms are kernel form instances, read on the eCRF screen (ADR-2622). */
     async loadRecord(subjectCode: string): Promise<boolean> {
       const studyId = this.studyCode;
       if (!studyId || !subjectCode) return false;
       const request = ++recordRequest;
       this.record = {
         subjectCode,
-        observations: [],
-        forms: [],
         queries: [],
         loading: true,
         error: false,
       };
       try {
-        const [observations, forms, queries] = await Promise.all([
-          executionApi.listObservations(studyId, subjectCode),
-          executionApi.listFormSubmissions(studyId, subjectCode),
-          executionApi.listQueries(studyId, subjectCode),
-        ]);
+        const queries = await executionApi.listQueries(studyId, subjectCode);
         if (request !== recordRequest) return false;
-        this.record.observations = observations;
-        this.record.forms = forms;
         this.record.queries = queries;
         return true;
       } catch (err) {
@@ -336,73 +324,6 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
         return false;
       } finally {
         if (request === recordRequest) this.record.loading = false;
-      }
-    },
-
-    /** Records source data verification of one observation by the signed-in user. */
-    async verifySdv(observation: Observation): Promise<boolean> {
-      return this.updateObservation(
-        () => executionApi.verifyObservationSdv(observation.id),
-        `${observation.test_name} verified against source`,
-        `${observation.test_name} was not verified`
-      );
-    },
-
-    /** Flags one observation for re-verification with the reason given. */
-    async flagSdv(observation: Observation, reason: string): Promise<boolean> {
-      return this.updateObservation(
-        () => executionApi.flagObservationSdv(observation.id, reason),
-        `${observation.test_name} flagged for re-verification`,
-        `${observation.test_name} was not flagged`
-      );
-    },
-
-    /** Runs an observation command and shows Execution's result in place of the old observation. */
-    async updateObservation(
-      command: () => Promise<Observation>,
-      success: string,
-      failure: string
-    ): Promise<boolean> {
-      const toasts = useToastStore();
-      try {
-        const updated = await command();
-        const list = this.record.observations;
-        const index = list.findIndex((o) => o.id === updated.id);
-        if (index >= 0) list.splice(index, 1, updated);
-        toasts.push({ tone: "success", title: success, message: "" });
-        return true;
-      } catch (err) {
-        toasts.apiError(failure, err);
-        return false;
-      }
-    },
-
-    /** Raises a query on an observation of the open participant. */
-    async raiseQuery(
-      observation: Observation,
-      explanation: string
-    ): Promise<boolean> {
-      const toasts = useToastStore();
-      try {
-        const query = await executionApi.raiseQuery({
-          studyId: this.studyCode,
-          subjectCode: this.record.subjectCode,
-          observation,
-          explanation,
-        });
-        this.record.queries.push(query);
-        toasts.push({
-          tone: "success",
-          title: `Query raised on ${observation.test_name}`,
-          message: "",
-        });
-        return true;
-      } catch (err) {
-        toasts.apiError(
-          `The query on ${observation.test_name} was not raised`,
-          err
-        );
-        return false;
       }
     },
 

@@ -7,7 +7,6 @@ import { useToastStore } from "../src/stores/toasts.js";
 import EcrfView from "../src/views/EcrfView.vue";
 import CrcFormRenderer from "../src/components/persona/CrcFormRenderer.vue";
 import SubjectEnrollmentForm from "../src/components/clinical/SubjectEnrollmentForm.vue";
-import { executionApi } from "../src/api/executionApi";
 
 vi.mock("vue-router", () => ({
   onBeforeRouteLeave: () => {},
@@ -22,7 +21,7 @@ vi.mock("vue-router", () => ({
   }),
 }));
 
-// Mock Execution API endpoints for subject listing and form submission
+// Mock Execution API endpoints for subject listing
 vi.mock("../src/api/executionApi", () => ({
   executionApi: {
     listSubjects: vi.fn().mockResolvedValue({
@@ -41,16 +40,8 @@ vi.mock("../src/api/executionApi", () => ({
       limit: 200,
       offset: 0,
     }),
-    createFormSubmission: vi.fn(),
-    completeFormSubmission: vi.fn(),
   },
 }));
-
-function httpError(status) {
-  const err = new Error(`Request failed with status ${status}`);
-  err.status = status;
-  return err;
-}
 
 // #4523: eCRF submission integration with Execution API & failure handling
 describe("EcrfView submitEcrf API integration and failure handling (#4523)", () => {
@@ -81,89 +72,29 @@ describe("EcrfView submitEcrf API integration and failure handling (#4523)", () 
     return mount(EcrfView, { global: { plugins: [pinia] } });
   }
 
-  it("dispatches createFormSubmission and completeFormSubmission on submit, adds ledger block with submission ID and synced: true, and shows success toast", async () => {
-    vi.mocked(executionApi.createFormSubmission).mockResolvedValueOnce({
-      id: "form-sub-xyz-123",
-      study_id: "TEST-STUDY",
-      subject_id: "SUBJ-001",
-      form_id: "VS_DEMO",
-      status: "DRAFT",
-    });
-    vi.mocked(executionApi.completeFormSubmission).mockResolvedValueOnce({
-      id: "form-sub-xyz-123",
-      study_id: "TEST-STUDY",
-      subject_id: "SUBJ-001",
-      form_id: "VS_DEMO",
-      status: "COMPLETED",
-    });
-
-    const pushSpy = vi.spyOn(useToastStore(pinia), "push");
+  it("sends the sample form nowhere outside a demo build: refuses it, records no ledger block and keeps its fields (ADR-2622)", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
     const wrapper = mountView();
     await flushPromises();
-
-    wrapper.findComponent(CrcFormRenderer).vm.$emit("submit-ecrf");
-    await flushPromises();
-
-    expect(executionApi.createFormSubmission).toHaveBeenCalledWith({
-      studyId: "TEST-STUDY",
-      subjectId: "SUBJ-001",
-      formId: "VS_DEMO",
-      siteId: "TEST-SITE",
-      visitId: "Week2",
-      protocolVersion: "1.0.0",
-      payload: "{}",
-    });
-
-    expect(executionApi.completeFormSubmission).toHaveBeenCalledWith(
-      "form-sub-xyz-123"
-    );
-
-    expect(alertSpy).not.toHaveBeenCalled();
-
-    await vi.waitFor(() => {
-      expect(pushSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          tone: "success",
-          title: "eCRF Form Submitted",
-        })
-      );
-    });
-
-    const submitBlock = store.ledgerBlocks.find(
-      (b) => b.action === "SESSION_SUBMIT"
-    );
-    expect(submitBlock).toBeDefined();
-    expect(submitBlock.synced).toBe(true);
-    expect(submitBlock.submissionId).toBe("form-sub-xyz-123");
-    expect(submitBlock.details.submissionId).toBe("form-sub-xyz-123");
-    expect(submitBlock.details.synced).toBe(true);
-  });
-
-  it("handles failed network/API request: triggers error toast, records no ledger block, and preserves form fields", async () => {
-    vi.mocked(executionApi.createFormSubmission).mockRejectedValueOnce(
-      httpError(500)
-    );
-
-    const wrapper = mountView();
-    await flushPromises();
+    fetchSpy.mockClear();
 
     store.formValues.VSSBP = "120";
-
     const ledgerBefore = store.ledgerBlocks.length;
 
     wrapper.findComponent(CrcFormRenderer).vm.$emit("submit-ecrf");
     await flushPromises();
 
+    expect(fetchSpy).not.toHaveBeenCalled();
     expect(store.ledgerBlocks.length).toBe(ledgerBefore);
     expect(store.formValues.VSSBP).toBe("120");
     expect(alertSpy).not.toHaveBeenCalled();
-
     expect(useToastStore(pinia).toasts).toContainEqual(
       expect.objectContaining({
         tone: "error",
-        title: "eCRF Form Submission Failed",
+        title: "Submitting the sample form isn't available yet",
       })
     );
+    fetchSpy.mockRestore();
   });
 
   it("refuses screening, which no service evaluates, and shows no result", async () => {

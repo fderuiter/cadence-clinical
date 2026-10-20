@@ -18,7 +18,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.11")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -1319,152 +1319,6 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.ToTable("device_quarantine_records", (string)null);
                 });
 
-            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Forms.FormSubmission", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ClonedFromId")
-                        .HasMaxLength(36)
-                        .HasColumnType("character varying(36)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("FormId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
-                    b.Property<bool>("IsReadonly")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
-
-                    b.Property<string>("Payload")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("payload");
-
-                    b.Property<string>("ProtocolVersion")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("ReasonForChange")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("SignatureManifest")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("signature_manifest");
-
-                    b.Property<string>("SiteId")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("StudyId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("SubjectId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<long>("VersionIndex")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("VisitId")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<long>("_version")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasDefaultValue(0L)
-                        .HasColumnName("_version");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SiteId")
-                        .HasDatabaseName("ix_form_submissions_site_id");
-
-                    b.HasIndex("StudyId", "SubjectId", "VisitId", "FormId")
-                        .HasDatabaseName("idx_form_submissions_coords");
-
-                    b.ToTable("form_submissions", (string)null);
-                });
-
-            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Forms.PublishedFormVersionRegistry", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("DdfIr")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
-                    b.Property<string>("FormHash")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("FormId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("OpenRosaXml")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("ProtocolVersion")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("ProtocolVersionId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<DateTimeOffset>("PublishedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("StudyId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("TenantId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("StudyId", "ProtocolVersion", "FormId")
-                        .IsUnique();
-
-                    b.ToTable("published_form_version_registries", (string)null);
-                });
-
             modelBuilder.Entity("Cadence.Apps.Execution.Domain.Observations.BulkLabRangeImportJob", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1545,181 +1399,6 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.HasIndex("StudyId", "SubmittedAt");
 
                     b.ToTable("bulk_lab_range_import_jobs", (string)null);
-                });
-
-            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Observations.ClinicalObservation", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("AdditionalProperties")
-                        .IsRequired()
-                        .HasColumnType("jsonb")
-                        .HasColumnName("additional_properties");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Domain")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<Guid?>("FormSubmissionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("form_submission_id");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true)
-                        .HasColumnName("is_active");
-
-                    b.Property<bool?>("IsOutOfRange")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsOutlier")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsSdvFlagged")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsSdvVerified")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("LabIndicator")
-                        .HasColumnType("text");
-
-                    b.Property<bool?>("LabOutOfRange")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("LabSiteId")
-                        .HasColumnType("text");
-
-                    b.Property<string>("LabSource")
-                        .HasColumnType("text");
-
-                    b.Property<string>("MatchedNormalBounds")
-                        .HasColumnType("text");
-
-                    b.Property<string>("NormalizedUnit")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<double?>("NormalizedValue")
-                        .HasColumnType("double precision");
-
-                    b.Property<DateTime>("ObservationDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("PageId")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<int?>("ProtocolVersionIndex")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ProtocolVersionTag")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("RangeIndicator")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ReasonForChange")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<double?>("ReferenceRangeHigh")
-                        .HasColumnType("double precision");
-
-                    b.Property<double?>("ReferenceRangeLow")
-                        .HasColumnType("double precision");
-
-                    b.Property<string>("SdvFlagReason")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<DateTimeOffset?>("SdvVerifiedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("SdvVerifiedBy")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("SiteId")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("StudyId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("SubjectId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("TestCode")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("TestName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("Unit")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<double?>("Value")
-                        .HasColumnType("double precision");
-
-                    b.Property<string>("ValueString")
-                        .HasColumnType("text");
-
-                    b.Property<long>("VersionIndex")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("VisitId")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<long>("_version")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasDefaultValue(0L)
-                        .HasColumnName("_version");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FormSubmissionId")
-                        .HasDatabaseName("ix_clinical_observations_form_submission_id");
-
-                    b.HasIndex("IsActive")
-                        .HasDatabaseName("ix_clinical_observations_is_active");
-
-                    b.HasIndex("SiteId")
-                        .HasDatabaseName("ix_clinical_observations_site_id");
-
-                    b.HasIndex("FormSubmissionId", "IsActive")
-                        .HasDatabaseName("idx_observation_form_submission_active");
-
-                    b.HasIndex("SubjectId", "ObservationDate")
-                        .HasDatabaseName("idx_observation_subject_date");
-
-                    b.HasIndex("StudyId", "SubjectId", "VisitId", "Domain", "TestCode")
-                        .HasDatabaseName("idx_observation_coords");
-
-                    b.ToTable("clinical_observations", (string)null);
                 });
 
             modelBuilder.Entity("Cadence.Apps.Execution.Domain.Observations.LabReferenceRange", b =>
@@ -2381,10 +2060,6 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasColumnType("double precision")
                         .HasColumnName("delta_percentage");
 
-                    b.Property<string>("FormSubmissionId")
-                        .HasColumnType("text")
-                        .HasColumnName("form_submission_id");
-
                     b.Property<string>("GradingScale")
                         .IsRequired()
                         .HasColumnType("text")
@@ -2490,25 +2165,6 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.ToTable("staged_adverse_event_reviews", (string)null);
                 });
 
-            modelBuilder.Entity("Cadence.Database.Signatures.ConsumedSignatureToken", b =>
-                {
-                    b.Property<string>("TokenId")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
-                    b.Property<DateTimeOffset>("ConsumedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset>("RetainUntil")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("TokenId");
-
-                    b.HasIndex("RetainUntil");
-
-                    b.ToTable("consumed_signature_tokens", (string)null);
-                });
-
             modelBuilder.Entity("Cadence.Core.Domain.Audit.AuditLogEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2555,6 +2211,25 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("AuditLogEntries");
+                });
+
+            modelBuilder.Entity("Cadence.Database.Signatures.ConsumedSignatureToken", b =>
+                {
+                    b.Property<string>("TokenId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset>("ConsumedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("RetainUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("TokenId");
+
+                    b.HasIndex("RetainUntil");
+
+                    b.ToTable("consumed_signature_tokens", (string)null);
                 });
 
             modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.InboxState", b =>

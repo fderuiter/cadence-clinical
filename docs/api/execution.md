@@ -4,7 +4,6 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
-| `POST` | `/api/v1/execution/batch-sign-off` | BatchSignOff |  |
 | `GET` | `/api/v1/execution/cec/dossiers/{id}` | GetCecDossierById |  |
 | `POST` | `/api/v1/execution/cec/dossiers/{id}/chair-adjudicate` | ChairAdjudicateDossier |  |
 | `GET` | `/api/v1/execution/coding/synonyms` | GetActiveSynonymRules | Retrieve active synonym rules for study auto-coding engine. |
@@ -23,13 +22,6 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `GET` | `/api/v1/execution/devices/quarantine` | ListDeviceQuarantines | List Device Quarantines |
 | `POST` | `/api/v1/execution/devices/quarantine` | InitiateDeviceQuarantine | Initiate Quarantine |
 | `POST` | `/api/v1/execution/devices/quarantine/release` | ReleaseDeviceQuarantine | Release Quarantine |
-| `POST` | `/api/v1/execution/forms` | CreateFormSubmission |  |
-| `GET` | `/api/v1/execution/forms/subject/{studyId}/{subjectId}` | ListFormSubmissionsBySubject |  |
-| `GET` | `/api/v1/execution/forms/{id}` | GetFormSubmissionById |  |
-| `PUT` | `/api/v1/execution/forms/{id}` | UpdateFormPayload |  |
-| `POST` | `/api/v1/execution/forms/{id}/approve` | ApproveFormSubmission |  |
-| `POST` | `/api/v1/execution/forms/{id}/complete` | CompleteFormSubmission |  |
-| `POST` | `/api/v1/execution/forms/{id}/unlock` | UnlockFormSubmission |  |
 | `GET` | `/api/v1/execution/lab-ranges` | GetReferenceRanges | Get reference ranges for study/site |
 | `POST` | `/api/v1/execution/lab-ranges` | CreateReferenceRange | Create laboratory reference range |
 | `GET` | `/api/v1/execution/lab-ranges/{id}` | GetReferenceRangeById | Get reference range by ID |
@@ -44,11 +36,6 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `POST` | `/api/v1/execution/labs/toxicity/evaluate` | EvaluateLabToxicityEndpoint | Evaluate Lab Toxicity Endpoint |
 | `GET` | `/api/v1/execution/labs/toxicity/review-queue` | ListStagedAeReviewQueue | List Staged Ae Review Queue |
 | `POST` | `/api/v1/execution/labs/toxicity/review/{review_id}/action` | ActionStagedAeReview | Action Staged Ae Review |
-| `POST` | `/api/v1/execution/observations` | CreateClinicalObservation |  |
-| `GET` | `/api/v1/execution/observations/subject/{studyId}/{subjectId}` | ListObservationsBySubject |  |
-| `GET` | `/api/v1/execution/observations/{id}` | GetObservationById |  |
-| `POST` | `/api/v1/execution/observations/{id}/sdv` | VerifyObservationSdv |  |
-| `POST` | `/api/v1/execution/observations/{id}/sdv/flag` | FlagObservationSdv |  |
 | `GET` | `/api/v1/execution/queries` | ListClinicalQueries |  |
 | `POST` | `/api/v1/execution/queries` | CreateClinicalQuery |  |
 | `POST` | `/api/v1/execution/queries/batch-cancel` | BatchCancelClinicalQueries |  |

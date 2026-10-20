@@ -396,43 +396,6 @@ describe("Clinical Canvas kernel verbs: Trace, Impact, Act and Explain (ADR-2540
   });
 });
 
-describe("CanvasInspector on an observation", () => {
-  it("keeps the kernel verbs disabled, since an observation has no kernel reference yet", async () => {
-    const wrapper = mount(CanvasInspector, {
-      props: {
-        studyCode: "CAD-101",
-        participant: PARTICIPANT,
-        nodeRef: REF,
-        missing: false,
-        observation: {
-          id: "obs-1",
-          test_name: "Hemoglobin",
-          test_code: "HGB",
-          domain: "LB",
-          observation_date: "2026-09-01",
-          value: 13.2,
-          unit: "g/dL",
-          is_sdv_verified: false,
-        },
-      },
-      global: { stubs: { RouterLink: true } },
-    });
-
-    for (const verb of ["trace", "impact", "act", "explain"]) {
-      const button = wrapper.find(`#verb-${verb}`);
-      expect(button.attributes("aria-disabled")).toBe("true");
-      await button.trigger("click");
-      expect(wrapper.find("#verb-note").text()).toContain(
-        "an observation has no kernel reference yet"
-      );
-    }
-    expect(kernelApi.getCommands).not.toHaveBeenCalled();
-    expect(kernelApi.trace).not.toHaveBeenCalled();
-    expect(kernelApi.dependents).not.toHaveBeenCalled();
-    wrapper.unmount();
-  });
-});
-
 describe("⌘K palette kernel search (ADR-2484)", () => {
   let wrapper;
 

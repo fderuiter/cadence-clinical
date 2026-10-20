@@ -117,7 +117,7 @@ string GetServiceUrl(CadenceService service)
 var routes = ServiceTopology.Services
     .SelectMany(service => service.RoutePrefixes.Select(prefix => new RouteConfig
     {
-        RouteId = $"{service.Name}-{prefix}-route",
+        RouteId = $"{service.Name}-{prefix.Replace('/', '-')}-route",
         ClusterId = service.ClusterId,
         Match = new RouteMatch { Path = $"/api/v1/{prefix}/{{**catch-all}}" },
     }))

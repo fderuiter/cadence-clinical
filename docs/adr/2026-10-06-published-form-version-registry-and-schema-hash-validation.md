@@ -1,6 +1,12 @@
 # ADR-2809: Published Form Version Registry and Schema Hash Validation
 
-- **Status:** Accepted
+> [!NOTE]
+> Superseded by [ADR-2622](2026-10-19-ecrf-forms-are-collection-instances-saved-in-one-command.md). eCRF forms are
+> kernel collection instances recorded against a CollectionSpec version, so Execution's `PublishedFormVersionRegistry`,
+> its `FormVersionPublishedConsumer` and its form submissions were deleted (#5460). The kernel still raises
+> `FormVersionPublished`.
+
+- **Status:** Superseded by [ADR-2622](2026-10-19-ecrf-forms-are-collection-instances-saved-in-one-command.md)
 - **Date:** 2026-10-06
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter

@@ -32,12 +32,11 @@ vi.mock("../src/api/soaClient", () => {
   return {
     soaClient: {
       verifySignature: vi.fn(),
-      batchSignOff: vi.fn(),
     },
   };
 });
 
-describe("Batch Source Data Verification and GxP Compliance Flow Tests", () => {
+describe("Source Data Verification and GxP Compliance Flow Tests", () => {
   let pinia;
   let clinicalStore;
   let authStore;
@@ -67,7 +66,6 @@ describe("Batch Source Data Verification and GxP Compliance Flow Tests", () => {
 
     // Setup mocks
     vi.mocked(soaClient.verifySignature).mockReset();
-    vi.mocked(soaClient.batchSignOff).mockReset();
   });
 
   it("successfully parses route query parameters and preserves study/site context on land", () => {
@@ -82,95 +80,6 @@ describe("Batch Source Data Verification and GxP Compliance Flow Tests", () => {
     expect(clinicalStore.activeSiteId).toBe("TEST-SITE");
     expect(clinicalStore.activeSubjectId).toBe("SUBJ-002");
     expect(clinicalStore.activeVisitId).toBe("Week2");
-  });
-
-  it("renders batch SDV selection checkboxes for GxP fields when isAuthorizedForBulkSdv is true", async () => {
-    const wrapper = mount(EcrfView, {
-      global: {
-        plugins: [pinia],
-      },
-    });
-
-    // Verify CRA/authorized role is active
-    expect(wrapper.vm.isAuthorizedForBulkSdv).toBe(true);
-
-    // Verify batch selection checkboxes are present
-    const batchCheckboxes = wrapper.findAll(".batch-sdv-checkbox");
-    expect(batchCheckboxes.length).toBeGreaterThan(0);
-  });
-
-  it("triggers dual-factor electronic sign-off and batch SDV successfully when verified within the 60-second window", async () => {
-    const wrapper = mount(EcrfView, {
-      global: {
-        plugins: [pinia],
-      },
-    });
-
-    // Mock successful 21 CFR Part 11 token generation & transaction signoff
-    vi.mocked(soaClient.verifySignature).mockResolvedValue({
-      sig_token: "valid-gxp-token",
-    });
-    vi.mocked(soaClient.batchSignOff).mockResolvedValue({
-      status: "SUCCESS",
-      signed_forms_count: 2,
-      signed_at: "2026-08-03T10:00:00Z",
-      signatures: [],
-    });
-
-    // Select vital signs fields for verification
-    wrapper.vm.selectedBatchFields = ["vssbp", "vsdpb"];
-
-    // Initiate verification (Opens Re-auth Modal)
-    wrapper.vm.initiateBatchVerify();
-    expect(wrapper.vm.showReauthModal).toBe(true);
-    expect(wrapper.vm.reauthAction).toBe("BULK_SDV");
-
-    // Execute Signature
-    wrapper.vm.reauthPassword = "CorrectPassword123"; // pragma: allowlist secret
-    await wrapper.vm.confirmReauth();
-
-    // Expect verifySignature and batchSignOff to have been called
-    expect(soaClient.verifySignature).toHaveBeenCalled();
-    expect(soaClient.batchSignOff).toHaveBeenCalled();
-
-    // Selection must clear on success, and modal closes
-    expect(wrapper.vm.selectedBatchFields.length).toBe(0);
-    expect(wrapper.vm.showReauthModal).toBe(false);
-
-    // Local SDV status should be verified
-    expect(wrapper.vm.sdvStates[wrapper.vm.getSdvKey("vssbp")]).toBe(true);
-    expect(wrapper.vm.sdvStates[wrapper.vm.getSdvKey("vsdpb")]).toBe(true);
-  });
-
-  it("explicitly rejects bulk-signing transactions and applies compliance lockout if the token age exceeds 60 seconds", async () => {
-    const wrapper = mount(EcrfView, {
-      global: {
-        plugins: [pinia],
-      },
-    });
-
-    // Mock successful 21 CFR Part 11 token generation
-    vi.mocked(soaClient.verifySignature).mockResolvedValue({
-      sig_token: "expired-gxp-token",
-    });
-
-    // Select vital signs fields for verification
-    wrapper.vm.selectedBatchFields = ["vssbp"];
-
-    // Initiate verification (Opens Re-auth Modal)
-    wrapper.vm.initiateBatchVerify();
-
-    // Set password and simulate compliance 65-second lockout delay
-    wrapper.vm.reauthPassword = "CorrectPassword123"; // pragma: allowlist secret
-    wrapper.vm.simulateDelay = true;
-
-    // Confirm (Exposing token timeout rejection)
-    await wrapper.vm.confirmReauth();
-
-    // Verify error was rendered and transaction was blocked (batchSignOff not called)
-    expect(soaClient.batchSignOff).not.toHaveBeenCalled();
-    expect(wrapper.vm.reauthError).toContain("Compliance Lockout");
-    expect(wrapper.vm.showReauthModal).toBe(true); // modal kept open
   });
 
   it("automatically clears verification status and dispatches an high-priority alert notification when a verified field is modified", async () => {

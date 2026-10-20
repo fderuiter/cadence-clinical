@@ -8,7 +8,7 @@ import EcrfView from "../src/views/EcrfView.vue";
 import CrcFormRenderer from "../src/components/persona/CrcFormRenderer.vue";
 import { useClinicalStore } from "../src/stores/clinical.js";
 import { useAuthStore } from "../src/stores/auth.js";
-import { executionApi } from "../src/api/executionApi.js";
+import { useToastStore } from "../src/stores/toasts.js";
 
 // Mock router
 let routeLeaveHandler = null;
@@ -22,10 +22,7 @@ vi.mock("vue-router", () => ({
 
 // Mock execution API
 vi.mock("../src/api/executionApi.js", () => ({
-  executionApi: {
-    createFormSubmission: vi.fn().mockResolvedValue({ id: "SUB-12345" }),
-    completeFormSubmission: vi.fn().mockResolvedValue({ id: "SUB-12345" }),
-  },
+  executionApi: {},
 }));
 
 const SCOPE = ref({ tenantId: "tenant-a", userId: "user-a" });
@@ -205,10 +202,8 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
           lookupStatuses: {},
           getValidationError: () => null,
           isCraUser: false,
-          isAuthorizedForBulkSdv: false,
           sdvStates: {},
           getSdvKey: () => "key",
-          selectedBatchFields: [],
           dirtyFields: { vssbp: true },
           isDirty: true,
           draftRestored: false,
@@ -247,7 +242,7 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
           stubs: {
             StudySubjectsBar: true,
             SubjectEnrollmentForm: true,
-            PiSignatureDrawer: true,
+            EcrfFormPanel: true,
             DesignerSchemaPanel: true,
             ReasonModal: true,
             ConflictResolutionModal: true,
@@ -279,7 +274,7 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
           stubs: {
             StudySubjectsBar: true,
             SubjectEnrollmentForm: true,
-            PiSignatureDrawer: true,
+            EcrfFormPanel: true,
             DesignerSchemaPanel: true,
             ReasonModal: true,
             ConflictResolutionModal: true,
@@ -310,23 +305,20 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
       expect(leaveResultAllowed).toBeUndefined();
     });
 
-    it("clears draft from localStorage when form is submitted", async () => {
+    function mountSampleForm() {
       const store = useClinicalStore();
       store.subjects = [{ id: "SUBJ-001", status: "ENROLLED" }];
       store.ecrfFields = [
         { id: "vssbp", label: "Systolic BP", type: "number" },
       ];
-
-      const draftKey = VIEW_DRAFT_KEY;
-      localStorage.setItem(draftKey, JSON.stringify({ vssbp: "120" }));
-
-      const wrapper = mount(EcrfView, {
+      localStorage.setItem(VIEW_DRAFT_KEY, JSON.stringify({ vssbp: "120" }));
+      return mount(EcrfView, {
         global: {
           plugins: [pinia, i18n],
           stubs: {
             StudySubjectsBar: true,
             SubjectEnrollmentForm: true,
-            PiSignatureDrawer: true,
+            EcrfFormPanel: true,
             DesignerSchemaPanel: true,
             ReasonModal: true,
             ConflictResolutionModal: true,
@@ -335,7 +327,11 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
           },
         },
       });
+    }
 
+    it("clears draft from localStorage when the sample form is submitted in a demo build", async () => {
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      const wrapper = mountSampleForm();
       await nextTick();
 
       const crcRenderer = wrapper.findComponent(CrcFormRenderer);
@@ -346,12 +342,25 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
       await vi.runAllTimersAsync();
       await flushPromises();
 
-      expect(executionApi.createFormSubmission).toHaveBeenCalled();
       // The submit chain hashes a ledger block with Web Crypto, which resolves outside the
       // flushed microtasks when the suite runs under load; wait for the draft to clear.
       await vi.waitFor(() => {
-        expect(localStorage.getItem(draftKey)).toBeNull();
+        expect(localStorage.getItem(VIEW_DRAFT_KEY)).toBeNull();
       });
+    });
+
+    it("refuses to submit the sample form outside a demo build and keeps the draft (ADR-2622)", async () => {
+      const wrapper = mountSampleForm();
+      await nextTick();
+
+      wrapper.findComponent(CrcFormRenderer).vm.$emit("submit-ecrf");
+      await flushPromises();
+
+      expect(useToastStore().toasts[0]).toMatchObject({
+        tone: "error",
+        title: "Submitting the sample form isn't available yet",
+      });
+      expect(localStorage.getItem(VIEW_DRAFT_KEY)).not.toBeNull();
     });
   });
 });

@@ -1,12 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { useAuthStore } from "../src/stores/auth";
-import { useSignatureStore } from "../src/stores/signatures";
 import { useEtmfStore } from "../src/stores/etmf";
 import { useNotificationsStore } from "../src/stores/notifications";
 
 /**
- * #4523: the local demo simulations (mock signatures, demo TMF documents, local notifications) may run only in a
+ * #4523: the local demo simulations (demo TMF documents, local notifications) may run only in a
  * demo build, whatever the auth store says. Outside one, a failing gateway must surface as an error.
  */
 function failEveryRequest(status) {
@@ -33,35 +32,6 @@ describe("demo simulations are gated on a demo build (#4523)", () => {
     // Simulate stale/forged store state: demo flag on, no token.
     authStore.isDemoMode = true;
     authStore.token = null;
-  });
-
-  it("submitBatchSignature does not return a mock-sig result outside a demo build", async () => {
-    const fetchMock = failEveryRequest(502);
-    const store = useSignatureStore();
-
-    await expect(
-      store.submitBatchSignature({
-        studyId: "STUDY-01",
-        subjectId: "SUBJ-01",
-        formIds: ["FORM-01"],
-        password: "pw", // pragma: allowlist secret
-        meaning: "APPROVED",
-      })
-    ).rejects.toMatchObject({ status: 502 });
-
-    expect(fetchMock).toHaveBeenCalled();
-    expect(store.lastSignatureResult).toBeNull();
-    expect(store.signatureError).toBeTruthy();
-    expect(window.localStorage.getItem("lastSignatureResult")).toBeNull();
-  });
-
-  it("does not restore a persisted demo signature outside a demo build", () => {
-    window.localStorage.setItem(
-      "lastSignatureResult",
-      JSON.stringify({ status: "demo", signatures: [] })
-    );
-    setActivePinia(createPinia());
-    expect(useSignatureStore().lastSignatureResult).toBeNull();
   });
 
   it("etmf fetchDocuments does not serve demo documents outside a demo build", async () => {
@@ -115,14 +85,6 @@ describe("demo simulations are gated on a demo build (#4523)", () => {
     auth.token = null;
 
     expect(useNotificationsStore().notifications.length).toBeGreaterThan(0);
-    const res = await useSignatureStore().submitBatchSignature({
-      studyId: "STUDY-01",
-      subjectId: "SUBJ-01",
-      formIds: ["FORM-01"],
-      password: "pw", // pragma: allowlist secret
-      meaning: "APPROVED",
-    });
-    expect(res.status).toBe("demo");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

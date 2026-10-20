@@ -107,6 +107,15 @@
           @screen="onSubjectScreen"
         />
 
+        <!-- The participant's case report form, a kernel form instance saved a page at a time (ADR-2622). -->
+        <EcrfFormPanel
+          :form-id="routeQuery('formId')"
+          :enrollment-id="routeQuery('enrollmentId')"
+          :collection-spec-id="routeQuery('collectionSpecId')"
+          :planned-activity-id="routeQuery('plannedActivityId')"
+          @dirty-change="formPanelDirty = $event"
+        />
+
         <CrcFormRenderer
           v-model:selected-subject-id="selectedSubjectId"
           v-model:selected-visit-id="selectedVisitId"
@@ -115,14 +124,12 @@
           v-model:econsent-signer-name="econsentSignerName"
           v-model:paper-icf-date="paperIcfDate"
           v-model:paper-icf-note="paperIcfNote"
-          v-model:selected-batch-fields="selectedBatchFields"
           :store="store"
           :is-reconsent-gated="isReconsentGated"
           :reconsent-submitting="reconsentSubmitting"
           :lookup-statuses="lookupStatuses"
           :get-validation-error="getValidationError"
           :is-cra-user="isCraUser"
-          :is-authorized-for-bulk-sdv="isAuthorizedForBulkSdv"
           :sdv-states="sdvStates"
           :get-sdv-key="getSdvKey"
           :dirty-fields="dirtyFields"
@@ -143,16 +150,7 @@
           @handle-sdv-toggle="onSdvToggle"
           @clear-form="clearForm"
           @submit-ecrf="submitEcrf"
-        >
-          <template #batch-sdv-bar>
-            <!-- CRA Persona Component: Batch SDV Action Bar -->
-            <CraVerificationConsole
-              :selected-batch-fields="selectedBatchFields"
-              :is-authorized-for-bulk-sdv="isAuthorizedForBulkSdv"
-              @initiate-batch-verify="initiateBatchVerify"
-            />
-          </template>
-        </CrcFormRenderer>
+        />
       </div>
 
       <!-- Right Column: PI Persona Component & CDASH Metadata Tools -->
@@ -166,32 +164,6 @@
           gap: 20px;
         "
       >
-        <!-- PI Persona Component: Signature Worklist & Re-authentication Drawer/Modal -->
-        <!-- prettier-ignore -->
-        <PiSignatureDrawer
-          v-model:signoff-target-type="signoffTargetType"
-          v-model:signoff-target-id="signoffTargetId"
-          v-model:custom-target-id="customTargetId"
-          v-model:signoff-reason="signoffReason"
-          v-model:reauth-username="reauthUsername"
-          v-model:reauth-password="reauthPassword"
-          v-model:reauth-totp="reauthTotp"
-          v-model:simulate-delay="simulateDelay"
-          :selected-subject-ids="selectedSubjectIds"
-          :signature-result="lastSignatureResult"
-          :available-subjects="availableSubjects"
-          :available-visits="availableVisits"
-          :available-form-submissions="availableFormSubmissions"
-          :valid-signing-reasons="validSigningReasons"
-          :show-reauth-modal="showReauthModal"
-          :reauth-error="reauthError"
-          @toggle-select-all="toggleSelectAll"
-          @toggle-subject="toggleSubject"
-          @clear-cert="clearSignatureResult"
-          @submit-signoff="handleSignOffSubmit"
-          @cancel-reauth="cancelReauth"
-          @confirm-reauth="confirmReauth"/><!-- pragma: allowlist secret -->
-
         <!-- Live Form State & CDASH Meta Card -->
         <div
           class="card"
@@ -276,27 +248,27 @@
     <!-- Full-Width Bottom Section: Study Designer Persona Component -->
     <div style="margin-top: 24px">
       <DesignerSchemaPanel
-        v-model:edit-item-value="editItemValue"
-        v-model:edit-item-reason="editItemReason"
-        v-model:reject-item-reason="rejectItemReason"
-        v-model:promote-change-reason="promoteChangeReason"
+        v-model:edit-item-value="schema.editItemValue"
+        v-model:edit-item-reason="schema.editItemReason"
+        v-model:reject-item-reason="schema.rejectItemReason"
+        v-model:promote-change-reason="schema.promoteChangeReason"
         :store="store"
-        :selected-file-name="selectedFileName"
-        :editing-item-id="editingItemId"
-        :rejecting-item-id="rejectingItemId"
-        :unreviewed-count="unreviewedCount"
-        :get-confidence-class="getConfidenceClass"
-        :get-status-class="getStatusClass"
-        @trigger-file-select="triggerFileSelect"
-        @trigger-document-upload="triggerDocumentUpload"
-        @accept-item="acceptItem"
-        @start-edit-item="startEditItem"
-        @cancel-edit-item="cancelEditItem"
-        @save-edit-item="saveEditItem"
-        @start-reject-item="startRejectItem"
-        @cancel-reject-item="cancelRejectItem"
-        @confirm-reject-item="confirmRejectItem"
-        @promote-candidate="promoteCandidate"
+        :selected-file-name="schema.selectedFileName"
+        :editing-item-id="schema.editingItemId"
+        :rejecting-item-id="schema.rejectingItemId"
+        :unreviewed-count="schema.unreviewedCount"
+        :get-confidence-class="schema.getConfidenceClass"
+        :get-status-class="schema.getStatusClass"
+        @trigger-file-select="schema.triggerFileSelect"
+        @trigger-document-upload="schema.triggerDocumentUpload"
+        @accept-item="schema.acceptItem"
+        @start-edit-item="schema.startEditItem"
+        @cancel-edit-item="schema.cancelEditItem"
+        @save-edit-item="schema.saveEditItem"
+        @start-reject-item="schema.startRejectItem"
+        @cancel-reject-item="schema.cancelRejectItem"
+        @confirm-reject-item="schema.confirmRejectItem"
+        @promote-candidate="schema.promoteCandidate"
       />
     </div>
 
@@ -335,8 +307,6 @@ import { useRoute, onBeforeRouteLeave } from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { useToastStore } from "../stores/toasts.js";
-import { executionApi } from "../api/executionApi";
-import { soaClient } from "../api/soaClient";
 import { validateField, debounce } from "ui";
 import { evaluateAST } from "../evaluator.js";
 import { terminologyClient } from "../api/terminologyClient";
@@ -347,8 +317,7 @@ import { ClientSyncEngine } from "../utils/syncEngine";
 
 // Import Persona Sub-Components
 import CrcFormRenderer from "../components/persona/CrcFormRenderer.vue";
-import CraVerificationConsole from "../components/persona/CraVerificationConsole.vue";
-import PiSignatureDrawer from "../components/persona/PiSignatureDrawer.vue";
+import EcrfFormPanel from "../components/ecrf/EcrfFormPanel.vue";
 import DesignerSchemaPanel from "../components/persona/DesignerSchemaPanel.vue";
 import SubjectEnrollmentForm from "../components/clinical/SubjectEnrollmentForm.vue";
 import StudySubjectsBar from "../components/clinical/StudySubjectsBar.vue";
@@ -357,7 +326,6 @@ import EhrReconciliationDrawer from "../components/clinical/EhrReconciliationDra
 // Import Domain Composables
 import { useConsentGating } from "../composables/useConsentGating";
 import { useVerification } from "../composables/useVerification";
-import { usePiSignoff } from "../composables/usePiSignoff";
 import { useSchemaIngestion } from "../composables/useSchemaIngestion";
 import { useEcrfDrafts } from "../composables/useEcrfDrafts";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
@@ -370,6 +338,15 @@ const route = useRoute();
 const demoBuild = isDemoBuild();
 
 const showEhrReconciliationDrawer = ref(false);
+
+// Whether the case report form has entries that are not saved yet.
+const formPanelDirty = ref(false);
+
+/** One route query value as a string, or null. */
+function routeQuery(name) {
+  const value = route?.query?.[name];
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
 
 // Selected Subject & Visit State
 const selectedSubjectId = ref("SUBJ-001");
@@ -457,10 +434,8 @@ const {
 // Domain Composable 2: Verification & SDV (CRA)
 const {
   sdvStates,
-  selectedBatchFields,
   pendingSdvToggle,
   isCraUser,
-  isAuthorizedForBulkSdv,
   handleSdvToggle: composableHandleSdvToggle,
   handleVerificationInvalidationOnEdit,
 } = useVerification(activeUserRole);
@@ -475,84 +450,8 @@ function onSdvToggle(fieldId, checked) {
   });
 }
 
-function initiateBatchVerify() {
-  if (selectedBatchFields.value.length === 0) {
-    alert("No fields selected for batch verification!");
-    return;
-  }
-  reauthAction.value = "BULK_SDV";
-  reauthUsername.value =
-    store.user.username || authStore.identity?.username || "";
-  reauthPassword.value = "";
-  reauthTotp.value = "";
-  reauthError.value = "";
-  showReauthModal.value = true;
-}
-
-// Domain Composable 3: PI Sign-Off Worklist & Re-authentication (PI)
-const {
-  signoffTargetType,
-  signoffTargetId,
-  customTargetId,
-  signoffReason,
-  availableSubjects,
-  selectedSubjectIds,
-  toggleSelectAll,
-  toggleSubject,
-  lastSignatureResult,
-  clearSignatureResult,
-  availableVisits,
-  availableFormSubmissions,
-  validSigningReasons,
-  showReauthModal,
-  reauthUsername,
-  reauthPassword,
-  reauthTotp,
-  reauthError,
-  reauthAction,
-  pendingCloseQueryFieldId,
-  simulateDelay,
-  handleSignOffSubmit: composableHandleSignOffSubmit,
-  cancelReauth,
-} = usePiSignoff(store, authStore);
-
-function handleSignOffSubmit() {
-  composableHandleSignOffSubmit(
-    (config) => {
-      reauthAction.value = config.action;
-      reauthUsername.value = config.username;
-      reauthPassword.value = "";
-      reauthTotp.value = "";
-      reauthError.value = "";
-      showReauthModal.value = true;
-    },
-    store.user.username || authStore.identity?.username || ""
-  );
-}
-
-// Domain Composable 4: Protocol Schema Ingestion & Review (Study Designer)
-const {
-  selectedFileName,
-  editingItemId,
-  editItemValue,
-  editItemReason,
-  rejectingItemId,
-  rejectItemReason,
-  promoteChangeReason,
-  unreviewedCount,
-  triggerFileSelect,
-  triggerDocumentUpload,
-  getConfidenceClass,
-  getStatusClass,
-  acceptItem,
-  startEditItem,
-  cancelEditItem,
-  saveEditItem,
-  startRejectItem,
-  cancelRejectItem,
-  confirmRejectItem,
-  promoteCandidate,
-} = useSchemaIngestion(store);
+// Domain Composable 4: Protocol Schema Ingestion & Review (Study Designer). reactive() unwraps its refs for the template.
+const schema = reactive(useSchemaIngestion(store));
 
 // Reason for Change Modal States
 const ecrfReasonOptions = [
@@ -777,7 +676,7 @@ onUnmounted(() => {
 // Route & Browser Navigation Guards
 if (typeof onBeforeRouteLeave === "function") {
   onBeforeRouteLeave(() => {
-    if (isDirty.value) {
+    if (isDirty.value || formPanelDirty.value) {
       const confirmLeave = window.confirm(
         "You have unsaved eCRF draft changes. Are you sure you want to leave?"
       );
@@ -789,7 +688,7 @@ if (typeof onBeforeRouteLeave === "function") {
 }
 
 function handleBeforeUnload(event) {
-  if (isDirty.value) {
+  if (isDirty.value || formPanelDirty.value) {
     event.preventDefault();
     event.returnValue = "";
     return "";
@@ -971,16 +870,22 @@ function respondQuery(fieldId, respFromComponent = null) {
 }
 
 function closeQuery(fieldId) {
-  // The re-authentication prompt below verifies nothing, so outside demo builds it is never shown.
   if (!allowUnbackedAction("Closing a query")) return;
-  pendingCloseQueryFieldId.value = fieldId;
-  reauthAction.value = "CLOSE_QUERY";
-  reauthUsername.value =
-    store.user.username || authStore.identity?.username || "";
-  reauthPassword.value = "";
-  reauthTotp.value = "";
-  reauthError.value = "";
-  showReauthModal.value = true;
+  const queryObj = store.formQueries[fieldId];
+  if (!queryObj) return;
+  queryObj.status = "CLOSED";
+  queryObj.closedBy = `${activeUserRole.value} (Client Monitor)`;
+  queryObj.closedAt = new Date().toISOString().slice(0, 10);
+  store.addLedgerBlock(
+    "QUERY_CLOSE",
+    {
+      fieldId,
+      query: queryObj,
+      subjectId: selectedSubjectId.value,
+      visitId: selectedVisitId.value,
+    },
+    "Discrepancy resolved and closed by monitor."
+  );
 }
 
 function reopenQuery(fieldId) {
@@ -1000,249 +905,6 @@ function reopenQuery(fieldId) {
     },
     "Investigator response was rejected by clinical monitor."
   );
-}
-
-// Re-authentication confirmation handler
-async function confirmReauth() {
-  if (!reauthPassword.value) {
-    reauthError.value = "Password is required.";
-    return;
-  }
-
-  const username = reauthUsername.value;
-  const password = reauthPassword.value;
-  const totp = reauthTotp.value || null;
-  const action = reauthAction.value;
-
-  reauthPassword.value = "";
-
-  if (action === "CLOSE_QUERY") {
-    const fieldId = pendingCloseQueryFieldId.value;
-    if (fieldId) {
-      const queryObj = store.formQueries[fieldId];
-      queryObj.status = "CLOSED";
-      queryObj.closedBy = `${username} (CRA Monitor)`;
-      queryObj.closedAt = new Date().toISOString().slice(0, 10);
-
-      const fieldMeta = store.ecrfFields.find((f) => f.id === fieldId);
-      const cdash = fieldMeta ? fieldMeta.cdash : "";
-      const [domain, testCode] = cdash
-        ? cdash.split(".")
-        : ["VS", fieldId.toUpperCase()];
-
-      store.addLedgerBlock(
-        "QUERY_CLOSE",
-        {
-          fieldId,
-          studyId: store.currentUsdm.studyId || "STUDY-USDM-001",
-          subjectId: selectedSubjectId.value,
-          visitId: selectedVisitId.value,
-          domain,
-          testCode,
-          query: queryObj,
-        },
-        "Discrepancy resolved and closed permanently by monitor."
-      );
-      pendingCloseQueryFieldId.value = null;
-    }
-
-    showReauthModal.value = false;
-    reauthError.value = "";
-    alert(
-      "Identity verified. Query closed and logged to cryptographic ledger."
-    );
-  } else if (action === "BATCH_SIGN_OFF") {
-    try {
-      reauthError.value = "";
-
-      const studyId =
-        store.activeStudyId ||
-        store.currentStudyId ||
-        store.currentUsdm?.studyId ||
-        "STUDY-USDM-001";
-      const targetType = signoffTargetType.value;
-      let targetIds = [];
-      if (targetType === "SUBJECT") {
-        targetIds = selectedSubjectIds.value;
-      } else {
-        const targetId =
-          signoffTargetId.value === "custom"
-            ? customTargetId.value
-            : signoffTargetId.value;
-        targetIds = [targetId];
-      }
-      const signingReason = signoffReason.value;
-
-      const normStudy = studyId.trim();
-      const normType = targetType.trim().toUpperCase();
-      const normIds = [...targetIds]
-        .map((id) => String(id).trim())
-        .sort()
-        .join(",");
-      const normReason = signingReason.trim();
-      const bindingStr = `${normStudy}:${normType}:${normIds}:${normReason}`;
-
-      const msgBuffer = new TextEncoder().encode(bindingStr);
-      const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const batchId = hashArray
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-
-      const reauthRes = await soaClient.verifySignature(
-        {
-          username,
-          password,
-          totp,
-          action: "/api/v1/execution/batch-sign-off",
-          batchId,
-        },
-        authStore.accessToken
-      );
-
-      const sigToken = reauthRes.sig_token;
-
-      const signoffRes = await soaClient.batchSignOff(
-        {
-          studyId,
-          targetType,
-          targetIds,
-          signingReason,
-        },
-        {
-          userId: username,
-          roles: store.user.roles ? store.user.roles.join(",") : "investigator",
-          changeReason: signingReason,
-          sigToken,
-        },
-        authStore.accessToken
-      );
-
-      lastSignatureResult.value = signoffRes;
-
-      await store.addLedgerBlock(
-        "BATCH_SIGN_OFF_SUCCESS",
-        {
-          targetType,
-          targetIds,
-          signingReason,
-          result: signoffRes,
-        },
-        `PI electronic sign-off approved: ${signingReason}`
-      );
-
-      showReauthModal.value = false;
-      reauthTotp.value = "";
-      alert(
-        `Signature Token obtained successfully.\nBatch sign-off completed for ${targetType} (${targetIds.length} target(s))!`
-      );
-    } catch (err) {
-      reauthPassword.value = "";
-      reauthTotp.value = "";
-
-      if (err.message === "REAUTHENTICATION_REQUIRED" || err.status === 401) {
-        reauthError.value =
-          "Identity verification expired or invalid. Please try again.";
-        showReauthModal.value = true;
-      } else {
-        reauthError.value = err.message || "Failed to complete batch sign-off.";
-      }
-    }
-  } else if (action === "BULK_SDV") {
-    try {
-      reauthError.value = "";
-
-      const studyId = store.currentUsdm.studyId || "STUDY-USDM-001";
-      const fieldsToVerify = [...selectedBatchFields.value];
-      const signingReason = "Batch Source Data Verification (SDV)";
-
-      const normStudy = studyId.trim();
-      const normFields = fieldsToVerify.sort().join(",");
-      const bindingStr = `${normStudy}:SDV:${normFields}:${signingReason}`;
-
-      const msgBuffer = new TextEncoder().encode(bindingStr);
-      const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const batchId = hashArray
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-
-      let tokenRequestedAt = Date.now();
-      if (simulateDelay.value) {
-        tokenRequestedAt -= 65000;
-      }
-
-      const reauthRes = await soaClient.verifySignature(
-        {
-          username,
-          password,
-          totp,
-          action: "/api/v1/execution/batch-sign-off",
-          batchId,
-        },
-        authStore.accessToken
-      );
-
-      const sigToken = reauthRes.sig_token;
-
-      const elapsed = (Date.now() - tokenRequestedAt) / 1000;
-      if (elapsed > 60) {
-        throw new Error(
-          "Compliance Lockout: The electronic signature verification token is older than 60 seconds."
-        );
-      }
-
-      await soaClient.batchSignOff(
-        {
-          studyId,
-          targetType: "FORM",
-          targetIds: fieldsToVerify,
-          signingReason,
-        },
-        {
-          userId: username,
-          roles: store.user.roles ? store.user.roles.join(",") : "monitor",
-          changeReason: signingReason,
-          sigToken,
-        },
-        authStore.accessToken
-      );
-
-      for (const fieldId of fieldsToVerify) {
-        const sKey = getSdvKey(fieldId);
-        sdvStates[sKey] = true;
-
-        store.addLedgerBlock(
-          "SDV_TOGGLE",
-          {
-            subjectId: selectedSubjectId.value,
-            visitId: selectedVisitId.value,
-            fieldId,
-            is_sdv_verified: true,
-          },
-          "Batch Source Data Verification (SDV) confirmed"
-        );
-      }
-
-      selectedBatchFields.value = [];
-      showReauthModal.value = false;
-      reauthTotp.value = "";
-      alert(
-        `Identity verified. Batch Source Data Verification (SDV) completed successfully for selected fields!`
-      );
-    } catch (err) {
-      reauthPassword.value = "";
-      reauthTotp.value = "";
-
-      if (err.message === "REAUTHENTICATION_REQUIRED" || err.status === 401) {
-        reauthError.value =
-          "Identity verification expired or invalid. Please try again.";
-        showReauthModal.value = true;
-      } else {
-        reauthError.value = err.message || "Failed to complete batch SDV.";
-      }
-    }
-  }
 }
 
 function clearForm() {
@@ -1290,61 +952,27 @@ async function submitEcrf() {
     return;
   }
 
-  const studyId =
-    store.activeStudyId ||
-    store.currentStudyId ||
-    store.currentUsdm?.studyId ||
-    "STUDY-USDM-001";
-  const subjectId =
-    selectedSubjectId.value || store.activeSubjectId || "SUBJ-001";
-  const visitId = selectedVisitId.value || store.activeVisitId || "Screening";
-  const formId = "VS_DEMO";
-  const siteId = store.activeSiteId || store.currentSiteId || "SITE-101";
-  const protocolVersion = store.currentUsdm?.protocolVersion || "1.0.0";
-  const payload = JSON.stringify(store.formValues || {});
+  // The sample form is not a kernel form: values are entered and saved in the case report form above, a page at a
+  // time (ADR-2622). Outside demo builds submitting the sample form is refused rather than sent anywhere.
+  if (!allowUnbackedAction("Submitting the sample form")) return;
 
-  try {
-    const submission = await executionApi.createFormSubmission({
-      studyId,
-      subjectId,
-      formId,
-      siteId,
-      visitId,
-      protocolVersion,
-      payload,
-    });
-
-    const completed = await executionApi.completeFormSubmission(submission.id);
-
-    const block = await store.addLedgerBlock(
-      "SESSION_SUBMIT",
-      {
-        formId,
-        subjectId,
-        visitId,
-        studyId,
-        siteId,
-        formValues: store.formValues,
-        formQueries: store.formQueries,
-        submissionId: completed.id,
-        backendSubmissionId: completed.id,
-        synced: true,
-      },
-      "eCRF successfully verified, finalized, and electronically submitted."
-    );
-    if (block) {
-      block.synced = true;
-      block.submissionId = completed.id;
-    }
-
-    toastStore.push({
-      tone: "success",
-      title: "eCRF Form Submitted",
-      message: `eCRF Session successfully submitted to backend Execution API (Submission ID: ${completed.id}).`,
-    });
-    clearDraft();
-  } catch (err) {
-    toastStore.apiError("eCRF Form Submission Failed", err);
-  }
+  await store.addLedgerBlock(
+    "SESSION_SUBMIT",
+    {
+      formId: "VS_DEMO",
+      subjectId: selectedSubjectId.value,
+      visitId: selectedVisitId.value,
+      formValues: store.formValues,
+      formQueries: store.formQueries,
+      synced: false,
+    },
+    "Sample eCRF session submitted in the demo."
+  );
+  toastStore.push({
+    tone: "success",
+    title: "Sample form submitted",
+    message: "The demo recorded the sample form in its local ledger only.",
+  });
+  clearDraft();
 }
 </script>

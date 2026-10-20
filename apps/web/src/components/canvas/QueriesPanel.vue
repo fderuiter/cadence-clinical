@@ -189,7 +189,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import type { ClinicalQuery, Observation } from "../../api/executionApi";
+import type { ClinicalQuery } from "../../api/executionApi";
 import {
   useStudyCanvasStore,
   type QueryAction,
@@ -203,7 +203,6 @@ import {
 const props = defineProps<{
   subjectCode: string;
   queries: ClinicalQuery[];
-  observations: Observation[];
   canManage: boolean;
 }>();
 
@@ -345,10 +344,7 @@ function queryStatusLabel(status: string): string {
 }
 
 function targetLabel(query: ClinicalQuery): string {
-  const observation = props.observations.find(
-    (o) => o.id === query.observation_id
-  );
-  const test = observation?.test_name ?? query.test_code;
+  const test = query.test_code;
   return query.visit_id ? `${test} · ${query.visit_id}` : test;
 }
 

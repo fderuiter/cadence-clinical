@@ -30,9 +30,9 @@ Only `/healthz` and `/api/v1/status` are anonymous on the gateway itself.
 
 ## Electronic signatures (step-up)
 
-21 CFR 11.200(a)(1) requires a signer to re-enter credentials when signing. Signature-gated endpoints (today:
-PI approval of a form, `POST /api/v1/execution/forms/{id}/approve`) need an `X-Sig-Token` next to the
-bearer token:
+21 CFR 11.200(a)(1) requires a signer to re-enter credentials when signing. Signature-gated endpoints (for example
+eConsent signing and training delegation sign-off; form signatures return as kernel attestations in #5463) need an
+`X-Sig-Token` next to the bearer token:
 
 1. The signed-in client sends `POST /api/v1/auth/signature-verification` with
    `{ "password", "totp"?, "action", "semantic_action", "batch_id"? }`, where `action` is the path being signed
@@ -78,31 +78,30 @@ Development a missing address defaults to `http://localhost:<port>` (the ports i
 start without it. An address that is not an absolute http or https URL fails startup everywhere
 (`tests/Cadence.UnitTests/Gateway/GatewayServiceUrlValidationTests.cs`).
 
-| Path prefix                | Service                                                       | Address key                 |
-| -------------------------- | ------------------------------------------------------------- | --------------------------- |
-| `/api/v1/studies/**`       | designer                                                      | `DESIGNER_SERVICE_URL`      |
-| `/api/v1/protocols/**`     | designer                                                      | `DESIGNER_SERVICE_URL`      |
-| `/api/v1/observations/**`  | execution                                                     | `EXECUTION_SERVICE_URL`     |
-| `/api/v1/forms/**`         | execution                                                     | `EXECUTION_SERVICE_URL`     |
-| `/api/v1/queries/**`       | execution                                                     | `EXECUTION_SERVICE_URL`     |
-| `/api/v1/execution/**`     | execution                                                     | `EXECUTION_SERVICE_URL`     |
-| `/api/v1/etmf/**`          | etmf                                                          | `ETMF_SERVICE_URL`          |
-| `/api/v1/interop/**`       | interop                                                       | `INTEROP_SERVICE_URL`       |
-| `/api/v1/quality/**`       | quality                                                       | `QUALITY_SERVICE_URL`       |
-| `/api/v1/notifications/**` | notifications                                                 | `NOTIFICATIONS_SERVICE_URL` |
-| `/api/v1/ctms/**`          | ctms                                                          | `CTMS_SERVICE_URL`          |
-| `/api/v1/safety/**`        | safety                                                        | `SAFETY_SERVICE_URL`        |
-| `/api/v1/tickets/**`       | tickets                                                       | `TICKETS_SERVICE_URL`       |
-| `/api/v1/eisf/**`          | eisf                                                          | `EISF_SERVICE_URL`          |
-| `/api/v1/econsent/**`      | econsent                                                      | `ECONSENT_SERVICE_URL`      |
-| `/api/v1/org/**`           | org                                                           | `ORG_SERVICE_URL`           |
-| `/api/v1/fileshare/**`     | fileshare                                                     | `FILESHARE_SERVICE_URL`     |
-| `/api/v1/imaging/**`       | imaging                                                       | `IMAGING_SERVICE_URL`       |
-| `/api/v1/knowledge/**`     | knowledge                                                     | `KNOWLEDGE_SERVICE_URL`     |
-| `/api/v1/training/**`      | knowledge                                                     | `KNOWLEDGE_SERVICE_URL`     |
-| `/api/v1/payments/**`      | payments                                                      | `PAYMENTS_SERVICE_URL`      |
-| `/api/v1/kernel/**`        | kernel ([apps/kernel-api](../kernel-api/README.md))           | `KERNEL_SERVICE_URL`        |
-| `/api/v1/ai/**`            | kernel (the [Intelligence module](../intelligence/README.md)) | `KERNEL_SERVICE_URL`        |
+| Path prefix                  | Service                                                                  | Address key                 |
+| ---------------------------- | ------------------------------------------------------------------------ | --------------------------- |
+| `/api/v1/studies/**`         | designer                                                                 | `DESIGNER_SERVICE_URL`      |
+| `/api/v1/protocols/**`       | designer                                                                 | `DESIGNER_SERVICE_URL`      |
+| `/api/v1/queries/**`         | execution                                                                | `EXECUTION_SERVICE_URL`     |
+| `/api/v1/execution/**`       | execution                                                                | `EXECUTION_SERVICE_URL`     |
+| `/api/v1/etmf/**`            | etmf                                                                     | `ETMF_SERVICE_URL`          |
+| `/api/v1/interop/**`         | interop                                                                  | `INTEROP_SERVICE_URL`       |
+| `/api/v1/quality/**`         | quality                                                                  | `QUALITY_SERVICE_URL`       |
+| `/api/v1/notifications/**`   | notifications                                                            | `NOTIFICATIONS_SERVICE_URL` |
+| `/api/v1/ctms/**`            | ctms                                                                     | `CTMS_SERVICE_URL`          |
+| `/api/v1/safety/**`          | safety                                                                   | `SAFETY_SERVICE_URL`        |
+| `/api/v1/tickets/**`         | tickets                                                                  | `TICKETS_SERVICE_URL`       |
+| `/api/v1/eisf/**`            | eisf                                                                     | `EISF_SERVICE_URL`          |
+| `/api/v1/econsent/**`        | econsent                                                                 | `ECONSENT_SERVICE_URL`      |
+| `/api/v1/org/**`             | org                                                                      | `ORG_SERVICE_URL`           |
+| `/api/v1/fileshare/**`       | fileshare                                                                | `FILESHARE_SERVICE_URL`     |
+| `/api/v1/imaging/**`         | imaging                                                                  | `IMAGING_SERVICE_URL`       |
+| `/api/v1/knowledge/**`       | knowledge                                                                | `KNOWLEDGE_SERVICE_URL`     |
+| `/api/v1/training/**`        | knowledge                                                                | `KNOWLEDGE_SERVICE_URL`     |
+| `/api/v1/payments/**`        | payments                                                                 | `PAYMENTS_SERVICE_URL`      |
+| `/api/v1/kernel/**`          | kernel ([apps/kernel-api](../kernel-api/README.md))                      | `KERNEL_SERVICE_URL`        |
+| `/api/v1/ai/**`              | kernel (the [Intelligence module](../intelligence/README.md))            | `KERNEL_SERVICE_URL`        |
+| `/api/v1/execution/forms/**` | kernel (the [Execution module](../execution/module/README.md), ADR-2622) | `KERNEL_SERVICE_URL`        |
 
 `tests/Cadence.UnitTests/Gateway/GatewayRouteCoverageTests.cs` boots the gateway and every service and fails when a route leads to a
 prefix its service does not map, or when a service maps an `/api/v1` endpoint no route reaches. Add or remove a

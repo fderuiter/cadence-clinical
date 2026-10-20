@@ -5,16 +5,11 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-using Cadence.Apps.Execution.Application.Forms;
-using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
-using Cadence.Kernel.Trust;
-using Cadence.Security;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
 using Cadence.Testing;
 using Cadence.Testing.Security;
-using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -22,8 +17,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
-
-using HmacSigner = Cadence.Security.Authentication.HmacSigner;
 
 namespace Cadence.IntegrationTests.Execution;
 
@@ -89,64 +82,6 @@ public sealed class ExecutionAuditAttributionTests(ExecutionPostgresApiFactory f
             $"/api/v1/execution/sites/{site}/activate",
             new { study_id = Study },
             Ct));
-
-        await ShouldHaveNoAnonymousEntriesAsync();
-    }
-
-    [Fact]
-    [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-001")]
-    public async Task ObservationWrites_AreEachAuditedAgainstTheCaller()
-    {
-        factory.SkipIfUnavailable();
-        var coordinator = Caller("obs-coordinator", "crc");
-        var monitor = Caller("obs-monitor", "CRA");
-        object observation = new { subject_id = $"SUBJ-{_run}", domain = "VS", test_code = "SYSBP", test_name = "Systolic BP", study_id = Study, value = 120, unit = "mmHg", observation_date = "2026-01-01T08:00:00Z" };
-
-        string verified = await ReadIdAsync(await AuditedAsync(coordinator, c => c.PostAsJsonAsync("/api/v1/execution/observations/", observation, Ct)));
-        string flagged = await ReadIdAsync(await AuditedAsync(coordinator, c => c.PostAsJsonAsync("/api/v1/execution/observations/", observation, Ct)));
-        await AuditedAsync(monitor, c => c.PostAsync($"/api/v1/execution/observations/{verified}/sdv", content: null, Ct));
-        await AuditedAsync(monitor, c => c.PostAsJsonAsync($"/api/v1/execution/observations/{flagged}/sdv/flag", new { reason = "Source mismatch" }, Ct));
-
-        await ShouldHaveNoAnonymousEntriesAsync();
-    }
-
-    [Fact]
-    [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-001")]
-    public async Task FormWrites_AreEachAuditedAgainstTheCaller()
-    {
-        factory.SkipIfUnavailable();
-        var investigator = Caller("form-pi", "Site Investigator");
-        const string payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 130}";
-
-        string form = await ReadIdAsync(await AuditedAsync(investigator, c => c.PostAsJsonAsync(
-            "/api/v1/execution/forms/",
-            new { study_id = Study, subject_id = $"SUBJ-{_run}", form_id = "VS_FORM", payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 129}" },
-            Ct)));
-        await AuditedAsync(investigator, c => c.PutAsJsonAsync($"/api/v1/execution/forms/{form}", new { payload }, Ct));
-        await AuditedAsync(investigator, c => c.PostAsync($"/api/v1/execution/forms/{form}/complete", content: null, Ct));
-        var signer = investigator with
-        {
-            SigToken = TestSecurityContext.CreateSigToken(
-                investigator.UserId, FormEndpoints.ApproveAction(form), FormEndpoints.ApproveSemanticAction, batchId: JsonCanonicalization.Sha256Hex(payload)),
-        };
-        await AuditedAsync(signer, c => c.PostAsJsonAsync(
-            $"/api/v1/execution/forms/{form}/approve",
-            new
-            {
-                signing_reason = "PI approval and sign-off.",
-                signature_manifest = new
-                {
-                    signer_id = investigator.UserId,
-                    signer_name = "Dr Audit",
-                    payload_hash = JsonCanonicalization.Sha256Hex(payload),
-                },
-            },
-            Ct));
-        // Unlocking a signed form for correction is the data manager's action, not the signer's (ADR-2516).
-        var dataManager = Caller("form-dm", "Data Manager");
-        await AuditedAsync(dataManager, c => c.PostAsJsonAsync($"/api/v1/execution/forms/{form}/unlock", new { reason = "Late lab result" }, Ct));
 
         await ShouldHaveNoAnonymousEntriesAsync();
     }

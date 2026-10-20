@@ -16,6 +16,7 @@ The Clinical Kernel's HTTP host ([ADR-2540](../../docs/adr/2026-09-30-kernel-api
 - `KernelDatabaseHealthCheck`: the readiness probe opens a connection to the kernel database.
 - `KernelMigrationHostedService`: applies the kernel migrations on start when `Database:MigrateOnStartup` or `Database:MigrateOnly` is set, then each module's (`AddModuleMigrations`, in its own schema).
 - The Intelligence module ([`apps/intelligence`](../intelligence/README.md), ADR-2630): `AddCadenceIntelligenceModule` and `MapIntelligenceModule()` add the AI agent runtime, its ledger and controls, and the command-palette intent router under `/api/v1/ai`.
+- The Execution module ([`apps/execution/module`](../execution/module/README.md), ADR-2622): `AddCadenceExecutionModule` and `MapExecutionModule()` add eCRF forms over kernel form instances under `/api/v1/execution/forms`. `KernelReadAccess` gives module reads the kernel's masking (`IKernelReadAccess`).
 - The activity projector (`AddKernelActivityProjection()`, ADR-2485): copies committed kernel events into the activity stream every five seconds. This is the one host with kernel persistence, so it runs the projector (ADR-2540 §4.7).
 
 The endpoints, response records and tenant filter live in [`packages/kernel/src/Cadence.Kernel.Api`](../../packages/kernel/README.md).
@@ -50,9 +51,13 @@ The host also runs the kernel command pipeline (`AddKernelCommandPipeline`), so 
 | `POST observations/{ref}/corrections` | Corrects the value (`observation.correct`) with the expected version. 409 `K.Observation.VersionStale`, 423 `K.Observation.Locked`, 422 `K.Command.ReasonForChangeRequired` without a reason (the pipeline's check, as for every kernel mutation).     |
 | `GET observations/{ref}`              | The value, version, the locks covering it (ADR-2621), every revision, the assertions about it and the kernel audit entries. 403 when the caller may not see its enrollment.                                                                            |
 
+### Execution forms (ADR-2622)
+
+`POST /api/v1/execution/forms`, `GET /api/v1/execution/forms/{formId}` and `PUT /api/v1/execution/forms/{formId}/values` open, read and save eCRF forms; the [Execution module README](../execution/module/README.md) describes them.
+
 Also `GET /healthz`, `/healthz/live`, `/healthz/ready` and `GET /api/v1/kernel/status` (anonymous). OpenAPI and the Scalar reference are mapped in Development only; the exported document is [docs/openapi/kernel_openapi.json](../../docs/openapi/kernel_openapi.json).
 
-The gateway forwards `/api/v1/kernel/**` here. Compose publishes host port 8018 (container port 8080); the gateway's default upstream is `http://localhost:8018` (`KERNEL_SERVICE_URL`).
+The gateway forwards `/api/v1/kernel/**`, `/api/v1/ai/**` and `/api/v1/execution/forms/**` here. Compose publishes host port 8018 (container port 8080); the gateway's default upstream is `http://localhost:8018` (`KERNEL_SERVICE_URL`).
 
 ## Security
 
@@ -64,14 +69,14 @@ The gateway forwards `/api/v1/kernel/**` here. Compose publishes host port 8018 
 
 ## Key dependencies
 
-- Project references: `Cadence.Kernel.Abstractions`, `Cadence.Kernel.Application`, `Cadence.Kernel.Persistence`, `Cadence.Kernel.Api`, `Cadence.Security`, `Cadence.Database`, `Cadence.Telemetry`.
+- Project references: `Cadence.Kernel.Abstractions`, `Cadence.Kernel.Application`, `Cadence.Kernel.Persistence`, `Cadence.Kernel.Api`, `Cadence.Modules.Intelligence`, `Cadence.Modules.Execution`, `Cadence.Security`, `Cadence.Database`, `Cadence.Telemetry`.
 - Packages: `Microsoft.AspNetCore.OpenApi`, `Scalar.AspNetCore`, `Npgsql.EntityFrameworkCore.PostgreSQL` (versions in `Directory.Packages.props`).
 
 ## Tests
 
 - `tests/Cadence.UnitTests/Kernel/Api/KernelApiHostTests.cs` boots the real host with fake navigation, search, tenant directory, protocol version reader and authority store: 403 for an unknown or missing tenant code, 401 unsigned, reads in the resolved tenant, masking in place and in search (and the host's grant-backed visibility: everything masked without a grant, visible under a tenant-wide one), protocol versions listed, masked and refused for a hidden study, 400 and 404 problems, CanI denied without a grant and permitted with one, each explained, no actor for a subject that is no accountable person, the command catalogue, search, and the activity read (filters, masking, cursor paging, a hidden scope refused).
 - `tests/Cadence.UnitTests/Gateway/GatewayRouteCoverageTests.cs` checks the gateway route against the endpoints this host maps; `tests/Cadence.UnitTests/AppHost/AppHostModelTests.cs` checks its port.
-- The kernel ports themselves are tested against PostgreSQL in `tests/Cadence.IntegrationTests/Kernel`.
+- The kernel ports themselves are tested against PostgreSQL in `tests/Cadence.IntegrationTests/Kernel`; the Execution module's forms through this host in `tests/Cadence.IntegrationTests/Execution/ExecutionFormHostPostgresTests.cs`.
 - `tests/Cadence.IntegrationTests/Kernel/KernelDevelopmentTenantPostgresTests.cs` starts the real host on PostgreSQL as the application role with a development tenant code: the tenant is provisioned once, with an audit entry naming the bootstrap's service account, a caller with that code is served, and other codes are still refused. With demo data on, the coordinator finds `CADENCE-101` and lists their own site's participants while the other study site is masked, a person with no grant finds nothing, the grantees are exactly the realm's subject ids, and a second start adds no audit entry. `KernelApiHostTests` checks that the setting stops the host outside Development.
 - `tests/Cadence.IntegrationTests/Kernel/KernelApiHostPostgresTests.cs` boots the real host on PostgreSQL with nothing faked: a coordinator granted at one study site gets their enrollment, the design elements and the version from Trace, dependents and amendment impact, the other site's enrollment masked in place, and the changed elements with the schedule directives; a reader with no grant gets the same dependents counts with everything masked, and is refused the amendment's impact report, which describes the version's content (ADR-2475). The host's own projector fills the activity stream, where the coordinator sees their site's screening and the other site's masked, and a reader with no grant is refused the study's activity.
 

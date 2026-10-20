@@ -12,7 +12,11 @@ namespace Cadence.Topology;
 /// <param name="Directory">Its directory under <c>apps/</c>.</param>
 /// <param name="Port">The host port docker compose publishes it on and the AppHost runs it on.</param>
 /// <param name="UrlVariable">The variable that tells the gateway the service's base URL.</param>
-/// <param name="RoutePrefixes">The <c>/api/v1/&lt;prefix&gt;</c> paths the gateway forwards to it.</param>
+/// <param name="RoutePrefixes">
+/// The <c>/api/v1/&lt;prefix&gt;</c> paths the gateway forwards to it. A prefix of two segments, such as
+/// <c>execution/forms</c>, takes precedence over another service's one-segment prefix it lies under: a module moved
+/// into the kernel host keeps its routes (ADR-2601 §4.4).
+/// </param>
 /// <param name="Database">Whether it needs the PostgreSQL connection and the audit-log key.</param>
 /// <param name="Core">Whether the AppHost's <c>core</c> profile runs it.</param>
 public sealed record CadenceService(
@@ -46,7 +50,7 @@ public static class ServiceTopology
     public static IReadOnlyList<CadenceService> Services { get; } =
     [
         new("designer", "designer", 8001, "DESIGNER_SERVICE_URL", ["studies", "protocols"], Database: false, Core: false),
-        new("execution", "execution", 8002, "EXECUTION_SERVICE_URL", ["observations", "forms", "queries", "execution"], Database: true, Core: true),
+        new("execution", "execution", 8002, "EXECUTION_SERVICE_URL", ["queries", "execution"], Database: true, Core: true),
         new("etmf", "etmf", 8003, "ETMF_SERVICE_URL", ["etmf"], Database: true, Core: false),
         new("interop", "interop", 8004, "INTEROP_SERVICE_URL", ["interop"], Database: true, Core: false),
         new("quality", "quality", 8005, "QUALITY_SERVICE_URL", ["quality"], Database: true, Core: false),
@@ -61,7 +65,7 @@ public static class ServiceTopology
         new("imaging", "imaging", 8014, "IMAGING_SERVICE_URL", ["imaging"], Database: true, Core: false),
         new("knowledge", "knowledge", 8015, "KNOWLEDGE_SERVICE_URL", ["knowledge", "training"], Database: true, Core: false),
         new("payments", "payments", 8016, "PAYMENTS_SERVICE_URL", ["payments"], Database: true, Core: false),
-        new("kernel", "kernel-api", 8018, "KERNEL_SERVICE_URL", ["kernel", "ai"], Database: true, Core: true),
+        new("kernel", "kernel-api", 8018, "KERNEL_SERVICE_URL", ["kernel", "ai", "execution/forms"], Database: true, Core: true),
     ];
 
     /// <summary>The service called <paramref name="name"/>.</summary>

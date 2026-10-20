@@ -10,7 +10,8 @@ One document per module, rendered from each module's EF Core design-time model. 
 | [econsent](econsent.md) | `EconsentDbContext` | 19 |
 | [eisf](eisf.md) | `EisfDbContext` | 5 |
 | [etmf](etmf.md) | `EtmfDbContext` | 11 |
-| [execution](execution.md) | `ExecutionDbContext` | 30 |
+| [execution](execution.md) | `ExecutionDbContext` | 27 |
+| [executionmodule](executionmodule.md) | `ExecutionModuleDbContext` | 1 |
 | [fileshare](fileshare.md) | `FileshareDbContext` | 6 |
 | [imaging](imaging.md) | `ImagingDbContext` | 9 |
 | [intelligence](intelligence.md) | `IntelligenceDbContext` | 3 |

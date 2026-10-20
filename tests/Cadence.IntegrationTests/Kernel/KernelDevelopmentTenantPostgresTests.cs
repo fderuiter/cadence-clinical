@@ -34,6 +34,9 @@ public sealed class KernelDevelopmentTenantPostgresTests(KernelPostgresFixture f
 {
     private const string Operator = "svc:kernel-development-bootstrap";
 
+    // The Execution module's kernel event consumer (ADR-2622), granted by the demo data until #5566 provisions module service accounts.
+    private const string ExecutionFormsConsumer = "svc:execution-forms";
+
     /// <summary>
     /// The first start provisions the tenant with an audit entry naming the bootstrap's service account, and a caller
     /// with that tenant code is served (a kernel search, where a reader with no grant gets no hits); a second start finds the tenant and provisions nothing more.
@@ -128,7 +131,8 @@ public sealed class KernelDevelopmentTenantPostgresTests(KernelPostgresFixture f
                 connection, "SELECT string_agg(g.grantee_id, ',') FROM kernel.grants g JOIN kernel.tenants t ON t.id = g.tenant_id WHERE t.code = @code", code))!)
                 .Split(',');
             grantees.Should().BeEquivalentTo(
-                RealmUserIds().Append(Operator), "the seeder grants itself and each realm user, by the fixed subject id in docker/cadence-realm.json");
+                RealmUserIds().Append(Operator).Append(ExecutionFormsConsumer),
+                "the seeder grants itself, the Execution module's form consumer and each realm user, by the fixed subject id in docker/cadence-realm.json");
         }
 
         using (var second = Host(code, demoData: true))

@@ -40,6 +40,7 @@ public static class Program
         "Cadence.Apps.Safety",
         "Cadence.Apps.Tickets",
         "Cadence.Modules.Intelligence",
+        "Cadence.Modules.Execution",
     ];
 
     public static int Main(string[] args)
