@@ -342,18 +342,25 @@ checks, writes both documents and `docs/SDLC/runs/`, stages them, and with `--co
 Tests are found by scanning `tests/` for `[Fact]` and `[Theory]` methods and matched to TRX results by
 their fully qualified name. Theory cases are merged: a single failing case fails the test.
 
-| State            | Meaning                                                                                         |
-| ---------------- | ----------------------------------------------------------------------------------------------- |
-| **Qualified**    | Every test declaring the requirement ran and passed.                                            |
-| **Failed**       | At least one test declaring the requirement failed, errored, timed out or aborted.              |
-| **Not verified** | No test failed, but at least one test declaring the requirement was skipped or did not execute. |
-| **Planned**      | No test declares the requirement yet.                                                           |
+| State                                        | Meaning                                                                                                  |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Qualified**                                | Every test declaring the requirement ran and passed.                                                     |
+| **Failed**                                   | At least one test declaring the requirement failed, errored, timed out or aborted.                       |
+| **Not verified**                             | No test failed, but at least one test declaring the requirement was skipped or did not execute.          |
+| **Not verified (needs PostgreSQL evidence)** | Every test passed, but the requirement lives in the database and none of its tests is a PostgreSQL test. |
+| **Planned**                                  | No test declares the requirement yet.                                                                    |
 
 Every test that declares a requirement is mandatory (#5324). A requirement with three passing tests and one skipped
 test is **Not verified**, not Qualified. Each test is reported with one of four results: **PASSED**, **FAILED**,
 **SKIPPED** (xUnit skipped it, for example because no database was configured) or **NOT EXECUTED** (it has no result in
 any TRX file, or its result is neither a pass, a failure nor a skip). Theory cases are merged per method, and a single
 skipped case keeps the method from passing. A test that did not execute is never assumed to have passed.
+
+A requirement whose behaviour lives in the database (row-level security, a trigger, an append-only ledger, values the
+server fills on commit) says so in the PRD with a `**Evidence:** PostgreSQL (…)` line under its heading. In-memory and
+SQLite doubles can't exercise that behaviour, so such a requirement qualifies only when at least one of its tests is in
+`tests/Cadence.IntegrationTests` or `tests/Cadence.E2ETests`, the PostgreSQL-backed projects (#5324). Add the line when
+you write such a requirement, and add a PostgreSQL test before tagging unit tests for it.
 
 An `SRS-*` or `Trace-*` alias is a child requirement with its own acceptance criteria, so it is judged only by the tests
 that declare the alias itself. Its parent's tests never qualify it, and its own tests never qualify the parent. Section 4
@@ -364,7 +371,8 @@ changes), the generation time, the database the fixtures recorded and the runner
 `gxp snapshot`, so the recorded revision is exactly what was tested. The snapshot-mode docs comparison
 (`cadence gxp diff`) leaves the evidence block and the integrity stamp out, since they change on every run. Without any
 TRX results, generation stops with an error unless you run `pnpm cadence generate-rtm --draft` or set
-`RTM_DRAFT=true`. A draft is marked **DRAFT ONLY** and every test shows as **UNVERIFIED**. `gxp sync` and `gxp snapshot` ignore
+`RTM_DRAFT=true`. A draft is marked **DRAFT ONLY** and every test shows as **UNVERIFIED**. The `rtm` gate refuses a
+committed RTM or IQ/OQ/PQ report that is a draft or names no tested revision, and `gxp snapshot` never takes a draft. `gxp sync` and `gxp snapshot` ignore
 `RTM_DRAFT`, so a variable left set in a shell or CI job can't turn documents built from real results into
 drafts.
 

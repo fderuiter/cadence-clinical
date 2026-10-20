@@ -421,6 +421,92 @@ public sealed class RtmGeneratorServiceTests : IDisposable
     }
 
     /// <summary>
+    /// Regression for #5324: a requirement whose behaviour lives in the database (row-level security, a trigger, an
+    /// append-only ledger) was qualified by in-memory and SQLite tests. It now needs a PostgreSQL test among its mapped tests.
+    /// </summary>
+    [Fact]
+    public void Classify_LeavesADatabaseRequirementUnverified_UntilAPostgresTestIsMapped()
+    {
+        var mappings = new Dictionary<string, List<TestMappingInfo>>
+        {
+            ["PRD-A-1"] = [Mapping("S.Unit", "tests/Cadence.UnitTests/A/ATests.cs")],
+            ["PRD-A-2"] = [Mapping("S.Unit", "tests/Cadence.UnitTests/A/ATests.cs"), Mapping("S.Pg", "tests/Cadence.IntegrationTests/A/APostgresTests.cs")],
+            ["PRD-A-3"] = [Mapping("S.Fail", "tests/Cadence.UnitTests/A/ATests.cs")],
+        };
+        var results = new Dictionary<string, TestResultInfo>
+        {
+            ["S.Unit"] = new() { Status = TestStatus.Passed },
+            ["S.Pg"] = new() { Status = TestStatus.Passed },
+            ["S.Fail"] = new() { Status = TestStatus.Failed },
+        };
+
+        RtmGeneratorService.Classify("PRD-A-1", mappings, results, requiresDatabase: true).Should().Be(RequirementState.NeedsDatabaseEvidence);
+        RtmGeneratorService.Classify("PRD-A-1", mappings, results).Should().Be(RequirementState.Qualified);
+        RtmGeneratorService.Classify("PRD-A-2", mappings, results, requiresDatabase: true).Should().Be(RequirementState.Qualified);
+        RtmGeneratorService.Classify("PRD-A-3", mappings, results, requiresDatabase: true).Should().Be(RequirementState.Failed);
+    }
+
+    [Fact]
+    public void ParsePrd_ReadsTheEvidenceLineForItsOwnRequirementOnly()
+    {
+        string sdlc = Path.Combine(_dir, "sdlc");
+        Directory.CreateDirectory(sdlc);
+        File.WriteAllText(Path.Combine(sdlc, "prd.md"), string.Join("\n",
+            "#### PRD-AAA-001: Isolation",
+            "",
+            "**Evidence:** PostgreSQL (row-level security).",
+            "",
+            "Tenants never see each other's rows.",
+            "",
+            "#### PRD-AAA-002: Rendering",
+            "",
+            "A pure function."));
+
+        var reqs = RtmGeneratorService.ParsePrd(sdlc);
+
+        reqs["PRD-AAA-001"].RequiresDatabase.Should().BeTrue();
+        reqs["PRD-AAA-002"].RequiresDatabase.Should().BeFalse();
+    }
+
+    [Fact]
+    public void RepositoryPrd_MarksTheTenantIsolationRequirementAsNeedingPostgres()
+    {
+        string repoRoot = Cadence.ToolingCore.OpenApi.OpenApiToolingService.FindRepoRoot();
+
+        RtmGeneratorService.LoadRequirements(repoRoot)["PRD-CRF-013"].RequiresDatabase.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// Regression for #5324: a draft or a document with no recorded revision could be committed as the snapshot, and
+    /// the <c>rtm</c> gate only checked its stamp.
+    /// </summary>
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public void GenerateRtm_ValidateOnly_RefusesACommittedDraftOrUnrecordedSnapshot(bool draftBanner, bool unrecorded)
+    {
+        WriteMinimalRepository();
+        string committed = Path.Combine(_dir, "docs", "SDLC", "Requirements_Traceability_Matrix.md");
+        File.WriteAllText(committed, GxPSigner.StampGxpMarkdown("# RTM\n\n" + new RtmEvidenceContext("`0123abc` (clean working tree)", "2026-10-20 00:00:00", "PostgreSQL 18", "test").Render()));
+        RtmGeneratorService.GenerateRtm(validateOnly: true, reportPath: ".", repoRoot: _dir, requireCurrentSnapshot: false, requireRecordedEvidence: true).Should().Be(0);
+
+        string body = "# RTM\n\n"
+            + (draftBanner ? $"> ⚠️ **{RtmGeneratorService.DraftBanner}** ⚠️\n\n" : "")
+            + (unrecorded ? RtmEvidenceContext.NotRecorded.Render() : "");
+        File.WriteAllText(committed, GxPSigner.StampGxpMarkdown(body));
+
+        RtmGeneratorService.IsUnverifiedSnapshot(File.ReadAllText(committed)).Should().BeTrue();
+        RtmGeneratorService.GenerateRtm(validateOnly: true, reportPath: ".", repoRoot: _dir, requireCurrentSnapshot: false, requireRecordedEvidence: true).Should().Be(1);
+    }
+
+    [Fact]
+    public void SyncCompliance_RefusesADraftSnapshot()
+    {
+        Cadence.ToolingCore.Services.SyncGxPService.SyncCompliance(draft: true, snapshot: true, repoRoot: _dir).Should().Be(1);
+        File.Exists(Path.Combine(_dir, "docs", "SDLC", "Requirements_Traceability_Matrix.md")).Should().BeFalse();
+    }
+
+    /// <summary>
     /// Regression for #5324 and #5328: an alias (SRS or Trace ID) used to inherit its parent's tests and show
     /// "Verified via Parent". A parent's evidence no longer qualifies a child with its own acceptance criteria, and a
     /// child's tests still never qualify the parent.
@@ -705,7 +791,7 @@ public sealed class RtmGeneratorServiceTests : IDisposable
             "every requirement ID a test declares must be defined in docs/SDLC or docs/SRS.md (see docs/TESTING.md)");
     }
 
-    private static TestMappingInfo Mapping(string fullName) => new() { FullName = fullName, TestName = fullName };
+    private static TestMappingInfo Mapping(string fullName, string file = "") => new() { FullName = fullName, TestName = fullName, File = file };
 
     private void WriteMinimalRepository()
     {
