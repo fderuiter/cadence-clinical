@@ -548,11 +548,14 @@ A compliance artifact caching mechanism that records test run outcomes and JUnit
 
 A modular architecture unifying repository sentinels (drift detection, duplication analysis, ADR validation, schema verification) under a typed, concurrent check interface that emits structured JSON telemetry and formatted terminal reports.
 
-### AI Gateway Microservice
+### Intelligence module (AI agent runtime)
 
-A dedicated internal routing and inference microservice (`apps/ai_gateway`) that encapsulates model provider orchestration, token rate-limiting, cost accounting, tier-based model selection, and prompt template execution behind a uniform HMAC-authenticated REST API.
+The one place AI agents run (ADR-2630): an in-process module of the composition host that replaces the `apps/ai_gateway` scaffold (#5374). It holds the provider-neutral model port, qualified **task configurations**, the agent tools, the citation verifier, the **interaction ledger** of every run, and budgets with a kill switch. Its only write into clinical data is a kernel Proposal.
 
-Under ADR-2610 it becomes an in-process module of the composition host rather than a separate microservice (#5374); AI actors act through kernel Proposals (ADR-2489).
+A **task configuration** is the qualified unit for an AI task: model and version, prompt, tools, retrieval sources, output schema, evaluation set, acceptance criteria, autonomy level and approver role. Any change makes a new version that must be qualified again (#5385).
+
+The **autonomy level** of a task is how far its agent may go: 0 inform, 1 draft a Proposal, 2 a Proposal whose approval executes its commands as the approver (K-AI-2), 3 a standing grant for operational commands only (K-AI-7). See [docs/ai/AI_AGENTS.md](docs/ai/AI_AGENTS.md).
+_Avoid_: "AI gateway microservice", AI draft states on regulated records, "the model" as the thing that is validated
 
 ### Three-Tier Model Routing Strategy
 

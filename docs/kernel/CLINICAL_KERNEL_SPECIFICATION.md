@@ -1133,6 +1133,18 @@ builds agent actors, and the existing `actor.agent_verb` rule is K-AI-1 for now:
 The K-AI-2 execution link, standing grants (b), grants scoped to the requesting human, the `QueryStatus.DraftAi`
 migration and a proposals work-queue source follow in later slices.
 
+AI agents across the platform (ADR-2630, K037) run in one governed runtime, the Intelligence module, whose only
+write into clinical data is a Proposal. Each task configuration declares an autonomy level: 0 inform, 1 draft,
+2 approve-to-execute (K-AI-2) or 3 standing grant for operational commands only.
+
+- **K-AI-4** An agent Proposal's claims and values cite kernel nodes its run read; uncited content never reaches a
+  Proposal.
+- **K-AI-5** An agent Proposal records its task configuration version alongside `ModelId` (extends K-PROV-3).
+- **K-AI-6** An agent acts for exactly one requesting person, and its reads are bounded by that person's grants.
+- **K-AI-7** A standing grant to an agent may name only commands the command catalogue marks operational; no
+  standing grant covers a command that writes clinical truth, an attestation or an unblinding.
+- **K-AI-8** No kernel behaviour and no module workflow depends on an agent being available.
+
 ### 11.1 Simulation (ADR-2480)
 
 Simulation answers "what happens if I change this?" (Clinical Canvas Simulate verb) by **evaluating, never
@@ -1306,6 +1318,7 @@ kernel, is merged into another, or is retired.
 | K034 | Observation corrections and locks          | A correction appends an insert-only revision to a stable Observation; value Assertions cite the revision; `Locked`/`Frozen` are scoped Assertions with Attestation and retraction, guarded by shared scope locks                                                    | ADR-2620, ADR-2621 |
 | K035 | eCRF forms on the kernel                   | A form instance is a kernel `CollectionInstance`; one command saves a whole page against per-value revisions; structural checks before commit, edit checks after; a correction supersedes, never erases, a form signature                                           | ADR-2622           |
 | K036 | Typed observation values                   | One polymorphic `ObservationValue` (quantity with UCUM unit, coded with code-system version, text, boolean, partial ISO 8601 date/time, missing with a null flavor) in commands, events, jsonb storage, the API and the SDTM projection                             | ADR-2623           |
+| K037 | AI agents in one governed runtime          | Agents run in the Intelligence module and write only Proposals; autonomy levels 0 to 3; cited content only; configuration version recorded; reads bounded by the requesting person; standing grants for operational commands only                                   | ADR-2630           |
 
 ---
 
