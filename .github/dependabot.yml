@@ -10,6 +10,10 @@ updates:
     labels:
       - "dependencies"
       - "dotnet"
+    ignore:
+      # MassTransit 9 is commercial and needs a license key; 8.x stays under Apache 2.0 (#5520, ADR-2524).
+      - dependency-name: "MassTransit*"
+        update-types: ["version-update:semver-major"]
 
   # Node.js workspace dependency updates (pnpm / package.json)
   - package-ecosystem: "npm"
