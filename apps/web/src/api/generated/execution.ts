@@ -1578,17 +1578,16 @@ export interface components {
       status: string;
       approved_submission_ids: string[];
       skipped_submission_ids: string[];
-      signature_id?: null | string;
-      study_id?: null | string;
-      subject_id?: null | string;
-      /**
-       * Format: int32
-       * @default 0
-       */
+      study_id: string;
+      /** Format: int32 */
       signed_forms_count: number | string;
-      content_digest?: null | string;
-      timestamp_utc?: null | string;
-      audit_tx?: null | string;
+      /** Format: date-time */
+      signed_at: string;
+      signatures: components["schemas"]["Execution_BatchSignOffSignature"][];
+    };
+    Execution_BatchSignOffSignature: {
+      form_submission_id: string;
+      payload_hash: string;
     };
     Execution_BulkLabRangeDryRunResponse: {
       is_success: boolean;

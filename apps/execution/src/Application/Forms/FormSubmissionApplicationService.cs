@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -570,7 +568,7 @@ public sealed class FormSubmissionApplicationService(
         var skippedSubmissionIds = new List<string>();
 
         DateTime signedAt = _clock.UtcNow.UtcDateTime;
-        var digestHashes = new List<string>();
+        var signatures = new List<BatchSignOffSignature>();
 
         foreach (var submission in candidateSubmissions)
         {
@@ -607,29 +605,20 @@ public sealed class FormSubmissionApplicationService(
 
             submission.ReasonForChange = normReason;
             approvedSubmissionIds.Add(submission.Id.ToString());
-            digestHashes.Add(computedHash);
+            signatures.Add(new BatchSignOffSignature(submission.Id.ToString(), computedHash));
         }
 
         await formSubmissionRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        string certSerial = "CERT-SIG-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
-        string combinedDigest = digestHashes.Count > 0
-            ? "sha256-" + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("|", digestHashes))))
-            : "sha256-" + batchId;
-        string auditTx = "AUD-TX-" + Guid.NewGuid().ToString("N")[..12].ToUpperInvariant();
-        string timestampUtc = signedAt.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
-
+        // Only identifiers of stored records are returned: each manifest is stored on the form it signs (#5468).
         return new BatchSignOffResponse(
             Status: "success",
             ApprovedSubmissionIds: approvedSubmissionIds,
             SkippedSubmissionIds: skippedSubmissionIds,
-            SignatureId: certSerial,
             StudyId: request.StudyId,
-            SubjectId: string.Join(",", request.TargetIds),
-            SignedFormsCount: approvedSubmissionIds.Count,
-            ContentDigest: combinedDigest,
-            TimestampUtc: timestampUtc,
-            AuditTx: auditTx);
+            SignedFormsCount: signatures.Count,
+            SignedAt: signedAt,
+            Signatures: signatures);
     }
 
     /// <summary>

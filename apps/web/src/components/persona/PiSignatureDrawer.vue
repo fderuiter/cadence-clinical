@@ -298,56 +298,36 @@
           "
         >
           <div>
-            <strong>Certificate Serial ID:</strong>
-            <div id="cert-serial-id" style="font-family: monospace">
-              {{
-                signatureResult.signature_id ||
-                signatureResult.signatureId ||
-                "CERT-PI-EXEC-001" /* deid-ignore */
-              }}
+            <strong>Signed forms:</strong>
+            <div id="cert-signed-count" style="font-family: monospace">
+              {{ signatureResult.signed_forms_count ?? 0 }}
             </div>
           </div>
           <div>
-            <strong>UTC Timestamp:</strong>
+            <strong>Signed at (UTC):</strong>
             <div id="cert-timestamp" style="font-family: monospace">
-              {{
-                signatureResult.timestamp_utc ||
-                signatureResult.timestampUtc ||
-                new Date().toISOString()
-              }}
+              {{ signatureResult.signed_at }}
             </div>
           </div>
           <div style="grid-column: span 2">
-            <strong>Content SHA-256 Digest:</strong>
-            <div
-              id="cert-content-digest"
+            <strong>Stored signatures (form, payload SHA-256):</strong>
+            <ul
+              id="cert-signatures"
               style="
+                margin: 4px 0 0 0;
+                padding-left: 16px;
                 font-family: monospace;
                 word-break: break-all;
-                background: #dcfce7;
-                padding: 4px;
-                border-radius: 4px;
               "
             >
-              {{
-                signatureResult.content_digest ||
-                signatureResult.contentDigest ||
-                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-              }}
-            </div>
-          </div>
-          <div style="grid-column: span 2">
-            <strong>Audit Ledger Transaction ID:</strong>
-            <div
-              id="cert-audit-tx"
-              style="font-family: monospace; word-break: break-all"
-            >
-              {{
-                signatureResult.audit_tx ||
-                signatureResult.auditTx ||
-                "TX-AUDIT-001"
-              }}
-            </div>
+              <li
+                v-for="sig in signatureResult.signatures || []"
+                :key="sig.form_submission_id"
+                class="cert-signature"
+              >
+                {{ sig.form_submission_id }}: {{ sig.payload_hash }}
+              </li>
+            </ul>
           </div>
         </div>
       </div>

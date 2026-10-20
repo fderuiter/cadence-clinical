@@ -95,6 +95,38 @@ public sealed class BatchSignOffEndpointsTests
     }
 
     /// <summary>
+    /// Every identifier the response returns resolves to a stored signature: the form it names carries a manifest
+    /// with the returned payload hash and signing time. Before #5468 the response carried a random certificate
+    /// serial and audit transaction id that named no stored record.
+    /// </summary>
+    [Fact]
+    [GxPRequirement("SRS-EDC-003")]
+    public async Task BatchSignOff_ReturnsOnlyIdsOfStoredSignatures()
+    {
+        var repo = new InMemoryFormSubmissionRepository();
+        var svc = CreateService(repo);
+        var (id1, id2) = await TwoCompletedSubjectsAsync(svc);
+        var request = SubjectBatch("SUBJ-101", "SUBJ-102");
+
+        var result = await FormEndpoints.BatchSignOffAsync(
+            request, CreateHttpContext(verifiedToken: TokenFor("dr_investigator", request)), svc, CancellationToken.None);
+
+        var response = result.Should().BeOfType<Ok<BatchSignOffResponse>>().Subject.Value!;
+        response.Signatures.Select(s => s.FormSubmissionId).Should().BeEquivalentTo(id1, id2);
+        response.ApprovedSubmissionIds.Should().BeEquivalentTo(response.Signatures.Select(s => s.FormSubmissionId));
+        foreach (var signature in response.Signatures)
+        {
+            var stored = await svc.GetByIdAsync(signature.FormSubmissionId, CancellationToken.None);
+            stored.IsSuccess.Should().BeTrue();
+            var manifest = stored.Value!.SignatureManifest;
+            manifest.Should().NotBeNull();
+            manifest!.PayloadHash.Should().Be(signature.PayloadHash);
+            manifest.SignedAt.Should().Be(response.SignedAt);
+            manifest.SignerId.Should().Be("dr_investigator");
+        }
+    }
+
+    /// <summary>
     /// Without a verified token the service signs nothing, whatever reaches it. Before #5311 a request with no token
     /// skipped verification and was signed.
     /// </summary>
