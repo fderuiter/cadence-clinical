@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Threading.Tasks;
 
+using Cadence.Testing.Persistence;
+
 using Npgsql;
 
 namespace Cadence.TestSupport.Database;
@@ -10,7 +12,8 @@ namespace Cadence.TestSupport.Database;
 /// <summary>
 /// Checks and records the database a PostgreSQL fixture ran against (#5324). <see cref="VerifyAndRecordAsync"/>
 /// refuses an application role that is a superuser or bypasses Row-Level Security, because a pass under such a role
-/// says nothing about tenant isolation. When <c>CADENCE_TEST_EVIDENCE_DIR</c> is set (<c>gxp sync</c> and
+/// says nothing about tenant isolation, and a server of another major than <see cref="PostgresTestImage.Major"/>,
+/// because its pass qualifies a version the stack does not run (#5438). When <c>CADENCE_TEST_EVIDENCE_DIR</c> is set (<c>gxp sync</c> and
 /// <c>cadence ci</c> set it to <c>TestResults/gxp</c>), it also writes one <c>*.database.txt</c> file there, which
 /// the RTM and IQ/OQ/PQ report print as their database environment.
 /// </summary>
@@ -51,6 +54,12 @@ public static class PostgresTestEvidence
         {
             throw new InvalidOperationException(
                 $"The application role '{appRole}' is a superuser or has BYPASSRLS, so tests run as it would not exercise Row-Level Security.");
+        }
+
+        string versionNumber = await ScalarAsync(connection, "SHOW server_version_num").ConfigureAwait(false);
+        if (PostgresTestImage.Mismatch(int.Parse(versionNumber, System.Globalization.CultureInfo.InvariantCulture)) is { } mismatch)
+        {
+            throw new InvalidOperationException(mismatch);
         }
 
         string? directory = Environment.GetEnvironmentVariable(DirectoryVariable);

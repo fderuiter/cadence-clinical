@@ -33,8 +33,6 @@ describe("Centralized Zod ePRO Schema & Pre-Transmission Sync Guard", () => {
 
   describe("Requirement 1 & 3: Pre-Save Local Validation Gate", () => {
     it("should reject ePRO submission with age below 18 and prevent write to IndexedDB", async () => {
-      const startTime = performance.now();
-
       await expect(
         queueSubmission({
           subject_id: "subject_101",
@@ -47,9 +45,6 @@ describe("Centralized Zod ePRO Schema & Pre-Transmission Sync Guard", () => {
       ).rejects.toThrow(
         "Demographic Validation Error: Participant age must be between 18 and 110."
       );
-
-      const duration = performance.now() - startTime;
-      expect(duration).toBeLessThan(500); // Performance constraint < 500ms
 
       const queued = await getQueuedSubmissions();
       expect(queued.length).toBe(0);

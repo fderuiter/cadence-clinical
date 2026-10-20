@@ -49,8 +49,8 @@ clinical truth (K-TRUTH-1).
 | Language and runtime | C# 14 / .NET 10 (`net10.0`, SDK pinned in `global.json`)                                               |
 | Web APIs             | ASP.NET Core 10 Minimal APIs, `TypedResults`, endpoint filters (`IEndpointFilter`)                     |
 | Data modelling       | `record` types, primary constructors, FluentValidation, `System.Text.Json` source generation           |
-| Persistence          | EF Core 10 + Npgsql on PostgreSQL 16+, GxP audit `SaveChangesInterceptor`                              |
-| Messaging            | MassTransit with the EF Core transactional outbox (`apps/execution`)                                   |
+| Persistence          | EF Core 10 + Npgsql on PostgreSQL 18 (ADR-2533), GxP audit `SaveChangesInterceptor`                    |
+| Messaging            | MassTransit 8 (Apache 2.0, ADR-2524) with the EF Core transactional outbox (`apps/execution`)          |
 | HTTP clients         | `IHttpClientFactory` typed clients with Polly resilience pipelines                                     |
 | Identity             | Keycloak OIDC at the gateway; HMAC-signed caller identity to services (`packages/security`)            |
 | Style and analysis   | `.editorconfig`, `dotnet format`, NetAnalyzers, SonarAnalyzer, BannedApiAnalyzers; warnings are errors |

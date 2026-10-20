@@ -2,6 +2,7 @@ using Cadence.Apps.Knowledge.Domain;
 using Cadence.Apps.Knowledge.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
+using Cadence.Database.Signatures;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -29,6 +30,8 @@ public sealed class KnowledgeDbContext(DbContextOptions<KnowledgeDbContext> opti
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        // Used e-signature tokens, single use across instances and restarts (ADR-2515, #5434).
+        modelBuilder.ApplyConfiguration(new ConsumedSignatureTokenConfiguration());
 
         modelBuilder.ApplyConfiguration(new KnowledgeCategoryConfiguration());
         modelBuilder.ApplyConfiguration(new KnowledgeArticleConfiguration());

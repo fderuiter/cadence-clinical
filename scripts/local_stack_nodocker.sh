@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Start, check and stop the local Cadence core stack without Docker:
-# a throwaway PostgreSQL 16 cluster (port 5433, trust auth), Keycloak from the release tarball (port 8080,
+# a throwaway PostgreSQL 18 cluster (ADR-2533) (port 5433, trust auth), Keycloak from the release tarball (port 8080,
 # docker/cadence-realm.json imported) and the Aspire AppHost core profile (gateway 8000, execution 8002,
 # kernel 8018, web 3000, dashboard 15000) in tmux session "apphost".
 # Usage, from the repository root: scripts/local_stack_nodocker.sh up|status|down
@@ -10,7 +10,7 @@ set -euo pipefail
 STATE=${CADENCE_DEV_STATE:-/opt/cadence-dev}
 KC_VERSION=26.8.1 # same as docker/docker-compose.yml
 KC_HOME=$STATE/keycloak-$KC_VERSION
-PG_BIN=/usr/lib/postgresql/16/bin
+PG_BIN=/usr/lib/postgresql/18/bin
 PG_PORT=5433
 CONN="Host=127.0.0.1;Port=$PG_PORT;Username=postgres;Database=cadence"
 REPO=$(git rev-parse --show-toplevel)
@@ -25,7 +25,7 @@ up() {
   # PostgreSQL: own cluster so the machine's main cluster and its passwords stay untouched.
   if [ ! -d "$STATE/pg/data" ]; then
     mkdir -p "$STATE/pg" && chown postgres "$STATE/pg"
-    su postgres -c "$PG_BIN/initdb -D $STATE/pg/data --auth=trust -U postgres" >/dev/null
+    su postgres -c "$PG_BIN/initdb -D $STATE/pg/data --auth=trust -U postgres -E UTF8 --locale=C.UTF-8" >/dev/null
   fi
   if ! su postgres -c "$PG_BIN/pg_ctl -D $STATE/pg/data status" >/dev/null 2>&1; then
     su postgres -c "$PG_BIN/pg_ctl -D $STATE/pg/data -o '-p $PG_PORT -k /tmp' -l $STATE/pg/log start" >/dev/null

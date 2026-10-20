@@ -72,7 +72,10 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
-      "redirectUris": ["http://localhost:3000/cadence-clinical/*"],
+      "redirectUris": [
+        "http://localhost:3000/cadence-clinical/*",
+        "http://localhost:5174/subject-portal/*"
+      ],
       "webOrigins": ["+"],
       "attributes": {
         "pkce.code.challenge.method": "S256",

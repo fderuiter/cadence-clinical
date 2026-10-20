@@ -22,18 +22,18 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "axe-core": "^4.13.0"
+    "axe-core": "^4.14.0"
   },
   "peerDependencies": {
     "vue": "^3.5.42"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.8",
+    "@vitejs/plugin-vue": "^6.0.10",
     "@vitest/coverage-v8": "^5.0.2",
     "pinia": "^4.0.3",
     "typescript": "^6.0.3",
     "vite": "^8.3.3",
-    "vitest": "^5.0.2",
+    "vitest": "^5.0.5",
     "vue": "^3.5.42"
   }
 }

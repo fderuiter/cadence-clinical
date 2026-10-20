@@ -35,8 +35,17 @@ Two opt-ins are checked in order, by every fixture below:
 
 1. `CADENCE_TEST_POSTGRES` is an Npgsql connection string to a server you already run, as a superuser. Each fixture
    creates a throwaway database on it (`cadence_it_*`, `cadence_kernel_it_*` or `cadence_e2e_*`) and drops it afterwards.
-2. `CADENCE_TEST_DOCKER=1` starts a Testcontainers `postgres:16-alpine` container, whose default `postgres` user is a
-   superuser. `PostgresTestServer` in `tests/Cadence.TestSupport/Database` makes this choice for the kernel fixtures.
+2. `CADENCE_TEST_DOCKER=1` starts a Testcontainers container of `PostgresTestImage.Image`, whose default `postgres`
+   user is a superuser. `PostgresTestServer` in `tests/Cadence.TestSupport/Database` makes this choice for the kernel
+   fixtures.
+
+The tests qualify **PostgreSQL 18**, the major docker compose runs
+([ADR-2533](adr/2026-10-19-tests-ci-and-compose-run-one-pinned-postgresql-major.md)). `PostgresTestImage`
+(`packages/testing`, `Cadence.Testing.Persistence`) holds the major and the digest-pinned image; every fixture, CI's
+service container and `docker/docker-compose.yml` use that image, and `PostgresVersionPinTests` fails when one drifts.
+A server of another major is refused: `cadence ci` stops before the tests when `CADENCE_TEST_POSTGRES` reaches one, and
+the kernel fixture fails its tests on one. A local server for `CADENCE_TEST_POSTGRES` is PostgreSQL 18 (on Debian or
+Ubuntu, `postgresql-18` from the PostgreSQL apt repository).
 
 Once either is set, a fixture that cannot reach or start the server fails its tests; it never turns them into skips.
 A run that skips database tests is not evidence: `cadence ci` fails when any test in `Cadence.IntegrationTests` or
@@ -44,21 +53,33 @@ A run that skips database tests is not evidence: `cadence ci` fails when any tes
 fail on such a run. The only exemption is the opt-in lineage benchmark, named in
 `DatabaseTestEvidence.OptInTests`.
 
-The kernel fixture checks that its application role is neither a superuser nor `BYPASSRLS` before any test runs, since
-a pass under such a role says nothing about Row-Level Security. When `CADENCE_TEST_EVIDENCE_DIR` is set (`gxp sync`,
+The kernel fixture checks that its application role is neither a superuser nor `BYPASSRLS`, and that the server runs
+the qualified major, before any test runs, since a pass under such a role says nothing about Row-Level Security. When `CADENCE_TEST_EVIDENCE_DIR` is set (`gxp sync`,
 `gxp snapshot` and `cadence ci` set it to `TestResults/gxp`), it records the server version and source, the installed extensions, the latest
 kernel migration and the role's attributes in `kernel.database.txt`, which the RTM and IQ/OQ/PQ report print.
 
-Where Docker is not available, for example in a cloud agent session, a local server works:
+Where Docker is not available, a local PostgreSQL 18 server works. Create its cluster as UTF8: a `SQL_ASCII` cluster,
+which `initdb` makes under the C locale, fails the kernel's correction tests.
 
 ```bash
-sudo apt-get install -y postgresql
-sudo service postgresql start
-sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres'"
+sudo install -d /usr/share/postgresql-common/pgdg
+sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+. /etc/os-release
+echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+  | sudo tee /etc/apt/sources.list.d/pgdg.list
+sudo apt-get update && sudo apt-get install -y postgresql-18
+sudo pg_createcluster 18 main --port 5432 --locale C.UTF-8 --encoding UTF8 -- --auth-local=trust --auth-host=trust
+sudo pg_ctlcluster 18 main start
 
-export CADENCE_TEST_POSTGRES="Host=localhost;Username=postgres;Password=postgres;Database=postgres"
+export CADENCE_TEST_POSTGRES="Host=127.0.0.1;Port=5432;Username=postgres;Database=postgres"
 dotnet test Cadence.sln
 ```
+
+Cloud agent sessions get this from the project's cloud environment: its setup script installs the .NET 10 SDK and
+PostgreSQL 18 and creates that cluster (dropping Ubuntu's PostgreSQL 16 one), and the environment sets
+`CADENCE_TEST_POSTGRES`. A failed step there only warns, so it never stops a session from starting. The
+`scripts/claude_session_start.sh` hook restores pnpm and NuGet dependencies, restarts the cluster when a session resumes
+and sets `CADENCE_TEST_BROWSER=1`, so `cadence ci` runs as it would locally.
 
 These tests currently use it:
 
@@ -170,7 +191,9 @@ build (RS0030). Pick the replacement by what the test needs:
 A unit test never asserts how long the code took (`elapsed.Should().BeLessThan(...)`). The answer depends on the
 load on the machine, so a latency ceiling fails whenever something else runs beside the tests (#5415). Assert the
 behaviour instead: the result, the status code a timeout produces, or a deadline driven by `FakeClock`.
-`WallClockAssertionTests` in `Cadence.ArchitectureTests` enforces this for `Cadence.UnitTests`. A performance budget
+The same holds for the Vitest suites: no `expect(duration).toBeLessThan(...)` on a `performance.now()` or `Date.now()`
+difference; a slow step gets a longer test timeout instead (#5478). `WallClockAssertionTests` in
+`Cadence.ArchitectureTests` enforces this for `Cadence.UnitTests` and for the frontend tests. A performance budget
 that is a real requirement belongs in an opt-in benchmark, like `LineageBenchmarkPostgresTests`.
 
 `Task.Delay` belongs only where a test deliberately holds a lock or widens a race window, or where a fake

@@ -34,10 +34,13 @@ namespace Cadence.IntegrationTests.Kernel;
 [Trait("Category", "Integration")]
 public sealed class KernelActivityPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>
 {
-    private static readonly string[] StudyEvents =
+    private static readonly string[] ProtocolEvents =
     [
         "ProtocolVersionDrafted", "ProtocolVersionSubmittedForReview", "AttestationRecorded", "ProtocolVersionApproved",
     ];
+
+    /// <summary>The study's own registration (#5485) and its protocol's events: everything scoped to the study.</summary>
+    private static readonly string[] StudyEvents = ["StudyRegistered", .. ProtocolEvents];
 
     /// <summary>
     /// A study's activity holds its protocol events and the attestation that signed its protocol version, not the
@@ -69,7 +72,7 @@ public sealed class KernelActivityPostgresTests(KernelPostgresFixture fixture) :
         inStudy.Entries.Single(e => e.Type == "ProtocolVersionApproved").Subject.Should()
             .Be(NodeRef.For(version.ProtocolVersionId, 3), "the entry names the version the event produced");
         (await ReadAsync(tenant, new ActivityQuery(Scope: NodeRef.For(version.ProtocolVersionId, 1)), ct)).Entries
-            .Should().HaveCount(StudyEvents.Length, "a scope is matched whatever version it names");
+            .Should().HaveCount(ProtocolEvents.Length, "a scope is matched whatever version it names");
     }
 
     /// <summary>Family, actor and time filters narrow the stream, and combine.</summary>
@@ -94,7 +97,7 @@ public sealed class KernelActivityPostgresTests(KernelPostgresFixture fixture) :
             e.Type == "AttestationRecorded" && e.Family == EventFamily.Trust && e.SubjectKind == NodeKinds.Attestation);
         byActor.Entries.Should().NotBeEmpty().And.OnlyContain(e => e.ActorId == KernelPostgresFixture.ActorId);
         byStranger.Entries.Should().BeEmpty();
-        recent.Entries.Select(e => e.Type).Should().BeEquivalentTo(StudyEvents);
+        recent.Entries.Select(e => e.Type).Should().BeEquivalentTo(ProtocolEvents);
     }
 
     /// <summary>Following the cursor page by page returns every entry exactly once, in the same order as one read.</summary>
@@ -125,7 +128,7 @@ public sealed class KernelActivityPostgresTests(KernelPostgresFixture fixture) :
         }
         while (cursor is not null);
 
-        all.Should().HaveCount(9, "two tenant events, four protocol events and three organizations");
+        all.Should().HaveCount(10, "two tenant events, the study's registration, four protocol events and three organizations");
         paged.Select(e => e.EventId).Should().Equal(all.Select(e => e.EventId));
     }
 

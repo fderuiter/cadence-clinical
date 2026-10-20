@@ -8,7 +8,7 @@
     <!-- ASP.NET Core & OpenTelemetry -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
     <!-- Gateway OIDC bearer-token validation against Keycloak (#4761). -->
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.13" />
     <!-- MIG-SUBJ-023: WebApplicationFactory(Program) for SubjectEndpointsRoutingTests, the first routing
          test in this repo to need it; pinned to the same 10.0.11 shared-framework servicing release as the
          other Microsoft.AspNetCore.* packages above. -->
@@ -52,8 +52,8 @@
 
     <!-- Validation & Security -->
     <PackageVersion Include="Fluid.Core" Version="2.13.0" />
-    <PackageVersion Include="FluentValidation" Version="11.11.0" />
-    <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
+    <PackageVersion Include="FluentValidation" Version="12.2.0" />
+    <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.19.2" />
     <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.19.2" />
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.1" />
@@ -62,11 +62,11 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
     <PackageVersion Include="xunit.v3" Version="1.1.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.2" />
-    <PackageVersion Include="FluentAssertions" Version="8.0.1" />
+    <PackageVersion Include="FluentAssertions" Version="8.11.0" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.3.0" />
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
-    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+    <PackageVersion Include="coverlet.collector" Version="10.1.0" />
     <PackageVersion Include="TngTech.ArchUnitNET.xUnit" Version="0.13.4" />
 
     <!-- Resilience & HTTP Clients -->
@@ -76,9 +76,9 @@
 
     <!-- Media, Storage & Antivirus Integrations -->
     <PackageVersion Include="fo-dicom" Version="5.1.5" />
-    <PackageVersion Include="FFMpegCore" Version="5.1.0" />
+    <PackageVersion Include="FFMpegCore" Version="5.5.0" />
     <PackageVersion Include="nClam" Version="7.0.0" />
-    <PackageVersion Include="AWSSDK.S3" Version="3.7.412.3" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.104.5" />
 
     <!-- Analyzers & Code Quality -->
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" />

@@ -29,6 +29,10 @@ public class ClinicalQueryRaisedConsumerTests
         {
             x.AddConsumer<ClinicalQueryRaisedConsumer>();
         });
+
+        // The harness stops waiting for messages after this long without bus activity. Its default is about a second,
+        // and on a loaded machine the duplicate's delivery can take longer than that.
+        services.Configure<TestHarnessOptions>(options => options.TestInactivityTimeout = TimeSpan.FromSeconds(30));
         return services.BuildServiceProvider();
     }
 

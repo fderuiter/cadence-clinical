@@ -24,8 +24,10 @@ signatures and audit digests shared by every Cadence service.
   gateway's HMAC-signed identity headers, fail-closed), `GatewayIdentity`, `GatewayHeaders`,
   `CadenceClaimTypes`, `HmacSigner`, `SigTokenVerifier` (`VerifyAndConsumeAsync`, acceptance window
   `iat - 5s <= now < exp + 5s`) with `ISigTokenUseStore` for single use: `ReplayCache` is the process-local default,
-  and a host with a database replaces it with a durable store, as Execution does
-  ([ADR-2515](../../docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md)).
+  and every host with an e-signature route replaces it with an `IDurableSigTokenUseStore` (`AddCadenceDurableSigTokenStore`
+  in [packages/database](../database/README.md)). Outside `Development`, `SigTokenUseStoreStartupCheck` refuses to start a
+  host that maps a `RequireElectronicSignature` route without one (#5434,
+  [ADR-2515](../../docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md)).
   `RequireElectronicSignature(...)` applies it to a route and `HttpContext.VerifiedSigToken()` reads the verified token;
   `AuditorWriteGuardMiddleware`, and `ChangeReasonHeader`, the one codec for `X-Change-Reason`: plain
   printable ASCII, or RFC 8187 `UTF-8''` percent-encoded UTF-8 for any other text. Every reader decodes the

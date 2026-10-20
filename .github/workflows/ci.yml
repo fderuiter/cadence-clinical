@@ -349,7 +349,7 @@ jobs:
 
       - name: Upload Trivy scan results to GitHub Security tab
         if: github.event_name == 'push' && (success() || failure())
-        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
         with:
           sarif_file: "trivy-results.sarif"
 
@@ -455,7 +455,8 @@ jobs:
     # CADENCE_TEST_POSTGRES they would be skipped (docs/TESTING.md).
     services:
       postgres:
-        image: postgres:16
+        # The image the tests qualify: PostgresTestImage.Image and docker/docker-compose.yml (ADR-2533).
+        image: postgres:18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
         env:
           POSTGRES_USER: cadence
           # A throwaway database on the runner; no credential is needed or stored.

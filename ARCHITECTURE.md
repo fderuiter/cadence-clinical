@@ -179,7 +179,7 @@ Other runtime pieces:
 | Subject portal         | `apps/subject-portal`         | Participant PWA (port 5174)                                                                                                                                                                                                           |
 | Aspire AppHost         | `apps/apphost`                | Local orchestration of PostgreSQL (database `cadence`), MinIO, Keycloak, every .NET service and the web app; a `core` profile runs the gateway, kernel API, execution and web only, optionally on an existing PostgreSQL and Keycloak |
 | Keycloak               | `docker/cadence-realm.json`   | OIDC identity provider (port 8080), realm `cadence`                                                                                                                                                                                   |
-| PostgreSQL 16          | compose `postgres`            | One `cadence` database with a schema per service (ADR-2447)                                                                                                                                                                           |
+| PostgreSQL 18          | compose `postgres`            | One `cadence` database with a schema per service (ADR-2447)                                                                                                                                                                           |
 | MinIO, ClamAV          | compose profile `storage`     | Object storage (fileshare, through `packages/storage`) and upload scanning (no service calls ClamAV yet)                                                                                                                              |
 | Front proxy            | compose `front-proxy` (nginx) | Port 8000; forwards the web apps' API calls to the gateway                                                                                                                                                                            |
 | Other compose services | `docker/docker-compose.yml`   | `dotnet-dev` (SDK container)                                                                                                                                                                                                          |
@@ -211,9 +211,9 @@ Decided in [ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signe
 - Signing a PI form approval needs a fresh re-authentication: the gateway re-checks the signer's
   password with Keycloak and issues a 60-second `X-Sig-Token` bound to the user, form and meaning
   ([ADR-2259](docs/adr/2026-09-29-electronic-signature-step-up-re-authentication.md)). Batch PI sign-off and the
-  delegation-log sign-off bind the token to the exact targets (`batch_id`). Each token signs once: Execution records
-  its use in PostgreSQL, so single use holds across instances and restarts; other services still record uses in
-  process memory until they fold into the single host
+  delegation-log sign-off bind the token to the exact targets (`batch_id`). Each token signs once: Execution, eConsent
+  and Knowledge record its use in PostgreSQL, in their own schema, so single use holds across instances and restarts,
+  and a host that maps a signed route without a durable store refuses to start outside Development (#5434)
   ([ADR-2515](docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md)).
 - The web app signs in only through Keycloak (authorization code + PKCE) and keeps tokens in memory;
   only the opt-in demo build uses an offline demo identity
@@ -244,7 +244,7 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
 
 ## 5. Persistence
 
-- **PostgreSQL 16+ through EF Core 10 + Npgsql.** `AddCadencePostgresDbContext`
+- **PostgreSQL 18 through EF Core 10 + Npgsql** (tests, CI and compose pin one image, ADR-2533). `AddCadencePostgresDbContext`
   (`packages/database`) resolves `ConnectionStrings:cadence` (set by the Aspire AppHost), then
   `POSTGRES_CONNECTION_STRING`. Only the `Development` environment falls back to the local compose
   database; any other environment fails at startup. Transient-failure retries are enabled.
@@ -301,7 +301,9 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
   ([ADR-2523](docs/adr/2026-10-19-explicit-transactions-run-inside-the-execution-strategy.md)).
 - **Messaging:** Execution, eTMF, eConsent and Notifications publish integration events through the MassTransit EF Core
   transactional outbox ([ADR-2814](docs/adr/2026-10-07-standardize-masstransit-ef-core-transactional-outbox-across-core-services.md)).
-  Kernel events use the kernel outbox (ADR-2449).
+  Kernel events use the kernel outbox (ADR-2449). MassTransit stays on the Apache 2.0 8.x line; 9.x is a commercial
+  product that needs a licence key, so Dependabot does not offer it
+  ([ADR-2524](docs/adr/2026-10-19-messaging-stays-on-the-apache-licensed-masstransit-8-line.md)).
 
 ## 6. Cross-cutting building blocks
 
