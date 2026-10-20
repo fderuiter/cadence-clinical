@@ -35,16 +35,20 @@ public sealed class SignatureTokenSingleUsePostgresTests(ThrowawayPostgresDataba
     [Trait("Category", "GxP_OQ")]
     [GxPRequirement("SRS-SYS-005")]
     public Task Econsent_TokenUsedOnOneInstance_IsRefusedByAFreshInstance() =>
-        UsedOnceAcrossInstancesAsync(connection => new EconsentDbContextFactory().CreateDbContext(Args(connection)));
+        UsedOnceAcrossInstancesAsync(
+            EconsentDbContextFactory.Schema,
+            connection => new EconsentDbContextFactory().CreateDbContext(Args(connection)));
 
     /// <summary>Knowledge: a used delegation sign-off token is refused by a second instance.</summary>
     [Fact]
     [Trait("Category", "GxP_OQ")]
     [GxPRequirement("SRS-SYS-005")]
     public Task Knowledge_TokenUsedOnOneInstance_IsRefusedByAFreshInstance() =>
-        UsedOnceAcrossInstancesAsync(connection => new KnowledgeDbContextFactory().CreateDbContext(Args(connection)));
+        UsedOnceAcrossInstancesAsync(
+            KnowledgeDbContextFactory.Schema,
+            connection => new KnowledgeDbContextFactory().CreateDbContext(Args(connection)));
 
-    private async Task UsedOnceAcrossInstancesAsync<TContext>(Func<string, TContext> createContext)
+    private async Task UsedOnceAcrossInstancesAsync<TContext>(string schema, Func<string, TContext> createContext)
         where TContext : DbContext
     {
         database.SkipIfUnavailable();
@@ -52,7 +56,16 @@ public sealed class SignatureTokenSingleUsePostgresTests(ThrowawayPostgresDataba
         string connection = database.ConnectionString!;
         await using (var migrating = createContext(connection))
         {
+            // As CadenceMigrationHostedService does: without its schema the module's tables would land in public,
+            // where both modules' consumed_signature_tokens collide (ADR-2447).
+#pragma warning disable EF1002 // The schema is the factory's constant; DDL cannot take parameters.
+            await migrating.Database.ExecuteSqlRawAsync($"CREATE SCHEMA IF NOT EXISTS \"{schema}\"", ct);
+#pragma warning restore EF1002
             await migrating.Database.MigrateAsync(ct);
+            (await migrating.Database
+                .SqlQuery<string>($"SELECT table_schema AS \"Value\" FROM information_schema.tables WHERE table_name = 'consumed_signature_tokens' AND table_schema = {schema}")
+                .ToListAsync(ct))
+                .Should().ContainSingle("the module keeps its used tokens in its own schema");
         }
 
         await using var first = Instance(createContext, connection);
