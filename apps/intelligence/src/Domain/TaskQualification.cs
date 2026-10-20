@@ -19,14 +19,15 @@ public enum QualificationStatus
 }
 
 /// <summary>
-/// The evaluation run a qualification rests on (ADR-2631): which run, against which pinned evaluation set, whether it
-/// met the configuration's acceptance criteria, and its summary as JSON. The evaluation harness (#5548) produces it.
+/// The evaluation run a qualification rests on (ADR-2631, ADR-2634 §4.4): the stored run (<see cref="EvaluationRun"/>)
+/// by id, the content hash of its record, the evaluation set it used, and its metrics and verdict as JSON. Built only
+/// from a stored, accepted run, never from what a caller states (#5574).
 /// </summary>
-/// <param name="RunReference">The evaluation run's id in the harness.</param>
+/// <param name="RunReference">The evaluation run's id.</param>
+/// <param name="RunHash">The kernel content hash of the stored run record.</param>
 /// <param name="EvaluationSetHash">The content hash of the evaluation set the run used.</param>
-/// <param name="Passed">True when the run met every acceptance criterion.</param>
-/// <param name="SummaryJson">The run's metrics and per-criterion results, as JSON.</param>
-public sealed record EvaluationEvidence(string RunReference, string EvaluationSetHash, bool Passed, string SummaryJson);
+/// <param name="SummaryJson">The run's metrics and verdict, as JSON.</param>
+public sealed record EvaluationEvidence(string RunReference, string RunHash, string EvaluationSetHash, string SummaryJson);
 
 /// <summary>
 /// A tenant's qualification of one task configuration version (ADR-2631, K-AI-5): the configuration's content hash
@@ -70,6 +71,9 @@ public sealed class TaskQualification : AggregateRoot<Guid>
 
     /// <summary>The evaluation run the qualification rests on.</summary>
     public string EvaluationRunReference { get; private set; } = string.Empty;
+
+    /// <summary>The kernel content hash of the stored evaluation run record.</summary>
+    public string EvaluationRunHash { get; private set; } = string.Empty;
 
     /// <summary>The content hash of the evaluation set the run used.</summary>
     public string EvaluationSetHash { get; private set; } = string.Empty;
@@ -130,6 +134,7 @@ public sealed class TaskQualification : AggregateRoot<Guid>
         Status = QualificationStatus.Qualified;
         RiskClass = configuration.Credibility?.RiskClass ?? ModelRiskClass.High;
         EvaluationRunReference = evidence.RunReference;
+        EvaluationRunHash = evidence.RunHash;
         EvaluationSetHash = evidence.EvaluationSetHash;
         EvaluationSummaryJson = evidence.SummaryJson;
         AttestationId = attestationId;

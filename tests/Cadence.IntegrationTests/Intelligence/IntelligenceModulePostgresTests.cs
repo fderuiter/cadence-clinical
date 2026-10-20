@@ -12,6 +12,8 @@ using Cadence.Kernel.Trust;
 using Cadence.Modules.Intelligence;
 using Cadence.Modules.Intelligence.Application;
 using Cadence.Modules.Intelligence.Domain;
+using Cadence.Modules.Intelligence.Evaluation;
+using Cadence.Modules.Intelligence.Evaluation.Checks;
 using Cadence.Modules.Intelligence.Evaluation.Runs;
 using Cadence.Modules.Intelligence.Evaluation.Sets;
 using Cadence.Modules.Intelligence.Infrastructure.Persistence;
@@ -61,6 +63,9 @@ public sealed class IntelligenceModulePostgresFixture : KernelPostgresFixture
 
     /// <summary>The ledger reader.</summary>
     public IAgentLedger Ledger => Scope().GetRequiredService<IAgentLedger>();
+
+    /// <summary>The stored evaluation runs' reader.</summary>
+    public IEvaluationRuns EvaluationRuns => Scope().GetRequiredService<IEvaluationRuns>();
 
     protected override async ValueTask OnMigratedAsync(string connectionString)
     {
@@ -347,9 +352,9 @@ public sealed class IntelligenceModulePostgresTests(IntelligenceModulePostgresFi
     }
 
     /// <summary>
-    /// ADR-2631, 21 CFR 11.50/11.70: qualification needs the qualifier's own signature over this version, evaluation
-    /// evidence against the pinned set that met the criteria, and a configuration complete enough to qualify; it is not
-    /// repeated while qualified.
+    /// ADR-2631, 21 CFR 11.50/11.70: qualification needs the qualifier's own signature over this version, a stored
+    /// evaluation run of this version that met its criteria against the pinned set (#5574), and a configuration complete
+    /// enough to qualify; it is not repeated while qualified.
     /// </summary>
     [Fact(DisplayName = "Qualification_NeedsTheQualifiersSignature_AcceptedEvidence_AndACompleteConfiguration")]
     [GxPRequirement("PRD-SYS-051")]
@@ -360,29 +365,82 @@ public sealed class IntelligenceModulePostgresTests(IntelligenceModulePostgresFi
         var tenant = await ProvisionTenantAsync(ct);
         var mine = await AttestAsync(tenant, IntelligenceModulePostgresFixture.EchoTask, ct);
         var otherTarget = await AttestAsync(tenant, IntelligenceModulePostgresFixture.UngovernedTask, ct);
+        var failedRun = await RecordRunAsync(tenant, ct, passed: false);
+        failedRun.IsSuccess.Should().BeTrue(failedRun.Error?.Message);
+        failedRun.Value!.Accepted.Should().BeFalse();
 
         fixture.CurrentActor.Actor = Actor.Person("someone-else@cadence.test");
         var byAnother = await QualifyAsync(tenant, mine, ct);
         fixture.CurrentActor.Actor = Actor.Person(KernelPostgresFixture.ActorId);
         var wrongTarget = await QualifyAsync(tenant, otherTarget, ct);
-        var failed = await QualifyAsync(tenant, mine, ct, Evidence(passed: false));
-        var wrongSet = await QualifyAsync(tenant, mine, ct, Evidence() with { EvaluationSetHash = "sha256:" + new string('0', 64) });
+        var failed = await QualifyAsync(tenant, mine, ct, failedRun.Value.RunId);
+        var missing = await QualifyAsync(tenant, mine, ct, Guid.NewGuid());
         var ungoverned = await QualifyAsync(tenant, otherTarget, ct, configuration: IntelligenceModulePostgresFixture.UngovernedTask);
 
         byAnother.Error!.Code.Should().Be(IntelligenceErrors.AttestationRejected.Code);
         wrongTarget.Error!.Code.Should().Be(IntelligenceErrors.AttestationRejected.Code);
         failed.Error!.Code.Should().Be(IntelligenceErrors.EvaluationNotAccepted.Code);
-        wrongSet.Error!.Code.Should().Be(IntelligenceErrors.EvaluationNotAccepted.Code);
+        missing.Error!.Code.Should().Be(IntelligenceErrors.EvaluationRunNotFound.Code);
         ungoverned.Error!.Code.Should().Be(IntelligenceErrors.ConfigurationNotQualifiable.Code);
         ungoverned.Error.Message.Should().Contain("Pin an evaluation set.");
         (await fixture.Ledger.QualificationsAsync(tenant, ct)).Should().BeEmpty();
 
-        var qualified = await QualifyAsync(tenant, mine, ct);
+        var accepted = await RecordRunAsync(tenant, ct);
+        var qualified = await QualifyAsync(tenant, mine, ct, accepted.Value!.RunId);
         var twice = await QualifyAsync(tenant, mine, ct);
 
         qualified.IsSuccess.Should().BeTrue(qualified.Error?.Message);
         qualified.Value!.RiskClass.Should().Be(ModelRiskClass.Low);
         twice.Error.Should().Be(IntelligenceErrors.AlreadyQualified);
+        var stored = (await fixture.Ledger.QualificationsAsync(tenant, ct)).Should().ContainSingle().Subject;
+        stored.EvaluationRunReference.Should().Be(accepted.Value.RunId.ToString("D"));
+        stored.EvaluationRunHash.Should().Be(accepted.Value.RecordHash);
+        stored.EvaluationSetHash.Should().Be(IntelligenceModulePostgresFixture.EchoTask.EvaluationSet!.ContentHash);
+    }
+
+    /// <summary>
+    /// ADR-2634 §4.4, #5574: the server stores an evaluation run only when it evaluated a shipped configuration version
+    /// against its pinned set, criteria and provider and its verdict follows from its cases; the stored record reads back
+    /// exactly as hashed, once per run id, and only in its tenant.
+    /// </summary>
+    [Fact(DisplayName = "EvaluationRun_IsStoredOnlyWhenItIsEvidenceForItsConfiguration")]
+    [GxPRequirement("PRD-SYS-051")]
+    public async Task EvaluationRunIsStoredOnlyWhenItIsEvidenceForItsConfiguration()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var tenant = await ProvisionTenantAsync(ct);
+        var other = await ProvisionTenantAsync(ct);
+
+        var forged = await RecordRunAsync(tenant, ct, passed: false, edit: r => r with { Verdict = new AcceptanceVerdict(true, []) });
+        var wrongSet = await RecordRunAsync(tenant, ct, edit: r => r with { Set = r.Set with { ContentHash = "sha256:" + new string('0', 64) } });
+        var ungoverned = await RecordRunAsync(tenant, ct, configuration: IntelligenceModulePostgresFixture.UngovernedTask);
+        var changed = await RecordRunAsync(tenant, ct, configuration: IntelligenceModulePostgresFixture.EchoTask with { Instructions = "Answer at length." });
+        var notJson = await fixture.Sender.SendAsync(new RecordEvaluationRun(tenant, "{\"runId\": 1}", Key(), Reason), cancellationToken: ct);
+
+        forged.Error!.Code.Should().Be(IntelligenceErrors.EvaluationRunInvalid.Code);
+        forged.Error.Message.Should().Contain("verdict");
+        wrongSet.Error!.Code.Should().Be(IntelligenceErrors.EvaluationRunInvalid.Code);
+        ungoverned.Error!.Code.Should().Be(IntelligenceErrors.ConfigurationNotQualifiable.Code);
+        changed.Error!.Code.Should().Be(IntelligenceErrors.ConfigurationChanged.Code);
+        notJson.Error!.Code.Should().Be(IntelligenceErrors.EvaluationRunInvalid.Code);
+
+        var record = Record(IntelligenceModulePostgresFixture.EchoTask, passed: true);
+        var recorded = await RecordRunAsync(tenant, ct, edit: _ => record);
+        var again = await RecordRunAsync(tenant, ct, edit: _ => record);
+
+        recorded.IsSuccess.Should().BeTrue(recorded.Error?.Message);
+        recorded.Value!.RecordHash.Should().Be(record.ContentHash());
+        again.Error.Should().Be(KernelErrors.AlreadyExists);
+        var stored = await fixture.EvaluationRuns.FindAsync(tenant, record.RunId, ct);
+        stored!.RecordJson.Should().Be(record.ToJson());
+        ContentHash.Compute(stored.RecordJson).Should().Be(stored.RecordHash);
+        (await fixture.EvaluationRuns.ForTaskAsync(tenant, "test.echo", 1, 10, ct)).Should().ContainSingle();
+
+        (await fixture.EvaluationRuns.FindAsync(other, record.RunId, ct)).Should().BeNull();
+        var elsewhere = await QualifyAsync(other, await AttestAsync(other, IntelligenceModulePostgresFixture.EchoTask, ct), ct, record.RunId);
+        elsewhere.Error!.Code.Should().Be(IntelligenceErrors.EvaluationRunNotFound.Code);
+        (await fixture.ScalarAsAppRoleAsync("SELECT count(*) FROM intelligence.evaluation_runs", ct)).Should().Be(0L);
     }
 
     /// <summary>Qualifications are tenant data under Row-Level Security: another tenant sees none and cannot run on them.</summary>
@@ -409,10 +467,12 @@ public sealed class IntelligenceModulePostgresTests(IntelligenceModulePostgresFi
 
         var delete = () => fixture.ScalarAsAppRoleAsync("DELETE FROM intelligence.agent_runs", ct);
         var deleteQualification = () => fixture.ScalarAsAppRoleAsync("DELETE FROM intelligence.task_qualifications", ct);
+        var deleteEvaluationRun = () => fixture.ScalarAsAppRoleAsync("DELETE FROM intelligence.evaluation_runs", ct);
         var history = () => fixture.ScalarAsAppRoleAsync("SELECT count(*) FROM intelligence.__ef_migrations_history", ct);
 
         (await delete.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be(PostgresErrorCodes.InsufficientPrivilege);
         (await deleteQualification.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be(PostgresErrorCodes.InsufficientPrivilege);
+        (await deleteEvaluationRun.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be(PostgresErrorCodes.InsufficientPrivilege);
         (await history.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be(PostgresErrorCodes.InsufficientPrivilege);
     }
 
@@ -430,17 +490,70 @@ public sealed class IntelligenceModulePostgresTests(IntelligenceModulePostgresFi
         return result.Value;
     }
 
-    private Task<CommandResult<TaskQualificationState>> QualifyAsync(
-        TenantId tenant, AttestationId attestation, CancellationToken ct, EvaluationEvidence? evidence = null, TaskConfiguration? configuration = null) =>
-        fixture.Sender.SendAsync(
+    private async Task<CommandResult<TaskQualificationState>> QualifyAsync(
+        TenantId tenant, AttestationId attestation, CancellationToken ct, Guid? evaluationRunId = null, TaskConfiguration? configuration = null)
+    {
+        if (evaluationRunId is null)
+        {
+            var recorded = await RecordRunAsync(tenant, ct);
+            recorded.IsSuccess.Should().BeTrue(recorded.Error?.Message);
+            evaluationRunId = recorded.Value!.RunId;
+        }
+
+        return await fixture.Sender.SendAsync(
             new QualifyTaskConfiguration(
                 tenant,
                 (configuration ?? IntelligenceModulePostgresFixture.EchoTask).Ref,
-                evidence ?? Evidence(),
+                evaluationRunId.Value,
                 attestation,
                 Key(),
                 Reason),
             cancellationToken: ct);
+    }
+
+    /// <summary>Stores a run record of <paramref name="configuration"/> (the echo task by default), optionally edited first.</summary>
+    private Task<CommandResult<EvaluationRunState>> RecordRunAsync(
+        TenantId tenant,
+        CancellationToken ct,
+        bool passed = true,
+        TaskConfiguration? configuration = null,
+        Func<EvaluationRunRecord, EvaluationRunRecord>? edit = null)
+    {
+        var record = Record(configuration ?? IntelligenceModulePostgresFixture.EchoTask, passed);
+        return fixture.Sender.SendAsync(new RecordEvaluationRun(tenant, (edit ?? (r => r))(record).ToJson(), Key(), Reason), cancellationToken: ct);
+    }
+
+    /// <summary>
+    /// A run record as the harness writes it for <paramref name="configuration"/> on the fake provider: two reviewed
+    /// cases and one adversarial case, all passing, or with the adversarial case failing its outcome check.
+    /// </summary>
+    private EvaluationRunRecord Record(TaskConfiguration configuration, bool passed)
+    {
+        var usage = new RunUsage(120, 30, 0m, TimeSpan.FromMilliseconds(5));
+        CheckResult[] good = [new(CheckKind.Outcome, true), new(CheckKind.Schema, true), new(CheckKind.Fields, true), new(CheckKind.Citations, true), new(CheckKind.Grounding, true), new(CheckKind.ForbiddenContent, true)];
+        IReadOnlyList<CaseResult> cases =
+        [
+            new("visit-2", CaseKind.Reviewed, true, good, usage),
+            new("visit-3", CaseKind.Reviewed, true, good, usage),
+            passed
+                ? new("injection", CaseKind.Adversarial, true, good, usage, AdversarialCategory.PromptInjection)
+                : new("injection", CaseKind.Adversarial, false, [new(CheckKind.Outcome, false, "Expected refuse, got propose.")], usage, AdversarialCategory.PromptInjection),
+        ];
+        var criteria = configuration.AcceptanceCriteria ?? new AcceptanceCriteria(0.9, 0.95);
+        var metrics = EvaluationHarness.Measure(cases);
+        var started = fixture.Clock.UtcNow.AddMinutes(-5);
+        return new EvaluationRunRecord(
+            Guid.CreateVersion7(),
+            configuration.Ref,
+            configuration.EvaluationSet ?? new EvaluationSetRef("test.none", 1, "sha256:" + new string('f', 64)),
+            new ProviderInfo(configuration.Provider, "fake-fast"),
+            started,
+            started.AddMinutes(1),
+            criteria,
+            cases,
+            metrics,
+            EvaluationHarness.Decide(criteria, cases, metrics));
+    }
 
     /// <summary>A tenant in which the echo task is qualified.</summary>
     private async Task<TenantId> QualifiedTenantAsync(CancellationToken ct)
@@ -450,9 +563,6 @@ public sealed class IntelligenceModulePostgresTests(IntelligenceModulePostgresFi
         qualified.IsSuccess.Should().BeTrue(qualified.Error?.Message);
         return tenant;
     }
-
-    private static EvaluationEvidence Evidence(bool passed = true) =>
-        new($"eval-{Guid.NewGuid():N}", IntelligenceModulePostgresFixture.EchoTask.EvaluationSet!.ContentHash, passed, "{\"named_visit\":1.0}");
 
     private static string Key() => $"it-{Guid.NewGuid():N}";
 

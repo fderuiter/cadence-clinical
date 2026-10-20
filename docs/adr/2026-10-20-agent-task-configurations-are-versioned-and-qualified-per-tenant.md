@@ -75,7 +75,8 @@ medium, low when both are low or one is low and the other medium, otherwise medi
 
 A `TaskQualification` (table `intelligence.task_qualifications`, under tenant Row-Level Security, no delete for the
 application role) records one tenant's qualification of one version: the content hash it covers, the risk class, the
-evaluation run reference, the evaluation set hash, the run summary, the attestation id and who qualified it when.
+evaluation run reference and the run record's content hash, the evaluation set hash, the run summary, the attestation id
+and who qualified it when.
 
 `QualifyTaskConfiguration` (capability `task_configuration.qualify`, verb `Approve`, so only a person can qualify)
 succeeds only when:
@@ -83,7 +84,8 @@ succeeds only when:
 1. the version is registered and its current content hash is the one named;
 2. it is complete enough to qualify: an evaluation set, acceptance criteria, a complete credibility assessment, and an
    approver role from autonomy level Draft up;
-3. the evaluation evidence ran against the pinned set's hash and met the acceptance criteria;
+3. the named evaluation run is stored in the tenant (`RecordEvaluationRun`, #5574), evaluated exactly this version
+   against the pinned set's hash, and met the acceptance criteria;
 4. the caller signed an `Approved` kernel attestation over target kind `task_configuration`, the version's derived id
    and its content hash.
 
@@ -113,9 +115,9 @@ the version exists and its content hash is current when someone signs it.
   audit chain and raises an event (`intelligence.TaskConfigurationQualified`, `intelligence.TaskConfigurationSuspended`).
 - **Negative:** every new task needs an evaluation set and a qualification before use, in every tenant.
 - **Open:**
-  - The evaluation evidence is stated by the qualifier until the evaluation harness (#5548) stores runs; then the
-    command will read the stored run instead of taking `passed` from the request. The signature makes the qualifier
-    accountable in the meantime.
+  - Resolved by #5574: the command reads a stored evaluation run (ADR-2634 §4.4) instead of taking `passed` from the
+    request. The case results in a stored run still come from the harness the operator runs; running the evaluation
+    on the server against a real provider waits on #5550.
   - There is no HTTP step-up signing route yet: the qualification route takes the id of an attestation made with the
     kernel `Attest` command.
   - Evidence thresholds per risk class come with the harness; the risk class is recorded now.

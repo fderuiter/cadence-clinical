@@ -261,7 +261,7 @@ public sealed class AgentRunnerTests
         _sender.Sent.OfType<StartAgentRun>().Last().Configuration.Version.Should().Be(4);
     }
 
-    private static EvaluationEvidence Evidence() => new("eval-run-1", "sha256:" + new string('a', 64), Passed: true, "{}");
+    private static EvaluationEvidence Evidence() => new("eval-run-1", "sha256:" + new string('b', 64), "sha256:" + new string('a', 64), "{}");
 
     private AgentRunner Runner(
         IChatClient client, TaskConfiguration? task = null, AgentRunnerOptions? options = null, bool qualify = true, TaskConfiguration[]? extra = null)

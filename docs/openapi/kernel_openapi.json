@@ -1873,12 +1873,247 @@
         }
       }
     },
+    "/api/v1/ai/evaluation-runs": {
+      "post": {
+        "tags": [
+          "AI agents"
+        ],
+        "summary": "Stores an evaluation run record after checking it against its task configuration version, set, criteria and case results (evaluation_run.record, ADR-2634).",
+        "operationId": "AiRecordEvaluationRun",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_JsonElement"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_EvaluationRunStateResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060M.Intelligence.Task.Unknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060M.Intelligence.Configuration.Changed\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060M.Intelligence.Configuration.NotQualifiable\u0060, \u0060M.Intelligence.Evaluation.RunInvalid\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "M.Intelligence.Task.Unknown",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "M.Intelligence.Configuration.Changed",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "M.Intelligence.Configuration.NotQualifiable",
+            "status": 422
+          },
+          {
+            "code": "M.Intelligence.Evaluation.RunInvalid",
+            "status": 422
+          }
+        ]
+      }
+    },
+    "/api/v1/ai/evaluation-runs/{runId}": {
+      "get": {
+        "tags": [
+          "AI agents"
+        ],
+        "summary": "One stored evaluation run with its record, exactly as hashed.",
+        "operationId": "AiGetEvaluationRun",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_EvaluationRunResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/tasks/{key}/evaluation-runs": {
+      "get": {
+        "tags": [
+          "AI agents"
+        ],
+        "summary": "The stored evaluation runs of a task, newest first, optionally of one version.",
+        "operationId": "AiListEvaluationRuns",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kernel_EvaluationRunSummaryResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/ai/tasks/{key}/versions/{version}/qualification": {
       "post": {
         "tags": [
           "AI agents"
         ],
-        "summary": "Qualifies a task configuration version on its evaluation evidence and the caller\u0027s signed approval (task_configuration.qualify, ADR-2631).",
+        "summary": "Qualifies a task configuration version on a stored, accepted evaluation run and the caller\u0027s signed approval (task_configuration.qualify, ADR-2631).",
         "operationId": "AiQualifyTask",
         "parameters": [
           {
@@ -1942,7 +2177,7 @@
             }
           },
           "404": {
-            "description": "Not Found. Kernel errors: \u0060M.Intelligence.Task.Unknown\u0060.",
+            "description": "Not Found. Kernel errors: \u0060M.Intelligence.Evaluation.RunNotFound\u0060, \u0060M.Intelligence.Task.Unknown\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1980,6 +2215,10 @@
           {
             "code": "K.Authorization.Denied",
             "status": 403
+          },
+          {
+            "code": "M.Intelligence.Evaluation.RunNotFound",
+            "status": 404
           },
           {
             "code": "M.Intelligence.Task.Unknown",
@@ -3315,6 +3554,141 @@
           }
         }
       },
+      "Kernel_EvaluationRunResponse": {
+        "required": [
+          "run",
+          "record_json"
+        ],
+        "type": "object",
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/Kernel_EvaluationRunSummaryResponse"
+          },
+          "record_json": {
+            "type": "string"
+          }
+        }
+      },
+      "Kernel_EvaluationRunStateResponse": {
+        "required": [
+          "run_id",
+          "task_key",
+          "task_version",
+          "configuration_hash",
+          "evaluation_set_hash",
+          "record_hash",
+          "accepted",
+          "reasons"
+        ],
+        "type": "object",
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "task_key": {
+            "type": "string"
+          },
+          "task_version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "configuration_hash": {
+            "type": "string"
+          },
+          "evaluation_set_hash": {
+            "type": "string"
+          },
+          "record_hash": {
+            "type": "string"
+          },
+          "accepted": {
+            "type": "boolean"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Kernel_EvaluationRunSummaryResponse": {
+        "required": [
+          "run_id",
+          "task_key",
+          "task_version",
+          "configuration_hash",
+          "evaluation_set_id",
+          "evaluation_set_version",
+          "evaluation_set_hash",
+          "provider",
+          "model",
+          "accepted",
+          "started_at",
+          "completed_at",
+          "record_hash"
+        ],
+        "type": "object",
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "task_key": {
+            "type": "string"
+          },
+          "task_version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "configuration_hash": {
+            "type": "string"
+          },
+          "evaluation_set_id": {
+            "type": "string"
+          },
+          "evaluation_set_version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "evaluation_set_hash": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "accepted": {
+            "type": "boolean"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "record_hash": {
+            "type": "string"
+          }
+        }
+      },
       "Kernel_EvaluationSetRef": {
         "required": [
           "set_id",
@@ -3542,6 +3916,7 @@
           }
         }
       },
+      "Kernel_JsonElement": {},
       "Kernel_KernelActivityEntryResponse": {
         "required": [
           "event_id",
@@ -5709,10 +6084,7 @@
       "Kernel_QualificationRequest": {
         "required": [
           "configuration_hash",
-          "evaluation_run_reference",
-          "evaluation_set_hash",
-          "passed",
-          "evaluation_summary_json",
+          "evaluation_run_id",
           "attestation_id"
         ],
         "type": "object",
@@ -5720,17 +6092,9 @@
           "configuration_hash": {
             "type": "string"
           },
-          "evaluation_run_reference": {
-            "type": "string"
-          },
-          "evaluation_set_hash": {
-            "type": "string"
-          },
-          "passed": {
-            "type": "boolean"
-          },
-          "evaluation_summary_json": {
-            "type": "string"
+          "evaluation_run_id": {
+            "type": "string",
+            "format": "uuid"
           },
           "attestation_id": {
             "type": "string",
@@ -5968,6 +6332,7 @@
           "configuration_hash",
           "risk_class",
           "evaluation_run_reference",
+          "evaluation_run_hash",
           "qualified_at",
           "suspended_at",
           "suspension_reason"
@@ -5987,6 +6352,9 @@
             "type": "string"
           },
           "evaluation_run_reference": {
+            "type": "string"
+          },
+          "evaluation_run_hash": {
             "type": "string"
           },
           "qualified_at": {
