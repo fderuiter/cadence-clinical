@@ -6,14 +6,14 @@ requirement as qualified.
 
 ## Test projects
 
-| Project                                                            | What it holds                                                                                                                                | Run it with                                                                    |
-| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 | Unit and component tests for services and packages, on in-memory fakes, SQLite or the EF Core in-memory provider. Needs no database.         | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
-| `tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj`   | Tests against a real PostgreSQL database (see below). Every test in it carries `Category=Integration`.                                       | `dotnet cadence test --integration`                                            |
-| `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` | Layer and boundary rules (ArchUnitNET), the kernel baselines, suppression and test-layout policies, and the architecture sentinels.          | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
-| `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   | Black-box HTTP tests against the execution service through `WebApplicationFactory`.                                                          | `dotnet test tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   |
-| `packages/ui/tests/`                                               | Vitest suite for the shared JavaScript signing and UI helpers.                                                                               | `pnpm --filter ui test`                                                        |
-| `apps/web/tests/`                                                  | Vitest suite for the web app's API clients, stores and views (jsdom). Playwright specs under `tests/e2e/` and `tests/browser/` are excluded. | `pnpm --filter web test`                                                       |
+| Project                                                            | What it holds                                                                                                                                    | Run it with                                                                    |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 | Unit and component tests for services and packages, on in-memory fakes, SQLite or the EF Core in-memory provider. Needs no database.             | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
+| `tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj`   | Tests against a real PostgreSQL database (see below). Every test in it carries `Category=Integration`.                                           | `dotnet cadence test --integration`                                            |
+| `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` | Layer and boundary rules (ArchUnitNET), the kernel baselines, suppression and test-layout policies, and the architecture sentinels.              | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
+| `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   | Black-box HTTP tests against the execution service, and the cross-module clinical journeys through the single host, via `WebApplicationFactory`. | `dotnet test tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   |
+| `packages/ui/tests/`                                               | Vitest suite for the shared JavaScript signing and UI helpers.                                                                                   | `pnpm --filter ui test`                                                        |
+| `apps/web/tests/`                                                  | Vitest suite for the web app's API clients, stores and views (jsdom). Playwright specs under `tests/e2e/` and `tests/browser/` are excluded.     | `pnpm --filter web test`                                                       |
 
 `dotnet test Cadence.sln` runs all four .NET test projects. `dotnet cadence test --fast` is the quick loop (every
 project, `Category!=Integration`), and `make verify` runs the quality gates plus every suite before you open a PR.
@@ -130,6 +130,17 @@ These tests currently use it:
 - `tests/Cadence.E2ETests/E2E/` (`ExecutionE2EFactory`): write paths that enroll a subject. Read and routing tests run on
   the in-memory provider when no database is configured. Tests that write call
   `factory.SkipUnlessPostgres()`.
+- `tests/Cadence.E2ETests/Journeys/` (`KernelHostJourneyFixture`, #5471): the cross-module clinical journeys (consent to
+  export, SAE to safety, withdrawal) through the single host (`apps/kernel-api`, ADR-2601, ADR-2610) on a throwaway
+  database, connected as a `NOBYPASSRLS` login role granted the application role's rights, with the kernel's and every
+  module's migrations (as the host registers them) applied as the owner. Forms go over the Execution module's routes, and the journeys wait for
+  the module's consumer to open its form as `svc:execution-forms`. Each journey arranges its own
+  tenant and study through the kernel pipeline as a setup person, then makes every step as a gateway-signed caller,
+  authorized by the host against that caller's grants, and checks one kernel `ParticipantId` throughout and a kernel
+  audit entry naming the caller for every write. A step whose kernel command exists but whose route the host does not
+  map yet goes through `KernelHostCommandRelay`, a test-only route at the end of the host's pipeline that takes the
+  signed identity, tenant, reason and idempotency key as the real routes do; a step whose feature does not exist yet is
+  a dated `TODO` naming the issue that adds it. Without a database the journeys are skipped.
 
 ## Web app tests (`apps/web`)
 

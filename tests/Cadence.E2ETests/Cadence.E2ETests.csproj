@@ -12,6 +12,14 @@
     <ProjectReference Include="..\..\packages\security\src\Cadence.Security.csproj" />
     <ProjectReference Include="..\..\packages\testing\src\Cadence.Testing.csproj" />
     <ProjectReference Include="..\..\apps\execution\src\Cadence.Apps.Execution.csproj" />
+    <!-- The single host (ADR-2601, ADR-2610) the cross-module journeys boot, and the kernel layers they arrange the study with. -->
+    <ProjectReference Include="..\..\apps\kernel-api\src\Cadence.Kernel.Host.csproj" />
+    <ProjectReference Include="..\..\apps\execution\module\Cadence.Modules.Execution.csproj" />
+    <ProjectReference Include="..\..\packages\kernel\src\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
+    <ProjectReference Include="..\..\packages\kernel\src\Cadence.Kernel.Application\Cadence.Kernel.Application.csproj" />
+    <ProjectReference Include="..\..\packages\kernel\src\Cadence.Kernel.Persistence\Cadence.Kernel.Persistence.csproj" />
+    <ProjectReference Include="..\..\packages\kernel\src\Cadence.Kernel.Api\Cadence.Kernel.Api.csproj" />
+    <ProjectReference Include="..\Cadence.TestSupport\Cadence.TestSupport.csproj" />
     <ProjectReference Include="..\..\apps\gateway\src\Cadence.Apps.Gateway.csproj" Aliases="gateway" />
     <ProjectReference Include="..\..\apps\designer\src\Cadence.Apps.Designer.csproj" Aliases="designer" />
     <ProjectReference Include="..\..\apps\ctms\src\Cadence.Apps.Ctms.csproj" />
