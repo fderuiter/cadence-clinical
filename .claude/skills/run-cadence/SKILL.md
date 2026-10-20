@@ -136,6 +136,8 @@ The first takes about a minute (mostly the build), the second about 4 s. The ful
   `/opt/cadence-dev/keycloak-import.log`) so the ids arrive. A kernel read that answers 200 with no hits, or `activity`
   403 "You hold no grant in effect", means the token's `sub` is not one of those ids. A 403 "not an active kernel
   tenant" means the kernel was not started in Development.
+- **Stop the stack before `pnpm cadence ci`.** `KernelObservationHostPostgresTests.BrowserCorrection_ReachesTheDatabaseWithItsReason`
+  binds the gateway's port 8000 and fails with "address already in use" while the stack runs.
 - **`ui` must be built.** `apps/web/vite.config.js` aliases `ui` to `packages/ui/dist/index.js`, which `pnpm install`
   does not create; Vite shows "Failed to resolve import "ui" from "src/main.js"". `scripts/local_stack_nodocker.sh up` runs
   `pnpm --filter ui build`. If Vite already started without it, restart the AppHost: Vite keeps the failed
