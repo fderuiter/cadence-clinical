@@ -550,9 +550,11 @@ A modular architecture unifying repository sentinels (drift detection, duplicati
 
 ### Intelligence module (AI agent runtime)
 
-The one place AI agents run (ADR-2630): an in-process module of the composition host that replaces the `apps/ai_gateway` scaffold (#5374). It holds the provider-neutral model port, qualified **task configurations**, the agent tools, the citation verifier, the **interaction ledger** of every run, and budgets with a kill switch. Its only write into clinical data is a kernel Proposal.
+The one place AI agents run (ADR-2630): `Cadence.Modules.Intelligence` (`apps/intelligence`), an in-process module of the composition host (today the kernel API host) under `/api/v1/ai`, which replaced the `apps/ai_gateway` service and took over its command-palette intent router (#5374). It holds the provider-neutral model port, qualified **task configurations**, the agent tools, the citation verifier, the **interaction ledger** of every run, and budgets with a kill switch. Its only write into clinical data is a kernel Proposal.
 
-A **task configuration** is the qualified unit for an AI task: model and version, prompt, tools, retrieval sources, output schema, evaluation set, acceptance criteria, autonomy level and approver role. Any change makes a new version that must be qualified again (#5385).
+A **task configuration** is the qualified unit for an AI task: model and version, prompt, tools, retrieval sources, output schema, evaluation set, acceptance criteria, autonomy level and approver role. Any change makes a new version that must be qualified again (#5385). Today a task configuration carries its key, version, provider, model (or a `tier:` alias such as `tier:balanced`), instructions template, maximum output tokens and autonomy level, and every run records the SHA-256 hash of its content (K-AI-5).
+
+An **agent run** is one call of a task, recorded in the interaction ledger (the append-only `intelligence.agent_runs` table, isolated per tenant) through the `StartAgentRun` and `CompleteAgentRun` module commands, with the configuration hash, model, token use, cost and a content hash. An **agent control** (`intelligence.agent_controls`, set with `SetAgentControl`) is a tenant's kill switch and monthly token budget for one task key or, with scope `*`, for every task.
 
 The **autonomy level** of a task is how far its agent may go: 0 inform, 1 draft a Proposal, 2 a Proposal whose approval executes its commands as the approver (K-AI-2), 3 a standing grant for operational commands only (K-AI-7). See [docs/ai/AI_AGENTS.md](docs/ai/AI_AGENTS.md).
 _Avoid_: "AI gateway microservice", AI draft states on regulated records, "the model" as the thing that is validated
@@ -1016,7 +1018,7 @@ _Avoid_: Unformatted 502 HTML pages, plain-text stack trace leakages, or non-RFC
 
 ### Unified OpenAPI Schema Aggregation
 
-An automated schema composition engine in `apps/gateway` that dynamically fetches and merges OpenAPI 3.1.0 specifications from all downstream microservices (`apps/*`), rewriting component schemas with isolated service prefixes (`Imaging_`, `Payments_`, `AiGateway_`, `Designer_`, `Execution_`) and qualifying path operation IDs to eliminate naming collisions and present a unified interactive Swagger UI at `/docs`.
+An automated schema composition engine in `apps/gateway` that dynamically fetches and merges OpenAPI 3.1.0 specifications from all downstream microservices (`apps/*`), rewriting component schemas with isolated service prefixes (`Imaging_`, `Payments_`, `Designer_`, `Execution_`) and qualifying path operation IDs to eliminate naming collisions and present a unified interactive Swagger UI at `/docs`.
 _Avoid_: Missing service definitions in unified API specifications, colliding schema names across microservices
 
 ### Cryptographic Audit Chain Synchronization

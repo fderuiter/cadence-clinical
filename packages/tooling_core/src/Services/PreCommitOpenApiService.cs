@@ -143,7 +143,6 @@ public static class PreCommitOpenApiService
         string appFolder = parts[1].ToLowerInvariant();
         return appFolder switch
         {
-            "ai_gateway" => "ai_gateway",
             "ctms" => "ctms",
             "designer" => "designer",
             "econsent" => "econsent",
@@ -153,7 +152,7 @@ public static class PreCommitOpenApiService
             "fileshare" => "fileshare",
             "imaging" => "imaging",
             "interop" => "interop",
-            "kernel-api" or "kernel" => "kernel",
+            "kernel-api" or "kernel" or "intelligence" => "kernel",
             "knowledge" => "knowledge",
             "notifications" => "notifications",
             "org" => "org",

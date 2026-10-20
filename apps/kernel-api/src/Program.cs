@@ -10,6 +10,7 @@ using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Application.Search;
 using Cadence.Kernel.Application.Simulation;
 using Cadence.Kernel.Host;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.Activity;
 using Cadence.Kernel.Persistence.Navigation;
@@ -17,6 +18,7 @@ using Cadence.Kernel.Persistence.Search;
 using Cadence.Kernel.Persistence.Simulation;
 using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Time;
+using Cadence.Modules.Intelligence;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
 
@@ -85,6 +87,10 @@ builder.Services.AddSingleton<IKernelChangeReason, SignedChangeReason>();
 // the IdentityVault (#4782) are not decided here yet.
 builder.Services.AddKernelGrantVisibility();
 
+// Modules in this host (ADR-2601). The Intelligence module is the governed AI agent runtime (ADR-2630): agents read and
+// propose, a person approves, and AI is never required for clinical work (K-AI-8).
+builder.Services.AddCadenceIntelligenceModule(builder.Configuration, builder.Environment, connectionString);
+
 // The kernel tenant comes from the tenant code the gateway signs, through the kernel's tenant directory (ADR-2540).
 builder.Services.AddSingleton<IKernelTenantResolver, DirectoryTenantResolver>();
 
@@ -100,6 +106,7 @@ app.MapCadenceHealthAndStatusEndpoints(
     "Clinical Kernel API health probe.",
     "Returns the Clinical Kernel API's operational status.");
 app.MapKernelApi().MapKernelReads().MapKernelObservations();
+app.MapIntelligenceModule();
 
 await app.RunAsync();
 

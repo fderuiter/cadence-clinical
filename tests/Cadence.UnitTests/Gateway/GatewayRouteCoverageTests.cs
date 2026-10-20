@@ -47,7 +47,6 @@ public sealed class GatewayRouteCoverageTests
         ["imaging-cluster"] = MappedPaths<Cadence.Apps.Imaging.Program>,
         ["knowledge-cluster"] = MappedPaths<Cadence.Apps.Knowledge.Program>,
         ["payments-cluster"] = MappedPaths<Cadence.Apps.Payments.Program>,
-        ["ai-gateway-cluster"] = MappedPaths<Cadence.Apps.AiGateway.Program>,
         ["kernel-cluster"] = MappedPaths<Cadence.Kernel.Host.Program>,
     };
 

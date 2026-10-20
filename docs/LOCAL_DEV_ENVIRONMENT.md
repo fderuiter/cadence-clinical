@@ -142,25 +142,29 @@ The host ports are the defaults the gateway routes to (`apps/gateway/src/Program
 services started with `dotnet run` and the compose stack alike. Inside compose, every .NET service listens on
 8080 in its own container.
 
-| Service                       | Host port | Database schema | Service              | Host port   | Database schema |
-| ----------------------------- | --------- | --------------- | -------------------- | ----------- | --------------- |
-| front proxy (nginx) → gateway | 8000      | none            | eisf                 | 8010        | `eisf`          |
-| designer                      | 8001      | none            | econsent             | 8011        | `econsent`      |
-| execution                     | 8002      | `edc`           | org                  | 8012        | `org`           |
-| etmf                          | 8003      | `etmf`          | fileshare            | 8013        | `fileshare`     |
-| interop                       | 8004      | `interop`       | imaging              | 8014        | `imaging`       |
-| quality                       | 8005      | `quality`       | knowledge            | 8015        | `knowledge`     |
-| notifications                 | 8006      | `notifications` | payments             | 8016        | `payments`      |
-| ctms                          | 8007      | `ctms`          | ai_gateway           | 8017        | none            |
-| safety                        | 8008      | `safety`        | Keycloak             | 8080        | (own store)     |
-| tickets                       | 8009      | `tickets`       | web / subject portal | 5173 / 5174 | none            |
-| kernel (`apps/kernel-api`)    | 8018      | `kernel`        |                      |             |                 |
+| Service                       | Host port | Database schema | Service                    | Host port   | Database schema          |
+| ----------------------------- | --------- | --------------- | -------------------------- | ----------- | ------------------------ |
+| front proxy (nginx) → gateway | 8000      | none            | eisf                       | 8010        | `eisf`                   |
+| designer                      | 8001      | none            | econsent                   | 8011        | `econsent`               |
+| execution                     | 8002      | `edc`           | org                        | 8012        | `org`                    |
+| etmf                          | 8003      | `etmf`          | fileshare                  | 8013        | `fileshare`              |
+| interop                       | 8004      | `interop`       | imaging                    | 8014        | `imaging`                |
+| quality                       | 8005      | `quality`       | knowledge                  | 8015        | `knowledge`              |
+| notifications                 | 8006      | `notifications` | payments                   | 8016        | `payments`               |
+| ctms                          | 8007      | `ctms`          | kernel (`apps/kernel-api`) | 8018        | `kernel`, `intelligence` |
+| safety                        | 8008      | `safety`        | Keycloak                   | 8080        | (own store)              |
+| tickets                       | 8009      | `tickets`       | web / subject portal       | 5173 / 5174 | none                     |
 
 PostgreSQL listens on 5432 (database `cadence`). What each service does and how mature it is:
 [ARCHITECTURE.md §3](../ARCHITECTURE.md#3-running-services-today). Check for port clashes with
 `pnpm cadence check-ports`.
 
 Each service answers `/healthz/live` and `/healthz/ready` without a token.
+
+The kernel host also serves `/api/v1/ai`, the Intelligence module (ADR-2630). Its command-palette intent router needs no
+model. Agent tasks call one only when a provider is configured: `Intelligence__Anthropic__ApiKey` (or
+`ANTHROPIC_API_KEY`) for Anthropic, or `Intelligence__FakeProvider=true` for deterministic answers in Development; see
+[ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md#intelligence-module).
 
 ## 5. Database tasks
 

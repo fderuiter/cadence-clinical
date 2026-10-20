@@ -98,7 +98,6 @@ SERVICES=(
     "fileshare"
     "imaging"
     "knowledge"
-    "ai_gateway"
 )
 
 for SVC in "${SERVICES[@]}"; do
@@ -107,9 +106,6 @@ for SVC in "${SERVICES[@]}"; do
 
     # Capitalize first letter for C# project naming
     CAP_NAME="$(tr '[:lower:]' '[:upper:]' <<< "${SVC:0:1}")${SVC:1}"
-    if [ "$SVC" == "ai_gateway" ]; then
-        CAP_NAME="AiGateway"
-    fi
 
     CSPROJ_FILE="$SRC_DIR/Cadence.Apps.$CAP_NAME.csproj"
     if [ ! -f "$CSPROJ_FILE" ]; then
@@ -164,9 +160,6 @@ dotnet sln Cadence.sln add packages/ddf/src/Cadence.Ddf.csproj --solution-folder
 # Add services
 for SVC in "${SERVICES[@]}"; do
     CAP_NAME="$(tr '[:lower:]' '[:upper:]' <<< "${SVC:0:1}")${SVC:1}"
-    if [ "$SVC" == "ai_gateway" ]; then
-        CAP_NAME="AiGateway"
-    fi
     CSPROJ_FILE="apps/$SVC/src/Cadence.Apps.$CAP_NAME.csproj"
     if [ -f "$CSPROJ_FILE" ]; then
         dotnet sln Cadence.sln add "$CSPROJ_FILE" --solution-folder Apps || true

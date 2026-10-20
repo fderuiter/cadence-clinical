@@ -34,7 +34,6 @@
     <ProjectReference Include="..\..\imaging\src\Cadence.Apps.Imaging.csproj" />
     <ProjectReference Include="..\..\knowledge\src\Cadence.Apps.Knowledge.csproj" />
     <ProjectReference Include="..\..\payments\src\Cadence.Apps.Payments.csproj" />
-    <ProjectReference Include="..\..\ai_gateway\src\Cadence.Apps.AiGateway.csproj" />
     <ProjectReference Include="..\..\kernel-api\src\Cadence.Kernel.Host.csproj" />
   </ItemGroup>
 

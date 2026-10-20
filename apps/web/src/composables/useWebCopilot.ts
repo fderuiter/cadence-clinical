@@ -21,6 +21,21 @@ export interface IntentRouteResponse {
   recommendations: IntentRecommendation[];
 }
 
+/** The kernel host's JSON is snake_case (`target_route`); the palette reads camelCase. */
+function fromWire(r: any): IntentRecommendation {
+  return {
+    id: r.id,
+    name: r.name,
+    description: r.description,
+    category: r.category || "[Suggested]",
+    icon: r.icon || "🤖",
+    targetRoute: r.target_route,
+    action: r.action ?? undefined,
+    confidence: r.confidence ?? 1.0,
+    roles: r.roles || [],
+  };
+}
+
 export function useWebCopilot() {
   const recommendations = ref<IntentRecommendation[]>([]);
   const loading = ref(false);
@@ -49,29 +64,16 @@ export function useWebCopilot() {
       });
 
       if (response && Array.isArray(response.recommendations)) {
-        recommendations.value = response.recommendations;
-        return response.recommendations;
-      } else if (response && Array.isArray(response.Recommendations)) {
-        recommendations.value = response.Recommendations.map((r: any) => ({
-          id: r.id || r.Id,
-          name: r.name || r.Name,
-          description: r.description || r.Description,
-          category: r.category || r.Category || "[Suggested]",
-          icon: r.icon || r.Icon || "🤖",
-          targetRoute: r.targetRoute || r.TargetRoute,
-          action: r.action || r.Action,
-          confidence: r.confidence ?? r.Confidence ?? 1.0,
-          roles: r.roles || r.Roles || [],
-        }));
+        recommendations.value = response.recommendations.map(fromWire);
         return recommendations.value;
       }
 
       recommendations.value = [];
       return [];
     } catch (err: any) {
-      // Fallback: AI Gateway error falls back gracefully to static filtering without UI errors
+      // A failed request falls back to the palette's local search without a UI error.
       console.warn(
-        "AI Gateway intent routing request failed, falling back to local search:",
+        "Intent routing request failed, falling back to local search:",
         err?.message || err
       );
       error.value = err?.message || "Failed to fetch intent recommendations";

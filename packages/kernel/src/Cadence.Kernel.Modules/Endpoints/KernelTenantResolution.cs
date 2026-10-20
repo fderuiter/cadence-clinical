@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 using Microsoft.AspNetCore.Http;
 
-namespace Cadence.Kernel.Api;
+namespace Cadence.Kernel.Modules;
 
 /// <summary>
 /// Finds the kernel tenant a request acts in, from the caller's verified claims (K-ID-2). The host implements it; the

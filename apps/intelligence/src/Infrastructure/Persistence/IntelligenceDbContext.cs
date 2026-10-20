@@ -1,0 +1,100 @@
+using Cadence.Kernel;
+using Cadence.Kernel.Modules;
+using Cadence.Modules.Intelligence.Domain;
+
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Design;
+
+namespace Cadence.Modules.Intelligence.Infrastructure.Persistence;
+
+/// <summary>
+/// The Intelligence module's records in its own schema (ADR-2600): the interaction ledger and the agent controls. Its
+/// audited rows are written only by the module's commands through the kernel pipeline; reads go through a tenant-scoped
+/// context (<see cref="IModuleTenantContextFactory{TContext}"/>) under Row-Level Security.
+/// </summary>
+/// <param name="options">Options from the command store, the tenant context factory or the migrator.</param>
+public sealed class IntelligenceDbContext(DbContextOptions<IntelligenceDbContext> options) : ModuleDbContext(options)
+{
+    /// <summary>The module's name in the composition host.</summary>
+    public const string Module = "intelligence";
+
+    /// <summary>The module's schema.</summary>
+    public const string Schema = "intelligence";
+
+    /// <summary>The interaction ledger's table.</summary>
+    public const string AgentRunsTable = "agent_runs";
+
+    /// <summary>The agent controls' table.</summary>
+    public const string AgentControlsTable = "agent_controls";
+
+    /// <summary>The interaction ledger.</summary>
+    public DbSet<AgentRun> AgentRuns => Set<AgentRun>();
+
+    /// <summary>The kill switches and budgets.</summary>
+    public DbSet<AgentControl> AgentControls => Set<AgentControl>();
+
+    /// <inheritdoc />
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.HasDefaultSchema(Schema);
+        modelBuilder.Entity<AgentRun>(run =>
+        {
+            run.ToTable(AgentRunsTable);
+            run.HasKey(r => r.Id);
+            run.Property(r => r.Id).HasColumnName("id").ValueGeneratedNever();
+            run.Property(r => r.TenantId).HasColumnName("tenant_id").HasConversion(t => t.Value, v => new TenantId(v));
+            run.Property(r => r.TaskKey).HasColumnName("task_key").HasMaxLength(96).IsRequired();
+            run.Property(r => r.TaskVersion).HasColumnName("task_version");
+            run.Property(r => r.ConfigurationHash).HasColumnName("configuration_hash").HasMaxLength(64).IsRequired();
+            run.Property(r => r.Provider).HasColumnName("provider").HasMaxLength(64).IsRequired();
+            run.Property(r => r.Model).HasColumnName("model").HasMaxLength(200).IsRequired();
+            run.Property(r => r.RequestedBy).HasColumnName("requested_by").HasMaxLength(255).IsRequired();
+            // text, not jsonb: jsonb rewrites the JSON, and the entry must read back exactly as it was hashed.
+            run.Property(r => r.RequestJson).HasColumnName("request_json").IsRequired();
+            run.Property(r => r.StartedAt).HasColumnName("started_at");
+            run.Property(r => r.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(16);
+            run.Property(r => r.ResponseText).HasColumnName("response_text");
+            run.Property(r => r.FailureReason).HasColumnName("failure_reason").HasMaxLength(2000);
+            run.Property(r => r.InputTokens).HasColumnName("input_tokens");
+            run.Property(r => r.OutputTokens).HasColumnName("output_tokens");
+            run.Property(r => r.CostUsd).HasColumnName("cost_usd").HasPrecision(18, 6);
+            run.Property(r => r.CompletedAt).HasColumnName("completed_at");
+            run.Property(r => r.ContentHash).HasColumnName("content_hash").HasMaxLength(64);
+            run.HasCommandAuditColumns();
+            run.Property(r => r.CreatedAt).HasColumnName("created_at");
+            run.Property(r => r.CreatedBy).HasColumnName("created_by");
+            run.Property(r => r.ReasonForChange).HasColumnName("reason_for_change");
+            run.Property(r => r.VersionIndex).HasColumnName("version_index");
+            run.HasIndex(r => new { r.TenantId, r.RequestedBy, r.StartedAt }).HasDatabaseName("ix_agent_runs_requester");
+            run.HasIndex(r => new { r.TenantId, r.TaskKey, r.StartedAt }).HasDatabaseName("ix_agent_runs_task");
+        });
+
+        modelBuilder.Entity<AgentControl>(control =>
+        {
+            control.ToTable(AgentControlsTable);
+            control.HasKey(c => c.Id);
+            control.Property(c => c.Id).HasColumnName("id").ValueGeneratedNever();
+            control.Property(c => c.TenantId).HasColumnName("tenant_id").HasConversion(t => t.Value, v => new TenantId(v));
+            control.Property(c => c.Scope).HasColumnName("scope").HasMaxLength(96).IsRequired();
+            control.Property(c => c.Enabled).HasColumnName("enabled");
+            control.Property(c => c.MonthlyTokenLimit).HasColumnName("monthly_token_limit");
+            control.HasCommandAuditColumns();
+            control.Property(c => c.CreatedAt).HasColumnName("created_at");
+            control.Property(c => c.CreatedBy).HasColumnName("created_by");
+            control.Property(c => c.ReasonForChange).HasColumnName("reason_for_change");
+            control.Property(c => c.VersionIndex).HasColumnName("version_index");
+            control.HasIndex(c => new { c.TenantId, c.Scope }).IsUnique().HasDatabaseName("ux_agent_controls_scope");
+        });
+    }
+}
+
+/// <summary>Builds the context for <c>dotnet ef</c>; the connection string is only used to pick the provider.</summary>
+internal sealed class IntelligenceDbContextDesignTimeFactory : IDesignTimeDbContextFactory<IntelligenceDbContext>
+{
+    public IntelligenceDbContext CreateDbContext(string[] args) =>
+        new(new DbContextOptionsBuilder<IntelligenceDbContext>()
+            .UseNpgsql(
+                "Host=localhost;Database=cadence_design",
+                npgsql => npgsql.MigrationsHistoryTable(ModuleMigrationServiceCollectionExtensions.MigrationsHistoryTable, IntelligenceDbContext.Schema))
+            .Options);
+}

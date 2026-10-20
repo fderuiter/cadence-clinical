@@ -105,7 +105,6 @@ function getApiSidebarGroups() {
       items: [
         { text: "Designer / USDM (8001)", link: "/api/designer" },
         { text: "Knowledge & SOPs (8015)", link: "/api/knowledge" },
-        { text: "AI Gateway (8017)", link: "/api/ai_gateway" },
       ],
     },
     {

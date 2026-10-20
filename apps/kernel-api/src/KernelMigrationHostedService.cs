@@ -1,7 +1,9 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Database;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.Persistence;
 
 using Microsoft.Extensions.Configuration;
@@ -12,7 +14,8 @@ using Microsoft.Extensions.Logging;
 namespace Cadence.Kernel.Host;
 
 /// <summary>
-/// Applies the kernel migrations before the host serves traffic when <c>Database:MigrateOnStartup</c> or
+/// Applies the kernel migrations, then each registered module's (<see cref="ModuleMigrationRegistration"/>, in
+/// registration order), before the host serves traffic when <c>Database:MigrateOnStartup</c> or
 /// <c>Database:MigrateOnly</c> is set, like every other service (<see cref="CadenceMigrationOptions"/>). Only for stacks
 /// whose connection string is the schema owner (local development, a deployment job): a host that connects as the
 /// application role leaves both settings off and has its migrations applied separately (ADR-2250).
@@ -20,6 +23,7 @@ namespace Cadence.Kernel.Host;
 internal sealed partial class KernelMigrationHostedService(
     string connectionString,
     CadenceMigrationOptions options,
+    IEnumerable<ModuleMigrationRegistration> modules,
     IHostApplicationLifetime lifetime,
     ILogger<KernelMigrationHostedService> logger) : IHostedLifecycleService
 {
@@ -27,6 +31,11 @@ internal sealed partial class KernelMigrationHostedService(
     {
         LogApplying(logger);
         await KernelDatabase.MigrateAsync(connectionString, cancellationToken).ConfigureAwait(false);
+        foreach (var module in modules)
+        {
+            LogApplyingModule(logger, module.Module, module.Schema);
+            await module.MigrateAsync(connectionString, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
@@ -58,6 +67,7 @@ internal sealed partial class KernelMigrationHostedService(
             services.AddHostedService(sp => new KernelMigrationHostedService(
                 connectionString,
                 options,
+                sp.GetServices<ModuleMigrationRegistration>(),
                 sp.GetRequiredService<IHostApplicationLifetime>(),
                 sp.GetRequiredService<ILogger<KernelMigrationHostedService>>()));
         }
@@ -66,6 +76,9 @@ internal sealed partial class KernelMigrationHostedService(
     [LoggerMessage(EventId = 2540, Level = LogLevel.Information, Message = "Applying the kernel migrations")]
     private static partial void LogApplying(ILogger logger);
 
-    [LoggerMessage(EventId = 2541, Level = LogLevel.Information, Message = "The kernel migrations are up to date; stopping because Database:MigrateOnly is set")]
+    [LoggerMessage(EventId = 2549, Level = LogLevel.Information, Message = "Applying the {Module} module migrations to schema {Schema}")]
+    private static partial void LogApplyingModule(ILogger logger, string module, string schema);
+
+    [LoggerMessage(EventId = 2541, Level = LogLevel.Information, Message = "The kernel and module migrations are up to date; stopping because Database:MigrateOnly is set")]
     private static partial void LogMigrateOnlyComplete(ILogger logger);
 }

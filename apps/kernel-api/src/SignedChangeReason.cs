@@ -1,4 +1,5 @@
 using Cadence.Kernel.Api;
+using Cadence.Kernel.Modules;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
 

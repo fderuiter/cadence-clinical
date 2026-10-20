@@ -1,4 +1,3 @@
-extern alias aigateway;
 extern alias ctms;
 extern alias designer;
 extern alias econsent;
@@ -75,7 +74,6 @@ public static class Program
 
         var services = new List<DotnetServiceRegistration>
         {
-            new("ai_gateway", "AiGateway_", typeof(aigateway::Cadence.Apps.AiGateway.Program), Path.Combine(repoRoot, "apps", "ai_gateway", "src")),
             new("ctms", "Ctms_", typeof(ctms::Cadence.Apps.Ctms.Program), Path.Combine(repoRoot, "apps", "ctms", "src")),
             new("econsent", "Econsent_", typeof(econsent::Cadence.Apps.Econsent.Program), Path.Combine(repoRoot, "apps", "econsent", "src")),
             new("eisf", "Eisf_", typeof(eisf::Cadence.Apps.Eisf.Program), Path.Combine(repoRoot, "apps", "eisf", "src")),

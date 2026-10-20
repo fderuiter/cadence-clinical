@@ -22,7 +22,7 @@ describe("useWebCopilot composable", () => {
     expect(apiClient.post).not.toHaveBeenCalled();
   });
 
-  it("fetches intent recommendations from AI Gateway endpoint", async () => {
+  it("maps the kernel host's snake_case recommendations", async () => {
     const mockRecommendations = [
       {
         id: "ai-intent-log-ae-101",
@@ -31,7 +31,7 @@ describe("useWebCopilot composable", () => {
           "Directly navigate to eCRF data entry for subject SUBJ-101",
         category: "[Suggested]",
         icon: "🩺",
-        targetRoute: "/ecrf?subjectId=SUBJ-101&action=log_ae",
+        target_route: "/ecrf?subjectId=SUBJ-101&action=log_ae",
         action: "log_ae",
         confidence: 0.98,
         roles: ["site_investigator", "crc"],
@@ -42,6 +42,8 @@ describe("useWebCopilot composable", () => {
       query: "log adverse event for subject 101",
       recommendations: mockRecommendations,
     });
+    const { target_route, ...rest } = mockRecommendations[0];
+    const expected = [{ ...rest, targetRoute: target_route }];
 
     const { fetchIntentRecommendations, recommendations, loading, error } =
       useWebCopilot();
@@ -54,8 +56,8 @@ describe("useWebCopilot composable", () => {
       query: "log adverse event for subject 101",
       context: undefined,
     });
-    expect(res).toEqual(mockRecommendations);
-    expect(recommendations.value).toEqual(mockRecommendations);
+    expect(res).toEqual(expected);
+    expect(recommendations.value).toEqual(expected);
     expect(loading.value).toBe(false);
     expect(error.value).toBeNull();
   });
