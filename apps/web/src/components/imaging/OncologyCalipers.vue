@@ -21,16 +21,6 @@
 
         <button
           type="button"
-          class="tool-select-btn btn-ai-segment"
-          :class="{ active: currentTool === 'AI_AUTO_SEGMENT' }"
-          @click="selectTool('AI_AUTO_SEGMENT')"
-        >
-          <span class="tool-icon">🤖</span>
-          <span class="tool-name">AI Auto-Segment</span>
-        </button>
-
-        <button
-          type="button"
           class="tool-select-btn"
           :class="{ active: currentTool === 'CALIPER_1D' }"
           @click="selectTool('CALIPER_1D')"

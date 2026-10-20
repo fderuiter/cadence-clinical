@@ -27,7 +27,7 @@ refuses every `Execute` and `Approve` verb to an `agent:` actor (ADR-2489, K033)
   shown to be fit for the task (#5385).
 - An approved proposal cannot be executed from its approval (K-AI-2 is not built).
 - Nothing stops an agent from stating a value it never read. A scaffold imaging feature fabricated measurements
-  (#5422, fixed by #5447 under #5426).
+  (#5422; #5447 fixed its study scope, identities and clock, and #5426 removes the fabricated measurements).
 - PRD-SYS-051 still describes a separate microservice and a `DRAFT_AI` state on regulated records.
 
 This ADR decides how agents are built, run and governed across the platform, and where each regulatory control lives.
