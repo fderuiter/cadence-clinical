@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -74,16 +73,6 @@ internal static class DevelopmentDemoData
         ("auditor.lead", "d43095eb-1912-40dd-a528-fa04335a2342", "DEMO_AUDITOR", null),
     ];
 
-    /// <summary>
-    /// The tenant-wide AI roles (ADR-2630): every realm user may run an agent task, and the data manager also sets the
-    /// kill switches and budgets. Agent runs are authorized on the tenant, so a study grant does not cover them.
-    /// </summary>
-    internal static readonly (string Code, string Name, string[] Capabilities, string[] Users)[] AiRoles =
-    [
-        ("DEMO_AI_USER", "AI assistant user", ["agent_run.record"], [.. Users.Select(u => u.Username)]),
-        ("DEMO_AI_ADMIN", "AI controls administrator", ["agent_control.set"], ["dm.lead"]),
-    ];
-
     /// <summary>The capabilities the bootstrap grants itself, tenant-wide, to write the demo study.</summary>
     private static readonly string[] SeederCapabilities =
         ["organization.register", "study.register", "site.register", "study_site.link", "participant.register", "participant.screen"];
@@ -144,20 +133,6 @@ internal static class DevelopmentDemoData
             await seeder.SendAsync(
                 new IssueGrant(tenant, ids.Grant(username), Actor.Person(subject), null, roles[role], scope, Epoch, null, false, Key($"grant:{username}"), Reason),
                 cancellationToken).ConfigureAwait(false);
-        }
-
-        foreach (var (code, name, capabilities, users) in AiRoles)
-        {
-            var aiRole = await seeder.SendAsync(
-                new DefineRole(tenant, ids.Role(code), code, name, capabilities, Key($"role:{code}"), Reason), cancellationToken).ConfigureAwait(false);
-            foreach (var username in users)
-            {
-                var subject = Users.Single(u => u.Username == username).Subject;
-                var grant = $"{code}:{username}";
-                await seeder.SendAsync(
-                    new IssueGrant(tenant, ids.Grant(grant), Actor.Person(subject), null, aiRole.RoleId, AuthorityScope.Tenant(), Epoch, null, false, Key($"grant:{grant}"), Reason),
-                    cancellationToken).ConfigureAwait(false);
-            }
         }
     }
 

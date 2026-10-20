@@ -49,6 +49,11 @@ public sealed class RouteAuthorizationTests
     [
         ("kernel", "/api/v1/kernel/*", "The kernel authorizes each object from the caller's grants: reads mask what they do not cover, commands go through the authority evaluator."),
         ("kernel", "POST /api/v1/ai/intent/route", "Matches fixed patterns, reads and writes no record, and filters recommendations by the caller's signed roles."),
+        ("kernel", "GET /api/v1/ai/runs", "Lists only the caller's own agent runs (requested_by is the signed subject), under the tenant's Row-Level Security."),
+        ("kernel", "GET /api/v1/ai/runs/{runId:guid}", "Answers only the caller's own agent run; another person's is 404."),
+        ("kernel", "GET /api/v1/ai/tasks", "The registered task configurations: code-defined, tenant-independent and holding no clinical record."),
+        ("kernel", "GET /api/v1/ai/controls", "The tenant's AI kill switches and budgets, which every member may see so they know whether an assistant is off."),
+        ("kernel", "PUT /api/v1/ai/controls/{scope}", "Sends SetAgentControl, which the kernel authority evaluator authorizes against agent_control.set (ADR-2630)."),
     ];
 
     private const string ProbeHeader = "X-Authorization-Probe";
