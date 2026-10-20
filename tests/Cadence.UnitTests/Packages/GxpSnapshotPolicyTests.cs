@@ -161,6 +161,45 @@ public sealed class GxpSnapshotPolicyTests : IDisposable
         GxpSnapshotGuardService.Check(_dir, preCommit: true, snapshotMode: true).Should().Be(0);
     }
 
+    /// <summary>
+    /// Regression: merging main into a branch after the integration owner took a snapshot staged main's new reports, and
+    /// the guard refused the merge commit. A report identical to main's is the baseline's, not the branch's.
+    /// </summary>
+    [Fact]
+    public void Check_AdmitsMainsSnapshotMergedIntoABranch_ButNotABranchsOwnEdit()
+    {
+        WriteRequirements();
+        WriteTaggedTest("First", "PRD-AAA-001");
+        RtmGeneratorService.GenerateRtm(draft: true, repoRoot: _dir).Should().Be(0);
+        Git("init", "-q", "-b", "main");
+        Git("add", "-A");
+        Git("commit", "-q", "-m", "baseline snapshot");
+
+        Git("checkout", "-q", "-b", "feature");
+        File.WriteAllText(Path.Combine(_dir, "tests", "Notes.txt"), "branch work\n");
+        Git("add", "-A");
+        Git("commit", "-q", "-m", "branch work");
+
+        Git("checkout", "-q", "main");
+        WriteTaggedTest("Second", "PRD-AAA-002");
+        RtmGeneratorService.GenerateRtm(draft: true, repoRoot: _dir).Should().Be(0);
+        Git("add", "-A");
+        Git("commit", "-q", "-m", "new snapshot");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+
+        Git("checkout", "-q", "feature");
+        Git("merge", "-q", "--no-commit", "--no-ff", "main");
+        GxpSnapshotGuardService.Check(_dir, preCommit: true, snapshotMode: false).Should().Be(0, "the staged reports are main's");
+        Git("commit", "-q", "--no-edit");
+        GxpSnapshotGuardService.Check(_dir, preCommit: false, snapshotMode: false).Should().Be(0);
+
+        string rtm = Path.Combine(_dir, "docs", "SDLC", "Requirements_Traceability_Matrix.md");
+        File.AppendAllText(rtm, "\nedited on the branch\n");
+        Git("add", "-A");
+        GxpSnapshotGuardService.Check(_dir, preCommit: true, snapshotMode: false).Should().Be(1);
+        GxpSnapshotGuardService.Check(_dir, preCommit: false, snapshotMode: false).Should().Be(1);
+    }
+
     private void WriteRequirements()
     {
         Directory.CreateDirectory(Path.Combine(_dir, "docs", "SDLC"));

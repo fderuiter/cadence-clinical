@@ -20,7 +20,8 @@ public static class GxpSnapshotGuardService
 
     /// <summary>
     /// Checks the staged files (<paramref name="preCommit"/>) or everything the branch changed since it left
-    /// <paramref name="baseRef"/>, including uncommitted changes. Returns 0 when no snapshot path changed or snapshot mode
+    /// <paramref name="baseRef"/>, including uncommitted changes, and counts only the paths whose content differs from
+    /// <paramref name="baseRef"/>, so merging main's snapshot into a branch passes. Returns 0 when no snapshot path changed or snapshot mode
     /// is on, and 1 otherwise. Outside the pre-commit hook, snapshot mode instead compares the regenerated documents with
     /// the snapshot (<see cref="GxpDocsDiffService.Compare"/>).
     /// </summary>
@@ -51,6 +52,17 @@ public static class GxpSnapshotGuardService
             {
                 Console.WriteLine($"[GXP SNAPSHOT] {baseRef} not found; checking uncommitted changes only.");
             }
+        }
+
+        // A path whose content is exactly main's is the baseline's snapshot coming in, for example when the branch merges
+        // main after the integration owner took a snapshot: only a copy that differs from the base is a branch's own change.
+        var differsFromBase = preCommit
+            ? Git(repoRoot, "diff", "--cached", "--name-only", baseRef)
+            : Git(repoRoot, "diff", "--name-only", baseRef);
+        if (differsFromBase is not null)
+        {
+            var differing = new HashSet<string>(differsFromBase, StringComparer.Ordinal);
+            changed = [.. changed.Where(differing.Contains)];
         }
 
         return Evaluate(changed, snapshot, preCommit ? "staged" : $"changed since {baseRef}");
