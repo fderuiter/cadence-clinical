@@ -6,7 +6,6 @@ namespace Cadence.Apps.Execution.Application.Queries;
 /// <summary>
 /// Ingestion DTO for batch answering open or reopened clinical queries.
 /// @req:PRD-SYS-007
-/// @req:PRD-SYS-053
 /// @req:SRS-EDC-004
 /// </summary>
 public sealed record BatchQueryRespondRequest(

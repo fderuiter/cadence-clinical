@@ -7,7 +7,6 @@ namespace Cadence.Apps.Tickets.Infrastructure.Persistence;
 
 /// <summary>
 /// Design-time-only factory that lets the <c>dotnet ef</c> CLI construct a <see cref="TicketsDbContext"/>.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class TicketsDbContextFactory : IDesignTimeDbContextFactory<TicketsDbContext>
 {

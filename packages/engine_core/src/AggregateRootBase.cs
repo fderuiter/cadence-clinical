@@ -3,7 +3,6 @@ namespace Cadence.Core.Domain;
 /// <summary>
 /// Non-generic base carrying the 21 CFR Part 11 audit fields shared by every <see cref="AggregateRoot{TId}"/>,
 /// letting infrastructure (e.g. <c>GxPAuditInterceptor</c>) pattern-match any aggregate regardless of its TId.
-/// @req:PRD-SYS-053
 /// </summary>
 public abstract class AggregateRootBase : IGxPAuditable
 {

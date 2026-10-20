@@ -34,7 +34,6 @@ internal sealed record OutboxRelayResult(int Dispatched, int Failed, bool MoreDu
 /// messages, in the same pass and until the failed one is retried. One relay per deployment keeps each tenant's order
 /// exactly; several relays stay correct but may interleave. The relay changes only delivery bookkeeping
 /// (<c>dispatched_at</c>, <c>attempts</c>, <c>next_attempt_at</c>, <c>last_error</c>), never kernel truth.
-/// @req:PRD-SYS-053
 /// </remarks>
 internal sealed partial class KernelOutboxRelay(
     KernelTenantDbContextFactory contextFactory,

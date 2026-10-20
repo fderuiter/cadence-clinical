@@ -38,7 +38,6 @@ namespace Cadence.UnitTests.Gateway;
 /// <summary>
 /// The gateway's e-signature step-up endpoint: a signed-in user re-enters their password and gets a
 /// single-use token for one action, which a signature-gated service then accepts.
-/// @req:SRS-SYS-005
 /// </summary>
 public sealed class SignatureTokenEndpointTests(SignatureTokenEndpointTests.Fixture fixture)
     : IClassFixture<SignatureTokenEndpointTests.Fixture>

@@ -64,7 +64,7 @@ public class RequirementTagScannerTests
     }
 
     [Fact]
-    public void ScanSource_CollectsIdsFromAttributesTraitsAndMethodDocComments()
+    public void ScanSource_CollectsIdsFromAttributesAndMethodDocComments()
     {
         var tests = RequirementTagScanner.ScanSource(Source(
             "namespace Sample;",
@@ -75,7 +75,7 @@ public class RequirementTagScannerTests
             "    /// </summary>",
             "    [Fact]",
             "    [GxPRequirement(\"PRD-BBB-001\", \"PRD-BBB-002\")]",
-            "    [Trait(\"Requirement\", \"SRS-CCC-001\")]",
+            "    [GxPRequirement(\"SRS-CCC-001\")]",
             "    public void Many()",
             "    {",
             // Split so the pre-commit requirement sanitizer, which rewrites staged tags, leaves the sample alone.
@@ -126,6 +126,114 @@ public class RequirementTagScannerTests
             "}"), "tests/Tricky.cs");
 
         tests.Should().ContainSingle().Which.FullName.Should().Be("Sample.Tricky.Real");
+    }
+
+    [Fact]
+    public void Scan_ReportsAnAtReqLineOnAClassAsAViolation()
+    {
+        var scan = RequirementTagScanner.Scan(Source(
+            "namespace Sample;",
+            "/// <summary>Suite.",
+            "/// @" + "req:PRD-AAA-001",
+            "/// </summary>",
+            "public class Suite",
+            "{",
+            "    [Fact]",
+            "    public void Untagged() { }",
+            "}"), "tests/Suite.cs");
+
+        scan.Tests.Should().ContainSingle().Which.RequirementIds.Should().BeEmpty();
+        var violation = scan.Violations.Should().ContainSingle().Subject;
+        violation.Line.Should().Be(5);
+        violation.Message.Should().Contain("Suite").And.Contain("PRD-AAA-001").And.Contain("on the type");
+    }
+
+    [Fact]
+    public void Scan_ReportsAGxPRequirementAttributeOnANestedRecordAsAViolation()
+    {
+        var scan = RequirementTagScanner.Scan(Source(
+            "namespace Sample;",
+            "public class Outer",
+            "{",
+            "    [GxPRequirement(\"PRD-AAA-001\")]",
+            "    private sealed record Helper(int Value)",
+            "    {",
+            "    }",
+            "}"), "tests/Outer.cs");
+
+        scan.Violations.Should().ContainSingle().Which.Message.Should().Contain("Helper declares PRD-AAA-001 on the type");
+    }
+
+    [Fact]
+    public void Scan_ReportsATraitRequirementAsAnUnsupportedFormAndDoesNotCountIt()
+    {
+        var scan = RequirementTagScanner.Scan(Source(
+            "namespace Sample;",
+            "public class Traited",
+            "{",
+            "    [Fact]",
+            "    [Trait(\"Category\", \"GxP_OQ\")]",
+            "    [Trait( \"Requirement\", \"PRD-AAA-001\")]",
+            "    public void Old() { }",
+            "}"), "tests/Traited.cs");
+
+        scan.Tests.Should().ContainSingle().Which.RequirementIds.Should().BeEmpty("a Trait is not a requirement tag");
+        var violation = scan.Violations.Should().ContainSingle().Subject;
+        violation.Line.Should().Be(6);
+        violation.Message.Should().Contain("not a supported requirement tag");
+    }
+
+    [Theory]
+    [InlineData("tests/Cadence.UnitTests/Interop/StatisticalComputingEnvironmentTests.cs", true)]
+    [InlineData("tests/Cadence.UnitTests/Packages/RtmGeneratorServiceTests.cs", true)]
+    [InlineData("tests/Cadence.UnitTests/Hooks/AgentHookGuardTests.cs", true)]
+    [InlineData("apps/cli/Packages/AgentHookGuardTests.cs", true)]
+    [InlineData("tests/Cadence.UnitTests/Packages/AgentHookGuardTests.cs", false)]
+    [InlineData("tests/Cadence.UnitTests/Packages/AgentHookCommandsTests.cs", false)]
+    public void Scan_ReportsTheAgentHookRequirementOutsideAgentHookTests(string path, bool expectViolation)
+    {
+        var scan = RequirementTagScanner.Scan(Source(
+            "namespace Sample;",
+            "public class Hooks",
+            "{",
+            "    /// <summary>Blocks a destructive command.",
+            "    /// @" + "req:PRD-SYS-053",
+            "    /// </summary>",
+            "    [Fact]",
+            "    public void Blocks() { }",
+            "}"), path);
+
+        scan.Tests.Should().ContainSingle().Which.RequirementIds.Should().Equal("PRD-SYS-053");
+        if (expectViolation)
+        {
+            scan.Violations.Should().ContainSingle().Which.Message.Should().Contain("Blocks declares PRD-SYS-053");
+        }
+        else
+        {
+            scan.Violations.Should().BeEmpty();
+        }
+    }
+
+    [Fact]
+    public void Scan_AcceptsMethodLevelTagsAndIgnoresSampleSourcesInStrings()
+    {
+        var scan = RequirementTagScanner.Scan(Source(
+            "namespace Sample;",
+            "/// <summary>A suite with no requirement tag of its own.</summary>",
+            "public class Clean",
+            "{",
+            "    private const string Sample = \"[Trait(\\\"Requirement\\\", \\\"PRD-AAA-002\\\")]\";",
+            "",
+            "    /// <summary>Checks things.",
+            "    /// @" + "req:PRD-AAA-001",
+            "    /// </summary>",
+            "    [Fact]",
+            "    [GxPRequirement(\"PRD-AAA-001\")]",
+            "    public void Tagged() { }",
+            "}"), "tests/Clean.cs");
+
+        scan.Violations.Should().BeEmpty();
+        scan.Tests.Should().ContainSingle().Which.RequirementIds.Should().Equal("PRD-AAA-001");
     }
 
     [Fact]
@@ -554,6 +662,36 @@ public sealed class RtmGeneratorServiceTests : IDisposable
         GxPSigner.VerifyStamp(stamped.Replace("\n", "\r\n", StringComparison.Ordinal)).Should().BeTrue();
         GxPSigner.VerifyStamp(stamped.Replace("All requirements", "Most requirements", StringComparison.Ordinal)).Should().BeFalse();
         GxPSigner.VerifyStamp("# Report\n\nAll requirements qualified.\n").Should().BeFalse();
+    }
+
+    [Fact]
+    public void GenerateRtm_ValidateOnly_FailsOnAMisappliedRequirementTag()
+    {
+        WriteMinimalRepository();
+        RtmGeneratorService.GenerateRtm(validateOnly: true, reportPath: ".", repoRoot: _dir).Should().Be(0);
+
+        File.WriteAllText(Path.Combine(_dir, "tests", "SuiteTests.cs"), string.Join("\n",
+            "namespace Sample;",
+            "/// <summary>Suite.",
+            "/// @" + "req:PRD-AAA-001",
+            "/// </summary>",
+            "public class SuiteTests",
+            "{",
+            "    [Fact]",
+            "    public void Untagged() { }",
+            "}"));
+
+        RtmGeneratorService.GenerateRtm(validateOnly: true, reportPath: ".", repoRoot: _dir).Should().Be(1);
+    }
+
+    [Fact]
+    public void RepositoryTests_HaveNoMisappliedRequirementTags()
+    {
+        string repoRoot = Cadence.ToolingCore.OpenApi.OpenApiToolingService.FindRepoRoot();
+        var scan = RequirementTagScanner.ScanDirectoriesWithViolations(repoRoot, RtmGeneratorService.TestSearchDirs);
+
+        scan.Violations.Select(v => v.ToString()).Should().BeEmpty(
+            "requirement tags belong only on the test methods whose assertions prove them (see docs/TESTING.md)");
     }
 
     [Fact]

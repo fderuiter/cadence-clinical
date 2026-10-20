@@ -7,7 +7,6 @@ namespace Cadence.Apps.Notifications.Infrastructure.Persistence;
 
 /// <summary>
 /// Design-time-only factory that lets the <c>dotnet ef</c> CLI construct a <see cref="NotificationsDbContext"/>.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class NotificationsDbContextFactory : IDesignTimeDbContextFactory<NotificationsDbContext>
 {

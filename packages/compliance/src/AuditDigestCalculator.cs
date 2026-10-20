@@ -5,7 +5,6 @@ namespace Cadence.Compliance;
 /// <see cref="Cadence.Security.Audit.AuditDigestCalculator"/> so the canonical payload and the HMAC key
 /// (<see cref="Cadence.Security.Audit.AuditSecretKey"/>, no hardcoded fallback) are identical for every
 /// producer and verifier.
-/// @req:PRD-SYS-053
 /// </summary>
 public static class AuditDigestCalculator
 {

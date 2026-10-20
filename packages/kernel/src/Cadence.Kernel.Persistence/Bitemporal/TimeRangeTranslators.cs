@@ -19,7 +19,6 @@ namespace Cadence.Kernel.Persistence.Bitemporal;
 /// <c>AsOf</c> query runs in the database and can use the GiST index (ADR-2246): <c>Contains</c> → <c>@&gt;</c>,
 /// <c>Overlaps</c> → <c>&amp;&amp;</c>, <c>Start</c> → <c>lower()</c>, <c>End</c> → <c>upper()</c>,
 /// <c>IsOpen</c> → <c>upper_inf()</c>.
-/// @req:PRD-SYS-053
 /// </summary>
 internal sealed class TimeRangeTranslator(ISqlExpressionFactory sqlExpressionFactory, IRelationalTypeMappingSource typeMappingSource)
     : IMethodCallTranslator, IMemberTranslator

@@ -97,7 +97,6 @@ public class EconsentReconsentConsumerTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public async Task Consume_DuplicateEconsentReconsentRequired_IsIdempotent()
     {
         var ct = TestContext.Current.CancellationToken;

@@ -14,7 +14,6 @@ namespace Cadence.Database;
 
 /// <summary>
 /// EF Core SaveChangesInterceptor enforcing 21 CFR Part 11 immutable audit trail fields and Merkle block hashing.
-/// @req:PRD-SYS-053
 /// </summary>
 public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock) : SaveChangesInterceptor
 {

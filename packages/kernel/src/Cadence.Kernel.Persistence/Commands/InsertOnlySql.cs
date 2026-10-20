@@ -8,7 +8,6 @@ namespace Cadence.Kernel.Persistence.Commands;
 /// DDL that makes the audit, event, provenance and idempotency tables insert-only in PostgreSQL itself (spec §5.3
 /// item 2): a trigger rejects every <c>UPDATE</c>, <c>DELETE</c> and <c>TRUNCATE</c> with SQLSTATE
 /// <see cref="ViolationSqlState"/>, whoever the database user is.
-/// @req:PRD-SYS-053
 /// </summary>
 internal static class InsertOnlySql
 {

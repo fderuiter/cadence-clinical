@@ -19,8 +19,6 @@ namespace Cadence.UnitTests.Execution.Forms;
 
 /// <summary>
 /// Unit test coverage for subject active protocol version resolution and validation during form submission creation.
-/// @req:PRD-SYS-001
-/// @req:SRS-EDC-002
 /// </summary>
 public sealed class FormSubmissionProtocolVersionTests
 {

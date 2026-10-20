@@ -246,7 +246,6 @@ public class ConsentWithdrawal
 /// raw capture. The binding is SHA-256 over the UTF-8 bytes of
 /// <c>"cadence.econsent.signature-binding.v1\n" + documentDigestSha256 + "\n" + signatureData</c>, lowercase hex.
 /// Migration <c>ProtectSignerEmailAndBindSignatureData</c> computes the same value in SQL for existing rows.
-/// @req:PRD-SYS-053
 /// </summary>
 public static class ConsentSignatureBinding
 {

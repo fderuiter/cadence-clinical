@@ -23,7 +23,6 @@ namespace Cadence.UnitTests.Execution.Observations;
 /// <summary>
 /// An observation's valid time is when it was made, supplied by the caller or the form payload. It is never
 /// defaulted to the time the server records it (#4769, kernel §4.1 two clocks).
-/// @req:SRS-EDC-001
 /// </summary>
 public sealed class ObservationValidTimeTests
 {

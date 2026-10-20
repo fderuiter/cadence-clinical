@@ -9,7 +9,6 @@ namespace Cadence.Kernel;
 
 /// <summary>
 /// Strongly-typed UUIDv7 identifier for an Organization (Sponsor, CRO, Site institution, Vendor, Regulator, IRB/EC, Lab).
-/// @req:PRD-SYS-053
 /// </summary>
 [TypeConverter(typeof(OrganizationIdTypeConverter))]
 [JsonConverter(typeof(OrganizationIdJsonConverter))]

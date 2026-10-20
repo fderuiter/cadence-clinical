@@ -98,9 +98,7 @@ namespace Cadence.IntegrationTests.Execution;
 /// to 400" bug; a bare, non-<see cref="DomainError"/> exception keeps ASP.NET Core's ordinary 500.</description></item>
 /// </list>
 /// </para>
-/// @req:PRD-SUB-001
 /// </summary>
-[GxPRequirement("PRD-SUB-001")]
 [Trait("Category", "Integration")]
 public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionPostgresApiFactory>
 {

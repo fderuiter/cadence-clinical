@@ -14,7 +14,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 /// Native C# DbContext seeder for Execution microservice.
 /// Populates required GxP reference data and initial entities. It writes no audit entries: every audit
 /// chain entry must come from the audit writer or interceptor so its hashes verify.
-/// @req:PRD-SUB-001, PRD-SYS-053
+/// @req:PRD-SUB-001
 /// </summary>
 public static class ExecutionDbSeeder
 {

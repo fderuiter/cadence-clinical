@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Cadence.Kernel.Persistence.Migrations;
 
 /// <summary>
-/// Migration adding kernel.form_version_snapshots table (PRD-SYS-053).
+/// Migration adding kernel.form_version_snapshots table.
 /// Persists compiled USDM form version snapshots created on protocol version approval.
 /// </summary>
 public partial class AddFormVersionSnapshots : Migration

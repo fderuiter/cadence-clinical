@@ -5,7 +5,6 @@ namespace Cadence.Apps.Execution.Domain.Forms;
 /// <summary>
 /// Registry of published form schemas for studies and protocol versions.
 /// Serves as the execution engine's copy of kernel form version snapshots.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class PublishedFormVersionRegistry
 {

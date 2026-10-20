@@ -21,7 +21,6 @@ namespace Cadence.Apps.Execution.Endpoints;
 /// Gated by 21 CFR Part 11 step-up electronic signature verification.
 /// @req:PRD-CEC-001
 /// @req:PRD-CEC-002
-/// @req:PRD-SYS-053
 /// @req:PRD-SYS-124
 /// </summary>
 public static class CecEndpoints

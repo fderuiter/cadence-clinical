@@ -19,7 +19,6 @@ namespace Cadence.Apps.Execution.Application.Queries;
 /// Application service implementing automated query dispatch for rule check violations
 /// and auto-resolution/closure of open queries upon site data correction.
 /// @req:PRD-SYS-007
-/// @req:PRD-SYS-053
 /// @req:SRS-EDC-002
 /// @req:SRS-EDC-004
 /// </summary>

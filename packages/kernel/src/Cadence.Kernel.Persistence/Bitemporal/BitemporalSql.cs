@@ -13,7 +13,6 @@ namespace Cadence.Kernel.Persistence.Bitemporal;
 /// either order).</item>
 /// </list>
 /// Used from migrations through <see cref="BitemporalMigrationBuilderExtensions"/>.
-/// @req:PRD-SYS-053
 /// </summary>
 internal static class BitemporalSql
 {

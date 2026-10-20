@@ -4,7 +4,6 @@ namespace Cadence.Kernel.Domain.Entities;
 
 /// <summary>
 /// Root isolation and contractual boundary representing a Cadence customer.
-/// @req:PRD-SYS-053
 /// </summary>
 public class Tenant : AggregateRoot<TenantId>
 {

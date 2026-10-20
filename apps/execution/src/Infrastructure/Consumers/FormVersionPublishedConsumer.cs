@@ -15,7 +15,6 @@ namespace Cadence.Apps.Execution.Infrastructure.Consumers;
 /// <summary>
 /// MassTransit consumer for <see cref="FormVersionPublished"/> events.
 /// Upserts <see cref="PublishedFormVersionRegistry"/> entries idempotently upon protocol approval in Kernel.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class FormVersionPublishedConsumer(
     IPublishedFormVersionRegistryRepository repository,

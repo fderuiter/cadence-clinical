@@ -16,7 +16,6 @@ namespace Cadence.UnitTests.Execution.Forms;
 /// <summary>
 /// Golden master parity tests verifying eCRF form submission lifecycle states,
 /// 21 CFR Part 11 cryptographic signatures, and audited unlock transitions against Python EDC baseline.
-/// @req:SRS-EDC-003
 /// </summary>
 public sealed class FormSubmissionGoldenMasterTests
 {

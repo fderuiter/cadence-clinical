@@ -17,7 +17,6 @@ namespace Cadence.Apps.Execution.Endpoints;
 /// <summary>
 /// Minimal API route definitions for clinical discrepancy query lifecycle and workflow operations.
 /// @req:PRD-SYS-007
-/// @req:PRD-SYS-053
 /// @req:SRS-EDC-004
 /// </summary>
 public static class QueryEndpoints

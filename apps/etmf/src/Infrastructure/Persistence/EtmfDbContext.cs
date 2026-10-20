@@ -11,7 +11,6 @@ namespace Cadence.Apps.Etmf.Infrastructure.Persistence;
 
 /// <summary>
 /// EF Core 10 DbContext for eTMF microservice persistence gateway.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class EtmfDbContext(DbContextOptions<EtmfDbContext> options) : DbContext(options)
 {

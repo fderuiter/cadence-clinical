@@ -12,7 +12,6 @@ namespace Cadence.Apps.Execution.Domain.Queries;
 /// Aggregate root representing a clinical query for GxP data discrepancy tracking.
 /// Implements full 6-state discrepancy lifecycle (Candidate, Open, Answered, Resolved/Closed, Reopened, Cancelled).
 /// @req:PRD-SYS-007
-/// @req:PRD-SYS-053
 /// @req:SRS-EDC-004
 /// </summary>
 public sealed class ClinicalQuery : AggregateRoot<QueryId>

@@ -20,7 +20,6 @@ public enum ActorKind
 /// The resolved principal behind a kernel command. Every kernel write has one (K-TX-5): system work runs as a named
 /// service account whose id starts with <c>svc:</c> (ADR-2257), and anonymous or generic ids such as
 /// <c>system</c> are refused at construction.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed record Actor
 {

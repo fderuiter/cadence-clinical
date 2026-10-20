@@ -4,7 +4,6 @@ namespace Cadence.Kernel.Domain.Entities;
 
 /// <summary>
 /// Organization entity operating within a Tenant boundary.
-/// @req:PRD-SYS-053
 /// </summary>
 public class Organization : AggregateRoot<OrganizationId>
 {

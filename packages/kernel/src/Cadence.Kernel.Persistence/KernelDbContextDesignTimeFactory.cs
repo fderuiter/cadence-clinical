@@ -10,7 +10,6 @@ namespace Cadence.Kernel.Persistence;
 /// The connection string comes from <c>-- --connection "..."</c> or <c>POSTGRES_CONNECTION_STRING</c>; with
 /// neither set it throws instead of falling back to a hardcoded credential (ADR-2260). The kernel does not
 /// reference <c>Cadence.Database</c>, so this mirrors <c>CadenceDatabaseExtensions.ResolveDesignTimeConnectionString</c>.
-/// @req:PRD-SYS-053
 /// </summary>
 internal sealed class KernelDbContextDesignTimeFactory : IDesignTimeDbContextFactory<KernelDbContext>
 {

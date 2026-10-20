@@ -9,7 +9,6 @@ namespace Cadence.Kernel;
 
 /// <summary>
 /// Strongly-typed UUIDv7 identifier for a Participant (pseudonymous clinical trial subject across EDC, eCOA, RTSM).
-/// @req:PRD-SYS-053
 /// </summary>
 [TypeConverter(typeof(ParticipantIdTypeConverter))]
 [JsonConverter(typeof(ParticipantIdJsonConverter))]

@@ -18,7 +18,6 @@ namespace Cadence.Kernel.Persistence.Tenancy;
 /// The setting lasts for the connection lease rather than one transaction, because a command reads its aggregate
 /// before it opens its write transaction and EF Core runs those reads as separate statements. Each lease belongs to
 /// one context and so to one tenant. Npgsql also discards session state when a connection returns to its pool.
-/// @req:PRD-SYS-053
 /// </remarks>
 internal sealed class KernelTenantConnectionInterceptor : DbConnectionInterceptor
 {

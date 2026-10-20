@@ -34,7 +34,6 @@ internal sealed record SealResult(TenantId TenantId, SealOutcome Outcome, AuditC
 /// Periodic root sealing of the per-tenant audit chains (spec §5.3): verifies a chain end to end and, when it is
 /// intact and has grown, records a seal of its head. A seal is never written over a broken chain, and a broken chain
 /// is logged as critical. Runs as the named service account <see cref="SealerActorId"/> (K-TX-5).
-/// @req:PRD-SYS-053
 /// </summary>
 internal sealed partial class KernelAuditChainSealer(
     KernelTenantDbContextFactory contextFactory,

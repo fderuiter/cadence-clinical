@@ -11,7 +11,6 @@ namespace Cadence.Kernel.Persistence.Tenancy;
 /// <summary>
 /// Creates kernel contexts already bound to a tenant (K-ID-2). Kernel code creates contexts only through this
 /// factory: the command pipeline for the command's tenant, and system jobs for each tenant in turn.
-/// @req:PRD-SYS-053
 /// </summary>
 internal sealed class KernelTenantDbContextFactory(IDbContextFactory<KernelDbContext> contextFactory)
 {

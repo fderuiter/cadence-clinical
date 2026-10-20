@@ -14,7 +14,6 @@ namespace Cadence.Kernel.Persistence.Background;
 /// named after the job on its own connection, and a replica that cannot take the lock skips the pass. A replica that
 /// dies mid-pass loses its connection and so its lock. This keeps one outbox relay per deployment, so each tenant's
 /// events arrive in order, and one sealing pass at a time.
-/// @req:PRD-SYS-053
 /// </summary>
 internal sealed class KernelLeaderLock(KernelConnectionString connection)
 {

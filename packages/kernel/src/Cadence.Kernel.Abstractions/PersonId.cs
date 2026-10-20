@@ -9,7 +9,6 @@ namespace Cadence.Kernel;
 
 /// <summary>
 /// Strongly-typed UUIDv7 identifier for a Person (human identity independent of tenant-scoped role).
-/// @req:PRD-SYS-053
 /// </summary>
 [TypeConverter(typeof(PersonIdTypeConverter))]
 [JsonConverter(typeof(PersonIdJsonConverter))]

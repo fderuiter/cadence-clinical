@@ -6,7 +6,6 @@ namespace Cadence.Kernel.Serialization;
 
 /// <summary>
 /// Generic TypeConverter for clinical kernel entity identifiers, enabling seamless binding in ASP.NET Core Minimal APIs and MVC.
-/// @req:PRD-SYS-053
 /// </summary>
 public abstract class EntityIdTypeConverter<TId> : TypeConverter
     where TId : struct, IEntityId<TId>

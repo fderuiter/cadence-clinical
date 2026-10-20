@@ -9,7 +9,6 @@ namespace Cadence.Kernel;
 
 /// <summary>
 /// Strongly-typed UUIDv7 identifier for a TenantMembership (a person's presence in one tenant, K-ID-4).
-/// @req:PRD-SYS-053
 /// </summary>
 [TypeConverter(typeof(TenantMembershipIdTypeConverter))]
 [JsonConverter(typeof(TenantMembershipIdJsonConverter))]

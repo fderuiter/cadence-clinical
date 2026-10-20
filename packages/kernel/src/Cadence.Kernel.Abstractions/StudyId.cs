@@ -9,7 +9,6 @@ namespace Cadence.Kernel;
 
 /// <summary>
 /// Strongly-typed UUIDv7 identifier for a Study (clinical protocol definition owned by a Sponsor Organization).
-/// @req:PRD-SYS-053
 /// </summary>
 [TypeConverter(typeof(StudyIdTypeConverter))]
 [JsonConverter(typeof(StudyIdJsonConverter))]

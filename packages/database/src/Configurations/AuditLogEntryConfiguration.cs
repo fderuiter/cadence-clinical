@@ -7,7 +7,6 @@ namespace Cadence.Database.Configurations;
 
 /// <summary>
 /// EF Core 10 Fluent API configuration for the shared 21 CFR Part 11 audit log entry table.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class AuditLogEntryConfiguration : IEntityTypeConfiguration<AuditLogEntry>
 {

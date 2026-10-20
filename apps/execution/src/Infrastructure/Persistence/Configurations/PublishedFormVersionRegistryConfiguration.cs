@@ -7,7 +7,6 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Configurations;
 
 /// <summary>
 /// EF Core entity configuration for <see cref="PublishedFormVersionRegistry"/>.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class PublishedFormVersionRegistryConfiguration : IEntityTypeConfiguration<PublishedFormVersionRegistry>
 {

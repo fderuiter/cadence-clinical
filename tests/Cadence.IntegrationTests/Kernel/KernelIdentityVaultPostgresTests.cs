@@ -138,7 +138,6 @@ public sealed class KernelIdentityVaultPostgresTests(KernelPostgresFixture fixtu
     /// denied each reveal on <c>actor.agent_verb</c>, the denial is audited, and nothing is disclosed.
     /// </summary>
     [Fact(DisplayName = "Reveal_ByAnAutomationAgent_IsDeniedEvenWithTheGrant")]
-    [GxPRequirement("PRD-SYS-001")]
     public async Task RevealByAnAutomationAgentIsDeniedEvenWithTheGrant()
     {
         fixture.SkipIfUnavailable();

@@ -31,7 +31,6 @@ namespace Cadence.UnitTests.Econsent;
 
 /// <summary>
 /// 21 CFR Part 11 step-up electronic signature verification tests for eConsent capture endpoints.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class EconsentEndpointsTests : IDisposable
 {
@@ -52,7 +51,6 @@ public sealed class EconsentEndpointsTests : IDisposable
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task SigTokenVerifier_ValidTokenForEconsent_VerifiesAndConsumesSuccessfully()
     {
         var verifier = new SigTokenVerifier();
@@ -70,7 +68,7 @@ public sealed class EconsentEndpointsTests : IDisposable
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("SRS-SYS-005")]
     public async Task SigTokenVerifier_ReusedTokenForEconsent_FailsClosedWithReauthenticationRequired()
     {
         var verifier = new SigTokenVerifier();
@@ -88,7 +86,7 @@ public sealed class EconsentEndpointsTests : IDisposable
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("SRS-SYS-005")]
     public async Task SigTokenVerifier_TokenForDifferentActionUrl_FailsClosedWithReauthenticationRequired()
     {
         var verifier = new SigTokenVerifier();

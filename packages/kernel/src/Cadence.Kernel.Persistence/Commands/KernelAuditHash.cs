@@ -11,7 +11,6 @@ namespace Cadence.Kernel.Persistence.Commands;
 /// field of <see cref="AuditEntryRecord"/> except <see cref="AuditEntryRecord.Hash"/>, in a fixed order. Times are
 /// UTC with exactly six fractional digits, the precision PostgreSQL stores, so a chain verifies after a database
 /// round-trip. A JSON array (rather than a delimiter-joined string) makes field boundaries unambiguous.
-/// @req:PRD-SYS-053
 /// </summary>
 internal static class KernelAuditHash
 {

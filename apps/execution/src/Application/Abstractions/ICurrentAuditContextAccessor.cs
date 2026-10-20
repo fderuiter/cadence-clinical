@@ -7,7 +7,6 @@ namespace Cadence.Apps.Execution.Application.Abstractions;
 /// There is no anonymous fallback; reading <see cref="UserId"/> with neither in place throws
 /// <see cref="AuditActorUnresolvedException"/>, so the write fails instead of being recorded against
 /// nobody (21 CFR 11.10(e), ALCOA+ attributable).
-/// @req:PRD-SYS-053
 /// </summary>
 public interface ICurrentAuditContextAccessor
 {
@@ -25,7 +24,6 @@ public interface ICurrentAuditContextAccessor
 /// <summary>
 /// Lets background work (message consumers, scheduled jobs) run the current DI scope as a named
 /// <see cref="ServiceAccount"/>, so its writes are attributed to that account rather than failing.
-/// @req:PRD-SYS-053
 /// </summary>
 public interface IAuditActorScope
 {
@@ -36,7 +34,6 @@ public interface IAuditActorScope
 /// <summary>
 /// Thrown when an audited write has no resolvable actor. Surfaces as a 500 rather than a write attributed to
 /// no one; authenticated HTTP callers never reach it because the gateway scheme rejects them first with 401.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class AuditActorUnresolvedException()
     : InvalidOperationException(

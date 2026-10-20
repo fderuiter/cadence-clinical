@@ -4,7 +4,6 @@ namespace Cadence.Kernel.Domain.Entities;
 
 /// <summary>
 /// Canonical Study aggregate root representing a clinical trial specification owned by a Sponsor Organization.
-/// @req:PRD-SYS-053
 /// </summary>
 public class Study : AggregateRoot<StudyId>
 {

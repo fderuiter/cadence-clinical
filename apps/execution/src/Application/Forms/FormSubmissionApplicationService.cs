@@ -32,7 +32,6 @@ namespace Cadence.Apps.Execution.Application.Forms;
 /// 21 CFR Part 11 electronic signature attestation, and audited unlock reversion.
 /// @req:PRD-SYS-001
 /// @req:PRD-SYS-002
-/// @req:PRD-SYS-053
 /// @req:SRS-EDC-002
 /// @req:SRS-EDC-003
 /// </summary>

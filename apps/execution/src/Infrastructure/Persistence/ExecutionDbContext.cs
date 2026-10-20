@@ -30,7 +30,6 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 /// @req:PRD-SYS-001
 /// @req:PRD-SYS-002
 /// @req:PRD-SYS-007
-/// @req:PRD-SYS-053
 /// @req:PRD-CEC-001
 /// @req:PRD-CEC-002
 /// @req:PRD-SCM-005

@@ -9,7 +9,6 @@ namespace Cadence.Kernel;
 
 /// <summary>
 /// Strongly-typed UUIDv7 identifier for a Tenant (isolation and customer contractual boundary).
-/// @req:PRD-SYS-053
 /// </summary>
 [TypeConverter(typeof(TenantIdTypeConverter))]
 [JsonConverter(typeof(TenantIdJsonConverter))]

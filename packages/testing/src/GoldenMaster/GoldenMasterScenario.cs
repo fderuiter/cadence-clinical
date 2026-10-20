@@ -18,7 +18,6 @@ namespace Cadence.Testing.GoldenMaster;
 /// "kind"s this shared loader deliberately does not interpret further -- dispatching those belongs to
 /// whichever slice-specific fixture-replay suite actually consumes them (e.g. a future
 /// golden-master-fixture-replay ticket for <c>execution-subjects</c>), not this cross-slice harness.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class GoldenMasterScenario
 {

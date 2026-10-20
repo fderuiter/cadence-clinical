@@ -36,7 +36,6 @@ namespace Cadence.Kernel.Persistence;
 
 /// <summary>
 /// Registers kernel persistence. Called by the kernel API host only; application modules must not call it (K-XS-2).
-/// @req:PRD-SYS-053
 /// </summary>
 public static class KernelPersistenceServiceCollectionExtensions
 {

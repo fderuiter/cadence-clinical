@@ -8,7 +8,6 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence;
 /// <summary>
 /// Design-time-only factory that lets the <c>dotnet ef</c> CLI (<c>migrations add</c>,
 /// <c>database update</c>, <c>migrations script</c>, ...) construct a <see cref="CtmsDbContext"/>.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class CtmsDbContextFactory : IDesignTimeDbContextFactory<CtmsDbContext>
 {

@@ -18,7 +18,6 @@ namespace Cadence.Kernel.Application.Commands;
 /// <summary>
 /// Resolves who is acting for the current command (spec §5.1 "Resolve Actor"). Hosts implement it from the
 /// authenticated principal or a named service account; returning null rejects the write (K-TX-5).
-/// @req:PRD-SYS-053
 /// </summary>
 public interface ICurrentActor
 {
@@ -28,7 +27,6 @@ public interface ICurrentActor
 /// <summary>
 /// The authorization step of the pipeline (spec §9.3, K-AUTH-1). The authority slice plugs a policy evaluator in
 /// here; the kernel refuses to start without one.
-/// @req:PRD-SYS-053
 /// </summary>
 public interface IAuthorizer
 {

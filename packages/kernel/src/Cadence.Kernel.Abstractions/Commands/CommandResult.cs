@@ -5,7 +5,6 @@ namespace Cadence.Kernel.Commands;
 /// <summary>
 /// Outcome of a kernel command: either a value or a registered <see cref="KernelError"/>. Expected failures never
 /// throw. <see cref="Replayed"/> is true when an idempotent replay returned the original result (K-TX-3).
-/// @req:PRD-SYS-053
 /// </summary>
 public readonly record struct CommandResult<TResult>
 {

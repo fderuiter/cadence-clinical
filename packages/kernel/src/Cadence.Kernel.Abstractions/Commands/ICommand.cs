@@ -5,7 +5,6 @@ namespace Cadence.Kernel.Commands;
 /// <summary>
 /// A request to change kernel state, sent through <see cref="IKernelCommandSender"/> (spec §5.1). A command changes
 /// exactly one aggregate (K-TX-1) and carries an idempotency key and a reason for change (K-TX-3).
-/// @req:PRD-SYS-053
 /// </summary>
 public interface ICommand
 {

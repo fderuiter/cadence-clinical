@@ -18,7 +18,6 @@ namespace Cadence.Kernel.Persistence;
 /// The Clinical Kernel's single <see cref="DbContext"/>, mapping kernel truth into the <c>kernel</c> schema of the
 /// shared <c>cadence</c> database (ADR-2244, ADR-2247). Internal: application modules never reference kernel
 /// persistence (K-XS-2); they go through <c>Cadence.Kernel.Abstractions</c>.
-/// @req:PRD-SYS-053
 /// </summary>
 internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options) : DbContext(options)
 {

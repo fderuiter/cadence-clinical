@@ -18,7 +18,6 @@ namespace Cadence.Kernel.Application.Events;
 /// commands it sends are attributed and authorized as <c>svc:&lt;name&gt;</c> (K-TX-5). Every consumer that handles the
 /// event is called even when an earlier one fails; any failure is rethrown so the relay retries the event, and the
 /// consumers that already succeeded replay their stored command outcome on the retry.
-/// @req:PRD-SYS-053
 /// </summary>
 internal sealed class InProcessKernelEventPublisher(
     IServiceScopeFactory scopes,

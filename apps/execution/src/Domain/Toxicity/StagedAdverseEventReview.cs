@@ -12,7 +12,6 @@ namespace Cadence.Apps.Execution.Domain.Toxicity;
 /// <summary>
 /// Aggregate root representing a Grade 3/4 laboratory toxicity event staged for Investigator review.
 /// @req:PRD-SYS-001
-/// @req:PRD-SYS-053
 /// @req:SRS-EDC-001
 /// </summary>
 public sealed class StagedAdverseEventReview : AggregateRoot<string>

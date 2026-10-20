@@ -10,7 +10,6 @@ namespace Cadence.Kernel.Persistence.Bitemporal;
 /// <summary>
 /// Adds the kernel's query translators (<see cref="TimeRangeTranslator"/>) to EF Core's internal service provider.
 /// Applied by <see cref="KernelDbContext"/> itself, so every way of building the context gets it.
-/// @req:PRD-SYS-053
 /// </summary>
 internal sealed class KernelQueryTranslationOptionsExtension : IDbContextOptionsExtension
 {

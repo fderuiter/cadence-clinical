@@ -7,7 +7,6 @@ namespace Cadence.Kernel.Domain.Entities;
 /// <summary>
 /// An immutable form version snapshot created upon protocol version approval (Requirement 1, 21 CFR Part 11).
 /// Persists compilation results from <c>UsdmCompiler</c> including DDF IR, OpenRosa XML, and SHA-256 <c>FormHash</c>.
-/// @req:PRD-SYS-053
 /// </summary>
 public class FormVersionSnapshot : AggregateRoot<FormVersionSnapshotId>
 {

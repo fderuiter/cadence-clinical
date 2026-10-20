@@ -28,7 +28,6 @@ namespace Cadence.Apps.Execution.Endpoints.Filters;
 /// Legacy Python source being replaced: the <c>X-Change-Reason</c> header presence checks preceding
 /// <c>update_subject_state_endpoint</c>/<c>update_subject_demographics_endpoint</c>/
 /// <c>delete_subject_demographics_endpoint</c> in <c>apps/execution/presentation/routers/subjects.py</c>.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class ChangeReasonHeaderFilter : IEndpointFilter
 {

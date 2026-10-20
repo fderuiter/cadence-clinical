@@ -31,7 +31,6 @@ namespace Cadence.IntegrationTests.Execution;
 /// Drives every mutating execution route through the real composition root as a signed caller and checks that
 /// each successful write leaves an audit entry naming that caller, in the same save. Nothing may be recorded
 /// against an anonymous "system" actor (#4767, 21 CFR 11.10(e)).
-/// @req:PRD-SYS-001
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class ExecutionAuditAttributionTests(ExecutionPostgresApiFactory factory) : IClassFixture<ExecutionPostgresApiFactory>

@@ -11,7 +11,6 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 /// (the only audit writer) records it on the changed entity's own entry, or as an action-only entry when the
 /// save changes nothing. One change therefore yields one entry on one chain keyed by the aggregate's CLR type
 /// name (#4768).
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class EfAuditLogWriter(ExecutionDbContext dbContext) : IAuditLogWriter
 {

@@ -19,7 +19,6 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// idempotency, illegal-transition failure propagation, and `TransitionTo`'s thin delegation to
 /// `SubjectTransitionGraph.Guard` (the full 81-permutation matrix is `MIG-SUBJ-002`'s
 /// `SubjectTransitionGraphTests`, not duplicated here).
-/// @req:PRD-SUB-001
 /// </summary>
 public class ClinicalSubjectTests
 {

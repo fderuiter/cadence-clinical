@@ -4,7 +4,6 @@ namespace Cadence.Kernel.Domain.Entities;
 
 /// <summary>
 /// Canonical StudySite aggregate root representing the association of Study × Site with regulatory approvals and activation lifecycle.
-/// @req:PRD-SYS-053
 /// </summary>
 public class StudySite : AggregateRoot<StudySiteId>
 {

@@ -10,7 +10,6 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence;
 
 /// <summary>
 /// EF Core 10 DbContext for Safety microservice persistence gateway.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class SafetyDbContext(DbContextOptions<SafetyDbContext> options) : DbContext(options)
 {

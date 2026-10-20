@@ -6,7 +6,6 @@ namespace Cadence.Kernel.Persistence.Commands;
 
 /// <summary>
 /// One executed (or denied) command: who, when, why, on which aggregate (K-PROV-1). Insert-only.
-/// @req:PRD-SYS-053
 /// </summary>
 internal sealed class ProvenanceActivityRecord
 {

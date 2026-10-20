@@ -24,7 +24,6 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// integration through the service (not just <see cref="SubjectTransitionGraph"/> in isolation), SCN-005's
 /// Rule 2 site-compliance gate on both the blocked and unblocked paths — asserted identically through both
 /// entry points — and that a successful transition's response reports the real post-transition status (D8, #4771).
-/// @req:PRD-SUB-001
 /// </summary>
 public class SubjectApplicationServiceStateTests
 {

@@ -225,7 +225,7 @@ downstream must stall. It never makes timestamps differ.
 Requirement IDs are defined in `docs/SDLC/01_Product_Requirements_Document_PRD.md` (`PRD-*`) and
 `docs/SRS.md` (`SRS-*` and `Trace-*`).
 
-A test declares the requirement it verifies **on the test method**, in any of these forms:
+A test declares the requirement it verifies **on the test method**, in either of these forms:
 
 ```csharp
 /// <summary>
@@ -237,7 +237,8 @@ A test declares the requirement it verifies **on the test method**, in any of th
 public async Task SaveChangesAsync_GivenNonStringTIdAggregate_StampsCreatedFields()
 ```
 
-`[Trait("Requirement", "PRD-SYS-001")]` is also recognised. One form is enough.
+One form is enough. `[Trait("Requirement", "…")]` is not a requirement tag: it is not counted, and the `rtm` gate
+refuses it.
 
 Rules:
 
@@ -252,8 +253,15 @@ Rules:
   raise the difference so the code or the requirement is fixed.
 - **Not every test needs a tag.** Helper, regression and architecture tests that verify no product
   requirement stay untagged. A tag exists to make an RTM claim, not to satisfy a checklist.
-- **Tags on a class do not count.** `@req:` in a class summary is documentation only. It never marks
-  every test in the file as verifying that requirement.
+- **No tags on a class.** A tag on a class, record or struct would read as a claim for every test in it, so it
+  is refused: the `rtm` gate fails on an `@req:` line in a type's doc comment, and `[GxPRequirement]` only compiles
+  on a method. Put the tag on the methods whose assertions prove the requirement.
+- **PRD-SYS-001 is audit fields and audit entries.** Tag it only where the assertions check `CreatedBy`,
+  `CreatedAt`, `ReasonForChange` or `VersionIndex`, or check the audit entry a change writes (its actor, reason or
+  action). Hash chaining and chain verification are PRD-SYS-003. Notification, event, idempotency and validation
+  tests are neither.
+- **PRD-SYS-053 is the agent lifecycle hooks.** Only the hook tests (`tests/**/Packages/AgentHook*.cs`) may declare
+  it; the `rtm` gate fails on it anywhere else, product tests included.
 - **Use IDs that exist.** A test that declares an ID no requirement document defines fails
   `pnpm cadence check` (the `rtm` gate), `pnpm cadence gxp validate`, and the
   `RepositoryTests_DeclareOnlyRequirementIdsThatExist` unit test. Add the requirement first, then tag the
@@ -368,6 +376,9 @@ Set `RTM_STRICT_ALL=true` to make validation fail while any requirement is not q
 hook. They fail when:
 
 - a test declares a requirement ID that no requirement document defines, or
+- a requirement tag is misapplied: an `@req:` on a class, record or struct, a `[Trait("Requirement", …)]`, or
+  PRD-SYS-053 outside `tests/**/Packages/AgentHook*.cs` (#5326). The error names the file and line of each, and the
+  `RepositoryTests_HaveNoMisappliedRequirementTags` unit test fails on the same tags, or
 - the RTM or the IQ/OQ/PQ report no longer matches its integrity stamp, because it was edited by hand, or
 - with `CADENCE_GXP_SNAPSHOT=1` only, the checked-in RTM lists different tests for a requirement than the tags in
   `tests/` declare. The error names each test that is missing from the RTM or no longer declares the requirement.
