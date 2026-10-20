@@ -322,6 +322,9 @@ public sealed class KernelAuthorizationTests
                 return Task.CompletedTask;
             }
 
+            public Task RecordRefusalAsync(KernelError refusal, CancellationToken cancellationToken) =>
+                throw new InvalidOperationException("A denied command reaches no handler.");
+
             public ValueTask DisposeAsync() => ValueTask.CompletedTask;
         }
     }

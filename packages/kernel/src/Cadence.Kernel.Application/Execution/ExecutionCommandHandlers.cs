@@ -9,6 +9,7 @@ using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -149,12 +150,16 @@ internal sealed class ChangeEnrollmentStatusHandler(IEnrollmentDirectory directo
 
 /// <summary>
 /// Handles <see cref="WithdrawParticipant"/>: the acting person must have signed <c>Withdrawn</c> over the
-/// enrollment's current content hash.
+/// enrollment's current content hash. From then on new capture for the enrollment is refused
+/// (<see cref="Evidence.CaptureConditions"/>).
 /// </summary>
 internal sealed class WithdrawParticipantHandler(IAttestationVerifier verifier) : ICommandHandler<WithdrawParticipant, EnrollmentState>
 {
     public async Task<CommandResult<EnrollmentState>> HandleAsync(WithdrawParticipant command, ICommandContext context, CancellationToken cancellationToken)
     {
+        // The enrollment's scope lock, exclusively: capture shares it before it reads the enrollment's status, so a
+        // capture either commits before the withdrawal or sees it and is refused (CaptureConditions, ADR-2621).
+        await context.Work.LockScopeAsync(NodeRef.For(command.EnrollmentId), cancellationToken).ConfigureAwait(false);
         if (await context.Work.FindAsync<Enrollment>(command.EnrollmentId, cancellationToken).ConfigureAwait(false) is not { } enrollment)
         {
             return KernelErrors.NotFound;

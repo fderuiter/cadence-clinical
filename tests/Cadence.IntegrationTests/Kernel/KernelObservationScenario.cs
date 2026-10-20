@@ -66,6 +66,20 @@ internal sealed class KernelObservationScenario(KernelPostgresFixture fixture)
         return new ReleaseLock(tenant, id, study, lockId, attestation, KernelProtocolScenario.Key(), "Query found after lock; unlocking to correct");
     }
 
+    /// <summary>The command withdrawing <paramref name="enrollment"/>'s participant; the investigator's signature is recorded first.</summary>
+    public async Task<WithdrawParticipant> WithdrawAsync(TenantId tenant, EnrollmentId enrollment, CancellationToken ct)
+    {
+        AttestationTarget target;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            target = (await db.Enrollments.AsNoTracking().SingleAsync(e => e.Id == enrollment, ct)).SignableTarget;
+        }
+
+        var signature = await Protocol.OkAsync(Protocol.AttestCommand(tenant, AttestationMeaning.Withdrawn, target), ct);
+        return new WithdrawParticipant(
+            tenant, enrollment, WithdrawalKind.WithdrawalBySubject, signature, Tick(), KernelProtocolScenario.Key(), "Participant withdrew consent");
+    }
+
     public DateTimeOffset Tick() => fixture.Clock.Advance(TimeSpan.FromSeconds(1));
 
     public async Task<StudySiteId> AddStudySiteAsync(TenantId tenant, StudyId study, CancellationToken ct)

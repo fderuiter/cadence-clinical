@@ -35,8 +35,8 @@ namespace Cadence.Kernel.Application.Commands;
 /// <summary>
 /// The kernel command pipeline (spec §5.1): pipeline-wide checks → resolve actor (K-TX-5) → the command's validators
 /// (ADR-2600 §4.4) → authorize (K-AUTH-1, denials audited) → idempotency (K-TX-3) → the approved proposal the command
-/// executes, when its metadata names one (K-AI-2) → handler decides on one aggregate (K-TX-1) → one transaction for state,
-/// provenance, events, audit and outbox (K-TX-2).
+/// executes, when its metadata names one (K-AI-2) → handler decides on one aggregate (K-TX-1; a refusal it explains is
+/// audited) → one transaction for state, provenance, events, audit and outbox (K-TX-2).
 /// </summary>
 public sealed class KernelCommandPipeline(
     IServiceProvider services,
@@ -122,7 +122,18 @@ public sealed class KernelCommandPipeline(
         {
             // A concurrent command with the same key can commit between the replay check and the handler's reads, so
             // the handler sees the winner's state (for example AlreadyExists). The stored outcome wins (K-TX-3).
-            return await ReplayAsync<TResult>(transaction, execution, cancellationToken).ConfigureAwait(false) ?? result;
+            if (await ReplayAsync<TResult>(transaction, execution, cancellationToken).ConfigureAwait(false) is { } winner)
+            {
+                return winner;
+            }
+
+            // A refusal the handler explains was decided by a condition, as a denial is by authorization: it is audited.
+            if (result.Error is { Explanation: not null } refusal)
+            {
+                await transaction.RecordRefusalAsync(refusal, cancellationToken).ConfigureAwait(false);
+            }
+
+            return result;
         }
 
         var resultJson = JsonSerializer.Serialize(result.Value, JsonOptions);

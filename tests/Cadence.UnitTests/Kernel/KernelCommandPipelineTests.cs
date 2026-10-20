@@ -353,6 +353,9 @@ public sealed partial class KernelCommandPipelineTests
         public Task RecordDenialAsync(AuthorizationDecision denial, CancellationToken cancellationToken) =>
             throw new InvalidOperationException("The command was permitted.");
 
+        public Task RecordRefusalAsync(KernelError refusal, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("The racing command's handler explains no refusal.");
+
         public Task<TAggregate?> FindAsync<TAggregate>(object id, CancellationToken cancellationToken)
             where TAggregate : AggregateRootBase =>
             Task.FromResult<TAggregate?>(null);

@@ -1457,7 +1457,7 @@
             }
           },
           "409": {
-            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Observation.ParticipantWithdrawn\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1510,6 +1510,10 @@
           },
           {
             "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Observation.ParticipantWithdrawn",
             "status": 409
           },
           {
@@ -2608,7 +2612,7 @@
             }
           },
           "409": {
-            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Collection.NoGoverningVersion\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Collection.NoGoverningVersion\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Observation.ParticipantWithdrawn\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -2665,6 +2669,10 @@
           },
           {
             "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Observation.ParticipantWithdrawn",
             "status": 409
           },
           {
@@ -2830,7 +2838,7 @@
             }
           },
           "409": {
-            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Collection.RevisionStale\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Collection.RevisionStale\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Observation.ParticipantWithdrawn\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -2887,6 +2895,10 @@
           },
           {
             "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Observation.ParticipantWithdrawn",
             "status": 409
           },
           {

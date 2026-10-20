@@ -10,7 +10,8 @@ namespace Cadence.Kernel.Commands;
 /// <summary>
 /// Records a clinical fact for the participant of an enrollment (spec §8.1): this concept had this value, observed at
 /// <c>ObservedAt</c>. The value is the authoritative one; an eCRF field is a representation of it (ADR-2620). Refused
-/// when a lock covers the enrollment, its study site or its study (spec §10.5).
+/// when a lock covers the enrollment, its study site or its study (spec §10.5), and when the participant is withdrawn
+/// (spec §7.4, <see cref="ObservationErrors.ParticipantWithdrawn"/>).
 /// </summary>
 /// <remarks>
 /// <para><c>EnrollmentId</c>: The enrollment the fact is about; the participant and study are taken from it, and the
@@ -26,7 +27,8 @@ namespace Cadence.Kernel.Commands;
     nameof(ObservationErrors.EnrollmentUnknown),
     nameof(ObservationErrors.ValueInvalid),
     nameof(ObservationErrors.ObservedAtInvalid),
-    nameof(ObservationErrors.Locked))]
+    nameof(ObservationErrors.Locked),
+    nameof(ObservationErrors.ParticipantWithdrawn))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RecordObservation(
     TenantId TenantId,
@@ -41,7 +43,8 @@ public sealed record RecordObservation(
 /// <summary>
 /// Corrects an observation's value (K-FACT-1): a new revision supersedes the current one, with the reason for change.
 /// Refused when a lock covers the observation (spec §10.5), when <c>ExpectedVersion</c> is not its current version, or
-/// when the value is unchanged (ADR-2620).
+/// when the value is unchanged (ADR-2620). A correction is accepted after the participant's withdrawal: it revises a value
+/// captured before it, which stays (K-CONS-2); only new capture is refused.
 /// </summary>
 /// <remarks>
 /// <para><c>EnrollmentId</c>: The enrollment the observation belongs to; the command is authorized against it.</para>
@@ -101,7 +104,15 @@ public static class ObservationErrors
     public static readonly KernelError Locked =
         new("K.Observation.Locked", 423, "A lock covers this observation's scope; nothing is recorded or corrected there.");
 
+    /// <summary>
+    /// New capture for a withdrawn participant: recording an observation, opening a form or saving a new value in one.
+    /// Values captured before the withdrawal stay readable and can still be corrected (spec §7.4, K-CONS-2). The refusal
+    /// is audited with the evaluated condition and the enrollment it was decided on.
+    /// </summary>
+    public static readonly KernelError ParticipantWithdrawn =
+        new("K.Observation.ParticipantWithdrawn", 409, "The participant is withdrawn; no new data is captured for this enrollment.");
+
     /// <summary>Every observation error, for the API's documented problem set.</summary>
     public static IReadOnlyList<KernelError> All { get; } =
-        [ValueInvalid, ObservedAtInvalid, EnrollmentUnknown, ValueUnchanged, VersionStale, Locked];
+        [ValueInvalid, ObservedAtInvalid, EnrollmentUnknown, ValueUnchanged, VersionStale, Locked, ParticipantWithdrawn];
 }
