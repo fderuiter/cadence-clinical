@@ -532,6 +532,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2630: AI Agents Act Through Proposals in One Governed Runtime](adr/2026-10-20-ai-agents-act-through-proposals-in-one-governed-runtime.md) | Current | - Status: Accepted |
 | [ADR-2632: Agents Act for One Person, and Approved Proposals Execute as Their Approver](adr/2026-10-20-agents-act-for-one-person-and-approved-proposals-execute-as-their-approver.md) | Current | - Status: Accepted |
 | [ADR-2518: DSUR Approval Is Its Own Capability, Signed by the Verified Caller](adr/2026-10-19-dsur-approval-is-its-own-capability-signed-by-the-verified-caller.md) | Current | - Status: Accepted |
+| [ADR-2631: Agent Task Configurations Are Versioned and Qualified per Tenant](adr/2026-10-20-agent-task-configurations-are-versioned-and-qualified-per-tenant.md) | Current | - Status: Accepted |
 | [ADR-2634: AI Task Configurations Are Measured by Versioned Evaluations and Production Signals](adr/2026-10-20-ai-task-configurations-are-measured-by-versioned-evaluations-and-production-signals.md) | Current | - Status: Accepted |
 ## Developing and running
 

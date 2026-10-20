@@ -452,10 +452,44 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** The agent task configurations in this deployment, with their content hashes. */
+    /** The agent task configuration versions in this deployment, with their content hashes and the tenant's qualification of each. */
     get: operations["AiListTasks"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/ai/tasks/{key}/versions/{version}/qualification": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Qualifies a task configuration version on its evaluation evidence and the caller's signed approval (task_configuration.qualify, ADR-2631). */
+    post: operations["AiQualifyTask"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/ai/tasks/{key}/versions/{version}/suspension": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Takes a qualified task configuration version out of use until it is qualified again (task_configuration.suspend). */
+    post: operations["AiSuspendTask"];
     delete?: never;
     options?: never;
     head?: never;
@@ -500,6 +534,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    Kernel_AcceptanceCriteria: {
+      /** Format: double */
+      minimum_pass_rate: number | string;
+      /** Format: double */
+      minimum_reviewed_pass_rate: number | string;
+      maximum_mean_latency?: null | string;
+      /** Format: double */
+      maximum_mean_cost?: null | number | string;
+    };
     Kernel_ActivityLocation: number;
     Kernel_ActivityTiming: {
       /** Format: int32 */
@@ -565,6 +608,15 @@ export interface components {
       model: string;
       autonomy_level: string;
       content_hash: string;
+      tools: string[];
+      retrieval_sources: string[];
+      evaluation_set: null | components["schemas"]["Kernel_EvaluationSetRef"];
+      acceptance_criteria:
+        null | components["schemas"]["Kernel_AcceptanceCriteria"];
+      risk_class: null | string;
+      qualification_gaps: string[];
+      qualification:
+        null | components["schemas"]["Kernel_TaskQualificationResponse"];
     };
     Kernel_AnonymousTypeOfstringAndstring: {
       status: null | string;
@@ -720,6 +772,12 @@ export interface components {
       intercurrent_events: components["schemas"]["Kernel_IntercurrentEvent"][];
       summary_measure: string;
       intervention_ids?: null | string[];
+    };
+    Kernel_EvaluationSetRef: {
+      set_id: string;
+      /** Format: int32 */
+      version: number | string;
+      content_hash: string;
     };
     Kernel_GenerateProtocolProposalRequest: {
       trial_brief: string;
@@ -1244,6 +1302,25 @@ export interface components {
       concepts: components["schemas"]["Kernel_ConceptRef"][];
       expression?: null | string;
     };
+    Kernel_QualificationRequest: {
+      configuration_hash: string;
+      evaluation_run_reference: string;
+      evaluation_set_hash: string;
+      passed: boolean;
+      evaluation_summary_json: string;
+      /** Format: uuid */
+      attestation_id: string;
+    };
+    Kernel_QualificationResponse: {
+      task_key: string;
+      /** Format: int32 */
+      task_version: number | string;
+      configuration_hash: string;
+      status: string;
+      risk_class: string;
+      /** Format: int64 */
+      version_index: number | string;
+    };
     /** @enum {unknown} */
     Kernel_QuantityComparator: "<" | "<=" | ">" | ">=" | null;
     Kernel_ScheduleChange: {
@@ -1280,6 +1357,18 @@ export interface components {
       dependents?: null | components["schemas"]["Kernel_DependentsReport"];
       matrix_gaps?: null | components["schemas"]["Kernel_MatrixGapFinding"][];
       is_empty?: boolean;
+    };
+    Kernel_TaskQualificationResponse: {
+      status: string;
+      usable: boolean;
+      configuration_hash: string;
+      risk_class: string;
+      evaluation_run_reference: string;
+      /** Format: date-time */
+      qualified_at: string;
+      /** Format: date-time */
+      suspended_at: null | string;
+      suspension_reason: null | string;
     };
     Kernel_TerminologyBinding: {
       code_system_version_id: components["schemas"]["Kernel_CodeSystemVersionId"];
@@ -2546,6 +2635,146 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Kernel_AgentTaskResponse"][];
+        };
+      };
+    };
+  };
+  AiQualifyTask: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        key: string;
+        version: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_QualificationRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_QualificationResponse"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `M.Intelligence.Task.Unknown`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `M.Intelligence.Configuration.Changed`, `M.Intelligence.Qualification.AlreadyQualified`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `M.Intelligence.Configuration.NotQualifiable`, `M.Intelligence.Qualification.AttestationRejected`, `M.Intelligence.Qualification.EvaluationNotAccepted`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  AiSuspendTask: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        key: string;
+        version: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_QualificationResponse"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `M.Intelligence.Qualification.NotQualified`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
     };

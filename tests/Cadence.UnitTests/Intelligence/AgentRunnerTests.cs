@@ -194,12 +194,89 @@ public sealed class AgentRunnerTests
         return control;
     }
 
-    private AgentRunner Runner(IChatClient client, TaskConfiguration? task = null, AgentRunnerOptions? options = null)
+    /// <summary>An unqualified configuration is refused before any model call or ledger write, saying why (ADR-2631).</summary>
+    [Fact]
+    [GxPRequirement("PRD-SYS-051")]
+    public async Task RunAsync_WhenTheConfigurationIsNotQualified_RefusesWithoutCallingTheModel()
     {
+        var model = new FakeChatClient();
+
+        var result = await Runner(model, qualify: false).RunAsync(Request(), TestContext.Current.CancellationToken);
+
+        result.Error!.Code.Should().Be(IntelligenceErrors.ConfigurationUnqualified.Code);
+        result.Error.Message.Should().Contain("data_review.query_draft v3 is not qualified in this tenant");
+        model.Calls.Should().Be(0);
+        _sender.Sent.Should().BeEmpty();
+    }
+
+    /// <summary>A suspended configuration is refused with the suspension reason.</summary>
+    [Fact]
+    [GxPRequirement("PRD-SYS-051")]
+    public async Task RunAsync_WhenTheConfigurationIsSuspended_Refuses()
+    {
+        var model = new FakeChatClient();
+        var runner = Runner(model);
+        _ledger.Qualifications.Single().Suspend("Override rate above threshold.", _clock.UtcNow);
+
+        var result = await runner.RunAsync(Request(), TestContext.Current.CancellationToken);
+
+        result.Error!.Code.Should().Be(IntelligenceErrors.ConfigurationUnqualified.Code);
+        result.Error.Message.Should().Contain("is suspended: Override rate above threshold.");
+        model.Calls.Should().Be(0);
+    }
+
+    /// <summary>A configuration whose content changed after it was qualified is refused, naming both hashes.</summary>
+    [Fact]
+    [GxPRequirement("PRD-SYS-051")]
+    public async Task RunAsync_WhenTheConfigurationChangedSinceQualification_Refuses()
+    {
+        var model = new FakeChatClient();
+        var changed = Configuration with { Instructions = "Review {{form}} and draft more queries." };
+        var runner = Runner(model, changed, qualify: false);
+        _ledger.Qualifications.Add(TaskQualification.Qualify(Tenant, Configuration, Evidence(), Guid.NewGuid(), "dm-lead", _clock.UtcNow));
+
+        var result = await runner.RunAsync(Request(), TestContext.Current.CancellationToken);
+
+        result.Error!.Code.Should().Be(IntelligenceErrors.ConfigurationUnqualified.Code);
+        result.Error.Message.Should().Contain("changed after it was qualified").And.Contain(Configuration.ContentHash).And.Contain(changed.ContentHash);
+        model.Calls.Should().Be(0);
+    }
+
+    /// <summary>The runner uses the newest version that is qualified, skipping a newer one that is not.</summary>
+    [Fact]
+    public async Task RunAsync_RoutesToTheNewestQualifiedVersion()
+    {
+        var newer = Configuration with { Version = 4, Instructions = "Review {{form}} carefully." };
+        var runner = Runner(new FakeChatClient(), qualify: false, extra: [newer]);
+        _ledger.Qualifications.Add(TaskQualification.Qualify(Tenant, Configuration, Evidence(), Guid.NewGuid(), "dm-lead", _clock.UtcNow));
+
+        var result = await runner.RunAsync(Request(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue(result.Error?.Message);
+        _sender.Sent.OfType<StartAgentRun>().Single().Configuration.Version.Should().Be(3);
+
+        _ledger.Qualifications.Add(TaskQualification.Qualify(Tenant, newer, Evidence(), Guid.NewGuid(), "dm-lead", _clock.UtcNow));
+        await runner.RunAsync(Request(), TestContext.Current.CancellationToken);
+
+        _sender.Sent.OfType<StartAgentRun>().Last().Configuration.Version.Should().Be(4);
+    }
+
+    private static EvaluationEvidence Evidence() => new("eval-run-1", "sha256:" + new string('a', 64), Passed: true, "{}");
+
+    private AgentRunner Runner(
+        IChatClient client, TaskConfiguration? task = null, AgentRunnerOptions? options = null, bool qualify = true, TaskConfiguration[]? extra = null)
+    {
+        TaskConfiguration[] configurations = [task ?? Configuration, .. extra ?? []];
+        if (qualify)
+        {
+            _ledger.Qualifications.RemoveAll(q => configurations.Any(c => c.Key == q.TaskKey && c.Version == q.TaskVersion));
+            _ledger.Qualifications.AddRange(configurations.Select(c => TaskQualification.Qualify(Tenant, c, Evidence(), Guid.NewGuid(), "dm-lead", _clock.UtcNow)));
+        }
+
         var prices = new Dictionary<string, ModelPrice> { ["fake-deep"] = new() { InputPerMillion = 5m, OutputPerMillion = 25m } };
         var provider = new ChatClientModelProvider(FakeChatClient.ProviderName, client, new Dictionary<string, string> { ["deep"] = "fake-deep" }, prices);
         return new AgentRunner(
-            new Cadence.Modules.Intelligence.Infrastructure.Tasks.RegisteredTaskConfigurations([task ?? Configuration]),
+            new Cadence.Modules.Intelligence.Infrastructure.Tasks.RegisteredTaskConfigurations(configurations),
             new ModelProviderRegistry([provider]),
             _ledger,
             _sender,
@@ -242,6 +319,11 @@ public sealed class AgentRunnerTests
         public long TokensUsed { get; set; }
 
         public List<(string? TaskKey, DateTimeOffset Since)> TokenQueries { get; } = [];
+
+        public List<TaskQualification> Qualifications { get; } = [];
+
+        public Task<IReadOnlyList<TaskQualification>> QualificationsAsync(TenantId tenant, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<TaskQualification>>(Qualifications);
 
         public Task<IReadOnlyList<AgentControl>> ControlsAsync(TenantId tenant, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<AgentControl>>(Controls);

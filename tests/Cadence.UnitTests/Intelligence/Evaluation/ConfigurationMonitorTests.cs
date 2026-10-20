@@ -4,6 +4,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel;
+using Cadence.Kernel.Commands;
+using Cadence.Modules.Intelligence.Application;
+using Cadence.Modules.Intelligence.Domain;
 using Cadence.Modules.Intelligence.Evaluation;
 using Cadence.Modules.Intelligence.Evaluation.Production;
 using Cadence.Testing.Time;
@@ -20,6 +24,7 @@ namespace Cadence.UnitTests.Intelligence.Evaluation;
 /// </summary>
 public sealed class ConfigurationMonitorTests
 {
+    private static readonly TenantId Tenant = new(Guid.Parse("0f6a3b1e-3333-4c2d-9e8f-000000000003"));
     private static readonly ConfigurationRef Config = EvaluationFixtures.Configuration;
     private static readonly MonitoringThresholds Thresholds = new();
     private static readonly DateTimeOffset Start = new(2026, 10, 20, 0, 0, 0, TimeSpan.Zero);
@@ -117,12 +122,30 @@ public sealed class ConfigurationMonitorTests
         var suspension = new RecordingSuspension();
         var recorder = new ProductionSignalRecorder(store, sink, suspension, new FakeClock(Start));
 
-        var report = await recorder.RecordAsync(Rejected(1, RejectionReason.Unsafe), Thresholds, TestContext.Current.CancellationToken);
+        var report = await recorder.RecordAsync(Tenant, Rejected(1, RejectionReason.Unsafe), Thresholds, TestContext.Current.CancellationToken);
 
         store.Stored.Should().ContainSingle();
         sink.Signals.Should().ContainSingle().Which.Key.Should().Be("data-review.query-draft:v1:UnsafeRejection");
         suspension.Suspended.Should().ContainSingle().Which.Configuration.Should().Be(Config);
         report.Suspend.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// A safety breach on a version the tenant never qualified needs no suspension; one that cannot suspend a qualified
+    /// version fails loudly rather than leave it running.
+    /// </summary>
+    [Fact]
+    public async Task RecorderFailsWhenASafetyBreachCannotSuspend()
+    {
+        var unqualified = new ProductionSignalRecorder(
+            new MemoryOutcomeStore(), new RecordingSink(), new RecordingSuspension { Error = IntelligenceErrors.NotQualified }, new FakeClock(Start));
+        var refused = new ProductionSignalRecorder(
+            new MemoryOutcomeStore(), new RecordingSink(), new RecordingSuspension { Error = KernelErrors.AuthorizationDenied }, new FakeClock(Start));
+
+        (await unqualified.RecordAsync(Tenant, Rejected(1, RejectionReason.Unsafe), Thresholds, TestContext.Current.CancellationToken))
+            .Suspend.Should().BeTrue();
+        var act = () => refused.RecordAsync(Tenant, Rejected(1, RejectionReason.Unsafe), Thresholds, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*Could not suspend*");
     }
 
     /// <summary>Edit distance is 0 for unchanged text and 1 when nothing survived.</summary>
@@ -172,10 +195,16 @@ public sealed class ConfigurationMonitorTests
     {
         public List<(ConfigurationRef Configuration, string Reason)> Suspended { get; } = [];
 
-        public Task SuspendAsync(ConfigurationRef configuration, string reason, CancellationToken cancellationToken)
+        public KernelError? Error { get; init; }
+
+        public Task<CommandResult<TaskQualificationState>> SuspendAsync(
+            TenantId tenant, ConfigurationRef configuration, string reason, CancellationToken cancellationToken)
         {
             Suspended.Add((configuration, reason));
-            return Task.CompletedTask;
+            return Task.FromResult(Error is { } error
+                ? CommandResult<TaskQualificationState>.Failure(error)
+                : CommandResult<TaskQualificationState>.Success(new TaskQualificationState(
+                    configuration.Key, configuration.Version, configuration.ContentHash, QualificationStatus.Suspended, ModelRiskClass.Medium, 2)));
         }
     }
 }

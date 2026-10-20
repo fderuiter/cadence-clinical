@@ -4,23 +4,28 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel;
+using Cadence.Kernel.Commands;
 using Cadence.Modules.Intelligence.Domain;
+using Cadence.Modules.Intelligence.Evaluation;
 
 using Microsoft.Extensions.AI;
 
 namespace Cadence.Modules.Intelligence.Application;
 
 /// <summary>
-/// The task configurations the runtime may use, by key (ADR-2630 §4.3). Agents register theirs with the module; versioned
-/// files and qualification replace this registration with #5385 (ADR-2631).
+/// The task configuration versions this deployment ships, by key and version (ADR-2631). A version's content never
+/// changes once published; the runtime uses, per tenant, the newest version that tenant qualified.
 /// </summary>
 public interface ITaskConfigurationCatalog
 {
-    /// <summary>Every configuration, ordered by key.</summary>
+    /// <summary>Every configuration version, ordered by key and then version.</summary>
     IReadOnlyList<TaskConfiguration> All { get; }
 
-    /// <summary>The configuration for <paramref name="taskKey"/>, or null.</summary>
-    TaskConfiguration? Find(string taskKey);
+    /// <summary>The versions of <paramref name="taskKey"/>, newest first; empty when the task is unknown.</summary>
+    IReadOnlyList<TaskConfiguration> Versions(string taskKey);
+
+    /// <summary>One version of <paramref name="taskKey"/>, or null.</summary>
+    TaskConfiguration? Find(string taskKey, int version);
 }
 
 /// <summary>
@@ -69,4 +74,18 @@ public interface IAgentLedger
 
     /// <summary>One run, or null.</summary>
     Task<AgentRun?> FindRunAsync(TenantId tenant, Guid runId, CancellationToken cancellationToken);
+
+    /// <summary>The tenant's task configuration qualifications, qualified and suspended.</summary>
+    Task<IReadOnlyList<TaskQualification>> QualificationsAsync(TenantId tenant, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// Takes a configuration version out of use in a tenant, for example when monitoring finds its quality has drifted
+/// (ADR-2631). Only a new qualification restores it. The evaluation harness (#5548) calls it.
+/// </summary>
+public interface ITaskConfigurationSuspension
+{
+    /// <summary>Suspends <paramref name="configuration"/> in <paramref name="tenant"/> for <paramref name="reason"/>.</summary>
+    Task<CommandResult<TaskQualificationState>> SuspendAsync(
+        TenantId tenant, ConfigurationRef configuration, string reason, CancellationToken cancellationToken);
 }

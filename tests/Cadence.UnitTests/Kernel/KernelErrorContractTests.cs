@@ -46,6 +46,9 @@ public sealed class KernelErrorContractTests
         typeof(KernelErrors).Assembly,
         typeof(RuleErrors).Assembly,
         typeof(KernelApplicationServiceCollectionExtensions).Assembly,
+
+        // Modules composed into the kernel host publish their routes in the kernel contract (ADR-2601).
+        typeof(Cadence.Modules.Intelligence.Domain.IntelligenceErrors).Assembly,
     ]);
 
     /// <summary>

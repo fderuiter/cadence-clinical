@@ -52,10 +52,10 @@ public sealed record AgentRunnerOptions(TimeSpan RequestTimeout)
 }
 
 /// <summary>
-/// Runs one agent task for the person sending the request (ADR-2630 §4.2, K-AI-6). In order: the task's configuration,
-/// its provider and model, the kill switches and the monthly budget; then the run is recorded in the ledger through a
-/// kernel command, the model is called, and the run is completed with the answer or the failure. Every refusal is a
-/// registered error and says the work can go on without AI (K-AI-8). The runtime writes nothing else: what an agent
+/// Runs one agent task for the person sending the request (ADR-2630 §4.2, K-AI-6). In order: the newest configuration
+/// version the tenant qualified (ADR-2631), its provider and model, the kill switches and the monthly budget; then the
+/// run is recorded in the ledger through a kernel command, the model is called, and the run is completed with the
+/// answer or the failure. Every refusal is a registered error and says the work can go on without AI (K-AI-8). The runtime writes nothing else: what an agent
 /// suggests reaches clinical data only as a Proposal a person approves (K-AI-1).
 /// </summary>
 public sealed partial class AgentRunner(
@@ -71,9 +71,22 @@ public sealed partial class AgentRunner(
     public async Task<CommandResult<AgentResponse>> RunAsync(AgentRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        if (catalog.Find(request.TaskKey) is not { } configuration)
+        var versions = catalog.Versions(request.TaskKey);
+        if (versions.Count == 0)
         {
             return IntelligenceErrors.TaskUnknown;
+        }
+
+        // Route to the newest version the tenant qualified on its current content (ADR-2631); when none is usable,
+        // say why for the newest version.
+        var qualifications = (await ledger.QualificationsAsync(request.Tenant, cancellationToken).ConfigureAwait(false))
+            .Where(q => q.TaskKey == request.TaskKey)
+            .ToDictionary(q => q.TaskVersion);
+        var configuration = versions.FirstOrDefault(c => TaskQualification.WhyNotUsable(qualifications.GetValueOrDefault(c.Version), c) is null);
+        if (configuration is null)
+        {
+            return IntelligenceErrors.ConfigurationUnqualified.WithMessage(
+                TaskQualification.WhyNotUsable(qualifications.GetValueOrDefault(versions[0].Version), versions[0])!);
         }
 
         if (providers.Find(configuration.Provider) is not { } provider

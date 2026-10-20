@@ -8819,7 +8819,7 @@
         "tags": [
           "AI agents"
         ],
-        "summary": "The agent task configurations in this deployment, with their content hashes.",
+        "summary": "The agent task configuration versions in this deployment, with their content hashes and the tenant\u0027s qualification of each.",
         "operationId": "AiListTasks",
         "responses": {
           "200": {
@@ -8836,6 +8836,294 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/ai/tasks/{key}/versions/{version}/qualification": {
+      "post": {
+        "tags": [
+          "AI agents"
+        ],
+        "summary": "Qualifies a task configuration version on its evaluation evidence and the caller\u0027s signed approval (task_configuration.qualify, ADR-2631).",
+        "operationId": "AiQualifyTask",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_QualificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_QualificationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060M.Intelligence.Task.Unknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060M.Intelligence.Configuration.Changed\u0060, \u0060M.Intelligence.Qualification.AlreadyQualified\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060M.Intelligence.Configuration.NotQualifiable\u0060, \u0060M.Intelligence.Qualification.AttestationRejected\u0060, \u0060M.Intelligence.Qualification.EvaluationNotAccepted\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "M.Intelligence.Task.Unknown",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "M.Intelligence.Configuration.Changed",
+            "status": 409
+          },
+          {
+            "code": "M.Intelligence.Qualification.AlreadyQualified",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "M.Intelligence.Configuration.NotQualifiable",
+            "status": 422
+          },
+          {
+            "code": "M.Intelligence.Qualification.AttestationRejected",
+            "status": 422
+          },
+          {
+            "code": "M.Intelligence.Qualification.EvaluationNotAccepted",
+            "status": 422
+          }
+        ]
+      }
+    },
+    "/api/v1/ai/tasks/{key}/versions/{version}/suspension": {
+      "post": {
+        "tags": [
+          "AI agents"
+        ],
+        "summary": "Takes a qualified task configuration version out of use until it is qualified again (task_configuration.suspend).",
+        "operationId": "AiSuspendTask",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_QualificationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060M.Intelligence.Qualification.NotQualified\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "M.Intelligence.Qualification.NotQualified",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          }
+        ]
       }
     },
     "/api/v1/ai/controls": {
@@ -20016,6 +20304,47 @@
           }
         }
       },
+      "Kernel_AcceptanceCriteria": {
+        "required": [
+          "minimum_pass_rate",
+          "minimum_reviewed_pass_rate"
+        ],
+        "type": "object",
+        "properties": {
+          "minimum_pass_rate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "minimum_reviewed_pass_rate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "maximum_mean_latency": {
+            "pattern": "^-?(\\d\u002B\\.)?\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,7})?$",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "maximum_mean_cost": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
       "Kernel_ActivityLocation": {
         "type": "integer"
       },
@@ -20237,7 +20566,14 @@
           "provider",
           "model",
           "autonomy_level",
-          "content_hash"
+          "content_hash",
+          "tools",
+          "retrieval_sources",
+          "evaluation_set",
+          "acceptance_criteria",
+          "risk_class",
+          "qualification_gaps",
+          "qualification"
         ],
         "type": "object",
         "properties": {
@@ -20263,6 +20599,60 @@
           },
           "content_hash": {
             "type": "string"
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "retrieval_sources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evaluation_set": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_EvaluationSetRef"
+              }
+            ]
+          },
+          "acceptance_criteria": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_AcceptanceCriteria"
+              }
+            ]
+          },
+          "risk_class": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "qualification_gaps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "qualification": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_TaskQualificationResponse"
+              }
+            ]
           }
         }
       },
@@ -20923,6 +21313,30 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "Kernel_EvaluationSetRef": {
+        "required": [
+          "set_id",
+          "version",
+          "content_hash"
+        ],
+        "type": "object",
+        "properties": {
+          "set_id": {
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "content_hash": {
+            "type": "string"
           }
         }
       },
@@ -23293,6 +23707,79 @@
           }
         }
       },
+      "Kernel_QualificationRequest": {
+        "required": [
+          "configuration_hash",
+          "evaluation_run_reference",
+          "evaluation_set_hash",
+          "passed",
+          "evaluation_summary_json",
+          "attestation_id"
+        ],
+        "type": "object",
+        "properties": {
+          "configuration_hash": {
+            "type": "string"
+          },
+          "evaluation_run_reference": {
+            "type": "string"
+          },
+          "evaluation_set_hash": {
+            "type": "string"
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "evaluation_summary_json": {
+            "type": "string"
+          },
+          "attestation_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "Kernel_QualificationResponse": {
+        "required": [
+          "task_key",
+          "task_version",
+          "configuration_hash",
+          "status",
+          "risk_class",
+          "version_index"
+        ],
+        "type": "object",
+        "properties": {
+          "task_key": {
+            "type": "string"
+          },
+          "task_version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "configuration_hash": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "risk_class": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "Kernel_QuantityComparator": {
         "enum": [
           "\u003C",
@@ -23472,6 +23959,53 @@
           },
           "is_empty": {
             "type": "boolean"
+          }
+        }
+      },
+      "Kernel_TaskQualificationResponse": {
+        "required": [
+          "status",
+          "usable",
+          "configuration_hash",
+          "risk_class",
+          "evaluation_run_reference",
+          "qualified_at",
+          "suspended_at",
+          "suspension_reason"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "usable": {
+            "type": "boolean"
+          },
+          "configuration_hash": {
+            "type": "string"
+          },
+          "risk_class": {
+            "type": "string"
+          },
+          "evaluation_run_reference": {
+            "type": "string"
+          },
+          "qualified_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "suspended_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "suspension_reason": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

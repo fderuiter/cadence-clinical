@@ -134,22 +134,6 @@ internal sealed class AttestHandler(IEnumerable<IAttestationTargetCheck> checks)
     }
 }
 
-/// <summary>
-/// Checks that a record of one kind may be signed with the requested target, for kinds outside the kernel core (spec
-/// §9.5). Register one per kind with <c>TryAddEnumerable</c>; <see cref="Attest"/> consults it after the core kinds.
-/// </summary>
-public interface IAttestationTargetCheck
-{
-    /// <summary>The NodeRef kind this check signs (<see cref="AttestationTarget.Kind"/>).</summary>
-    string Kind { get; }
-
-    /// <summary>
-    /// Null when <paramref name="target"/> may be signed now; otherwise <see cref="TrustErrors.TargetUnknown"/>,
-    /// <see cref="TrustErrors.TargetNotSignable"/> or <see cref="TrustErrors.TargetContentChanged"/>.
-    /// </summary>
-    Task<KernelError?> CheckAsync(AttestationTarget target, ICommandContext context, CancellationToken cancellationToken);
-}
-
 /// <summary>Registers the trust command handlers (spec §9.5).</summary>
 public static class TrustServiceCollectionExtensions
 {

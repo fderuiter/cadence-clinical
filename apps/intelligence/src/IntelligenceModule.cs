@@ -67,7 +67,13 @@ public static class IntelligenceModule
             .AddCommandHandler<CompleteAgentRun, AgentRunStatus, CompleteAgentRunHandler>()
             .AddCommandValidator<CompleteAgentRun, CompleteAgentRunValidator>()
             .AddCommandHandler<SetAgentControl, AgentControlState, SetAgentControlHandler>()
-            .AddCommandValidator<SetAgentControl, SetAgentControlValidator>();
+            .AddCommandValidator<SetAgentControl, SetAgentControlValidator>()
+            .AddCommandHandler<QualifyTaskConfiguration, TaskQualificationState, QualifyTaskConfigurationHandler>()
+            .AddCommandValidator<QualifyTaskConfiguration, QualifyTaskConfigurationValidator>()
+            .AddCommandHandler<SuspendTaskConfiguration, TaskQualificationState, SuspendTaskConfigurationHandler>()
+            .AddCommandValidator<SuspendTaskConfiguration, SuspendTaskConfigurationValidator>();
+        services.AddModuleAttestationTarget<TaskConfigurationAttestationCheck>();
+        services.TryAddScoped<ITaskConfigurationSuspension, TaskConfigurationSuspension>();
 
         var prices = options.Prices;
 

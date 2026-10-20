@@ -51,4 +51,14 @@ internal sealed class EfAgentLedger(IModuleTenantContextFactory<IntelligenceDbCo
         await using var db = contexts.Create(tenant);
         return await db.AgentRuns.AsNoTracking().SingleOrDefaultAsync(r => r.Id == runId, cancellationToken).ConfigureAwait(false);
     }
+
+    public async Task<IReadOnlyList<TaskQualification>> QualificationsAsync(TenantId tenant, CancellationToken cancellationToken)
+    {
+        await using var db = contexts.Create(tenant);
+        return await db.TaskQualifications.AsNoTracking()
+            .OrderBy(q => q.TaskKey)
+            .ThenBy(q => q.TaskVersion)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
 }

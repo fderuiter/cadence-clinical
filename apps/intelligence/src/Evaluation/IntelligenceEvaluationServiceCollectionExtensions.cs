@@ -17,18 +17,17 @@ public static class IntelligenceEvaluationServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds <see cref="ProductionSignalRecorder"/> with its ports: where outcomes are stored, where Quality signals go, and
-    /// how a configuration is suspended. The outcome store, the Quality module and the configuration registry (ADR-2631)
-    /// call this when they provide them; until then the recorder is not registered, so the host's container stays valid.
+    /// Adds <see cref="ProductionSignalRecorder"/> with its ports: where outcomes are stored and where Quality signals go.
+    /// The module registers how a configuration is suspended (<c>ITaskConfigurationSuspension</c>, ADR-2631). The outcome
+    /// store and the Quality module call this when they provide theirs; until then the recorder is not registered, so the
+    /// host's container stays valid.
     /// </summary>
-    public static IServiceCollection AddProductionSignals<TStore, TSink, TSuspension>(this IServiceCollection services)
+    public static IServiceCollection AddProductionSignals<TStore, TSink>(this IServiceCollection services)
         where TStore : class, IProposalOutcomeStore
         where TSink : class, IQualitySignalSink
-        where TSuspension : class, ITaskConfigurationSuspension
     {
         services.TryAddScoped<IProposalOutcomeStore, TStore>();
         services.TryAddScoped<IQualitySignalSink, TSink>();
-        services.TryAddScoped<ITaskConfigurationSuspension, TSuspension>();
         services.TryAddScoped<ProductionSignalRecorder>();
         return services;
     }

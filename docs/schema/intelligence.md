@@ -8,6 +8,7 @@ Generated from the EF Core model of `Cadence.Modules.Intelligence.Infrastructure
 | --- | --- | --- |
 | [`intelligence.agent_controls`](#intelligenceagent_controls) | `AgentControl` | 9 |
 | [`intelligence.agent_runs`](#intelligenceagent_runs) | `AgentRun` | 22 |
+| [`intelligence.task_qualifications`](#intelligencetask_qualifications) | `TaskQualification` | 19 |
 
 ## intelligence.agent_controls
 
@@ -37,7 +38,7 @@ Entity: `AgentRun`
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | no |  | PK |
 | `completed_at` | `timestamp with time zone` | yes |  |  |
-| `configuration_hash` | `character varying(64)` | no |  |  |
+| `configuration_hash` | `character varying(71)` | no |  |  |
 | `content_hash` | `character varying(64)` | yes |  |  |
 | `cost_usd` | `numeric(18,6)` | yes |  |  |
 | `created_at` | `timestamp with time zone` | no |  |  |
@@ -62,3 +63,33 @@ Indexes:
 
 - `ix_agent_runs_requester`: (`tenant_id`, `requested_by`, `started_at`)
 - `ix_agent_runs_task`: (`tenant_id`, `task_key`, `started_at`)
+
+## intelligence.task_qualifications
+
+Entity: `TaskQualification`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `attestation_id` | `uuid` | no |  |  |
+| `configuration_hash` | `character varying(71)` | no |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `evaluation_run_reference` | `character varying(200)` | no |  |  |
+| `evaluation_set_hash` | `character varying(71)` | no |  |  |
+| `evaluation_summary_json` | `text` | no |  |  |
+| `qualified_at` | `timestamp with time zone` | no |  |  |
+| `qualified_by` | `character varying(255)` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `risk_class` | `character varying(16)` | no |  |  |
+| `status` | `character varying(16)` | no |  |  |
+| `suspended_at` | `timestamp with time zone` | yes |  |  |
+| `suspension_reason` | `character varying(1000)` | yes |  |  |
+| `task_key` | `character varying(96)` | no |  |  |
+| `task_version` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Indexes:
+
+- `ux_task_qualifications_version`: unique (`tenant_id`, `task_key`, `task_version`)

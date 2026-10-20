@@ -4,7 +4,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel;
 using Cadence.Kernel.Time;
+using Cadence.Modules.Intelligence.Application;
+using Cadence.Modules.Intelligence.Domain;
 
 namespace Cadence.Modules.Intelligence.Evaluation.Production;
 
@@ -40,18 +43,9 @@ public interface IQualitySignalSink
 }
 
 /// <summary>
-/// Suspends a task configuration version so routing stops using it (ADR-2634 §4.5). Implemented by the configuration
-/// registry (ADR-2631); suspending twice is a no-op, and only a new qualification lifts it.
-/// </summary>
-public interface ITaskConfigurationSuspension
-{
-    /// <summary>Suspends <paramref name="configuration"/> for <paramref name="reason"/>.</summary>
-    Task SuspendAsync(ConfigurationRef configuration, string reason, CancellationToken cancellationToken);
-}
-
-/// <summary>
 /// Records a production outcome and acts on the monitor's verdict: raises a Quality signal for each breach and
-/// suspends the configuration on a safety breach (ADR-2634 §4.5). It never changes a configuration's content.
+/// suspends the configuration on a safety breach through <see cref="ITaskConfigurationSuspension"/> (ADR-2634 §4.5,
+/// ADR-2631). It never changes a configuration's content.
 /// </summary>
 public sealed class ProductionSignalRecorder(
     IProposalOutcomeStore store,
@@ -59,8 +53,10 @@ public sealed class ProductionSignalRecorder(
     ITaskConfigurationSuspension suspension,
     IClock clock)
 {
-    /// <summary>Records <paramref name="outcome"/> and returns the monitor's report after it.</summary>
-    public async Task<MonitoringReport> RecordAsync(ProposalOutcomeRecord outcome, MonitoringThresholds thresholds, CancellationToken cancellationToken = default)
+    /// <summary>Records <paramref name="outcome"/> of <paramref name="tenant"/> and returns the monitor's report after it.</summary>
+    /// <exception cref="InvalidOperationException">A safety breach could not suspend a qualified configuration.</exception>
+    public async Task<MonitoringReport> RecordAsync(
+        TenantId tenant, ProposalOutcomeRecord outcome, MonitoringThresholds thresholds, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(outcome);
         ArgumentNullException.ThrowIfNull(thresholds);
@@ -76,7 +72,14 @@ public sealed class ProductionSignalRecorder(
         if (report.Suspend)
         {
             var reasons = string.Join(" ", report.Breaches.Where(b => b.Severity == SignalSeverity.Suspend).Select(b => b.Detail));
-            await suspension.SuspendAsync(outcome.Configuration, reasons, cancellationToken).ConfigureAwait(false);
+            var suspended = await suspension.SuspendAsync(tenant, outcome.Configuration, reasons, cancellationToken).ConfigureAwait(false);
+
+            // A version the tenant never qualified is already out of use; any other refusal leaves an unsafe one running.
+            if (!suspended.IsSuccess && suspended.Error!.Code != IntelligenceErrors.NotQualified.Code)
+            {
+                throw new InvalidOperationException(
+                    $"Could not suspend {outcome.Configuration} after a safety breach: {suspended.Error.Code} {suspended.Error.Message}");
+            }
         }
 
         return report;

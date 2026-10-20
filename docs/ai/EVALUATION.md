@@ -179,10 +179,11 @@ window's report, raises a `ConfigurationSignal` per breach and suspends the conf
 The window is the newest 200 outcomes of that configuration version. Cost and latency only warn: a budget never
 blocks clinical work. The recorder's ports are implemented by the module parts that own the state:
 `IProposalOutcomeStore` (Intelligence persistence), `IQualitySignalSink` (the Quality module, one open signal per
-`ConfigurationSignal.Key`) and `ITaskConfigurationSuspension` (the configuration registry, ADR-2631). Whoever provides
-them registers the recorder with `AddProductionSignals<TStore, TSink, TSuspension>()`; until all three exist the
-recorder is not registered. Recording outcomes from kernel Proposal events waits on K-AI-5 (the Proposal names its
-configuration version) and the registry (#5385).
+`ConfigurationSignal.Key`) and `ITaskConfigurationSuspension`, which the module registers: it sends
+`SuspendTaskConfiguration` for the outcome's tenant ([ADR-2631](../adr/2026-10-20-agent-task-configurations-are-versioned-and-qualified-per-tenant.md)),
+and the recorder throws if a safety breach cannot suspend a qualified version. Whoever provides the store and the sink
+registers the recorder with `AddProductionSignals<TStore, TSink>()`; until both exist the recorder is not registered.
+Recording outcomes from kernel Proposal events waits on K-AI-5 (the Proposal names its configuration version).
 
 ## Improvements
 
