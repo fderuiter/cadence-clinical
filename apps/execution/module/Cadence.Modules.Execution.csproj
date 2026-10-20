@@ -17,6 +17,9 @@
     <ProjectReference Include="..\..\..\packages\kernel\src\Cadence.Kernel.Modules\Cadence.Kernel.Modules.csproj" />
     <ProjectReference Include="..\..\..\packages\engine_core\src\Cadence.Core.Domain.csproj" />
     <ProjectReference Include="..\..\..\packages\security\src\Cadence.Security.csproj" />
+
+    <!-- The durable single-use store for e-signature step-up tokens (ADR-2515). -->
+    <ProjectReference Include="..\..\..\packages\database\src\Cadence.Database.csproj" />
   </ItemGroup>
 
   <ItemGroup>

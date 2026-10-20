@@ -105,9 +105,16 @@ _Avoid_: empty strings or sentinels for missing values, units in a separate fiel
 The kernel side of one filled-in form: which Observations were collected together, for which participant
 and visit, under which CollectionSpec version (K-FACT-6, ADR-2622). It holds membership only; the form's
 layout, workflow and screen state are the EDC application's **FormInstance**. One command saves a whole
-page of its values and form locks apply at its scope. A form signature is meant to name its members' exact
-revisions, but attestations over a `collection_instance` are refused until its target check lands (#5463).
+page of its values, form locks apply at its scope, and a form signature names its members' exact revisions.
 _Avoid_: page IDs or visit strings on Observations, server-side form drafts
+
+### Form signature
+
+An investigator's kernel `Attestation` (meaning Approved or Responsibility) over a Collection Instance's content
+hash, the hash of its values' exact revisions, recorded by `SignCollectionInstance` after a single-use step-up
+re-authentication (#5463). A later correction never alters it: the form shows it as **superseded**, with the values
+it signed, until someone signs again.
+_Avoid_: unsigning, a form status of `SIGNED` or `MODIFIED_POST_SIGNATURE`, signing a payload copy
 
 ### FormInstance
 

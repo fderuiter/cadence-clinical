@@ -735,6 +735,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/forms/{formId}/signatures": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Signs the form's current values with an X-Sig-Token step-up token (collection.sign); 409 when the form changed since it was read. */
+    post: operations["ExecutionSignForm"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1122,6 +1139,7 @@ export interface components {
       locks: components["schemas"]["Kernel_FormLockResponse"][];
       assertions: components["schemas"]["Kernel_FormAssertionResponse"][];
       signatures: components["schemas"]["Kernel_FormSignatureResponse"][];
+      content_hash: null | string;
     };
     Kernel_FormSavedResponse: {
       /** Format: uuid */
@@ -1147,6 +1165,18 @@ export interface components {
       /** Format: date-time */
       signed_at: string;
       reason: string;
+      content_hash: string;
+      superseded: boolean;
+      signed_values:
+        null | components["schemas"]["Kernel_FormSignedValueResponse"][];
+    };
+    Kernel_FormSignedValueResponse: {
+      item_id: string;
+      /** Format: uuid */
+      observation_id: string;
+      /** Format: int32 */
+      revision: number | string;
+      value: components["schemas"]["Kernel_ObservationValue"];
     };
     Kernel_FormStateResponse: {
       /** Format: uuid */
@@ -1742,6 +1772,12 @@ export interface components {
       change: components["schemas"]["Kernel_ElementChangeKind"];
       before: null | components["schemas"]["Kernel_PlannedVisit"];
       after: null | components["schemas"]["Kernel_PlannedVisit"];
+    };
+    Kernel_SignFormRequest: {
+      meaning: string;
+      content_hash: string;
+      /** Format: uuid */
+      signature_id: null | string;
     };
     Kernel_SimulateProtocolRequest: {
       base_version_ref: null | string;
@@ -4084,6 +4120,86 @@ export interface operations {
       };
       /** @description Locked. Kernel errors: `K.Assertion.Locked`. */
       423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ExecutionSignForm: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        formId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_SignFormRequest"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_FormSignatureResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`, `K.Trust.AuthenticationStale`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Trust.PersonRequired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Trust.TargetContentChanged`, `K.Trust.TargetNotSignable`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Collection.SignatureMeaningInvalid`, `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Trust.MethodRequired`. */
+      422: {
         headers: {
           [name: string]: unknown;
         };

@@ -33,6 +33,8 @@ public interface ICollectionInstanceRecords
 /// <para><c>Assertions</c>: Verifications, queries and answers about the form's values, retracted ones included,
 /// oldest first (spec §8.2).</para>
 /// <para><c>Attestations</c>: The signatures over the form instance, oldest first (spec §9.5).</para>
+/// <para><c>ContentHash</c>: The hash a signature over the form's current values would bind to (#5463); null while the
+/// form has no values.</para>
 /// </remarks>
 public sealed record CollectionInstanceRecord(
     CollectionInstanceId CollectionInstanceId,
@@ -51,7 +53,8 @@ public sealed record CollectionInstanceRecord(
     IReadOnlyList<CollectedValueView> Values,
     IReadOnlyList<LockView> Locks,
     IReadOnlyList<AssertionView> Assertions,
-    IReadOnlyList<FormAttestationView> Attestations);
+    IReadOnlyList<FormAttestationView> Attestations,
+    string? ContentHash);
 
 /// <summary>One value of a form instance.</summary>
 /// <remarks>
@@ -71,6 +74,10 @@ public sealed record CollectedValueView(
 /// <summary>A signature over a form instance (spec §9.5).</summary>
 /// <remarks>
 /// <para><c>ContentHash</c>: The hash of the member revisions it signed; a later correction leaves it bound to them.</para>
+/// <para><c>Superseded</c>: True once a correction or a new value changed the form after it was signed: the signature
+/// stands for the revisions it signed, not for the form as it is now (#5463).</para>
+/// <para><c>SignedValues</c>: The revisions it signed, ordered by item id, rebuilt from the values' history; null in the
+/// rare case they cannot be rebuilt to the signed hash (a save recorded at the same instant as the signature).</para>
 /// </remarks>
 public sealed record FormAttestationView(
     AttestationId AttestationId,
@@ -78,4 +85,9 @@ public sealed record FormAttestationView(
     string SignedBy,
     DateTimeOffset SignedAt,
     string ContentHash,
-    string Reason);
+    string Reason,
+    bool Superseded,
+    IReadOnlyList<SignedValueView>? SignedValues);
+
+/// <summary>One value as a signature signed it.</summary>
+public sealed record SignedValueView(string ItemId, ObservationId ObservationId, int Revision, ObservationValue Value);

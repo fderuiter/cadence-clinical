@@ -4,6 +4,8 @@ import {
   ecrfFormsApi,
   formErrorCode,
   formFieldErrors,
+  formSignatureAction,
+  FORM_SIGN_SEMANTIC_ACTION,
 } from "../../src/api/ecrfFormsApi";
 import { ApiError } from "../../src/api/client";
 
@@ -157,5 +159,73 @@ describe("ecrfFormsApi (ADR-2622)", () => {
     });
     expect(formFieldErrors(new Error("x"))).toEqual({});
     expect(formErrorCode(new Error("x"))).toBeNull();
+  });
+
+  // #5463: a form signature carries the meaning and the content hash as read, with a step-up token for this form.
+  it("signs a form with the meaning, the content hash and the step-up token", async () => {
+    const signature = {
+      attestation_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a501",
+      meaning: "approved",
+      signed_by: "pi1",
+      signed_at: "2027-03-21T00:00:00Z",
+      reason: "Investigator Certification",
+      content_hash: "sha256:abc",
+      superseded: false,
+      signed_values: null,
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(201, signature));
+
+    const result = await ecrfFormsApi.signForm(
+      FORM,
+      { meaning: "approved", contentHash: "sha256:abc", signatureId: null },
+      "sig-token-1",
+      "Investigator Certification",
+      "sign-1"
+    );
+
+    expect(result).toEqual(signature);
+    const request = lastRequest();
+    expect(request.method).toBe("POST");
+    expect(new URL(request.url).pathname).toBe(
+      `/api/v1/execution/forms/${FORM}/signatures`
+    );
+    expect(request.headers.get("X-Sig-Token")).toBe("sig-token-1");
+    expect(request.headers.get("Idempotency-Key")).toBe("sign-1");
+    expect(request.headers.get("X-Change-Reason")).toBe(
+      "Investigator Certification"
+    );
+    expect(await request.json()).toEqual({
+      meaning: "approved",
+      content_hash: "sha256:abc",
+      signature_id: null,
+    });
+  });
+
+  it("names the step-up action as the form's signing URL in lowercase", () => {
+    expect(formSignatureAction(FORM.toUpperCase())).toBe(
+      `/api/v1/execution/forms/${FORM}/signatures`
+    );
+    expect(FORM_SIGN_SEMANTIC_ACTION).toBe("execution.form.sign");
+  });
+
+  it("rejects a signature over a form that changed since it was read", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse(
+        409,
+        {
+          title: "K.Trust.TargetContentChanged",
+          code: "K.Trust.TargetContentChanged",
+        },
+        "application/problem+json"
+      )
+    );
+
+    const error = await ecrfFormsApi
+      .signForm(FORM, { meaning: "approved", contentHash: "h" }, "t", "r", "k")
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.status).toBe(409);
+    expect(formErrorCode(error)).toBe("K.Trust.TargetContentChanged");
   });
 });

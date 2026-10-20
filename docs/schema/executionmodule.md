@@ -6,8 +6,23 @@ Generated from the EF Core model of `Cadence.Modules.Execution.Infrastructure.Ex
 
 | Table | Entity | Columns |
 | --- | --- | --- |
+| [`execution.consumed_signature_tokens`](#executionconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
 | [`execution.form_instances`](#executionform_instances) | `FormInstance` | 14 |
 | [`execution.form_queries`](#executionform_queries) | `FormQuery`, `FormQueryMessage` | 15 |
+
+## execution.consumed_signature_tokens
+
+Entity: `ConsumedSignatureToken`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `TokenId` | `character varying(128)` | no |  | PK |
+| `ConsumedAt` | `timestamp with time zone` | no |  |  |
+| `RetainUntil` | `timestamp with time zone` | no |  |  |
+
+Indexes:
+
+- `IX_consumed_signature_tokens_RetainUntil`: (`RetainUntil`)
 
 ## execution.form_instances
 

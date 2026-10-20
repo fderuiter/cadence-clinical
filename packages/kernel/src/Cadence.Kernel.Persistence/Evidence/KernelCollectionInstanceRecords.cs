@@ -61,13 +61,23 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
         var items = ProtocolDesignDocument.Read(content).Design?.CollectionSpecs
             .FirstOrDefault(s => string.Equals(s.Id, found.CollectionSpecId, StringComparison.Ordinal))?.Items ?? [];
 
+        // A signature names the revisions current when it was recorded; any later revision or value supersedes it (#5463).
+        string? contentHash = values.Count == 0
+            ? null
+            : CollectionInstance.ContentHashOf(values.Select(v => new CollectionContentEntry(v.ObservationId, v.Revision, v.Value)));
         var instanceGuid = found.Id.Value;
-        var attestations = await db.Attestations.AsNoTracking()
+        var signatures = await db.Attestations.AsNoTracking()
             .Where(a => a.TargetKind == NodeKinds.CollectionInstance && a.TargetId == instanceGuid)
             .OrderBy(a => a.RecordedAt).ThenBy(a => a.Id)
-            .Select(a => new FormAttestationView(a.Id, a.Meaning, a.ActorId, a.RecordedAt, a.TargetContentHash, a.Reason))
+            .Select(a => new { a.Id, a.Meaning, a.ActorId, a.RecordedAt, a.TargetContentHash, a.Reason })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+        var attestations = signatures
+            .Select(a => new FormAttestationView(
+                a.Id, a.Meaning, a.ActorId, a.RecordedAt, a.TargetContentHash, a.Reason,
+                !string.Equals(a.TargetContentHash, contentHash, StringComparison.Ordinal),
+                SignedValues(found, observations, a.RecordedAt, a.TargetContentHash)))
+            .ToList();
 
         return new CollectionInstanceRecord(
             found.Id,
@@ -86,6 +96,26 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             values,
             scoped.Locks(),
             assertions,
-            attestations);
+            attestations,
+            contentHash);
+    }
+
+    /// <summary>
+    /// The revisions a signature recorded at <paramref name="signedAt"/> signed: each member that had joined by then, at
+    /// its latest revision recorded by then. Returned only when they hash to <paramref name="signedHash"/>, so what the
+    /// form shows as signed is exactly what was signed.
+    /// </summary>
+    private static List<SignedValueView>? SignedValues(
+        CollectionInstance instance, IReadOnlyDictionary<ObservationId, Observation> observations, DateTimeOffset signedAt, string signedHash)
+    {
+        var signed = instance.Members
+            .Where(m => m.JoinedAt <= signedAt)
+            .OrderBy(m => m.ItemId, StringComparer.Ordinal)
+            .Select(m => (m.ItemId, Revision: observations[m.ObservationId].Revisions.Where(r => r.RecordedAt <= signedAt).MaxBy(r => r.Number)))
+            .Where(x => x.Revision is not null)
+            .Select(x => new SignedValueView(x.ItemId, x.Revision!.ObservationId, x.Revision.Number, x.Revision.Value))
+            .ToList();
+        var hash = CollectionInstance.ContentHashOf(signed.Select(v => new CollectionContentEntry(v.ObservationId, v.Revision, v.Value)));
+        return string.Equals(hash, signedHash, StringComparison.Ordinal) ? signed : null;
     }
 }

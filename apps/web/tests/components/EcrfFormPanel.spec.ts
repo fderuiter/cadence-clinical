@@ -25,7 +25,12 @@ vi.mock("../../src/api/ecrfFormsApi", async (importOriginal) => {
     await importOriginal<typeof import("../../src/api/ecrfFormsApi")>();
   return {
     ...actual,
-    ecrfFormsApi: { openForm: vi.fn(), getForm: vi.fn(), saveValues: vi.fn() },
+    ecrfFormsApi: {
+      openForm: vi.fn(),
+      getForm: vi.fn(),
+      saveValues: vi.fn(),
+      signForm: vi.fn(),
+    },
   };
 });
 
@@ -89,6 +94,7 @@ function form(overrides: Record<string, unknown> = {}) {
     locks: [],
     assertions: [],
     signatures: [],
+    content_hash: "sha256:form-v2",
     ...overrides,
   };
 }
@@ -140,7 +146,7 @@ describe("EcrfFormPanel: a kernel form instance saved a page at a time (ADR-2622
       "1 required item without a value (DIABP)"
     );
     expect(view.find('[data-testid="ecrf-no-signatures"]').text()).toContain(
-      "signing from this screen is not available yet"
+      "Not signed."
     );
   });
 
@@ -348,6 +354,9 @@ describe("EcrfFormPanel: a kernel form instance saved a page at a time (ADR-2622
             signed_by: "pi1",
             signed_at: "2027-03-21T00:00:00Z",
             reason: "Reviewed",
+            content_hash: "sha256:form-v2",
+            superseded: false,
+            signed_values: null,
           },
         ],
       }) as never
@@ -704,5 +713,227 @@ describe("EcrfFormPanel: queries on form values (#5461)", () => {
       })
     );
     expect(view.find("#query-query-a").text()).toContain("Answered");
+  });
+});
+
+function signature(overrides: Record<string, unknown> = {}) {
+  return {
+    attestation_id: "sig-current",
+    meaning: "approved",
+    signed_by: "pi1",
+    signed_at: "2027-03-21T00:00:00Z",
+    reason: "Investigator Certification",
+    content_hash: "sha256:form-v2",
+    superseded: false,
+    signed_values: null,
+    ...overrides,
+  };
+}
+
+describe("EcrfFormPanel: signing a form (#5463)", () => {
+  let wrapper: VueWrapper | undefined;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.mocked(ecrfFormsApi.getForm).mockReset();
+    vi.mocked(ecrfFormsApi.signForm).mockReset();
+    vi.mocked(ecrfFormsApi.saveValues).mockReset();
+    resetQueries();
+  });
+
+  afterEach(() => {
+    wrapper?.unmount();
+    wrapper = undefined;
+  });
+
+  async function mountWith() {
+    wrapper = mount(EcrfFormPanel, {
+      props: { formId: FORM_ID },
+      global: { stubs: { SignatureCaptureModal: true } },
+    });
+    await flushPromises();
+    return wrapper;
+  }
+
+  /** Opens the signature dialog and has it hand back a step-up token, as the gateway would. */
+  async function signThroughDialog(view: VueWrapper) {
+    await view.find("#ecrf-form-sign").trigger("click");
+    const modal = view.findComponent({ name: "SignatureCaptureModal" });
+    expect(modal.exists()).toBe(true);
+    const onSign = modal.props("onSign") as (
+      token: string,
+      reason: string
+    ) => Promise<unknown>;
+    // Settle at once, so a rejection the dialog would show is not reported as unhandled.
+    const result = onSign("sig-token-1", "Investigator Certification").then(
+      () => null,
+      (error: unknown) => error
+    );
+    await flushPromises();
+    return { modal, result };
+  }
+
+  it("signs the form as read with the chosen meaning and a step-up token for this form, then reads it again", async () => {
+    vi.mocked(ecrfFormsApi.getForm)
+      .mockResolvedValueOnce(form() as never)
+      .mockResolvedValueOnce(
+        form({
+          signatures: [signature({ meaning: "responsibility" })],
+        }) as never
+      );
+    vi.mocked(ecrfFormsApi.signForm).mockResolvedValue(
+      signature({ meaning: "responsibility" }) as never
+    );
+    const view = await mountWith();
+
+    expect(
+      (view.find("#ecrf-sign-meaning").element as HTMLSelectElement).value
+    ).toBe("approved");
+    await view.find("#ecrf-sign-meaning").setValue("responsibility");
+    const { modal } = await signThroughDialog(view);
+
+    expect(modal.props("actionUrl")).toBe(
+      `/api/v1/execution/forms/${FORM_ID}/signatures`
+    );
+    expect(modal.props("semanticAction")).toBe("execution.form.sign");
+    const [formId, request, sigToken, reason, key] = vi.mocked(
+      ecrfFormsApi.signForm
+    ).mock.calls[0];
+    expect(formId).toBe(FORM_ID);
+    expect(request).toMatchObject({
+      meaning: "responsibility",
+      contentHash: "sha256:form-v2",
+    });
+    expect(sigToken).toBe("sig-token-1");
+    expect(reason).toBe("Investigator Certification");
+    expect(key).toMatch(/[0-9a-f-]{36}/);
+    expect(ecrfFormsApi.getForm).toHaveBeenCalledTimes(2);
+    expect(view.find('[data-testid="ecrf-sign-outcome"]').text()).toBe(
+      "Form signed: Responsibility."
+    );
+    expect(view.find('[data-testid="ecrf-form-signatures"]').text()).toContain(
+      "Responsibility by pi1"
+    );
+  });
+
+  it("offers no signing while a page has unsaved entries or the form has no values", async () => {
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
+    const view = await mountWith();
+
+    expect(view.find("#ecrf-form-sign").attributes("disabled")).toBeUndefined();
+    await view.find("#ecrf-item-COMMENT").setValue("note");
+    expect(view.find("#ecrf-form-sign").attributes("disabled")).toBeDefined();
+    expect(view.find('[data-testid="ecrf-sign-hint"]').text()).toContain(
+      "Save or discard your changes"
+    );
+
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(
+      form({ content_hash: null }) as never
+    );
+    wrapper?.unmount();
+    const empty = await mountWith();
+    expect(empty.find("#ecrf-form-sign").attributes("disabled")).toBeDefined();
+    expect(empty.find('[data-testid="ecrf-sign-hint"]').text()).toBe(
+      "The form has no values to sign yet."
+    );
+  });
+
+  it("says the form changed and offers a reload when the content hash is stale (409)", async () => {
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
+    vi.mocked(ecrfFormsApi.signForm).mockRejectedValue(
+      new ApiError("The form changed.", 409, "Conflict", {
+        code: "K.Trust.TargetContentChanged",
+      })
+    );
+    const view = await mountWith();
+
+    await signThroughDialog(view);
+
+    const outcome = view.find('[data-testid="ecrf-sign-outcome"]');
+    expect(outcome.attributes("role")).toBe("alert");
+    expect(outcome.text()).toContain("This form changed after you opened it");
+    expect(outcome.text()).toContain("Reload the form");
+    await view.find("#ecrf-sign-reload").trigger("click");
+    await flushPromises();
+    expect(ecrfFormsApi.getForm).toHaveBeenCalledTimes(2);
+    expect(view.find('[data-testid="ecrf-sign-outcome"]').exists()).toBe(false);
+  });
+
+  it("says the user may not sign (403)", async () => {
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
+    vi.mocked(ecrfFormsApi.signForm).mockRejectedValue(
+      new ApiError("Forbidden", 403, "Forbidden", {
+        code: "K.Authorization.Denied",
+      })
+    );
+    const view = await mountWith();
+
+    await signThroughDialog(view);
+
+    expect(view.find('[data-testid="ecrf-sign-outcome"]').text()).toContain(
+      "You are not authorised to sign this form"
+    );
+    expect(view.find("#ecrf-sign-reload").exists()).toBe(false);
+  });
+
+  it("hands a refused step-up token (401) back to the signature dialog", async () => {
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
+    vi.mocked(ecrfFormsApi.signForm).mockRejectedValue(
+      new ApiError("REAUTHENTICATION_REQUIRED", 401, "Unauthorized")
+    );
+    const view = await mountWith();
+
+    const { result } = await signThroughDialog(view);
+
+    expect(await result).toBeInstanceOf(Error);
+    expect(String(await result)).toContain("REAUTHENTICATION_REQUIRED");
+    expect(view.find('[data-testid="ecrf-sign-outcome"]').exists()).toBe(false);
+  });
+
+  it("marks a superseded signature and shows what it signed beside the current values", async () => {
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(
+      form({
+        signatures: [
+          signature({
+            attestation_id: "sig-old",
+            content_hash: "sha256:form-v1",
+            superseded: true,
+            signed_values: [
+              {
+                item_id: "SYSBP",
+                observation_id: OBS_ID,
+                revision: 2,
+                value: { type: "quantity", value: 118, unit: "mm[Hg]" },
+              },
+            ],
+          }),
+          signature(),
+        ],
+      }) as never
+    );
+    const view = await mountWith();
+
+    const old = view.find('[data-signature="sig-old"]');
+    expect(old.classes()).toContain("ecrf-signature--superseded");
+    expect(old.find('[data-testid="ecrf-signature-superseded"]').text()).toBe(
+      "Superseded by a later correction"
+    );
+    const row = old.find('[data-signed-item="SYSBP"]');
+    const cells = row.findAll("th, td").map((c) => c.text());
+    expect(cells[0]).toBe("SYSBP");
+    expect(cells[1]).toContain("118");
+    expect(cells[2]).toBe("2");
+    expect(cells[3]).toContain("120");
+    expect(cells[4]).toBe("3");
+    expect(row.classes()).toContain("ecrf-signed-changed");
+
+    const current = view.find('[data-signature="sig-current"]');
+    expect(current.classes()).toContain("ecrf-signature--current");
+    expect(
+      current.find('[data-testid="ecrf-signature-superseded"]').exists()
+    ).toBe(false);
+    expect(current.find('[data-testid="ecrf-signed-values"]').exists()).toBe(
+      false
+    );
   });
 });
