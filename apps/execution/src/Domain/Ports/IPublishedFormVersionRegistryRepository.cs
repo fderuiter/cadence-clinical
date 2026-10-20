@@ -8,7 +8,6 @@ namespace Cadence.Apps.Execution.Domain.Ports;
 
 /// <summary>
 /// Port for persisting and retrieving <see cref="PublishedFormVersionRegistry"/> entries.
-/// @req:PRD-SYS-053
 /// </summary>
 public interface IPublishedFormVersionRegistryRepository
 {

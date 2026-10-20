@@ -9,7 +9,6 @@ namespace Cadence.Kernel;
 
 /// <summary>
 /// Strongly-typed UUIDv7 identifier for an Attestation (21 CFR Part 11 electronic signature ceremony and audit manifest).
-/// @req:PRD-SYS-053
 /// </summary>
 [TypeConverter(typeof(AttestationIdTypeConverter))]
 [JsonConverter(typeof(AttestationIdJsonConverter))]

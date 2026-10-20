@@ -9,7 +9,6 @@ namespace Cadence.Kernel.Persistence;
 
 /// <summary>
 /// EF Core configuration extensions registering strongly-typed UUIDv7 converters across clinical kernel entity models.
-/// @req:PRD-SYS-053
 /// </summary>
 public static class KernelModelConfigurationBuilderExtensions
 {

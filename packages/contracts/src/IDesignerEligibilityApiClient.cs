@@ -35,7 +35,6 @@ public record DesignerExpressionNodeDto(
 /// same-tier cycle (MIG-03, see docs/migration/phase0/03_migration_plan.md)
 /// can build against an identical shape. CriterionType is "inclusion" or
 /// "exclusion" at the wire level.
-/// @req:PRD-SYS-053
 /// </summary>
 public record DesignerEligibilityCriterionDto(
     string Id,
@@ -56,7 +55,6 @@ public record DesignerEligibilityCriterionDto(
 /// Designer service. It was defined for the Python Execution service's
 /// eligibility checks; no C# service implements or consumes it yet. This is a
 /// contract/DTO surface only: request signing, retry and serving are not built.
-/// @req:PRD-SYS-053
 /// </summary>
 public interface IDesignerEligibilityApiClient
 {

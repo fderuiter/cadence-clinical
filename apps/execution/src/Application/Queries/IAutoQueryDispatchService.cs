@@ -12,7 +12,6 @@ namespace Cadence.Apps.Execution.Application.Queries;
 /// <summary>
 /// Service abstraction for automated query dispatch and auto-resolution.
 /// @req:PRD-SYS-007
-/// @req:PRD-SYS-053
 /// @req:SRS-EDC-002
 /// @req:SRS-EDC-004
 /// </summary>

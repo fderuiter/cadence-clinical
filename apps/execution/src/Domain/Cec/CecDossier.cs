@@ -12,7 +12,6 @@ namespace Cadence.Apps.Execution.Domain.Cec;
 /// and Part 11 Chair tie-breaker finalization.
 /// @req:PRD-CEC-001
 /// @req:PRD-CEC-002
-/// @req:PRD-SYS-053
 /// @req:PRD-SYS-124
 /// </summary>
 public sealed class CecDossier : AggregateRoot<string>

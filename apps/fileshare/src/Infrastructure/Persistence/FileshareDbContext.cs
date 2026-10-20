@@ -9,7 +9,6 @@ namespace Cadence.Apps.Fileshare.Infrastructure.Persistence;
 
 /// <summary>
 /// EF Core 10 DbContext for Fileshare microservice persistence gateway.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class FileshareDbContext(DbContextOptions<FileshareDbContext> options) : DbContext(options)
 {

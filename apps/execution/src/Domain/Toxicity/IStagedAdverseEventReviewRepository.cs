@@ -7,7 +7,6 @@ namespace Cadence.Apps.Execution.Domain.Toxicity;
 /// <summary>
 /// Repository interface for persisting and retrieving <see cref="StagedAdverseEventReview"/> records.
 /// @req:PRD-SYS-001
-/// @req:PRD-SYS-053
 /// </summary>
 public interface IStagedAdverseEventReviewRepository
 {

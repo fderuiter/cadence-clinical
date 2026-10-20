@@ -17,7 +17,6 @@ namespace Cadence.UnitTests.Execution.Security;
 /// Coverage for <see cref="AmbientAuditContextAccessor"/>: the caller's <c>sub</c> claim is the actor, a
 /// declared <see cref="ServiceAccount"/> overrides it, and with neither the actor is unresolved and reading
 /// it throws instead of defaulting to <c>"system"</c> (#4767). The change reason keeps its default.
-/// @req:PRD-SYS-001
 /// </summary>
 public class CurrentAuditContextAccessorTests
 {

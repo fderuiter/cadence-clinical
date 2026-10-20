@@ -10,7 +10,6 @@ namespace Cadence.Apps.Execution.Application.Queries;
 /// <summary>
 /// Service abstraction governing clinical discrepancy query lifecycle and workflows.
 /// @req:PRD-SYS-007
-/// @req:PRD-SYS-053
 /// @req:SRS-EDC-004
 /// </summary>
 public interface IClinicalQueryApplicationService

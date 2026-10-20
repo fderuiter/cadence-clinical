@@ -6,7 +6,6 @@ namespace Cadence.Core.Domain.Audit;
 
 /// <summary>
 /// Immutable 21 CFR Part 11 regulatory audit trail entry with Merkle block chaining.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class AuditLogEntry
 {

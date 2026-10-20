@@ -14,6 +14,7 @@ using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.EditChecks;
+using Cadence.Testing;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Execution.Fakes;
 using Cadence.UnitTests.Fixtures.Execution;
@@ -27,10 +28,6 @@ namespace Cadence.UnitTests.Execution.Queries;
 /// <summary>
 /// Unit test coverage for automated query dispatch, dispatch policy tagging,
 /// auto-closure upon form data correction, CDM manual queue routing, and Part 11 system audit trail entries.
-/// @req:PRD-SYS-007
-/// @req:PRD-SYS-053
-/// @req:SRS-EDC-002
-/// @req:SRS-EDC-004
 /// </summary>
 public sealed class AutoQueryDispatchTests
 {
@@ -286,6 +283,7 @@ public sealed class AutoQueryDispatchTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task Requirement5_AuditTrail_LogsInitiatingUserForCreationAndResolution()
     {
         var dispatchService = new AutoQueryDispatchService(_queryRepo, _clock, _auditContext);
@@ -351,6 +349,7 @@ public sealed class AutoQueryDispatchTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task Requirement6_UnresolvedAuditContext_FallsBackToAutoQueryEngineServiceAccount()
     {
         var throwingContext = new ThrowingCurrentAuditContextAccessor();

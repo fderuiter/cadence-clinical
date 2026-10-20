@@ -7,7 +7,6 @@ namespace Cadence.Kernel.Persistence.Bitemporal;
 /// <see cref="BitemporalEntityTypeBuilderExtensions.HasBitemporalPeriod"/> must call
 /// <see cref="CreateBitemporalGuards"/> right after <c>CreateTable</c> (and <see cref="DropBitemporalGuards"/> in
 /// <c>Down</c>). See <see cref="BitemporalSql"/> for what the guards enforce.
-/// @req:PRD-SYS-053
 /// </summary>
 internal static class BitemporalMigrationBuilderExtensions
 {

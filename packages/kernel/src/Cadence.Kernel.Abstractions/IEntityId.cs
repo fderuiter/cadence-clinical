@@ -6,7 +6,6 @@ namespace Cadence.Kernel;
 
 /// <summary>
 /// Non-generic base contract for strongly-typed clinical kernel entity identifiers wrapping UUIDv7.
-/// @req:PRD-SYS-053
 /// </summary>
 public interface IEntityId : IComparable
 {
@@ -23,7 +22,6 @@ public interface IEntityId : IComparable
 
 /// <summary>
 /// Generic contract for strongly-typed clinical kernel entity identifiers wrapping UUIDv7.
-/// @req:PRD-SYS-053
 /// </summary>
 public interface IEntityId<TSelf> : IEntityId,
     IComparable<TSelf>,

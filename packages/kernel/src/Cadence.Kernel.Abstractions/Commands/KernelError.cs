@@ -10,7 +10,6 @@ namespace Cadence.Kernel.Commands;
 /// <summary>
 /// A registered kernel error (K-ERR-1): a stable <see cref="Code"/> of the form <c>K.&lt;Area&gt;.&lt;Name&gt;</c>, the
 /// HTTP status it maps to, and a human-readable message. Codes are never reused or renamed.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed record KernelError(string Code, int HttpStatus, string Message)
 {
@@ -34,7 +33,6 @@ public sealed record KernelError(string Code, int HttpStatus, string Message)
 /// <summary>
 /// The checked-in registry of kernel error codes (spec §5.4, K-ERR-1). Defaults: authorization 403, not found 404,
 /// idempotency or concurrency conflict 409, rule violation 422, lock 423.
-/// @req:PRD-SYS-053
 /// </summary>
 public static class KernelErrors
 {

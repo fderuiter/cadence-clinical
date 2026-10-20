@@ -10,7 +10,6 @@ namespace Cadence.Apps.Execution.Domain.Cec;
 /// Domain entity / aggregate root representing an Adjudication Committee Chair tie-breaker determination record
 /// sealed with a 21 CFR Part 11 electronic signature manifest.
 /// @req:PRD-CEC-002
-/// @req:PRD-SYS-053
 /// @req:PRD-SYS-124
 /// </summary>
 public sealed class CecChairAdjudication : AggregateRoot<string>

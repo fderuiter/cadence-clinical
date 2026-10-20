@@ -5,7 +5,6 @@ namespace Cadence.Core.Domain;
 
 /// <summary>
 /// Categorization of domain errors for deterministic HTTP and regulatory mapping.
-/// @req:PRD-SYS-053
 /// </summary>
 public enum ErrorType
 {
@@ -19,7 +18,6 @@ public enum ErrorType
 
 /// <summary>
 /// Strongly-typed domain error record providing machine-readable error codes and regulatory context.
-/// @req:PRD-SYS-053
 /// </summary>
 public record DomainError(
     string Code,
@@ -46,7 +44,6 @@ public record DomainError(
 /// <summary>
 /// Strongly-typed monadic result representing either successful outcome or explicit domain error.
 /// Eliminates runtime exception allocation overhead on expected clinical validation failures.
-/// @req:PRD-SYS-053
 /// </summary>
 public readonly record struct Result<TValue>
 {

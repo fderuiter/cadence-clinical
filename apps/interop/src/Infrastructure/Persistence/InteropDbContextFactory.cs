@@ -7,7 +7,6 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence;
 
 /// <summary>
 /// Design-time-only factory that lets the <c>dotnet ef</c> CLI construct an <see cref="InteropDbContext"/>.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class InteropDbContextFactory : IDesignTimeDbContextFactory<InteropDbContext>
 {

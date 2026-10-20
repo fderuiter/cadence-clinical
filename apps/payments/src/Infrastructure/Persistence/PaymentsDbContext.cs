@@ -12,7 +12,6 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence;
 /// <summary>
 /// EF Core 10 DbContext for Payments microservice persistence gateway. Payment processor references are encrypted
 /// at rest with <paramref name="fieldEncryptor"/> (#4770).
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class PaymentsDbContext(DbContextOptions<PaymentsDbContext> options, IFieldEncryptor fieldEncryptor)
     : DbContext(options), IFieldEncryptingDbContext

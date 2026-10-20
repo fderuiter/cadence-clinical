@@ -6,7 +6,6 @@ namespace Cadence.Contracts;
 /// Domain event published when a Grade 3/4 laboratory toxicity event is detected or confirmed.
 /// Written to the transactional outbox table for at-least-once downstream delivery.
 /// @req:PRD-SYS-001
-/// @req:PRD-SYS-053
 /// </summary>
 public record Grade3ToxicityDetected(
     string ReviewId,

@@ -12,7 +12,6 @@ namespace Cadence.Kernel.Persistence.Tenancy;
 /// <see cref="CurrentTenantFunction"/>, which reads <see cref="TenantSetting"/>: the one value
 /// <see cref="KernelTenantConnectionInterceptor"/> sets. With no tenant set it is <c>NULL</c>, so the connection sees
 /// no rows and can insert none.
-/// @req:PRD-SYS-053
 /// </summary>
 internal static class TenantIsolationSql
 {

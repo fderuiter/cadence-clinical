@@ -7,7 +7,6 @@ namespace Cadence.Kernel.Commands;
 /// <summary>
 /// The single path for kernel writes (spec §5.1): resolve actor → authorize → idempotency → handler → state,
 /// provenance, events, audit entry and outbox rows in one transaction.
-/// @req:PRD-SYS-053
 /// </summary>
 public interface IKernelCommandSender
 {

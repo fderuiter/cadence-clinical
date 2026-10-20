@@ -6,7 +6,7 @@ namespace Cadence.Kernel.Domain.Bitemporal;
 
 /// <summary>
 /// LINQ query extensions for point-in-time state reconstruction across valid time and recorded time.
-/// Conforms to ADR-2246 and PRD-SYS-053.
+/// Conforms to ADR-2246.
 /// </summary>
 public static class BitemporalQueryExtensions
 {

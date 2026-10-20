@@ -8,7 +8,6 @@ namespace Cadence.Apps.Quality.Infrastructure.Persistence;
 /// <summary>
 /// Design-time-only factory that lets the <c>dotnet ef</c> CLI (<c>migrations add</c>,
 /// <c>database update</c>, <c>migrations script</c>, ...) construct a <see cref="QualityDbContext"/>.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class QualityDbContextFactory : IDesignTimeDbContextFactory<QualityDbContext>
 {

@@ -13,7 +13,6 @@ namespace Cadence.E2ETests.E2E;
 /// <summary>
 /// E2E integration test suite for Observation and Form Submission REST endpoints.
 /// Verifies observation recording and cross-form edit check execution over HTTP.
-/// @req:PRD-QRY-003, PRD-LAB-001
 /// </summary>
 public class ObservationAndFormE2ETests : IClassFixture<ExecutionE2EFactory>
 {

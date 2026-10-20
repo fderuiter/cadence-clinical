@@ -12,7 +12,6 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// <summary>
 /// Full 9x9 = 81-permutation coverage for `MIG-SUBJ-002`'s `SubjectTransitionGraph.Guard`
 /// (SCN-003), plus the null-`current` and `ReconsentRequired` fan-out boundary checks.
-/// @req:PRD-SUB-001
 /// </summary>
 public class SubjectTransitionGraphTests
 {

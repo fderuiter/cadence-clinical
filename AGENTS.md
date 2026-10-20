@@ -166,7 +166,8 @@ is enough. These tags feed the Requirements Traceability Matrix, and
 - Tag only the requirement the test's assertions prove. Most tests need no tag.
 - Look the ID up in `docs/SDLC/01_Product_Requirements_Document_PRD.md` before using it. PRD-SYS-001 is
   audit fields and audit entries; PRD-SYS-053 is the agent lifecycle hooks and never belongs on a product test.
-- Tags on a class do not count, and an unknown ID fails `dotnet cadence check rtm`.
+- `pnpm cadence check rtm` fails on an unknown ID, a tag on a class, a `[Trait("Requirement", …)]` (not a
+  supported form), and PRD-SYS-053 outside `tests/**/Packages/AgentHook*.cs`.
 - After adding, removing or moving a tag, run `pnpm cadence gxp sync` to validate the tags and results. It
   writes a preview to `TestResults/gxp/preview/` and nothing under `docs/SDLC`; never commit the RTM or the
   IQ/OQ/PQ report on a feature branch (ADR-2532).

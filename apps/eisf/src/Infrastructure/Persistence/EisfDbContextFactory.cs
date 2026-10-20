@@ -8,7 +8,6 @@ namespace Cadence.Apps.Eisf.Infrastructure.Persistence;
 /// <summary>
 /// Design-time-only factory that lets the <c>dotnet ef</c> CLI (<c>migrations add</c>,
 /// <c>database update</c>, <c>migrations script</c>, ...) construct an <see cref="EisfDbContext"/>.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class EisfDbContextFactory : IDesignTimeDbContextFactory<EisfDbContext>
 {

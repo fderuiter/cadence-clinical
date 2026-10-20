@@ -21,7 +21,6 @@ namespace Cadence.Apps.Execution.Endpoints;
 /// Minimal API route definitions for eCRF form submissions, electronic signatures, and unlock workflows.
 /// @req:PRD-SYS-001
 /// @req:PRD-SYS-002
-/// @req:PRD-SYS-053
 /// @req:SRS-EDC-002
 /// @req:SRS-EDC-003
 /// </summary>

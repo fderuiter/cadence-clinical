@@ -7,6 +7,7 @@ using Cadence.Apps.Interop.Application.Services;
 using Cadence.Apps.Interop.Domain;
 using Cadence.Apps.Interop.Endpoints;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
+using Cadence.Testing;
 using Cadence.Testing.Time;
 
 using FluentAssertions;
@@ -45,9 +46,7 @@ public sealed class StatisticalComputingEnvironmentTests : IDisposable
         _connection.Dispose();
     }
 
-    /// <summary>@req:PRD-SYS-053</summary>
     [Fact(DisplayName = "ValidateLockfile_ValidUvLock_ReturnsValidStatusAndParsedPackages")]
-    [Trait("Requirement", "PRD-SYS-053")]
     public void ValidateLockfile_ValidUvLock_ReturnsValidStatusAndParsedPackages()
     {
         string uvLockContent = @"
@@ -68,9 +67,8 @@ version = ""1.26.0""
         result.UnqualifiedPackages.Should().BeEmpty();
     }
 
-    /// <summary>@req:PRD-SYS-053</summary>
     [Fact(DisplayName = "ValidateLockfile_TamperedDigest_ReturnsTamperedStatus")]
-    [Trait("Requirement", "PRD-SYS-053")]
+    [GxPRequirement("PRD-CDR-005")]
     public void ValidateLockfile_TamperedDigest_ReturnsTamperedStatus()
     {
         string content = "[[package]]\nname = \"pandas\"\nversion = \"2.2.0\"\n";
@@ -83,9 +81,7 @@ version = ""1.26.0""
         result.Details.Should().Contain("mismatch");
     }
 
-    /// <summary>@req:PRD-SYS-053</summary>
     [Fact(DisplayName = "ValidateLockfile_UnqualifiedPackageWithStrictQualification_RejectsPackage")]
-    [Trait("Requirement", "PRD-SYS-053")]
     public void ValidateLockfile_UnqualifiedPackageWithStrictQualification_RejectsPackage()
     {
         string content = @"
@@ -104,9 +100,7 @@ version = ""1.0.0""
         result.UnqualifiedPackages.Should().Contain("malicious-unapproved-package");
     }
 
-    /// <summary>@req:PRD-SYS-053</summary>
     [Fact(DisplayName = "ValidateLockfile_ValidRenvLock_ParsesRPackages")]
-    [Trait("Requirement", "PRD-SYS-053")]
     public void ValidateLockfile_ValidRenvLock_ParsesRPackages()
     {
         string renvContent = @"{
@@ -133,9 +127,7 @@ version = ""1.0.0""
         result.Packages.Select(p => p.Name).Should().Contain(["rtables", "dplyr"]);
     }
 
-    /// <summary>@req:PRD-SYS-053</summary>
     [Fact(DisplayName = "ExecuteInSandbox_WhenContainerUnavailable_FailsClosedWithNonZeroExitCodeAndErrorOutput")]
-    [Trait("Requirement", "PRD-SYS-053")]
     public async Task ExecuteInSandbox_WhenContainerUnavailable_FailsClosedWithNonZeroExitCodeAndErrorOutput()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -157,9 +149,7 @@ version = ""1.0.0""
         result.ContainerImageDigest.Should().NotBeNullOrWhiteSpace();
     }
 
-    /// <summary>@req:PRD-SYS-053</summary>
     [Fact(DisplayName = "ExecuteInSandbox_MockedDriver_ExecutesProgramAndGeneratesArtifactsAndManifestDigest")]
-    [Trait("Requirement", "PRD-SYS-053")]
     public async Task ExecuteInSandbox_MockedDriver_ExecutesProgramAndGeneratesArtifactsAndManifestDigest()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -208,9 +198,7 @@ version = ""1.0.0""
         result.ContainerImageDigest.Should().StartWith("sha256:");
     }
 
-    /// <summary>@req:PRD-SYS-053</summary>
     [Fact(DisplayName = "DatabaseLockToken_IssueAndRevoke_UpdatesTokenStateAndAuditTrail")]
-    [Trait("Requirement", "PRD-SYS-053")]
     public async Task DatabaseLockToken_IssueAndRevoke_UpdatesTokenStateAndAuditTrail()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -269,9 +257,7 @@ version = ""1.0.0""
         auditLog!.LockTokenId.Should().Be("DBLOCK-AUTH-TEST-12345");
     }
 
-    /// <summary>@req:PRD-SYS-053</summary>
     [Fact(DisplayName = "ExecutionManifest_VerifySeal_ReturnsValidWhenUntampered")]
-    [Trait("Requirement", "PRD-SYS-053")]
     public async Task ExecutionManifest_VerifySeal_ReturnsValidWhenUntampered()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -324,9 +310,7 @@ version = ""1.0.0""
         recomputedSeal.Should().Be(fetched.ManifestSha256Seal);
     }
 
-    /// <summary>@req:PRD-SYS-053</summary>
     [Fact(DisplayName = "ExecuteInSandbox_WhenRuntimeFails_ReturnsNonZeroExitCodeStderrAndNoSyntheticData")]
-    [Trait("Requirement", "PRD-SYS-053")]
     public async Task ExecuteInSandbox_WhenRuntimeFails_ReturnsNonZeroExitCodeStderrAndNoSyntheticData()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -348,9 +332,7 @@ version = ""1.0.0""
         result.Stdout.Should().BeEmpty();
     }
 
-    /// <summary>@req:PRD-SYS-053</summary>
     [Fact(DisplayName = "ExecutionRun_WhenExitCodeNonZero_SetsStatusFailedAndSuppressesSignatureAndSeal")]
-    [Trait("Requirement", "PRD-SYS-053")]
     public async Task ExecutionRun_WhenExitCodeNonZero_SetsStatusFailedAndSuppressesSignatureAndSeal()
     {
         var ct = TestContext.Current.CancellationToken;

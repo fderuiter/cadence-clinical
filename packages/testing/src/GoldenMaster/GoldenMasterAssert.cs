@@ -42,7 +42,6 @@ namespace Cadence.Testing.GoldenMaster;
 /// type argument instead, achieving genuine cross-slice reusability for this package rather than a
 /// single-slice-only helper that merely lives under `packages/testing/` in name.
 /// </para>
-/// @req:PRD-SYS-053
 /// </summary>
 public static class GoldenMasterAssert
 {

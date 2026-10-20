@@ -3,7 +3,6 @@ namespace Cadence.Kernel.Application;
 /// <summary>
 /// Anchor for the kernel application layer. The command pipeline (#4779), authorization (#4781) and consent
 /// evaluation land here (spec §5.1, §9.3, §9.4). Depends only on Kernel.Abstractions and Kernel.Domain.
-/// @req:PRD-SYS-053
 /// </summary>
 public static class KernelApplicationAssembly
 {

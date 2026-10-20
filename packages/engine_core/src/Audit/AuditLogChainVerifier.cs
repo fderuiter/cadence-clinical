@@ -17,7 +17,6 @@ public sealed record AuditLogChainResult(string EntityName, bool Valid, int Entr
 /// its own chain: exactly one genesis entry (empty predecessor), each entry naming the previous entry's
 /// <see cref="AuditLogEntry.BlockHash"/>, no forks, no unreachable entries, and every block hash recomputing
 /// from the entry's own fields. Historical chains are verified as they are, never rewritten.
-/// @req:PRD-SYS-053
 /// </summary>
 public static class AuditLogChainVerifier
 {

@@ -24,7 +24,6 @@ namespace Cadence.Templating;
 /// assembly; parsed templates are cached per assembly and resource so modules can never collide.
 /// Every value a template outputs is encoded for the template's format (#4959): <c>.xml.liquid</c> and
 /// <c>.html.liquid</c> templates escape markup characters, other templates (plain text) are written as is.
-/// @req:PRD-SYS-053
 /// </summary>
 public class FluidTemplateRenderer : ITemplateRenderer
 {

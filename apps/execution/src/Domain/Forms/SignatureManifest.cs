@@ -6,7 +6,6 @@ namespace Cadence.Apps.Execution.Domain.Forms;
 /// <summary>
 /// 21 CFR Part 11 cryptographic electronic signature attestation manifest.
 /// @req:PRD-SYS-002
-/// @req:PRD-SYS-053
 /// @req:SRS-EDC-003
 /// </summary>
 public sealed record SignatureManifest(

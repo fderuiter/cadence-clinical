@@ -6,7 +6,7 @@ namespace Cadence.Kernel.Persistence.Configurations;
 
 /// <summary>
 /// Shared mapping for the 21 CFR Part 11 audit fields every kernel aggregate carries (<see cref="AggregateRootBase"/>).
-/// <c>VersionIndex</c> is the optimistic-concurrency token. @req:PRD-SYS-053
+/// <c>VersionIndex</c> is the optimistic-concurrency token.
 /// </summary>
 internal static class AuditColumns
 {

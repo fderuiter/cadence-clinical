@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Queries;
 using Cadence.Contracts;
-using Cadence.Testing;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Execution.Fakes;
 using Cadence.UnitTests.Fixtures.Execution;
@@ -22,7 +21,6 @@ namespace Cadence.UnitTests.Execution.Queries;
 public class ClinicalQueryApplicationServiceOutboxTests
 {
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public async Task CreateAsync_WhenQueryRaised_PublishesClinicalQueryRaisedEvent()
     {
         var ct = TestContext.Current.CancellationToken;

@@ -26,7 +26,6 @@ namespace Cadence.Testing.GoldenMaster;
 /// no verified expectation) that this loader treats as the fixture-integrity failure the ticket's fail-fast
 /// requirement exists to catch.
 /// </para>
-/// @req:PRD-SYS-053
 /// </summary>
 public static class GoldenMasterFixtureLoader
 {

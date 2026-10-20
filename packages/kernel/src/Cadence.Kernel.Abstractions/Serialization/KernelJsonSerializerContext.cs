@@ -5,7 +5,6 @@ namespace Cadence.Kernel.Serialization;
 
 /// <summary>
 /// Source-generated JsonSerializerContext for Native AOT and high-performance serialization of Kernel identifier types.
-/// @req:PRD-SYS-053
 /// </summary>
 [JsonSourceGenerationOptions(
     WriteIndented = false,

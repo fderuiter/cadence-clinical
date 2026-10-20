@@ -6,7 +6,6 @@ namespace Cadence.Kernel.Serialization;
 
 /// <summary>
 /// Generic JsonConverter for clinical kernel entity identifiers, serializing as UUID strings for Native AOT and System.Text.Json.
-/// @req:PRD-SYS-053
 /// </summary>
 public class EntityIdJsonConverter<TId> : JsonConverter<TId>
     where TId : struct, IEntityId<TId>

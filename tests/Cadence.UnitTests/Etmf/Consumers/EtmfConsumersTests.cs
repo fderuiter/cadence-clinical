@@ -5,7 +5,6 @@ using Cadence.Apps.Etmf.Infrastructure.Consumers;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Contracts;
 using Cadence.Kernel.Time;
-using Cadence.Testing;
 using Cadence.Testing.Time;
 
 using FluentAssertions;
@@ -36,7 +35,6 @@ public class EtmfConsumersTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public async Task Consume_EtmfDocumentFilingRequested_FilesDocument()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -75,7 +73,6 @@ public class EtmfConsumersTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public async Task Consume_EtmfDocumentFilingRequested_IsIdempotent()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -114,7 +111,6 @@ public class EtmfConsumersTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public async Task Consume_EConsentCompleted_FilesICFDocumentInEtmf()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -152,7 +148,6 @@ public class EtmfConsumersTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public async Task Consume_EConsentCompleted_IsIdempotent()
     {
         var ct = TestContext.Current.CancellationToken;

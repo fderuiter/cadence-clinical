@@ -68,7 +68,6 @@ internal sealed class KernelUnitOfWorkFactory(
 /// staged IdentityVault writes in one PostgreSQL transaction (K-TX-2, K-LIN-2, ADR-2458). The aggregate may be the
 /// kernel's or a module's: a module's context is opened on this command's connection and enlisted in the same
 /// transaction, so its rows commit or roll back with the kernel's (ADR-2600).
-/// @req:PRD-SYS-053
 /// </summary>
 internal sealed class KernelCommandTransaction(
     KernelDbContext db,

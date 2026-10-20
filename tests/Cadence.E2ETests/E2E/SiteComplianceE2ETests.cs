@@ -13,7 +13,6 @@ namespace Cadence.E2ETests.E2E;
 /// <summary>
 /// E2E integration test suite for Site Compliance REST endpoints.
 /// Verifies site compliance summary retrieval and lock state enforcement.
-/// @req:Trace-3
 /// </summary>
 public class SiteComplianceE2ETests : IClassFixture<ExecutionE2EFactory>
 {

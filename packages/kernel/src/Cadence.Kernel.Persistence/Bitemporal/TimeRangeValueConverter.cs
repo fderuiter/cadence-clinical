@@ -11,7 +11,6 @@ namespace Cadence.Kernel.Persistence.Bitemporal;
 /// <summary>
 /// Stores a domain <see cref="TimeRange"/> as a PostgreSQL <c>tstzrange</c> <c>[start, end)</c>, with an open range
 /// stored as an infinite upper bound (ADR-2246). The domain type stays free of Npgsql.
-/// @req:PRD-SYS-053
 /// </summary>
 internal sealed class TimeRangeValueConverter()
     : ValueConverter<TimeRange, NpgsqlRange<DateTimeOffset>>(

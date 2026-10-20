@@ -19,7 +19,6 @@ namespace Cadence.Apps.Notifications.Endpoints;
 /// <summary>
 /// Notification rendering. The caller picks a notification by key from <see cref="Catalog"/>; nothing
 /// outside that allow-list can be rendered.
-/// @req:PRD-SYS-053
 /// </summary>
 public static class NotificationTemplateEndpoints
 {

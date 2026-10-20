@@ -28,7 +28,6 @@ namespace Cadence.UnitTests.Execution.Forms;
 /// <summary>
 /// Unit test coverage for eCRF form submission lifecycle states, 21 CFR Part 11 electronic signature approval,
 /// SHA-256 payload integrity validation, immutable read-only locking, and audited unlock workflows.
-/// @req:SRS-EDC-003
 /// </summary>
 public sealed class FormSubmissionStateTests
 {

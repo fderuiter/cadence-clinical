@@ -8,7 +8,6 @@ namespace Cadence.Apps.Interop.Infrastructure.Security;
 /// Turns a raw wearable/sensor device token into the keyed lookup hash stored in every <c>DeviceTokenHash</c>
 /// column (device registrations, telemetry streams, daily summaries, safety alerts). The raw token is never
 /// persisted; to find a device's rows, hash the presented token and compare hashes (#4770).
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class DeviceTokenHasher(ILookupHasher lookupHasher)
 {

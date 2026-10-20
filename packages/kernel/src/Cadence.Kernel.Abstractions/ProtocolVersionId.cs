@@ -9,7 +9,6 @@ namespace Cadence.Kernel;
 
 /// <summary>
 /// Strongly-typed UUIDv7 identifier for an immutable ProtocolVersion snapshot in the Clinical Kernel.
-/// @req:PRD-SYS-053
 /// </summary>
 [TypeConverter(typeof(ProtocolVersionIdTypeConverter))]
 [JsonConverter(typeof(ProtocolVersionIdJsonConverter))]

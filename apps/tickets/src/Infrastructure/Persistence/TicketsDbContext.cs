@@ -9,7 +9,6 @@ namespace Cadence.Apps.Tickets.Infrastructure.Persistence;
 
 /// <summary>
 /// EF Core 10 DbContext for Tickets microservice persistence gateway.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class TicketsDbContext(DbContextOptions<TicketsDbContext> options) : DbContext(options)
 {

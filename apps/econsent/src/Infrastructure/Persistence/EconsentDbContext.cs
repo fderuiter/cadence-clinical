@@ -15,7 +15,6 @@ namespace Cadence.Apps.Econsent.Infrastructure.Persistence;
 /// <summary>
 /// EF Core 10 DbContext for eConsent microservice persistence gateway. Signer e-mail addresses are encrypted at rest
 /// with <paramref name="fieldEncryptor"/> (#4770).
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class EconsentDbContext(DbContextOptions<EconsentDbContext> options, IFieldEncryptor fieldEncryptor)
     : DbContext(options), IFieldEncryptingDbContext

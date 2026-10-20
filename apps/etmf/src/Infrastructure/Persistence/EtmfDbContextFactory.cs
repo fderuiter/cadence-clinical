@@ -8,7 +8,6 @@ namespace Cadence.Apps.Etmf.Infrastructure.Persistence;
 /// <summary>
 /// Design-time-only factory that lets the <c>dotnet ef</c> CLI (<c>migrations add</c>,
 /// <c>database update</c>, <c>migrations script</c>, ...) construct an <see cref="EtmfDbContext"/>.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class EtmfDbContextFactory : IDesignTimeDbContextFactory<EtmfDbContext>
 {

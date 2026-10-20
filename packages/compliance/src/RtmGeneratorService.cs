@@ -114,7 +114,8 @@ public static partial class RtmGeneratorService
         var allRequirements = LoadRequirements(repoRoot);
 
         // 2. Tests and the requirements they declare
-        var tests = RequirementTagScanner.ScanDirectories(repoRoot, TestSearchDirs);
+        var scan = RequirementTagScanner.ScanDirectoriesWithViolations(repoRoot, TestSearchDirs);
+        var tests = scan.Tests;
         var testMappings = BuildMappings(tests);
 
         // An alias is mapped only to the tests that declare the alias itself. It does not inherit its parent's
@@ -166,6 +167,19 @@ public static partial class RtmGeneratorService
             foreach (var kv in unknownTags)
             {
                 Console.WriteLine($"  {kv.Key}: {string.Join(", ", kv.Value.Select(t => $"{t.File}:{t.Line}"))}");
+            }
+
+            exitCode = 1;
+        }
+
+        // A tag on a class, an unsupported Trait form, or a requirement declared outside the tests that may verify it
+        // makes an RTM claim no test assertion backs (#5326).
+        if (scan.Violations.Count > 0)
+        {
+            Console.WriteLine($"[RTM ERROR] Misapplied requirement tags ({scan.Violations.Count}). A tag belongs on the test method whose assertions prove the requirement (docs/TESTING.md):");
+            foreach (var violation in scan.Violations)
+            {
+                Console.WriteLine($"  {violation}");
             }
 
             exitCode = 1;

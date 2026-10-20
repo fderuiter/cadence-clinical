@@ -8,7 +8,6 @@ namespace Cadence.Apps.Execution.Application.Abstractions;
 /// automatic `GxPAuditInterceptor` cannot label on its own, since a bare `EntityState.Modified` cannot
 /// distinguish "consent recorded" from "state transitioned". The action labels the interceptor's own entry for
 /// that change, so each change has exactly one audit entry committed in the same `SaveChangesAsync` (#4768).
-/// @req:PRD-SYS-053
 /// </summary>
 public interface IAuditLogWriter
 {

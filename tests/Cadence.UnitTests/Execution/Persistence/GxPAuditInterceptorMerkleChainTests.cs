@@ -87,7 +87,7 @@ public class GxPAuditInterceptorMerkleChainTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
+    [GxPRequirement("PRD-SYS-003")]
     public async Task SaveChangesAsync_GivenTwoSequentialSaves_ChainsPredecessorHashForSameEntityType()
     {
         var clock = new FakeClock();
@@ -112,7 +112,7 @@ public class GxPAuditInterceptorMerkleChainTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
+    [GxPRequirement("PRD-SYS-003")]
     public async Task SaveChangesAsync_GivenTwoEntityTypesModifiedInSameCall_ChainsEachEntityTypeIndependently()
     {
         var clock = new FakeClock();
@@ -165,7 +165,7 @@ public class GxPAuditInterceptorMerkleChainTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
+    [GxPRequirement("PRD-SYS-003")]
     public async Task SaveChangesAsync_GivenSequentialSavesWithIdenticalTimestamps_ProducesValidMerkleChain()
     {
         string dbName = Guid.NewGuid().ToString();

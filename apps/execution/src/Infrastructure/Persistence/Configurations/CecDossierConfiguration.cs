@@ -15,7 +15,6 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Configurations;
 /// EF Core 10 entity mapping for the <c>cec_dossiers</c> table.
 /// Configures JSONB properties, signature manifest, and concurrency tokens.
 /// @req:PRD-CEC-001
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class CecDossierConfiguration : IEntityTypeConfiguration<CecDossier>
 {

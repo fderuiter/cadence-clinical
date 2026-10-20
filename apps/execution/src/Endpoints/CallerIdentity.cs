@@ -8,7 +8,6 @@ namespace Cadence.Apps.Execution.Endpoints;
 
 /// <summary>
 /// Reads the authenticated caller off the request's validated claims.
-/// @req:PRD-SYS-053
 /// </summary>
 internal static class CallerIdentity
 {

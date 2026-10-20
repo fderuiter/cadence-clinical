@@ -7,7 +7,6 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence;
 
 /// <summary>
 /// Design-time-only factory that lets the <c>dotnet ef</c> CLI construct a <see cref="KnowledgeDbContext"/>.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class KnowledgeDbContextFactory : IDesignTimeDbContextFactory<KnowledgeDbContext>
 {
