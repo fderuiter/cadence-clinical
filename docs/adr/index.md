@@ -136,6 +136,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2630: AI Agents Act Through Proposals in One Governed Runtime](2026-10-20-ai-agents-act-through-proposals-in-one-governed-runtime.md) (2026-10-20)
 - [ADR-2631: Agent Task Configurations Are Versioned and Qualified per Tenant](2026-10-20-agent-task-configurations-are-versioned-and-qualified-per-tenant.md) (2026-10-20)
 - [ADR-2632: Agents Act for One Person, and Approved Proposals Execute as Their Approver](2026-10-20-agents-act-for-one-person-and-approved-proposals-execute-as-their-approver.md) (2026-10-20)
+- [ADR-2634: AI Task Configurations Are Measured by Versioned Evaluations and Production Signals](2026-10-20-ai-task-configurations-are-measured-by-versioned-evaluations-and-production-signals.md) (2026-10-20)
 
 ### 1. Core Platform & Execution Engine
 
@@ -269,7 +270,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2380: Centralized Permission-Based Authorization and Dynamic Mappings](2026-08-17-centralized-permission-auth.md) (2026-08-17)
 - [ADR-2184: Localize datetime helpers in security package](2026-08-18-localize-datetime-helpers-in-security-package.md) (2026-08-18)
 - [ADR-110: eTMF Inbound-Email Webhook and Binder Routing](2026-08-21-etmf-inbound-email-webhook-and-binder-routing.md) (2026-08-21)
-- [ADR-2191: AI Gateway Microservice and Three-Tier Clinical Intelligence Architecture](2026-08-21-ai-gateway-microservice-and-three-tier-clinical-intelligence-architecture.md) (2026-08-21)
+- [ADR-2191: AI Gateway Microservice and Three-Tier Clinical Intelligence Architecture](2026-08-21-ai-gateway-microservice-and-three-tier-clinical-intelligence-architecture.md) (2026-08-21) _(Partly superseded by ADR-2610 and ADR-2630)_
 - [ADR-101: Role Authorization for Granular Data-Lock Actions and Trust Boundary Verification](2026-08-24-role-authorization-for-granular-data-lock-actions.md) (2026-08-24)
 - [ADR-2402: Hybrid Multi-Step Clinical Reasoning Core and Protocol Grounding Gate](2026-08-25-hybrid-multi-step-clinical-reasoning-core-and-protocol-grounding-gate.md) (2026-08-25)
 - [ADR-2437: Decommission Legacy V1 Signatures and Standalone Rendering Engine](2026-09-08-decommission-legacy-v1-signatures-and-rendering-engine.md) (2026-09-08)
@@ -390,7 +391,6 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2434: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](2026-09-06-gxp-compliance-reporting-ci-alignment.md) (2026-09-06)
 - [ADR-2261: Native C# De-Identification Engine and Cryptographic Canonical Signing Foundation](2026-09-29-native-csharp-deid-engine-and-canonical-signing.md) (2026-09-29)
 - [ADR-2541: Consolidate GxPAuditInterceptor on Cadence.Database and Remove Obsolete Security Interceptor](2026-09-30-consolidate-gxp-audit-interceptor-on-database-package.md) (2026-09-30)
-- [ADR-2634: AI Task Configurations Are Measured by Versioned Evaluations and Production Signals](2026-10-20-ai-task-configurations-are-measured-by-versioned-evaluations-and-production-signals.md) (2026-10-20)
 
 ### 6. Frontend & Design System
 

@@ -104,7 +104,8 @@ _Avoid_: empty strings or sentinels for missing values, units in a separate fiel
 The kernel side of one filled-in form: which Observations were collected together, for which participant
 and visit, under which CollectionSpec version (K-FACT-6, ADR-2622). It holds membership only; the form's
 layout, workflow and screen state are the EDC application's **FormInstance**. One command saves a whole
-page of its values, form locks apply at its scope, and a form signature names its members' exact revisions.
+page of its values and form locks apply at its scope. A form signature is meant to name its members' exact
+revisions, but attestations over a `collection_instance` are refused until its target check lands (#5463).
 _Avoid_: page IDs or visit strings on Observations, server-side form drafts
 
 ### FormInstance
@@ -572,15 +573,17 @@ A modular architecture unifying repository sentinels (drift detection, duplicati
 
 ### Intelligence module (AI agent runtime)
 
-The one place AI agents run (ADR-2630): `Cadence.Modules.Intelligence` (`apps/intelligence`), an in-process module of the composition host (today the kernel API host) under `/api/v1/ai`, which replaced the `apps/ai_gateway` service and took over its command-palette intent router (#5374). It holds the provider-neutral model port, qualified **task configurations**, the agent tools, the citation verifier, the **interaction ledger** of every run, and budgets with a kill switch. Its only write into clinical data is a kernel Proposal.
+The one place AI agents run (ADR-2630): `Cadence.Modules.Intelligence` (`apps/intelligence`), an in-process module of the composition host (today the kernel API host) under `/api/v1/ai`, which replaced the `apps/ai_gateway` service and took over its command-palette intent router (#5374). It holds the provider-neutral model port, qualified **task configurations**, stored **evaluation runs** and production monitoring (ADR-2634), the **interaction ledger** of every run, and budgets with a kill switch. The agent tools, the citation verifier and runs that write a Proposal come with #5547; its only write into clinical data will be a kernel Proposal.
 
 A **task configuration** is the qualified unit for an AI task: model and version, prompt, tools, retrieval sources, output schema, evaluation set, acceptance criteria, autonomy level and approver role. It also carries the FDA credibility assessment (question of interest, context of use, model influence, decision consequence), which gives its **model risk class** (low, medium or high). Its kernel content hash covers every field, and every run records it (K-AI-5). Any change makes a new version that must be qualified again.
 
-A **task qualification** is one tenant's signed decision that a task configuration version is fit for use (ADR-2631): a person attests `Approved` over the version's content hash after an evaluation run against its pinned evaluation set met the acceptance criteria. Agents run only on a version the tenant qualified, and only while its content is unchanged; a **suspended** version is out of use until it is qualified again.
+A **task qualification** is one tenant's signed decision that a task configuration version is fit for use (ADR-2631): a person attests `Approved` over the version's content hash, and the command names a stored evaluation run of exactly that version against its pinned evaluation set that met the acceptance criteria (#5574). Agents run only on a version the tenant qualified, and only while its content is unchanged; a **suspended** version is out of use until it is qualified again.
+
+An **evaluation run** is one execution of a task configuration version against its pinned evaluation set (ADR-2634 §4.4): the case results, metrics and verdict, stored with `RecordEvaluationRun` in `intelligence.evaluation_runs` as canonical JSON with its kernel content hash. The server admits a run only when it evaluated a shipped version against exactly its pinned set, criteria and provider and its verdict follows from its case results, and a run is never changed. Qualification rests on a stored run, never on a caller saying a run passed.
 
 An **agent run** is one call of a task, recorded in the interaction ledger (the append-only `intelligence.agent_runs` table, isolated per tenant) through the `StartAgentRun` and `CompleteAgentRun` module commands, with the configuration hash, model, token use, cost and a content hash. An **agent control** (`intelligence.agent_controls`, set with `SetAgentControl`) is a tenant's kill switch and monthly token budget for one task key or, with scope `*`, for every task.
 
-The **autonomy level** of a task is how far its agent may go: 0 inform, 1 draft a Proposal, 2 a Proposal whose approval executes its commands as the approver (K-AI-2), 3 a standing grant for operational commands only (K-AI-7). See [docs/ai/AI_AGENTS.md](docs/ai/AI_AGENTS.md).
+The **autonomy level** of a task is how far its agent may go: 0 inform, 1 draft a Proposal, 2 a Proposal holding exact commands, which the approver then sends as themself, each naming the proposal (K-AI-2, ADR-2632), 3 a standing grant for operational commands only (K-AI-7). See [docs/ai/AI_AGENTS.md](docs/ai/AI_AGENTS.md).
 _Avoid_: "AI gateway microservice", AI draft states on regulated records, "the model" as the thing that is validated
 
 ### Three-Tier Model Routing Strategy
@@ -1250,7 +1253,7 @@ _Avoid_: Raw unmapped primitive input fields requiring post-hoc SAS/SDTM ETL map
 
 ### Automated UAT & Simulation Studio
 
-An automated qualification environment in the eCRF Designer that utilizes AI Gateway synthetic generation to construct thousands of targeted edge-case data payloads (nulls, boundary values, invalid dates, extreme laboratory spikes), evaluates them against the stateless Rules Evaluator, and compiles an immutable 21 CFR Part 11 compliant UAT Evidence Report in sub-30 seconds.
+An automated qualification environment in the eCRF Designer that would use synthetic generation (planned as an Intelligence module task, ADR-2630) to construct thousands of targeted edge-case data payloads (nulls, boundary values, invalid dates, extreme laboratory spikes), evaluates them against the stateless Rules Evaluator, and compiles an immutable 21 CFR Part 11 compliant UAT Evidence Report in sub-30 seconds.
 _Avoid_: Weeks of manual data entry and exploratory testing for study UAT sign-off
 
 ### In-Flight Patient Migration Matrix
