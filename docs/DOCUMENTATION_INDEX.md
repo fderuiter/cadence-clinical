@@ -534,6 +534,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2518: DSUR Approval Is Its Own Capability, Signed by the Verified Caller](adr/2026-10-19-dsur-approval-is-its-own-capability-signed-by-the-verified-caller.md) | Current | - Status: Accepted |
 | [ADR-2631: Agent Task Configurations Are Versioned and Qualified per Tenant](adr/2026-10-20-agent-task-configurations-are-versioned-and-qualified-per-tenant.md) | Current | - Status: Accepted |
 | [ADR-2634: AI Task Configurations Are Measured by Versioned Evaluations and Production Signals](adr/2026-10-20-ai-task-configurations-are-measured-by-versioned-evaluations-and-production-signals.md) | Current | - Status: Accepted |
+| [ADR-2534: Quality Gates Live in One Registry and Each Must Be Able to Fail](adr/2026-10-20-quality-gates-live-in-one-registry-and-each-must-be-able-to-fail.md) | Current | - Status: Accepted |
 ## Developing and running
 
 | Document | Status | What it is |
@@ -542,7 +543,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [Environment variables](ENVIRONMENT_VARIABLES.md) | Current | Every setting the code reads, required or optional |
 | [Database layout and migrations](OPERATIONAL_DATABASE.md) | Current | One `cadence` database with a schema per service; migrations at startup or as a job |
 | [Testing and requirement qualification](TESTING.md) | Current | Running the .NET and Vitest suites, PostgreSQL opt-ins, `Cadence.Testing` helpers, requirement tagging and when a requirement counts as qualified |
-| [CI and quality gates](CI.md) | Current | Workflows, CI jobs, the 21 quality gates, the pre-commit hook and a failure runbook |
+| [CI and quality gates](CI.md) | Current | Workflows, CI jobs, the quality gates, the pre-commit hook and a failure runbook |
 | [CLI reference](cli.md) | Generated | Every `pnpm cadence` command (`pnpm cadence generate-cli-docs`) |
 | [Service and package READMEs](../ARCHITECTURE.md#3-running-services-today) | Current | One README per `apps/*` and `packages/*` directory |
 | [REST API reference](api/index.md) | Generated | Per-service endpoint reference from `docs/openapi/*.json` (`pnpm cadence generate-api-docs`) |

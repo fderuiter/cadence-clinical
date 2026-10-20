@@ -19,8 +19,7 @@ spaces), SHA-1 thumbprints and serial numbers (decimal, `0x` hex or plain hex, c
 checked after the signature, so a tampered document reports tampering. Known differences from the deleted Python:
 the status is `REVOKED_CERTIFICATE` (Python `CERTIFICATE_REVOKED`), there are no trust-store checks, and the AI-record
 approval helpers are not ported (spec §11 Proposals supersedes them). `VerifyMarkdown` also checks the SHA-256 in the signature block
-against the document body. Only tests call the verifier today; `dotnet cadence verify-gxp-signatures` is not
-implemented yet ([docs/cli.md](../../docs/cli.md)).
+against the document body. Only tests call the verifier today; no CLI command verifies signatures.
 
 ## Generated GxP documents
 

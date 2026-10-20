@@ -1,316 +1,75 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 
-using Cadence.Compliance;
-using Cadence.ToolingCore.OpenApi;
 using Cadence.ToolingCore.Services;
 
 using Spectre.Console;
 
 namespace Cadence.Cli.Services;
 
+/// <summary>Runs the gates of <see cref="QualityGates"/> for <c>cadence check</c>.</summary>
 public static class QualityGateOrchestrator
 {
     public static int RunQualityGates(string? gateName = null, string[]? targetFiles = null, bool preCommit = false)
     {
         AnsiConsole.MarkupLine("[bold cyan]Executing Cadence Quality Sentinels & Policy Gates...[/]\n");
 
+        string repoRoot = FindRepoRoot();
         if (preCommit && (targetFiles == null || targetFiles.Length == 0))
         {
-            var staged = PreCommitOpenApiService.GetStagedFiles(FindRepoRoot());
+            var staged = PreCommitOpenApiService.GetStagedFiles(repoRoot);
             if (staged.Count > 0)
             {
                 targetFiles = staged.ToArray();
             }
         }
 
+        var context = new GateContext(repoRoot, targetFiles, preCommit);
+
         if (!string.IsNullOrEmpty(gateName))
         {
-            return RunSingleGate(gateName, targetFiles, preCommit);
+            var gate = QualityGates.Find(gateName);
+            if (gate is null)
+            {
+                AnsiConsole.MarkupLine($"[red]Unknown quality gate '{Markup.Escape(gateName)}'. Gates: {Markup.Escape(QualityGates.NameList)}.[/]");
+                return 1;
+            }
+
+            return gate.Run(context) ? 0 : 1;
         }
 
-        // Run all 22 pre-commit quality gates natively in C# via ToolingCore services
-        bool allPassed = true;
+        return RunAll(context);
+    }
 
-        // 1. Formatting
-        AnsiConsole.MarkupLine("1/22 Validating C# Code Formatting (.editorconfig)...");
-        if (preCommit)
+    private static int RunAll(GateContext context)
+    {
+        int total = QualityGates.All.Count;
+        int failed = 0;
+        for (int i = 0; i < total; i++)
         {
-            AnsiConsole.MarkupLine("Skipped: the pre-commit hook runs 'dotnet format' on the staged files.");
-        }
-        else if (RunProcess("dotnet", "format whitespace Cadence.sln --verify-no-changes --no-restore") != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 1 (dotnet-format) failed![/]");
-            allPassed = false;
-        }
+            var gate = QualityGates.All[i];
+            AnsiConsole.MarkupLine($"\n[bold]{i + 1}/{total} {Markup.Escape(gate.Name)}[/]: {Markup.Escape(gate.Checks)}");
+            if (context.PreCommit && gate.PreCommit == PreCommitMode.Skipped)
+            {
+                AnsiConsole.MarkupLine($"Skipped: {Markup.Escape(gate.PreCommitNote ?? "")}.");
+                continue;
+            }
 
-        // 2. Roslyn Style
-        AnsiConsole.MarkupLine("\n2/22 Validating Roslyn Analyzer Rules...");
-        if (preCommit)
-        {
-            AnsiConsole.MarkupLine("Skipped: the pre-commit hook runs 'dotnet format' on the staged files.");
-        }
-        else if (RunProcess("dotnet", "format style Cadence.sln --verify-no-changes --no-restore") != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 2 (dotnet-format-style) failed![/]");
-            allPassed = false;
+            if (!gate.Run(context))
+            {
+                AnsiConsole.MarkupLine($"[red]Gate {i + 1} ({Markup.Escape(gate.Name)}) failed![/]");
+                failed++;
+            }
         }
 
-        // 3. Clean Secrets Baseline
-        AnsiConsole.MarkupLine("\n3/22 Cleaning Secrets Baseline...");
-        if (SecretsBaselineCleanerService.CleanSecretsBaseline() != 0)
+        if (failed > 0)
         {
-            AnsiConsole.MarkupLine("[red]Gate 3 (clean-secrets-baseline) failed![/]");
-            allPassed = false;
-        }
-
-        // 4. Code Duplication
-        AnsiConsole.MarkupLine("\n4/22 Detecting Code Duplication...");
-        if (DuplicationDetectorService.DetectDuplication(targetFiles) != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 4 (detect-code-duplication) failed![/]");
-            allPassed = false;
-        }
-
-        // 5. CLI Docs
-        AnsiConsole.MarkupLine("\n5/22 Validating CLI Docs Parity...");
-        if (CliDocsGeneratorService.GenerateCliDocs(check: true) != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 5 (validate-cli-docs) failed![/]");
-            allPassed = false;
-        }
-
-        // 6. ADRs
-        AnsiConsole.MarkupLine("\n6/22 Validating ADR Integrity...");
-        if (!Cadence.ToolingCore.Services.AdrValidatorService.ValidateAdrs(checkGitDiff: true))
-        {
-            AnsiConsole.MarkupLine("[red]Gate 6 (validate-adrs) failed![/]");
-            allPassed = false;
-        }
-
-        // 7. Architecture Drift
-        AnsiConsole.MarkupLine("\n7/22 Validating Architecture Drift...");
-        if (Cadence.ToolingCore.Services.ArchitectureDriftValidatorService.ValidateArchitectureDrift() != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 7 (validate-architecture-drift) failed![/]");
-            allPassed = false;
-        }
-
-        // 8. Path Requirement Sanitizer
-        AnsiConsole.MarkupLine("\n8/22 Sanitizing Requirement Tag Prefixes...");
-        if (ComplianceUtilityService.ExecuteComplianceUtility(sanitize: true, targetFiles: targetFiles) != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 8 (path-requirement-sanitizer) failed![/]");
-            allPassed = false;
-        }
-
-        // 9. Markdown Validation
-        AnsiConsole.MarkupLine("\n9/22 Validating Markdown Workspaces & Links...");
-        if (Cadence.ToolingCore.Services.MarkdownValidatorService.ValidateMarkdown(targetFiles) != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 9 (validate-markdown) failed![/]");
-            allPassed = false;
-        }
-
-        // 10. Environment Variables
-        AnsiConsole.MarkupLine("\n10/22 Validating Environment Variables Synchronization...");
-        if (EnvVarExtractorService.ExtractAndValidateEnvVars(checkOnly: true) != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 10 (validate-environment-variables) failed![/]");
-            allPassed = false;
-        }
-
-        // 10b. Dev Environment
-        AnsiConsole.MarkupLine("\nValidating Dev Environment Documentation Parity...");
-        if (DevEnvironmentValidatorService.ValidateDevEnvironment() != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate (validate-dev-environment) failed![/]");
-            allPassed = false;
-        }
-
-        // 11. Readmes
-        AnsiConsole.MarkupLine("\n11/22 Validating README Coverage...");
-        if (ReadmeValidatorService.ValidateReadmes() != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 11 (validate-readmes) failed![/]");
-            allPassed = false;
-        }
-
-        // 12. Imports
-        AnsiConsole.MarkupLine("\n12/22 Validating Cross-Service Imports...");
-        if (ImportValidatorService.ValidateImports() != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 12 (validate-imports) failed![/]");
-            allPassed = false;
-        }
-
-        // 13. Audit Security
-        AnsiConsole.MarkupLine("\n13/22 Executing Security Audit & Secret Scanner...");
-        if (SecurityAuditorService.AuditSecurity(targetFiles) != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 13 (audit-security) failed![/]");
-            allPassed = false;
-        }
-
-        // 14. DEID Scan
-        AnsiConsole.MarkupLine("\n14/22 Executing DEID Compliance Scan...");
-        if (Cadence.ToolingCore.Services.DeidComplianceService.ScanDeidCompliance(targetFiles) != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 14 (deid-compliance-scan) failed![/]");
-            allPassed = false;
-        }
-
-        // 15. Auto-stage OpenAPI
-        AnsiConsole.MarkupLine("\n15/22 Staging & Validating OpenAPI Schemas...");
-        if (PreCommitOpenApiService.ExecutePreCommitOpenApi(quick: preCommit, targetFiles: targetFiles) != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 15 (auto-stage-openapi) failed![/]");
-            allPassed = false;
-        }
-
-        // 16. API Clients
-        AnsiConsole.MarkupLine("\n16/22 Validating Frontend API Clients AST Contract...");
-        if (ApiClientValidatorService.ValidateApiClients() != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 16 (validate-api-clients) failed![/]");
-            allPassed = false;
-        }
-
-        // 17. Schema Doc
-        AnsiConsole.MarkupLine("\n17/22 Validating Database Schema Documentation...");
-        if (preCommit)
-        {
-            AnsiConsole.MarkupLine("Skipped: rendering every module's EF Core model runs in 'cadence check' and CI.");
-        }
-        else if (SchemaDocGeneratorService.GenerateSchemaDocumentation(validate: true) != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 17 (schema-doc) failed![/]");
-            allPassed = false;
-        }
-
-        // 18. Path Patterns
-        AnsiConsole.MarkupLine("\n18/22 Validating Path Patterns...");
-        if (PathPatternValidatorService.ValidatePathPatterns(targetFiles) != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 18 (validate-path-patterns) failed![/]");
-            allPassed = false;
-        }
-
-        // 19. Backend Static Verify
-        AnsiConsole.MarkupLine("\n19/22 Verifying Backend Contracts...");
-        if (ContractVerifierService.VerifyContracts() != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 19 (backend-static-verify) failed![/]");
-            allPassed = false;
-        }
-
-        // 20. Query Style Linter
-        AnsiConsole.MarkupLine("\n20/22 Executing Query Style Linter...");
-        if (QueryLinterService.LintQueries(targetFiles) != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 20 (query-style-linter) failed![/]");
-            allPassed = false;
-        }
-
-        // 21. Vulnerabilities & Dependencies
-        AnsiConsole.MarkupLine("\n21/22 Validating Dependencies & Vulnerabilities...");
-        if (VulnerabilityAuditorService.AuditVulnerabilities() != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 21a (validate-vulnerabilities) failed![/]");
-            allPassed = false;
-        }
-        if (DependencyValidatorService.ValidateDependencies() != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 21b (validate-dependencies) failed![/]");
-            allPassed = false;
-        }
-
-        // 22. Documentation Index
-        AnsiConsole.MarkupLine("\n22/22 Validating Documentation Index Completeness...");
-        if (DocIndexSyncService.SyncDocIndex(check: true) != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate 22 (validate-doc-index) failed![/]");
-            allPassed = false;
-        }
-
-        // 22b. GxP RTM Validation
-        AnsiConsole.MarkupLine("\nValidating GxP Requirements Traceability Matrix...");
-        if (!GxpRtmValidatorService.ValidateGxpRtm())
-        {
-            AnsiConsole.MarkupLine("[red]Gate (gxp-rtm-validate) failed![/]");
-            allPassed = false;
-        }
-
-        // 22c. GxP snapshot guard (ADR-2532)
-        AnsiConsole.MarkupLine("\nChecking that this branch does not change the generated GxP snapshots...");
-        if (GxpSnapshotGuardService.Check(FindRepoRoot(), preCommit) != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate (gxp-snapshot) failed![/]");
-            allPassed = false;
-        }
-
-        // 22d. Ratchet baselines may only shrink (#5318)
-        AnsiConsole.MarkupLine("\nChecking that no ratchet baseline grew without a Baseline-Growth reason...");
-        if (BaselineRatchetService.Check(FindRepoRoot(), preCommit) != 0)
-        {
-            AnsiConsole.MarkupLine("[red]Gate (baseline-ratchet) failed![/]");
-            allPassed = false;
-        }
-
-        if (!allPassed)
-        {
-            AnsiConsole.MarkupLine("\n[bold red]One or more quality gate checks failed.[/]");
+            AnsiConsole.MarkupLine($"\n[bold red]{failed} of {total} quality gates failed.[/]");
             return 1;
         }
 
-        AnsiConsole.MarkupLine("\n[bold green]All 22 native quality sentinels passed.[/]");
+        AnsiConsole.MarkupLine($"\n[bold green]All {total} quality gates passed.[/]");
         return 0;
-    }
-
-    private static int RunSingleGate(string gateName, string[]? targetFiles, bool preCommit)
-    {
-        string normalized = gateName.ToLowerInvariant().Replace("_", "-");
-        bool passed = normalized switch
-        {
-            "prettier-check" => true,
-            "dotnet-format" => RunProcess("dotnet", "format whitespace Cadence.sln --verify-no-changes --no-restore") == 0,
-            "dotnet-format-style" => RunProcess("dotnet", "format style Cadence.sln --verify-no-changes --no-restore") == 0,
-            "clean-secrets-baseline" or "clean-secrets" => SecretsBaselineCleanerService.CleanSecretsBaseline() == 0,
-            "detect-code-duplication" or "duplication" => DuplicationDetectorService.DetectDuplication(targetFiles) == 0,
-            "validate-cli-docs" or "cli-docs" => CliDocsGeneratorService.GenerateCliDocs(check: true) == 0,
-            "validate-doc-index" or "doc-index" => DocIndexSyncService.SyncDocIndex(check: true) == 0,
-            "validate-adrs" or "adrs" => Cadence.ToolingCore.Services.AdrValidatorService.ValidateAdrs(checkGitDiff: true),
-            "validate-architecture-drift" or "arch-drift" => Cadence.ToolingCore.Services.ArchitectureDriftValidatorService.ValidateArchitectureDrift() == 0,
-            "path-requirement-sanitizer" or "sanitizer" => ComplianceUtilityService.ExecuteComplianceUtility(sanitize: true, targetFiles: targetFiles) == 0,
-            "validate-markdown" or "markdown" => Cadence.ToolingCore.Services.MarkdownValidatorService.ValidateMarkdown(targetFiles) == 0,
-            "validate-environment-variables" or "env-vars" => EnvVarExtractorService.ExtractAndValidateEnvVars(checkOnly: true) == 0,
-            "validate-dev-environment" or "dev-environment" or "dev-env" => DevEnvironmentValidatorService.ValidateDevEnvironment() == 0,
-            "validate-readmes" or "readmes" => ReadmeValidatorService.ValidateReadmes() == 0,
-            "validate-imports" or "imports" => ImportValidatorService.ValidateImports() == 0,
-            "audit-security" or "security" => SecurityAuditorService.AuditSecurity(targetFiles) == 0,
-            "deid-compliance-scan" or "deid" => Cadence.ToolingCore.Services.DeidComplianceService.ScanDeidCompliance(targetFiles) == 0,
-            "auto-stage-openapi" or "openapi" => PreCommitOpenApiService.ExecutePreCommitOpenApi(quick: preCommit, targetFiles: targetFiles) == 0,
-            "validate-api-clients" or "api-clients" => ApiClientValidatorService.ValidateApiClients() == 0,
-            "auto-stage-schema-doc" or "schema-doc" => SchemaDocGeneratorService.GenerateSchemaDocumentation(validate: true) == 0,
-            "validate-path-patterns" or "path-patterns" => PathPatternValidatorService.ValidatePathPatterns(targetFiles) == 0,
-            "backend-static-verify" or "contracts" => ContractVerifierService.VerifyContracts() == 0,
-            "query-style-linter" or "query-linter" => QueryLinterService.LintQueries(targetFiles) == 0,
-            "validate-vulnerabilities" or "vulnerabilities" => VulnerabilityAuditorService.AuditVulnerabilities() == 0,
-            "validate-dependencies" or "dependencies" => DependencyValidatorService.ValidateDependencies() == 0,
-            "gxp-rtm-validate" or "rtm" => GxpRtmValidatorService.ValidateGxpRtm(),
-            "gxp-snapshot-guard" or "gxp-snapshot" => GxpSnapshotGuardService.Check(FindRepoRoot(), preCommit) == 0,
-            "baseline-ratchet" or "baselines" => BaselineRatchetService.Check(FindRepoRoot(), preCommit) == 0,
-            _ => ReportUnknownGate(gateName)
-        };
-
-        return passed ? 0 : 1;
-    }
-
-    private static bool ReportUnknownGate(string gateName)
-    {
-        AnsiConsole.MarkupLine($"[red]Unknown quality gate '{Markup.Escape(gateName)}'. Run 'cadence check --help' for the list of gates.[/]");
-        return false;
     }
 
     public static string FindRepoRoot()
@@ -327,21 +86,5 @@ public static class QualityGateOrchestrator
             current = parent ?? "";
         }
         return Directory.GetCurrentDirectory();
-    }
-
-    private static int RunProcess(string fileName, string arguments)
-    {
-        var psi = new ProcessStartInfo
-        {
-            FileName = fileName,
-            Arguments = arguments,
-            WorkingDirectory = FindRepoRoot(),
-            UseShellExecute = false
-        };
-
-        using var process = Process.Start(psi);
-        if (process == null) return 1;
-        process.WaitForExit();
-        return process.ExitCode;
     }
 }

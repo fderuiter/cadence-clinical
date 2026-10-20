@@ -173,8 +173,6 @@ model. Agent tasks call one only when a provider is configured: `Intelligence__A
 | Add a migration                  | `pwsh scripts/manage_migrations.ps1 add <service> <MigrationName>` |
 | Idempotent SQL script for review | `pwsh scripts/manage_migrations.ps1 script <service>`              |
 | Reset local databases            | `pnpm cadence db reset`                                            |
-| Seed local databases             | `pnpm cadence db seed`                                             |
-| Database status                  | `pnpm cadence db status`                                           |
 
 ## 6. Quality gates and GxP sync
 

@@ -179,8 +179,8 @@ finish() {
     for s in "${SKIPPED[@]}"; do note "  - $s"; done
   fi
   printf '\n'
-  printf '  %sTo run your first UI video recording and upload to Google Drive:%s\n\n' "$BOLD" "$RESET"
-  printf '    %suv run cadence record run --upload-drive%s\n\n' "$GREEN" "$RESET"
+  printf '  %sThe CLI has no recording command yet; these values are ready for when it lands%s\n' "$BOLD" "$RESET"
+  printf '  (docs/adr/2026-09-30-recording-evidence-goes-to-controlled-object-storage.md).\n\n'
 }
 
 # ──────────────────────────────────────────────────────────────────────────

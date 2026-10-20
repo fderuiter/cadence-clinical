@@ -7,7 +7,7 @@
 # ==============================================================================
 
 .DEFAULT_GOAL := help
-.PHONY: help setup wizard doctor build dev fix lint-paths typecheck lint format action-pinning check verify ci test sync-gxp gxp-sync gxp-snapshot rtm adr docs ports db-reset db-reset-offline db-seed db-status
+.PHONY: help setup wizard doctor build dev fix lint-paths typecheck lint format action-pinning check verify ci test sync-gxp gxp-sync gxp-snapshot rtm adr docs ports db-reset db-reset-offline
 
 # Colour codes
 CYAN  := \033[0;36m
@@ -62,7 +62,7 @@ format: ## Check formatting only (no auto-fix)
 action-pinning: ## Validate GitHub Actions commit SHA pinning
 	python3 scripts/check-action-pinning.py
 
-check: $(CADENCE_CLI) ## Run all 21 quality gates (dotnet cadence check)
+check: $(CADENCE_CLI) ## Run every quality gate (cadence check)
 	$(CADENCE_CLI) check
 
 verify: $(CADENCE_CLI) ## Full verification — quality gates + all test suites (use before opening a PR)
@@ -104,12 +104,6 @@ db-reset: $(CADENCE_CLI) ## Drop and re-create the local development database sc
 
 db-reset-offline: $(CADENCE_CLI) ## Reset databases offline, generating warnings if remote connections fail
 	$(CADENCE_CLI) db reset
-
-db-seed: $(CADENCE_CLI) ## Populate multi-engine databases with realistic end-to-end clinical trial datasets
-	$(CADENCE_CLI) db seed
-
-db-status: $(CADENCE_CLI) ## Display multi-engine database sizes and available snapshots
-	$(CADENCE_CLI) db status
 
 ports: $(CADENCE_CLI) ## Check that all required service ports are free (cadence check-ports)
 	$(CADENCE_CLI) check-ports

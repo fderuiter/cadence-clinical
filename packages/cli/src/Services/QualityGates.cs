@@ -1,0 +1,205 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+
+using Cadence.ToolingCore.Services;
+
+namespace Cadence.Cli.Services;
+
+/// <summary>How the pre-commit hook (<c>cadence check --pre-commit</c>) runs a gate.</summary>
+public enum PreCommitMode
+{
+    /// <summary>The hook runs the gate as <c>cadence check</c> does, limited to the staged files when it takes files.</summary>
+    Full,
+
+    /// <summary>The hook runs a quicker variant, described by <see cref="QualityGate.PreCommitNote"/>.</summary>
+    Quick,
+
+    /// <summary>The hook skips the gate, for the reason in <see cref="QualityGate.PreCommitNote"/>.</summary>
+    Skipped,
+}
+
+/// <summary>What a gate checks: the repository root, the files to limit it to, and whether the pre-commit hook runs it.</summary>
+public sealed record GateContext(string RepoRoot, string[]? TargetFiles = null, bool PreCommit = false)
+{
+    /// <summary>The target files, or <c>null</c> for the whole repository.</summary>
+    public string[]? Files => TargetFiles is { Length: > 0 } ? TargetFiles : null;
+}
+
+/// <summary>
+/// One quality gate of <c>cadence check</c>: its short <paramref name="Name"/>, the longer names it also answers to,
+/// one sentence on what it checks, and the check itself, which returns <c>true</c> when the gate passes.
+/// </summary>
+public sealed record QualityGate(string Name, IReadOnlyList<string> Aliases, string Checks, Func<GateContext, bool> Run)
+{
+    /// <summary>How the pre-commit hook runs the gate.</summary>
+    public PreCommitMode PreCommit { get; init; } = PreCommitMode.Full;
+
+    /// <summary>What the hook does instead, when <see cref="PreCommit"/> is not <see cref="PreCommitMode.Full"/>.</summary>
+    public string? PreCommitNote { get; init; }
+
+    /// <summary>Whether the gate limits itself to the files given to <c>cadence check &lt;gate&gt; [files]</c>.</summary>
+    public bool TakesFiles { get; init; }
+
+    /// <summary>The short name followed by the aliases.</summary>
+    public IEnumerable<string> AllNames => Aliases.Prepend(Name);
+}
+
+/// <summary>
+/// The registry of quality gates. <c>cadence check</c> runs them in this order, <c>cadence check &lt;gate&gt;</c> looks
+/// a gate up here, and the gate count, the <c>check --help</c> text and the gate tables in <c>docs/cli.md</c> and
+/// <c>docs/CI.md</c> (<see cref="GateDocs"/>) are generated from it. Each gate must be able to fail:
+/// <c>QualityGateRegistryTests</c> runs every gate against a fixture that breaks it.
+/// </summary>
+public static class QualityGates
+{
+    /// <summary>Every gate, in the order <c>cadence check</c> runs them.</summary>
+    public static IReadOnlyList<QualityGate> All { get; } =
+    [
+        new("dotnet-format", [], "Whitespace formatting against `.editorconfig` (`dotnet format whitespace`)",
+            ctx => RunProcess(ctx.RepoRoot, "dotnet", "format", "whitespace", "Cadence.sln", "--verify-no-changes", "--no-restore") == 0)
+        {
+            PreCommit = PreCommitMode.Skipped,
+            PreCommitNote = "the hook runs `dotnet format` on the staged C# files itself",
+        },
+        new("dotnet-format-style", [], "Roslyn code-style rules (`dotnet format style`)",
+            ctx => RunProcess(ctx.RepoRoot, "dotnet", "format", "style", "Cadence.sln", "--verify-no-changes", "--no-restore") == 0)
+        {
+            PreCommit = PreCommitMode.Skipped,
+            PreCommitNote = "the hook runs `dotnet format` on the staged C# files itself",
+        },
+        new("clean-secrets", ["clean-secrets-baseline"],
+            "Normalizes `.secrets.baseline`; fails when it is not valid JSON (CI then checks that it did not change)",
+            ctx => SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: ctx.RepoRoot) == 0),
+        new("duplication", ["detect-code-duplication"], "Duplicated code blocks over 15 normalized lines involving a C# file",
+            ctx => DuplicationDetectorService.DetectDuplication(ctx.Files, ctx.RepoRoot) == 0)
+        { TakesFiles = true },
+        new("cli-docs", ["validate-cli-docs"],
+            "`docs/cli.md` documents every command in `Program.cs`, and the gate tables in `docs/cli.md` and `docs/CI.md` match this registry",
+            ctx => CheckCliDocs(ctx.RepoRoot)),
+        new("adrs", ["validate-adrs"], "ADR schema, `docs/adr/index.md` consistency, and an ADR for architectural changes",
+            ctx => AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: ctx.RepoRoot)),
+        new("arch-drift", ["validate-architecture-drift"],
+            "`docker/docker-compose.yml` exists and declares services; services missing from the architecture docs are warnings",
+            ctx => ArchitectureDriftValidatorService.ValidateArchitectureDrift(ctx.RepoRoot) == 0),
+        new("sanitizer", ["path-requirement-sanitizer"],
+            "Requirement tags in Markdown are upper case (`@req:PRD-…`); it fixes them and fails so the fix is staged",
+            ctx => ComplianceUtilityService.CheckRequirementTags(ctx.RepoRoot, ctx.Files) == 0)
+        { TakesFiles = true },
+        new("markdown", ["validate-markdown"],
+            "Markdown structure, links, and paths into .NET test project folders (`tests/Cadence.*`) that no longer exist",
+            ctx => MarkdownValidatorService.ValidateMarkdown(ctx.Files, ctx.RepoRoot) == 0)
+        { TakesFiles = true },
+        new("env-vars", ["validate-environment-variables"],
+            "Environment variables read in code are in `.env.example` and `docs/ENVIRONMENT_VARIABLES.md`",
+            ctx => EnvVarExtractorService.ExtractAndValidateEnvVars(checkOnly: true, repoRoot: ctx.RepoRoot) == 0),
+        new("dev-env", ["validate-dev-environment", "dev-environment"],
+            "Service ports in `docs/LOCAL_DEV_ENVIRONMENT.md` match the gateway and the Aspire AppHost",
+            ctx => DevEnvironmentValidatorService.ValidateDevEnvironment(ctx.RepoRoot) == 0),
+        new("readmes", ["validate-readmes"], "Each directory under `apps/` and `packages/` has a README with a title",
+            ctx => ReadmeValidatorService.ValidateReadmes(ctx.RepoRoot) == 0),
+        new("imports", ["validate-imports"], "No `using` of another service's namespace across `apps/<service>`",
+            ctx => ImportValidatorService.ValidateImports(ctx.RepoRoot) == 0),
+        new("security", ["audit-security"], "Hard-coded secret patterns (private keys, AWS secret keys)",
+            ctx => SecurityAuditorService.AuditSecurity(ctx.Files, ctx.RepoRoot) == 0)
+        { TakesFiles = true },
+        new("deid", ["deid-compliance-scan"],
+            "PHI/PII in tracked files outside tests, docs, scripts and similar folders (all 14 detector categories), ratcheted by `.deid-baseline.txt`; a line that is not PHI takes a `deid-ignore` comment",
+            ctx => DeidComplianceService.ScanDeidCompliance(ctx.Files, ctx.RepoRoot) == 0)
+        { TakesFiles = true },
+        new("openapi", ["auto-stage-openapi"], "`docs/openapi` matches what the .NET services serve, and `docs/api` matches `docs/openapi`",
+            ctx => PreCommitOpenApiService.ExecutePreCommitOpenApi(ctx.RepoRoot, quick: ctx.PreCommit, targetFiles: ctx.TargetFiles) == 0)
+        {
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "exports specs only for the services the staged C# files touch, otherwise checks `docs/api` against the committed `docs/openapi`",
+        },
+        new("api-clients", ["validate-api-clients"],
+            "The web API types are generated from the current `docs/openapi`, and the web API clients typecheck against them",
+            ctx => ApiClientValidatorService.ValidateApiClients(ctx.RepoRoot) == 0),
+        new("schema-doc", ["auto-stage-schema-doc"], "`docs/schema` matches the EF Core models",
+            ctx => SchemaDocGeneratorService.GenerateSchemaDocumentation(validate: true, repoRoot: ctx.RepoRoot) == 0)
+        {
+            PreCommit = PreCommitMode.Skipped,
+            PreCommitNote = "rendering every module's EF Core model takes minutes; `cadence check` and CI run it",
+        },
+        new("path-patterns", ["validate-path-patterns"],
+            "No `tmp`, `temp`, `scratch` or `old_src` directories, `.vue` files only under `apps/` and `packages/`, `.sh` files only under `scripts/`",
+            ctx => PathPatternValidatorService.ValidatePathPatterns(ctx.Files, ctx.RepoRoot) == 0)
+        { TakesFiles = true },
+        new("query-linter", ["query-style-linter"], "No interpolated SQL string passed to `FromSqlRaw` or `ExecuteSqlRaw`, and no comparison with a boolean literal",
+            ctx => QueryLinterService.LintQueries(ctx.Files, ctx.RepoRoot) == 0)
+        { TakesFiles = true },
+        new("vulnerabilities", ["validate-vulnerabilities"],
+            "NuGet and npm dependency vulnerabilities not exempted by a valid `docs/SDLC/vulnerability_exclusions_ledger.json` entry",
+            ctx => VulnerabilityAuditorService.AuditVulnerabilities(ctx.RepoRoot) == 0),
+        new("dependencies", ["validate-dependencies"], "`apps/web/package.json` lists no client-side crypto package (`node-forge`, `elliptic`, `jose`)",
+            ctx => DependencyValidatorService.ValidateDependencies(ctx.RepoRoot) == 0),
+        new("doc-index", ["validate-doc-index"], "Every Markdown document under `docs/` is listed in `docs/DOCUMENTATION_INDEX.md`",
+            ctx => DocIndexSyncService.SyncDocIndex(check: true, repoRoot: ctx.RepoRoot) == 0),
+        new("rtm", ["gxp-rtm-validate"],
+            "Requirement tags name known requirements and sit on test methods, and the generated documents match their integrity stamps",
+            ctx => GxpRtmValidatorService.ValidateGxpRtm(ctx.RepoRoot)),
+        new("gxp-snapshot", ["gxp-snapshot-guard"],
+            "The branch does not change the generated RTM, IQ/OQ/PQ report or `docs/SDLC/runs/` unless `CADENCE_GXP_SNAPSHOT=1` (ADR-2532)",
+            ctx => GxpSnapshotGuardService.Check(ctx.RepoRoot, ctx.PreCommit) == 0)
+        {
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "checks the staged files instead of the branch",
+        },
+        new("baseline-ratchet", ["baselines"],
+            "No ratchet baseline (`*.baseline.txt`, `.deid-baseline.txt`, `.secrets.baseline`) gained an entry since the `origin/main` merge base, unless a commit has a `Baseline-Growth:` trailer",
+            ctx => BaselineRatchetService.Check(ctx.RepoRoot, ctx.PreCommit) == 0)
+        {
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "checks the staged files; `CADENCE_BASELINE_GROWTH=\"<reason>\"` admits growth",
+        },
+    ];
+
+    /// <summary>Finds a gate by its short name or an alias; case is ignored and underscores count as hyphens.</summary>
+    public static QualityGate? Find(string name)
+    {
+        string normalized = Normalize(name);
+        return All.FirstOrDefault(g => g.AllNames.Any(n => n == normalized));
+    }
+
+    /// <summary>The short names, comma-separated, for help text.</summary>
+    public static string NameList => string.Join(", ", All.Select(g => g.Name));
+
+    /// <summary>Both halves of the <c>cli-docs</c> gate, so one failure does not hide the other.</summary>
+    private static bool CheckCliDocs(string repoRoot)
+    {
+        bool commandsDocumented = CliDocsGeneratorService.GenerateCliDocs(check: true, repoRoot: repoRoot) == 0;
+        bool tablesCurrent = GateDocs.Check(repoRoot);
+        return commandsDocumented && tablesCurrent;
+    }
+
+    private static string Normalize(string name) => name.Trim().ToLowerInvariant().Replace('_', '-');
+
+    private static int RunProcess(string workingDirectory, string fileName, params string[] arguments)
+    {
+        var psi = new ProcessStartInfo(fileName) { WorkingDirectory = workingDirectory, UseShellExecute = false };
+        foreach (string argument in arguments)
+        {
+            psi.ArgumentList.Add(argument);
+        }
+
+        try
+        {
+            using var process = Process.Start(psi);
+            if (process is null)
+            {
+                return 1;
+            }
+
+            process.WaitForExit();
+            return process.ExitCode;
+        }
+        catch (System.ComponentModel.Win32Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Could not run {fileName}: {ex.Message}");
+            return 1;
+        }
+    }
+}

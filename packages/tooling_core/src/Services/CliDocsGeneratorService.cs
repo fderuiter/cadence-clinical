@@ -37,7 +37,6 @@ public static partial class CliDocsGeneratorService
                 "cadence doctor",
                 "cadence check",
                 "cadence fix",
-                "cadence setup",
                 "cadence gxp"
             ];
 

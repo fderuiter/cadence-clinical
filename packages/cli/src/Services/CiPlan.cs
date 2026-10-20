@@ -238,11 +238,6 @@ public static class CiPlan
             {
                 Commands = [Dotnet("test", "tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj", "--no-build")],
             },
-            new("dotnet-quality", "Run hexagonal contract verification")
-            {
-                CoveredBy = QualitySentinels,
-                Commands = [CadenceCli(true, "check", "contracts")],
-            },
             new("dotnet-quality", "Run ADR validation") { CoveredBy = QualitySentinels, Commands = [CadenceCli(true, "check", "adrs")] },
             new("dotnet-quality", "Run CODEOWNERS coverage validation") { Commands = [CadenceCli(true, "validate-codeowners")] },
             new("dotnet-quality", "Verify schema documentation freshness")

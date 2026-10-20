@@ -32,7 +32,7 @@ Greenlight gates are activation evidence, so the service never invents them (#54
 there is no default study. `GET /startup/matrix` only reads, and a study and country with no recorded gates is an empty
 matrix. Reading or certifying a single site with no recorded gate returns `404` and writes nothing. Batch certify
 refuses the whole request with `400` when any named site has no gate in that study and country, and certifies nothing.
-No route records facet evidence yet (#5445), so gates come from the database (for demo data, `pnpm cadence db seed`).
+No route records facet evidence yet (#5445), so gates come only from rows already in the database; the CLI has no seed command.
 
 ## Persistence
 

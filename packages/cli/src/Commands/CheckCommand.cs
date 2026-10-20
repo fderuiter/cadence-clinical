@@ -13,7 +13,7 @@ public static class CheckCommand
         var gate = new Argument<string?>("gate")
         {
             Arity = ArgumentArity.ZeroOrOne,
-            Description = "Specific quality gate to execute (e.g., clean-secrets-baseline, duplication, adrs).",
+            Description = $"One of the {QualityGates.All.Count} quality gates to run, by name or alias: {QualityGates.NameList}. Without it, all of them run in this order.",
         };
         var files = new Argument<string[]>("files")
         {

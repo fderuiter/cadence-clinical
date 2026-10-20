@@ -35,8 +35,6 @@ Some commands also have a `make` target. The Makefile publishes the CLI to `./bi
 | `make gxp-snapshot`                      | `CADENCE_GXP_SNAPSHOT=1 cadence gxp snapshot` |
 | `make adr TITLE="..."`                   | `cadence scaffold adr "<title>"`              |
 | `make db-reset`, `make db-reset-offline` | `cadence db reset`                            |
-| `make db-seed`                           | `cadence db seed` (not implemented yet)       |
-| `make db-status`                         | `cadence db status` (not implemented yet)     |
 
 `make wizard` runs `scripts/setup_wizard.sh` directly. That is the same script as `cadence wizard onboarding`.
 
@@ -68,23 +66,58 @@ It exits `1` when pnpm is missing, crashes or differs from the pin, and `0` othe
 Runs the quality gates.
 
 ```bash
-pnpm cadence check                 # all 22 gates
+pnpm cadence check                 # every gate
 pnpm cadence check <gate>          # one gate
 pnpm cadence check <gate> <files>  # one gate, limited to these files
 pnpm cadence check --pre-commit    # what the pre-commit hook runs
 ```
 
-| Argument       | Description                                                                                                                                                                                                                                                                                                                           |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `[gate]`       | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens.                                                                                                                                                                                                      |
-| `[files]`      | Files to check. Only some gates use them (duplication, sanitizer, markdown, security, deid, path-patterns, query-linter).                                                                                                                                                                                                             |
-| `--pre-commit` | Quick variants for the pre-commit hook: the two format gates are skipped (the hook formats the staged files itself), the `openapi` gate checks `docs/api` against the committed specs instead of exporting specs from the services, and the `gxp-snapshot` and `baseline-ratchet` gates check the staged files instead of the branch. |
+| Argument       | Description                                                                                                                                                             |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[gate]`       | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens.                                        |
+| `[files]`      | Files to check. Only the gates marked in the table below use them.                                                                                                      |
+| `--pre-commit` | What the pre-commit hook runs: the staged files are the `[files]`, and each gate runs, runs a quicker variant or is skipped as the last column of the table below says. |
 
-With no gate, all 22 gates run in order. A failing gate does not stop the run. The command exits `1` if any gate failed.
+With no gate, every gate runs in the order below. A failing gate does not stop the run. The command exits `1` if any
+gate failed. An unknown gate name prints the gate names and exits `1`.
 
-An unknown gate name prints an error and exits `1`. Extra alias accepted:
+The gates are defined once, in `packages/cli/src/Services/QualityGates.cs`. This table and the one in
+[CI.md](CI.md#quality-gates) are generated from it by `pnpm cadence generate-cli-docs`; the `cli-docs` gate fails when
+either is stale. `tests/Cadence.UnitTests/Packages/QualityGateRegistryTests.cs` runs every gate against a fixture that
+must make it fail.
 
-- `prettier-check` always passes. It runs nothing.
+<!-- quality-gates:begin (generated from packages/cli/src/Services/QualityGates.cs by `pnpm cadence generate-cli-docs`; do not edit) -->
+
+| Gate                  | Also accepted                                 | Takes `[files]` | Pre-commit hook (`--pre-commit`)                                                                                                       |
+| --------------------- | --------------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `dotnet-format`       |                                               |                 | Skipped: the hook runs `dotnet format` on the staged C# files itself                                                                   |
+| `dotnet-format-style` |                                               |                 | Skipped: the hook runs `dotnet format` on the staged C# files itself                                                                   |
+| `clean-secrets`       | `clean-secrets-baseline`                      |                 | Runs                                                                                                                                   |
+| `duplication`         | `detect-code-duplication`                     | yes             | Runs on the staged files                                                                                                               |
+| `cli-docs`            | `validate-cli-docs`                           |                 | Runs                                                                                                                                   |
+| `adrs`                | `validate-adrs`                               |                 | Runs                                                                                                                                   |
+| `arch-drift`          | `validate-architecture-drift`                 |                 | Runs                                                                                                                                   |
+| `sanitizer`           | `path-requirement-sanitizer`                  | yes             | Runs on the staged files                                                                                                               |
+| `markdown`            | `validate-markdown`                           | yes             | Runs on the staged files                                                                                                               |
+| `env-vars`            | `validate-environment-variables`              |                 | Runs                                                                                                                                   |
+| `dev-env`             | `validate-dev-environment`, `dev-environment` |                 | Runs                                                                                                                                   |
+| `readmes`             | `validate-readmes`                            |                 | Runs                                                                                                                                   |
+| `imports`             | `validate-imports`                            |                 | Runs                                                                                                                                   |
+| `security`            | `audit-security`                              | yes             | Runs on the staged files                                                                                                               |
+| `deid`                | `deid-compliance-scan`                        | yes             | Runs on the staged files                                                                                                               |
+| `openapi`             | `auto-stage-openapi`                          | yes             | Quick: exports specs only for the services the staged C# files touch, otherwise checks `docs/api` against the committed `docs/openapi` |
+| `api-clients`         | `validate-api-clients`                        |                 | Runs                                                                                                                                   |
+| `schema-doc`          | `auto-stage-schema-doc`                       |                 | Skipped: rendering every module's EF Core model takes minutes; `cadence check` and CI run it                                           |
+| `path-patterns`       | `validate-path-patterns`                      | yes             | Runs on the staged files                                                                                                               |
+| `query-linter`        | `query-style-linter`                          | yes             | Runs on the staged files                                                                                                               |
+| `vulnerabilities`     | `validate-vulnerabilities`                    |                 | Runs                                                                                                                                   |
+| `dependencies`        | `validate-dependencies`                       |                 | Runs                                                                                                                                   |
+| `doc-index`           | `validate-doc-index`                          |                 | Runs                                                                                                                                   |
+| `rtm`                 | `gxp-rtm-validate`                            |                 | Runs                                                                                                                                   |
+| `gxp-snapshot`        | `gxp-snapshot-guard`                          |                 | Quick: checks the staged files instead of the branch                                                                                   |
+| `baseline-ratchet`    | `baselines`                                   |                 | Quick: checks the staged files; `CADENCE_BASELINE_GROWTH="<reason>"` admits growth                                                     |
+
+<!-- quality-gates:end -->
 
 The `gxp-snapshot` gate (also `gxp-snapshot-guard`, ADR-2532) fails when the generated RTM, the IQ/OQ/PQ report or
 anything under `docs/SDLC/runs/` is changed: the staged files with `--pre-commit`, otherwise everything the branch changed
@@ -151,7 +184,7 @@ Where it differs from CI:
   in `Cadence.IntegrationTests` or `Cadence.E2ETests` that was skipped or did not execute fails the step too (#5325),
   except the opt-in lineage benchmark listed in `DatabaseTestEvidence.OptInTests`. `--allow-skip` accepts the skips.
 - **Checks already run once are not repeated.** A step that runs one gate of `cadence check` (ADRs, Markdown, schema
-  doc, OpenAPI, contracts, duplication, the security audit, vulnerabilities, secrets and DEID) is reported as
+  doc, OpenAPI, duplication, the security audit, vulnerabilities, secrets and DEID) is reported as
   _covered_ when the full `Run Cadence quality sentinels` step passed. If that step failed, each of them runs on its own
   so the summary shows which gate failed. The Node install and UI build in later jobs are covered by earlier jobs.
   The documentation build (`pnpm docs:build`) also starts with `cadence check` and Markdown validation; after that step
@@ -199,36 +232,34 @@ Single-purpose commands. Most are also run as gates by `cadence check`. None of 
 
 Paths are relative to the repository root. "Calls" is the method the command runs, in `packages/tooling_core/src/Services` unless noted.
 
-| Command                       | What it does                                                                                                                                                                                                                                                                                                                                          | Calls                                                         |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `detect-duplication`          | Finds duplicated blocks (over 15 normalized lines) in `.cs`, `.py`, `.js`, `.vue` and `.css` files under `apps/` and `packages/`. Writes `duplication_summary.json`. Fails only when a duplicate involves a `.cs` file.                                                                                                                               | `DuplicationDetectorService.DetectDuplication`                |
-| `validate-imports`            | Fails when a `.cs` file in one `apps/<service>` has `using Cadence.Apps.<other service>`.                                                                                                                                                                                                                                                             | `ImportValidatorService.ValidateImports`                      |
-| `validate-dependencies`       | Fails when `apps/web/package.json` lists `node-forge`, `elliptic` or `jose`. Passes if the file is missing.                                                                                                                                                                                                                                           | `DependencyValidatorService.ValidateDependencies`             |
-| `validate-path-patterns`      | Fails on directories named `tmp`, `temp`, `scratch` or `old_src`, `.vue` files outside `apps/` and `packages/`, and `.sh` files outside `scripts/`.                                                                                                                                                                                                   | `PathPatternValidatorService.ValidatePathPatterns`            |
-| `validate-readmes`            | Fails when a direct subdirectory of `apps/` or `packages/` has no `README.md`, or its README has no `# ` title.                                                                                                                                                                                                                                       | `ReadmeValidatorService.ValidateReadmes`                      |
-| `validate-codeowners`         | Fails when `.github/CODEOWNERS` is missing or empty.                                                                                                                                                                                                                                                                                                  | `CodeownersValidatorService.ValidateCodeowners`               |
-| `validate-markdown`           | Checks workspace links and `#` heading spacing in `docs/**/*.md`.                                                                                                                                                                                                                                                                                     | `MarkdownValidatorService.ValidateMarkdown`                   |
-| `query-linter`                | Scans `.cs` files outside `tests/`. Fails on interpolated `FromSqlRaw($...)` or `ExecuteSqlRaw($...)`, and on `== true` or `== false`.                                                                                                                                                                                                                | `QueryLinterService.LintQueries`                              |
-| `extract-env-vars`            | Finds environment variable reads in `.cs` and `.py` files. Fails if `.env.example` is missing. With `--check`, returns exit code 1 when variables missing from `.env.example` or `docs/ENVIRONMENT_VARIABLES.md` are found. It never writes files.                                                                                                    | `EnvVarExtractorService.ExtractAndValidateEnvVars`            |
-| `verify-contracts`            | Checks hexagonal port and contract definitions. The rules are in `packages/tooling_core/src/Contracts/ContractVerifier.cs`.                                                                                                                                                                                                                           | `ContractVerifierService.VerifyContracts`                     |
-| `audit-security`              | Scans every file in the repository for secret patterns.                                                                                                                                                                                                                                                                                               | `SecurityAuditorService.AuditSecurity`                        |
-| `validate-vulnerabilities`    | Audits dependency vulnerabilities across .NET packages and pnpm frontend workspace dependencies (alongside Python dependencies) against active exemptions in `docs/SDLC/vulnerability_exclusions_ledger.json`. Fails if unapproved vulnerabilities exist.                                                                                             | `VulnerabilityAuditorService.AuditVulnerabilities`            |
-| `clean-secrets-baseline`      | Rewrites the file exclusion filter in `.secrets.baseline`. Skips if the file is missing.                                                                                                                                                                                                                                                              | `SecretsBaselineCleanerService.CleanSecretsBaseline`          |
-| `validate-architecture-drift` | Lists services in `docker/docker-compose.yml`. Warns when one is not mentioned in `ARCHITECTURE.md` or `docs/SDLC/02_Technical_Design_Document_TDD.md`. Fails only if the compose file is missing or has no services.                                                                                                                                 | `ArchitectureDriftValidatorService.ValidateArchitectureDrift` |
-| `sync-openapi-spec`           | Runs `Cadence.OpenApiExporter`, which boots every .NET service in memory and exports its OpenAPI document, then writes the specs and the `cdisc_openapi.json` aggregate to `docs/openapi/` and deletes top-level specs no service serves. `docs/openapi/legacy/` is left alone. Option: `--validate` (compare only; exits `1` on drift).              | `OpenApiSyncService.SyncOpenApiSpec`                          |
-| `validate-openapi-drift`      | Runs `sync-openapi-spec --validate` and `generate-api-docs --validate`. Exits `1` if either finds drift.                                                                                                                                                                                                                                              | `OpenApiDriftValidatorService.ValidateDrift`                  |
-| `generate-api-docs`           | Writes `docs/api/<service>.md` (one table of operations per service) and `docs/api/index.md` from `docs/openapi/*_openapi.json`, and deletes pages with no spec. Option: `--validate` (compare only; exits `1` on drift).                                                                                                                             | `ApiDocsGeneratorService.GenerateApiDocs`                     |
-| `generate-schema-doc`         | Runs `Cadence.SchemaDocExporter`, which builds every module's EF Core design-time model (no database needed) and writes one Markdown page per module plus `README.md` to `docs/schema/`, deleting files no module produces. Option: `--validate` (compare only; exits `1` on drift). This is the `schema-doc` gate.                                   | `SchemaDocGeneratorService.GenerateSchemaDocumentation`       |
-| `pre-commit-openapi`          | Same as `validate-openapi-drift`. This is the `openapi` gate. It does not stage anything.                                                                                                                                                                                                                                                             | `PreCommitOpenApiService.ExecutePreCommitOpenApi`             |
-| `validate-api-clients`        | Checks that `apps/web/src/api/generated/` matches `docs/openapi/` (`node scripts/generate-api-types.js --check`), then runs `pnpm exec tsc --noEmit` in `apps/web`, which typechecks the `apps/web/src/api` clients against their generated OpenAPI types. Exits `1` on stale generated types or a type error. This is the `api-clients` gate.        | `ApiClientValidatorService.ValidateApiClients`                |
-| `generate-cli-docs`           | Without options, creates a stub `docs/cli.md` only if it is missing. With `--check`, fails when this file lacks the required headings or a command registered in `Program.cs`.                                                                                                                                                                        | `CliDocsGeneratorService.GenerateCliDocs`                     |
-| `generate-doc-index`          | Scans markdown files in `docs/` and updates `docs/DOCUMENTATION_INDEX.md` organized by category. Option: `--check` (verify index completeness without editing; exits `1` on unindexed files). This is the `validate-doc-index` gate.                                                                                                                  | `DocIndexSyncService.SyncDocIndex`                            |
-| `generate-rtm`                | Builds the traceability matrix from requirements in `docs/`, `@req` tags in tests and `report_dotnet.trx`. Writes `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md`. Options: `--validate` (write nothing; fail if a mapped test failed), `--draft` (mark tests as unverified when the report is missing). | `RtmGeneratorService.GenerateRtm` (`packages/compliance/src`) |
-| `compliance-utility`          | With `--sanitize`, upper-cases `@req:PRD-...` tags in `docs/**/*.md`, skipping `docs/SDLC/runs/`. Without it, does nothing.                                                                                                                                                                                                                           | `ComplianceUtilityService.ExecuteComplianceUtility`           |
-| `verify-gxp-signatures`       | Not implemented yet. Exits `1` without checking any signature.                                                                                                                                                                                                                                                                                        | `VerifyGxPSignaturesService.VerifySignatures`                 |
-| `clean-test-dbs`              | Deletes every `.db` and `.sqlite` file in the repository whose path does not contain `node_modules`, `bin` or `obj`.                                                                                                                                                                                                                                  | `CleanTestDbsService.CleanTestDatabases`                      |
-| `check-ports`                 | Reports whether ports 8000-8002, 8004-8019, 5432, 7687 and 8080 are in use on `127.0.0.1`. Always exits `0`.                                                                                                                                                                                                                                          | `PortCheckerService.CheckPorts`                               |
-| `run-gating-pipeline`         | Runs `detect-duplication`, `validate-imports` and `validate-openapi-drift`. Stops at the first failure.                                                                                                                                                                                                                                               | `GatingPipelineService.RunGatingPipeline`                     |
+| Command                       | What it does                                                                                                                                                                                                                                                                                                                                          | Calls                                                                                     |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `detect-duplication`          | Finds duplicated blocks (over 15 normalized lines) in `.cs`, `.py`, `.js`, `.vue` and `.css` files under `apps/` and `packages/`. Writes `duplication_summary.json`. Fails only when a duplicate involves a `.cs` file.                                                                                                                               | `DuplicationDetectorService.DetectDuplication`                                            |
+| `validate-imports`            | Fails when a `.cs` file in one `apps/<service>` has `using Cadence.Apps.<other service>`.                                                                                                                                                                                                                                                             | `ImportValidatorService.ValidateImports`                                                  |
+| `validate-dependencies`       | Fails when `apps/web/package.json` lists `node-forge`, `elliptic` or `jose`. Passes if the file is missing.                                                                                                                                                                                                                                           | `DependencyValidatorService.ValidateDependencies`                                         |
+| `validate-path-patterns`      | Fails on directories named `tmp`, `temp`, `scratch` or `old_src`, `.vue` files outside `apps/` and `packages/`, and `.sh` files outside `scripts/`.                                                                                                                                                                                                   | `PathPatternValidatorService.ValidatePathPatterns`                                        |
+| `validate-readmes`            | Fails when a direct subdirectory of `apps/` or `packages/` has no `README.md`, or its README has no `# ` title.                                                                                                                                                                                                                                       | `ReadmeValidatorService.ValidateReadmes`                                                  |
+| `validate-codeowners`         | Fails when `.github/CODEOWNERS` is missing or empty.                                                                                                                                                                                                                                                                                                  | `CodeownersValidatorService.ValidateCodeowners`                                           |
+| `validate-markdown`           | Checks workspace links and `#` heading spacing in `docs/**/*.md`.                                                                                                                                                                                                                                                                                     | `MarkdownValidatorService.ValidateMarkdown`                                               |
+| `query-linter`                | Scans `.cs` files outside `tests/`. Fails on interpolated `FromSqlRaw($...)` or `ExecuteSqlRaw($...)`, and on `== true` or `== false`.                                                                                                                                                                                                                | `QueryLinterService.LintQueries`                                                          |
+| `extract-env-vars`            | Finds environment variable reads in `.cs` and `.py` files. Fails if `.env.example` is missing. With `--check`, returns exit code 1 when variables missing from `.env.example` or `docs/ENVIRONMENT_VARIABLES.md` are found. It never writes files.                                                                                                    | `EnvVarExtractorService.ExtractAndValidateEnvVars`                                        |
+| `audit-security`              | Scans every file in the repository for secret patterns.                                                                                                                                                                                                                                                                                               | `SecurityAuditorService.AuditSecurity`                                                    |
+| `validate-vulnerabilities`    | Audits dependency vulnerabilities across .NET packages and pnpm frontend workspace dependencies (alongside Python dependencies) against active exemptions in `docs/SDLC/vulnerability_exclusions_ledger.json`. Fails if unapproved vulnerabilities exist.                                                                                             | `VulnerabilityAuditorService.AuditVulnerabilities`                                        |
+| `clean-secrets-baseline`      | Rewrites the file exclusion filter in `.secrets.baseline`. Skips if the file is missing.                                                                                                                                                                                                                                                              | `SecretsBaselineCleanerService.CleanSecretsBaseline`                                      |
+| `validate-architecture-drift` | Lists services in `docker/docker-compose.yml`. Warns when one is not mentioned in `ARCHITECTURE.md` or `docs/SDLC/02_Technical_Design_Document_TDD.md`. Fails only if the compose file is missing or has no services.                                                                                                                                 | `ArchitectureDriftValidatorService.ValidateArchitectureDrift`                             |
+| `sync-openapi-spec`           | Runs `Cadence.OpenApiExporter`, which boots every .NET service in memory and exports its OpenAPI document, then writes the specs and the `cdisc_openapi.json` aggregate to `docs/openapi/` and deletes top-level specs no service serves. `docs/openapi/legacy/` is left alone. Option: `--validate` (compare only; exits `1` on drift).              | `OpenApiSyncService.SyncOpenApiSpec`                                                      |
+| `validate-openapi-drift`      | Runs `sync-openapi-spec --validate` and `generate-api-docs --validate`. Exits `1` if either finds drift.                                                                                                                                                                                                                                              | `OpenApiDriftValidatorService.ValidateDrift`                                              |
+| `generate-api-docs`           | Writes `docs/api/<service>.md` (one table of operations per service) and `docs/api/index.md` from `docs/openapi/*_openapi.json`, and deletes pages with no spec. Option: `--validate` (compare only; exits `1` on drift).                                                                                                                             | `ApiDocsGeneratorService.GenerateApiDocs`                                                 |
+| `generate-schema-doc`         | Runs `Cadence.SchemaDocExporter`, which builds every module's EF Core design-time model (no database needed) and writes one Markdown page per module plus `README.md` to `docs/schema/`, deleting files no module produces. Option: `--validate` (compare only; exits `1` on drift). This is the `schema-doc` gate.                                   | `SchemaDocGeneratorService.GenerateSchemaDocumentation`                                   |
+| `pre-commit-openapi`          | Same as `validate-openapi-drift`. This is the `openapi` gate. It does not stage anything.                                                                                                                                                                                                                                                             | `PreCommitOpenApiService.ExecutePreCommitOpenApi`                                         |
+| `validate-api-clients`        | Checks that `apps/web/src/api/generated/` matches `docs/openapi/` (`node scripts/generate-api-types.js --check`), then runs `pnpm exec tsc --noEmit` in `apps/web`, which typechecks the `apps/web/src/api` clients against their generated OpenAPI types. Exits `1` on stale generated types or a type error. This is the `api-clients` gate.        | `ApiClientValidatorService.ValidateApiClients`                                            |
+| `generate-cli-docs`           | Without options, rewrites the generated quality gate tables in `docs/cli.md` and `docs/CI.md` from `QualityGates.cs`. With `--check`, runs the `cli-docs` gate: fails when a table is stale, or this file lacks the required headings or a command registered in `Program.cs`.                                                                        | `GateDocs.Write` (`packages/cli/src/Services`), `CliDocsGeneratorService.GenerateCliDocs` |
+| `generate-doc-index`          | Scans markdown files in `docs/` and updates `docs/DOCUMENTATION_INDEX.md` organized by category. Option: `--check` (verify index completeness without editing; exits `1` on unindexed files). This is the `validate-doc-index` gate.                                                                                                                  | `DocIndexSyncService.SyncDocIndex`                                                        |
+| `generate-rtm`                | Builds the traceability matrix from requirements in `docs/`, `@req` tags in tests and `report_dotnet.trx`. Writes `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md`. Options: `--validate` (write nothing; fail if a mapped test failed), `--draft` (mark tests as unverified when the report is missing). | `RtmGeneratorService.GenerateRtm` (`packages/compliance/src`)                             |
+| `compliance-utility`          | With `--sanitize`, upper-cases `@req:PRD-...` tags in `docs/**/*.md`, skipping `docs/SDLC/runs/`. Without it, does nothing.                                                                                                                                                                                                                           | `ComplianceUtilityService.ExecuteComplianceUtility`                                       |
+| `clean-test-dbs`              | Deletes every `.db` and `.sqlite` file in the repository whose path does not contain `node_modules`, `bin` or `obj`.                                                                                                                                                                                                                                  | `CleanTestDbsService.CleanTestDatabases`                                                  |
+| `check-ports`                 | Reports whether ports 8000-8002, 8004-8019, 5432, 7687 and 8080 are in use on `127.0.0.1`. Always exits `0`.                                                                                                                                                                                                                                          | `PortCheckerService.CheckPorts`                                                           |
+| `run-gating-pipeline`         | Runs `detect-duplication`, `validate-imports` and `validate-openapi-drift`. Stops at the first failure.                                                                                                                                                                                                                                               | `GatingPipelineService.RunGatingPipeline`                                                 |
 
 These commands always exit `0`: `compliance-utility`, `clean-test-dbs` and `check-ports`.
 
@@ -284,10 +315,6 @@ block and the integrity stamp, which change on every run. Exits `1` and prints t
 the test mapping differ. The `gxp-snapshot` gate runs it in snapshot mode (`CADENCE_GXP_SNAPSHOT=1`) outside the
 pre-commit hook, as CI's `Check GxP Snapshot Policy` step does after regenerating the reports.
 
-#### `cadence gxp verify`
-
-Not implemented yet. Same as the `verify-gxp-signatures` tool command: it exits `1` without checking any signature.
-
 ### `cadence db`
 
 Local database commands.
@@ -304,14 +331,6 @@ It refuses to run when `CADENCE_ENV`, `ASPNETCORE_ENVIRONMENT` or `ENVIRONMENT` 
 #### `cadence db migrate`
 
 Runs `dotnet ef database update --project apps/execution/src/Cadence.Apps.Execution.csproj` in the current directory. Only the execution service is migrated. Use `scripts/manage_migrations.ps1` to add migrations.
-
-#### `cadence db status`
-
-Not implemented yet. Use `cadence doctor` to check datastore connectivity.
-
-#### `cadence db seed`
-
-Not implemented yet.
 
 ### `cadence settings`
 
@@ -330,34 +349,6 @@ Runs `bash scripts/migrate_service_wizard.sh -ServiceName <name>` in the current
 Creates `docs/adr/<yyyy-mm-dd>-<slug>.md` from a built-in template. The ADR number is one more than the highest `ADR-<n>:` found on the first line of existing ADRs, or 100 if there are none. Fails if the file already exists. Appends a link to `docs/adr/index.md` if that file exists.
 
 The title is required. With make, pass it as `make adr TITLE="Use X for Y"`.
-
-### `cadence setup`
-
-#### `cadence setup credentials`
-
-Not implemented yet. Copy `.env.example` to `.env` and fill in the values described in [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md).
-
-### `cadence record`
-
-#### `cadence record list`
-
-Not implemented yet.
-
-#### `cadence record run`
-
-Not implemented yet.
-
-### `cadence cdisc`
-
-#### `cadence cdisc export`
-
-Not implemented yet. The USDM JSON schemas in `packages/usdm-schemas/src` are maintained by hand.
-
-### `cadence mcp`
-
-#### `cadence mcp server`
-
-Not implemented yet.
 
 ### `cadence hook`
 
