@@ -88,6 +88,7 @@ internal sealed class KernelCommandTransaction(
     private readonly List<long> _sharedKeys = [];
     private bool _connectionHeld;
     private AuthorizationDecision? _permit;
+    private NodeRef? _proposal;
 
     public IKernelUnitOfWork Work => this;
 
@@ -282,6 +283,17 @@ internal sealed class KernelCommandTransaction(
     {
         ArgumentNullException.ThrowIfNull(permit);
         _permit = permit;
+    }
+
+    public void RecordProposalExecution(NodeRef proposal)
+    {
+        ArgumentNullException.ThrowIfNull(proposal);
+        if (proposal.Kind != NodeKinds.Proposal || proposal.Version is null)
+        {
+            throw new ArgumentException($"K-AI-2: '{proposal}' is not a proposal version.", nameof(proposal));
+        }
+
+        _proposal = proposal;
     }
 
     public Task<IdempotentOutcome?> FindPriorOutcomeAsync(CancellationToken cancellationToken) =>
@@ -641,6 +653,7 @@ internal sealed class KernelCommandTransaction(
             CommandType = execution.CommandType,
             ActorId = execution.Actor.Id,
             ActorKind = execution.Actor.Kind,
+            RequestedBy = execution.Actor.RequestedBy?.Id,
             RecordedAt = execution.RecordedAt,
             ReasonForChange = Command.ReasonForChange,
             IdempotencyKey = Command.IdempotencyKey,
@@ -649,6 +662,7 @@ internal sealed class KernelCommandTransaction(
             AggregateId = aggregate?.Id,
             CorrelationId = execution.Metadata.CorrelationId,
             CausationId = execution.Metadata.CausationId,
+            ProposalId = outcome == "Committed" ? _proposal?.Id : null,
             Authorization = decision is null
                 ? null
                 : JsonSerializer.Serialize(
@@ -685,6 +699,11 @@ internal sealed class KernelCommandTransaction(
         if (aggregate.Action == "Updated")
         {
             inbound.Add((subject.AtVersion(version - 1), LineageEdgeKind.Supersedes, null));
+        }
+
+        if (_proposal is { } proposal && proposal.Unversioned() != subject.Unversioned())
+        {
+            inbound.Add((proposal, LineageEdgeKind.ExecutedUnder, null));
         }
 
         if (aggregate.Derived && inbound.Count == 0)

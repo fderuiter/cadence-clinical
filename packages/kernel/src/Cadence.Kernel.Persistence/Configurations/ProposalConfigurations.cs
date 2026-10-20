@@ -9,7 +9,8 @@ namespace Cadence.Kernel.Persistence.Configurations;
 
 /// <summary>
 /// EF Core mapping for <c>kernel.proposals</c> (ADR-2489). The checks repeat the domain's rules: the intent, the counts
-/// of affected objects and requested capabilities, the expiry window, a model exactly for an automation agent, the hash
+/// of affected objects and requested capabilities, the expiry window, a model and a requesting person exactly for an
+/// automation agent (K-PROV-3, K-AI-6), the hash
 /// shapes, and decision columns that fit the status. The migration fixes the content columns with the immutable-columns
 /// trigger, so only the decision can change.
 /// </summary>
@@ -31,6 +32,10 @@ internal sealed class ProposalConfiguration : IEntityTypeConfiguration<Proposal>
                 "ck_proposals_model",
                 "(proposed_by_kind = 'AutomationAgent' AND model_id IS NOT NULL AND char_length(model_id) > 0)"
                 + " OR (proposed_by_kind <> 'AutomationAgent' AND model_id IS NULL)");
+            t.HasCheckConstraint(
+                "ck_proposals_requested_by",
+                "(proposed_by_kind = 'AutomationAgent' AND requested_by_id IS NOT NULL AND char_length(requested_by_id) > 0)"
+                + " OR (proposed_by_kind <> 'AutomationAgent' AND requested_by_id IS NULL)");
             t.HasCheckConstraint("ck_proposals_content_hash", $"content_hash ~ '{ContentHash.Pattern}'");
             t.HasCheckConstraint("ck_proposals_simulated_impact", $"simulated_impact IS NULL OR simulated_impact ~ '{ContentHash.Pattern}'");
             t.HasCheckConstraint("ck_proposals_confidence_score", "confidence_score IS NULL OR (confidence_score >= 0.0 AND confidence_score <= 1.0)");
@@ -47,6 +52,7 @@ internal sealed class ProposalConfiguration : IEntityTypeConfiguration<Proposal>
         builder.Property(x => x.RequestedCapabilities).IsRequired();
         builder.Property(x => x.ProposedById).HasMaxLength(256).IsRequired();
         builder.Property(x => x.ProposedByKind).HasConversion<string>().HasMaxLength(32).IsRequired();
+        builder.Property(x => x.RequestedById).HasMaxLength(256);
         builder.Property(x => x.ModelId).HasMaxLength(Propose.MaxModelIdLength);
         builder.Property(x => x.ContentHash).HasMaxLength(ContentHash.Length).IsRequired();
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(16).IsRequired();

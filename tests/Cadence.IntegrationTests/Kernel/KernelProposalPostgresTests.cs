@@ -40,7 +40,9 @@ public sealed class KernelProposalPostgresTests : IClassFixture<KernelPostgresFi
     private const string Reason = KernelProtocolScenario.Reason;
     private const string Model = "claude-opus-5";
 
-    private static readonly Actor Agent = Actor.AutomationAgent("deviation-triage");
+    private static readonly Actor Requester = Actor.Person("data-manager@sponsor.test");
+    private static readonly Actor AgentIdentity = Actor.AutomationAgent("deviation-triage");
+    private static readonly Actor Agent = AgentIdentity.ActingFor(Requester);
     private static readonly Actor Approver = Actor.Person("approver@sponsor.test");
     private static readonly Actor Colleague = Actor.Person("colleague@sponsor.test");
 
@@ -84,7 +86,7 @@ public sealed class KernelProposalPostgresTests : IClassFixture<KernelPostgresFi
         var (tenant, study) = await _scenario.NewStudyAsync(ct);
         var (artifact, plan) = await RegisterPlanAsync(tenant, study, ct);
         var (version, _) = await _scenario.ApprovedAsync(tenant, study, ct);
-        await GrantAsync(tenant, Agent, "proposal.create", AuthorityScope.Study(study), ct);
+        await GrantAgentAsync(tenant, "proposal.create", AuthorityScope.Study(study), ct);
         await GrantAsync(tenant, Approver, "proposal.approve", AuthorityScope.Study(study), ct);
         await GrantAsync(tenant, Approver, "attestation.sign", AuthorityScope.Tenant(), ct);
         UseProductionAuthorization();
@@ -152,10 +154,10 @@ public sealed class KernelProposalPostgresTests : IClassFixture<KernelPostgresFi
         var ct = TestContext.Current.CancellationToken;
         var (tenant, study) = await _scenario.NewStudyAsync(ct);
         var (_, plan) = await RegisterPlanAsync(tenant, study, ct);
-        await GrantAsync(tenant, Agent, "proposal.create", AuthorityScope.Study(study), ct);
+        await GrantAgentAsync(tenant, "proposal.create", AuthorityScope.Study(study), ct);
         foreach (var capability in new[] { "proposal.approve", "proposal.reject", "attestation.sign" })
         {
-            await GrantAsync(tenant, Agent, capability, AuthorityScope.Tenant(), ct);
+            await GrantAgentAsync(tenant, capability, AuthorityScope.Tenant(), ct);
         }
 
         UseProductionAuthorization();
@@ -191,7 +193,7 @@ public sealed class KernelProposalPostgresTests : IClassFixture<KernelPostgresFi
         var ct = TestContext.Current.CancellationToken;
         var (tenant, study) = await _scenario.NewStudyAsync(ct);
         var (_, plan) = await RegisterPlanAsync(tenant, study, ct);
-        await GrantAsync(tenant, Agent, "proposal.create", AuthorityScope.Study(study), ct);
+        await GrantAgentAsync(tenant, "proposal.create", AuthorityScope.Study(study), ct);
         foreach (var capability in new[] { "proposal.create", "proposal.approve", "attestation.sign" })
         {
             await GrantAsync(tenant, Approver, capability, AuthorityScope.Tenant(), ct);
@@ -283,7 +285,7 @@ public sealed class KernelProposalPostgresTests : IClassFixture<KernelPostgresFi
         var (_, plan) = await RegisterPlanAsync(tenant, study, ct);
         foreach (var capability in new[] { "proposal.create", "proposal.withdraw" })
         {
-            await GrantAsync(tenant, Agent, capability, AuthorityScope.Study(study), ct);
+            await GrantAgentAsync(tenant, capability, AuthorityScope.Study(study), ct);
         }
 
         foreach (var capability in new[] { "proposal.withdraw", "proposal.reject" })
@@ -331,7 +333,7 @@ public sealed class KernelProposalPostgresTests : IClassFixture<KernelPostgresFi
         var hidden = new NodeRef(NodeKinds.Enrollment, Guid.NewGuid(), 1);
         _fixture.Visibility.Masked[hidden.Unversioned()] = MaskReason.NotPermitted;
         _fixture.Visibility.Masked[NodeRef.For(hiddenPlan)] = MaskReason.NotPermitted;
-        await GrantAsync(tenant, Agent, "proposal.create", AuthorityScope.Study(study), ct);
+        await GrantAgentAsync(tenant, "proposal.create", AuthorityScope.Study(study), ct);
         UseProductionAuthorization();
 
         (await SendErrorAs(Agent, Propose(tenant, ProposalId.New(), study, plan, [hidden], model: Model), ct))
@@ -410,7 +412,7 @@ public sealed class KernelProposalPostgresTests : IClassFixture<KernelPostgresFi
         var ct = TestContext.Current.CancellationToken;
         var (tenant, study) = await _scenario.NewStudyAsync(ct);
         var (_, plan) = await RegisterPlanAsync(tenant, study, ct);
-        await GrantAsync(tenant, Agent, "proposal.create", AuthorityScope.Study(study), ct);
+        await GrantAgentAsync(tenant, "proposal.create", AuthorityScope.Study(study), ct);
         await GrantAsync(tenant, Colleague, "proposal.escalate", AuthorityScope.Study(study), ct);
         UseProductionAuthorization();
 
@@ -480,6 +482,13 @@ public sealed class KernelProposalPostgresTests : IClassFixture<KernelPostgresFi
             new IssueGrant(tenant, GrantId.New(), grantee, capability, null, scope, _fixture.Clock.UtcNow, null, false, KernelProtocolScenario.Key(), "Appointed"),
             ct);
         Tick();
+    }
+
+    /// <summary>Grants the agent a capability, and the person it acts for the same, since the agent is bounded by both (K-AI-6).</summary>
+    private async Task GrantAgentAsync(TenantId tenant, string capability, AuthorityScope scope, CancellationToken ct)
+    {
+        await GrantAsync(tenant, AgentIdentity, capability, scope, ct);
+        await GrantAsync(tenant, Requester, capability, scope, ct);
     }
 
     private void UseProductionAuthorization()

@@ -170,14 +170,19 @@ _Avoid_: role strings as authority, delegation tables separate from grants, queu
 
 An **AutomationAgent** is an AI or rules agent acting through the Intelligence engine, an actor whose id starts
 with `agent:` (`Actor.AutomationAgent`). It reads through the same authorization and visibility as a person and may
-propose, but it can never execute or approve, sign an attestation, or decide a proposal (K-AI-1, K-AI-3).
+propose, but it can never execute or approve, sign an attestation, or decide a proposal (K-AI-1, K-AI-3). It always acts
+for one **requesting person** (`Actor.ActingFor`), and may see and do only what both it and that person may
+(K-AI-6, ADR-2632); acting for no one it may do nothing.
 
 A **Proposal** is a suggested change to a study, by an agent or a person: an intent, the artifact version holding
 the plan, the objects it would change or depends on, an optional simulation result hash, the capabilities a person
 would use to execute it, and an expiry. It changes nothing in the kernel. Its content is fixed under a content hash.
 It is `Open` until a person approves it with an Attestation over that hash, a person rejects it, or its proposer
 withdraws it. The proposer can never approve it. An open proposal past its expiry reads as **Expired**. An agent's
-proposal names the model that produced it (K-PROV-3, ADR-2489).
+proposal names the model that produced it (K-PROV-3, ADR-2489) and the person it was made for. A person **executes**
+an approved proposal by sending each of its commands as themselves, naming the proposal; only its approver may, before
+it expires, and only with a capability it requested. The kernel then links proposal, approval, activity and events
+(`ProposalExecuted`, K-AI-2, ADR-2632).
 _Avoid_: AI draft statuses on regulated records (`DRAFT_AI`), "approved" to mean "executed"
 
 ### Tenant

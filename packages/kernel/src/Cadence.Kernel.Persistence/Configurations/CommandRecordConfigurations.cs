@@ -14,6 +14,7 @@ internal sealed class ProvenanceActivityConfiguration : IEntityTypeConfiguration
         builder.Property(x => x.CommandType).HasMaxLength(200).IsRequired();
         builder.Property(x => x.ActorId).HasMaxLength(256).IsRequired();
         builder.Property(x => x.ActorKind).HasConversion<string>().HasMaxLength(32);
+        builder.Property(x => x.RequestedBy).HasMaxLength(256);
         builder.Property(x => x.ReasonForChange).HasMaxLength(2000).IsRequired();
         builder.Property(x => x.IdempotencyKey).HasMaxLength(200).IsRequired();
         builder.Property(x => x.Outcome).HasMaxLength(32).IsRequired();
@@ -21,6 +22,7 @@ internal sealed class ProvenanceActivityConfiguration : IEntityTypeConfiguration
         builder.Property(x => x.AggregateId).HasMaxLength(200);
         builder.Property(x => x.Authorization).HasColumnType("jsonb");
         builder.HasIndex(x => new { x.TenantId, x.RecordedAt });
+        builder.HasIndex(x => new { x.TenantId, x.ProposalId }).HasFilter("proposal_id IS NOT NULL");
         builder.HasIndex(x => x.CorrelationId);
     }
 }

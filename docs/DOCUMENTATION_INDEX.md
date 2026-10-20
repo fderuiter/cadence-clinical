@@ -529,6 +529,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2623: Observation Values Are Typed](adr/2026-10-19-observation-values-are-typed.md) | Current | - Status: Accepted |
 | [ADR-2517: SMART Client Assertions Are Signed Only With Server-Side Endpoint Keys](adr/2026-10-19-smart-client-assertions-are-signed-only-with-server-side-endpoint-keys.md) | Current | - Status: Accepted |
 | [ADR-2630: AI Agents Act Through Proposals in One Governed Runtime](adr/2026-10-20-ai-agents-act-through-proposals-in-one-governed-runtime.md) | Current | - Status: Accepted |
+| [ADR-2632: Agents Act for One Person, and Approved Proposals Execute as Their Approver](adr/2026-10-20-agents-act-for-one-person-and-approved-proposals-execute-as-their-approver.md) | Current | - Status: Accepted |
 ## Developing and running
 
 | Document | Status | What it is |

@@ -93,6 +93,7 @@ public static class KernelEventFamilies
         ["ProposalCreated"] = EventFamily.Intelligence,
         ["ProposalEscalated"] = EventFamily.Intelligence,
         ["ProposalApproved"] = EventFamily.Intelligence,
+        ["ProposalExecuted"] = EventFamily.Intelligence,
         ["ProposalRejected"] = EventFamily.Intelligence,
         ["ProposalWithdrawn"] = EventFamily.Intelligence,
         ["FormVersionPublished"] = EventFamily.Knowledge,

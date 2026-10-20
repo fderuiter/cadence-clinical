@@ -122,7 +122,7 @@ public static class AuthorityErrors
         new("K.Authority.RoleUnknown", 404, "The role does not exist.");
 
     public static readonly KernelError GrantTargetInvalid =
-        new("K.Authority.GrantTargetInvalid", 422, "A grant names exactly one capability or one role.");
+        new("K.Authority.GrantTargetInvalid", 422, "A grant names one grantee, as an identity rather than an agent acting for someone, and exactly one capability or one role.");
 
     public static readonly KernelError ScopeInvalid =
         new("K.Authority.ScopeInvalid", 422, "The grant scope is not valid.");

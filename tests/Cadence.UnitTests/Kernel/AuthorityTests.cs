@@ -12,6 +12,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Explanations;
 using Cadence.Kernel.References;
+using Cadence.Testing;
 using Cadence.Testing.Time;
 
 using FluentAssertions;
@@ -197,16 +198,55 @@ public sealed class AuthorityTests
 
     /// <summary>Automation agents may read and propose with a grant, but never execute or approve (spec §11).</summary>
     [Fact(DisplayName = "Evaluate_AutomationAgent_OnlyReadsAndProposes")]
+    [GxPRequirement("PRD-SYS-051")]
     public async Task EvaluateAutomationAgentOnlyReadsAndProposes()
     {
-        var agent = new Actor(ActorKind.AutomationAgent, "agent:coder");
-        var store = new Store(Issue(grantee: agent, capability: "observation.record").Value!, Issue(grantee: agent, capability: "mapping.propose").Value!);
+        var identity = new Actor(ActorKind.AutomationAgent, "agent:coder");
+        var agent = identity.ActingFor(Crc);
+        var propose = new Capability("mapping.propose", VerbClass.Propose);
+        var store = new Store(
+            Issue(grantee: identity, capability: "observation.record").Value!,
+            Issue(grantee: identity, capability: "mapping.propose").Value!,
+            Issue(grantee: Crc, capability: "observation.record").Value!,
+            Issue(grantee: Crc, capability: "mapping.propose").Value!);
 
         var execute = await Evaluate(store, agent, Record, SiteA1Ref);
 
-        execute.Permitted.Should().BeFalse();
+        execute.Permitted.Should().BeFalse("a person holding the capability does not let the agent execute");
         execute.Conditions.Single().Code.Should().Be(AuthorityEvaluator.AgentVerbCondition);
-        (await Evaluate(store, agent, new Capability("mapping.propose", VerbClass.Propose), SiteA1Ref)).Permitted.Should().BeTrue();
+        (await Evaluate(store, agent, propose, SiteA1Ref)).Permitted.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// An agent acts for exactly one requesting person and may do only what both it and that person may do (K-AI-6,
+    /// ADR-2632): acting for nobody it may do nothing, and a person without the capability cannot lend it.
+    /// </summary>
+    [Fact(DisplayName = "Evaluate_AutomationAgent_IsBoundedByTheRequestingPerson")]
+    [GxPRequirement("PRD-SYS-051")]
+    public async Task EvaluateAutomationAgentIsBoundedByTheRequestingPerson()
+    {
+        var identity = new Actor(ActorKind.AutomationAgent, "agent:coder");
+        var propose = new Capability("mapping.propose", VerbClass.Propose);
+        var otherPerson = Actor.Person("monitor@sponsor.test");
+        var store = new Store(
+            Issue(grantee: identity, capability: "mapping.propose").Value!,
+            Issue(grantee: Crc, capability: "mapping.propose").Value!,
+            Issue(grantee: otherPerson, capability: "observation.record").Value!);
+
+        var alone = await Evaluate(store, identity, propose, SiteA1Ref);
+        var forCrc = await Evaluate(store, identity.ActingFor(Crc), propose, SiteA1Ref);
+        var forOther = await Evaluate(store, identity.ActingFor(otherPerson), propose, SiteA1Ref);
+        var unGranted = await Evaluate(new Store(Issue(grantee: Crc, capability: "mapping.propose").Value!), identity.ActingFor(Crc), propose, SiteA1Ref);
+
+        alone.Permitted.Should().BeFalse();
+        alone.Conditions.Single().Code.Should().Be(AuthorityEvaluator.RequesterCondition);
+        forCrc.Permitted.Should().BeTrue();
+        forCrc.Conditions.Should().Contain(c => c.Code == AuthorityEvaluator.RequesterCondition && c.Met);
+        forOther.Permitted.Should().BeFalse("the person it acts for does not hold the capability");
+        forOther.Conditions.Should().Contain(c => c.Code == AuthorityEvaluator.RequesterCondition && !c.Met);
+        unGranted.Permitted.Should().BeFalse("the agent's own grants still bound it");
+        FluentActions.Invoking(() => Crc with { RequestedBy = otherPerson }).Should().Throw<ArgumentException>("only an agent acts for someone");
+        FluentActions.Invoking(() => identity.ActingFor(identity)).Should().Throw<ArgumentException>("an agent acts for a person");
     }
 
     /// <summary>Platform operators may provision tenants and issue the first grants and roles, and nothing else.</summary>
