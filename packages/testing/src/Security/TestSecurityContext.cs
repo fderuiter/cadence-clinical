@@ -29,6 +29,9 @@ public static class TestSecurityContext
     /// <summary>Test-only execution demographics key (32 zero bytes); a valid AES-256 key for startup validation.</summary>
     public const string DemographicsKeyBase64 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="; // pragma: allowlist secret
 
+    /// <summary>Test-only execution randomisation key (base64 of 32 bytes, #5607), distinct from the demographics key.</summary>
+    public const string RandomizationKeyBase64 = "cmFuZG9taXphdGlvbi10ZXN0LWtleS0wMDAwMDAwMDA="; // pragma: allowlist secret
+
     /// <summary>Test-only SCE lock-token signing key (base64 of 32 ASCII bytes) for the interop host (#5382).</summary>
     public const string SceSigningKeyBase64 = "Y2FkZW5jZS10ZXN0LXNjZS1zaWduaW5nLWtleS0wMDE="; // pragma: allowlist secret
 
@@ -183,6 +186,10 @@ public static class SignedClientExtensions
     /// <summary>Supplies the test demographics encryption key so the execution host's startup validation passes.</summary>
     public static IWebHostBuilder UseTestDemographicsKey(this IWebHostBuilder builder) =>
         builder.UseSetting("DemographicsEncryption:KeyBase64", TestSecurityContext.DemographicsKeyBase64);
+
+    /// <summary>Supplies the test randomisation key (<c>RANDOMIZATION_ALLOCATION_KEY</c>) so the execution host's startup validation passes.</summary>
+    public static IWebHostBuilder UseTestRandomizationKey(this IWebHostBuilder builder) =>
+        builder.UseSetting("RANDOMIZATION_ALLOCATION_KEY", TestSecurityContext.RandomizationKeyBase64);
 
     /// <summary>Supplies the test SCE signing key (<c>CADENCE_SCE_SIGNING_KEY</c>) so the interop host's startup validation passes.</summary>
     public static IWebHostBuilder UseTestSceSigningKey(this IWebHostBuilder builder) =>

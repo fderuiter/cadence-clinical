@@ -42,7 +42,7 @@ public class SubjectE2ETests : IClassFixture<ExecutionE2EFactory>
     {
         // Arrange
         _factory.SkipUnlessPostgres();
-        var request = new SubjectCreateRequest("SUBJ-E2E-999", "STUDY-E2E-001", "SITE-101", null, null);
+        var request = new SubjectCreateRequest("SUBJ-E2E-999", "STUDY-E2E-001", "SITE-101", null);
         var ct = TestContext.Current.CancellationToken;
 
         // Act

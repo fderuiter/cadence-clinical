@@ -42,6 +42,22 @@ public static class BlockRandomizationEngine
         int blockSize,
         Random rng)
     {
+        ArgumentNullException.ThrowIfNull(rng);
+        return GeneratePermutedBlock(armsRatios, blockSize, rng.Next);
+    }
+
+    /// <summary>
+    /// One permuted block drawing its shuffle from <paramref name="nextBelow"/> (an integer in <c>[0, n)</c>), so a
+    /// live randomisation list can be generated from a cryptographic source rather than a seeded <see cref="Random"/>
+    /// whose seed could be recovered from a few known allocations (#5607).
+    /// </summary>
+    public static List<string> GeneratePermutedBlock(
+        Dictionary<string, int> armsRatios,
+        int blockSize,
+        Func<int, int> nextBelow)
+    {
+        ArgumentNullException.ThrowIfNull(armsRatios);
+        ArgumentNullException.ThrowIfNull(nextBelow);
         int ratioSum = armsRatios.Values.Sum();
         int multiplier = blockSize / ratioSum;
 
@@ -55,10 +71,10 @@ public static class BlockRandomizationEngine
             }
         }
 
-        // Fisher-Yates shuffle using deterministic rng
+        // Fisher-Yates shuffle
         for (int i = block.Count - 1; i > 0; i--)
         {
-            int j = rng.Next(i + 1);
+            int j = nextBelow(i + 1);
             (block[i], block[j]) = (block[j], block[i]);
         }
 

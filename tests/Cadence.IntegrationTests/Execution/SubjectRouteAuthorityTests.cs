@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -6,8 +7,11 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Domain.Randomization;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
+using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Security;
@@ -211,7 +215,7 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     public async Task SubjectDetail_IsBlindedWithoutTheUnblindedAccessClaim()
     {
         factory.SkipIfUnavailable();
-        string subject = await SeedAsync(SubjectState.Randomized);
+        string subject = await SeedAllocatedAsync();
 
         using var blinded = factory.CreateSignedClient(Caller("pi-blinded", "Principal Investigator"));
         using var unblinded = factory.CreateSignedClient(Caller("pharmacist", "Pharmacist") with { UnblindedAccess = true });
@@ -224,17 +228,17 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     }
 
     [Fact]
-    public async Task StateChangeResponse_WithholdsTheTreatmentGroupFromABlindedCaller()
+    public async Task StateChangeResponse_NeverCarriesTheTreatmentGroup()
     {
         factory.SkipIfUnavailable();
-        string subject = await SeedAsync(SubjectState.Randomized);
+        string subject = await SeedAllocatedAsync();
         using var client = factory.CreateSignedClient(Caller("crc-active", "crc"));
 
         var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "ACTIVE" }, Ct);
 
         state.StatusCode.Should().Be(HttpStatusCode.OK, await state.Content.ReadAsStringAsync(Ct));
         using var body = JsonDocument.Parse(await state.Content.ReadAsStringAsync(Ct));
-        body.RootElement.GetProperty("treatment_group").ValueKind.Should().Be(JsonValueKind.Null);
+        body.RootElement.TryGetProperty("treatment_group", out _).Should().BeFalse();
     }
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -242,14 +246,14 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     private GatewayIdentity Caller(string name, string role) =>
         TestSecurityContext.Identity($"{name.Replace(' ', '-')}-{_run}", role) with { ChangeReason = Reason };
 
-    /// <summary>Seeds a subject in <paramref name="state"/> with a treatment group, walking the transition graph.</summary>
+    /// <summary>Seeds a subject in <paramref name="state"/>, walking the transition graph.</summary>
     private async Task<string> SeedAsync(SubjectState state)
     {
         string code = $"SUBJ-{Guid.NewGuid().ToString("N")[..10]}";
         // Each seeded participant takes the next index: (study, enrollment_index) is unique in PostgreSQL.
         var subject = ClinicalSubject.Create(
             new SubjectCode(code), new StudyCode(Study), siteCode: null, enrollmentIndex: Interlocked.Increment(ref _nextEnrollmentIndex),
-            encryptedDemographics: "seed-ciphertext", stratFactors: null, treatmentGroup: Arm);
+            encryptedDemographics: "seed-ciphertext", stratFactors: null);
         if (state == SubjectState.Randomized)
         {
             subject.TransitionTo(SubjectState.Enrolled).IsSuccess.Should().BeTrue();
@@ -259,6 +263,42 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
         using var scope = factory.Services.CreateSeedingScope();
         var db = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
         db.ClinicalSubjects.Add(subject);
+        await db.SaveChangesAsync(Ct);
+        return code;
+    }
+
+    /// <summary>
+    /// Seeds a randomised subject the way the randomise route leaves one (#5607): its own study with an approved
+    /// minimisation scheme, and an allocation whose arm is encrypted with the host's allocation key.
+    /// </summary>
+    private async Task<string> SeedAllocatedAsync()
+    {
+        var clock = SystemClock.Instance;
+        var study = new StudyCode($"{Study}-{Guid.NewGuid().ToString("N")[..8]}");
+        string code = $"SUBJ-{Guid.NewGuid().ToString("N")[..10]}";
+        var subject = ClinicalSubject.Create(new SubjectCode(code), study, siteCode: null, enrollmentIndex: 1,
+            encryptedDemographics: "seed-ciphertext", stratFactors: null);
+        subject.TransitionTo(SubjectState.Enrolled).IsSuccess.Should().BeTrue();
+
+        var scheme = RandomizationScheme.Draft(study, 1, RandomizationMethod.Minimization,
+            new Dictionary<string, int> { ["ARM-A"] = 1, [Arm] = 1 },
+            new Dictionary<string, IReadOnlyList<string>> { ["sex"] = ["F", "M"] }, blockSizes: null,
+            slotsPerStratum: 0, preferredArmProbability: 0.8, requiresKit: false, "statistician-a", Reason, clock).Value!;
+        scheme.Approve("statistician-b", Reason, clock).IsSuccess.Should().BeTrue();
+
+        using var scope = factory.Services.CreateSeedingScope();
+        var protector = scope.ServiceProvider.GetRequiredService<IAllocationProtector>();
+        var allocationId = Guid.NewGuid();
+        var allocation = RandomizationAllocation.Record(allocationId, scheme, subject, "sex=F",
+            new Dictionary<string, string> { ["sex"] = "F" }, sequence: 1,
+            protector.Protect(Arm, RandomizationAllocation.ArmPurpose(allocationId)), listSlotId: null, kitNumber: null,
+            "crc-seed", clock.UtcNow, Reason);
+        subject.Randomize(allocationId, kitReference: null, new Dictionary<string, object?>()).IsSuccess.Should().BeTrue();
+
+        var db = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
+        db.ClinicalSubjects.Add(subject);
+        db.RandomizationSchemes.Add(scheme);
+        db.RandomizationAllocations.Add(allocation);
         await db.SaveChangesAsync(Ct);
         return code;
     }

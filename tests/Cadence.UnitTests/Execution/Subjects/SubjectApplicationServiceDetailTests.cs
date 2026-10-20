@@ -18,8 +18,8 @@ using Xunit;
 namespace Cadence.UnitTests.Execution.Subjects;
 
 /// <summary>
-/// `MIG-SUBJ-019` coverage for <see cref="SubjectApplicationService.GetDetailAsync"/>: the RTSM-blinding
-/// redaction matrix (blinded vs. unblinded caller), the single-lookup-by-domain-code-only contract (raise
+/// `MIG-SUBJ-019` coverage for <see cref="SubjectApplicationService.GetDetailAsync"/>: the RTSM blinding
+/// (the service never returns an arm, #5607), the single-lookup-by-domain-code-only contract (raise
 /// site #13's not-found, deliberately not the shared dual-lookup helper), and the full-population contract
 /// (the response reflects the aggregate's real current state).
 /// </summary>
@@ -57,26 +57,12 @@ public class SubjectApplicationServiceDetailTests
         return subject;
     }
 
-    /// <summary>
-    /// <see cref="ClinicalSubject"/> exposes no public way to populate
-    /// <see cref="ClinicalSubject.TreatmentGroupCiphertext"/> yet -- randomization/kit-assignment is out of
-    /// this ticket's (and every currently-implemented ticket's) scope, per <c>ClinicalSubject.Create</c>'s
-    /// own remarks. Reflection over the private setter is the only way to construct a fixture that actually
-    /// exercises the RTSM-blinding *redaction* (as opposed to a value that is trivially null either way).
-    /// </summary>
-    private static void SetTreatmentGroupCiphertext(ClinicalSubject subject, string value)
-    {
-        var property = typeof(ClinicalSubject).GetProperty(nameof(ClinicalSubject.TreatmentGroupCiphertext))
-            ?? throw new InvalidOperationException($"{nameof(ClinicalSubject.TreatmentGroupCiphertext)} property not found via reflection.");
-        property.SetValue(subject, value);
-    }
-
     [Fact]
     public async Task GetDetailAsync_GivenSubjectNotFound_ReturnsNotFoundError()
     {
         var harness = new Harness();
 
-        var result = await harness.Service.GetDetailAsync("SUBJ-DOES-NOT-EXIST", isBlindedCaller: false,
+        var result = await harness.Service.GetDetailAsync("SUBJ-DOES-NOT-EXIST",
             TestContext.Current.CancellationToken);
 
         result.IsFailure.Should().BeTrue();
@@ -91,9 +77,9 @@ public class SubjectApplicationServiceDetailTests
         var harness = new Harness();
         var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001");
 
-        var byId = await harness.Service.GetDetailAsync(subject.Id.ToString(), isBlindedCaller: false,
+        var byId = await harness.Service.GetDetailAsync(subject.Id.ToString(),
             TestContext.Current.CancellationToken);
-        var byCode = await harness.Service.GetDetailAsync(subject.SubjectCode.Value, isBlindedCaller: false,
+        var byCode = await harness.Service.GetDetailAsync(subject.SubjectCode.Value,
             TestContext.Current.CancellationToken);
 
         byId.IsFailure.Should().BeTrue("this method's single lookup is by domain code only, not the surrogate id");
@@ -108,7 +94,7 @@ public class SubjectApplicationServiceDetailTests
         var harness = new Harness();
         var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001", siteCode, SubjectState.Enrolled);
 
-        var result = await harness.Service.GetDetailAsync(subject.SubjectCode.Value, isBlindedCaller: false,
+        var result = await harness.Service.GetDetailAsync(subject.SubjectCode.Value,
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
@@ -118,72 +104,25 @@ public class SubjectApplicationServiceDetailTests
         result.Value.SiteId.Should().Be(siteCode);
     }
 
-    // -- RTSM blinding redaction matrix ----------------------------------------------------------
+    // -- RTSM blinding (#5607) ------------------------------------------------------------------
 
     [Fact]
-    public async Task GetDetailAsync_GivenBlindedCallerTrue_RedactsAllThreeRtsmFieldsToNull()
+    public async Task GetDetailAsync_NeverCarriesTheArm_EvenForARandomizedSubject()
     {
+        // The arm lives only as ciphertext on the randomisation allocation; the subject service has no
+        // way to read it, so the detail it returns is blinded for every caller. The endpoint reveals the
+        // allocation to an unblinded caller through IRandomizationApplicationService.
         var harness = new Harness();
-        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001");
-        SetTreatmentGroupCiphertext(subject, "ARM-A");
+        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001", status: SubjectState.Enrolled);
+        subject.Randomize(Guid.NewGuid(), "KIT-001", new Dictionary<string, object?>()).IsSuccess.Should().BeTrue();
 
-        var result = await harness.Service.GetDetailAsync(subject.SubjectCode.Value, isBlindedCaller: true,
+        var result = await harness.Service.GetDetailAsync(subject.SubjectCode.Value,
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value!.TreatmentGroup.Should().BeNull();
+        result.Value!.Status.Should().Be("RANDOMIZED");
+        result.Value.TreatmentGroup.Should().BeNull();
         result.Value.RandomizationSeed.Should().BeNull();
         result.Value.InvestigationalProductId.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task GetDetailAsync_GivenBlindedCallerFalse_ReturnsTheRealTreatmentGroup_NotRedacted()
-    {
-        // The meaningful half of the redaction matrix: prove the filter actually branches on
-        // isBlindedCaller, rather than TreatmentGroup simply always being null regardless.
-        var harness = new Harness();
-        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001");
-        SetTreatmentGroupCiphertext(subject, "ARM-A");
-
-        var result = await harness.Service.GetDetailAsync(subject.SubjectCode.Value, isBlindedCaller: false,
-            TestContext.Current.CancellationToken);
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value!.TreatmentGroup.Should().Be("ARM-A");
-    }
-
-    [Fact]
-    public async Task GetDetailAsync_GivenBlindedCallerTrue_RedactsAnActuallyPopulatedTreatmentGroup_NotJustAnAlreadyNullOne()
-    {
-        // Belt-and-braces: same populated subject as the "false" case above, asserting the *same* real
-        // value is nulled out when isBlindedCaller flips to true -- a true before/after redaction proof
-        // rather than two independently-trivial assertions.
-        var harness = new Harness();
-        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001");
-        SetTreatmentGroupCiphertext(subject, "ARM-A");
-
-        var unblinded = await harness.Service.GetDetailAsync(subject.SubjectCode.Value, isBlindedCaller: false,
-            TestContext.Current.CancellationToken);
-        var blinded = await harness.Service.GetDetailAsync(subject.SubjectCode.Value, isBlindedCaller: true,
-            TestContext.Current.CancellationToken);
-
-        unblinded.Value!.TreatmentGroup.Should().Be("ARM-A");
-        blinded.Value!.TreatmentGroup.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task GetDetailAsync_RandomizationSeedAndInvestigationalProductId_AreAlwaysNull_RegardlessOfBlinding()
-    {
-        // ClinicalSubject exposes no data source for either field yet (the randomization slice that would
-        // populate them is out of scope for this ticket) -- documented as a known limitation, not an
-        // oversight: both fields have nothing to redact either way today.
-        var harness = new Harness();
-        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001");
-
-        var unblinded = await harness.Service.GetDetailAsync(subject.SubjectCode.Value, isBlindedCaller: false,
-            TestContext.Current.CancellationToken);
-
-        unblinded.Value!.RandomizationSeed.Should().BeNull();
-        unblinded.Value.InvestigationalProductId.Should().BeNull();
     }
 }

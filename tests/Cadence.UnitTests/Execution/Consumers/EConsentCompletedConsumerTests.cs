@@ -161,6 +161,9 @@ public class EConsentCompletedConsumerTests
             return Task.FromResult(others);
         }
 
+        public Task<bool> HasCurrentConsentAsync(SubjectCode subjectCode, StudyCode studyCode, CancellationToken cancellationToken) =>
+            throw new NotSupportedException("The consumer never checks for a current consent.");
+
         public Task AddAsync(SubjectConsent consent, CancellationToken cancellationToken)
         {
             unitOfWork.StageConsent(consent);

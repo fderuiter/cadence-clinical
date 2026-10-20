@@ -71,6 +71,9 @@ issuer never asks for the Keycloak admin):
 - `audit-log-secret-key`, passed to every database-backed service as `AUDIT_LOG_SECRET_KEY`;
 - `demographics-encryption-key`, passed to execution as `DemographicsEncryption__KeyBase64` (base64 AES key of
   16, 24 or 32 bytes; execution refuses to start without one, ADR-2490);
+- `randomization-allocation-key`, passed to execution as `RANDOMIZATION_ALLOCATION_KEY` (base64 of 32 bytes, a
+  different key; it encrypts randomisation lists, allocations and kit arm labels, and execution refuses to start
+  without one, ADR-2640);
 - `field-encryption-key`, passed to econsent and payments as `FIELD_ENCRYPTION_KEY`, and `field-lookup-hash-key`,
   passed to interop as `FIELD_LOOKUP_HASH_KEY` (base64 of 32 bytes each, ADR-2494);
 - `sce-signing-key`, passed to interop as `CADENCE_SCE_SIGNING_KEY` (base64 of 32 bytes; signs SCE database-lock

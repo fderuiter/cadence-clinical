@@ -83,7 +83,7 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
             var repository = new SubjectRepository(context);
             var service = new SubjectApplicationService(repository, consents, compliance, encryption, auditWriter, auditContext);
 
-            var request = new SubjectCreateRequest($"SUBJ-PG-{i:D3}", studyCode.Value, "SITE-001", ArmId: null, Demographics: null);
+            var request = new SubjectCreateRequest($"SUBJ-PG-{i:D3}", studyCode.Value, "SITE-001", Demographics: null);
             var result = await service.CreateAsync(request, TestContext.Current.CancellationToken);
             result.IsSuccess.Should().BeTrue();
         });
@@ -173,7 +173,7 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
             var repository = new SubjectRepository(context);
             var service = new SubjectApplicationService(repository, consents, compliance, encryption, auditWriter, auditContext);
 
-            var request = new SubjectCreateRequest($"SUBJ-A-{i:D3}", studyA.Value, "SITE-001", ArmId: null, Demographics: null);
+            var request = new SubjectCreateRequest($"SUBJ-A-{i:D3}", studyA.Value, "SITE-001", Demographics: null);
             var result = await service.CreateAsync(request, TestContext.Current.CancellationToken);
             result.IsSuccess.Should().BeTrue();
         });
@@ -184,7 +184,7 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
             var repository = new SubjectRepository(context);
             var service = new SubjectApplicationService(repository, consents, compliance, encryption, auditWriter, auditContext);
 
-            var request = new SubjectCreateRequest($"SUBJ-B-{i:D3}", studyB.Value, "SITE-001", ArmId: null, Demographics: null);
+            var request = new SubjectCreateRequest($"SUBJ-B-{i:D3}", studyB.Value, "SITE-001", Demographics: null);
             var result = await service.CreateAsync(request, TestContext.Current.CancellationToken);
             result.IsSuccess.Should().BeTrue();
         });

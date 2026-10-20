@@ -6,7 +6,7 @@ namespace Cadence.Apps.Execution.Application.Subjects;
 
 /// <summary>
 /// Wire shape for every endpoint that returns a subject (`01_spec.md` §1.2's <c>SubjectResponse</c>
-/// field list: <c>id</c>, <c>subject_id</c>, <c>study_id</c>, <c>site_id</c>, <c>treatment_group</c>,
+/// field list: <c>id</c>, <c>subject_id</c>, <c>study_id</c>, <c>site_id</c>,
 /// <c>status</c>, <c>active_protocol_version</c>, <c>encrypted_demographics</c>). Property names carry
 /// the wire's PascalCase-of-the-snake_case-name form so the shared <see cref="System.Text.Json.JsonNamingPolicy"/>
 /// registered once in `Program.cs` (MIG-SUBJ-008, `02_technical_design.md` §2.6) maps them automatically
@@ -19,7 +19,9 @@ namespace Cadence.Apps.Execution.Application.Subjects;
 /// property and a domain-code property in the same type, so none of them need this treatment
 /// (see <see cref="SubjectDetailResponse"/>, which names its domain-code property plain <c>SubjectId</c>).
 /// Legacy Python source being replaced: `apps/execution/presentation/dtos.py`'s <c>SubjectResponse</c>
-/// Pydantic model and its four construction sites in `apps/execution/presentation/routers/subjects.py`.
+/// Pydantic model and its four construction sites in `apps/execution/presentation/routers/subjects.py`. It carries no
+/// treatment arm: the arm lives only encrypted on the randomisation allocation, and only subject detail reveals it, to an
+/// unblinded caller (#5607).
 /// @req:PRD-SUB-001
 /// </summary>
 public sealed record SubjectResponse(
@@ -27,7 +29,6 @@ public sealed record SubjectResponse(
     [property: JsonPropertyName("subject_id")] SubjectCode SubjectId_,
     StudyCode StudyId,
     SiteCode? SiteId,
-    string? TreatmentGroup,
     string Status,
     string? ActiveProtocolVersion,
     string? EncryptedDemographics)
@@ -38,6 +39,6 @@ public sealed record SubjectResponse(
     /// response model from the aggregate's actual current state.
     /// </summary>
     public static SubjectResponse FromAggregate(ClinicalSubject subject) => new(
-        subject.Id, subject.SubjectCode, subject.StudyCode, subject.SiteCode, subject.TreatmentGroupCiphertext,
+        subject.Id, subject.SubjectCode, subject.StudyCode, subject.SiteCode,
         SubjectStateCodec.ToCode(subject.Status), subject.ActiveProtocolVersion, subject.EncryptedDemographics);
 }

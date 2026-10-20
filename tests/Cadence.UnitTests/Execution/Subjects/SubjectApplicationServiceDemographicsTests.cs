@@ -190,7 +190,6 @@ public class SubjectApplicationServiceDemographicsTests
         result.Value!.Status.Should().Be("SCREENING");
         result.Value.ActiveProtocolVersion.Should().Be("1.0.0");
         result.Value.SiteId.Should().BeNull();
-        result.Value.TreatmentGroup.Should().BeNull();
     }
 
     // -- SCN-004: post-randomization lock matrix ------------------------------------------------------

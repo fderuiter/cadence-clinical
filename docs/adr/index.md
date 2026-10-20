@@ -32,6 +32,7 @@ Reservation rule: since the kernel work of September 2026, a new ADR takes the n
 | 2610–2619 | Scaffold service dispositions                                                     |
 | 2620–2629 | The eCRF on the kernel observation path                                           |
 | 2630–2639 | AI agents                                                                         |
+| 2640–2649 | Clinical operations compliance (GCP workflows)                                    |
 | 2800–2899 | Google Stitch pull requests (closed; no new numbers)                              |
 
 An area with no block takes the next unused block of ten below 2800 and adds a row here in the same pull request.
@@ -362,6 +363,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2801: Automated Stipend Disbursement Threshold Rules for Participant Wallet](2026-10-01-automated-stipend-disbursement-threshold-rules.md) (2026-10-01)
 - [ADR-2232: Financial and Site Operations Engines Standard](2026-08-29-financial-and-site-operations-engines-standard.md) (2026-08-29)
 - [ADR-2425: Randomization and Trial Supply Management](2026-08-31-randomization-and-trial-supply-management.md) (2026-08-31)
+- [ADR-2640: Randomisation Allocates from Approved, Encrypted Scheme Versions](2026-10-20-randomisation-allocates-from-approved-encrypted-scheme-versions.md) (2026-10-20)
 
 ### 5. Compliance, Audit & Governance
 

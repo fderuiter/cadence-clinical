@@ -18,6 +18,7 @@ public static partial class PermissionMatrix
     private static partial void AddExecutionGrants()
     {
         AddEdcGrants();
+        AddRandomizationGrants();
         AddLaboratoryGrants();
         AddSupplyGrants();
         AddSiteComplianceGrants();
@@ -53,6 +54,21 @@ public static partial class PermissionMatrix
         {
             Grant(role, "medical_coding", "manage_synonyms");
         }
+    }
+
+    /// <summary>
+    /// Randomisation (#5607, ADR-2640). The unblinded statistician drafts and approves scheme versions (the service also
+    /// requires the approver to be someone other than the author); data managers and auditors read the configuration,
+    /// which holds no list or allocation. Site staff randomise a participant; the response names the allocation and kit,
+    /// never the arm.
+    /// </summary>
+    private static void AddRandomizationGrants()
+    {
+        Grant(RoleNormalization.ROLE_UNBLINDED_STATISTICIAN, "randomization_scheme", "read", "draft", "approve");
+        Grant(RoleNormalization.ROLE_SPONSOR_DM, "randomization_scheme", "read");
+        Grant(RoleNormalization.ROLE_AUDITOR_CANONICAL, "randomization_scheme", "read");
+        Grant(RoleNormalization.ROLE_INVESTIGATOR, "subject_enrollment", "randomize");
+        Grant(RoleNormalization.ROLE_CRC, "subject_enrollment", "randomize");
     }
 
     /// <summary>Lab reference ranges, bulk range imports and toxicity review.</summary>

@@ -1208,6 +1208,11 @@ _Avoid_: Rigid rule-based 3+3 designs unable to incorporate continuous Bayesian 
 A deterministic block allocation strategy that partitions subjects into discrete strata based on baseline factor combinations, generating variable-length balanced permutation blocks sealed with cryptographic checksums to guarantee allocation predictability prevention while maintaining exact target ratios.
 _Avoid_: Fixed-size unmasked blocks susceptible to clinical investigator selection bias
 
+### Randomisation Scheme Version and Allocation
+
+A study's randomisation configuration (method, arms and ratios, stratification factors, block sizes) is a versioned scheme that goes live only when someone other than its author approves it ([ADR-2640](docs/adr/2026-10-20-randomisation-allocates-from-approved-encrypted-scheme-versions.md)). A permuted-block version's list is generated once, on approval, and each slot's arm is stored encrypted. An allocation records which version, stratum, slot and kit a participant received; it is insert-only, and its arm is encrypted and readable only by an unblinded caller. The arm never sits on the subject (kernel specification §7.4).
+_Avoid_: An arm supplied in a create request, or a participant moved to `RANDOMIZED` by a plain state change
+
 ### Multi-Echelon Predictive Resupply Forecasting Engine
 
 A supply chain optimization runtime that models inventory across the complete clinical supply hierarchy (Primary Manufacturer $\to$ Central Depot $\to$ Regional Depot $\to$ Clinical Site), calculating lead-time safety buffers, lot shelf-life expiration run-out curves, and automated resupply orders to eliminate patient treatment interruption.

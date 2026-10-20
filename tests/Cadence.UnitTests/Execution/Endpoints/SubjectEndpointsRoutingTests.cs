@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -9,6 +10,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Randomization;
 using Cadence.Apps.Execution.Application.Serialization;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
@@ -82,8 +84,8 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     {
         _factory.Service.CreateResult = Result<SubjectResponse>.Success(
             new SubjectResponse(SubjectId.New(), new SubjectCode("SUBJ-777"), new StudyCode("STUDY-001"),
-                null, null, "SCREENING", "1.0.0", null));
-        var request = new SubjectCreateRequest("SUBJ-777", "STUDY-001", null, null, null);
+                null, "SCREENING", "1.0.0", null));
+        var request = new SubjectCreateRequest("SUBJ-777", "STUDY-001", null, null);
 
         var response = await SendJsonAsync(HttpMethod.Post, "/api/v1/execution/subjects", request);
 
@@ -274,7 +276,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         _factory.Service.GetDetailAsyncCalls.Should().Be(1);
-        _factory.Service.LastIsBlindedCaller.Should().BeTrue("the caller carries no unblinded-access claim, so detail is blinded (#4943)");
     }
 
     [Fact]
@@ -288,15 +289,16 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     /// <summary>
-    /// Subject detail is blinded by default (#4943): a caller without the gateway-signed
+    /// Subject detail is blinded by default (#4943, #5607): a caller without the gateway-signed
     /// <see cref="CadenceClaimTypes.UnblindedAccess"/> claim gets <c>treatment_group: null</c>, whatever roles it
-    /// holds. Calls <see cref="SubjectEndpoints.GetSubjectDetailAsync"/> directly and executes the returned
-    /// <see cref="IResult"/> to check the serialized body.
+    /// holds, and the arm is never even decrypted for it. Calls <see cref="SubjectEndpoints.GetSubjectDetailAsync"/>
+    /// directly and executes the returned <see cref="IResult"/> to check the serialized body.
     /// </summary>
     [Fact]
-    public async Task GetSubjectDetailAsync_GivenCallerWithoutUnblindedAccess_ResolvesIsBlindedCallerTrue_AndSerializesTreatmentGroupAsNull()
+    public async Task GetSubjectDetailAsync_GivenCallerWithoutUnblindedAccess_NeverRevealsTheArm()
     {
         var service = new FakeSubjectApplicationService();
+        var randomization = new FakeRandomizationService();
         using var responseBody = new MemoryStream();
         var httpContext = new DefaultHttpContext
         {
@@ -305,22 +307,25 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
         };
         httpContext.Response.Body = responseBody;
 
-        var result = await SubjectEndpoints.GetSubjectDetailAsync("SUBJ-001", httpContext, service, TestContext.Current.CancellationToken);
+        var result = await SubjectEndpoints.GetSubjectDetailAsync("SUBJ-001", httpContext, service, randomization,
+            TestContext.Current.CancellationToken);
         await result.ExecuteAsync(httpContext);
 
-        service.LastIsBlindedCaller.Should().BeTrue();
+        randomization.RevealCalls.Should().Be(0);
         responseBody.Seek(0, SeekOrigin.Begin);
         using var document = await JsonDocument.ParseAsync(responseBody, cancellationToken: TestContext.Current.CancellationToken);
         document.RootElement.GetProperty("treatment_group").ValueKind.Should().Be(JsonValueKind.Null);
+        document.RootElement.GetProperty("investigational_product_id").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
     [Fact]
-    public async Task GetSubjectDetailAsync_GivenCallerWithUnblindedAccess_ResolvesIsBlindedCallerFalse_AndDoesNotRedact()
+    public async Task GetSubjectDetailAsync_GivenCallerWithUnblindedAccess_RevealsTheAllocatedArmAndKit()
     {
         // The other half of the matrix above: proves the wiring branches on the signed claim.
         var principal = TestSecurityContext.CreatePrincipal("pharmacist-001", "pharmacist");
         ((ClaimsIdentity)principal.Identity!).AddClaim(new Claim(CadenceClaimTypes.UnblindedAccess, "true"));
         var service = new FakeSubjectApplicationService();
+        var randomization = new FakeRandomizationService();
         using var responseBody = new MemoryStream();
         var httpContext = new DefaultHttpContext
         {
@@ -329,13 +334,15 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
         };
         httpContext.Response.Body = responseBody;
 
-        var result = await SubjectEndpoints.GetSubjectDetailAsync("SUBJ-001", httpContext, service, TestContext.Current.CancellationToken);
+        var result = await SubjectEndpoints.GetSubjectDetailAsync("SUBJ-001", httpContext, service, randomization,
+            TestContext.Current.CancellationToken);
         await result.ExecuteAsync(httpContext);
 
-        service.LastIsBlindedCaller.Should().BeFalse();
+        randomization.RevealCalls.Should().Be(1);
         responseBody.Seek(0, SeekOrigin.Begin);
         using var document = await JsonDocument.ParseAsync(responseBody, cancellationToken: TestContext.Current.CancellationToken);
         document.RootElement.GetProperty("treatment_group").GetString().Should().Be("ARM-A");
+        document.RootElement.GetProperty("investigational_product_id").GetString().Should().Be("KIT-007");
     }
 
     // ================================================================================================
@@ -427,7 +434,7 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     public async Task CreateSubjectAsync_GivenPreCancelledToken_ThrowsOperationCanceledExceptionRatherThanCompleting()
     {
         var service = new FakeSubjectApplicationService();
-        var request = new SubjectCreateRequest("SUBJ-001", "STUDY-001", null, null, null);
+        var request = new SubjectCreateRequest("SUBJ-001", "STUDY-001", null, null);
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
@@ -472,7 +479,7 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
-        var act = () => SubjectEndpoints.GetSubjectDetailAsync("SUBJ-001", httpContext, service, cts.Token);
+        var act = () => SubjectEndpoints.GetSubjectDetailAsync("SUBJ-001", httpContext, service, new FakeRandomizationService(), cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
@@ -596,8 +603,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
 
         public int GetDetailAsyncCalls { get; private set; }
 
-        public bool? LastIsBlindedCaller { get; private set; }
-
         public string? LastChangeReasonSeenByAdvanceState { get; private set; }
 
         public string? LastChangeReasonSeenByUpdateDemographics { get; private set; }
@@ -656,21 +661,17 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
             return Task.FromResult(DeleteDemographicsResult ?? Result<SubjectResponse>.Success(DefaultSubjectResponse()));
         }
 
-        public Task<Result<SubjectDetailResponse>> GetDetailAsync(string subjectId, bool isBlindedCaller, CancellationToken ct)
+        public Task<Result<SubjectDetailResponse>> GetDetailAsync(string subjectId, CancellationToken ct)
         {
             GetDetailAsyncCalls++;
-            LastIsBlindedCaller = isBlindedCaller;
             ct.ThrowIfCancellationRequested();
             if (GetDetailResult is { } overridden)
             {
                 return Task.FromResult(overridden);
             }
 
-            // Mirrors (in miniature, for this fake only) SubjectApplicationService.GetDetailAsync's own RTSM
-            // redaction rule -- just enough to prove the endpoint threads isBlindedCaller correctly end to
-            // end (AC's own wiring-only concern), not a re-implementation of that method's real logic.
-            var body = new SubjectDetailResponse(new SubjectCode(subjectId), new StudyCode("STUDY-001"), "ENROLLED",
-                new SiteCode("SITE-001"), isBlindedCaller ? null : "ARM-A", RandomizationSeed: null, InvestigationalProductId: null);
+            var body = new SubjectDetailResponse(new SubjectCode(subjectId), new StudyCode("STUDY-001"), "RANDOMIZED",
+                new SiteCode("SITE-001"), TreatmentGroup: null, RandomizationSeed: null, InvestigationalProductId: null);
             return Task.FromResult(Result<SubjectDetailResponse>.Success(body));
         }
 
@@ -691,10 +692,35 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
                 "Not exercised by SubjectEndpoints -- no route registered by this ticket maps to this method.");
 
         private static SubjectResponse DefaultSubjectResponse() =>
-            new(SubjectId.New(), new SubjectCode("SUBJ-001"), new StudyCode("STUDY-001"), null, null, "SCREENING", "1.0.0", null);
+            new(SubjectId.New(), new SubjectCode("SUBJ-001"), new StudyCode("STUDY-001"), null, "SCREENING", "1.0.0", null);
 
         private static SubjectConsentResponse DefaultConsentResponse() =>
             new(SubjectConsentId.New(), new SubjectCode("SUBJ-001"), new StudyCode("STUDY-001"), "2.0", 2, true, null, false, false, 1);
+    }
+
+    /// <summary>Reveals a fixed allocation and counts how often the endpoint asks; the scheme routes are not exercised here.</summary>
+    private sealed class FakeRandomizationService : IRandomizationApplicationService
+    {
+        public int RevealCalls { get; private set; }
+
+        public Task<RevealedAllocation?> RevealAsync(string subjectIdOrCode, CancellationToken ct)
+        {
+            RevealCalls++;
+            return Task.FromResult<RevealedAllocation?>(new RevealedAllocation("ARM-A", "KIT-007"));
+        }
+
+        public Task<Result<RandomizationSchemeResponse>> DraftSchemeAsync(RandomizationSchemeDraftRequest request, CancellationToken ct) =>
+            throw new NotSupportedException();
+
+        public Task<Result<RandomizationSchemeResponse>> ApproveSchemeAsync(Guid schemeId, string changeReason, CancellationToken ct) =>
+            throw new NotSupportedException();
+
+        public Task<Result<IReadOnlyList<RandomizationSchemeResponse>>> ListSchemesAsync(string? studyId, CancellationToken ct) =>
+            throw new NotSupportedException();
+
+        public Task<Result<RandomizationResponse>> RandomizeAsync(string subjectIdOrCode, RandomizeSubjectRequest request,
+            string changeReason, CancellationToken ct) =>
+            throw new NotSupportedException();
     }
 
     private static ClaimsPrincipal SiteCoordinator() => TestSecurityContext.CreatePrincipal("crc-001", "crc");
@@ -739,6 +765,7 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
                         services.AddCadenceSecurity();
                         services.ConfigureHttpJsonOptions(ApplyExecutionJsonConventions);
                         services.AddSingleton<ISubjectApplicationService>(Service);
+                        services.AddSingleton<IRandomizationApplicationService>(new FakeRandomizationService());
                         services.AddSingleton<IValidator<SubjectCreateRequest>, SubjectCreateRequestValidator>();
                         services.AddSingleton<IValidator<SubjectConsentRequest>, SubjectConsentRequestValidator>();
                         services.AddSingleton<IValidator<SubjectStateUpdateRequest>, SubjectStateUpdateRequestValidator>();

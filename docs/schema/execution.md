@@ -19,15 +19,18 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.cgt_destruction_certificates`](#edccgt_destruction_certificates) | `CgtDestructionCertificate` | 32 |
 | [`edc.cgt_milestone_events`](#edccgt_milestone_events) | `CgtMilestoneEvent` | 25 |
 | [`edc.cgt_vial_return_reconciliations`](#edccgt_vial_return_reconciliations) | `CgtVialReturnReconciliation` | 20 |
-| [`edc.clinical_subjects`](#edcclinical_subjects) | `ClinicalSubject` | 23 |
+| [`edc.clinical_subjects`](#edcclinical_subjects) | `ClinicalSubject` | 22 |
 | [`edc.consumed_signature_tokens`](#edcconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
 | [`edc.device_deficiencies`](#edcdevice_deficiencies) | `DeviceDeficiency` | 30 |
 | [`edc.device_inventory_items`](#edcdevice_inventory_items) | `DeviceInventoryItem` | 28 |
 | [`edc.device_quarantine_records`](#edcdevice_quarantine_records) | `DeviceQuarantineRecord` | 19 |
-| [`edc.ip_kit_inventory_items`](#edcip_kit_inventory_items) | `IpKitInventoryItem` | 17 |
+| [`edc.ip_kit_inventory_items`](#edcip_kit_inventory_items) | `IpKitInventoryItem` | 21 |
 | [`edc.ip_kit_reconciliation_batches`](#edcip_kit_reconciliation_batches) | `IpKitReconciliationBatch` | 15 |
 | [`edc.ip_kit_reconciliation_certificates`](#edcip_kit_reconciliation_certificates) | `IpKitReconciliationCertificate` | 15 |
 | [`edc.lab_reference_ranges`](#edclab_reference_ranges) | `LabReferenceRange` | 22 |
+| [`edc.randomization_allocations`](#edcrandomization_allocations) | `RandomizationAllocation` | 18 |
+| [`edc.randomization_list_slots`](#edcrandomization_list_slots) | `RandomizationListSlot` | 6 |
+| [`edc.randomization_schemes`](#edcrandomization_schemes) | `RandomizationScheme` | 23 |
 | [`edc.site_compliance_caches`](#edcsite_compliance_caches) | `SiteComplianceCache` | 12 |
 | [`edc.staged_adverse_event_reviews`](#edcstaged_adverse_event_reviews) | `StagedAdverseEventReview` | 27 |
 | [`edc.subject_consents`](#edcsubject_consents) | `SubjectConsent` | 14 |
@@ -452,7 +455,6 @@ Entity: `ClinicalSubject`
 | `Status` | `character varying(32)` | no |  |  |
 | `StudyCode` | `character varying(255)` | no |  |  |
 | `SubjectCode` | `character varying(255)` | no |  |  |
-| `TreatmentGroupCiphertext` | `text` | yes |  |  |
 | `UnblindedAt` | `timestamp with time zone` | yes |  |  |
 | `UnblindedBy` | `text` | yes |  |  |
 | `UnblindedReason` | `text` | yes |  |  |
@@ -605,6 +607,9 @@ Entity: `IpKitInventoryItem`
 | Column | Type | Null | Default | Key |
 | --- | --- | --- | --- | --- |
 | `Id` | `uuid` | no |  | PK |
+| `AssignedAt` | `timestamp with time zone` | yes |  |  |
+| `AssignedRandomizationId` | `uuid` | yes |  |  |
+| `AssignedSubjectCode` | `character varying(255)` | yes |  |  |
 | `CreatedAt` | `timestamp with time zone` | no |  |  |
 | `CreatedBy` | `character varying(255)` | no |  |  |
 | `DispositionReason` | `character varying(255)` | yes |  |  |
@@ -620,10 +625,12 @@ Entity: `IpKitInventoryItem`
 | `SiteId` | `character varying(255)` | no |  |  |
 | `Status` | `character varying(100)` | no |  |  |
 | `StudyId` | `character varying(255)` | no |  |  |
+| `TreatmentArmCiphertext` | `text` | yes |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
 
 Indexes:
 
+- `IX_ip_kit_inventory_items_AssignedRandomizationId`: unique (`AssignedRandomizationId`) where `"AssignedRandomizationId" IS NOT NULL`
 - `IX_ip_kit_inventory_items_StudyId_SiteId_KitNumber`: unique (`StudyId`, `SiteId`, `KitNumber`)
 
 ## edc.ip_kit_reconciliation_batches
@@ -711,6 +718,99 @@ Indexes:
 
 - `IX_lab_reference_ranges_StudyId_IsActive`: (`StudyId`, `IsActive`)
 - `IX_lab_reference_ranges_StudyId_TestCode_Source_SiteId_IsActive`: (`StudyId`, `TestCode`, `Source`, `SiteId`, `IsActive`)
+
+## edc.randomization_allocations
+
+Entity: `RandomizationAllocation`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `AllocatedAt` | `timestamp with time zone` | no |  |  |
+| `AllocatedBy` | `character varying(255)` | no |  |  |
+| `ArmCiphertext` | `text` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `KitNumber` | `character varying(255)` | yes |  |  |
+| `ListSlotId` | `uuid` | yes |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `SchemeId` | `uuid` | no |  |  |
+| `SchemeVersion` | `integer` | no |  |  |
+| `Sequence` | `integer` | no |  |  |
+| `SiteCode` | `text` | yes |  |  |
+| `StratificationFactorsJson` | `jsonb` | no |  |  |
+| `StratumKey` | `character varying(1024)` | no |  |  |
+| `StudyCode` | `character varying(255)` | no |  |  |
+| `SubjectId` | `uuid` | no |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_randomization_allocations_clinical_subjects_SubjectId`: (`SubjectId`) references `edc.clinical_subjects` (`Id`), on delete restrict
+- `FK_randomization_allocations_randomization_schemes_SchemeId`: (`SchemeId`) references `edc.randomization_schemes` (`Id`), on delete restrict
+
+Indexes:
+
+- `IX_randomization_allocations_SchemeId_StratumKey_Sequence`: unique (`SchemeId`, `StratumKey`, `Sequence`)
+- `IX_randomization_allocations_StudyCode_AllocatedAt`: (`StudyCode`, `AllocatedAt`)
+- `IX_randomization_allocations_SubjectId`: unique (`SubjectId`)
+
+## edc.randomization_list_slots
+
+Entity: `RandomizationListSlot`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `AllocationId` | `uuid` | yes |  |  |
+| `ArmCiphertext` | `text` | no |  |  |
+| `SchemeId` | `uuid` | no |  |  |
+| `Sequence` | `integer` | no |  |  |
+| `StratumKey` | `character varying(1024)` | no |  |  |
+
+Foreign keys:
+
+- `FK_randomization_list_slots_randomization_schemes_SchemeId`: (`SchemeId`) references `edc.randomization_schemes` (`Id`), on delete restrict
+
+Indexes:
+
+- `IX_randomization_list_slots_AllocationId`: unique (`AllocationId`) where `"AllocationId" IS NOT NULL`
+- `IX_randomization_list_slots_SchemeId_StratumKey_Sequence`: unique (`SchemeId`, `StratumKey`, `Sequence`)
+
+## edc.randomization_schemes
+
+Entity: `RandomizationScheme`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `ApprovalReason` | `character varying(1000)` | yes |  |  |
+| `ApprovedAt` | `timestamp with time zone` | yes |  |  |
+| `ApprovedBy` | `character varying(255)` | yes |  |  |
+| `ArmsJson` | `jsonb` | no |  |  |
+| `BlockSizesJson` | `jsonb` | no |  |  |
+| `ConfigurationHash` | `character varying(64)` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `DraftedAt` | `timestamp with time zone` | no |  |  |
+| `DraftedBy` | `character varying(255)` | no |  |  |
+| `ListSize` | `integer` | no |  |  |
+| `Method` | `character varying(32)` | no |  |  |
+| `PreferredArmProbability` | `double precision` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `RequiresKit` | `boolean` | no |  |  |
+| `RetiredAt` | `timestamp with time zone` | yes |  |  |
+| `SlotsPerStratum` | `integer` | no |  |  |
+| `Status` | `character varying(32)` | no |  |  |
+| `StratificationFactorsJson` | `jsonb` | no |  |  |
+| `StudyCode` | `character varying(255)` | no |  |  |
+| `Version` | `integer` | no |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+
+Indexes:
+
+- `IX_randomization_schemes_StudyCode_Approved`: unique (`StudyCode`) where `"Status" = 'Approved'`
+- `IX_randomization_schemes_StudyCode_Version`: unique (`StudyCode`, `Version`)
 
 ## edc.site_compliance_caches
 
