@@ -7,7 +7,7 @@
     "pinia": "^4.0.3",
     "ui": "workspace:*",
     "usdm-schemas": "workspace:*",
-    "vue": "^3.5.42",
+    "vue": "^3.5.44",
     "vue-i18n": "^11.4.14",
     "vue-router": "^5.4.0",
     "vuedraggable": "4.1.0"
