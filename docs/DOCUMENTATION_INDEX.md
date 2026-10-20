@@ -523,6 +523,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2622: eCRF Forms Are Kernel Collection Instances Saved in One Command](adr/2026-10-19-ecrf-forms-are-collection-instances-saved-in-one-command.md) | Current | - Status: Accepted |
 | [ADR-2533: Tests, CI and Compose Run One Pinned PostgreSQL Major](adr/2026-10-19-tests-ci-and-compose-run-one-pinned-postgresql-major.md) | Current | - Status: Accepted |
 | [ADR-2524: Messaging Stays on the Apache-Licensed MassTransit 8 Line](adr/2026-10-19-messaging-stays-on-the-apache-licensed-masstransit-8-line.md) | Current | - Status: Accepted |
+| [ADR-2543: The Kernel Host Seeds the Local Demo Study](adr/2026-10-19-the-kernel-host-seeds-the-local-demo-study.md) | Current | - Status: Accepted |
 ## Developing and running
 
 | Document | Status | What it is |

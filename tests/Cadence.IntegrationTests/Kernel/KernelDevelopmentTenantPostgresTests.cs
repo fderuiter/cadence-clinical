@@ -1,5 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Commands;
@@ -80,6 +86,91 @@ public sealed class KernelDevelopmentTenantPostgresTests(KernelPostgresFixture f
         Actor.ServiceAccount("kernel-development-bootstrap").Id.Should().Be(Operator);
     }
 
+    /// <summary>
+    /// With demo data on (ADR-2543, #5452), the bootstrap writes the demo study through the pipeline and grants the realm's
+    /// users by their fixed subject ids: the site coordinator sees the study, their own study site and its participants,
+    /// while the other study site stays masked; a person with no grant finds nothing. A second start replays every
+    /// command and writes nothing more.
+    /// </summary>
+    [Fact(DisplayName = "DemoData_GrantsTheCoordinatorTheirSiteOnly_AndReplaysOnRestart")]
+    public async Task DemoDataGrantsTheCoordinatorTheirSiteOnlyAndReplaysOnRestart()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        string code = $"dev-{Guid.NewGuid():N}"[..20];
+        long auditAfterFirstStart;
+
+        using (var first = Host(code, demoData: true))
+        {
+            using var crc = first.CreateSignedClient(new GatewayIdentity(CrcSubject, [], [], TenantId: code));
+            var study = (await GetAsync(crc, "/api/v1/kernel/search?q=CADENCE-101", ct)).EnumerateArray()
+                .Should().ContainSingle(h => h.GetProperty("code").GetString() == "CADENCE-101").Subject.GetProperty("ref").GetString()!;
+
+            var studySites = (await GetAsync(crc, $"/api/v1/kernel/nodes/{Uri.EscapeDataString(study)}/children", ct)).EnumerateArray()
+                .Select(c => c.GetProperty("node")).Where(n => n.GetProperty("kind").GetString() == "study_site").ToList();
+            studySites.Should().HaveCount(2);
+            var own = studySites.Should().ContainSingle(n => n.GetProperty("mask").ValueKind == JsonValueKind.Null).Subject;
+            studySites.Should().ContainSingle(n => n.GetProperty("mask").GetString() == "NotPermitted", "the other site is not the coordinator's");
+
+            var participants = (await GetAsync(crc, $"/api/v1/kernel/nodes/{Uri.EscapeDataString(own.GetProperty("ref").GetString()!)}/children", ct)).EnumerateArray()
+                .Select(c => c.GetProperty("node")).ToList();
+            participants.Select(n => n.GetProperty("title").GetString()).Should().BeEquivalentTo("SUBJ-101-001", "SUBJ-101-002");
+
+            using var stranger = first.CreateSignedClient(new GatewayIdentity("stranger@dev-tenant.test", [], [], TenantId: code));
+            (await GetAsync(stranger, "/api/v1/kernel/search?q=CADENCE-101", ct)).GetArrayLength().Should().Be(0, "a person with no grant sees nothing");
+        }
+
+        await using (var connection = new NpgsqlConnection(fixture.AdminConnectionString))
+        {
+            await connection.OpenAsync(ct);
+            auditAfterFirstStart = (long)(await ScalarAsync(connection, AuditCount, code))!;
+            var grantees = ((string)(await ScalarAsync(
+                connection, "SELECT string_agg(g.grantee_id, ',') FROM kernel.grants g JOIN kernel.tenants t ON t.id = g.tenant_id WHERE t.code = @code", code))!)
+                .Split(',');
+            grantees.Should().BeEquivalentTo(
+                RealmUserIds().Append(Operator), "the seeder grants itself and each realm user, by the fixed subject id in docker/cadence-realm.json");
+        }
+
+        using (var second = Host(code, demoData: true))
+        {
+            using var crc = second.CreateSignedClient(new GatewayIdentity(CrcSubject, [], [], TenantId: code));
+            (await GetAsync(crc, "/api/v1/kernel/search?q=CADENCE-101", ct)).GetArrayLength().Should().Be(1);
+        }
+
+        await using (var connection = new NpgsqlConnection(fixture.AdminConnectionString))
+        {
+            await connection.OpenAsync(ct);
+            (await ScalarAsync(connection, AuditCount, code)).Should().Be(auditAfterFirstStart, "the second start replays every command");
+        }
+    }
+
+    private const string CrcSubject = "1a4345cc-364c-4b8b-881e-93bbea528b0a";
+
+    private const string AuditCount =
+        "SELECT count(*) FROM kernel.audit_entries a JOIN kernel.tenants t ON t.id = a.tenant_id WHERE t.code = @code";
+
+    /// <summary>The fixed subject ids of the users in <c>docker/cadence-realm.json</c>.</summary>
+    private static IEnumerable<string> RealmUserIds()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "docker", "cadence-realm.json")))
+        {
+            directory = directory.Parent;
+        }
+
+        string path = Path.Combine(directory?.FullName ?? throw new InvalidOperationException("docker/cadence-realm.json not found."), "docker", "cadence-realm.json");
+        using var realm = JsonDocument.Parse(File.ReadAllText(path));
+        return [.. realm.RootElement.GetProperty("users").EnumerateArray().Select(u => u.GetProperty("id").GetString()!)];
+    }
+
+    private static async Task<JsonElement> GetAsync(HttpClient client, string path, CancellationToken ct)
+    {
+        using var response = await client.GetAsync(new Uri(path, UriKind.Relative), ct);
+        string body = await response.Content.ReadAsStringAsync(ct);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        return JsonDocument.Parse(body).RootElement.Clone();
+    }
+
     private static async Task<object?> ScalarAsync(NpgsqlConnection connection, string sql, string code)
     {
         await using var command = new NpgsqlCommand(sql, connection);
@@ -88,10 +179,11 @@ public sealed class KernelDevelopmentTenantPostgresTests(KernelPostgresFixture f
         return await command.ExecuteScalarAsync(TestContext.Current.CancellationToken);
     }
 
-    private WebApplicationFactory<Cadence.Kernel.Host.Program> Host(string code) =>
+    private WebApplicationFactory<Cadence.Kernel.Host.Program> Host(string code, bool demoData = false) =>
         new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseEnvironment("Development")
             .UseTestGatewaySecret()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
-            .UseSetting("Kernel:DevelopmentTenant:Code", code));
+            .UseSetting("Kernel:DevelopmentTenant:Code", code)
+            .UseSetting("Kernel:DevelopmentTenant:DemoData", demoData ? "true" : "false"));
 }

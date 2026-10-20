@@ -463,8 +463,10 @@ services:
       - "8018:8080"
     environment:
       <<: *db-env
-      # Provision the tenant the realm's users sign in with (ADR-2514, ADR-2542); Development only.
+      # Provision the tenant the realm's users sign in with (ADR-2514, ADR-2542), with the demo study and the realm
+      # users' grants (ADR-2543); Development only.
       Kernel__DevelopmentTenant__Code: cadence-local
+      Kernel__DevelopmentTenant__DemoData: "true"
     depends_on: *db-depends
 
   dotnet-dev:

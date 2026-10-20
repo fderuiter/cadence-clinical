@@ -138,13 +138,15 @@ IResourceBuilder<ProjectResource> Service(IResourceBuilder<ProjectResource> proj
 Service(builder.AddProject<Projects.Cadence_Apps_Execution>("execution"))
     .WithEnvironment("DemographicsEncryption__KeyBase64", demographicsEncryptionKey);
 // The local realm's users sign in with tenant code cadence-local (ADR-2514); the kernel host provisions that tenant on
-// start, in Development only (ADR-2542). A project resource does not inherit the AppHost's environment, so the kernel
-// is given it, and the tenant setting only when that environment is Development.
+// start, in Development only (ADR-2542), with the demo study and the realm users' grants (ADR-2543). A project resource
+// does not inherit the AppHost's environment, so the kernel is given it, and the tenant settings only when that
+// environment is Development.
 var kernel = Service(builder.AddProject<Projects.Cadence_Kernel_Host>("kernel"))
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName);
 if (builder.Environment.IsDevelopment())
 {
     kernel.WithEnvironment("Kernel__DevelopmentTenant__Code", "cadence-local");
+    kernel.WithEnvironment("Kernel__DevelopmentTenant__DemoData", "true");
 }
 
 if (full)
