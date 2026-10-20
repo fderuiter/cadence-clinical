@@ -15,7 +15,9 @@ Safety and pharmacovigilance scaffold. It holds the safety case, ICSR reporting 
 - `Infrastructure/Persistence/Migrations/`: `20260924145528_InitialCreate`, `20261019200603_WidenDsurSignatureManifest`
   (`periodic_safety_reports.EsignatureManifestId` becomes `text`: it holds the whole signed manifest, which never fit
   in the former `varchar(255)`, so approval failed on PostgreSQL), `20261019230618_AddConsumedSignatureTokens` (the
-  `consumed_signature_tokens` table that makes step-up tokens single use, #5462).
+  `consumed_signature_tokens` table that makes step-up tokens single use, #5462), `20261020101549_WidenSafetySignatureManifests` (the
+  same column on reporting evaluations, narratives, signal alerts and device investigations becomes `text`, so every
+  record that can carry a signature stores the whole manifest; [ADR-2519](../../docs/adr/2026-10-20-safety-signature-manifests-are-stored-as-text.md), #5482).
 - `../Templates/e2b_r3_icsr.xml.liquid`: ICSR template embedded into the assembly.
 
 ## HTTP surface
@@ -81,6 +83,8 @@ outside a verified request fails. E-signature tokens are single use across insta
   PostgreSQL (`CADENCE_TEST_POSTGRES` or `CADENCE_TEST_DOCKER=1`) and checks the audit entries.
   `SafetyPersistencePostgresTests.cs` checks that the migrations apply and match the model, and that compile, update
   and approve store UTC `timestamptz` instants and the verified caller, reason and version of each write.
+  `SafetySignatureManifestPostgresTests.cs` checks that every `EsignatureManifestId` column is `text` and that a whole
+  signed manifest round-trips through a host DSUR approval and through each of the other four records (#5482).
 - SAE reconciliation has entities and tables only (`SaeReconciliationRun`, `SaeDiscrepancy`, `SaeReconciliationJob`)
   and no code path, so it has no tests.
 - Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
