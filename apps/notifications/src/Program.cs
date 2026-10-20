@@ -29,7 +29,6 @@ builder.Services.AddMassTransit(x =>
         o.UsePostgres();
         o.UseBusOutbox();
     });
-    x.AddConsumer<ClinicalQueryRaisedConsumer>();
     x.AddConsumer<EconsentReconsentConsumer>();
     x.UsingInMemory((context, cfg) =>
     {

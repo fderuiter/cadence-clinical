@@ -1,12 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Domain.Observations;
-using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Kernel;
 
@@ -16,8 +13,8 @@ using Microsoft.OpenApi;
 namespace Cadence.Apps.Execution.Infrastructure.OpenApi;
 
 /// <summary>
-/// Describes the Execution value objects and status enums in the OpenAPI document the way
-/// <c>ExecutionJsonSerialization</c> puts them on the wire: IDs and codes as strings, statuses as string enums.
+/// Describes the Execution value objects in the OpenAPI document the way
+/// <c>ExecutionJsonSerialization</c> puts them on the wire: IDs and codes as strings.
 /// Their custom JSON converters hide that shape from the schema generator, which otherwise emits an empty
 /// schema and leaves typed clients (the web app) with <c>unknown</c>.
 /// </summary>
@@ -33,13 +30,7 @@ public sealed class ExecutionWireTypesOpenApiTransformer : IOpenApiSchemaTransfo
         typeof(ObservationId),
         typeof(DomainCode),
         typeof(TestCode),
-        typeof(QueryId),
     ];
-
-    private static readonly Dictionary<Type, string[]> StatusEnums = new()
-    {
-        [typeof(QueryStatus)] = Enum.GetValues<QueryStatus>().Select(QueryStatusCodec.ToCode).ToArray(),
-    };
 
     public Task TransformAsync(OpenApiSchema schema, OpenApiSchemaTransformerContext context, CancellationToken cancellationToken)
     {
@@ -48,11 +39,6 @@ public sealed class ExecutionWireTypesOpenApiTransformer : IOpenApiSchemaTransfo
         if (StringValueObjects.Contains(type))
         {
             SetString(schema);
-        }
-        else if (StatusEnums.TryGetValue(type, out string[]? codes))
-        {
-            SetString(schema);
-            schema.Enum = codes.Select(code => (JsonNode)JsonValue.Create(code)!).ToList();
         }
 
         return Task.CompletedTask;

@@ -1,4 +1,3 @@
-using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -40,15 +39,4 @@ public sealed class ExecutionOpenApiWireTypesTests(ExecutionApiFactory factory) 
         schema.TryGetProperty("properties", out _).Should().BeFalse();
     }
 
-    [Theory]
-    [InlineData("QueryStatus", new[] { "NONE", "CANDIDATE", "DRAFT_AI", "OPEN", "ANSWERED", "RESOLVED", "CLOSED", "REOPENED", "CANCELLED" })]
-    public async Task Statuses_AreDescribedAsTheirWireCodes(string schemaName, string[] codes)
-    {
-        var schemas = await GetSchemasAsync();
-
-        var schema = schemas.GetProperty(schemaName);
-        schema.GetProperty("type").GetString().Should().Be("string");
-        schema.GetProperty("enum").EnumerateArray().Select(code => code.GetString())
-            .Should().BeEquivalentTo(codes);
-    }
 }

@@ -19,7 +19,6 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.cgt_destruction_certificates`](#edccgt_destruction_certificates) | `CgtDestructionCertificate` | 32 |
 | [`edc.cgt_milestone_events`](#edccgt_milestone_events) | `CgtMilestoneEvent` | 25 |
 | [`edc.cgt_vial_return_reconciliations`](#edccgt_vial_return_reconciliations) | `CgtVialReturnReconciliation` | 20 |
-| [`edc.clinical_queries`](#edcclinical_queries) | `ClinicalQuery` | 30 |
 | [`edc.clinical_subjects`](#edcclinical_subjects) | `ClinicalSubject` | 23 |
 | [`edc.consumed_signature_tokens`](#edcconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
 | [`edc.device_deficiencies`](#edcdevice_deficiencies) | `DeviceDeficiency` | 30 |
@@ -30,7 +29,7 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.ip_kit_reconciliation_certificates`](#edcip_kit_reconciliation_certificates) | `IpKitReconciliationCertificate` | 15 |
 | [`edc.lab_reference_ranges`](#edclab_reference_ranges) | `LabReferenceRange` | 22 |
 | [`edc.site_compliance_caches`](#edcsite_compliance_caches) | `SiteComplianceCache` | 12 |
-| [`edc.staged_adverse_event_reviews`](#edcstaged_adverse_event_reviews) | `StagedAdverseEventReview` | 28 |
+| [`edc.staged_adverse_event_reviews`](#edcstaged_adverse_event_reviews) | `StagedAdverseEventReview` | 27 |
 | [`edc.subject_consents`](#edcsubject_consents) | `SubjectConsent` | 14 |
 | [`edc.synonym_rules`](#edcsynonym_rules) | `SynonymRule` | 15 |
 
@@ -433,50 +432,6 @@ Indexes:
 - `IX_cgt_vial_return_reconciliations_StudyId`: (`StudyId`)
 - `IX_cgt_vial_return_reconciliations_VialIdentifier`: (`VialIdentifier`)
 
-## edc.clinical_queries
-
-Entity: `ClinicalQuery`
-
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `ActionRequired` | `character varying(255)` | yes |  |  |
-| `CancellationReason` | `character varying(1000)` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `Domain` | `character varying(50)` | yes |  |  |
-| `EscalatedAt` | `timestamp with time zone` | yes |  |  |
-| `Explanation` | `character varying(1000)` | yes |  |  |
-| `FieldId` | `character varying(255)` | yes |  |  |
-| `FieldLink` | `character varying(255)` | yes |  |  |
-| `FormId` | `character varying(255)` | yes |  |  |
-| `Message` | `character varying(1000)` | yes |  |  |
-| `ObservationId` | `character varying(255)` | yes |  |  |
-| `Origin` | `character varying(50)` | yes |  |  |
-| `Priority` | `character varying(50)` | yes |  |  |
-| `QueryType` | `character varying(255)` | yes |  |  |
-| `ReasonForChange` | `text` | no |  |  |
-| `ResolvedAt` | `timestamp with time zone` | yes |  |  |
-| `Resolver` | `character varying(255)` | yes |  |  |
-| `Responder` | `character varying(255)` | yes |  |  |
-| `Response` | `character varying(1000)` | yes |  |  |
-| `RuleId` | `character varying(255)` | yes |  |  |
-| `SiteId` | `character varying(255)` | yes |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `TestCode` | `character varying(100)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `VisitId` | `character varying(255)` | yes |  |  |
-| `_version` | `bigint` | no | `0` |  |
-
-Indexes:
-
-- `idx_query_observation_id`: (`ObservationId`)
-- `idx_query_subject_status`: (`SubjectId`, `Status`)
-- `idx_query_target`: (`StudyId`, `SubjectId`, `VisitId`, `Domain`, `TestCode`)
-- `ix_clinical_queries_site_id`: (`SiteId`)
-
 ## edc.clinical_subjects
 
 Entity: `ClinicalSubject`
@@ -796,7 +751,6 @@ Entity: `StagedAdverseEventReview`
 | `is_hys_law_warning` | `boolean` | no |  |  |
 | `lab_value` | `double precision` | no |  |  |
 | `observation_id` | `text` | yes |  |  |
-| `query_id` | `text` | yes |  |  |
 | `reason_for_change` | `text` | no |  |  |
 | `review_status` | `text` | no |  |  |
 | `reviewed_at` | `timestamp with time zone` | yes |  |  |

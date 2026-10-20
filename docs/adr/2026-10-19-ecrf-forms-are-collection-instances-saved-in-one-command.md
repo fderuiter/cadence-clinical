@@ -136,6 +136,8 @@ The spec amendment lands with this ADR. The code is tracked under #5365, one pul
 2. [x] #5363 typed values; #4729 Assertions and scoped locks.
 3. [x] #5459 `CollectionInstance` and `RecordCollectedValues`, with PostgreSQL tests for atomicity, per-value 409,
        lock races at each scope and replay.
-4. [ ] #5460 Execution as a module over the kernel (done: `apps/execution/module`); #5368 edit checks; #5461 queries; #5465 SDV; #5463 signatures;
+4. [ ] #5460 Execution as a module over the kernel (done: `apps/execution/module`); #5368 edit checks; #5461 queries (done:
+       `FormQuery`, mirrored by `MirrorFormQueryToKernel`; Execution's own `ClinicalQuery` stack retired by migration
+       `RetireClinicalQueries`); #5465 SDV; #5463 signatures;
        #5466 locks; #5369 and #5469 the web screen.
 5. [ ] #5365's definition-of-done suite on PostgreSQL as the application role, with RTM evidence (#5324).

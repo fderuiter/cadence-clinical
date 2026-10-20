@@ -122,75 +122,139 @@
               <th scope="col">Value</th>
               <th scope="col">Or missing because</th>
               <th scope="col">Revision</th>
+              <th scope="col">Queries</th>
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="item in items"
-              :key="item.item_id"
-              :data-item="item.item_id"
-              :class="{ 'ecrf-item-edited': isEdited(item) }"
-            >
-              <th scope="row">
-                <label :for="`ecrf-item-${item.item_id}`">
-                  {{ item.item_id }}
-                  <abbr
-                    v-if="item.required"
-                    class="ecrf-required"
-                    title="Required"
-                    >*</abbr
+            <template v-for="item in items" :key="item.item_id">
+              <tr
+                :data-item="item.item_id"
+                :class="{ 'ecrf-item-edited': isEdited(item) }"
+              >
+                <th scope="row">
+                  <label :for="`ecrf-item-${item.item_id}`">
+                    {{ item.item_id }}
+                    <abbr
+                      v-if="item.required"
+                      class="ecrf-required"
+                      title="Required"
+                      >*</abbr
+                    >
+                  </label>
+                  <div v-if="item.concept" class="ecrf-item-concept">
+                    {{ item.concept }}
+                  </div>
+                </th>
+                <td>
+                  <input
+                    :id="`ecrf-item-${item.item_id}`"
+                    v-model="entries[item.item_id].text"
+                    type="text"
+                    autocomplete="off"
+                    :disabled="
+                      locked || saving || !!entries[item.item_id].missing
+                    "
+                    :aria-invalid="!!itemErrors[item.item_id]"
+                    :aria-describedby="`ecrf-item-${item.item_id}-error`"
+                  />
+                  <span v-if="item.unit" class="ecrf-item-unit">{{
+                    item.unit
+                  }}</span>
+                  <p
+                    :id="`ecrf-item-${item.item_id}-error`"
+                    class="ecrf-form-error"
                   >
-                </label>
-                <div v-if="item.concept" class="ecrf-item-concept">
-                  {{ item.concept }}
-                </div>
-              </th>
-              <td>
-                <input
-                  :id="`ecrf-item-${item.item_id}`"
-                  v-model="entries[item.item_id].text"
-                  type="text"
-                  autocomplete="off"
-                  :disabled="
-                    locked || saving || !!entries[item.item_id].missing
-                  "
-                  :aria-invalid="!!itemErrors[item.item_id]"
-                  :aria-describedby="`ecrf-item-${item.item_id}-error`"
-                />
-                <span v-if="item.unit" class="ecrf-item-unit">{{
-                  item.unit
-                }}</span>
-                <p
-                  :id="`ecrf-item-${item.item_id}-error`"
-                  class="ecrf-form-error"
-                >
-                  {{ (itemErrors[item.item_id] ?? []).join(" ") }}
-                </p>
-              </td>
-              <td>
-                <select
-                  v-model="entries[item.item_id].missing"
-                  :aria-label="`Why ${item.item_id} is missing`"
-                  :disabled="locked || saving"
-                >
-                  <option value="">Not missing</option>
-                  <option
-                    v-for="option in MISSING_REASONS"
-                    :key="option.reason"
-                    :value="option.reason"
+                    {{ (itemErrors[item.item_id] ?? []).join(" ") }}
+                  </p>
+                </td>
+                <td>
+                  <select
+                    v-model="entries[item.item_id].missing"
+                    :aria-label="`Why ${item.item_id} is missing`"
+                    :disabled="locked || saving"
                   >
-                    {{ option.text }}
-                  </option>
-                </select>
-              </td>
-              <td class="ecrf-item-revision">
-                <template v-if="item.value">
-                  {{ item.revision }} by {{ item.recorded_by }} at
-                  {{ item.recorded_at }}
-                </template>
-                <template v-else>No value</template>
-              </td>
-            </tr>
+                    <option value="">Not missing</option>
+                    <option
+                      v-for="option in MISSING_REASONS"
+                      :key="option.reason"
+                      :value="option.reason"
+                    >
+                      {{ option.text }}
+                    </option>
+                  </select>
+                </td>
+                <td class="ecrf-item-revision">
+                  <template v-if="item.value">
+                    {{ item.revision }} by {{ item.recorded_by }} at
+                    {{ item.recorded_at }}
+                  </template>
+                  <template v-else>No value</template>
+                </td>
+                <td>
+                  <div class="ecrf-item-queries">
+                    <span
+                      v-if="liveOn(item).length"
+                      class="ecrf-query-badge"
+                      :data-testid="`ecrf-query-badge-${item.item_id}`"
+                    >
+                      {{ liveOn(item).length }} unresolved
+                      {{ liveOn(item).length === 1 ? "query" : "queries" }}
+                    </span>
+                    <span
+                      v-if="liveOn(item).some((q) => q.value_changed)"
+                      class="ecrf-query-changed"
+                      :data-testid="`ecrf-query-changed-${item.item_id}`"
+                    >
+                      Value changed since queried
+                    </span>
+                    <button
+                      v-if="canManageQueries && item.observation_id"
+                      :id="`ecrf-raise-${item.item_id}`"
+                      class="btn btn-secondary"
+                      type="button"
+                      :disabled="queries.busy"
+                      @click="beginRaise(item)"
+                    >
+                      Raise query
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr
+                v-if="raising?.item_id === item.item_id"
+                class="ecrf-raise-row"
+              >
+                <td colspan="5">
+                  <div class="ecrf-form-row">
+                    <label for="ecrf-raise-text"
+                      >Query on {{ raising.item_id }} (revision
+                      {{ raising.revision }})</label
+                    >
+                    <textarea
+                      id="ecrf-raise-text"
+                      v-model="raiseText"
+                      rows="2"
+                    />
+                    <button
+                      id="ecrf-raise-confirm"
+                      class="btn btn-primary"
+                      type="button"
+                      :disabled="queries.busy || !raiseText.trim()"
+                      @click="confirmRaise"
+                    >
+                      Raise query
+                    </button>
+                    <button
+                      class="btn btn-secondary"
+                      type="button"
+                      @click="raising = null"
+                    >
+                      Back
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </template>
           </tbody>
         </table>
 
@@ -246,6 +310,55 @@
         </button>
       </div>
 
+      <section
+        id="ecrf-form-queries"
+        aria-labelledby="ecrf-form-queries-title"
+        :aria-busy="queries.loading"
+      >
+        <h3 id="ecrf-form-queries-title">Queries</h3>
+        <p v-if="queries.loading" role="status">Loading queries…</p>
+        <p v-else-if="queries.loadError" class="ecrf-form-error" role="alert">
+          The queries could not be loaded: {{ queries.loadError }}
+        </p>
+        <p
+          v-else-if="queries.queries.length === 0"
+          data-testid="ecrf-no-queries"
+        >
+          No queries on this form.
+        </p>
+        <FormQueryList
+          v-else
+          :queries="queries.queries"
+          :can-manage="canManageQueries"
+          :busy="queries.busy"
+          :act="queries.act"
+        />
+        <div
+          data-testid="ecrf-query-outcome"
+          :class="[
+            'ecrf-form-outcome',
+            queries.outcome
+              ? `ecrf-form-outcome--${queries.outcome.kind === 'done' ? 'saved' : 'failed'}`
+              : '',
+          ]"
+          aria-live="polite"
+          role="status"
+        >
+          <template v-if="queries.outcome">
+            {{ queries.outcome.message }}
+            <button
+              v-if="queries.outcome.kind === 'stale'"
+              id="ecrf-query-reload"
+              class="btn btn-secondary"
+              type="button"
+              @click="reloadAfterStale"
+            >
+              Reload form
+            </button>
+          </template>
+        </div>
+      </section>
+
       <h3>Verifications, queries and answers</h3>
       <p v-if="form.assertions.length === 0" data-testid="ecrf-no-assertions">
         None recorded.
@@ -283,9 +396,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import { MISSING_REASONS } from "../../api/observationValue";
+import type { EcrfFormItem } from "../../api/ecrfFormsApi";
 import { useEcrfForm } from "../../composables/useEcrfForm";
+import { isLiveQuery, useFormQueries } from "../../composables/useFormQueries";
+import FormQueryList from "./FormQueryList.vue";
 
 const props = defineProps<{
   /** A form to load on mount, for example from the route. */
@@ -293,6 +409,8 @@ const props = defineProps<{
   enrollmentId?: string | null;
   collectionSpecId?: string | null;
   plannedActivityId?: string | null;
+  /** Offer raising, closing, reopening and cancelling queries (a monitor); the module still checks. */
+  canManageQueries?: boolean;
 }>();
 
 const emit = defineEmits<{ (e: "dirty-change", dirty: boolean): void }>();
@@ -345,6 +463,65 @@ function openNew() {
     plannedActivityId: plannedActivityId.value || null,
     collectedAt: new Date(collectedAt.value).toISOString(),
   });
+}
+
+// The form's queries (#5461), read again whenever the form is read, so `value_changed` follows a correction.
+// reactive() unwraps the composable's refs for the template.
+const queries = reactive(useFormQueries());
+const raising = ref<{
+  item_id: string;
+  observation_id: string;
+  revision: number;
+} | null>(null);
+const raiseText = ref("");
+
+watch(
+  () => (form.value ? `${form.value.form_id}@${form.value.version}` : null),
+  (loaded) => {
+    raising.value = null;
+    if (loaded && form.value) void queries.load({ formId: form.value.form_id });
+    else queries.clear();
+  }
+);
+
+function liveOn(item: EcrfFormItem) {
+  return form.value
+    ? queries.forItem(form.value.form_id, item.item_id).filter(isLiveQuery)
+    : [];
+}
+
+/** Starts a query on the item's value at the revision this form read returned. */
+function beginRaise(item: EcrfFormItem) {
+  if (!item.observation_id) return;
+  raising.value = {
+    item_id: item.item_id,
+    observation_id: item.observation_id,
+    revision: Number(item.revision),
+  };
+  raiseText.value = "";
+}
+
+async function confirmRaise() {
+  const target = raising.value;
+  const text = raiseText.value.trim();
+  if (!form.value || !target || !text) return;
+  const raised = await queries.raise(
+    {
+      formId: form.value.form_id,
+      itemId: target.item_id,
+      observationId: target.observation_id,
+      revision: target.revision,
+    },
+    text
+  );
+  if (raised) raising.value = null;
+}
+
+/** The value moved on since the form was read: read the form and its queries again. */
+async function reloadAfterStale() {
+  queries.outcome = null;
+  await reload();
+  await queries.reload();
 }
 
 async function submit() {
@@ -424,6 +601,25 @@ watch(dirty, (value) => emit("dirty-change", value));
 .ecrf-item-unit {
   margin-left: 4px;
   color: #475569;
+}
+.ecrf-item-queries {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.ecrf-query-badge {
+  padding: 0 8px;
+  border-radius: 999px;
+  background-color: #fffbeb;
+  color: #92400e;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.ecrf-query-changed {
+  color: #1d4ed8;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 .ecrf-item-edited {
   background-color: #fffbeb;

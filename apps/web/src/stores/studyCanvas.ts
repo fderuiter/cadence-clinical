@@ -1,9 +1,6 @@
 import { defineStore } from "pinia";
-import {
-  executionApi,
-  type ClinicalQuery,
-  type SubjectSummary,
-} from "../api/executionApi";
+import { executionApi, type SubjectSummary } from "../api/executionApi";
+import { findKernelEnrollmentRef } from "../canvas/kernelStudy";
 import { PARTICIPANT_STATES, participantStateLabel } from "../canvas/lifecycle";
 import { useToastStore } from "./toasts.js";
 
@@ -28,38 +25,6 @@ let participantsRequest = 0;
 let pulseRequest = 0;
 let recordRequest = 0;
 
-export type QueryAction = "respond" | "close" | "reopen" | "cancel";
-
-const QUERY_ACTIONS: Record<
-  QueryAction,
-  {
-    run: (id: string, text: string) => Promise<ClinicalQuery>;
-    done: string;
-    failed: string;
-  }
-> = {
-  respond: {
-    run: (id, text) => executionApi.respondQuery(id, text),
-    done: "Query answered",
-    failed: "The query was not answered",
-  },
-  close: {
-    run: (id, text) => executionApi.closeQuery(id, text),
-    done: "Query closed",
-    failed: "The query was not closed",
-  },
-  reopen: {
-    run: (id, text) => executionApi.reopenQuery(id, text),
-    done: "Query reopened",
-    failed: "The query was not reopened",
-  },
-  cancel: {
-    run: (id, text) => executionApi.cancelQuery(id, text),
-    done: "Query cancelled",
-    failed: "The query was not cancelled",
-  },
-};
-
 /**
  * Data behind the Clinical Canvas for one study, read from Execution (#4833). The canvas shows only what
  * this store has read; anything a service does not serve yet is absent (docs/ux/CLINICAL_CANVAS.md §6.1).
@@ -78,10 +43,13 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     pulse: null as { total: number; byState: PulseCount[] } | null,
     pulseLoading: false,
     pulseError: false,
-    /** The open participant's record: Execution's queries on one participant, by subject code. */
+    /**
+     * The open participant's record: the participant's kernel enrollment, by subject code. Its eCRF queries are read
+     * by enrollment id (#5461); `enrollmentId` is null when the kernel has no single enrollment for the participant.
+     */
     record: {
       subjectCode: "",
-      queries: [] as ClinicalQuery[],
+      enrollmentId: null as string | null,
       loading: false,
       error: false,
     },
@@ -301,21 +269,29 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       ]);
     },
 
-    /** Loads a participant's queries. Values and forms are kernel form instances, read on the eCRF screen (ADR-2622). */
-    async loadRecord(subjectCode: string): Promise<boolean> {
+    /**
+     * Finds a participant's kernel enrollment, whose eCRF queries the record shows. Values and forms are kernel form
+     * instances, read on the eCRF screen (ADR-2622).
+     */
+    async loadRecord(participant: SubjectSummary): Promise<boolean> {
       const studyId = this.studyCode;
+      const subjectCode = participant.subject_id;
       if (!studyId || !subjectCode) return false;
       const request = ++recordRequest;
       this.record = {
         subjectCode,
-        queries: [],
+        enrollmentId: null,
         loading: true,
         error: false,
       };
       try {
-        const queries = await executionApi.listQueries(studyId, subjectCode);
+        const enrollment = await findKernelEnrollmentRef(
+          studyId,
+          participant.site_id ?? null,
+          subjectCode
+        );
         if (request !== recordRequest) return false;
-        this.record.queries = queries;
+        this.record.enrollmentId = enrollment?.id ?? null;
         return true;
       } catch (err) {
         if (request !== recordRequest) return false;
@@ -324,98 +300,6 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
         return false;
       } finally {
         if (request === recordRequest) this.record.loading = false;
-      }
-    },
-
-    /** Answers, closes, reopens or cancels a query, then shows Execution's result in its place. */
-    async actOnQuery(
-      query: ClinicalQuery,
-      action: QueryAction,
-      text: string
-    ): Promise<boolean> {
-      const toasts = useToastStore();
-      const { run, done, failed } = QUERY_ACTIONS[action];
-      try {
-        const updated = await run(query.id, text);
-        const list = this.record.queries;
-        const index = list.findIndex((q) => q.id === updated.id);
-        if (index >= 0) list.splice(index, 1, updated);
-        toasts.push({ tone: "success", title: done, message: "" });
-        return true;
-      } catch (err) {
-        toasts.apiError(failed, err);
-        return false;
-      }
-    },
-
-    /** Batch closes or cancels multiple queries, then updates Execution's results in place. */
-    async batchActOnQueries(
-      queryIds: string[],
-      action: "close" | "cancel",
-      reason: string
-    ): Promise<boolean> {
-      const toasts = useToastStore();
-      const isClose = action === "close";
-      const failedMsg = isClose
-        ? "The queries were not closed"
-        : "The queries were not cancelled";
-      try {
-        const response = isClose
-          ? await executionApi.batchCloseQueries(queryIds, reason)
-          : await executionApi.batchCancelQueries(queryIds, reason);
-
-        const updatedQueries = response.queries || [];
-        const count = response.count ?? updatedQueries.length;
-        const list = this.record.queries;
-        for (const updated of updatedQueries) {
-          const index = list.findIndex((q) => q.id === updated.id);
-          if (index >= 0) {
-            list.splice(index, 1, updated);
-          }
-        }
-
-        const title = isClose
-          ? `${count} ${count === 1 ? "query" : "queries"} closed`
-          : `${count} ${count === 1 ? "query" : "queries"} cancelled`;
-
-        toasts.push({ tone: "success", title, message: "" });
-        return true;
-      } catch (err) {
-        toasts.apiError(failedMsg, err);
-        return false;
-      }
-    },
-
-    /** Batch responds to multiple open or reopened queries, then updates Execution's results in place. */
-    async batchRespondToQueries(
-      queryIds: string[],
-      response: string,
-      reason?: string
-    ): Promise<boolean> {
-      const toasts = useToastStore();
-      try {
-        const res = await executionApi.batchRespondQueries(
-          queryIds,
-          response,
-          reason
-        );
-
-        const updatedQueries = res.queries || [];
-        const count = res.count ?? updatedQueries.length;
-        const list = this.record.queries;
-        for (const updated of updatedQueries) {
-          const index = list.findIndex((q) => q.id === updated.id);
-          if (index >= 0) {
-            list.splice(index, 1, updated);
-          }
-        }
-
-        const title = `${count} ${count === 1 ? "query" : "queries"} answered`;
-        toasts.push({ tone: "success", title, message: "" });
-        return true;
-      } catch (err) {
-        toasts.apiError("The queries were not answered", err);
-        return false;
       }
     },
   },
