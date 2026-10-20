@@ -6,7 +6,6 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Toxicity;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Ports;
-using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Domain.Toxicity;
 using Cadence.Contracts;
@@ -27,7 +26,6 @@ public sealed class LabToxicityGradingPipelineTests
     private readonly IClock _clock = SystemClock.Instance;
     private readonly ICurrentAuditContextAccessor _auditContextAccessor = Substitute.For<ICurrentAuditContextAccessor>();
     private readonly IStagedAdverseEventReviewRepository _stagedReviewRepository = Substitute.For<IStagedAdverseEventReviewRepository>();
-    private readonly IClinicalQueryRepository _queryRepository = Substitute.For<IClinicalQueryRepository>();
     private readonly IPublishEndpoint _publishEndpoint = Substitute.For<IPublishEndpoint>();
 
     public LabToxicityGradingPipelineTests()
@@ -35,16 +33,10 @@ public sealed class LabToxicityGradingPipelineTests
         _auditContextAccessor.UserId.Returns("investigator_user_01");
     }
 
-    [Fact(DisplayName = "ExecuteActionAsync_Confirm_ResolvesQuery_AndPublishesOutboxEvent")]
-    public async Task ExecuteActionAsync_Confirm_ResolvesQuery_AndPublishesOutboxEvent()
+    [Fact(DisplayName = "ExecuteActionAsync_Confirm_PublishesOutboxEvent")]
+    public async Task ExecuteActionAsync_Confirm_PublishesOutboxEvent()
     {
         // Arrange
-        var query = ClinicalQuery.Raise(
-            studyId: new StudyCode("STUDY-001"),
-            subjectId: new SubjectCode("SUBJ-101"),
-            testCode: new TestCode("ALT"),
-            explanation: "Toxicity review required").Value!;
-
         var stagedReview = StagedAdverseEventReview.Create(
             studyId: new StudyCode("STUDY-001"),
             subjectId: new SubjectCode("SUBJ-101"),
@@ -57,18 +49,13 @@ public sealed class LabToxicityGradingPipelineTests
             clinicalDescription: "Grade 3 ALT elevation",
             isHysLawWarning: false,
             isDeltaCheckAlert: false,
-            deltaPercentage: null,
-            queryId: query.Id);
+            deltaPercentage: null);
 
         _stagedReviewRepository.GetByIdAsync(stagedReview.Id, Arg.Any<CancellationToken>())
             .Returns(stagedReview);
 
-        _queryRepository.GetForUpdateAsync(query.Id, Arg.Any<CancellationToken>())
-            .Returns(query);
-
         var governanceSvc = new LabToxicityGovernanceService(
             _stagedReviewRepository,
-            _queryRepository,
             _publishEndpoint,
             _clock,
             _auditContextAccessor);
@@ -86,7 +73,6 @@ public sealed class LabToxicityGradingPipelineTests
         result.IsSuccess.Should().BeTrue();
         stagedReview.ReviewStatus.Should().Be("CONFIRMED");
         stagedReview.ReviewedBy.Should().Be("investigator_user_01");
-        query.Status.Should().Be(QueryStatus.Closed);
 
         await _publishEndpoint.Received(1).Publish(
             Arg.Is<Grade3ToxicityDetected>(e =>
@@ -97,16 +83,10 @@ public sealed class LabToxicityGradingPipelineTests
             Arg.Any<CancellationToken>());
     }
 
-    [Fact(DisplayName = "ExecuteActionAsync_Dismiss_CancelsQuery_WithoutOutboxPublish")]
-    public async Task ExecuteActionAsync_Dismiss_CancelsQuery_WithoutOutboxPublish()
+    [Fact(DisplayName = "ExecuteActionAsync_Dismiss_WithoutOutboxPublish")]
+    public async Task ExecuteActionAsync_Dismiss_WithoutOutboxPublish()
     {
         // Arrange
-        var query = ClinicalQuery.Raise(
-            studyId: new StudyCode("STUDY-001"),
-            subjectId: new SubjectCode("SUBJ-101"),
-            testCode: new TestCode("ALT"),
-            explanation: "Toxicity review required").Value!;
-
         var stagedReview = StagedAdverseEventReview.Create(
             studyId: new StudyCode("STUDY-001"),
             subjectId: new SubjectCode("SUBJ-101"),
@@ -119,18 +99,13 @@ public sealed class LabToxicityGradingPipelineTests
             clinicalDescription: "Grade 3 ALT elevation",
             isHysLawWarning: false,
             isDeltaCheckAlert: false,
-            deltaPercentage: null,
-            queryId: query.Id);
+            deltaPercentage: null);
 
         _stagedReviewRepository.GetByIdAsync(stagedReview.Id, Arg.Any<CancellationToken>())
             .Returns(stagedReview);
 
-        _queryRepository.GetForUpdateAsync(query.Id, Arg.Any<CancellationToken>())
-            .Returns(query);
-
         var governanceSvc = new LabToxicityGovernanceService(
             _stagedReviewRepository,
-            _queryRepository,
             _publishEndpoint,
             _clock,
             _auditContextAccessor);
@@ -147,7 +122,6 @@ public sealed class LabToxicityGradingPipelineTests
         // Assert
         result.IsSuccess.Should().BeTrue();
         stagedReview.ReviewStatus.Should().Be("DISMISSED");
-        query.Status.Should().Be(QueryStatus.Cancelled);
 
         await _publishEndpoint.DidNotReceive().Publish(Arg.Any<Grade3ToxicityDetected>(), Arg.Any<CancellationToken>());
     }
@@ -175,7 +149,6 @@ public sealed class LabToxicityGradingPipelineTests
 
         var governanceSvc = new LabToxicityGovernanceService(
             _stagedReviewRepository,
-            _queryRepository,
             _publishEndpoint,
             _clock,
             _auditContextAccessor);
@@ -207,7 +180,6 @@ public sealed class LabToxicityGradingPipelineTests
         // Arrange
         var governanceSvc = new LabToxicityGovernanceService(
             _stagedReviewRepository,
-            _queryRepository,
             _publishEndpoint,
             _clock,
             _auditContextAccessor);

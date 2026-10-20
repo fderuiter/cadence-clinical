@@ -4,6 +4,21 @@ import { createPinia, setActivePinia } from "pinia";
 import EcrfFormPanel from "../../src/components/ecrf/EcrfFormPanel.vue";
 import { ecrfFormsApi } from "../../src/api/ecrfFormsApi";
 import { ApiError } from "../../src/api/client";
+import { ecrfQueriesApi } from "../../src/api/ecrfQueriesApi";
+
+vi.mock("../../src/api/ecrfQueriesApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../src/api/ecrfQueriesApi")>();
+  return {
+    ...actual,
+    ecrfQueriesApi: {
+      raise: vi.fn(),
+      listForForm: vi.fn(),
+      listForEnrollment: vi.fn(),
+      transition: vi.fn(),
+    },
+  };
+});
 
 vi.mock("../../src/api/ecrfFormsApi", async (importOriginal) => {
   const actual =
@@ -78,6 +93,11 @@ function form(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function resetQueries() {
+  for (const fn of Object.values(ecrfQueriesApi)) vi.mocked(fn).mockReset();
+  vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([]);
+}
+
 describe("EcrfFormPanel: a kernel form instance saved a page at a time (ADR-2622)", () => {
   let wrapper: VueWrapper | undefined;
 
@@ -86,6 +106,7 @@ describe("EcrfFormPanel: a kernel form instance saved a page at a time (ADR-2622
     vi.mocked(ecrfFormsApi.getForm).mockReset();
     vi.mocked(ecrfFormsApi.openForm).mockReset();
     vi.mocked(ecrfFormsApi.saveValues).mockReset();
+    resetQueries();
   });
 
   afterEach(() => {
@@ -398,6 +419,7 @@ describe("useEcrfForm outcomes (ADR-2622)", () => {
     vi.mocked(ecrfFormsApi.getForm).mockReset();
     vi.mocked(ecrfFormsApi.openForm).mockReset();
     vi.mocked(ecrfFormsApi.saveValues).mockReset();
+    resetQueries();
   });
 
   afterEach(() => {
@@ -514,5 +536,173 @@ describe("useEcrfForm outcomes (ADR-2622)", () => {
       .find('select[aria-label="Why RESULT is missing"]')
       .setValue("Unknown");
     expect(wrapper.find("#ecrf-form-save").text()).toBe("Save page (2)");
+  });
+});
+
+function formQuery(overrides: Record<string, unknown> = {}) {
+  return {
+    query_id: "query-a",
+    form_id: FORM_ID,
+    enrollment_id: "e",
+    item_id: "SYSBP",
+    observation_id: OBS_ID,
+    revision: 3,
+    current_revision: 3,
+    value_changed: false,
+    status: "open",
+    text: "Please confirm the value",
+    messages: [
+      {
+        kind: "raised",
+        text: "Please confirm the value",
+        by: "monitor",
+        at: "2027-03-14T10:00:00Z",
+      },
+    ],
+    raised_by: "monitor",
+    raised_at: "2027-03-14T10:00:00Z",
+    version: 1,
+    ...overrides,
+  };
+}
+
+describe("EcrfFormPanel: queries on form values (#5461)", () => {
+  let wrapper: VueWrapper | undefined;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.mocked(ecrfFormsApi.getForm).mockReset();
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
+    resetQueries();
+  });
+
+  afterEach(() => {
+    wrapper?.unmount();
+    wrapper = undefined;
+  });
+
+  async function mountWith(props: Record<string, unknown> = {}) {
+    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID, ...props } });
+    await flushPromises();
+    return wrapper;
+  }
+
+  async function raiseOnSysbp(view: VueWrapper, text: string) {
+    await view.find("#ecrf-raise-SYSBP").trigger("click");
+    await view.find("#ecrf-raise-text").setValue(text);
+    await view.find("#ecrf-raise-confirm").trigger("click");
+    await flushPromises();
+  }
+
+  it("lists the form's queries and marks each item's unresolved ones and changed values", async () => {
+    vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([
+      formQuery({ value_changed: true, current_revision: 4 }),
+      formQuery({ query_id: "query-b", status: "closed" }),
+    ] as never);
+    const view = await mountWith();
+
+    expect(ecrfQueriesApi.listForForm).toHaveBeenCalledWith(FORM_ID);
+    expect(view.find('[data-testid="ecrf-query-badge-SYSBP"]').text()).toBe(
+      "1 unresolved query"
+    );
+    expect(view.find('[data-testid="ecrf-query-changed-SYSBP"]').exists()).toBe(
+      true
+    );
+    expect(view.find('[data-testid="ecrf-query-badge-DIABP"]').exists()).toBe(
+      false
+    );
+    expect(view.findAll("#ecrf-form-queries .form-query")).toHaveLength(2);
+    // Raising is offered to a monitor only.
+    expect(view.find("#ecrf-raise-SYSBP").exists()).toBe(false);
+  });
+
+  it("raises a query on an item's value at the revision the form read returned", async () => {
+    vi.mocked(ecrfQueriesApi.raise).mockResolvedValue(formQuery() as never);
+    const view = await mountWith({ canManageQueries: true });
+
+    // An item without a value has nothing to query.
+    expect(view.find("#ecrf-raise-DIABP").exists()).toBe(false);
+    await view.find("#ecrf-raise-SYSBP").trigger("click");
+    expect(view.find('label[for="ecrf-raise-text"]').text()).toContain(
+      "Query on SYSBP (revision 3)"
+    );
+    await view.find("#ecrf-raise-text").setValue(" Please confirm the value ");
+    await view.find("#ecrf-raise-confirm").trigger("click");
+    await flushPromises();
+
+    expect(vi.mocked(ecrfQueriesApi.raise).mock.calls[0][0]).toMatchObject({
+      formId: FORM_ID,
+      observationId: OBS_ID,
+      revision: 3,
+      text: "Please confirm the value",
+      reason: "Please confirm the value",
+    });
+    expect(view.find("#ecrf-raise-text").exists()).toBe(false);
+    expect(view.find('[data-testid="ecrf-query-badge-SYSBP"]').text()).toBe(
+      "1 unresolved query"
+    );
+    expect(view.find('[data-testid="ecrf-query-outcome"]').text()).toBe(
+      "Query raised."
+    );
+  });
+
+  it("says the value changed and offers a reload when the revision is stale", async () => {
+    vi.mocked(ecrfQueriesApi.raise).mockRejectedValue(
+      new ApiError("Conflict", 409, "Conflict", {
+        code: "M.Execution.Query.RevisionStale",
+      })
+    );
+    const view = await mountWith({ canManageQueries: true });
+    await raiseOnSysbp(view, "Please confirm");
+
+    const outcome = view.find('[data-testid="ecrf-query-outcome"]');
+    expect(outcome.attributes("aria-live")).toBe("polite");
+    expect(outcome.text()).toContain(
+      "The value changed since you loaded the form"
+    );
+    await view.find("#ecrf-query-reload").trigger("click");
+    await flushPromises();
+    expect(ecrfFormsApi.getForm).toHaveBeenCalledTimes(2);
+    expect(view.find("#ecrf-query-reload").exists()).toBe(false);
+  });
+
+  it("says when the value is not on the form", async () => {
+    vi.mocked(ecrfQueriesApi.raise).mockRejectedValue(
+      new ApiError("Not found", 404, "Not Found", {
+        code: "M.Execution.Query.ObservationUnknown",
+      })
+    );
+    const view = await mountWith({ canManageQueries: true });
+    await raiseOnSysbp(view, "Please confirm");
+
+    expect(view.find('[data-testid="ecrf-query-outcome"]').text()).toContain(
+      "That value is not on this form any more"
+    );
+    expect(view.find("#ecrf-query-reload").exists()).toBe(false);
+  });
+
+  it("answers an open query through the form's query list", async () => {
+    vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([
+      formQuery(),
+    ] as never);
+    vi.mocked(ecrfQueriesApi.transition).mockResolvedValue(
+      formQuery({ status: "answered", version: 2 }) as never
+    );
+    const view = await mountWith();
+
+    await view.find("#btn-answer-query-a").trigger("click");
+    await view.find("#query-text-query-a").setValue("Confirmed against source");
+    await view.find("#query-query-a form").trigger("submit");
+    await flushPromises();
+
+    expect(ecrfQueriesApi.transition).toHaveBeenCalledWith(
+      "answer",
+      expect.objectContaining({
+        formId: FORM_ID,
+        queryId: "query-a",
+        text: "Confirmed against source",
+      })
+    );
+    expect(view.find("#query-query-a").text()).toContain("Answered");
   });
 });

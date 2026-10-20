@@ -50,7 +50,7 @@ public static class ServiceTopology
     public static IReadOnlyList<CadenceService> Services { get; } =
     [
         new("designer", "designer", 8001, "DESIGNER_SERVICE_URL", ["studies", "protocols"], Database: false, Core: false),
-        new("execution", "execution", 8002, "EXECUTION_SERVICE_URL", ["queries", "execution"], Database: true, Core: true),
+        new("execution", "execution", 8002, "EXECUTION_SERVICE_URL", ["execution"], Database: true, Core: true),
         new("etmf", "etmf", 8003, "ETMF_SERVICE_URL", ["etmf"], Database: true, Core: false),
         new("interop", "interop", 8004, "INTEROP_SERVICE_URL", ["interop"], Database: true, Core: false),
         new("quality", "quality", 8005, "QUALITY_SERVICE_URL", ["quality"], Database: true, Core: false),

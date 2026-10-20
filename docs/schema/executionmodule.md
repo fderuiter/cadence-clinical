@@ -7,6 +7,7 @@ Generated from the EF Core model of `Cadence.Modules.Execution.Infrastructure.Ex
 | Table | Entity | Columns |
 | --- | --- | --- |
 | [`execution.form_instances`](#executionform_instances) | `FormInstance` | 14 |
+| [`execution.form_queries`](#executionform_queries) | `FormQuery`, `FormQueryMessage` | 15 |
 
 ## execution.form_instances
 
@@ -32,3 +33,30 @@ Entity: `FormInstance`
 Indexes:
 
 - `ix_form_instances_tenant_enrollment`: (`tenant_id`, `enrollment_id`)
+
+## execution.form_queries
+
+Entity: `FormQuery`, `FormQueryMessage`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `enrollment_id` | `uuid` | no |  |  |
+| `form_id` | `uuid` | no |  |  |
+| `item_id` | `character varying(128)` | no |  |  |
+| `kernel_answer_id` | `uuid` | yes |  |  |
+| `kernel_query_id` | `uuid` | no |  |  |
+| `messages` | `jsonb` | yes |  |  |
+| `observation_id` | `uuid` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `revision` | `integer` | no |  |  |
+| `status` | `character varying(16)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Indexes:
+
+- `ix_form_queries_tenant_enrollment_status`: (`tenant_id`, `enrollment_id`, `status`)
+- `ix_form_queries_tenant_form`: (`tenant_id`, `form_id`)

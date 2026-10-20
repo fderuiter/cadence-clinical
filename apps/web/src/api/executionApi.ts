@@ -6,7 +6,8 @@ import type { components, paths } from "./generated/execution";
  * Typed client for the .NET Execution service, generated from docs/openapi/execution_openapi.json.
  *
  * Every Execution call in the web app goes through this client (docs/web/API_MIGRATION.md). eCRF forms are not here:
- * they are kernel form instances served by the kernel host (ecrfFormsApi.ts, ADR-2622).
+ * they are kernel form instances served by the kernel host (ecrfFormsApi.ts, ADR-2622), and so are their queries
+ * (ecrfQueriesApi.ts, #5461).
  */
 type Schemas = components["schemas"];
 
@@ -15,8 +16,6 @@ export type SubjectList = Schemas["Execution_SubjectListResponse"];
 export type Subject = Schemas["Execution_SubjectResponse"];
 export type ComplianceStatus = Schemas["Execution_ComplianceStatusResponse"];
 export type OperationEnvelope = Schemas["Execution_OperationEnvelopeResponse"];
-export type ClinicalQuery = Schemas["Execution_ClinicalQueryResponse"];
-export type BatchQueryResponse = Schemas["Execution_BatchQueryResponse"];
 
 export interface AddSubject {
   studyId: string;
@@ -112,101 +111,6 @@ export const executionApi = {
           path: { siteId },
           query: { study_id: studyId, milestone },
         },
-      })
-    );
-  },
-
-  /** Queries on a participant (GET /api/v1/execution/queries?study_id=&subject_id=), by subject code. */
-  listQueries(studyId: string, subjectCode: string): Promise<ClinicalQuery[]> {
-    return unwrapResponse(
-      client.GET("/api/v1/execution/queries", {
-        params: { query: { study_id: studyId, subject_id: subjectCode } },
-      })
-    );
-  },
-
-  /**
-   * Answers an open or reopened query. The responder is the signed-in user; this client never sends a
-   * responder of its own (#4920).
-   */
-  respondQuery(id: string, response: string): Promise<ClinicalQuery> {
-    return unwrapResponse(
-      client.POST("/api/v1/execution/queries/{id}/respond", {
-        params: { path: { id } },
-        body: { response },
-      })
-    );
-  },
-
-  /** Closes an answered query (CRA or data manager), with the reason as X-Change-Reason. */
-  closeQuery(id: string, reason: string): Promise<ClinicalQuery> {
-    return unwrapResponse(
-      client.POST("/api/v1/execution/queries/{id}/close", {
-        params: { path: { id } },
-        headers: { "X-Change-Reason": encodeChangeReason(reason) },
-      })
-    );
-  },
-
-  /** Reopens an answered or closed query (CRA or data manager); Execution requires the reason in both places. */
-  reopenQuery(id: string, reason: string): Promise<ClinicalQuery> {
-    return unwrapResponse(
-      client.POST("/api/v1/execution/queries/{id}/reopen", {
-        params: { path: { id } },
-        body: { reason },
-        headers: { "X-Change-Reason": encodeChangeReason(reason) },
-      })
-    );
-  },
-
-  /** Cancels a query that is not closed (CRA or data manager); Execution requires the reason in both places. */
-  cancelQuery(id: string, reason: string): Promise<ClinicalQuery> {
-    return unwrapResponse(
-      client.POST("/api/v1/execution/queries/{id}/cancel", {
-        params: { path: { id } },
-        body: { reason },
-        headers: { "X-Change-Reason": encodeChangeReason(reason) },
-      })
-    );
-  },
-
-  /** Batch closes multiple queries (CRA or data manager), with the reason as X-Change-Reason. */
-  batchCloseQueries(
-    queryIds: string[],
-    reason: string
-  ): Promise<BatchQueryResponse> {
-    return unwrapResponse(
-      client.POST("/api/v1/execution/queries/batch-close", {
-        body: { query_ids: queryIds, reason },
-        headers: { "X-Change-Reason": encodeChangeReason(reason) },
-      })
-    );
-  },
-
-  /** Batch cancels multiple queries (CRA or data manager), with the reason as X-Change-Reason. */
-  batchCancelQueries(
-    queryIds: string[],
-    reason: string
-  ): Promise<BatchQueryResponse> {
-    return unwrapResponse(
-      client.POST("/api/v1/execution/queries/batch-cancel", {
-        body: { query_ids: queryIds, reason },
-        headers: { "X-Change-Reason": encodeChangeReason(reason) },
-      })
-    );
-  },
-
-  /** Batch responds to multiple open or reopened queries, with the reason as X-Change-Reason. */
-  batchRespondQueries(
-    queryIds: string[],
-    response: string,
-    reason?: string
-  ): Promise<BatchQueryResponse> {
-    const changeReason = reason || response;
-    return unwrapResponse(
-      client.POST("/api/v1/execution/queries/batch-respond", {
-        body: { query_ids: queryIds, response, reason: changeReason },
-        headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
       })
     );
   },

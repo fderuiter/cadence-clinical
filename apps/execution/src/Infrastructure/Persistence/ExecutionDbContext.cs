@@ -4,7 +4,6 @@ using Cadence.Apps.Execution.Domain.Coding;
 using Cadence.Apps.Execution.Domain.Compliance;
 using Cadence.Apps.Execution.Domain.Devices;
 using Cadence.Apps.Execution.Domain.Observations;
-using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Domain.Supply;
 using Cadence.Apps.Execution.Domain.Toxicity;
@@ -45,7 +44,6 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
 
     public DbSet<SiteComplianceCache> SiteComplianceCaches => Set<SiteComplianceCache>();
 
-    public DbSet<ClinicalQuery> ClinicalQueries => Set<ClinicalQuery>();
 
     public DbSet<StagedAdverseEventReview> StagedAdverseEventReviews => Set<StagedAdverseEventReview>();
 
@@ -95,7 +93,6 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new ClinicalSubjectConfiguration());
         modelBuilder.ApplyConfiguration(new SubjectConsentConfiguration());
         modelBuilder.ApplyConfiguration(new SiteComplianceCacheConfiguration());
-        modelBuilder.ApplyConfiguration(new ClinicalQueryConfiguration());
         modelBuilder.ApplyConfiguration(new StagedAdverseEventReviewConfiguration());
         modelBuilder.ApplyConfiguration(new CecDossierConfiguration());
         modelBuilder.ApplyConfiguration(new CecChairAdjudicationConfiguration());

@@ -18,7 +18,6 @@ namespace Cadence.Apps.Execution.Application.Toxicity;
 
 public sealed class LabToxicityGovernanceService(
     IStagedAdverseEventReviewRepository stagedReviewRepository,
-    IClinicalQueryRepository queryRepository,
     IPublishEndpoint publishEndpoint,
     IClock clock,
     ICurrentAuditContextAccessor auditContextAccessor) : ILabToxicityGovernanceService
@@ -60,15 +59,6 @@ public sealed class LabToxicityGovernanceService(
         {
             review.Confirm(reviewerId, request.InvestigatorNotes, request.ReasonForChange, now);
 
-            if (review.QueryId.HasValue)
-            {
-                var query = await queryRepository.GetForUpdateAsync(review.QueryId.Value, cancellationToken).ConfigureAwait(false);
-                if (query != null)
-                {
-                    query.Close(reviewerId, now);
-                }
-            }
-
             // Transactional Outbox Event Publishing
             await publishEndpoint.Publish(new Grade3ToxicityDetected(
                 ReviewId: review.Id,
@@ -82,7 +72,6 @@ public sealed class LabToxicityGovernanceService(
                 CtcaeGrade: review.CtcaeGrade,
                 ToxicityTerm: review.ToxicityTerm,
                 IsHysLawWarning: review.IsHysLawWarning,
-                QueryId: review.QueryId?.ToString(),
                 DetectedAt: now
             ), cancellationToken).ConfigureAwait(false);
 
@@ -92,29 +81,11 @@ public sealed class LabToxicityGovernanceService(
         {
             review.Dismiss(reviewerId, request.InvestigatorNotes, request.ReasonForChange, now);
 
-            if (review.QueryId.HasValue)
-            {
-                var query = await queryRepository.GetForUpdateAsync(review.QueryId.Value, cancellationToken).ConfigureAwait(false);
-                if (query != null)
-                {
-                    query.Cancel(request.ReasonForChange, reviewerId);
-                }
-            }
-
             msg = "Staged AE review dismissed successfully.";
         }
         else if (actionUpper == "ESCALATE_SAE")
         {
             review.Escalate(reviewerId, request.InvestigatorNotes, request.ReasonForChange, now);
-
-            if (review.QueryId.HasValue)
-            {
-                var query = await queryRepository.GetForUpdateAsync(review.QueryId.Value, cancellationToken).ConfigureAwait(false);
-                if (query != null)
-                {
-                    query.Close(reviewerId, now);
-                }
-            }
 
             await publishEndpoint.Publish(new Grade3ToxicityDetected(
                 ReviewId: review.Id,
@@ -128,7 +99,6 @@ public sealed class LabToxicityGovernanceService(
                 CtcaeGrade: review.CtcaeGrade,
                 ToxicityTerm: review.ToxicityTerm,
                 IsHysLawWarning: review.IsHysLawWarning,
-                QueryId: review.QueryId?.ToString(),
                 DetectedAt: now
             ), cancellationToken).ConfigureAwait(false);
 
@@ -145,7 +115,6 @@ public sealed class LabToxicityGovernanceService(
             Id: review.Id,
             ReviewStatus: review.ReviewStatus,
             ActionTaken: actionUpper,
-            QueryId: review.QueryId?.ToString(),
             Message: msg,
             Timestamp: now
         );
@@ -209,7 +178,6 @@ public sealed class LabToxicityGovernanceService(
             SubjectId: r.SubjectId.Value,
             VisitId: r.VisitId,
             ObservationId: r.ObservationId?.ToString(),
-            QueryId: r.QueryId?.ToString(),
             TestCode: r.TestCode.Value,
             TestName: r.TestName,
             LabValue: r.LabValue,

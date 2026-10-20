@@ -1,7 +1,6 @@
 using System;
 
 using Cadence.Apps.Execution.Domain.Observations;
-using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
 using Cadence.Kernel;
@@ -20,7 +19,6 @@ public sealed class StagedAdverseEventReview : AggregateRoot<string>
     public SubjectCode SubjectId { get; private set; }
     public string? VisitId { get; private set; }
     public ObservationId? ObservationId { get; private set; }
-    public QueryId? QueryId { get; private set; }
     public TestCode TestCode { get; private set; }
     public string TestName { get; private set; } = string.Empty;
     public double LabValue { get; private set; }
@@ -57,7 +55,6 @@ public sealed class StagedAdverseEventReview : AggregateRoot<string>
         SiteCode? siteId = null,
         string? visitId = null,
         ObservationId? observationId = null,
-        QueryId? queryId = null,
         string gradingScale = "CTCAE_V5")
     {
         return new StagedAdverseEventReview
@@ -68,7 +65,6 @@ public sealed class StagedAdverseEventReview : AggregateRoot<string>
             SiteId = siteId,
             VisitId = visitId,
             ObservationId = observationId,
-            QueryId = queryId,
             TestCode = testCode,
             TestName = testName,
             LabValue = labValue,

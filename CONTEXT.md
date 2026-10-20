@@ -115,6 +115,15 @@ snapshotted from the CollectionSpec when the kernel opened the form. The module 
 value, a reasoned missing value included), never stored.
 _Avoid_: copying values, statuses or signatures into it; they stay in the kernel
 
+### Form Query
+
+A data query the Execution module keeps about one revision of one form value (#5461): the kernel
+`(ObservationId, Revision)` a monitor questioned, its status (open, answered, closed, cancelled) and its conversation.
+The workflow is EDC's (spec §11); each step is also stated as a kernel `Queried` or `QueryAnswered` Assertion, or a
+retraction of one, by `svc:execution-queries`, so other applications count open queries from the kernel. A correction
+past the questioned revision shows as "value changed".
+_Avoid_: a query that names a form field code or Execution's own observation copy; batch query commands
+
 ### Assertion
 
 A statement by an actor with authority about an Observation or another Assertion: verified (SDV),

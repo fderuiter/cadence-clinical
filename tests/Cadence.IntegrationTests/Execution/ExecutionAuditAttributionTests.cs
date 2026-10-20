@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Infrastructure.Persistence;
@@ -86,27 +85,6 @@ public sealed class ExecutionAuditAttributionTests(ExecutionPostgresApiFactory f
         await ShouldHaveNoAnonymousEntriesAsync();
     }
 
-    [Fact]
-    [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-001")]
-    public async Task QueryWrites_AreEachAuditedAgainstTheCaller()
-    {
-        factory.SkipIfUnavailable();
-        var monitor = Caller("query-cra", "CRA");
-        var investigator = Caller("query-pi", "Site Investigator");
-
-        string query = await ReadIdAsync(await AuditedAsync(monitor, c => c.PostAsJsonAsync(
-            "/api/v1/execution/queries/",
-            new { study_id = Study, subject_id = $"SUBJ-{_run}", test_code = "SYSBP", explanation = "Value out of range" },
-            Ct)));
-        await AuditedAsync(investigator, c => c.PostAsJsonAsync($"/api/v1/execution/queries/{query}/respond", new { response = "Confirmed with source" }, Ct));
-        await AuditedAsync(monitor, c => c.PostAsJsonAsync($"/api/v1/execution/queries/{query}/close", new { resolver = monitor.UserId }, Ct));
-        await AuditedAsync(monitor, c => c.PostAsJsonAsync($"/api/v1/execution/queries/{query}/reopen", new { reason = "Needs re-check" }, Ct));
-        await AuditedAsync(monitor, c => c.PostAsJsonAsync($"/api/v1/execution/queries/{query}/cancel", new { reason = "Raised in error" }, Ct));
-
-        await ShouldHaveNoAnonymousEntriesAsync();
-    }
-
     private static System.Threading.CancellationToken Ct => TestContext.Current.CancellationToken;
 
     private GatewayIdentity Caller(string name, string role) =>
@@ -141,11 +119,5 @@ public sealed class ExecutionAuditAttributionTests(ExecutionPostgresApiFactory f
             .Where(e => e.UserId == "system" || e.UserId == "")
             .CountAsync(Ct);
         anonymous.Should().Be(0);
-    }
-
-    private static async Task<string> ReadIdAsync(HttpResponseMessage response)
-    {
-        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct));
-        return body.RootElement.GetProperty("id").GetString()!;
     }
 }
