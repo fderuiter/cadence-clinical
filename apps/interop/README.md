@@ -1,6 +1,6 @@
 # Interoperability service
 
-Interoperability scaffold. It holds the ePRO submission, instrument, subject assignment, EHR endpoint and reconciliation, and device/sensor telemetry model; no business endpoints are mapped yet, so the subject portal's `/api/v1/interop/...` calls have no backend.
+Interoperability scaffold. It holds the ePRO submission, instrument, subject assignment, EHR endpoint and reconciliation, and device/sensor telemetry model. It maps the eSource (EHR) routes under `/api/v1/interop/esource` and the statistical computing environment under `/api/v1/interop/sce`; ePRO, instrument and device telemetry have no endpoints yet.
 
 **Status:** a standalone ASP.NET Core 10 scaffold service. Under [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and the [clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map, §15 roadmap) it becomes an application module over the clinical kernel. The disposition of the scaffold services is tracked in issue #4787.
 
@@ -11,12 +11,23 @@ Interoperability scaffold. It holds the ePRO submission, instrument, subject ass
 - `Domain/`: EF Core entity classes (ePRO submissions and quarantine, instruments, subject assignments, EHR endpoints, device registrations, sensor telemetry, audit log).
   Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Infrastructure/Persistence/`: `InteropDbContext`, a design-time `InteropDbContextFactory`, and `Configurations/` (Fluent API mappings).
-- `Infrastructure/Persistence/Migrations/`: `20260924145123_InitialCreate`.
+- `Infrastructure/Persistence/Migrations/`: `20260924145123_InitialCreate`, `20260929203013_HashDeviceTokensAtRest`,
+  `20261006202718_AddSceEntities`, `20261019174341_AddEhrEndpointSigningKeyRef` (#5436: an EHR endpoint names a
+  server-side signing key reference instead of holding a private key).
 
 ## HTTP surface
 
 - `GET /healthz`, `GET /healthz/live`, `GET /healthz/ready` (anonymous; mapped by `MapCadenceHealthAndStatusEndpoints` and `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready` checks `InteropDbContext`.
 - `GET /api/v1/interop/status` (anonymous status payload).
+- eSource (`Endpoints/EsourceEndpoints.cs`, `/api/v1/interop/esource`): EHR endpoint list and registration
+  (`/endpoints`), SMART client assertion signing and verification (`/smart/assertion`, `/smart/verify`), polling a
+  hospital EHR and ingesting a FHIR bundle (`/poll`, `/ingest`), reconciliation candidates (`/candidates`,
+  `/candidates/{candidate_id}`), accepting, rejecting and querying them (`/reconcile/accept`, `/reconcile/batch-accept`,
+  `/reconcile/reject`, `/reconcile/batch-reject`, `/reconcile/query`) and the provenance audit
+  (`/provenance/{candidate_id}`).
+- Statistical computing environment (`Endpoints/SceEndpoints.cs`, `/api/v1/interop/sce`): programs, lockfile
+  validation, database-lock tokens (issue, list, revoke), program execution, runs, run verification and run artifacts;
+  the permissions are under [Security](#security).
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
 - The gateway forwards `/api/v1/interop/**` to this service. Compose publishes host port 8004 (container port 8080).
 

@@ -71,7 +71,7 @@ creates new reviews today.
 
 ## Tests
 
-- Unit and endpoint tests in `tests/Cadence.UnitTests/Execution/`: `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Execution"`. The PostgreSQL tests are in `tests/Cadence.IntegrationTests/Execution/` and need `CADENCE_TEST_POSTGRES` or Docker (`dotnet cadence test --integration`).
+- Unit and endpoint tests in `tests/Cadence.UnitTests/Execution/`: `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Execution"`. The PostgreSQL tests are in `tests/Cadence.IntegrationTests/Execution/` and need `CADENCE_TEST_POSTGRES` or Docker (`pnpm cadence test --integration`).
 - End-to-end tests in `tests/Cadence.E2ETests/E2E/`: `dotnet test tests/Cadence.E2ETests/Cadence.E2ETests.csproj --filter "FullyQualifiedName~Cadence.E2ETests.E2E"`.
 - Architecture rules: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 

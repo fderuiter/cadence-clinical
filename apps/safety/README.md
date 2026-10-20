@@ -14,7 +14,8 @@ Safety and pharmacovigilance scaffold. It holds the safety case, ICSR reporting 
 - `Application/DsurCompilerEngine.cs`: DSUR compilation, draft update and approval (GxPSigner manifest, record lock).
 - `Infrastructure/Persistence/Migrations/`: `20260924145528_InitialCreate`, `20261019200603_WidenDsurSignatureManifest`
   (`periodic_safety_reports.EsignatureManifestId` becomes `text`: it holds the whole signed manifest, which never fit
-  in the former `varchar(255)`, so approval failed on PostgreSQL).
+  in the former `varchar(255)`, so approval failed on PostgreSQL), `20261019230618_AddConsumedSignatureTokens` (the
+  `consumed_signature_tokens` table that makes step-up tokens single use, #5462).
 - `../Templates/e2b_r3_icsr.xml.liquid`: ICSR template embedded into the assembly.
 
 ## HTTP surface

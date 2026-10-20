@@ -9,6 +9,7 @@ using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.Standards.Mapping;
 using Cadence.Standards.Mapping;
+using Cadence.Testing;
 using Cadence.TestSupport.Kernel.Standards;
 
 using FluentAssertions;
@@ -142,6 +143,7 @@ public sealed class ObservationValueTests
     /// value fits every item (K-FACT-3); an item with neither unit, terminology nor kind takes any valid value.
     /// </summary>
     [Fact]
+    [KernelRule("K-FACT-3")]
     public void CollectionItem_AdmitsOnlyValuesItCanHold()
     {
         var sysbp = new CollectionItem("sysbp", Systolic, Unit: "mm[Hg]");
@@ -174,6 +176,7 @@ public sealed class ObservationValueTests
     /// comparator, and a missing value as <c>--STAT = NOT DONE</c> with its reason in <c>--REASND</c>.
     /// </summary>
     [Fact]
+    [KernelRule("K-FACT-3")]
     public void Mapping_WritesQuantitiesBoundsAndMissingValues()
     {
         var engine = new MappingEngine();
