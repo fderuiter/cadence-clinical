@@ -9,7 +9,7 @@ Generated from the EF Core model of `Cadence.Apps.Interop.Infrastructure.Persist
 | [`interop.audit_log_entries`](#interopaudit_log_entries) | `AuditLogEntry` | 11 |
 | [`interop.clinical_queries`](#interopclinical_queries) | `ClinicalQuery` | 10 |
 | [`interop.device_registrations`](#interopdevice_registrations) | `DeviceRegistrationRecord` | 20 |
-| [`interop.ehr_endpoints`](#interopehr_endpoints) | `EhrEndpointRecord` | 15 |
+| [`interop.ehr_endpoints`](#interopehr_endpoints) | `EhrEndpointRecord` | 17 |
 | [`interop.ehr_reconciliation_candidates`](#interopehr_reconciliation_candidates) | `EhrReconciliationCandidateRecord` | 32 |
 | [`interop.epro_defeated_submissions`](#interopepro_defeated_submissions) | `EproSubmissionDefeated` | 8 |
 | [`interop.epro_quarantined_submissions`](#interopepro_quarantined_submissions) | `EproSubmissionQuarantine` | 12 |
@@ -126,6 +126,8 @@ Entity: `EhrEndpointRecord`
 | `PublicKeyJwksUrl` | `character varying(500)` | yes |  |  |
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `ScopesJson` | `jsonb` | no |  |  |
+| `SigningKeyId` | `character varying(255)` | yes |  |  |
+| `SigningKeyRef` | `character varying(64)` | yes |  |  |
 | `SystemType` | `character varying(50)` | no |  |  |
 | `TokenUrl` | `character varying(500)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |

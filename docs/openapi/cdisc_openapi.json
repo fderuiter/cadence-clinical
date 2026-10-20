@@ -6102,6 +6102,26 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -6145,6 +6165,26 @@
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -19070,6 +19110,18 @@
               "null",
               "string"
             ]
+          },
+          "signingKeyRef": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signingKeyId": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -19113,6 +19165,18 @@
             "type": "string"
           },
           "publicKeyJwksUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signingKeyRef": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signingKeyId": {
             "type": [
               "null",
               "string"
@@ -19164,8 +19228,7 @@
           "endpointId",
           "studyId",
           "siteId",
-          "subjectId",
-          "privateKeyPem"
+          "subjectId"
         ],
         "type": "object",
         "properties": {
@@ -19186,12 +19249,6 @@
           },
           "subjectId": {
             "type": "string"
-          },
-          "privateKeyPem": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
@@ -19826,30 +19883,12 @@
       },
       "Interop_SmartAssertionRequest": {
         "required": [
-          "clientId",
-          "tokenUrl",
-          "privateKeyPem",
-          "keyId"
+          "endpointId"
         ],
         "type": "object",
         "properties": {
-          "clientId": {
+          "endpointId": {
             "type": "string"
-          },
-          "tokenUrl": {
-            "type": "string"
-          },
-          "privateKeyPem": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "keyId": {
-            "type": [
-              "null",
-              "string"
-            ]
           },
           "expirationSeconds": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -19885,32 +19924,15 @@
       "Interop_SmartVerifyRequest": {
         "required": [
           "clientAssertionToken",
-          "clientId",
-          "tokenUrl",
-          "publicKeyPem"
+          "endpointId"
         ],
         "type": "object",
         "properties": {
           "clientAssertionToken": {
             "type": "string"
           },
-          "clientId": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "tokenUrl": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "publicKeyPem": {
-            "type": [
-              "null",
-              "string"
-            ]
+          "endpointId": {
+            "type": "string"
           }
         }
       },

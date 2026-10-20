@@ -526,6 +526,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2543: The Kernel Host Seeds the Local Demo Study](adr/2026-10-19-the-kernel-host-seeds-the-local-demo-study.md) | Current | - Status: Accepted |
 | [ADR-2525: Dependabot Bumps Merge as One Locally Validated Batch](adr/2026-10-20-dependabot-bumps-merge-as-one-locally-validated-batch.md) | Current | - Status: Accepted |
 | [ADR-2623: Observation Values Are Typed](adr/2026-10-19-observation-values-are-typed.md) | Current | - Status: Accepted |
+| [ADR-2517: SMART Client Assertions Are Signed Only With Server-Side Endpoint Keys](adr/2026-10-19-smart-client-assertions-are-signed-only-with-server-side-endpoint-keys.md) | Current | - Status: Accepted |
 ## Developing and running
 
 | Document | Status | What it is |

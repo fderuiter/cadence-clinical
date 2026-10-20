@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Interop.Application.Services;
 using Cadence.Apps.Interop.Domain;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
+using Cadence.Apps.Interop.Infrastructure.Security;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
@@ -57,14 +58,18 @@ public static class EsourceEndpoints
             .RequirePermission("esource_endpoint:configure")
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<SmartAssertionResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         group.MapPost("/smart/verify", VerifyClientAssertionAsync)
             .WithName("VerifyClientAssertion")
             .RequirePermission("esource_endpoint:configure")
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<SmartVerifyResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         // Polling & Ingestion
         group.MapPost("/poll", PollHospitalEhrAsync)
@@ -173,6 +178,13 @@ public static class EsourceEndpoints
             return Results.Problem("Endpoint name and FHIR Base URL are required.", statusCode: StatusCodes.Status400BadRequest);
         }
 
+        if (request.SigningKeyRef is not null && !ConfigurationSmartSigningKeys.IsValidReference(request.SigningKeyRef))
+        {
+            return Results.Problem(
+                "SigningKeyRef names a server-side key: letters, digits and underscores, at most 64.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
         var caller = GetCallerUser(httpContext);
         var record = new EhrEndpointRecord
         {
@@ -182,6 +194,8 @@ public static class EsourceEndpoints
             TokenUrl = request.TokenUrl ?? $"{request.FhirBaseUrl}/oauth/token",
             ClientId = request.ClientId ?? Guid.NewGuid().ToString("N"),
             PublicKeyJwksUrl = request.PublicKeyJwksUrl,
+            SigningKeyRef = request.SigningKeyRef,
+            SigningKeyId = request.SigningKeyId,
             ScopesJson = JsonSerializer.Serialize(request.Scopes ?? ["system/*.read", "user/*.read"]),
             PollingIntervalSec = request.PollingIntervalSec > 0 ? request.PollingIntervalSec : 300,
             IsActive = true,
@@ -196,98 +210,150 @@ public static class EsourceEndpoints
         return Results.Created($"/api/v1/interop/esource/endpoints/{record.Id}", record);
     }
 
-    public static IResult GenerateClientAssertionAsync(
+    /// <summary>The longest client assertion SMART Backend Services allows.</summary>
+    public const int MaxAssertionLifetimeSeconds = 300;
+
+    private static IResult SigningKeyUnavailable(string detail) =>
+        Results.Problem(detail, statusCode: StatusCodes.Status422UnprocessableEntity, title: "SMART signing key unavailable");
+
+    private static async Task<EhrEndpointRecord?> ActiveEndpointAsync(InteropDbContext db, string? endpointId, CancellationToken ct) =>
+        string.IsNullOrWhiteSpace(endpointId)
+            ? null
+            : await db.EhrEndpointRecords.AsNoTracking().FirstOrDefaultAsync(e => e.Id == endpointId && e.IsActive, ct).ConfigureAwait(false);
+
+    /// <summary>
+    /// Signs a SMART Backend Services client assertion for a registered endpoint with that endpoint's server-side key
+    /// (#5436). The issuer and subject are the endpoint's client id and the audience its token URL. A missing,
+    /// unconfigured or invalid key answers 422 and signs nothing; there is no generated-key fallback.
+    /// </summary>
+    public static async Task<IResult> GenerateClientAssertionAsync(
         SmartAssertionRequest request,
-        IClock clock)
+        InteropDbContext db,
+        ISmartSigningKeys signingKeys,
+        IClock clock,
+        CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(request.ClientId) || string.IsNullOrWhiteSpace(request.TokenUrl))
+        if (string.IsNullOrWhiteSpace(request.EndpointId))
         {
-            return Results.Problem("ClientId and TokenUrl are required.", statusCode: StatusCodes.Status400BadRequest);
+            return Results.Problem("EndpointId is required.", statusCode: StatusCodes.Status400BadRequest);
         }
 
-        using var rsa = RSA.Create(2048);
-        if (!string.IsNullOrWhiteSpace(request.PrivateKeyPem))
+        if (request.ExpirationSeconds is < 1 or > MaxAssertionLifetimeSeconds)
         {
-            try
-            {
-                rsa.ImportFromPem(request.PrivateKeyPem);
-            }
-            catch
-            {
-                // Fall back to generated key for testing/simulation if invalid PEM provided
-            }
+            return Results.Problem(
+                $"ExpirationSeconds must be between 1 and {MaxAssertionLifetimeSeconds}.", statusCode: StatusCodes.Status400BadRequest);
         }
 
-        var securityKey = new RsaSecurityKey(rsa);
-        if (!string.IsNullOrWhiteSpace(request.KeyId))
+        var endpoint = await ActiveEndpointAsync(db, request.EndpointId, ct).ConfigureAwait(false);
+        if (endpoint is null)
         {
-            securityKey.KeyId = request.KeyId;
+            return Results.Problem($"No active EHR endpoint {request.EndpointId}.", statusCode: StatusCodes.Status404NotFound);
         }
 
-        var now = clock.UtcNow.UtcDateTime;
-        var expSec = request.ExpirationSeconds > 0 ? request.ExpirationSeconds : 300;
-        var expires = now.AddSeconds(expSec);
-
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var tokenDescriptor = new SecurityTokenDescriptor
+        if (!signingKeys.TryGetPrivateKey(endpoint.SigningKeyRef, out var rsa, out var error))
         {
-            Issuer = request.ClientId,
-            Subject = new ClaimsIdentity([new Claim("sub", request.ClientId)]),
-            Audience = request.TokenUrl,
-            Expires = expires,
-            IssuedAt = now,
-            NotBefore = now,
-            Claims = new Dictionary<string, object>
+            return SigningKeyUnavailable(error);
+        }
+
+        using (rsa)
+        {
+            var securityKey = new RsaSecurityKey(rsa) { KeyId = endpoint.SigningKeyId };
+            var now = clock.UtcNow.UtcDateTime;
+            var expires = now.AddSeconds(request.ExpirationSeconds);
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var tokenDescriptor = new SecurityTokenDescriptor
             {
-                ["jti"] = Guid.NewGuid().ToString()
-            },
-            SigningCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.RsaSha256)
-        };
+                Issuer = endpoint.ClientId,
+                Subject = new ClaimsIdentity([new Claim("sub", endpoint.ClientId)]),
+                Audience = endpoint.TokenUrl,
+                Expires = expires,
+                IssuedAt = now,
+                NotBefore = now,
+                Claims = new Dictionary<string, object>
+                {
+                    ["jti"] = Guid.NewGuid().ToString()
+                },
+                SigningCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.RsaSha384)
+            };
 
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        var tokenString = tokenHandler.WriteToken(token);
-
-        return Results.Ok(new SmartAssertionResponse(
-            ClientAssertionToken: tokenString,
-            ClientAssertionType: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-            ExpiresAt: new DateTimeOffset(expires)));
+            var tokenString = tokenHandler.WriteToken(tokenHandler.CreateToken(tokenDescriptor));
+            return Results.Ok(new SmartAssertionResponse(
+                ClientAssertionToken: tokenString,
+                ClientAssertionType: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+                ExpiresAt: new DateTimeOffset(expires)));
+        }
     }
 
-    public static IResult VerifyClientAssertionAsync(
+    /// <summary>
+    /// Verifies a client assertion against a registered endpoint: its signature under the endpoint's key, issuer and
+    /// subject equal to the client id, audience equal to the token URL, and lifetime on the injected clock (#5436).
+    /// </summary>
+    public static async Task<IResult> VerifyClientAssertionAsync(
         SmartVerifyRequest request,
-        IClock clock)
+        InteropDbContext db,
+        ISmartSigningKeys signingKeys,
+        IClock clock,
+        CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(request.ClientAssertionToken))
+        if (string.IsNullOrWhiteSpace(request.ClientAssertionToken) || string.IsNullOrWhiteSpace(request.EndpointId))
         {
-            return Results.Problem("Client assertion token is required.", statusCode: StatusCodes.Status400BadRequest);
+            return Results.Problem("ClientAssertionToken and EndpointId are required.", statusCode: StatusCodes.Status400BadRequest);
         }
 
-        var tokenHandler = new JwtSecurityTokenHandler();
-        if (!tokenHandler.CanReadToken(request.ClientAssertionToken))
+        var endpoint = await ActiveEndpointAsync(db, request.EndpointId, ct).ConfigureAwait(false);
+        if (endpoint is null)
         {
-            return Results.Ok(new SmartVerifyResponse(
-                IsValid: false,
-                Subject: string.Empty,
-                Issuer: string.Empty,
-                Audience: string.Empty,
-                ExpiresAt: clock.UtcNow,
-                ErrorMessage: "Invalid JWT token structure"));
+            return Results.Problem($"No active EHR endpoint {request.EndpointId}.", statusCode: StatusCodes.Status404NotFound);
         }
 
-        var jwt = tokenHandler.ReadJwtToken(request.ClientAssertionToken);
-        var isExpValid = jwt.ValidTo > clock.UtcNow.UtcDateTime;
-        var isSubValid = string.IsNullOrEmpty(request.ClientId) || jwt.Subject == request.ClientId;
-        var isAudValid = string.IsNullOrEmpty(request.TokenUrl) || jwt.Audiences.Contains(request.TokenUrl);
+        if (!signingKeys.TryGetPrivateKey(endpoint.SigningKeyRef, out var rsa, out var error))
+        {
+            return SigningKeyUnavailable(error);
+        }
 
-        var isValid = isExpValid && isSubValid && isAudValid;
+        using (rsa)
+        {
+            using var publicKey = RSA.Create(rsa.ExportParameters(includePrivateParameters: false));
+            var now = clock.UtcNow;
+            var parameters = new TokenValidationParameters
+            {
+                ValidIssuer = endpoint.ClientId,
+                ValidAudience = endpoint.TokenUrl,
+                IssuerSigningKey = new RsaSecurityKey(publicKey),
+                ValidAlgorithms = [SecurityAlgorithms.RsaSha384, SecurityAlgorithms.RsaSha256],
+                RequireExpirationTime = true,
+                RequireSignedTokens = true,
+                ClockSkew = TimeSpan.Zero,
+                LifetimeValidator = (notBefore, expires, _, _) =>
+                    expires is { } exp && now.UtcDateTime < exp && (notBefore is not { } nbf || nbf <= now.UtcDateTime),
+            };
 
-        return Results.Ok(new SmartVerifyResponse(
-            IsValid: isValid,
-            Subject: jwt.Subject ?? string.Empty,
-            Issuer: jwt.Issuer ?? string.Empty,
-            Audience: jwt.Audiences.FirstOrDefault() ?? string.Empty,
-            ExpiresAt: new DateTimeOffset(jwt.ValidTo),
-            ErrorMessage: isValid ? null : "Assertion verification failed (check exp/sub/aud)"));
+            var tokenHandler = new JwtSecurityTokenHandler { MapInboundClaims = false };
+            try
+            {
+                tokenHandler.ValidateToken(request.ClientAssertionToken, parameters, out var validated);
+                var jwt = (JwtSecurityToken)validated;
+                bool subjectIsClient = jwt.Subject == endpoint.ClientId;
+                return Results.Ok(new SmartVerifyResponse(
+                    IsValid: subjectIsClient,
+                    Subject: jwt.Subject ?? string.Empty,
+                    Issuer: jwt.Issuer ?? string.Empty,
+                    Audience: jwt.Audiences.FirstOrDefault() ?? string.Empty,
+                    ExpiresAt: new DateTimeOffset(jwt.ValidTo, TimeSpan.Zero),
+                    ErrorMessage: subjectIsClient ? null : "The subject is not the endpoint's client id."));
+            }
+            catch (Exception ex) when (ex is SecurityTokenException or ArgumentException)
+            {
+                return Results.Ok(new SmartVerifyResponse(
+                    IsValid: false,
+                    Subject: string.Empty,
+                    Issuer: string.Empty,
+                    Audience: string.Empty,
+                    ExpiresAt: now,
+                    ErrorMessage: ex.Message));
+            }
+        }
     }
 
     /// <summary>
@@ -975,16 +1041,16 @@ public record EhrEndpointCreateRequest(
     string? PublicKeyJwksUrl,
     List<string>? Scopes,
     int PollingIntervalSec,
-    string? ReasonForChange);
+    string? ReasonForChange,
+    string? SigningKeyRef = null,
+    string? SigningKeyId = null);
 
 public record EhrEndpointListResponse(
     List<EhrEndpointRecord> Endpoints);
 
+/// <summary>Asks for a client assertion for a registered endpoint; the key is the endpoint's, never the caller's.</summary>
 public record SmartAssertionRequest(
-    string ClientId,
-    string TokenUrl,
-    string? PrivateKeyPem,
-    string? KeyId,
+    string EndpointId,
     int ExpirationSeconds = 300);
 
 public record SmartAssertionResponse(
@@ -994,9 +1060,7 @@ public record SmartAssertionResponse(
 
 public record SmartVerifyRequest(
     string ClientAssertionToken,
-    string? ClientId,
-    string? TokenUrl,
-    string? PublicKeyPem);
+    string EndpointId);
 
 public record SmartVerifyResponse(
     bool IsValid,
@@ -1010,8 +1074,7 @@ public record EhrPollRequest(
     string? EndpointId,
     string StudyId,
     string? SiteId,
-    string SubjectId,
-    string? PrivateKeyPem);
+    string SubjectId);
 
 public record FhirBundleIngestRequest(
     string StudyId,

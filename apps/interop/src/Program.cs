@@ -21,6 +21,8 @@ builder.Services.AddSingleton<DeviceTokenHasher>();
 builder.Services.AddSceSigning();
 builder.Services.AddSingleton<ILockfileValidatorService, LockfileValidatorService>();
 builder.Services.AddSingleton<ISceDockerEngineDriver, SceDockerEngineDriver>();
+// SMART client assertions are signed with server-side keys named per endpoint, never keys from a request (#5436).
+builder.Services.AddSingleton<ISmartSigningKeys, ConfigurationSmartSigningKeys>();
 builder.AddCadencePostgresDbContext<InteropDbContext>();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 
