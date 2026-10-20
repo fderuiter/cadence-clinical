@@ -7,6 +7,7 @@ using Cadence.Kernel.Modules;
 using Cadence.Modules.Intelligence.Application;
 using Cadence.Modules.Intelligence.Domain;
 using Cadence.Modules.Intelligence.Endpoints;
+using Cadence.Modules.Intelligence.Evaluation;
 using Cadence.Modules.Intelligence.Infrastructure.Models;
 using Cadence.Modules.Intelligence.Infrastructure.Persistence;
 using Cadence.Modules.Intelligence.Infrastructure.Tasks;
@@ -90,6 +91,7 @@ public static class IntelligenceModule
         services.TryAddSingleton<IAgentLedger, EfAgentLedger>();
         services.TryAddSingleton(new AgentRunnerOptions(TimeSpan.FromSeconds(Math.Max(1, options.RequestTimeoutSeconds))));
         services.TryAddScoped<AgentRunner>();
+        services.AddIntelligenceEvaluation();
         return services;
     }
 
