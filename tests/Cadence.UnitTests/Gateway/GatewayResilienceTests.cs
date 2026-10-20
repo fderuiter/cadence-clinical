@@ -38,7 +38,7 @@ namespace Cadence.UnitTests.Gateway;
 /// </summary>
 public sealed class GatewayResilienceTests
 {
-    private const string ProxiedPath = "/api/v1/queries/q-1";
+    private const string ProxiedPath = "/api/v1/execution/subjects/s-1";
 
     [Fact]
     [Trait("Category", "GxP_OQ")]

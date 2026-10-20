@@ -1,5 +1,4 @@
 using Cadence.Apps.Execution.Domain.Observations;
-using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Domain.Toxicity;
 using Cadence.Kernel;
@@ -40,10 +39,6 @@ public sealed class StagedAdverseEventReviewConfiguration : IEntityTypeConfigura
         builder.Property(r => r.ObservationId)
             .HasColumnName("observation_id")
             .HasConversion(c => c.HasValue ? c.Value.Value.ToString() : null, v => string.IsNullOrEmpty(v) ? (ObservationId?)null : ObservationId.Parse(v));
-
-        builder.Property(r => r.QueryId)
-            .HasColumnName("query_id")
-            .HasConversion(c => c.HasValue ? c.Value.Value.ToString() : null, v => string.IsNullOrEmpty(v) ? (QueryId?)null : QueryId.Parse(v));
 
         builder.Property(r => r.TestCode)
             .HasColumnName("test_code")

@@ -225,7 +225,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2271: Dynamic OpenAPI Schema Aggregation at the Gateway](2026-07-22-gateway-openapi-aggregation.md) (2026-07-22)
 - [ADR-2276: Signature Re-Authentication](2026-07-22-signature-re-authentication.md) (2026-07-22)
 - [ADR-2281: Secure API Signatures with Canonical JSON (Version 2 Sole Standard)](2026-07-23-canonical-json-signatures-and-rolling-versioning.md) (2026-07-23)
-- [ADR-054: Clinical Query Workflow and Role Authorization](2026-07-24-clinical-query-workflow-authorization.md) (2026-07-24)
+- [ADR-054: Clinical Query Workflow and Role Authorization](2026-07-24-clinical-query-workflow-authorization.md) (2026-07-24) _(Superseded by ADR-2622)_
 - [ADR-057: Rolling Versioning and Transition Support for Canonical JSON Signatures](2026-07-24-rolling-upgrade-and-canonical-json-signatures.md) (2026-07-24)
 - [ADR-085: Backward-Compatible Gateway Signature Verification](2026-07-27-backward-compatible-gateway-signature-verification.md) (2026-07-27)
 - [ADR-095: CI Schema Introspection and Gateway Aggregation Resilience](2026-07-27-ci-schema-introspection-and-gateway-aggregation.md) (2026-07-27)

@@ -82,7 +82,6 @@ start without it. An address that is not an absolute http or https URL fails sta
 | ---------------------------- | ------------------------------------------------------------------------ | --------------------------- |
 | `/api/v1/studies/**`         | designer                                                                 | `DESIGNER_SERVICE_URL`      |
 | `/api/v1/protocols/**`       | designer                                                                 | `DESIGNER_SERVICE_URL`      |
-| `/api/v1/queries/**`         | execution                                                                | `EXECUTION_SERVICE_URL`     |
 | `/api/v1/execution/**`       | execution                                                                | `EXECUTION_SERVICE_URL`     |
 | `/api/v1/etmf/**`            | etmf                                                                     | `ETMF_SERVICE_URL`          |
 | `/api/v1/interop/**`         | interop                                                                  | `INTEROP_SERVICE_URL`       |

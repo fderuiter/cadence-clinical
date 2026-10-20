@@ -168,7 +168,7 @@ internal static class FormEndpoints
         return result.Value is { } state ? TypedResults.Ok(FormSavedResponse.From(state)) : KernelErrorEndpoints.Problem(result.Error!);
     }
 
-    private static string IdempotencyKey(HttpContext context) => context.Request.Headers[IdempotencyKeyHeader].ToString().Trim();
+    internal static string IdempotencyKey(HttpContext context) => context.Request.Headers[IdempotencyKeyHeader].ToString().Trim();
 
     private static ProblemHttpResult BadRequest(string title, string detail) =>
         TypedResults.Problem(title: title, detail: detail, statusCode: StatusCodes.Status400BadRequest);

@@ -3,7 +3,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Cadence.Apps.Execution.Domain.Observations;
-using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
 
 namespace Cadence.Apps.Execution.Application.Serialization;
@@ -113,32 +112,4 @@ public sealed class TestCodeJsonConverter : JsonConverter<TestCode>
 
     public override void Write(Utf8JsonWriter writer, TestCode value, JsonSerializerOptions options) =>
         writer.WriteStringValue(value.Value);
-}
-
-public sealed class QueryIdJsonConverter : JsonConverter<QueryId>
-{
-    public override QueryId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        string? raw = reader.GetString();
-        return raw is null
-            ? throw new JsonException("Expected a non-null JSON string for QueryId.")
-            : new QueryId(Guid.Parse(raw));
-    }
-
-    public override void Write(Utf8JsonWriter writer, QueryId value, JsonSerializerOptions options) =>
-        writer.WriteStringValue(value.Value);
-}
-
-public sealed class QueryStatusJsonConverter : JsonConverter<QueryStatus>
-{
-    public override QueryStatus Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        string? raw = reader.GetString();
-        return QueryStatusCodec.TryParse(raw, out var status)
-            ? status
-            : throw new JsonException($"Invalid QueryStatus value: '{raw}'.");
-    }
-
-    public override void Write(Utf8JsonWriter writer, QueryStatus value, JsonSerializerOptions options) =>
-        writer.WriteStringValue(QueryStatusCodec.ToCode(value));
 }

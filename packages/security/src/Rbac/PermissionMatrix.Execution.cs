@@ -10,10 +10,10 @@ public static partial class PermissionMatrix
 
     /// <summary>
     /// The Execution module's route permissions (ADR-2510, ADR-2516). Route permissions are a coarse gate: the
-    /// application services keep their own role checks (<c>SubjectAuthority</c>, SDV, query lifecycle, e-signature
-    /// signer roles), and no permission here admits a role those checks refuse for every request. Separation of duties
-    /// (21 CFR 11.10(g), ICH E6(R3)): site staff enter and sign data, monitors verify and query it, data managers manage
-    /// queries, coding and imports, auditors only read, and only the pharmacist touches blinded supply.
+    /// application services keep their own role checks (<c>SubjectAuthority</c>, SDV, e-signature signer
+    /// roles), and no permission here admits a role those checks refuse for every request. Separation of duties
+    /// (21 CFR 11.10(g), ICH E6(R3)): site staff enter and sign data, monitors verify it, data managers manage coding and
+    /// imports, auditors only read, and only the pharmacist touches blinded supply.
     /// </summary>
     private static partial void AddExecutionGrants()
     {
@@ -24,7 +24,7 @@ public static partial class PermissionMatrix
         AddAdjudicationGrants();
     }
 
-    /// <summary>Subjects, eCRF forms, observations, SDV, queries and medical-coding synonyms.</summary>
+    /// <summary>Subjects, eCRF forms, observations, SDV and medical-coding synonyms.</summary>
     private static void AddEdcGrants()
     {
         // Subject and eCRF reads beyond the sponsor, site and CRA roles that already hold them: monitors need them for
@@ -44,15 +44,6 @@ public static partial class PermissionMatrix
         foreach (string role in new[] { RoleNormalization.ROLE_SPONSOR_DM, RoleNormalization.ROLE_EXTERNAL_MONITOR })
         {
             Grant(role, "sdv", "read", "update", "flag");
-        }
-
-        // Queries: monitors raise and read them; auditors read them. Closing, reopening and cancelling a query is the
-        // CRA's or the data manager's decision (ClinicalQueryApplicationService.CanManageQueryLifecycle).
-        Grant("monitor", "query_lifecycle", "create", "read");
-        Grant(RoleNormalization.ROLE_AUDITOR_CANONICAL, "query_lifecycle", "read");
-        foreach (string role in new[] { RoleNormalization.ROLE_CRA_CANONICAL, RoleNormalization.ROLE_SPONSOR_DM })
-        {
-            Grant(role, "query_lifecycle", "manage");
         }
 
         // Synonym dictionaries: imported and deactivated by data managers and study designers (the roles the

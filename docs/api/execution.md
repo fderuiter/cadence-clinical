@@ -36,16 +36,6 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `POST` | `/api/v1/execution/labs/toxicity/evaluate` | EvaluateLabToxicityEndpoint | Evaluate Lab Toxicity Endpoint |
 | `GET` | `/api/v1/execution/labs/toxicity/review-queue` | ListStagedAeReviewQueue | List Staged Ae Review Queue |
 | `POST` | `/api/v1/execution/labs/toxicity/review/{review_id}/action` | ActionStagedAeReview | Action Staged Ae Review |
-| `GET` | `/api/v1/execution/queries` | ListClinicalQueries |  |
-| `POST` | `/api/v1/execution/queries` | CreateClinicalQuery |  |
-| `POST` | `/api/v1/execution/queries/batch-cancel` | BatchCancelClinicalQueries |  |
-| `POST` | `/api/v1/execution/queries/batch-close` | BatchCloseClinicalQueries |  |
-| `POST` | `/api/v1/execution/queries/batch-respond` | BatchRespondClinicalQueries |  |
-| `GET` | `/api/v1/execution/queries/{id}` | GetClinicalQueryById |  |
-| `POST` | `/api/v1/execution/queries/{id}/cancel` | CancelClinicalQuery |  |
-| `POST` | `/api/v1/execution/queries/{id}/close` | CloseClinicalQuery |  |
-| `POST` | `/api/v1/execution/queries/{id}/reopen` | ReopenClinicalQuery |  |
-| `POST` | `/api/v1/execution/queries/{id}/respond` | RespondClinicalQuery |  |
 | `POST` | `/api/v1/execution/rtsm/cgt/apheresis` |  |  |
 | `POST` | `/api/v1/execution/rtsm/cgt/bedside-verify` |  |  |
 | `GET` | `/api/v1/execution/rtsm/cgt/certificates/{studyId}` |  |  |

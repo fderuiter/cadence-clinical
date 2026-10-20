@@ -113,6 +113,7 @@
           :enrollment-id="routeQuery('enrollmentId')"
           :collection-spec-id="routeQuery('collectionSpecId')"
           :planned-activity-id="routeQuery('plannedActivityId')"
+          :can-manage-queries="canManageQueries(authStore)"
           @dirty-change="formPanelDirty = $event"
         />
 
@@ -330,6 +331,7 @@ import { useSchemaIngestion } from "../composables/useSchemaIngestion";
 import { useEcrfDrafts } from "../composables/useEcrfDrafts";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { isDemoBuild } from "../utils/demoMode.js";
+import { canManageQueries } from "../canvas/authority";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
@@ -811,10 +813,10 @@ function commitChange(field, oldValue, newValue, reason) {
   );
 }
 
-// Query Operations
-// Queries here live on the sample form, and their only sync target (/queries/sync) exists in the demo mock API
-// alone, so outside demo builds they are refused (#4827). They move onto Execution's query endpoints once the
-// eCRF renders real form definitions (#4828).
+// Sample-form queries
+// These queries are local state on the sample form (store.formQueries and the local ledger); no service receives them,
+// so outside demo builds they are refused (#4827). Real eCRF queries are raised, answered, reopened, closed and
+// cancelled on the case report form's values above, through the Execution module (EcrfFormPanel, #5461).
 function createQuery(fieldId, msgFromComponent = null) {
   const msg = msgFromComponent !== null ? msgFromComponent : "";
   if (!msg) {

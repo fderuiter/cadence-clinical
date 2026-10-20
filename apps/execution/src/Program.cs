@@ -7,7 +7,6 @@ using Cadence.Apps.Execution.Application.Coding;
 using Cadence.Apps.Execution.Application.Compliance;
 using Cadence.Apps.Execution.Application.Devices;
 using Cadence.Apps.Execution.Application.Observations;
-using Cadence.Apps.Execution.Application.Queries;
 using Cadence.Apps.Execution.Application.Serialization;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Application.Supply;
@@ -158,7 +157,6 @@ builder.Services.AddCadenceDurableSigTokenStore<ExecutionDbContext>();
 builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();
 builder.Services.AddScoped<IConsentRepository, ConsentRepository>();
 builder.Services.AddScoped<ISiteComplianceRepository, SiteComplianceRepository>();
-builder.Services.AddScoped<IClinicalQueryRepository, ClinicalQueryRepository>();
 builder.Services.AddScoped<IStagedAdverseEventReviewRepository, StagedAdverseEventReviewRepository>();
 builder.Services.AddScoped<ICecRepository, CecRepository>();
 builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
@@ -186,7 +184,6 @@ builder.Services.AddScoped<IAuditActorScope>(sp => sp.GetRequiredService<Ambient
 // this slice yet).
 builder.Services.AddScoped<ISubjectApplicationService, SubjectApplicationService>();
 builder.Services.AddScoped<ISiteComplianceApplicationService, SiteComplianceApplicationService>();
-builder.Services.AddScoped<IClinicalQueryApplicationService, ClinicalQueryApplicationService>();
 builder.Services.AddScoped<ILabToxicityGovernanceService, LabToxicityGovernanceService>();
 builder.Services.AddScoped<ILabRangeImportService, LabRangeImportService>();
 builder.Services.AddScoped<ICecApplicationService, CecApplicationService>();
@@ -248,7 +245,6 @@ app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service =
 // Route-group registrations
 app.MapSubjectEndpoints();
 app.MapSiteComplianceEndpoints();
-app.MapQueryEndpoints();
 app.MapLabToxicityEndpoints();
 app.MapLabRangeEndpoints();
 app.MapCecEndpoints();

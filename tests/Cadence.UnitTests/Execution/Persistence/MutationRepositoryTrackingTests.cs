@@ -1,11 +1,9 @@
+using System;
 using System.Threading.Tasks;
 
-using Cadence.Apps.Execution.Domain.Observations;
-using Cadence.Apps.Execution.Domain.Queries;
-using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Domain.Cec;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
-using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -17,16 +15,22 @@ using Xunit;
 namespace Cadence.UnitTests.Execution.Persistence;
 
 /// <summary>
-/// Regression coverage for mutations that were silently dropped: the query application
-/// service loaded aggregates through the <c>AsNoTracking()</c> read path, mutated them, then called
-/// <c>SaveChangesAsync</c>, which persisted nothing. Each test loads through the repository's tracked
-/// <c>GetForUpdateAsync</c>, mutates, saves, and re-reads through a fresh context to prove the change reached the
+/// Regression coverage for mutations that were silently dropped: an application service loaded aggregates
+/// through the <c>AsNoTracking()</c> read path, mutated them, then called <c>SaveChangesAsync</c>, which persisted
+/// nothing. Each test loads through the repository's tracked
+/// <c>Get…ForUpdateAsync</c>, mutates, saves, and re-reads through a fresh context to prove the change reached the
 /// database. Uses SQLite for the same reason as <see cref="ConsentRepositoryTests"/>.
 /// </summary>
 public class MutationRepositoryTrackingTests
 {
-    private static readonly StudyCode Study = new("STUDY-TRACKING");
-    private static readonly SubjectCode Subject = new("SUBJ-TRACKING");
+    private static readonly DateTime SignedAt = new(2026, 2, 10, 12, 0, 0, DateTimeKind.Utc);
+
+    private static readonly SignatureManifest ChairSignature = SignatureManifest.Create(
+        SignerId: "chair-user-1",
+        SignerRole: "CEC_CHAIR",
+        SigningReason: "I confirm this clinical endpoint adjudication determination is final",
+        SignedAt: SignedAt,
+        PayloadHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
 
     private static SqliteConnection OpenSqliteConnection()
     {
@@ -46,24 +50,39 @@ public class MutationRepositoryTrackingTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    public async Task ClinicalQueryRepository_GetForUpdateAsync_ThenAnswer_PersistsResponse()
+    public async Task CecRepository_GetDossierForUpdateAsync_ThenAdjudicate_PersistsDetermination()
     {
         var ct = TestContext.Current.CancellationToken;
         using var connection = OpenSqliteConnection();
         await EnsureSchemaAsync(connection);
 
-        var query = ClinicalQuery.Raise(Study, Subject, new TestCode("SYSBP"), "Value out of range").Value!;
-        var seedRepository = new ClinicalQueryRepository(CreateContext(connection));
-        await seedRepository.AddAsync(query, ct);
+        var dossier = CecDossier.Initialize(
+            dossierId: "DOSSIER-TRACKING",
+            eventId: "EVT-TRACKING",
+            studyId: "STUDY-TRACKING",
+            subjectId: "SUBJ-TRACKING",
+            maskedSubjectId: "MASK-TRACKING",
+            candidateEventType: "CARDIOVASCULAR",
+            reportedTerm: "Myocardial Infarction",
+            reportedOnsetDate: "2026-02-10");
+        var seedRepository = new CecRepository(CreateContext(connection));
+        await seedRepository.AddDossierAsync(dossier, ct);
         await seedRepository.SaveChangesAsync(ct);
 
-        var repository = new ClinicalQueryRepository(CreateContext(connection));
-        var loaded = await repository.GetForUpdateAsync(query.Id, ct);
-        loaded!.Answer("Confirmed with source", "site-user-1").IsSuccess.Should().BeTrue();
+        var repository = new CecRepository(CreateContext(connection));
+        var loaded = await repository.GetDossierForUpdateAsync(dossier.Id, ct);
+        loaded!.AdjudicateChair(
+            finalClassification: "ISCHEMIC_STROKE",
+            finalSubtype: null,
+            finalAdjudicatedOnsetDate: "2026-02-10",
+            adjudicationRationale: "Confirmed by MRI",
+            signatureManifest: ChairSignature,
+            finalizedAt: SignedAt).IsSuccess.Should().BeTrue();
         await repository.SaveChangesAsync(ct);
 
         await using var verify = CreateContext(connection);
-        var persisted = await verify.ClinicalQueries.AsNoTracking().SingleAsync(q => q.Id == query.Id, ct);
-        persisted.Status.Should().Be(QueryStatus.Answered);
+        var persisted = await verify.CecDossiers.AsNoTracking().SingleAsync(d => d.Id == dossier.Id, ct);
+        persisted.WorkflowStatus.Should().Be("FINALIZED_BY_CHAIR");
+        persisted.FinalConsensusClassification.Should().Be("ISCHEMIC_STROKE");
     }
 }
