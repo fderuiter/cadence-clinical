@@ -12,6 +12,7 @@ The Intelligence engine's runtime for AI agents ([ADR-2630](../../docs/adr/2026-
 - `Application/`: the module commands `StartAgentRun`, `CompleteAgentRun` (capability `agent_run.record`, verb Propose) and `SetAgentControl` (capability `agent_control.set`, verb Execute) with their handlers and validators; the ports `ITaskConfigurationCatalog`, `IModelProvider`, `IModelProviderRegistry`, `IAgentLedger`; and `AgentRunner`.
 - `Infrastructure/Models/`: the model port is Microsoft.Extensions.AI `IChatClient`. The Anthropic provider uses the official `Anthropic` SDK and is configured only when an API key is set; `FakeChatClient` answers deterministically and is allowed only in `Development` and `Testing`, so CI never calls a real model.
 - `Infrastructure/Persistence/`: `IntelligenceDbContext` (schema `intelligence`, tables `agent_runs` and `agent_controls`, both under tenant Row-Level Security), its migrations, `EfAgentLedger` and `IntelligenceDatabase.GrantAppRoleSql`.
+- `Evaluation/`: the measurement layer ([ADR-2634](../../docs/adr/2026-10-20-ai-task-configurations-are-measured-by-versioned-evaluations-and-production-signals.md), [guide](../../docs/ai/EVALUATION.md)): versioned evaluation sets, deterministic checks, the calibrated LLM judge, the `EvaluationHarness` and its hashed run records, improvement comparisons, and production signals per configuration version (`ConfigurationMonitor`, `ProductionSignalRecorder`). `AddIntelligenceEvaluation()` registers the harness.
 - `Intent/` and `Endpoints/IntentEndpoints.cs`: the rule-based command-palette intent router, moved from the AI gateway unchanged.
 
 ## How a run works
@@ -45,5 +46,6 @@ Section `Intelligence` ([docs/ENVIRONMENT_VARIABLES.md](../../docs/ENVIRONMENT_V
 
 ## Tests
 
+- `tests/Cadence.UnitTests/Intelligence/Evaluation`: the set loader's refusals, each deterministic check, judge calibration, the harness floors and run records, comparisons, and the production monitor.
 - `tests/Cadence.UnitTests/Intelligence`: domain, runner (kill switch, budget, timeout, failure), providers and the intent router.
 - `tests/Cadence.IntegrationTests/Intelligence`: the module on PostgreSQL 18 through the kernel command pipeline: ledger hash and audit, kill switch in the runner and the command, budget, Row-Level Security between tenants, requester checks, and the application role's missing `DELETE`.
