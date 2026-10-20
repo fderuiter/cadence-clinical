@@ -315,6 +315,69 @@ describe("kernelApi observations (ADR-2620)", () => {
   );
 });
 
+describe("kernelApi proposals (ADR-2635)", () => {
+  const PROPOSAL = "proposal:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d70";
+  let fetchSpy;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    fetchSpy = vi.spyOn(globalThis, "fetch");
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+  });
+
+  it("lists a study's proposals with the status and limit asked for", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, []));
+
+    await kernelApi.listProposals(STUDY, { status: "Open", limit: 20 });
+
+    const url = new URL(fetchSpy.mock.calls.at(-1)[0].url);
+    expect(url.pathname).toBe(
+      `/api/v1/kernel/studies/${encodeURIComponent(STUDY)}/proposals`
+    );
+    expect(url.searchParams.get("status")).toBe("Open");
+    expect(url.searchParams.get("limit")).toBe("20");
+  });
+
+  it("reads a proposal by its unversioned reference", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, { ref: PROPOSAL }));
+
+    await kernelApi.getProposal(`${PROPOSAL}@3`);
+
+    expect(new URL(fetchSpy.mock.calls.at(-1)[0].url).pathname).toBe(
+      `/api/v1/kernel/proposals/${encodeURIComponent(PROPOSAL)}`
+    );
+  });
+
+  it("rejects with the reason for change and the idempotency key as headers", async () => {
+    const state = {
+      ref: `${PROPOSAL}@2`,
+      status: "Rejected",
+      content_hash: "sha256:x",
+      decided_at: "2026-10-20T10:00:00Z",
+      decided_by: "reviewer-1",
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, state));
+
+    const result = await kernelApi.rejectProposal({
+      proposalRef: `${PROPOSAL}@1`,
+      reason: "Value is in range",
+      idempotencyKey: "key-9",
+    });
+
+    expect(result).toEqual(state);
+    const request = fetchSpy.mock.calls.at(-1)[0];
+    expect(request.method).toBe("POST");
+    expect(new URL(request.url).pathname).toBe(
+      `/api/v1/kernel/proposals/${encodeURIComponent(PROPOSAL)}/rejection`
+    );
+    expect(request.headers.get("Idempotency-Key")).toBe("key-9");
+    expect(request.headers.get("X-Change-Reason")).toBe("Value is in range");
+  });
+});
+
 describe("isMasked", () => {
   it("is true only when the kernel names a mask reason", () => {
     expect(isMasked({ kind: "study_site", ref: null, mask: "Blinded" })).toBe(

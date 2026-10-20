@@ -16,6 +16,7 @@ using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Intelligence;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Protocol;
@@ -63,6 +64,17 @@ public sealed class KernelApiHostTests : IDisposable
         ProtocolVersionId.New(), StudyId.FromGuid(Study.Id), 2, FirstVersion.Id, ProtocolVersionStatus.Draft, null,
         "Add a week 12 visit", null, null);
 
+    private static readonly NodeRef HiddenAffected = NodeRef.For(EnrollmentId.New(), 2);
+    private static readonly ProposalSummary OpenProposal = new(
+        ProposalId.New(), StudyId.FromGuid(Study.Id), "Close the stale queries at site 017",
+        new ProposalPlan(ArtifactVersionId.New(), ArtifactId.New(), "Proposed plan and reasoning", 1, "application/json", "sha256:plan"),
+        [NodeRef.For(FirstVersion.Id, 3).ToString(), HiddenAffected.ToString()], null, ["protocol.approve"],
+        new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 9, 8, 0, 0, 0, TimeSpan.Zero),
+        "agent:deviation-triage", ActorKind.AutomationAgent, "data-manager@sponsor.test", "claude-opus-5", 0.9, "sha256:proposal", ProposalStatus.Open,
+        null, null, null, null, false, null, null);
+
+    private static readonly ProposalSummary HiddenProposal = OpenProposal with { Id = ProposalId.New(), Intent = "Hidden" };
+
     private static readonly string[] ReadPaths =
     [
         $"/api/v1/kernel/nodes/{Study}", $"/api/v1/kernel/nodes/{Study}/path", $"/api/v1/kernel/nodes/{Study}/children",
@@ -70,6 +82,7 @@ public sealed class KernelApiHostTests : IDisposable
         "/api/v1/kernel/search?q=CAD", $"/api/v1/kernel/studies/{Study}/protocol-versions",
         $"/api/v1/kernel/protocol-versions/{NodeRef.For(FirstVersion.Id)}", $"/api/v1/kernel/activity?scope={Study}",
         $"/api/v1/kernel/protocol-versions/{NodeRef.For(Amendment.Id)}/schedule-of-activities",
+        $"/api/v1/kernel/studies/{Study}/proposals", $"/api/v1/kernel/proposals/{NodeRef.For(OpenProposal.Id)}",
     ];
 
     /// <summary>The amendment's design: CARDIO-2 with its week 12 visit a week later.</summary>
@@ -88,6 +101,7 @@ public sealed class KernelApiHostTests : IDisposable
     private readonly HideSome _visibility = new();
     private readonly FakeTenantDirectory _directory = new();
     private readonly FakeProtocolVersions _protocol = new();
+    private readonly FakeProposals _proposals = new();
     private readonly FakeAuthorityStore _authority = new();
     private readonly FakeLineage _lineage = new();
     private readonly FakeActivityStore _activity = new();
@@ -222,6 +236,10 @@ public sealed class KernelApiHostTests : IDisposable
     [InlineData("/api/v1/kernel/nodes/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/dependents?edge_kind=3", HttpStatusCode.BadRequest)]
     [InlineData("/api/v1/kernel/protocol-versions/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/impact", HttpStatusCode.BadRequest)]
     [InlineData("/api/v1/kernel/protocol-versions/protocol_version:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/impact", HttpStatusCode.NotFound)]
+    [InlineData("/api/v1/kernel/studies/site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/proposals", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/studies/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/proposals", HttpStatusCode.NotFound)]
+    [InlineData("/api/v1/kernel/proposals/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/proposals/proposal:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e", HttpStatusCode.NotFound)]
     [InlineData("/api/v1/kernel/activity?scope=nonsense", HttpStatusCode.BadRequest)]
     [InlineData("/api/v1/kernel/activity?family=Nope", HttpStatusCode.BadRequest)]
     [InlineData("/api/v1/kernel/activity?family=2", HttpStatusCode.BadRequest)]
@@ -832,6 +850,75 @@ public sealed class KernelApiHostTests : IDisposable
     private HttpClient Client(bool knownTenant = true, bool hostVisibility = false) =>
         Factory(knownTenant, hostVisibility: hostVisibility).CreateSignedClient();
 
+    /// <summary>
+    /// A study's proposals are listed for the Canvas with the filter and the host's clock passed to the reader: each
+    /// keeps its intent, plan, model and content hash; an affected object the reader may not see keeps its place masked,
+    /// and a proposal the reader may not see is masked whole. Reading a hidden proposal by its reference is refused.
+    /// </summary>
+    [Fact]
+    public async Task Proposals_AreListedAndRead_WithHiddenObjectsMaskedInPlace()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        _visibility.Hidden[HiddenAffected] = MaskReason.Blinded;
+        _visibility.Hidden[NodeRef.For(HiddenProposal.Id)] = MaskReason.NotPermitted;
+        using var client = Client();
+
+        using var list = await ReadJsonAsync(client, $"/api/v1/kernel/studies/{Study}/proposals?status=open&limit=10", ct);
+        var items = list.RootElement.EnumerateArray().ToList();
+        items.Should().HaveCount(2);
+        var open = items[0];
+        open.GetProperty("ref").GetString().Should().Be(NodeRef.For(OpenProposal.Id).ToString());
+        open.GetProperty("intent").GetString().Should().Be(OpenProposal.Intent);
+        open.GetProperty("model_id").GetString().Should().Be("claude-opus-5");
+        open.GetProperty("proposed_by_kind").GetString().Should().Be("AutomationAgent");
+        open.GetProperty("requested_by").GetString().Should().Be("data-manager@sponsor.test");
+        open.GetProperty("content_hash").GetString().Should().Be("sha256:proposal");
+        open.GetProperty("status").GetString().Should().Be("Open");
+        open.GetProperty("plan").GetProperty("title").GetString().Should().Be("Proposed plan and reasoning");
+        var affected = open.GetProperty("affected").EnumerateArray().ToList();
+        affected.Select(a => a.GetProperty("ref").GetString()).Should().Equal(OpenProposal.Affected);
+        affected[0].GetProperty("mask").ValueKind.Should().Be(JsonValueKind.Null);
+        affected[1].GetProperty("mask").GetString().Should().Be("Blinded");
+        items[1].GetProperty("ref").ValueKind.Should().Be(JsonValueKind.Null);
+        items[1].GetProperty("mask").GetString().Should().Be("NotPermitted");
+        _proposals.Lists.Should().ContainSingle().Which.Should().Be((Tenant, ProposalStatus.Open, 10));
+
+        using var read = await ReadJsonAsync(client, $"/api/v1/kernel/proposals/{NodeRef.For(OpenProposal.Id)}", ct);
+        read.RootElement.GetProperty("requested_capabilities").EnumerateArray().Select(c => c.GetString()).Should().Equal("protocol.approve");
+
+        var hidden = await client.GetAsync(new Uri($"/api/v1/kernel/proposals/{NodeRef.For(HiddenProposal.Id)}", UriKind.Relative), ct);
+        hidden.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    /// <summary>A status the kernel does not define and a limit out of range are refused before the reader runs.</summary>
+    [Theory]
+    [InlineData("status=pending")]
+    [InlineData("status=5")]
+    [InlineData("limit=0")]
+    [InlineData("limit=201")]
+    public async Task ProposalList_WithAnInvalidFilter_IsRefused(string query)
+    {
+        using var client = Client();
+
+        var response = await client.GetAsync(new Uri($"/api/v1/kernel/studies/{Study}/proposals?{query}", UriKind.Relative), TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        _proposals.Lists.Should().BeEmpty();
+    }
+
+    /// <summary>A study the reader may not see has its proposals refused, not masked, because a list would describe it.</summary>
+    [Fact]
+    public async Task ProposalList_OfAHiddenStudy_IsRefused()
+    {
+        _visibility.Hidden[Study.AtVersion(3)] = MaskReason.NotPermitted;
+        using var client = Client();
+
+        var response = await client.GetAsync(new Uri($"/api/v1/kernel/studies/{Study}/proposals", UriKind.Relative), TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        _proposals.Lists.Should().BeEmpty();
+    }
+
     private WebApplicationFactory<Cadence.Kernel.Host.Program> Factory(
         bool knownTenant = true, string? dropClaim = null, bool hostVisibility = false)
     {
@@ -853,6 +940,8 @@ public sealed class KernelApiHostTests : IDisposable
                 services.AddSingleton<ITenantDirectory>(_directory);
                 services.RemoveAll<IProtocolVersionReader>();
                 services.AddSingleton<IProtocolVersionReader>(_protocol);
+                services.RemoveAll<IProposalReader>();
+                services.AddSingleton<IProposalReader>(_proposals);
                 services.RemoveAll<IAuthorityStore>();
                 services.AddSingleton<IAuthorityStore>(_authority);
                 services.RemoveAll<IKernelLineage>();
@@ -1029,6 +1118,22 @@ public sealed class KernelApiHostTests : IDisposable
             Tenants.Add(tenant);
             return Task.FromResult(version == Amendment.Id ? ScheduleOfActivities.Compile(AmendedDesign) : null);
         }
+    }
+
+    private sealed class FakeProposals : IProposalReader
+    {
+        public List<(TenantId Tenant, ProposalStatus? Status, int Limit)> Lists { get; } = [];
+
+        public Task<IReadOnlyList<ProposalSummary>> ListForStudyAsync(
+            TenantId tenant, StudyId study, ProposalStatus? status, DateTimeOffset now, int limit, CancellationToken cancellationToken)
+        {
+            Lists.Add((tenant, status, limit));
+            IReadOnlyList<ProposalSummary> proposals = NodeRef.For(study) == Study ? [OpenProposal, HiddenProposal] : [];
+            return Task.FromResult(proposals);
+        }
+
+        public Task<ProposalSummary?> GetAsync(TenantId tenant, ProposalId proposal, DateTimeOffset now, CancellationToken cancellationToken) =>
+            Task.FromResult(new[] { OpenProposal, HiddenProposal }.FirstOrDefault(p => p.Id == proposal));
     }
 
     /// <summary>Three entries newest first: a visible screening, a status change a test may hide, and an older one.</summary>

@@ -137,6 +137,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2631: Agent Task Configurations Are Versioned and Qualified per Tenant](2026-10-20-agent-task-configurations-are-versioned-and-qualified-per-tenant.md) (2026-10-20)
 - [ADR-2632: Agents Act for One Person, and Approved Proposals Execute as Their Approver](2026-10-20-agents-act-for-one-person-and-approved-proposals-execute-as-their-approver.md) (2026-10-20)
 - [ADR-2634: AI Task Configurations Are Measured by Versioned Evaluations and Production Signals](2026-10-20-ai-task-configurations-are-measured-by-versioned-evaluations-and-production-signals.md) (2026-10-20)
+- [ADR-2635: AI in the Canvas Is Labelled, Scoped to the Selection and Ends in a Proposal](2026-10-20-ai-in-the-canvas-is-labelled-scoped-and-ends-in-a-proposal.md) (2026-10-20)
 
 ### 1. Core Platform & Execution Engine
 

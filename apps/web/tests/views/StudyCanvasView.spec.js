@@ -10,7 +10,11 @@ import App from "../../src/App.vue";
 import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 
 vi.mock("../../src/api/kernelApi", () => ({
-  kernelApi: { search: vi.fn(async () => []), getCommands: vi.fn() },
+  kernelApi: {
+    listProposals: vi.fn(async () => []),
+    search: vi.fn(async () => []),
+    getCommands: vi.fn(),
+  },
 }));
 
 vi.mock("../../src/api/executionApi", () => ({

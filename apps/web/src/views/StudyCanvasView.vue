@@ -63,6 +63,21 @@
         <kbd>⌘K</kbd>
       </button>
 
+      <button
+        id="btn-ai-assistance"
+        type="button"
+        class="ai-toggle"
+        :aria-pressed="aiEnabled"
+        aria-describedby="ai-assistance-note"
+        @click="setAiEnabled(!aiEnabled)"
+      >
+        AI assistance: {{ aiEnabled ? "on" : "off" }}
+      </button>
+      <span id="ai-assistance-note" class="sr-only">
+        Shows or hides Assist and the palette's Ask entry. Proposals an agent
+        already made still wait for a decision in Needs attention.
+      </span>
+
       <div class="user">
         <span id="canvas-user">{{
           authStore.identity?.username || "Signed in"
@@ -142,7 +157,15 @@
           tabindex="-1"
           :aria-label="workspaceLabel"
         >
-          <template v-if="recordRef">
+          <ProposalReview
+            v-if="proposalRef"
+            :key="proposalRef"
+            :study-code="studyCode"
+            :proposal-ref="proposalRef"
+            :reviewer="authStore.userId ?? ''"
+          />
+
+          <template v-else-if="recordRef">
             <ParticipantRecord
               v-if="recordParticipant"
               :participant="recordParticipant"
@@ -163,6 +186,10 @@
 
           <template v-else-if="!stage">
             <StudyPulse @drill="drillToParticipants" />
+            <NeedsAttention
+              :key="`attention-${studyCode}`"
+              :study-code="studyCode"
+            />
             <StudyActivity :key="studyCode" :study-code="studyCode" />
           </template>
 
@@ -241,6 +268,7 @@
               : null
           "
           :can-manage-participants="canChangeParticipants"
+          :assist-prompt="askText"
         />
       </div>
     </template>
@@ -315,6 +343,9 @@ import ProtocolVersionsSection from "../components/canvas/ProtocolVersionsSectio
 import StudyActivity from "../components/canvas/StudyActivity.vue";
 import StudyPulse from "../components/canvas/StudyPulse.vue";
 import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue";
+import NeedsAttention from "../components/ai/NeedsAttention.vue";
+import ProposalReview from "../components/ai/ProposalReview.vue";
+import { useAiAssistance } from "../ai/aiAssistance";
 
 /**
  * The Clinical Canvas (docs/ux/CLINICAL_CANVAS.md): one study at a time, navigated by lifecycle stage, in
@@ -322,8 +353,10 @@ import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue"
  * service; what no service serves yet is absent rather than mocked (§6.1).
  *
  * The URL holds the whole state, so every view is addressable (UX-2):
- * `/studies/:studyCode?stage=&section=&status=&site=&node=&participant=`. `node` (the participant or protocol version in
- * the inspector) and `participant` (the participant whose data is open) are kernel NodeRefs (ADR-2481).
+ * `/studies/:studyCode?stage=&section=&status=&site=&node=&participant=&proposal=&ask=`. `node` (the participant or
+ * protocol version in the inspector), `participant` (the participant whose data is open) and `proposal` (the proposal
+ * under review in the workspace, ADR-2635) are kernel NodeRefs (ADR-2481). `ask` is a question from the palette for
+ * the inspector's Assist.
  */
 interface StudyQuery {
   stage?: string;
@@ -332,12 +365,16 @@ interface StudyQuery {
   site?: string;
   node?: string;
   participant?: string;
+  proposal?: string;
+  ask?: string;
 }
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const canvas = useStudyCanvasStore();
+
+const { enabled: aiEnabled, setEnabled: setAiEnabled } = useAiAssistance();
 
 const paletteOpen = ref(false);
 const typedStudy = ref("");
@@ -400,6 +437,11 @@ const participantRef = (value: unknown): NodeRef | null => {
   return node?.kind === "participant" ? node : null;
 };
 const recordRef = computed(() => participantRef(route.query.participant));
+const proposalRef = computed(() => {
+  const node = parseNodeRef(route.query.proposal);
+  return node?.kind === "proposal" ? formatNodeRef(node) : "";
+});
+const askText = computed(() => single(route.query.ask).trim());
 const recordParticipant = computed<SubjectSummary | null>(() =>
   recordRef.value
     ? (canvas.knownParticipants[recordRef.value.id] ?? null)
@@ -433,6 +475,7 @@ const zoomCurrent = computed(() => {
 });
 
 const workspaceLabel = computed(() => {
+  if (proposalRef.value) return "Proposal review";
   if (recordRef.value) {
     return `${recordParticipant.value?.subject_id ?? "Participant"} data`;
   }
@@ -513,6 +556,15 @@ function drillToParticipants(status: string) {
 
 function goToPaletteTarget(target: PaletteTarget) {
   paletteOpen.value = false;
+  if (target.ask) {
+    // Ask keeps the view and its selection, and opens Assist with the question.
+    router.push({
+      name: "study",
+      params: { studyCode: target.studyCode },
+      query: { ...route.query, ask: target.ask },
+    });
+    return;
+  }
   const node = target.participant
     ? tryNodeRef("participant", target.participant.id)
     : null;
@@ -666,6 +718,30 @@ onUnmounted(() => document.removeEventListener("keydown", onGlobalKeydown));
   background: transparent;
   color: var(--neutral-dark);
   cursor: pointer;
+}
+
+.ai-toggle {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--neutral-dark);
+  cursor: pointer;
+}
+
+.ai-toggle[aria-pressed="true"] {
+  border-color: var(--semantic-color-ai-border, #c4b5fd);
+  background: var(--semantic-color-ai-bg, #f5f3ff);
+  color: var(--semantic-color-ai, #6d28d9);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .palette-trigger kbd {

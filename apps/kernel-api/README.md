@@ -55,6 +55,16 @@ The host also runs the kernel command pipeline (`AddKernelCommandPipeline`), so 
 
 `POST /api/v1/execution/forms`, `GET /api/v1/execution/forms/{formId}` and `PUT /api/v1/execution/forms/{formId}/values` open, read and save eCRF forms; the [Execution module README](../execution/module/README.md) describes them.
 
+### Proposals (ADR-2635)
+
+Proposals an agent or a person made (ADR-2489), for the Canvas's Needs Attention and review screen. A proposal, its plan and each affected object the caller may not see stay in place with their mask (ADR-2471).
+
+| Route (`/api/v1/kernel/…`)                        | Does                                                                                                                                                                                                                |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET studies/{studyRef}/proposals?status=&limit=` | The study's proposals, newest first. `status` is `Open`, `Approved`, `Rejected`, `Withdrawn` or `Expired` (an open proposal past its expiry); `limit` is 1 to 200 (default 50). A hidden study is refused with 403. |
+| `GET proposals/{ref}`                             | One proposal: intent, plan, affected objects, requested capabilities, proposer and kind, model, confidence, content hash, status and decision. 403 when the caller may not see it.                                  |
+| `POST proposals/{ref}/rejection`                  | Rejects an open proposal (`proposal.reject`) with the signed reason for change and an `Idempotency-Key`. 409 `K.Proposal.NotOpen` or `K.Proposal.Expired`; 422 without a reason. Approval waits on #5552.           |
+
 Also `GET /healthz`, `/healthz/live`, `/healthz/ready` and `GET /api/v1/kernel/status` (anonymous). OpenAPI and the Scalar reference are mapped in Development only; the exported document is [docs/openapi/kernel_openapi.json](../../docs/openapi/kernel_openapi.json).
 
 The gateway forwards `/api/v1/kernel/**`, `/api/v1/ai/**` and `/api/v1/execution/forms/**` here. Compose publishes host port 8018 (container port 8080); the gateway's default upstream is `http://localhost:8018` (`KERNEL_SERVICE_URL`).

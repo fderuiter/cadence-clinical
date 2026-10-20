@@ -85,6 +85,13 @@
   --semantic-color-error: var(--color-error);
   --semantic-color-error-bg: var(--color-error-bg);
 
+  /* AI output (UX-8, ADR-2635): one colour reserved for what an agent produced, never used for state.
+     Text on the AI background passes WCAG 2.1 AA (6.5:1; 7.1:1 on white); the border marks AI regions without colour alone,
+     alongside the "AI" label. */
+  --semantic-color-ai: #6d28d9;
+  --semantic-color-ai-bg: #f5f3ff;
+  --semantic-color-ai-border: #c4b5fd;
+
   /* Info & Notice Banners / Badges */
   --semantic-color-info: #1e40af;
   --semantic-color-info-bg: #eff6ff;
