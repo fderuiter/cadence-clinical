@@ -17,7 +17,6 @@
         "subject_id": "SUBJ-001",
         "study_id": "STUDY-001",
         "site_id": "SITE-101",
-        "arm_id": "ARM-A",
         "demographics": {
           "name": "Test Subject One",
           "birthdate": "1980-01-15",
@@ -42,7 +41,6 @@
         "subject_id": "SUBJ-002",
         "study_id": "STUDY-001",
         "site_id": "SITE-101",
-        "arm_id": "ARM-B",
         "demographics": null
       }
     },

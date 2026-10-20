@@ -1,5 +1,5 @@
 {
-  "$schema_note": "Expected outputs for both input_valid_nominal.json and input_valid_edge_cases.json, matched by scenario_id. `body` uses `<opaque>` for values that are non-deterministic (generated UUIDs, ciphertext) but must be non-null/present, and `<unchanged>` where a field must equal whatever the precondition set it to. Side effects not visible in the HTTP/service response body are listed under `db_assertions`/`audit_assertions`.",
+  "$schema_note": "Expected outputs for both input_valid_nominal.json and input_valid_edge_cases.json, matched by scenario_id. `body` uses `<opaque>` for values that are non-deterministic (generated UUIDs, ciphertext) but must be non-null/present, and `<unchanged>` where a field must equal whatever the precondition set it to. Side effects not visible in the HTTP/service response body are listed under `db_assertions`/`audit_assertions`. Deliberate departure from legacy (#5607, ADR-2640): no subject response carries `treatment_group` and no request carries `arm_id`; the arm comes only from randomisation, is stored encrypted on the allocation, and only subject detail reveals it, to an unblinded caller.",
   "results": [
     {
       "scenario_id": "SCN-001-A",
@@ -9,7 +9,6 @@
         "subject_id": "SUBJ-001",
         "study_id": "STUDY-001",
         "site_id": "SITE-101",
-        "treatment_group": "ARM-A",
         "status": "SCREENING",
         "active_protocol_version": "1.0.0",
         "encrypted_demographics": "<opaque-non-null>"
@@ -27,7 +26,6 @@
         "subject_id": "SUBJ-002",
         "study_id": "STUDY-001",
         "site_id": "SITE-101",
-        "treatment_group": "ARM-B",
         "status": "SCREENING",
         "active_protocol_version": "1.0.0",
         "encrypted_demographics": null
@@ -82,8 +80,7 @@
         "encrypted_demographics": null,
         "status": "ENROLLED",
         "active_protocol_version": "1.0.0",
-        "site_id": null,
-        "treatment_group": null
+        "site_id": null
       },
       "db_assertions": { "status": "ENROLLED" },
       "note": "Since #4771 (D8) the response maps the subject's real state, so the body matches the DB row. The legacy Python response hard-coded SCREENING/1.0.0 and a null site here."
@@ -98,8 +95,7 @@
         "encrypted_demographics": "<unchanged>",
         "status": "SCREENING",
         "active_protocol_version": "1.0.0",
-        "site_id": null,
-        "treatment_group": null
+        "site_id": null
       },
       "db_assertions": { "strat_factors": { "site": "B" } },
       "note": "The subject is still SCREENING, so the response status is its real state (see SCN-003-A for D8, #4771)."
@@ -153,8 +149,7 @@
         "encrypted_demographics": null,
         "status": "ENROLLED",
         "active_protocol_version": "1.0.0",
-        "site_id": "SITE-COMPLIANT-01",
-        "treatment_group": null
+        "site_id": "SITE-COMPLIANT-01"
       },
       "db_assertions": { "status": "ENROLLED" },
       "note": "Since #4771 (D8) the response maps the subject's real state, so the body matches the DB row. The legacy Python response hard-coded SCREENING/1.0.0 and a null site here."
@@ -247,7 +242,6 @@
         "subject_id": "SUBJ-PAPER",
         "study_id": "STUDY-PAPER",
         "site_id": null,
-        "treatment_group": null,
         "status": "SCREENING",
         "active_protocol_version": "1.0.0",
         "encrypted_demographics": "<opaque-non-null>"
@@ -283,7 +277,6 @@
         "subject_id": "SUBJ-EDGE-001",
         "study_id": "STUDY-001",
         "site_id": "",
-        "treatment_group": null,
         "status": "SCREENING",
         "active_protocol_version": "1.0.0",
         "encrypted_demographics": null
@@ -318,8 +311,7 @@
         "encrypted_demographics": "<unchanged>",
         "status": "WITHDRAWN",
         "active_protocol_version": "1.0.0",
-        "site_id": null,
-        "treatment_group": null
+        "site_id": null
       },
       "db_assertions": { "status": "WITHDRAWN" },
       "note": "Since #4771 (D8) the response maps the subject's real state, so the body matches the DB row. The legacy Python response hard-coded SCREENING/1.0.0 and a null site here."
@@ -371,8 +363,7 @@
         "encrypted_demographics": null,
         "status": "ENROLLED",
         "active_protocol_version": "2.1.0",
-        "site_id": "SITE-EDGE-010-COMPLIANT",
-        "treatment_group": null
+        "site_id": "SITE-EDGE-010-COMPLIANT"
       },
       "db_assertions": {
         "status": "ENROLLED",
