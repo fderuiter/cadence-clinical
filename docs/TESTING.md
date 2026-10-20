@@ -26,6 +26,26 @@ library with no tests. Helpers that need no application reference belong in `pac
 GitHub Actions minutes are not always available, so run the suites locally before pushing rather than
 relying on CI.
 
+## Ratchet baselines
+
+Some checks record pre-existing debt in a checked-in baseline instead of failing on it: the kernel boundary rules
+(`tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries.baseline.txt`), the `deid` gate
+(`.deid-baseline.txt`) and the detect-secrets allowlist (`.secrets.baseline`). Any other `*.baseline.txt` or
+`*-baseline.txt` file is treated the same way. A baseline may only shrink:
+
+- Fix a new violation instead of recording it. `CADENCE_UPDATE_BASELINE=1` regenerates a baseline so that paid-down
+  entries can be deleted; it is not a way to accept new ones.
+- The `baseline-ratchet` gate (`pnpm cadence check baseline-ratchet`) compares every baseline with its copy at
+  `git merge-base origin/main HEAD` and fails when an entry was added. Entries are compared as a multiset, so
+  reordering, comment lines and removed entries pass; a new baseline file counts as growth of all its entries.
+- When debt really must be accepted, say why in the commit that adds it, with a trailer:
+  `git commit --trailer "Baseline-Growth: <reason>"`. One such trailer on any commit of the branch admits the
+  branch's growth. The pre-commit hook runs before the message exists, so for that commit also set
+  `CADENCE_BASELINE_GROWTH="<reason>"`; the variable is honoured only in the pre-commit hook, and `pnpm cadence check`
+  and CI still require the trailer.
+- Without `origin/main` (or with a shallow clone that shares no history with it) the gate is skipped locally with a
+  message and fails in CI (`CI` or `GITHUB_ACTIONS` set), so a missing ref never lets growth through.
+
 ## Tests that need PostgreSQL
 
 Some behaviour only exists on a real database: advisory locks, transactions, and EF Core migrations. Those

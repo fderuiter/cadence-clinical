@@ -59,15 +59,16 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 | `vulnerabilities`     | NuGet dependency vulnerabilities (npm is not audited yet)                                                                                                                                       |
 | `rtm`                 | Requirement tag integrity and traceability matrix alignment                                                                                                                                     |
 | `gxp-snapshot`        | The branch (or, in the pre-commit hook, the staged files) does not change the generated RTM, IQ/OQ/PQ report or `docs/SDLC/runs/` unless `CADENCE_GXP_SNAPSHOT=1` (ADR-2532)                    |
+| `baseline-ratchet`    | No ratchet baseline (`*.baseline.txt`, `.deid-baseline.txt`, `.secrets.baseline`) gained an entry since the `origin/main` merge base, unless a commit has a `Baseline-Growth:` trailer          |
 
-`pnpm cadence check rtm` (or `gxp-rtm-validate`) runs Gate 22 to validate the requirement tags and integrity stamps without regenerating the matrix; it requires the matrix's test mapping to be current only with `CADENCE_GXP_SNAPSHOT=1`. `pnpm cadence check gxp-snapshot` (or `gxp-snapshot-guard`) runs the snapshot guard.
+`pnpm cadence check rtm` (or `gxp-rtm-validate`) runs Gate 22 to validate the requirement tags and integrity stamps without regenerating the matrix; it requires the matrix's test mapping to be current only with `CADENCE_GXP_SNAPSHOT=1`. `pnpm cadence check gxp-snapshot` (or `gxp-snapshot-guard`) runs the snapshot guard. `pnpm cadence check baseline-ratchet` (or `baselines`) runs the baseline ratchet ([docs/TESTING.md](TESTING.md#ratchet-baselines)); it runs inside `pnpm cadence check`, so CI's `Run Cadence quality sentinels` step and `cadence ci` run it too.
 
 ## Pre-commit hook
 
 `scripts/setup_wizard.sh` points git at `.githooks/` (`git config core.hooksPath .githooks`). The `pre-commit` hook (`pre-commit.ps1` on Windows) runs:
 
 1. `dotnet format Cadence.sln --verify-no-changes --include <staged .cs files>`, skipped when no C# file is staged.
-2. `pnpm cadence check --pre-commit`: all 22 gates, with two shortcuts. The two format gates are skipped because step 1 covers the staged files. The `openapi` gate only checks `docs/api` against the committed `docs/openapi` specs, because exporting the specs from the services takes minutes. `pnpm cadence check`, `make verify` and CI run every gate in full.
+2. `pnpm cadence check --pre-commit`: all 22 gates, with two shortcuts. The two format gates are skipped because step 1 covers the staged files. The `openapi` gate only checks `docs/api` against the committed `docs/openapi` specs, because exporting the specs from the services takes minutes. The `gxp-snapshot` and `baseline-ratchet` gates check the staged copies; `baseline-ratchet` admits staged growth when `CADENCE_BASELINE_GROWTH="<reason>"` is set, and the commit then needs a `Baseline-Growth: <reason>` trailer. `pnpm cadence check`, `make verify` and CI run every gate in full.
 
 Additionally, `.pre-commit-config.yaml` configures `rhysd/actionlint` and local `action-pinning-check` (`scripts/check-action-pinning.py`) hooks to ensure all GitHub Actions references in `.github/workflows/` are syntax-checked and pinned to 40-character commit SHAs.
 

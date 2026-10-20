@@ -157,6 +157,11 @@ Every PR updates what its change makes stale, in the same PR:
   `.deid-baseline.txt`. That baseline may only shrink. When a flagged line is not PHI (demo data, a code-system
   URL), put a `deid-ignore` comment on that line rather than adding to the baseline. When the gate reports stale
   baseline entries, drop them with `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid`.
+- Ratchet baselines (`kernel-boundaries.baseline.txt`, `.deid-baseline.txt`, `.secrets.baseline` and any other
+  `*.baseline.txt`) may only shrink. The `baseline-ratchet` gate fails when a branch adds an entry, unless a commit on
+  the branch says why in a `Baseline-Growth: <reason>` trailer (`git commit --trailer "Baseline-Growth: <reason>"`).
+  For the commit that stages the growth, set `CADENCE_BASELINE_GROWTH="<reason>"` so the pre-commit hook admits it
+  ([docs/TESTING.md](docs/TESTING.md#ratchet-baselines)).
 - Do not re-add Python code or tooling; the remaining Python reference sources are listed in
   [docs/PYTHON_REFERENCE_INVENTORY.md](docs/PYTHON_REFERENCE_INVENTORY.md) and are removed as their ports are
   verified ([#4789](https://github.com/fderuiter/cadence-clinical/issues/4789)).
