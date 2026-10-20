@@ -10709,7 +10709,7 @@
         "tags": [
           "IcsrTemplateEndpoints"
         ],
-        "summary": "Renders an ICSR E2B(R3) safety report as Liquid XML.",
+        "summary": "Renders an ICSR E2B(R3) safety report as Liquid XML; a report missing a mandatory element is refused with 400 naming each one.",
         "operationId": "RenderIcsrReport",
         "requestBody": {
           "content": {
@@ -10722,6 +10722,26 @@
           "required": true
         },
         "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/xml": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "403": {
             "description": "Forbidden",
             "content": {
@@ -25423,6 +25443,53 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Safety_HttpValidationProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           }
         }
       },

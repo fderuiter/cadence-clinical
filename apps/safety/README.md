@@ -22,10 +22,17 @@ Safety and pharmacovigilance scaffold. It holds the safety case, ICSR reporting 
 - `GET /healthz`, `GET /healthz/live`, `GET /healthz/ready` (anonymous; mapped by `MapCadenceHealthAndStatusEndpoints` and `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready` checks `SafetyDbContext`.
 - `GET /api/v1/safety/status` (anonymous status payload).
 - `POST /api/v1/safety/icsr/render`: renders an `IcsrReport` through `e2b_r3_icsr.xml.liquid` and returns `application/xml`. The template reads the report as `icsr`; field values are XML-escaped ([templating](../../packages/templating/README.md)). Needs `safety_report:create` (sysadmin, sponsor medical monitor); other callers get `403` ([ADR-2511](../../docs/adr/2026-09-30-template-render-routes-need-a-permission.md)).
+  A report missing a mandatory element (`header` message id, sender, receiver and transmission date, the worldwide
+  unique case id, the patient id, at least one reaction with a term, at least one suspect drug with a name) is refused
+  with a `400` validation problem whose `errors` are keyed by the rendered element path (for example
+  `header/message_id`), instead of being rendered with an empty element (`Domain/IcsrMandatoryElements.cs`, #5464).
+  The output is not validated against the ICH E2B(R3) schema: no XSD is in the repository, and the template's
+  element names are a simplified layout, not the HL7 v3 ICSR message structure.
 - DSUR periodic reports, under `/api/v1/safety/dsur` and the `/api/v1/safety/periodic-reports` aliases:
   - `POST .../compile` and `PUT .../{id}` need `safety_report:create`; `GET .../{id}` and the list need
     `safety_report:read`. The compiler (`CreatedBy`) and each audit entry are the verified caller; a request without one
-    gets `401`, never a default user. An update needs a `reasonForChange` (`400` without one; no default reason is filled in) and is refused on a LOCKED report (`409`).
+    gets `401`, never a default user. The period bounds are stored as UTC whatever offset the request gives them in
+    (PostgreSQL `timestamptz` accepts only UTC, so a `+02:00` bound used to fail with `500`, #5464). An update needs a `reasonForChange` (`400` without one; no default reason is filled in) and is refused on a LOCKED report (`409`).
   - `POST /api/v1/safety/dsur/{id}/approve` (and `/periodic-reports/{id}/approve`) signs and locks the report. It needs
     `safety_report:approve`, which only the sponsor medical monitor holds (`PermissionMatrix.Safety.cs`, PRD-PVG-008),
     and a step-up signature token (`X-Sig-Token`, [ADR-2515](../../docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md))
@@ -63,8 +70,18 @@ outside a verified request fails. E-signature tokens are single use across insta
 
 - `tests/Cadence.UnitTests/Safety/`: `DsurCompilerEngineTests` (engine and handlers) and `DsurApprovalAuthorityTests`
   (approval through the real host on an in-memory database: permission, step-up token, signer, compiler, reason, lock).
+- `tests/Cadence.UnitTests/Safety/SafetyRouteAuthorityTests.cs` pins the permission of every safety route (the table
+  fails when a route is added or changes permission) and checks `401` unsigned and `403` without the permission, with
+  nothing written. `DsurCompilationTests` covers the missing compound (`400`), exposure and the MedDRA cross-tabulation
+  against a hand-computed fixture, and the lock (update after approval and a second approval are `409`).
+  `IcsrRenderTests` compares the render with `Safety/Golden/e2b_r3_icsr.golden.xml` and checks that each missing
+  mandatory element is reported.
 - `tests/Cadence.IntegrationTests/Safety/DsurApprovalPostgresTests.cs` runs compile and approval through the real host on
   PostgreSQL (`CADENCE_TEST_POSTGRES` or `CADENCE_TEST_DOCKER=1`) and checks the audit entries.
+  `SafetyPersistencePostgresTests.cs` checks that the migrations apply and match the model, and that compile, update
+  and approve store UTC `timestamptz` instants and the verified caller, reason and version of each write.
+- SAE reconciliation has entities and tables only (`SaeReconciliationRun`, `SaeDiscrepancy`, `SaeReconciliationJob`)
+  and no code path, so it has no tests.
 - Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 
 ## Run locally

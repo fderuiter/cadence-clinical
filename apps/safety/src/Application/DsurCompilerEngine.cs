@@ -70,13 +70,17 @@ public class DsurCompilerEngine
 
             var reportId = Guid.NewGuid().ToString();
 
+            // PostgreSQL timestamptz takes only UTC offsets; a period given in another offset is the same instant (#5464).
+            var periodStart = request.PeriodStart.ToUniversalTime();
+            var periodEnd = request.PeriodEnd.ToUniversalTime();
+
             var payload = new DsurReportPayload(
                 ReportId: reportId,
                 ReportType: "DSUR",
                 CompoundName: request.CompoundName,
                 StudyId: request.StudyId ?? string.Empty,
-                PeriodStart: request.PeriodStart,
-                PeriodEnd: request.PeriodEnd,
+                PeriodStart: periodStart,
+                PeriodEnd: periodEnd,
                 ExposureMetrics: exposureMetrics,
                 TotalSubjectExposure: exposureMetrics.TotalSubjectsEnrolled,
                 TotalSaes: lineListings.Count,
@@ -97,8 +101,8 @@ public class DsurCompilerEngine
                 ReportType = "DSUR",
                 CompoundName = request.CompoundName,
                 StudyId = request.StudyId ?? string.Empty,
-                PeriodStart = request.PeriodStart,
-                PeriodEnd = request.PeriodEnd,
+                PeriodStart = periodStart,
+                PeriodEnd = periodEnd,
                 Status = "DRAFT",
                 TotalSubjectExposure = (int)Math.Round(exposureMetrics.TotalPatientYearsExposure),
                 TotalSaes = lineListings.Count,
@@ -260,12 +264,12 @@ public class DsurCompilerEngine
 
         if (request.PeriodStart.HasValue)
         {
-            record.PeriodStart = request.PeriodStart.Value;
+            record.PeriodStart = request.PeriodStart.Value.ToUniversalTime();
         }
 
         if (request.PeriodEnd.HasValue)
         {
-            record.PeriodEnd = request.PeriodEnd.Value;
+            record.PeriodEnd = request.PeriodEnd.Value.ToUniversalTime();
         }
 
         record.ReasonForChange = request.ReasonForChange;

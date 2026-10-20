@@ -47,7 +47,7 @@ public sealed class TemplateOutputEncodingTests
 
         var result = await IcsrTemplateEndpoints.RenderIcsrAsync(report, FluidTemplateRenderer.Instance);
 
-        var document = XDocument.Parse(result.ResponseContent!);
+        var document = XDocument.Parse(result.Result.Should().BeOfType<ContentHttpResult>().Subject.ResponseContent!);
         document.Descendants(Hl7 + "patient_id").Single().Value.Should().Be(Hostile);
         document.Descendants(Hl7 + "reaction_term").Single().Value.Should().Be("Rash</reaction_term><injected/>");
         document.Descendants(Hl7 + "drug_name").Single().Value.Should().Be("Drug \"X\"");
