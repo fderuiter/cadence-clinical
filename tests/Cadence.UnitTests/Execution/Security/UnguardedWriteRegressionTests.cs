@@ -153,9 +153,9 @@ public sealed class UnguardedWriteRegressionTests(ExecutionApiFactory factory) :
     {
         using (client)
         {
-            var kits = new List<IpKitInventoryResponse>
+            var kits = new List<IpKitSeedItem>
             {
-                new($"KIT-{site}", "STUDY-REG", site, "LOT-REG", FakeClock.DefaultStart.AddYears(1), "AVAILABLE"),
+                new($"KIT-{site}", "LOT-REG", FakeClock.DefaultStart.AddYears(1), "AVAILABLE"),
             };
             return await client.PostAsJsonAsync(
                 "/api/v1/execution/rtsm/kits/seed-inventory",

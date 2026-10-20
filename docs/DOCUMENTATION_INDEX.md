@@ -536,6 +536,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2634: AI Task Configurations Are Measured by Versioned Evaluations and Production Signals](adr/2026-10-20-ai-task-configurations-are-measured-by-versioned-evaluations-and-production-signals.md) | Current | - Status: Accepted |
 | [ADR-2534: Quality Gates Live in One Registry and Each Must Be Able to Fail](adr/2026-10-20-quality-gates-live-in-one-registry-and-each-must-be-able-to-fail.md) | Current | - Status: Accepted |
 | [ADR-2519: Safety Signature Manifests Are Stored as Text](adr/2026-10-20-safety-signature-manifests-are-stored-as-text.md) | Current | - Status: Accepted |
+| [ADR-2640: Randomisation Allocates from Approved, Encrypted Scheme Versions](adr/2026-10-20-randomisation-allocates-from-approved-encrypted-scheme-versions.md) | Current | - Status: Accepted |
 | [ADR-2464: ICSR Render Emits ICH E2B(R3) Validated Against the ICH Schema](adr/2026-10-20-icsr-render-emits-ich-e2br3-validated-against-the-ich-schema.md) | Current | - Status: Accepted |
 | [ADR-2635: AI in the Canvas Is Labelled, Scoped to the Selection and Ends in a Proposal](adr/2026-10-20-ai-in-the-canvas-is-labelled-scoped-and-ends-in-a-proposal.md) | Current | - Status: Accepted |
 ## Developing and running

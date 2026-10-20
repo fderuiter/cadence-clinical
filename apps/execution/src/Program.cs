@@ -7,6 +7,7 @@ using Cadence.Apps.Execution.Application.Coding;
 using Cadence.Apps.Execution.Application.Compliance;
 using Cadence.Apps.Execution.Application.Devices;
 using Cadence.Apps.Execution.Application.Observations;
+using Cadence.Apps.Execution.Application.Randomization;
 using Cadence.Apps.Execution.Application.Serialization;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Application.Supply;
@@ -27,6 +28,7 @@ using Cadence.Database.Signatures;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.FieldProtection;
 using Cadence.Telemetry;
 
 using FluentValidation;
@@ -104,6 +106,14 @@ builder.Services.AddOptions<DemographicsEncryptionOptions>()
     .Validate(options => DemographicsEncryptionOptions.IsValidKey(options.KeyBase64), DemographicsEncryptionOptions.InvalidKeyMessage)
     .ValidateOnStart();
 
+// Randomisation key (#5607, ADR-2640): encrypts list slots, allocations and kit labels, and no other column. No
+// default: the host refuses to start without a valid 32-byte key.
+builder.Services.AddOptions<AllocationProtectionOptions>()
+    .Configure(options => options.KeyBase64 ??= builder.Configuration[AllocationProtectionOptions.ConfigurationKey])
+    .Validate(options => FieldProtectionKey.IsValid(options.KeyBase64), AllocationProtectionOptions.InvalidKeyMessage)
+    .ValidateOnStart();
+builder.Services.AddSingleton<IAllocationProtector, AesGcmAllocationProtector>();
+
 // IClock / IDemographicsEncryptionService / IDemographicsNormalizationService -- all three Singleton per
 // `02_technical_design.md` §2's DI-lifetime table ("stateless, holds [at most] configured key material").
 // DemographicsNormalizationService itself depends on IDemographicsEncryptionService + IClock, both already
@@ -156,6 +166,7 @@ builder.Services.AddCadenceDurableSigTokenStore<ExecutionDbContext>();
 // The repository ports, Scoped to match ExecutionDbContext's own lifetime
 builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();
 builder.Services.AddScoped<IConsentRepository, ConsentRepository>();
+builder.Services.AddScoped<IRandomizationRepository, RandomizationRepository>();
 builder.Services.AddScoped<ISiteComplianceRepository, SiteComplianceRepository>();
 builder.Services.AddScoped<IStagedAdverseEventReviewRepository, StagedAdverseEventReviewRepository>();
 builder.Services.AddScoped<ICecRepository, CecRepository>();
@@ -183,6 +194,7 @@ builder.Services.AddScoped<IAuditActorScope>(sp => sp.GetRequiredService<Ambient
 // explicit registration; see that constructor's own doc comment for why a real evaluator does not exist in
 // this slice yet).
 builder.Services.AddScoped<ISubjectApplicationService, SubjectApplicationService>();
+builder.Services.AddScoped<IRandomizationApplicationService, RandomizationApplicationService>();
 builder.Services.AddScoped<ISiteComplianceApplicationService, SiteComplianceApplicationService>();
 builder.Services.AddScoped<ILabToxicityGovernanceService, LabToxicityGovernanceService>();
 builder.Services.AddScoped<ILabRangeImportService, LabRangeImportService>();
@@ -244,6 +256,7 @@ app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service =
 
 // Route-group registrations
 app.MapSubjectEndpoints();
+app.MapRandomizationEndpoints();
 app.MapSiteComplianceEndpoints();
 app.MapLabToxicityEndpoints();
 app.MapLabRangeEndpoints();

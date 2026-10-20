@@ -51,7 +51,7 @@ public class SubjectApplicationServiceCreateTests
 
     private static SubjectCreateRequest CreateRequest(string subjectId, string studyId = "STUDY-001",
         string? siteId = null, DemographicsPayload? demographics = null) =>
-        new(subjectId, studyId, siteId, ArmId: null, demographics);
+        new(subjectId, studyId, siteId, demographics);
 
     [Fact]
     public async Task CreateAsync_GivenEmptyStudy_EnrollsSequentialSubjectsWithZeroBasedIndexAndScreeningStatus()

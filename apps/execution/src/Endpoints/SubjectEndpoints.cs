@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Randomization;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
@@ -256,7 +257,7 @@ public static partial class SubjectEndpoints
         }
 
         var result = await svc.AdvanceStateAsync(subjectId, request, changeReason, ct).ConfigureAwait(false);
-        return result.Match(r => Results.Ok(BlindFor(http.User, r)), e => e.ToProblemResult());
+        return result.Match(r => Results.Ok(r), e => e.ToProblemResult());
     }
 
     /// <summary>
@@ -277,12 +278,13 @@ public static partial class SubjectEndpoints
     }
 
     /// <summary>
-    /// <c>GET /api/v1/execution/subjects/{subjectId}</c>. Blinded by default: the treatment group is returned only
-    /// to a caller whose signed identity carries <see cref="CadenceClaimTypes.UnblindedAccess"/>, which the gateway
-    /// sets from the identity provider (#4943).
+    /// <c>GET /api/v1/execution/subjects/{subjectId}</c>. Blinded by default: the treatment group and kit are revealed
+    /// from the randomisation allocation only to a caller whose signed identity carries
+    /// <see cref="CadenceClaimTypes.UnblindedAccess"/>, which the gateway sets from the identity provider (#4943, #5607).
     /// </summary>
     public static async Task<IResult> GetSubjectDetailAsync(
-        string subjectId, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
+        string subjectId, HttpContext http, ISubjectApplicationService svc, IRandomizationApplicationService randomization,
+        CancellationToken ct, [FromServices] ILogger? logger = null)
     {
         bool isBlindedCaller = !IsUnblindedCaller(http.User);
 
@@ -291,8 +293,16 @@ public static partial class SubjectEndpoints
             logger.LogFetchingSubjectDetail(subjectId, isBlindedCaller);
         }
 
-        var result = await svc.GetDetailAsync(subjectId, isBlindedCaller, ct).ConfigureAwait(false);
-        return result.Match(Results.Ok, e => e.ToProblemResult());
+        var result = await svc.GetDetailAsync(subjectId, ct).ConfigureAwait(false);
+        if (result.IsFailure || isBlindedCaller)
+        {
+            return result.Match(Results.Ok, e => e.ToProblemResult());
+        }
+
+        var revealed = await randomization.RevealAsync(subjectId, ct).ConfigureAwait(false);
+        return Results.Ok(revealed is null
+            ? result.Value!
+            : result.Value! with { TreatmentGroup = revealed.Arm, InvestigationalProductId = revealed.KitNumber });
     }
 
     /// <summary>
@@ -318,7 +328,7 @@ public static partial class SubjectEndpoints
         }
 
         var result = await svc.UpdateDemographicsAsync(subjectId, request, changeReason, ct).ConfigureAwait(false);
-        return result.Match(r => Results.Ok(BlindFor(http.User, r)), e => e.ToProblemResult());
+        return result.Match(r => Results.Ok(r), e => e.ToProblemResult());
     }
 
     /// <summary>
@@ -343,15 +353,8 @@ public static partial class SubjectEndpoints
         }
 
         var result = await svc.DeleteDemographicsAsync(subjectId, changeReason, ct).ConfigureAwait(false);
-        return result.Match(r => Results.Ok(BlindFor(http.User, r)), e => e.ToProblemResult());
+        return result.Match(r => Results.Ok(r), e => e.ToProblemResult());
     }
-
-    /// <summary>
-    /// <paramref name="response"/> without its treatment group unless <paramref name="user"/> is unblinded, so a
-    /// state change or demographics edit cannot reveal the arm that subject detail withholds (#4943).
-    /// </summary>
-    private static SubjectResponse BlindFor(ClaimsPrincipal user, SubjectResponse response) =>
-        IsUnblindedCaller(user) ? response : response with { TreatmentGroup = null };
 
     /// <summary>Whether <paramref name="user"/> carries the gateway-signed unblinded-access claim.</summary>
     private static bool IsUnblindedCaller(ClaimsPrincipal user) =>

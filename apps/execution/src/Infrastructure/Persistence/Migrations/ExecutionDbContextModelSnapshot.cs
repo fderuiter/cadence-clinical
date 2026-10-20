@@ -1499,6 +1499,229 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.ToTable("lab_reference_ranges", (string)null);
                 });
 
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Randomization.RandomizationAllocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AllocatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AllocatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ArmCiphertext")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("KitNumber")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid?>("ListSlotId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("SchemeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SchemeVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SiteCode")
+                        .HasColumnType("text");
+
+                    b.Property<string>("StratificationFactorsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("StratumKey")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("StudyCode")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("VersionIndex")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubjectId")
+                        .IsUnique();
+
+                    b.HasIndex("StudyCode", "AllocatedAt");
+
+                    b.HasIndex("SchemeId", "StratumKey", "Sequence")
+                        .IsUnique();
+
+                    b.ToTable("randomization_allocations", (string)null);
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Randomization.RandomizationListSlot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AllocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ArmCiphertext")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SchemeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("StratumKey")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AllocationId")
+                        .IsUnique()
+                        .HasFilter("\"AllocationId\" IS NOT NULL");
+
+                    b.HasIndex("SchemeId", "StratumKey", "Sequence")
+                        .IsUnique();
+
+                    b.ToTable("randomization_list_slots", (string)null);
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Randomization.RandomizationScheme", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ApprovalReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ApprovedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ArmsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("BlockSizesJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("ConfigurationHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTimeOffset>("DraftedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DraftedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("ListSize")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<double>("PreferredArmProbability")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("RequiresKit")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("RetiredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("SlotsPerStratum")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("StratificationFactorsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("StudyCode")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("VersionIndex")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudyCode")
+                        .IsUnique()
+                        .HasDatabaseName("IX_randomization_schemes_StudyCode_Approved")
+                        .HasFilter("\"Status\" = 'Approved'");
+
+                    b.HasIndex("StudyCode", "Version")
+                        .IsUnique();
+
+                    b.ToTable("randomization_schemes", (string)null);
+                });
+
             modelBuilder.Entity("Cadence.Apps.Execution.Domain.Subjects.ClinicalSubject", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1552,9 +1775,6 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
-
-                    b.Property<string>("TreatmentGroupCiphertext")
-                        .HasColumnType("text");
 
                     b.Property<DateTimeOffset?>("UnblindedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1672,6 +1892,16 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTimeOffset?>("AssignedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("AssignedRandomizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AssignedSubjectCode")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1734,10 +1964,17 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<string>("TreatmentArmCiphertext")
+                        .HasColumnType("text");
+
                     b.Property<long>("VersionIndex")
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AssignedRandomizationId")
+                        .IsUnique()
+                        .HasFilter("\"AssignedRandomizationId\" IS NOT NULL");
 
                     b.HasIndex("StudyId", "SiteId", "KitNumber")
                         .IsUnique();
@@ -2253,6 +2490,30 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.HasIndex("Created");
 
                     b.ToTable("OutboxState");
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Randomization.RandomizationAllocation", b =>
+                {
+                    b.HasOne("Cadence.Apps.Execution.Domain.Randomization.RandomizationScheme", null)
+                        .WithMany()
+                        .HasForeignKey("SchemeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Cadence.Apps.Execution.Domain.Subjects.ClinicalSubject", null)
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Randomization.RandomizationListSlot", b =>
+                {
+                    b.HasOne("Cadence.Apps.Execution.Domain.Randomization.RandomizationScheme", null)
+                        .WithMany()
+                        .HasForeignKey("SchemeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxMessage", b =>

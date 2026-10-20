@@ -216,7 +216,6 @@ public static class DatabaseResetService
                 ""SubjectCode"" character varying(255) NOT NULL,
                 ""StudyCode"" character varying(255) NOT NULL,
                 ""SiteCode"" text,
-                ""TreatmentGroupCiphertext"" text,
                 ""Status"" character varying(32) NOT NULL,
                 ""ActiveProtocolVersion"" text NOT NULL,
                 ""EncryptedDemographics"" text,

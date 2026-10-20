@@ -13,8 +13,8 @@ namespace Cadence.Apps.Execution.Application.Subjects;
 public sealed record DemographicsPayload(string? Name, string? Birthdate, string? Gender, string? Race);
 
 /// <summary>
-/// <c>POST /api/v1/execution/subjects</c> request body. <see cref="SiteId"/> and <see cref="ArmId"/> are
-/// legitimately optional at enrollment time — a subject can be created before site/arm assignment.
+/// <c>POST /api/v1/execution/subjects</c> request body. <see cref="SiteId"/> is legitimately optional at enrollment
+/// time. There is no arm: a caller cannot choose one, because an arm comes only from randomisation (#5607).
 /// Per <c>01_spec.md</c> §3's truthiness-trap table, an explicitly-empty <see cref="SiteId"/> string is a
 /// <i>valid</i> value for this DTO's own shape rules (see <see cref="SubjectCreateRequestValidator"/>); the
 /// empty-string-as-absent ambiguity is resolved downstream at the domain layer by <c>SiteCode</c>'s
@@ -27,7 +27,6 @@ public sealed record SubjectCreateRequest(
     string SubjectId,
     string StudyId,
     string? SiteId,
-    string? ArmId,
     DemographicsPayload? Demographics);
 
 /// <summary>

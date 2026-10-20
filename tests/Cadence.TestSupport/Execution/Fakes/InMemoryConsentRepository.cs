@@ -45,6 +45,12 @@ public sealed class InMemoryConsentRepository : IConsentRepository
         return Task.FromResult(others);
     }
 
+    public Task<bool> HasCurrentConsentAsync(SubjectCode subjectCode, StudyCode studyCode, CancellationToken cancellationToken)
+    {
+        var consents = _store.Values.Where(c => c.SubjectCode == subjectCode && c.ProtocolVersion.StudyCode == studyCode).ToList();
+        return Task.FromResult(consents.Any(c => c.IcfSigned || c.IsPaperOverride) && !consents.Any(c => c.RequiresReconsent));
+    }
+
     public Task AddAsync(SubjectConsent consent, CancellationToken cancellationToken)
     {
         _store[consent.Id] = consent;

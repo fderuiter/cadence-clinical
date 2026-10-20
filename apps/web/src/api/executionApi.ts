@@ -54,7 +54,8 @@ export const executionApi = {
 
   /**
    * Adds a participant to a study in screening (POST /api/v1/execution/subjects). The canvas sends no
-   * demographics and no arm: identity details and randomization are not captured here. The reason reaches
+   * demographics: identity details are not captured here. A participant is never given an arm at creation;
+   * randomisation has its own route (ADR-2640). The reason reaches
    * the audit entry as X-Change-Reason.
    */
   addSubject({
@@ -69,7 +70,6 @@ export const executionApi = {
           subject_id: subjectCode,
           study_id: studyId,
           site_id: siteId || null,
-          arm_id: null,
           demographics: null,
         },
         headers: { "X-Change-Reason": encodeChangeReason(reason) },

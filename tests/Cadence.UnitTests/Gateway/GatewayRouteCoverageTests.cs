@@ -104,7 +104,7 @@ public sealed class GatewayRouteCoverageTests
         await using var factory = new WebApplicationFactory<TProgram>().WithWebHostBuilder(host => host
             .UseTestGatewaySecret()
             .UseTestPostgresConnectionString()
-            .UseTestDemographicsKey()
+            .UseTestDemographicsKey().UseTestRandomizationKey()
             .UseTestFieldProtectionKeys()
             .UseTestSceSigningKey()
             .UseTestImagingDeidentificationKeys());

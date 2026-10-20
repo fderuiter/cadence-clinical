@@ -54,6 +54,12 @@ public interface IConsentRepository
     Task<IReadOnlyList<SubjectConsent>> GetOtherRequiringReconsentAsync(SubjectCode subjectCode, StudyCode studyCode,
         int excludeVersionIndex, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Whether the participant holds a current informed consent in the study: at least one consent signed (or recorded
+    /// on paper) and none waiting for re-consent. Randomisation is refused without one (#5607, ICH E6(R3) 2.8).
+    /// </summary>
+    Task<bool> HasCurrentConsentAsync(SubjectCode subjectCode, StudyCode studyCode, CancellationToken cancellationToken);
+
     /// <summary>Stages a new <see cref="SubjectConsent"/> for insertion; takes effect on the next
     /// <see cref="SaveChangesAsync"/>.</summary>
     Task AddAsync(SubjectConsent consent, CancellationToken cancellationToken);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 
+using Cadence.Apps.Execution.Domain.Randomization;
 using Cadence.Core.Domain;
 using Cadence.Kernel.Time;
 
@@ -21,7 +22,6 @@ public sealed class ClinicalSubject : AggregateRoot<SubjectId>
     public SubjectCode SubjectCode { get; private set; } = default!;
     public StudyCode StudyCode { get; private set; } = default!;
     public SiteCode? SiteCode { get; private set; }
-    public string? TreatmentGroupCiphertext { get; private set; }
     public SubjectState Status { get; private set; }
     public string ActiveProtocolVersion { get; private set; } = "1.0.0";
     public string? EncryptedDemographics { get; private set; }
@@ -40,8 +40,7 @@ public sealed class ClinicalSubject : AggregateRoot<SubjectId>
     private ClinicalSubject() { } // EF Core
 
     public static ClinicalSubject Create(SubjectCode subjectCode, StudyCode studyCode, SiteCode? siteCode,
-        int enrollmentIndex, string? encryptedDemographics, IReadOnlyDictionary<string, object?>? stratFactors,
-        string? treatmentGroup = null)
+        int enrollmentIndex, string? encryptedDemographics, IReadOnlyDictionary<string, object?>? stratFactors)
     {
         var subject = new ClinicalSubject
         {
@@ -52,22 +51,8 @@ public sealed class ClinicalSubject : AggregateRoot<SubjectId>
             Status = SubjectState.Screening,
             EnrollmentIndex = enrollmentIndex,
             EncryptedDemographics = encryptedDemographics,
-            // MIG-SUBJ-026 fix: SubjectCreateRequest.ArmId (the enrollment-time treatment-arm assignment,
-            // e.g. "ARM-A") was declared on the request DTO but never threaded through anywhere -- neither
-            // this factory nor SubjectApplicationService.CreateAsync ever read it, so every created subject's
-            // TreatmentGroupCiphertext was unconditionally null regardless of what the caller supplied,
-            // confirmed directly blocking SCN-001-A's golden-master fixture (expects the response's
-            // treatment_group to echo the request's arm_id verbatim: "ARM-A", not null). This new, optional
-            // (defaulted, so every one of the ~20 already-merged call sites across tests/ and
-            // EConsentCompletedConsumer.cs -- which never assign a treatment group at auto-enrollment time --
-            // keeps compiling and behaving unchanged) parameter is unrelated to actual randomization/kit
-            // assignment (RandomizationId/KitReference below, still never populated here, out of this
-            // slice's scope per this same comment's original note) -- it is the enrollment-time arm_id, which
-            // the fixture's own expectation confirms round-trips as a plain string, not an encrypted/blinded
-            // value, despite this property's "Ciphertext"-suffixed name (the true RTSM-encrypted-and-blinded
-            // treatment group is a randomization-slice concern this port never reaches -- see
-            // SubjectApplicationService.GetDetailAsync's own remarks on that boundary).
-            TreatmentGroupCiphertext = treatmentGroup,
+            // No arm at creation: an arm comes only from randomisation, and is held encrypted on the
+            // RandomizationAllocation, never on the subject (#5607).
             RandomizationId = null,
             KitReference = null,
         };
@@ -114,6 +99,27 @@ public sealed class ClinicalSubject : AggregateRoot<SubjectId>
         if (IsPostRandomization())
             return SubjectErrors.SoftDeleteBlocked();
         EncryptedDemographics = null;
+        return true;
+    }
+
+    /// <summary>
+    /// Records the randomisation (#5607): the stratification factors it used become locked, the subject moves to
+    /// <see cref="SubjectState.Randomized"/>, and it names its allocation and kit. The arm is not held here.
+    /// </summary>
+    public Result<bool> Randomize(Guid randomizationId, string? kitReference, IReadOnlyDictionary<string, object?> stratFactors)
+    {
+        ArgumentNullException.ThrowIfNull(stratFactors);
+        if (RandomizationId is not null)
+            return RandomizationErrors.AlreadyRandomized();
+        var transition = SubjectTransitionGraph.Guard(Status, SubjectState.Randomized);
+        if (transition.IsFailure)
+            return SubjectErrors.InvalidStateTransition(SubjectStateCodec.ToCode(Status), "RANDOMIZED");
+
+        _stratFactors.Clear();
+        foreach (var (k, v) in stratFactors) _stratFactors[k] = v;
+        Status = SubjectState.Randomized;
+        RandomizationId = randomizationId;
+        KitReference = kitReference;
         return true;
     }
 

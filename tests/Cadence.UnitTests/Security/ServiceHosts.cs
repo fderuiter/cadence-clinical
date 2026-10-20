@@ -58,7 +58,7 @@ internal static class ServiceHosts
         {
             host.UseTestGatewaySecret()
                 .UseTestPostgresConnectionString()
-                .UseTestDemographicsKey()
+                .UseTestDemographicsKey().UseTestRandomizationKey()
                 .UseTestFieldProtectionKeys()
                 .UseTestSceSigningKey()
                 .UseTestImagingDeidentificationKeys();

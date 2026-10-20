@@ -1928,6 +1928,251 @@
         }
       }
     },
+    "/api/v1/execution/randomization/schemes": {
+      "post": {
+        "tags": [
+          "Randomization"
+        ],
+        "summary": "Drafts the study\u0027s next randomisation scheme version.",
+        "operationId": "DraftRandomizationScheme",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_RandomizationSchemeDraftRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_RandomizationSchemeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Randomization"
+        ],
+        "summary": "Lists a study\u0027s scheme versions, newest first, without lists or allocations.",
+        "operationId": "ListRandomizationSchemes",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_RandomizationSchemeResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/randomization/schemes/{schemeId}/approve": {
+      "post": {
+        "tags": [
+          "Randomization"
+        ],
+        "summary": "Approves a draft version for go-live, retiring the previous one and generating its list.",
+        "operationId": "ApproveRandomizationScheme",
+        "parameters": [
+          {
+            "name": "schemeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_RandomizationSchemeResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/subjects/{subjectId}/randomize": {
+      "post": {
+        "tags": [
+          "Subjects"
+        ],
+        "summary": "Randomises an enrolled participant under the live scheme and assigns a kit when it needs one.",
+        "operationId": "RandomizeSubject",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_RandomizeSubjectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_RandomizationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/labs/toxicity/review-queue": {
       "get": {
         "tags": [
@@ -15795,56 +16040,6 @@
           }
         }
       },
-      "Execution_IpKitInventoryResponse": {
-        "required": [
-          "kit_number",
-          "study_id",
-          "site_id",
-          "lot_number",
-          "expiration_date",
-          "status"
-        ],
-        "type": "object",
-        "properties": {
-          "kit_number": {
-            "type": "string"
-          },
-          "study_id": {
-            "type": "string"
-          },
-          "site_id": {
-            "type": "string"
-          },
-          "lot_number": {
-            "type": "string"
-          },
-          "expiration_date": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "status": {
-            "type": "string"
-          },
-          "residual_volume_ml": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "null",
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "residual_volume_percentage": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "null",
-              "number",
-              "string"
-            ],
-            "format": "double"
-          }
-        }
-      },
       "Execution_IpKitItemReconcileRequest": {
         "required": [
           "kit_number",
@@ -15916,6 +16111,56 @@
             "type": "string"
           },
           "scanned_lot_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_IpKitSeedItem": {
+        "required": [
+          "kit_number",
+          "lot_number",
+          "expiration_date"
+        ],
+        "type": "object",
+        "properties": {
+          "kit_number": {
+            "type": "string"
+          },
+          "lot_number": {
+            "type": "string"
+          },
+          "expiration_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "residual_volume_ml": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "residual_volume_percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "treatment_arm": {
             "type": [
               "null",
               "string"
@@ -16585,6 +16830,285 @@
           }
         }
       },
+      "Execution_RandomizationResponse": {
+        "required": [
+          "randomization_id",
+          "subject_id",
+          "study_id",
+          "scheme_version",
+          "stratum_key",
+          "kit_number",
+          "status",
+          "randomized_at"
+        ],
+        "type": "object",
+        "properties": {
+          "randomization_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subject_id": {
+            "$ref": "#/components/schemas/Execution_SubjectCode"
+          },
+          "study_id": {
+            "$ref": "#/components/schemas/Execution_StudyCode"
+          },
+          "scheme_version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "stratum_key": {
+            "type": "string"
+          },
+          "kit_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "randomized_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Execution_RandomizationSchemeDraftRequest": {
+        "required": [
+          "study_id",
+          "method",
+          "arms",
+          "stratification_factors",
+          "block_sizes",
+          "slots_per_stratum",
+          "preferred_arm_probability",
+          "requires_kit"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "$ref": "#/components/schemas/Execution_StudyCode"
+          },
+          "method": {
+            "type": "string"
+          },
+          "arms": {
+            "type": "object",
+            "additionalProperties": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "stratification_factors": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "block_sizes": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "slots_per_stratum": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "preferred_arm_probability": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "requires_kit": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Execution_RandomizationSchemeResponse": {
+        "required": [
+          "id",
+          "study_id",
+          "version",
+          "method",
+          "status",
+          "arms",
+          "stratification_factors",
+          "block_sizes",
+          "slots_per_stratum",
+          "preferred_arm_probability",
+          "requires_kit",
+          "list_size",
+          "configuration_hash",
+          "drafted_by",
+          "drafted_at",
+          "approved_by",
+          "approved_at",
+          "retired_at"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "study_id": {
+            "$ref": "#/components/schemas/Execution_StudyCode"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "method": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "arms": {
+            "type": "object",
+            "additionalProperties": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "stratification_factors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "block_sizes": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "slots_per_stratum": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "preferred_arm_probability": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "requires_kit": {
+            "type": "boolean"
+          },
+          "list_size": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "configuration_hash": {
+            "type": "string"
+          },
+          "drafted_by": {
+            "type": "string"
+          },
+          "drafted_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "approved_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "approved_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "retired_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "Execution_RandomizeSubjectRequest": {
+        "required": [
+          "stratification_factors"
+        ],
+        "type": "object",
+        "properties": {
+          "stratification_factors": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "Execution_SeedInventoryRequest": {
         "required": [
           "study_id",
@@ -16602,7 +17126,7 @@
           "kits": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Execution_IpKitInventoryResponse"
+              "$ref": "#/components/schemas/Execution_IpKitSeedItem"
             }
           }
         }
@@ -16974,7 +17498,6 @@
           "subject_id",
           "study_id",
           "site_id",
-          "arm_id",
           "demographics"
         ],
         "type": "object",
@@ -16986,12 +17509,6 @@
             "type": "string"
           },
           "site_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "arm_id": {
             "type": [
               "null",
               "string"
@@ -17135,7 +17652,6 @@
           "subject_id",
           "study_id",
           "site_id",
-          "treatment_group",
           "status",
           "active_protocol_version",
           "encrypted_demographics"
@@ -17159,12 +17675,6 @@
               {
                 "$ref": "#/components/schemas/Execution_SiteCode"
               }
-            ]
-          },
-          "treatment_group": {
-            "type": [
-              "null",
-              "string"
             ]
           },
           "status": {

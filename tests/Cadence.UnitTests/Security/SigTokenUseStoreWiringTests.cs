@@ -59,7 +59,7 @@ public sealed class SigTokenUseStoreWiringTests
     {
         using var host = new WebApplicationFactory<Cadence.Apps.Execution.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
-            .UseTestDemographicsKey()
+            .UseTestDemographicsKey().UseTestRandomizationKey()
             .UseTestPostgresConnectionString());
 
         host.Services.GetRequiredService<ISigTokenUseStore>()

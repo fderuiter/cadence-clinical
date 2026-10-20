@@ -92,5 +92,5 @@ public static class IpKitEndpoints
 public record SeedInventoryRequest(
     string StudyId,
     string SiteId,
-    List<IpKitInventoryResponse> Kits
+    List<IpKitSeedItem> Kits
 );

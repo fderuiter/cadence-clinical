@@ -150,6 +150,58 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/randomization/schemes": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lists a study's scheme versions, newest first, without lists or allocations. */
+    get: operations["ListRandomizationSchemes"];
+    put?: never;
+    /** Drafts the study's next randomisation scheme version. */
+    post: operations["DraftRandomizationScheme"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/randomization/schemes/{schemeId}/approve": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Approves a draft version for go-live, retiring the previous one and generating its list. */
+    post: operations["ApproveRandomizationScheme"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/subjects/{subjectId}/randomize": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Randomises an enrolled participant under the live scheme and assigns a kit when it needs one. */
+    post: operations["RandomizeSubject"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/execution/labs/toxicity/review-queue": {
     parameters: {
       query?: never;
@@ -1758,19 +1810,6 @@ export interface components {
       /** @default Batch IP kit reconciliation */
       reason_for_change: string;
     };
-    Execution_IpKitInventoryResponse: {
-      kit_number: string;
-      study_id: string;
-      site_id: string;
-      lot_number: string;
-      /** Format: date-time */
-      expiration_date: string;
-      status: string;
-      /** Format: double */
-      residual_volume_ml?: null | number | string;
-      /** Format: double */
-      residual_volume_percentage?: null | number | string;
-    };
     Execution_IpKitItemReconcileRequest: {
       kit_number: string;
       lot_number: string;
@@ -1788,6 +1827,18 @@ export interface components {
       study_id: string;
       site_id: string;
       scanned_lot_number?: null | string;
+    };
+    Execution_IpKitSeedItem: {
+      kit_number: string;
+      lot_number: string;
+      /** Format: date-time */
+      expiration_date: string;
+      status?: null | string;
+      /** Format: double */
+      residual_volume_ml?: null | number | string;
+      /** Format: double */
+      residual_volume_percentage?: null | number | string;
+      treatment_arm?: null | string;
     };
     Execution_LabReferenceRangeCreateRequest: {
       study_id: string;
@@ -1942,10 +1993,76 @@ export interface components {
       /** Format: int32 */
       version_index: number | string;
     };
+    Execution_RandomizationResponse: {
+      /** Format: uuid */
+      randomization_id: string;
+      subject_id: components["schemas"]["Execution_SubjectCode"];
+      study_id: components["schemas"]["Execution_StudyCode"];
+      /** Format: int32 */
+      scheme_version: number | string;
+      stratum_key: string;
+      kit_number: null | string;
+      status: string;
+      /** Format: date-time */
+      randomized_at: string;
+    };
+    Execution_RandomizationSchemeDraftRequest: {
+      study_id: components["schemas"]["Execution_StudyCode"];
+      method: string;
+      arms: {
+        [key: string]: number | string;
+      };
+      stratification_factors: null | {
+        [key: string]: string[];
+      };
+      block_sizes: null | (number | string)[];
+      /** Format: int32 */
+      slots_per_stratum: null | number | string;
+      /** Format: double */
+      preferred_arm_probability: null | number | string;
+      requires_kit: boolean;
+    };
+    Execution_RandomizationSchemeResponse: {
+      /** Format: uuid */
+      id: string;
+      study_id: components["schemas"]["Execution_StudyCode"];
+      /** Format: int32 */
+      version: number | string;
+      method: string;
+      status: string;
+      arms: {
+        [key: string]: number | string;
+      };
+      stratification_factors: {
+        [key: string]: string[];
+      };
+      block_sizes: (number | string)[];
+      /** Format: int32 */
+      slots_per_stratum: number | string;
+      /** Format: double */
+      preferred_arm_probability: number | string;
+      requires_kit: boolean;
+      /** Format: int32 */
+      list_size: number | string;
+      configuration_hash: string;
+      drafted_by: string;
+      /** Format: date-time */
+      drafted_at: string;
+      approved_by: null | string;
+      /** Format: date-time */
+      approved_at: null | string;
+      /** Format: date-time */
+      retired_at: null | string;
+    };
+    Execution_RandomizeSubjectRequest: {
+      stratification_factors: null | {
+        [key: string]: string;
+      };
+    };
     Execution_SeedInventoryRequest: {
       study_id: string;
       site_id: string;
-      kits: components["schemas"]["Execution_IpKitInventoryResponse"][];
+      kits: components["schemas"]["Execution_IpKitSeedItem"][];
     };
     Execution_SignatureManifest: {
       signer_id: string;
@@ -2040,7 +2157,6 @@ export interface components {
       subject_id: string;
       study_id: string;
       site_id: null | string;
-      arm_id: null | string;
       demographics:
         null | components["schemas"]["Execution_DemographicsPayload"];
     };
@@ -2073,7 +2189,6 @@ export interface components {
       subject_id: components["schemas"]["Execution_SubjectCode"];
       study_id: components["schemas"]["Execution_StudyCode"];
       site_id: null | components["schemas"]["Execution_SiteCode"];
-      treatment_group: null | string;
       status: string;
       active_protocol_version: null | string;
       encrypted_demographics: null | string;
@@ -2571,6 +2686,199 @@ export interface operations {
     responses: {
       /** @description Forbidden */
       403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ListRandomizationSchemes: {
+    parameters: {
+      query?: {
+        study_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_RandomizationSchemeResponse"][];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  DraftRandomizationScheme: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_RandomizationSchemeDraftRequest"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_RandomizationSchemeResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_HttpValidationProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ApproveRandomizationScheme: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        schemeId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_RandomizationSchemeResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  RandomizeSubject: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        subjectId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_RandomizeSubjectRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_RandomizationResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };

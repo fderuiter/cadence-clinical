@@ -4,11 +4,14 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Supply;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
+using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Kernel.Time;
 using Cadence.Testing;
+using Cadence.Testing.Security;
 
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 using Xunit;
 
@@ -19,6 +22,9 @@ public sealed class IpKitApplicationServiceTests : IAsyncLifetime
     private readonly SqliteConnection _connection;
     private readonly ExecutionDbContext _dbContext;
     private readonly IClock _clock;
+
+    private static readonly AesGcmAllocationProtector Protector = new(Options.Create(
+        new AllocationProtectionOptions { KeyBase64 = TestSecurityContext.RandomizationKeyBase64 }));
 
     public IpKitApplicationServiceTests()
     {
@@ -49,12 +55,12 @@ public sealed class IpKitApplicationServiceTests : IAsyncLifetime
     public async Task ProcessBatchReconciliationAsync_UpdatesKitStatuses_AndGeneratesCertificate()
     {
         var ct = TestContext.Current.CancellationToken;
-        var service = new IpKitApplicationService(_dbContext, _clock);
+        var service = new IpKitApplicationService(_dbContext, _clock, Protector);
 
-        var seedKits = new List<IpKitInventoryResponse>
+        var seedKits = new List<IpKitSeedItem>
         {
-            new("KIT-001", "STUDY-101", "SITE-01", "LOT-A100", _clock.UtcNow.AddMonths(12), "ACTIVE_AT_SITE"),
-            new("KIT-002", "STUDY-101", "SITE-01", "LOT-A100", _clock.UtcNow.AddMonths(12), "ACTIVE_AT_SITE")
+            new("KIT-001", "LOT-A100", _clock.UtcNow.AddMonths(12), "ACTIVE_AT_SITE"),
+            new("KIT-002", "LOT-A100", _clock.UtcNow.AddMonths(12), "ACTIVE_AT_SITE")
         };
         await service.SeedSiteInventoryAsync("STUDY-101", "SITE-01", seedKits, ct);
 
@@ -96,11 +102,11 @@ public sealed class IpKitApplicationServiceTests : IAsyncLifetime
     public async Task ValidateScannedBarcodeAsync_DetectsLotMismatch()
     {
         var ct = TestContext.Current.CancellationToken;
-        var service = new IpKitApplicationService(_dbContext, _clock);
+        var service = new IpKitApplicationService(_dbContext, _clock, Protector);
 
-        await service.SeedSiteInventoryAsync("STUDY-101", "SITE-01", new List<IpKitInventoryResponse>
+        await service.SeedSiteInventoryAsync("STUDY-101", "SITE-01", new List<IpKitSeedItem>
         {
-            new("KIT-999", "STUDY-101", "SITE-01", "LOT-EXPECTED-100", _clock.UtcNow.AddMonths(6), "ACTIVE_AT_SITE")
+            new("KIT-999", "LOT-EXPECTED-100", _clock.UtcNow.AddMonths(6), "ACTIVE_AT_SITE")
         }, ct);
 
         var validateMatch = await service.ValidateScannedBarcodeAsync(new IpKitScanValidateRequest("KIT-999", "STUDY-101", "SITE-01", "LOT-EXPECTED-100"), ct);

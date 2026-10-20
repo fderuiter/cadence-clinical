@@ -29,7 +29,7 @@ public class RequestValidatorTests
     public void SubjectCreateRequestValidator_FullyPopulatedRequest_Passes()
     {
         var request = new SubjectCreateRequest(
-            "SUBJ-001", "STUDY-001", "SITE-001", "ARM-A",
+            "SUBJ-001", "STUDY-001", "SITE-001",
             new DemographicsPayload("Jane Doe", "1990-01-01", "F", "White"));
 
         var result = new SubjectCreateRequestValidator().Validate(request);
@@ -46,7 +46,7 @@ public class RequestValidatorTests
         // SiteId is legitimately optional (01_spec.md §3 truthiness-trap table): neither "absent" (null)
         // nor "explicitly empty" ("") fails this DTO's own shape rules — the empty-string-as-absent
         // ambiguity is resolved downstream by SiteCode's constructor (MIG-SUBJ-001), not suppressed here.
-        var request = new SubjectCreateRequest("SUBJ-001", "STUDY-001", siteId, null, null);
+        var request = new SubjectCreateRequest("SUBJ-001", "STUDY-001", siteId, null);
 
         var result = new SubjectCreateRequestValidator().Validate(request);
 
@@ -56,7 +56,7 @@ public class RequestValidatorTests
     [Fact]
     public void SubjectCreateRequestValidator_SiteIdExceedsMaxLength_FailsMaximumLength()
     {
-        var request = new SubjectCreateRequest("SUBJ-001", "STUDY-001", new string('a', 256), null, null);
+        var request = new SubjectCreateRequest("SUBJ-001", "STUDY-001", new string('a', 256), null);
 
         var result = new SubjectCreateRequestValidator().Validate(request);
 
@@ -67,7 +67,7 @@ public class RequestValidatorTests
     [Fact]
     public void SubjectCreateRequestValidator_EmptySubjectId_FailsNotEmpty()
     {
-        var request = new SubjectCreateRequest("", "STUDY-001", null, null, null);
+        var request = new SubjectCreateRequest("", "STUDY-001", null, null);
 
         var result = new SubjectCreateRequestValidator().Validate(request);
 
@@ -78,7 +78,7 @@ public class RequestValidatorTests
     [Fact]
     public void SubjectCreateRequestValidator_EmptyStudyId_FailsNotEmpty()
     {
-        var request = new SubjectCreateRequest("SUBJ-001", "", null, null, null);
+        var request = new SubjectCreateRequest("SUBJ-001", "", null, null);
 
         var result = new SubjectCreateRequestValidator().Validate(request);
 
@@ -93,7 +93,7 @@ public class RequestValidatorTests
         int length, bool expectedValid)
     {
         var value = new string('a', length);
-        var request = new SubjectCreateRequest(value, value, null, null, null);
+        var request = new SubjectCreateRequest(value, value, null, null);
 
         var result = new SubjectCreateRequestValidator().Validate(request);
 

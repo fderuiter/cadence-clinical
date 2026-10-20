@@ -154,7 +154,7 @@ describe("executionApi: adding participants and changing their state", () => {
     };
   }
 
-  it("adds a participant with no demographics or arm, and the reason as X-Change-Reason", async () => {
+  it("adds a participant with no demographics, and the reason as X-Change-Reason", async () => {
     const created = { id: "s1", subject_id: "017-0009", status: "SCREENING" };
     fetchSpy.mockResolvedValueOnce(jsonResponse(201, created));
 
@@ -174,7 +174,6 @@ describe("executionApi: adding participants and changing their state", () => {
         subject_id: "017-0009",
         study_id: "CAD-101",
         site_id: "017",
-        arm_id: null,
         demographics: null,
       },
     });

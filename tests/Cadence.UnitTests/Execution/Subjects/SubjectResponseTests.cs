@@ -60,7 +60,6 @@ public class SubjectResponseTests
         response.Id.Should().Be(subject.Id);
         response.SubjectId_.Should().Be(subject.SubjectCode);
         response.StudyId.Should().Be(subject.StudyCode);
-        response.TreatmentGroup.Should().Be(subject.TreatmentGroupCiphertext);
         response.ActiveProtocolVersion.Should().Be(subject.ActiveProtocolVersion);
         response.EncryptedDemographics.Should().Be(subject.EncryptedDemographics);
     }
@@ -99,7 +98,7 @@ public class SubjectResponseTests
     {
         var response = new SubjectResponse(
             new SubjectId(Guid.Parse("11111111-1111-1111-1111-111111111111")),
-            new SubjectCode("SUBJ-EDGE-010"), new StudyCode("STUDY-001"), SiteId: null, TreatmentGroup: null,
+            new SubjectCode("SUBJ-EDGE-010"), new StudyCode("STUDY-001"), SiteId: null,
             Status: "SCREENING", ActiveProtocolVersion: "1.0.0", EncryptedDemographics: null);
 
         using var document = JsonDocument.Parse(JsonSerializer.Serialize(response, WireOptions));
@@ -109,7 +108,7 @@ public class SubjectResponseTests
         root.TryGetProperty("subject_id", out var subjectId).Should().BeTrue();
         root.TryGetProperty("study_id", out var studyId).Should().BeTrue();
         root.TryGetProperty("site_id", out var siteId).Should().BeTrue();
-        root.TryGetProperty("treatment_group", out _).Should().BeTrue();
+        root.TryGetProperty("treatment_group", out _).Should().BeFalse("a subject response never carries the arm (#5607)");
         root.TryGetProperty("status", out var status).Should().BeTrue();
         root.TryGetProperty("active_protocol_version", out _).Should().BeTrue();
         root.TryGetProperty("encrypted_demographics", out _).Should().BeTrue();

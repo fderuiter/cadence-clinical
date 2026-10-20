@@ -237,6 +237,8 @@ services:
       <<: *db-env
       # Local-only AES-256 key; generate a real one with `openssl rand -base64 32`.
       DemographicsEncryption__KeyBase64: Y2FkZW5jZS1sb2NhbC1kZXYtZGVtb2dyYXBoaWNzISE= # pragma: allowlist secret
+      # Local-only randomisation key (#5607), different from the demographics key.
+      RANDOMIZATION_ALLOCATION_KEY: Y2FkZW5jZS1sb2NhbC1kZXYtcmFuZG9taXphdGlvbiE= # pragma: allowlist secret
     depends_on: *db-depends
 
   etmf:

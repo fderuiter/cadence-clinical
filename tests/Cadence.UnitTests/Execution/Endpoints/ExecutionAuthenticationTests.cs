@@ -109,7 +109,7 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
     {
         using var unconfigured = new StartupValidationFactory<Cadence.Apps.Execution.Program>(builder => builder
             .UseTestPostgresConnectionString()
-            .UseTestDemographicsKey()
+            .UseTestDemographicsKey().UseTestRandomizationKey()
             .UseSetting("GATEWAY_SECRET", string.Empty));
 
         unconfigured.ValidateStartup().Should().BeOfType<OptionsValidationException>()

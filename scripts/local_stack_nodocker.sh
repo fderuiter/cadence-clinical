@@ -72,6 +72,9 @@ up() {
       echo "Parameters__demographics-encryption-key=$(openssl rand -base64 32)"
     } >"$STATE/secrets.env"
   fi
+  # Added with randomisation (#5607); a state directory from before it gets the key appended once.
+  grep -q '^Parameters__randomization-allocation-key=' "$STATE/secrets.env" ||
+    echo "Parameters__randomization-allocation-key=$(openssl rand -base64 32)" >>"$STATE/secrets.env"
 
   if ! curl -sf http://localhost:8000/healthz/live >/dev/null; then
     tmux kill-session -t apphost 2>/dev/null || true
