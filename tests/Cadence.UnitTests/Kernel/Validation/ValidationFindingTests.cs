@@ -71,6 +71,7 @@ public class ValidationFindingTests
     [Fact(DisplayName = "Ledger_RerunWithoutDetection_ResolvesWithTheRunAsEvidence")]
     [Trait("Category", "Unit")]
     [GxPRequirement("PRD-CRF-004")]
+    [KernelRule("K-FIND-1")]
     public void LedgerRerunWithoutDetectionResolvesWithTheRunAsEvidence()
     {
         var finding = FindingId("VS1", "row-1");
@@ -157,6 +158,7 @@ public class ValidationFindingTests
     [Fact(DisplayName = "Ledger_GeneratedHistories_ResolveExactlyWhenTheLatestRunMissesTheFinding")]
     [Trait("Category", "Unit")]
     [GxPRequirement("PRD-CRF-004")]
+    [KernelRule("K-FIND-1")]
     public void LedgerGeneratedHistoriesResolveExactlyWhenTheLatestRunMissesTheFinding()
     {
         var findings = Enumerable.Range(0, 6).Select(i => FindingId("VS1", $"row-{i}")).ToArray();

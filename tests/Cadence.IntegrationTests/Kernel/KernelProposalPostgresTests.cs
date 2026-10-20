@@ -79,6 +79,8 @@ public sealed class KernelProposalPostgresTests : IClassFixture<KernelPostgresFi
     /// are as they were (K-SIM-5).
     /// </summary>
     [Fact(DisplayName = "Proposal_AgentProposes_PersonApprovesWithAttestation_NothingElseChanges")]
+    [KernelRule("K-SIM-5")]
+    [KernelRule("K-PROV-3")]
     public async Task ProposalAgentProposesPersonApprovesWithAttestationNothingElseChanges()
     {
         _fixture.SkipIfUnavailable();
@@ -148,6 +150,7 @@ public sealed class KernelProposalPostgresTests : IClassFixture<KernelPostgresFi
     /// each denial is audited.
     /// </summary>
     [Fact(DisplayName = "Proposal_Agent_CannotApproveRejectOrAttest")]
+    [KernelRule("K-AI-1")]
     public async Task ProposalAgentCannotApproveRejectOrAttest()
     {
         _fixture.SkipIfUnavailable();
@@ -323,6 +326,7 @@ public sealed class KernelProposalPostgresTests : IClassFixture<KernelPostgresFi
     /// is refused without saying which, so a proposal never links into scope its proposer cannot read.
     /// </summary>
     [Fact(DisplayName = "Proposal_NamingAnObjectTheProposerMayNotSee_IsRefused")]
+    [KernelRule("K-AI-3")]
     public async Task ProposalNamingAnObjectTheProposerMayNotSeeIsRefused()
     {
         _fixture.SkipIfUnavailable();

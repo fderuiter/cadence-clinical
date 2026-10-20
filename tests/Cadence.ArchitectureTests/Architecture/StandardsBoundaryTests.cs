@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 
 using Cadence.Rules.Evaluation;
 using Cadence.Standards;
+using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -52,6 +53,8 @@ public partial class StandardsBoundaryTests
     /// </summary>
     [Fact(DisplayName = "KernelAndStandardsSource_NamesNoStandardDatasetOrVariable")]
     [Trait("Category", "Architecture")]
+    [KernelRule("K-PROJ-1")]
+    [KernelRule("K-TRUTH-1")]
     public void KernelAndStandardsSourceNamesNoStandardDatasetOrVariable()
     {
         var names = new HashSet<string>(StringComparer.Ordinal);

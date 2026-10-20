@@ -152,6 +152,7 @@ public sealed class BitemporalPostgresTests(BitemporalPostgresFixture fixture) :
     /// is rejected by the database, while the same key in another tenant is accepted.
     /// </summary>
     [Fact(DisplayName = "Bitemporal_OverlappingInsert_IsRejectedByExclusionConstraint")]
+    [KernelRule("K-TIME-2")]
     public async Task BitemporalOverlappingInsertIsRejectedByExclusionConstraint()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -175,6 +176,7 @@ public sealed class BitemporalPostgresTests(BitemporalPostgresFixture fixture) :
     /// are all rejected by the database.
     /// </summary>
     [Fact(DisplayName = "Bitemporal_Rows_AreAppendOnly_ExceptClosingRecordedPeriod")]
+    [KernelRule("K-TIME-1")]
     public async Task BitemporalRowsAreAppendOnlyExceptClosingRecordedPeriod()
     {
         var ct = TestContext.Current.CancellationToken;

@@ -65,6 +65,7 @@ public class KernelDbContextModelTests
     [Fact(DisplayName = "KernelDbContext_TenantScopedEntities_UseCompositeTenantForeignKeys")]
     [Trait("Category", "Unit")]
     [GxPRequirement("PRD-CRF-013")]
+    [KernelRule("K-ID-1")]
     public void KernelDbContextTenantScopedEntitiesUseCompositeTenantForeignKeys()
     {
         using var context = CreateContext();

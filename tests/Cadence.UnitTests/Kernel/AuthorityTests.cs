@@ -70,6 +70,7 @@ public sealed class AuthorityTests
 
     /// <summary>A role bundles well-formed capabilities, never an unblinding one (K-AUTH-4), and sorts and de-duplicates them.</summary>
     [Fact(DisplayName = "Role_Define_ValidatesAndRefusesUnblinding")]
+    [KernelRule("K-AUTH-4")]
     public void RoleDefineValidatesAndRefusesUnblinding()
     {
         Role.Define(RoleId.New(), Tenant, "crc", "CRC", ["observation.record"]).Error.Should().Be(AuthorityErrors.RoleCodeInvalid);
@@ -106,6 +107,7 @@ public sealed class AuthorityTests
     /// shortens it from when it is recorded without changing what was known before (K-AUTH-3).
     /// </summary>
     [Fact(DisplayName = "Grant_ValidityIsBitemporal_AndRevocationKeepsHistory")]
+    [KernelRule("K-AUTH-3")]
     public void GrantValidityIsBitemporalAndRevocationKeepsHistory()
     {
         var recordedAt = T0.AddDays(10);
@@ -131,6 +133,7 @@ public sealed class AuthorityTests
 
     /// <summary>With no grant, a denial names the capability, the resource and what to obtain (K-AUTH-6).</summary>
     [Fact(DisplayName = "Evaluate_NoGrant_DeniesNamingTheMissingGrant")]
+    [KernelRule("K-AUTH-6")]
     public async Task EvaluateNoGrantDeniesNamingTheMissingGrant()
     {
         var decision = await Evaluate(new Store(), Crc, Record, SiteA1Ref);
@@ -165,6 +168,7 @@ public sealed class AuthorityTests
 
     /// <summary>A grant for another study, an expired grant or one not yet known does not permit; the denial lists it.</summary>
     [Fact(DisplayName = "Evaluate_GrantOutOfScopeOrTime_Denies")]
+    [KernelRule("K-AUTH-3")]
     public async Task EvaluateGrantOutOfScopeOrTimeDenies()
     {
         var otherStudy = Issue(scope: AuthorityScope.Study(StudyB)).Value!;
@@ -354,6 +358,8 @@ public sealed class AuthorityTests
     /// K-AUTH-6).
     /// </summary>
     [Fact(DisplayName = "Evaluate_RequiredQualification_DeniesUntilHeldAndNamesIt")]
+    [KernelRule("K-AUTH-5")]
+    [KernelRule("K-AUTH-6")]
     public async Task EvaluateRequiredQualificationDeniesUntilHeldAndNamesIt()
     {
         var grant = Issue().Value!;
@@ -378,6 +384,7 @@ public sealed class AuthorityTests
 
     /// <summary>An expired qualification is named with the day it expired, so the denial says what to renew (K-AUTH-6).</summary>
     [Fact(DisplayName = "Evaluate_ExpiredQualification_DeniesNamingTheExpiry")]
+    [KernelRule("K-AUTH-6")]
     public async Task EvaluateExpiredQualificationDeniesNamingTheExpiry()
     {
         var grant = Issue(validFrom: T0.AddYears(-2)).Value!;
@@ -420,6 +427,7 @@ public sealed class AuthorityTests
     /// late cannot validate an action evaluated as of before it was known (K-AUTH-3).
     /// </summary>
     [Fact(DisplayName = "Evaluate_Qualification_RespectsScopeCapabilityAndKnownTime")]
+    [KernelRule("K-AUTH-3")]
     public async Task EvaluateQualificationRespectsScopeCapabilityAndKnownTime()
     {
         var grant = Issue().Value!;

@@ -149,6 +149,36 @@ public class RequirementTagScannerTests
         tests.Single(t => t.MethodName == "First").RequirementIds.Should().Equal("PRD-AAA-001");
         tests.Single(t => t.MethodName == "Second").RequirementIds.Should().BeEmpty();
     }
+
+    /// <summary>
+    /// Kernel rules count only from <c>[KernelRule("…")]</c> on the method (#5467): a K-ID in the method's doc comment, a
+    /// class-level comment or a string is documentation, and a rule never leaks to the next test.
+    /// </summary>
+    [Fact]
+    public void ScanSource_CollectsKernelRulesFromMethodAttributesOnly()
+    {
+        var tests = RequirementTagScanner.ScanSource(Source(
+            "namespace Sample;",
+            "/// <summary>Suite proving K-TX-1.</summary>",
+            "public class Rules",
+            "{",
+            "    /// <summary>Validates K-TIME-1.</summary>",
+            "    [Fact]",
+            "    [KernelRule(\"K-TX-2\")]",
+            "    [KernelRuleAttribute(\"K-LIN-2\"), Trait(\"Category\", \"Integration\")]",
+            "    [KernelRule(\"K-TX-2\")]",
+            "    public void Tagged() { var s = \"[KernelRule(\\\"K-ID-1\\\")]\"; }",
+            "",
+            "    /// <summary>Validates K-TIME-2.</summary>",
+            "    [Theory]",
+            "    [InlineData(1)]",
+            "    public void Untagged(int x) { }",
+            "}"), "tests/Rules.cs");
+
+        tests.Single(t => t.MethodName == "Tagged").KernelRuleIds.Should().Equal("K-LIN-2", "K-TX-2");
+        tests.Single(t => t.MethodName == "Untagged").KernelRuleIds.Should().BeEmpty();
+        tests.Should().OnlyContain(t => t.RequirementIds.Count == 0);
+    }
 }
 
 /// <summary>

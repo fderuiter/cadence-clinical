@@ -116,6 +116,8 @@ public class BitemporalPersistenceTests
     /// </summary>
     [Fact(DisplayName = "BitemporalSql_Guards_ExcludeOverlapsPerTenantAndKey_AndRejectUnsafeIdentifiers")]
     [Trait("Category", "Unit")]
+    [KernelRule("K-TIME-1")]
+    [KernelRule("K-TIME-2")]
     public void BitemporalSqlGuardsExcludeOverlapsPerTenantAndKeyAndRejectUnsafeIdentifiers()
     {
         var sql = BitemporalSql.CreateGuards(KernelDbContext.Schema, "observations", "participant_id", "concept_id");

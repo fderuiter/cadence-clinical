@@ -38,6 +38,7 @@ public sealed class KernelNavigationPostgresTests(KernelPostgresFixture fixture)
     /// study site, and appears under its study grouped by country.
     /// </summary>
     [Fact(DisplayName = "Navigation_StudySite_SummaryPathAndChildren")]
+    [KernelRule("K-ID-7")]
     public async Task NavigationStudySiteSummaryPathAndChildren()
     {
         fixture.SkipIfUnavailable();
@@ -72,6 +73,7 @@ public sealed class KernelNavigationPostgresTests(KernelPostgresFixture fixture)
     /// enrollment under its subject code, and a study site's children are its enrollments, counted on the study.
     /// </summary>
     [Fact(DisplayName = "Navigation_EnrollmentSitsUnderItsStudySite")]
+    [KernelRule("K-ID-7")]
     public async Task NavigationEnrollmentSitsUnderItsStudySite()
     {
         fixture.SkipIfUnavailable();
@@ -124,6 +126,7 @@ public sealed class KernelNavigationPostgresTests(KernelPostgresFixture fixture)
     [Fact(DisplayName = "Navigation_NeverCrossesTenants")]
     [Trait("Category", "GxP_OQ")]
     [GxPRequirement("PRD-CRF-013")]
+    [KernelRule("K-ID-2")]
     public async Task NavigationNeverCrossesTenants()
     {
         fixture.SkipIfUnavailable();

@@ -55,6 +55,7 @@ public sealed class RulePackPostgresTests(KernelPostgresFixture fixture) : IClas
     /// </summary>
     [Fact(DisplayName = "RulePack_DraftedAndReleasedAtRuntime_LoadsAndEvaluates")]
     [GxPRequirement("PRD-CRF-004")]
+    [KernelRule("K-RULE-1")]
     public async Task RulePackDraftedAndReleasedAtRuntimeLoadsAndEvaluates()
     {
         fixture.SkipIfUnavailable();

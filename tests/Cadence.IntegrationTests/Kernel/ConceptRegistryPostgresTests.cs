@@ -170,6 +170,7 @@ public sealed class ConceptRegistryPostgresTests(KernelPostgresFixture fixture) 
 
     /// <summary>A licensed code system cannot be registered as open content through the pipeline (K-SEM-2).</summary>
     [Fact(DisplayName = "RegisterCodeSystem_MedDraAsOpen_IsRefused")]
+    [KernelRule("K-SEM-2")]
     public async Task RegisterCodeSystemMedDraAsOpenIsRefused()
     {
         fixture.SkipIfUnavailable();
@@ -185,6 +186,7 @@ public sealed class ConceptRegistryPostgresTests(KernelPostgresFixture fixture) 
 
     /// <summary>Terminology is per tenant: another tenant sees none of it (ADR-2470, K-ID-2).</summary>
     [Fact(DisplayName = "Terminology_IsInvisibleToOtherTenants")]
+    [KernelRule("K-ID-2")]
     public async Task TerminologyIsInvisibleToOtherTenants()
     {
         fixture.SkipIfUnavailable();

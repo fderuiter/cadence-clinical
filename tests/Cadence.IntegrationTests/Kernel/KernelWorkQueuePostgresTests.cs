@@ -59,6 +59,7 @@ public sealed class KernelWorkQueuePostgresTests : IClassFixture<KernelPostgresF
     /// study filter narrows the queue; and revoking the grant empties it.
     /// </summary>
     [Fact(DisplayName = "WorkQueue_FollowsGrants_RevokingTheGrantRemovesItsItems")]
+    [KernelRule("K-AUTH-8")]
     public async Task WorkQueueFollowsGrantsRevokingTheGrantRemovesItsItems()
     {
         _fixture.SkipIfUnavailable();
@@ -105,6 +106,7 @@ public sealed class KernelWorkQueuePostgresTests : IClassFixture<KernelPostgresF
     /// unregistered source or a verb class other than the kernel command's is refused.
     /// </summary>
     [Fact(DisplayName = "DefineWorkQueue_AddsVersions_AndChecksSourceAndVerbClass")]
+    [KernelRule("K-AUTH-8")]
     public async Task DefineWorkQueueAddsVersionsAndChecksSourceAndVerbClass()
     {
         _fixture.SkipIfUnavailable();
@@ -135,6 +137,7 @@ public sealed class KernelWorkQueuePostgresTests : IClassFixture<KernelPostgresF
     /// <summary>A tenant's queues and the versions behind them are invisible from another tenant.</summary>
     [Fact(DisplayName = "WorkQueue_CannotReachAnotherTenant")]
     [GxPRequirement("PRD-CRF-013")]
+    [KernelRule("K-AUTH-8")]
     public async Task WorkQueueCannotReachAnotherTenant()
     {
         _fixture.SkipIfUnavailable();

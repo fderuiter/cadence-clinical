@@ -261,6 +261,7 @@ public sealed class ModuleCommandPathPostgresTests(ModuleCommandPathPostgresFixt
 
     /// <summary>Validates K-TX-3 for a module command: a replay returns the stored outcome and writes nothing more.</summary>
     [Fact(DisplayName = "ModuleCommand_Replay_ReturnsStoredOutcome_AndWritesNothing")]
+    [KernelRule("K-TX-3")]
     public async Task ModuleCommandReplayReturnsStoredOutcomeAndWritesNothing()
     {
         fixture.SkipIfUnavailable();
@@ -281,6 +282,7 @@ public sealed class ModuleCommandPathPostgresTests(ModuleCommandPathPostgresFixt
     /// rows are written, leaves neither the module row nor any kernel row behind, and the chain head stays put.
     /// </summary>
     [Theory(DisplayName = "ModuleCommand_FailingAtAnyStage_PersistsNeitherModuleNorKernelRows")]
+    [KernelRule("K-TX-2")]
     [MemberData(nameof(CommitStages))]
     public async Task ModuleCommandFailingAtAnyStagePersistsNeitherModuleNorKernelRows(string stageName)
     {
@@ -365,6 +367,7 @@ public sealed class ModuleCommandPathPostgresTests(ModuleCommandPathPostgresFixt
     /// module context runs on the kernel's tenant-scoped connection under the same forced Row-Level Security.
     /// </summary>
     [Fact(DisplayName = "ModuleCommand_OtherTenant_CannotSeeOrChangeModuleRow")]
+    [KernelRule("K-ID-2")]
     public async Task ModuleCommandOtherTenantCannotSeeOrChangeModuleRow()
     {
         fixture.SkipIfUnavailable();

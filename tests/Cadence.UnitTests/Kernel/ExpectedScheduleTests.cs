@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 
 using Cadence.Kernel.Protocol.Design;
+using Cadence.Testing;
 using Cadence.TestSupport.Kernel.Protocol;
 
 using FluentAssertions;
@@ -85,6 +86,7 @@ public sealed class ExpectedScheduleTests
 
     /// <summary>The same inputs always give the same schedule: nothing is read from a clock or stored (K-TIME-7).</summary>
     [Fact]
+    [KernelRule("K-TIME-7")]
     public void Compute_IsAPureFunctionOfItsInputs()
     {
         var design = Design(

@@ -51,6 +51,7 @@ public sealed class ValidationFindingPostgresTests(KernelPostgresFixture fixture
     /// </summary>
     [Fact(DisplayName = "Rerun_AfterMappingFix_ResolvesTheFindingInsteadOfDuplicatingIt")]
     [GxPRequirement("PRD-CRF-004")]
+    [KernelRule("K-FIND-1")]
     public async Task RerunAfterMappingFixResolvesTheFindingInsteadOfDuplicatingIt()
     {
         fixture.SkipIfUnavailable();
@@ -101,6 +102,7 @@ public sealed class ValidationFindingPostgresTests(KernelPostgresFixture fixture
     /// and a decision on a finding derives from the run it was made on.
     /// </summary>
     [Fact(DisplayName = "Runs_AndDecisions_LinkToTheirInputsInLineage")]
+    [KernelRule("K-FIND-3")]
     public async Task RunsAndDecisionsLinkToTheirInputsInLineage()
     {
         fixture.SkipIfUnavailable();
@@ -139,6 +141,7 @@ public sealed class ValidationFindingPostgresTests(KernelPostgresFixture fixture
     /// explained finding no longer blocks and is listed with its explanation for the reviewer guide.
     /// </summary>
     [Fact(DisplayName = "AcceptAndExplain_RequireAMatchingAttestation")]
+    [KernelRule("K-FIND-2")]
     public async Task AcceptAndExplainRequireAMatchingAttestation()
     {
         fixture.SkipIfUnavailable();
@@ -242,6 +245,7 @@ public sealed class ValidationFindingPostgresTests(KernelPostgresFixture fixture
     /// </summary>
     [Fact(DisplayName = "Findings_AreIsolatedByTenant")]
     [GxPRequirement("PRD-CRF-013")]
+    [KernelRule("K-ID-2")]
     public async Task FindingsAreIsolatedByTenant()
     {
         fixture.SkipIfUnavailable();

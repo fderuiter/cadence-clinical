@@ -357,6 +357,7 @@ public sealed class KernelProtocolVersionPostgresTests(KernelPostgresFixture fix
     /// a distinct number following the parent, with none skipped.
     /// </summary>
     [Fact(DisplayName = "Fork_ConcurrentForks_GetConsecutiveNumbers")]
+    [KernelRule("K-TX-4")]
     public async Task ForkConcurrentForksGetConsecutiveNumbers()
     {
         fixture.SkipIfUnavailable();

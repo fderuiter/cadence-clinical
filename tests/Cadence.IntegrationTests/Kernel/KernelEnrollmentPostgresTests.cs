@@ -99,6 +99,7 @@ public sealed class KernelEnrollmentPostgresTests(KernelPostgresFixture fixture)
     /// time in one study get exactly 1..N, and another study numbers from 1 on its own.
     /// </summary>
     [Fact(DisplayName = "Enrollment_ConcurrentEnrolments_GetGapFreeNumbersPerStudy")]
+    [KernelRule("K-TX-4")]
     public async Task EnrollmentConcurrentEnrolmentsGetGapFreeNumbersPerStudy()
     {
         fixture.SkipIfUnavailable();
@@ -299,6 +300,7 @@ public sealed class KernelEnrollmentPostgresTests(KernelPostgresFixture fixture)
     /// the study's lock (K-TX-4) serializes them, so exactly one gets the code and the other gets SubjectCodeTaken.
     /// </summary>
     [Fact(DisplayName = "Screen_ConcurrentScreeningsWithOneCode_OnlyOneGetsTheCode")]
+    [KernelRule("K-TX-4")]
     public async Task ScreenConcurrentScreeningsWithOneCodeOnlyOneGetsTheCode()
     {
         fixture.SkipIfUnavailable();
@@ -417,6 +419,7 @@ public sealed class KernelEnrollmentPostgresTests(KernelPostgresFixture fixture)
     /// change, screen into, number against or sign another tenant's enrollment, participant or study site.
     /// </summary>
     [Fact(DisplayName = "Enrollments_AreInvisibleToAnotherTenant")]
+    [KernelRule("K-ID-2")]
     public async Task EnrollmentsAreInvisibleToAnotherTenant()
     {
         fixture.SkipIfUnavailable();

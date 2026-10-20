@@ -38,6 +38,8 @@ public sealed class KernelTenantIsolationPostgresTests(KernelPostgresFixture fix
     /// </summary>
     [Fact(DisplayName = "EveryKernelTable_HasTenantIdAndForcedRowLevelSecurity")]
     [GxPRequirement("PRD-CRF-013")]
+    [KernelRule("K-ID-1")]
+    [KernelRule("K-ID-2")]
     public async Task EveryKernelTableHasTenantIdAndForcedRowLevelSecurity()
     {
         fixture.SkipIfUnavailable();
@@ -75,6 +77,7 @@ public sealed class KernelTenantIsolationPostgresTests(KernelPostgresFixture fix
     /// </summary>
     [Fact(DisplayName = "ApplicationRole_IsNotOwner_AndCannotBypassRowLevelSecurity")]
     [GxPRequirement("PRD-CRF-013")]
+    [KernelRule("K-ID-2")]
     public async Task ApplicationRoleIsNotOwnerAndCannotBypassRowLevelSecurity()
     {
         fixture.SkipIfUnavailable();
@@ -108,6 +111,7 @@ public sealed class KernelTenantIsolationPostgresTests(KernelPostgresFixture fix
     /// </summary>
     [Fact(DisplayName = "CrossTenantRead_ReturnsNothing")]
     [GxPRequirement("PRD-CRF-013")]
+    [KernelRule("K-ID-2")]
     public async Task CrossTenantReadReturnsNothing()
     {
         fixture.SkipIfUnavailable();
@@ -134,6 +138,8 @@ public sealed class KernelTenantIsolationPostgresTests(KernelPostgresFixture fix
     /// </summary>
     [Fact(DisplayName = "CrossTenantForeignKey_AndForeignTenantRow_AreRejectedByTheDatabase")]
     [GxPRequirement("PRD-CRF-013")]
+    [KernelRule("K-ID-1")]
+    [KernelRule("K-ID-2")]
     public async Task CrossTenantForeignKeyAndForeignTenantRowAreRejectedByTheDatabase()
     {
         fixture.SkipIfUnavailable();
@@ -159,6 +165,7 @@ public sealed class KernelTenantIsolationPostgresTests(KernelPostgresFixture fix
     /// </summary>
     [Fact(DisplayName = "NoTenant_CannotConnect_AndSeesNothing")]
     [GxPRequirement("PRD-CRF-013")]
+    [KernelRule("K-ID-2")]
     public async Task NoTenantCannotConnectAndSeesNothing()
     {
         fixture.SkipIfUnavailable();
@@ -188,6 +195,7 @@ public sealed class KernelTenantIsolationPostgresTests(KernelPostgresFixture fix
     /// </summary>
     [Fact(DisplayName = "Person_IsVisibleOnlyToTenantsWithAMembership")]
     [GxPRequirement("PRD-CRF-013")]
+    [KernelRule("K-ID-4")]
     public async Task PersonIsVisibleOnlyToTenantsWithAMembership()
     {
         fixture.SkipIfUnavailable();
@@ -242,6 +250,7 @@ public sealed class KernelTenantIsolationPostgresTests(KernelPostgresFixture fix
     /// </summary>
     [Fact(DisplayName = "PipelineCommand_CommitsUnderRowLevelSecurity_VisibleToItsTenantOnly")]
     [GxPRequirement("PRD-CRF-013")]
+    [KernelRule("K-ID-2")]
     public async Task PipelineCommandCommitsUnderRowLevelSecurityVisibleToItsTenantOnly()
     {
         fixture.SkipIfUnavailable();

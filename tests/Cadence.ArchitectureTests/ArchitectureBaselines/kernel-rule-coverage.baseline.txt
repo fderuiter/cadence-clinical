@@ -1,0 +1,38 @@
+# Kernel rules with no test that names them yet (#5467) - docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md.
+# One rule ID per line, sorted ordinally. The list may only shrink: tag a test that proves the rule with
+# [KernelRule("K-AREA-N")] (docs/TESTING.md) and delete its line. CADENCE_UPDATE_BASELINE=1 deletes covered lines only.
+K-AI-2
+K-AI-4
+K-AI-5
+K-AI-6
+K-AI-7
+K-AI-8
+K-CONS-1
+K-CONS-2
+K-EVT-1
+K-EVT-2
+K-EXP-2
+K-FACT-2
+K-FACT-3
+K-FACT-4
+K-FACT-5
+K-FACT-6
+K-ID-3
+K-ID-5
+K-ING-1
+K-ING-2
+K-LIN-3
+K-LOC-1
+K-MOD-2
+K-PROJ-2
+K-PROJ-3
+K-PROV-2
+K-QBD-1
+K-QBD-2
+K-SPEC-1
+K-SPEC-2
+K-SPEC-3
+K-STD-2
+K-TIME-6
+K-TIME-8
+K-TIME-9
