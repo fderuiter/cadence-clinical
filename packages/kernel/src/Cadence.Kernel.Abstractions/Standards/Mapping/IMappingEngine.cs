@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
 
 namespace Cadence.Kernel.Standards.Mapping;
@@ -24,7 +26,25 @@ public interface IMappingEngine
 /// <param name="Concept">What the value means (the CollectionSpec item's concept).</param>
 /// <param name="Value">The value: a number in invariant form, text, or for a coded result the code; null when not collected.</param>
 /// <param name="Unit">The UCUM unit the value was collected in, or null.</param>
-public sealed record MappingInput(ConceptRef Concept, string? Value, string? Unit = null);
+/// <param name="Missing">Why the value was not obtained, when it is a missing value (K-FACT-3); null otherwise.</param>
+public sealed record MappingInput(ConceptRef Concept, string? Value, string? Unit = null, MissingValue? Missing = null)
+{
+    /// <summary>
+    /// The input for a typed observation value (ADR-2623): a quantity gives its amount (with any comparator, such as
+    /// &lt;0.5) and its UCUM unit, a code gives the code, a date gives its ISO 8601 text at its precision, a boolean gives
+    /// <c>true</c> or <c>false</c>, text gives itself, and a missing value gives no result and its reason.
+    /// </summary>
+    public static MappingInput From(ConceptRef concept, ObservationValue value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        return value switch
+        {
+            QuantityValue quantity => new MappingInput(concept, quantity.ToResultString(), quantity.Unit),
+            MissingValue missing => new MappingInput(concept, null, Missing: missing),
+            _ => new MappingInput(concept, value.ToDisplayString()),
+        };
+    }
+}
 
 /// <summary>
 /// What one mapping produced: the dataset and the variables of the record fragment, or the problems that stopped it.

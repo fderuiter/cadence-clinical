@@ -6,6 +6,7 @@ using Cadence.Kernel;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Time;
 using Cadence.Testing.Time;
@@ -53,7 +54,7 @@ public sealed class ObservationReasonForChangeValidationTests
             .BuildServiceProvider();
 
         var result = await services.GetRequiredService<IKernelCommandSender>().SendAsync(
-            new CorrectObservation(Tenant, ObservationId.New(), Enrollment, "120", ExpectedVersion: 1, IdempotencyKey: "k1", reason),
+            new CorrectObservation(Tenant, ObservationId.New(), Enrollment, new QuantityValue(120m, "mm[Hg]"), ExpectedVersion: 1, IdempotencyKey: "k1", reason),
             cancellationToken: ct);
 
         result.Error.Should().Be(KernelErrors.ReasonForChangeRequired);
@@ -68,9 +69,9 @@ public sealed class ObservationReasonForChangeValidationTests
     {
         var observation = Record();
 
-        observation.Correct("120", reason!, "user", T0.AddMinutes(5)).Should().Be(KernelErrors.ReasonForChangeRequired);
+        observation.Correct(new QuantityValue(120m, "mm[Hg]"), reason!, "user", T0.AddMinutes(5)).Should().Be(KernelErrors.ReasonForChangeRequired);
 
-        observation.Value.Should().Be("100", "a refused correction does not change the value");
+        observation.Value.Should().Be(new QuantityValue(100m, "mm[Hg]"), "a refused correction does not change the value");
         observation.Revisions.Should().ContainSingle();
     }
 
@@ -79,9 +80,9 @@ public sealed class ObservationReasonForChangeValidationTests
     {
         var observation = Record();
 
-        observation.Correct("120", "Transcription error", "user", T0.AddMinutes(5)).Should().BeNull();
+        observation.Correct(new QuantityValue(120m, "mm[Hg]"), "Transcription error", "user", T0.AddMinutes(5)).Should().BeNull();
 
-        observation.Value.Should().Be("120");
+        observation.Value.Should().Be(new QuantityValue(120m, "mm[Hg]"));
         observation.Revisions.Should().HaveCount(2);
         observation.Revisions[1].ReasonForChange.Should().Be("Transcription error");
     }
@@ -89,5 +90,5 @@ public sealed class ObservationReasonForChangeValidationTests
     private static Observation Record() =>
         Observation.Record(
             ObservationId.New(), Tenant, Enrollment, Participant, Study, Concept,
-            value: "100", observedAt: T0, reasonForChange: string.Empty, recordedBy: "user", recordedAt: T0).Value!;
+            value: new QuantityValue(100m, "mm[Hg]"), observedAt: T0, reasonForChange: string.Empty, recordedBy: "user", recordedAt: T0).Value!;
 }

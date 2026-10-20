@@ -30,7 +30,7 @@ public sealed record ObservationRecord(
     ParticipantId ParticipantId,
     StudyId StudyId,
     ConceptRef Concept,
-    string Value,
+    ObservationValue Value,
     DateTimeOffset ObservedAt,
     long Version,
     ObservationLockView? Lock,
@@ -43,7 +43,7 @@ public sealed record ObservationRecord(
 /// </remarks>
 public sealed record ObservationRevisionView(
     int Number,
-    string Value,
+    ObservationValue Value,
     string ReasonForChange,
     string RecordedBy,
     DateTimeOffset RecordedAt,

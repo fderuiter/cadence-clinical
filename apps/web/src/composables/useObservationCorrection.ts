@@ -4,6 +4,7 @@ import {
   kernelApi,
   type KernelObservation,
   type KernelObservationState,
+  type KernelObservationValue,
 } from "../api/kernelApi";
 
 /** What the screen tells the user after a correction attempt. */
@@ -36,7 +37,11 @@ export function useObservationCorrection(observationRef: () => string) {
   const saving = ref(false);
   const loadError = ref<string | null>(null);
   const outcome = ref<CorrectionOutcome | null>(null);
-  let pendingKey: { value: string; version: number; key: string } | null = null;
+  let pendingKey: {
+    value: string;
+    version: number;
+    key: string;
+  } | null = null;
 
   const version = computed(() => Number(observation.value?.version ?? 0));
   const locked = computed(() => observation.value?.locked != null);
@@ -54,10 +59,14 @@ export function useObservationCorrection(observationRef: () => string) {
     }
   }
 
-  function keyFor(value: string, expectedVersion: number): string {
-    if (pendingKey?.value !== value || pendingKey.version !== expectedVersion) {
+  function keyFor(
+    value: KernelObservationValue,
+    expectedVersion: number
+  ): string {
+    const sent = JSON.stringify(value);
+    if (pendingKey?.value !== sent || pendingKey.version !== expectedVersion) {
       pendingKey = {
-        value,
+        value: sent,
         version: expectedVersion,
         key: newIdempotencyKey(),
       };
@@ -65,7 +74,10 @@ export function useObservationCorrection(observationRef: () => string) {
     return pendingKey.key;
   }
 
-  async function correct(value: string, reason: string): Promise<void> {
+  async function correct(
+    value: KernelObservationValue,
+    reason: string
+  ): Promise<void> {
     const current = observation.value;
     if (!current || saving.value) return;
     const expectedVersion = version.value;

@@ -2048,6 +2048,16 @@
                 "$ref": "#/components/schemas/Kernel_DataPurpose"
               }
             ]
+          },
+          "value_kind": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_ObservationValueKind"
+              }
+            ]
           }
         }
       },
@@ -2135,6 +2145,16 @@
             ]
           }
         }
+      },
+      "Kernel_DateTimePrecision": {
+        "enum": [
+          "Year",
+          "Month",
+          "Day",
+          "Minute",
+          "Second",
+          null
+        ]
       },
       "Kernel_DependentGroup": {
         "required": [
@@ -2755,9 +2775,13 @@
             "type": "string"
           },
           "value": {
-            "type": [
-              "null",
-              "string"
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_ObservationValue"
+              }
             ]
           },
           "expected_version": {
@@ -3227,7 +3251,7 @@
             "type": "string"
           },
           "value": {
-            "type": "string"
+            "$ref": "#/components/schemas/Kernel_ObservationValue"
           },
           "observed_at": {
             "type": "string",
@@ -3282,7 +3306,7 @@
             "type": "string"
           },
           "value": {
-            "type": "string"
+            "$ref": "#/components/schemas/Kernel_ObservationValue"
           },
           "version": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -3406,9 +3430,13 @@
             "type": "string"
           },
           "value": {
-            "type": [
-              "null",
-              "string"
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_ObservationValue"
+              }
             ]
           },
           "observed_at": {
@@ -4041,6 +4069,16 @@
         "type": "integer"
       },
       "Kernel_NodeRef": {},
+      "Kernel_NullFlavor": {
+        "enum": [
+          "NotDone",
+          "Unknown",
+          "AskedButUnknown",
+          "NotAsked",
+          "NotApplicable",
+          "Masked"
+        ]
+      },
       "Kernel_Objective": {
         "required": [
           "id",
@@ -4150,7 +4188,7 @@
             "format": "int32"
           },
           "value": {
-            "type": "string"
+            "$ref": "#/components/schemas/Kernel_ObservationValue"
           },
           "reason_for_change": {
             "type": "string"
@@ -4168,6 +4206,182 @@
               "string"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "Kernel_ObservationValue": {
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/Kernel_ObservationValueQuantityValue"
+          },
+          {
+            "$ref": "#/components/schemas/Kernel_ObservationValueCodedValue"
+          },
+          {
+            "$ref": "#/components/schemas/Kernel_ObservationValueTextValue"
+          },
+          {
+            "$ref": "#/components/schemas/Kernel_ObservationValueBooleanValue"
+          },
+          {
+            "$ref": "#/components/schemas/Kernel_ObservationValueDateTimeValue"
+          },
+          {
+            "$ref": "#/components/schemas/Kernel_ObservationValueMissingValue"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "quantity": "#/components/schemas/Kernel_ObservationValueQuantityValue",
+            "coded": "#/components/schemas/Kernel_ObservationValueCodedValue",
+            "text": "#/components/schemas/Kernel_ObservationValueTextValue",
+            "boolean": "#/components/schemas/Kernel_ObservationValueBooleanValue",
+            "dateTime": "#/components/schemas/Kernel_ObservationValueDateTimeValue",
+            "missing": "#/components/schemas/Kernel_ObservationValueMissingValue"
+          }
+        }
+      },
+      "Kernel_ObservationValueBooleanValue": {
+        "required": [
+          "value"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "boolean"
+            ],
+            "type": "string"
+          },
+          "value": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Kernel_ObservationValueCodedValue": {
+        "required": [
+          "code_system_version_id",
+          "code"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "coded"
+            ],
+            "type": "string"
+          },
+          "code_system_version_id": {
+            "$ref": "#/components/schemas/Kernel_CodeSystemVersionId"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "Kernel_ObservationValueDateTimeValue": {
+        "required": [
+          "value"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "dateTime"
+            ],
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "precision": {
+            "$ref": "#/components/schemas/Kernel_DateTimePrecision"
+          }
+        }
+      },
+      "Kernel_ObservationValueKind": {
+        "enum": [
+          "Quantity",
+          "Coded",
+          "Text",
+          "Boolean",
+          "DateTime",
+          "Missing",
+          null
+        ]
+      },
+      "Kernel_ObservationValueMissingValue": {
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "missing"
+            ],
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/Kernel_NullFlavor"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_ObservationValueQuantityValue": {
+        "required": [
+          "value",
+          "unit"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "quantity"
+            ],
+            "type": "string"
+          },
+          "value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "comparator": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_QuantityComparator"
+              }
+            ]
+          }
+        }
+      },
+      "Kernel_ObservationValueTextValue": {
+        "required": [
+          "value"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "text"
+            ],
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
           }
         }
       },
@@ -4521,6 +4735,15 @@
             ]
           }
         }
+      },
+      "Kernel_QuantityComparator": {
+        "enum": [
+          "\u003C",
+          "\u003C=",
+          "\u003E",
+          "\u003E=",
+          null
+        ]
       },
       "Kernel_ScheduleChange": {
         "required": [

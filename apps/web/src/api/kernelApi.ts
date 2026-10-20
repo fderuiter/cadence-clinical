@@ -1,6 +1,7 @@
 import { encodeChangeReason } from "./changeReason";
 import { createOpenApiClient, unwrapResponse } from "./client";
 import type { components, paths } from "./generated/kernel";
+import type { KernelObservationValue } from "./observationValue";
 
 /**
  * Typed client for the kernel API host, generated from docs/openapi/kernel_openapi.json (ADR-2540).
@@ -40,6 +41,7 @@ export type KernelObservationRevision =
   Schemas["Kernel_ObservationRevisionView"];
 export type KernelObservationAuditEntry =
   Schemas["Kernel_ObservationAuditView"];
+export type { KernelObservationValue };
 
 /** A correction of one observation's value (ADR-2620). */
 export interface KernelObservationCorrection {
@@ -47,7 +49,8 @@ export interface KernelObservationCorrection {
   observationRef: string;
   /** The enrollment the observation belongs to: the scope the correction is authorised against. */
   enrollmentRef: string;
-  value: string;
+  /** The corrected value, of the same kind as the current one (ADR-2623). */
+  value: KernelObservationValue;
   /** The version the user corrected; the kernel answers 409 if the observation has changed since. */
   expectedVersion: number;
   reason: string;

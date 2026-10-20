@@ -7,6 +7,7 @@ using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Bitemporal;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Serialization;
 using Cadence.Kernel.Trust;
@@ -211,7 +212,7 @@ public class KernelIdentifierTests
         var studySite = new StudySite(studySiteId, tenantId, studyId, siteId, "Selected", "usr_admin", "Site selected");
         var participant = Participant.Register(participantId, tenantId);
         var observation = Observation.Record(
-            obsId, tenantId, EnrollmentId.New(), participantId, studyId, ConceptRef.New(), "120/80", now, "Blood pressure entered", "usr_crc", now).Value!;
+            obsId, tenantId, EnrollmentId.New(), participantId, studyId, ConceptRef.New(), new QuantityValue(120m, "mm[Hg]"), now, "Blood pressure entered", "usr_crc", now).Value!;
         var target = new AttestationTarget(AttestationTarget.ProtocolVersionKind, Guid.CreateVersion7(), ContentHash.Compute("{}"));
         var attestation = Attestation.Sign(
             attestationId, tenantId, Actor.Person("usr_pi"), AttestationMeaning.Approved, target, now, "pwd+otp", now, "Signature completed").Value!;

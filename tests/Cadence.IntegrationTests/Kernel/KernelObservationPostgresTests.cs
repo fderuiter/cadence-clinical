@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Persistence.Commands;
@@ -57,22 +58,22 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         var (tenant, enrollment) = await NewEnrollmentAsync(ct);
-        var recorded = await RecordAsync(tenant, enrollment, "182", ct);
+        var recorded = await RecordAsync(tenant, enrollment, Mmhg(182), ct);
         recorded.Version.Should().Be(1);
         Tick();
 
-        var corrected = await _scenario.OkAsync(Correct(tenant, recorded, "128"), ct);
+        var corrected = await _scenario.OkAsync(Correct(tenant, recorded, Mmhg(128)), ct);
 
-        corrected.Value.Should().Be("128");
+        corrected.Value.Should().Be(Mmhg(128));
         corrected.Version.Should().Be(2);
         corrected.Revision.Should().Be(2);
         await using var db = fixture.CreateContext(tenant);
         var observation = await db.Observations.AsNoTracking().SingleAsync(o => o.Id == recorded.ObservationId, ct);
-        observation.Value.Should().Be("128");
+        observation.Value.Should().Be(Mmhg(128));
         observation.VersionIndex.Should().Be(2);
         observation.ReasonForChange.Should().Be(CorrectionReason);
         observation.Revisions.OrderBy(r => r.Number).Select(r => (r.Number, r.Value, r.ReasonForChange))
-            .Should().Equal((1, "182", EntryReason), (2, "128", CorrectionReason));
+            .Should().Equal((1, (ObservationValue)Mmhg(182), EntryReason), (2, (ObservationValue)Mmhg(128), CorrectionReason));
         var record = await fixture.ObservationRecords.FindAsync(tenant, recorded.ObservationId, ct);
         record!.Revisions[0].RecordedUntil.Should().Be(record.Revisions[1].RecordedAt, "the first value is recorded until the correction");
         record.Revisions[1].RecordedUntil.Should().BeNull();
@@ -101,7 +102,7 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         var (tenant, enrollment) = await NewEnrollmentAsync(ct);
-        var recorded = await RecordAsync(tenant, enrollment, "182", ct);
+        var recorded = await RecordAsync(tenant, enrollment, Mmhg(182), ct);
         var before = await CountsAsync(tenant, ct);
         var stage = Enum.Parse<CommitStage>(stageName);
         fixture.UnitOfWork.FaultInjector = s =>
@@ -112,14 +113,14 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
             }
         };
 
-        var act = () => fixture.Sender.SendAsync(Correct(tenant, recorded, "128"), cancellationToken: ct);
+        var act = () => fixture.Sender.SendAsync(Correct(tenant, recorded, Mmhg(128)), cancellationToken: ct);
 
         (await act.Should().ThrowAsync<InvalidOperationException>()).WithMessage($"Injected fault at {stage}.");
         fixture.UnitOfWork.FaultInjector = null;
         (await CountsAsync(tenant, ct)).Should().Be(before);
         await using var db = fixture.CreateContext(tenant);
         var observation = await db.Observations.AsNoTracking().SingleAsync(o => o.Id == recorded.ObservationId, ct);
-        observation.Value.Should().Be("182");
+        observation.Value.Should().Be(Mmhg(182));
         observation.VersionIndex.Should().Be(1);
         observation.Revisions.Should().ContainSingle();
     }
@@ -134,11 +135,11 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         var (tenant, enrollment) = await NewEnrollmentAsync(ct);
-        var recorded = await RecordAsync(tenant, enrollment, "182", ct);
-        await _scenario.OkAsync(Correct(tenant, recorded, "128"), ct);
+        var recorded = await RecordAsync(tenant, enrollment, Mmhg(182), ct);
+        await _scenario.OkAsync(Correct(tenant, recorded, Mmhg(128)), ct);
         var before = await CountsAsync(tenant, ct);
 
-        var stale = await fixture.Sender.SendAsync(Correct(tenant, recorded, "129"), cancellationToken: ct);
+        var stale = await fixture.Sender.SendAsync(Correct(tenant, recorded, Mmhg(129)), cancellationToken: ct);
 
         stale.Error!.Code.Should().Be(ObservationErrors.VersionStale.Code);
         stale.Error.HttpStatus.Should().Be(409);
@@ -155,11 +156,11 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         var (tenant, enrollment) = await NewEnrollmentAsync(ct);
-        var recorded = await RecordAsync(tenant, enrollment, "182", ct);
+        var recorded = await RecordAsync(tenant, enrollment, Mmhg(182), ct);
 
         var results = await Task.WhenAll(
-            fixture.Sender.SendAsync(Correct(tenant, recorded, "128"), cancellationToken: ct),
-            fixture.Sender.SendAsync(Correct(tenant, recorded, "138"), cancellationToken: ct));
+            fixture.Sender.SendAsync(Correct(tenant, recorded, Mmhg(128)), cancellationToken: ct),
+            fixture.Sender.SendAsync(Correct(tenant, recorded, Mmhg(138)), cancellationToken: ct));
 
         results.Count(r => r.IsSuccess).Should().Be(1);
         results.Single(r => !r.IsSuccess).Error!.Code.Should().Be(ObservationErrors.VersionStale.Code);
@@ -181,10 +182,10 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
 
         // 1. The correction is mid-commit when the lock arrives.
         var (tenant, enrollment) = await NewEnrollmentAsync(ct);
-        var recorded = await RecordAsync(tenant, enrollment, "182", ct);
+        var recorded = await RecordAsync(tenant, enrollment, Mmhg(182), ct);
         using (var paused = new CommitPause(fixture))
         {
-            var correction = paused.HoldAsync(() => fixture.Sender.SendAsync(Correct(tenant, recorded, "128"), cancellationToken: ct));
+            var correction = paused.HoldAsync(() => fixture.Sender.SendAsync(Correct(tenant, recorded, Mmhg(128)), cancellationToken: ct));
             await paused.Reached.WaitAsync(TimeSpan.FromSeconds(30), ct);
             var locking = fixture.Sender.SendAsync(Lock(tenant, recorded), cancellationToken: ct);
             await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
@@ -195,19 +196,19 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
             (await locking).IsSuccess.Should().BeTrue();
         }
 
-        var after = await fixture.Sender.SendAsync(Correct(tenant, recorded, "138", expectedVersion: 2), cancellationToken: ct);
+        var after = await fixture.Sender.SendAsync(Correct(tenant, recorded, Mmhg(138), expectedVersion: 2), cancellationToken: ct);
         after.Error!.Code.Should().Be(ObservationErrors.Locked.Code);
         after.Error.HttpStatus.Should().Be(423);
         await AssertNoCorrectionAfterLockAsync(tenant, recorded.ObservationId, expectedCorrections: 1, ct);
 
         // 2. The lock is mid-commit when the correction arrives.
         (tenant, enrollment) = await NewEnrollmentAsync(ct);
-        recorded = await RecordAsync(tenant, enrollment, "182", ct);
+        recorded = await RecordAsync(tenant, enrollment, Mmhg(182), ct);
         using (var paused = new CommitPause(fixture))
         {
             var locking = paused.HoldAsync(() => fixture.Sender.SendAsync(Lock(tenant, recorded), cancellationToken: ct));
             await paused.Reached.WaitAsync(TimeSpan.FromSeconds(30), ct);
-            var correction = fixture.Sender.SendAsync(Correct(tenant, recorded, "128"), cancellationToken: ct);
+            var correction = fixture.Sender.SendAsync(Correct(tenant, recorded, Mmhg(128)), cancellationToken: ct);
             await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
             correction.IsCompleted.Should().BeFalse("the correction waits for the lock's advisory lock ({0})", Describe(correction));
             paused.Release();
@@ -229,15 +230,55 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         var (tenant, enrollment) = await NewEnrollmentAsync(ct);
-        var recorded = await RecordAsync(tenant, enrollment, "182", ct);
+        var recorded = await RecordAsync(tenant, enrollment, Mmhg(182), ct);
         var other = await ScreenAsync(tenant, await AddStudySiteAsync(tenant, recorded.StudyId, ct), ct);
 
         var result = await fixture.Sender.SendAsync(
-            new CorrectObservation(tenant, recorded.ObservationId, other, "128", 1, KernelProtocolScenario.Key(), CorrectionReason), cancellationToken: ct);
+            new CorrectObservation(tenant, recorded.ObservationId, other, Mmhg(128), 1, KernelProtocolScenario.Key(), CorrectionReason), cancellationToken: ct);
 
         result.Error!.Code.Should().Be(KernelErrors.NotFound.Code);
         await using var db = fixture.CreateContext(tenant);
-        (await db.Observations.AsNoTracking().SingleAsync(o => o.Id == recorded.ObservationId, ct)).Value.Should().Be("182");
+        (await db.Observations.AsNoTracking().SingleAsync(o => o.Id == recorded.ObservationId, ct)).Value.Should().Be(Mmhg(182));
+    }
+
+    /// <summary>
+    /// Typed values (ADR-2623) survive PostgreSQL: each variant is stored as <c>jsonb</c> and read back equal, through
+    /// the domain model and the observation read, although jsonb reorders the members; a quantity keeps its entered
+    /// precision. A value that was not obtained is recorded with its reason and corrected like any other (K-FACT-3).
+    /// </summary>
+    [Fact(DisplayName = "TypedValues_RoundTripThroughJsonb_AndAMissingValueIsCorrectable")]
+    public async Task TypedValuesRoundTripThroughJsonbAndAMissingValueIsCorrectable()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, enrollment) = await NewEnrollmentAsync(ct);
+        ObservationValue[] values =
+        [
+            new QuantityValue(1.50m, "mg/dL"),
+            new QuantityValue(0.5m, "mg/dL", QuantityComparator.LessThan),
+            new CodedValue(CodeSystemVersionId.New(), "C49488"),
+            new TextValue("Headache, mild"),
+            new BooleanValue(false),
+            new DateTimeValue("2026-03"),
+            new MissingValue(NullFlavor.NotDone, "Patient refused"),
+        ];
+
+        foreach (var value in values)
+        {
+            var recorded = await RecordAsync(tenant, enrollment, value, ct);
+            recorded.Value.Should().Be(value);
+            await using var db = fixture.CreateContext(tenant);
+            (await db.Observations.AsNoTracking().SingleAsync(o => o.Id == recorded.ObservationId, ct)).Value.Should().Be(value);
+            (await fixture.ObservationRecords.FindAsync(tenant, recorded.ObservationId, ct))!.Revisions.Single().Value.Should().Be(value);
+        }
+
+        var missing = await RecordAsync(tenant, enrollment, new MissingValue(NullFlavor.NotDone, "Cuff unavailable"), ct);
+        var corrected = await _scenario.OkAsync(Correct(tenant, missing, Mmhg(118)), ct);
+        corrected.Value.Should().Be(Mmhg(118));
+        var stored = await StoredJsonAsync(tenant, missing.ObservationId, ct);
+        stored.Should().Contain("\"value\": 118").And.Contain("\"type\": \"quantity\"");
+        (await StoredJsonAsync(tenant, (await RecordAsync(tenant, enrollment, new QuantityValue(1.50m, "mg/dL"), ct)).ObservationId, ct))
+            .Should().Contain("1.50", "jsonb keeps the scale the value was entered with");
     }
 
     /// <summary>A correction to the same value, or to an empty value, is refused as a rule violation.</summary>
@@ -247,11 +288,11 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         var (tenant, enrollment) = await NewEnrollmentAsync(ct);
-        var recorded = await RecordAsync(tenant, enrollment, "182", ct);
+        var recorded = await RecordAsync(tenant, enrollment, Mmhg(182), ct);
 
-        (await fixture.Sender.SendAsync(Correct(tenant, recorded, "182"), cancellationToken: ct)).Error!.Code
+        (await fixture.Sender.SendAsync(Correct(tenant, recorded, Mmhg(182)), cancellationToken: ct)).Error!.Code
             .Should().Be(ObservationErrors.ValueUnchanged.Code);
-        (await fixture.Sender.SendAsync(Correct(tenant, recorded, " "), cancellationToken: ct)).Error!.Code
+        (await fixture.Sender.SendAsync(Correct(tenant, recorded, new TextValue(" ")), cancellationToken: ct)).Error!.Code
             .Should().Be(ObservationErrors.ValueInvalid.Code);
     }
 
@@ -284,7 +325,7 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
     {
         using var tests = new KernelObservationPostgresTests(fixture);
         var (tenant, enrollment) = await tests.NewEnrollmentAsync(ct);
-        await tests.RecordAsync(tenant, enrollment, "120", ct);
+        await tests.RecordAsync(tenant, enrollment, Mmhg(120), ct);
     }
 
     private async Task<(TenantId Tenant, EnrollmentId Enrollment)> NewEnrollmentAsync(CancellationToken ct)
@@ -293,16 +334,26 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
         return (tenant, await ScreenAsync(tenant, await AddStudySiteAsync(tenant, study, ct), ct));
     }
 
-    private async Task<ObservationState> RecordAsync(TenantId tenant, EnrollmentId enrollment, string value, CancellationToken ct) =>
+    private async Task<ObservationState> RecordAsync(TenantId tenant, EnrollmentId enrollment, ObservationValue value, CancellationToken ct) =>
         await _scenario.OkAsync(
             new RecordObservation(tenant, ObservationId.New(), enrollment, SystolicBloodPressure, value, Tick().AddMinutes(-5), KernelProtocolScenario.Key(), EntryReason),
             ct);
 
-    private static CorrectObservation Correct(TenantId tenant, ObservationState observation, string value, long expectedVersion = 1) =>
+    private static CorrectObservation Correct(TenantId tenant, ObservationState observation, ObservationValue value, long expectedVersion = 1) =>
         new(tenant, observation.ObservationId, observation.EnrollmentId, value, expectedVersion, KernelProtocolScenario.Key(), CorrectionReason);
 
     private static LockObservation Lock(TenantId tenant, ObservationState observation) =>
         new(tenant, observation.ObservationId, observation.EnrollmentId, KernelProtocolScenario.Key(), "Data review complete; locking the value");
+
+    private static QuantityValue Mmhg(decimal value) => new(value, "mm[Hg]");
+
+    private async Task<string> StoredJsonAsync(TenantId tenant, ObservationId observation, CancellationToken ct)
+    {
+        await using var db = fixture.CreateContext(tenant);
+        return await db.Database
+            .SqlQuery<string>($"SELECT value::text AS \"Value\" FROM kernel.observations WHERE id = {observation.Value}")
+            .SingleAsync(ct);
+    }
 
     private DateTimeOffset Tick() => fixture.Clock.Advance(TimeSpan.FromSeconds(1));
 

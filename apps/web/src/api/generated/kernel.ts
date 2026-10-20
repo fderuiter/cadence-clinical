@@ -464,6 +464,7 @@ export interface components {
       /** @default false */
       required: boolean;
       purpose?: null | components["schemas"]["Kernel_DataPurpose"];
+      value_kind?: null | components["schemas"]["Kernel_ObservationValueKind"];
     };
     Kernel_CollectionSpec: {
       id: string;
@@ -484,6 +485,9 @@ export interface components {
       safety_rule_ids?: string[];
       operational_need?: null | string;
     };
+    /** @enum {unknown} */
+    Kernel_DateTimePrecision:
+      "Year" | "Month" | "Day" | "Minute" | "Second" | null;
     Kernel_DependentGroup: {
       kind: string;
       /** Format: int32 */
@@ -624,7 +628,7 @@ export interface components {
     };
     Kernel_KernelCorrectObservationRequest: {
       enrollment_ref: string;
-      value: null | string;
+      value: null | components["schemas"]["Kernel_ObservationValue"];
       /** Format: int64 */
       expected_version: number | string;
     };
@@ -731,7 +735,7 @@ export interface components {
       ref: string;
       enrollment_ref: string;
       concept: string;
-      value: string;
+      value: components["schemas"]["Kernel_ObservationValue"];
       /** Format: date-time */
       observed_at: string;
       /** Format: int64 */
@@ -743,7 +747,7 @@ export interface components {
     Kernel_KernelObservationStateResponse: {
       ref: string;
       enrollment_ref: string;
-      value: string;
+      value: components["schemas"]["Kernel_ObservationValue"];
       /** Format: int64 */
       version: number | string;
       /** Format: int32 */
@@ -767,7 +771,7 @@ export interface components {
       observation_id: null | string;
       enrollment_ref: string;
       concept: string;
-      value: null | string;
+      value: null | components["schemas"]["Kernel_ObservationValue"];
       /** Format: date-time */
       observed_at: string;
     };
@@ -896,6 +900,14 @@ export interface components {
     Kernel_MatrixGapKind: number;
     Kernel_MatrixGapSeverity: number;
     Kernel_NodeRef: unknown;
+    /** @enum {unknown} */
+    Kernel_NullFlavor:
+      | "NotDone"
+      | "Unknown"
+      | "AskedButUnknown"
+      | "NotAsked"
+      | "NotApplicable"
+      | "Masked";
     Kernel_Objective: {
       id: string;
       level: components["schemas"]["Kernel_ObjectiveLevel"];
@@ -923,13 +935,59 @@ export interface components {
     Kernel_ObservationRevisionView: {
       /** Format: int32 */
       number: number | string;
-      value: string;
+      value: components["schemas"]["Kernel_ObservationValue"];
       reason_for_change: string;
       recorded_by: string;
       /** Format: date-time */
       recorded_at: string;
       /** Format: date-time */
       recorded_until: null | string;
+    };
+    Kernel_ObservationValue:
+      | components["schemas"]["Kernel_ObservationValueQuantityValue"]
+      | components["schemas"]["Kernel_ObservationValueCodedValue"]
+      | components["schemas"]["Kernel_ObservationValueTextValue"]
+      | components["schemas"]["Kernel_ObservationValueBooleanValue"]
+      | components["schemas"]["Kernel_ObservationValueDateTimeValue"]
+      | components["schemas"]["Kernel_ObservationValueMissingValue"];
+    Kernel_ObservationValueBooleanValue: {
+      /** @enum {string} */
+      type?: "boolean";
+      value: boolean;
+    };
+    Kernel_ObservationValueCodedValue: {
+      /** @enum {string} */
+      type?: "coded";
+      code_system_version_id: components["schemas"]["Kernel_CodeSystemVersionId"];
+      code: string;
+    };
+    Kernel_ObservationValueDateTimeValue: {
+      /** @enum {string} */
+      type?: "dateTime";
+      value: string;
+      precision?: components["schemas"]["Kernel_DateTimePrecision"];
+    };
+    /** @enum {unknown} */
+    Kernel_ObservationValueKind:
+      "Quantity" | "Coded" | "Text" | "Boolean" | "DateTime" | "Missing" | null;
+    Kernel_ObservationValueMissingValue: {
+      /** @enum {string} */
+      type?: "missing";
+      reason: components["schemas"]["Kernel_NullFlavor"];
+      detail?: null | string;
+    };
+    Kernel_ObservationValueQuantityValue: {
+      /** @enum {string} */
+      type?: "quantity";
+      /** Format: double */
+      value: number | string;
+      unit: string;
+      comparator?: null | components["schemas"]["Kernel_QuantityComparator"];
+    };
+    Kernel_ObservationValueTextValue: {
+      /** @enum {string} */
+      type?: "text";
+      value: string;
     };
     Kernel_PlannedActivity: {
       id: string;
@@ -1003,6 +1061,8 @@ export interface components {
       concepts: components["schemas"]["Kernel_ConceptRef"][];
       expression?: null | string;
     };
+    /** @enum {unknown} */
+    Kernel_QuantityComparator: "<" | "<=" | ">" | ">=" | null;
     Kernel_ScheduleChange: {
       activity_id: string;
       change: components["schemas"]["Kernel_ElementChangeKind"];

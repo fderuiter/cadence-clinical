@@ -264,7 +264,7 @@ describe("kernelApi observations (ADR-2620)", () => {
     const result = await kernelApi.correctObservation({
       observationRef: `${OBSERVATION}@1`,
       enrollmentRef: ENROLLMENT,
-      value: "128",
+      value: { type: "quantity", value: "128", unit: "mm[Hg]" },
       expectedVersion: 1,
       reason: "Transcription error – source reads 128",
       idempotencyKey: "key-1",
@@ -282,7 +282,7 @@ describe("kernelApi observations (ADR-2620)", () => {
     );
     expect(await request.json()).toEqual({
       enrollment_ref: ENROLLMENT,
-      value: "128",
+      value: { type: "quantity", value: "128", unit: "mm[Hg]" },
       expected_version: 1,
     });
   });
@@ -302,7 +302,7 @@ describe("kernelApi observations (ADR-2620)", () => {
         .correctObservation({
           observationRef: OBSERVATION,
           enrollmentRef: ENROLLMENT,
-          value: "128",
+          value: { type: "quantity", value: "128", unit: "mm[Hg]" },
           expectedVersion: 1,
           reason: "Transcription error",
           idempotencyKey: "key-2",

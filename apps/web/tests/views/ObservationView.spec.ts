@@ -8,19 +8,23 @@ import { kernelApi } from "@/api/kernelApi";
 const OBSERVATION = "observation:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d70";
 const ENROLLMENT = "enrollment:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d71";
 
+function mmhg(value: number) {
+  return { type: "quantity", value, unit: "mm[Hg]", comparator: null };
+}
+
 function observation(overrides: Record<string, unknown> = {}) {
   return {
     ref: `${OBSERVATION}@1`,
     enrollment_ref: ENROLLMENT,
     concept: "concept:systolic@1",
-    value: "182",
+    value: mmhg(182),
     observed_at: "2026-10-15T09:00:00Z",
     version: 1,
     locked: null,
     revisions: [
       {
         number: 1,
-        value: "182",
+        value: mmhg(182),
         reason_for_change: "Initial entry",
         recorded_by: "crc@site.test",
         recorded_at: "2026-10-15T09:05:00Z",
@@ -65,7 +69,7 @@ describe("ObservationView (ADR-2620)", () => {
   it("shows the saved state only after the kernel commits, then the reloaded audit trail", async () => {
     const corrected = observation({
       ref: `${OBSERVATION}@2`,
-      value: "128",
+      value: mmhg(128),
       version: 2,
       audit: [
         {
@@ -105,25 +109,39 @@ describe("ObservationView (ADR-2620)", () => {
     expect(wrapper.find("[data-testid=observation-outcome]").exists()).toBe(
       false
     );
-    expect(wrapper.find("[data-testid=observation-value]").text()).toBe("182");
+    expect(wrapper.find("[data-testid=observation-value]").text()).toBe(
+      "182 mm[Hg]"
+    );
     expect(wrapper.find("#observation-save").text()).toBe("Saving…");
     expect(correct).toHaveBeenCalledWith(
       expect.objectContaining({
         observationRef: `${OBSERVATION}@1`,
         enrollmentRef: ENROLLMENT,
-        value: "128",
+        value: {
+          type: "quantity",
+          value: "128",
+          unit: "mm[Hg]",
+          comparator: null,
+        },
         expectedVersion: 1,
         reason: "Typographical Error: Transcription error",
       })
     );
 
-    commit({ ref: `${OBSERVATION}@2`, value: "128", version: 2, revision: 2 });
+    commit({
+      ref: `${OBSERVATION}@2`,
+      value: mmhg(128),
+      version: 2,
+      revision: 2,
+    });
     await flushPromises();
 
     expect(wrapper.find("[data-testid=observation-outcome]").text()).toContain(
       "Correction saved"
     );
-    expect(wrapper.find("[data-testid=observation-value]").text()).toBe("128");
+    expect(wrapper.find("[data-testid=observation-value]").text()).toBe(
+      "128 mm[Hg]"
+    );
     expect(wrapper.find("[data-testid=observation-audit]").text()).toContain(
       "Typographical Error: Transcription error"
     );
@@ -133,7 +151,7 @@ describe("ObservationView (ADR-2620)", () => {
   it("reloads and asks again when the version is stale", async () => {
     const newer = observation({
       ref: `${OBSERVATION}@2`,
-      value: "130",
+      value: mmhg(130),
       version: 2,
     });
     const get = vi
@@ -151,7 +169,9 @@ describe("ObservationView (ADR-2620)", () => {
     expect(wrapper.find("[data-testid=observation-outcome]").text()).toContain(
       "changed this value after you opened it"
     );
-    expect(wrapper.find("[data-testid=observation-value]").text()).toBe("130");
+    expect(wrapper.find("[data-testid=observation-value]").text()).toBe(
+      "130 mm[Hg]"
+    );
     wrapper.unmount();
   });
 
@@ -210,10 +230,35 @@ describe("ObservationView (ADR-2620)", () => {
     expect(
       wrapper.find("#observation-save").attributes("disabled")
     ).toBeDefined();
+    await wrapper.find("#observation-new-value").setValue("182.0");
+    expect(
+      wrapper.find("#observation-save").attributes("disabled")
+    ).toBeDefined();
     await wrapper.find("#observation-new-value").setValue("  ");
     expect(
       wrapper.find("#observation-save").attributes("disabled")
     ).toBeDefined();
+    wrapper.unmount();
+  });
+
+  it("keeps the unit and refuses text that is not a quantity (ADR-2623)", async () => {
+    vi.spyOn(kernelApi, "getObservation").mockResolvedValue(observation());
+    const wrapper = await mountView();
+
+    expect(wrapper.find("[data-testid=observation-unit]").text()).toBe(
+      "mm[Hg]"
+    );
+    await wrapper.find("#observation-new-value").setValue("high");
+    expect(
+      wrapper.find("#observation-save").attributes("disabled")
+    ).toBeDefined();
+    expect(wrapper.find("#observation-new-value-hint").text()).toContain(
+      "Enter a number in mm[Hg]"
+    );
+    await wrapper.find("#observation-new-value").setValue("<90");
+    expect(
+      wrapper.find("#observation-save").attributes("disabled")
+    ).toBeUndefined();
     wrapper.unmount();
   });
 });

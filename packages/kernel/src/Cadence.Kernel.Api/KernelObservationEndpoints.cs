@@ -121,7 +121,7 @@ public static class KernelObservationEndpoints
                 observation,
                 EnrollmentId.FromGuid(enrollment.Id),
                 concept,
-                request.Value ?? string.Empty,
+                request.Value!,
                 request.ObservedAt,
                 IdempotencyKey(context),
                 changeReason.Read(context) ?? string.Empty),
@@ -154,7 +154,7 @@ public static class KernelObservationEndpoints
                 KernelRequestTenant.Get(context),
                 observation,
                 EnrollmentId.FromGuid(enrollment.Id),
-                request.Value ?? string.Empty,
+                request.Value!,
                 request.ExpectedVersion,
                 IdempotencyKey(context),
                 changeReason.Read(context) ?? string.Empty),
@@ -223,15 +223,15 @@ public static class KernelObservationEndpoints
 /// <param name="ObservationId">The new observation's id; the kernel assigns one when absent. Retrying with the same idempotency key must send the same id.</param>
 /// <param name="EnrollmentRef">The enrollment the fact is about, as a NodeRef.</param>
 /// <param name="Concept">What the value means, as <c>&lt;concept id&gt;@&lt;version&gt;</c>.</param>
-/// <param name="Value">The value as entered.</param>
+/// <param name="Value">The value as entered, typed by its <c>type</c> member (ADR-2623).</param>
 /// <param name="ObservedAt">When the fact held in the trial world.</param>
-public sealed record KernelRecordObservationRequest(Guid? ObservationId, string EnrollmentRef, string Concept, string? Value, DateTimeOffset ObservedAt);
+public sealed record KernelRecordObservationRequest(Guid? ObservationId, string EnrollmentRef, string Concept, ObservationValue? Value, DateTimeOffset ObservedAt);
 
 /// <summary>Body of <c>POST /observations/{ref}/corrections</c>.</summary>
 /// <param name="EnrollmentRef">The observation's enrollment, as a NodeRef; the correction is authorized against it.</param>
 /// <param name="Value">The corrected value.</param>
 /// <param name="ExpectedVersion">The observation version the corrector saw; another version is refused with 409.</param>
-public sealed record KernelCorrectObservationRequest(string EnrollmentRef, string? Value, long ExpectedVersion);
+public sealed record KernelCorrectObservationRequest(string EnrollmentRef, ObservationValue? Value, long ExpectedVersion);
 
 /// <summary>Body of <c>POST /observations/{ref}/lock</c>.</summary>
 /// <param name="EnrollmentRef">The observation's enrollment, as a NodeRef.</param>
@@ -243,7 +243,7 @@ public sealed record KernelLockObservationRequest(string EnrollmentRef);
 /// <param name="Value">The current value.</param>
 /// <param name="Version">The version to name as expected in the next correction.</param>
 /// <param name="Revision">The number of the revision holding the value.</param>
-public sealed record KernelObservationStateResponse(string Ref, string EnrollmentRef, string Value, long Version, int Revision)
+public sealed record KernelObservationStateResponse(string Ref, string EnrollmentRef, ObservationValue Value, long Version, int Revision)
 {
     internal static KernelObservationStateResponse From(ObservationState state) =>
         new(NodeRef.For(state.ObservationId, state.Version).ToString(), NodeRef.For(state.EnrollmentId).ToString(), state.Value, state.Version, state.Revision);
@@ -269,7 +269,7 @@ public sealed record KernelObservationResponse(
     string Ref,
     string EnrollmentRef,
     string Concept,
-    string Value,
+    ObservationValue Value,
     DateTimeOffset ObservedAt,
     long Version,
     ObservationLockView? Locked,

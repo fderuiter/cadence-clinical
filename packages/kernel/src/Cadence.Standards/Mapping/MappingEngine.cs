@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Standards.Mapping;
 
 namespace Cadence.Standards.Mapping;
@@ -10,13 +11,16 @@ namespace Cadence.Standards.Mapping;
 /// <summary>
 /// The .NET <see cref="IMappingEngine"/> (ADR-2463). For the mapping of the input's Concept it writes the constant
 /// variables, the original result and unit as collected, and, for a quantity, the result converted into the standard
-/// unit. A coded result is written as its CT submission value. Every unit is written as the specification's term for
+/// unit. A coded result is written as its CT submission value, and a value that was not obtained as its status
+/// (<c>--STAT = NOT DONE</c>) and reason (<c>--REASND</c>). Every unit is written as the specification's term for
 /// it. The engine never guesses: a missing mapping, unit term, conversion or decode, a quantity that is neither a number
 /// nor a bound such as &lt;1.0, or a conversion out of range is a problem, and a result with a problem produces no record
 /// fragment.
 /// </summary>
 public sealed class MappingEngine : IMappingEngine
 {
+    private const string NotDone = "NOT DONE";
+
     private const NumberStyles NumberStyle = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint | NumberStyles.AllowExponent;
 
     /// <inheritdoc />
@@ -34,7 +38,11 @@ public sealed class MappingEngine : IMappingEngine
         var values = mapping.Assign.Select(a => new MappedValue(a.Key, a.Value)).ToList();
         var result = mapping.Result;
 
-        if (mapping.Codelist is { } codelist)
+        if (input.Missing is { } missing)
+        {
+            MapNotDone(mapping, missing, values, problems);
+        }
+        else if (mapping.Codelist is { } codelist)
         {
             var decoded = Decode(codelist, input.Value, decoder, problems);
             values.Add(new MappedValue(result.Original, decoded));
@@ -47,6 +55,12 @@ public sealed class MappingEngine : IMappingEngine
         else
         {
             MapResult(specification, mapping, input, values, problems);
+        }
+
+        if (input.Missing is null)
+        {
+            Add(values, result.Status, null);
+            Add(values, result.ReasonNotDone, null);
         }
 
         return problems.Count == 0
@@ -115,6 +129,36 @@ public sealed class MappingEngine : IMappingEngine
             values.Add(new MappedValue(result.StandardUnit, UnitTerm(specification, mapping, mapping.StandardUnit, problems)));
         }
     }
+
+    // A value that was not obtained (K-FACT-3) has no result: its status says NOT DONE and its reason goes to --REASND,
+    // the detail when there is one, otherwise the null flavor when it says more than "not done".
+    private static void MapNotDone(VariableMapping mapping, MissingValue missing, List<MappedValue> values, List<string> problems)
+    {
+        var result = mapping.Result;
+        if (result.Status is null)
+        {
+            problems.Add($"Mapping \"{mapping.Id}\" names no status variable (--STAT), so it cannot write a value that was not obtained ({missing.Reason}).");
+            return;
+        }
+
+        values.Add(new MappedValue(result.Original, null));
+        Add(values, result.OriginalUnit, null);
+        Add(values, result.StandardCharacter, null);
+        Add(values, result.StandardNumeric, null);
+        Add(values, result.StandardUnit, null);
+        values.Add(new MappedValue(result.Status, NotDone));
+        Add(values, result.ReasonNotDone, missing.Detail ?? (missing.Reason == NullFlavor.NotDone ? null : ReasonText(missing.Reason)));
+    }
+
+    private static string ReasonText(NullFlavor reason) => reason switch
+    {
+        NullFlavor.Unknown => "UNKNOWN",
+        NullFlavor.AskedButUnknown => "ASKED BUT UNKNOWN",
+        NullFlavor.NotAsked => "NOT ASKED",
+        NullFlavor.NotApplicable => "NOT APPLICABLE",
+        NullFlavor.Masked => "MASKED",
+        _ => reason.ToString().ToUpperInvariant(),
+    };
 
     private static decimal? Convert(VariableMapping mapping, decimal value, string unit)
     {

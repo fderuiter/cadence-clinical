@@ -92,6 +92,13 @@ asserted by this source. Values are immutable; a correction appends a numbered r
 Observation, with a reason, so the earlier value stays readable (K-FACT-1, ADR-2621). The concept is a
 `ConceptRef`, never an SDTM variable.
 
+### Observation Value
+
+The typed value of an Observation (ADR-2623): a quantity with its UCUM unit (and an optional comparator such as
+`<`), a code in a versioned code system, text, a boolean, an ISO 8601 date/time at year to second precision
+(`2026-03` is a partial date), or a missing value with a null flavor (`NotDone`, `Unknown`, `NotApplicable`, …).
+_Avoid_: empty strings or sentinels for missing values, units in a separate field, string values
+
 ### Collection Instance
 
 The kernel side of one filled-in form: which Observations were collected together, for which participant
