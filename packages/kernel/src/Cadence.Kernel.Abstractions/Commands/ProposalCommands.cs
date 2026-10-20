@@ -152,6 +152,7 @@ public enum ProposalStatus
 /// <param name="EscalatedTo">The role, group, or actor to whom it was escalated.</param>
 /// <param name="EscalationReason">Why it was escalated.</param>
 /// <param name="EscalationPolicy">The policy rule governing escalation.</param>
+/// <param name="RequestedBy">The person an automation agent proposed it for (K-AI-6); null for any other proposer.</param>
 public sealed record ProposalState(
     ProposalId ProposalId,
     StudyId StudyId,
@@ -172,7 +173,8 @@ public sealed record ProposalState(
     ActorKind? EscalatedByKind = null,
     string? EscalatedTo = null,
     string? EscalationReason = null,
-    string? EscalationPolicy = null);
+    string? EscalationPolicy = null,
+    string? RequestedBy = null);
 
 /// <summary>Errors raised by the proposal commands (ADR-2489).</summary>
 public static class ProposalErrors
@@ -222,4 +224,32 @@ public static class ProposalErrors
 
     public static readonly KernelError AttestationRejected =
         new("K.Proposal.AttestationRejected", 422, "The attestation does not approve this proposal's content.");
+
+    /// <summary>An automation agent proposes only for the person it acts for (K-AI-6).</summary>
+    public static readonly KernelError RequesterRequired =
+        new("K.Proposal.RequesterRequired", 422, "An automation agent proposes for the one person it acts for (K-AI-6).");
+
+    /// <summary>The command names a proposal that does not exist in the tenant (K-AI-2).</summary>
+    public static readonly KernelError ExecutionUnknown =
+        new("K.Proposal.ExecutionUnknown", 404, "The proposal the command executes does not exist.");
+
+    /// <summary>The proposal the command executes has not been approved (K-AI-2).</summary>
+    public static readonly KernelError NotApproved =
+        new("K.Proposal.NotApproved", 409, "Only an approved proposal can be executed.");
+
+    /// <summary>The proposal the command executes has expired (K-AI-2).</summary>
+    public static readonly KernelError ExecutionExpired =
+        new("K.Proposal.ExecutionExpired", 409, "The proposal expired; it can no longer be executed.");
+
+    /// <summary>Only the person who approved a proposal executes it, as themselves (spec §11, K-AI-2).</summary>
+    public static readonly KernelError NotApprover =
+        new("K.Proposal.NotApprover", 403, "Only the person who approved the proposal can execute it.");
+
+    /// <summary>The command needs a capability the proposal did not request (K-AI-2).</summary>
+    public static readonly KernelError CapabilityNotRequested =
+        new("K.Proposal.CapabilityNotRequested", 403, "The proposal did not request this command's capability.");
+
+    /// <summary>The command acts on an object of another study than the proposal's (K-AI-2).</summary>
+    public static readonly KernelError OutsideStudy =
+        new("K.Proposal.OutsideStudy", 403, "The command acts outside the proposal's study.");
 }

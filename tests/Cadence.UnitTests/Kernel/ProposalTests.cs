@@ -10,6 +10,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
+using Cadence.Testing;
 using Cadence.Testing.Time;
 
 using FluentAssertions;
@@ -28,9 +29,9 @@ public sealed class ProposalTests
 {
     private static readonly TenantId Tenant = TenantId.New();
 
-    private static readonly Actor Agent = Actor.AutomationAgent("deviation-triage");
-
     private static readonly Actor Proposer = Actor.Person("proposer@sponsor.test");
+
+    private static readonly Actor Agent = Actor.AutomationAgent("deviation-triage").ActingFor(Proposer);
 
     private static readonly Actor Approver = Actor.Person("approver@sponsor.test");
 
@@ -243,7 +244,7 @@ public sealed class ProposalTests
             ["capabilities"] = Create(command with { RequestedCapabilities = ["protocol.approve"] }, Proposer),
             ["expiry"] = Create(command with { ExpiresAt = command.ExpiresAt.AddSeconds(1) }, Proposer),
             ["proposer"] = Create(command, Approver),
-            ["proposer kind and model"] = Create(command with { ModelId = "claude-opus-5" }, Actor.AutomationAgent("proposer@sponsor.test")),
+            ["proposer kind and model"] = Create(command with { ModelId = "claude-opus-5" }, Actor.AutomationAgent("proposer@sponsor.test").ActingFor(Proposer)),
         };
         _clock.Advance(TimeSpan.FromSeconds(1));
         variants["proposed at"] = Create(command, Proposer);
@@ -258,6 +259,30 @@ public sealed class ProposalTests
         var command = Command() with { ModelId = "claude-opus-5" };
 
         Create(command with { ModelId = "claude-sonnet-5" }, Agent).ContentHash.Should().NotBe(Create(command, Agent).ContentHash);
+    }
+
+    /// <summary>
+    /// Only the person who approved a proposal executes it, while it is unexpired, and only with a capability it
+    /// requested (K-AI-2, ADR-2632). An agent always proposes for one requesting person (K-AI-6).
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-SYS-051")]
+    public void CheckExecution_IsForTheApproverWithARequestedCapabilityBeforeExpiry()
+    {
+        var proposal = Create(Command(), Agent, "claude-opus-5");
+        var now = _clock.Advance(TimeSpan.FromHours(1));
+
+        proposal.CheckExecution(Approver, "protocol.approve", now)!.Code.Should().Be(ProposalErrors.NotApproved.Code);
+        proposal.Approve(Approver, AttestationId.New(), now).Should().BeNull();
+
+        proposal.CheckExecution(Approver, "protocol.approve", now).Should().BeNull();
+        proposal.CheckExecution(Approver, "effectivity.change_status", now).Should().BeNull();
+        proposal.CheckExecution(Approver, "observation.record", now)!.Code.Should().Be(ProposalErrors.CapabilityNotRequested.Code);
+        proposal.CheckExecution(Proposer, "protocol.approve", now).Should().Be(ProposalErrors.NotApprover);
+        proposal.CheckExecution(Agent, "protocol.approve", now).Should().Be(ProposalErrors.NotApprover);
+        proposal.CheckExecution(Approver, "protocol.approve", proposal.ExpiresAt).Should().Be(ProposalErrors.ExecutionExpired);
+        Proposal.Create(Tenant, Command() with { ModelId = "claude-opus-5" }, Actor.AutomationAgent("deviation-triage"), _clock.UtcNow, ProposalCapabilities.IsExecutable)
+            .Error.Should().Be(ProposalErrors.RequesterRequired);
     }
 
     [Fact]
@@ -278,7 +303,7 @@ public sealed class ProposalTests
         proposal.DecisionReason.Should().BeNull();
         proposal.ToState(now).Should().BeEquivalentTo(new ProposalState(
             proposal.Id, proposal.StudyId, ProposalStatus.Approved, proposal.ContentHash, Agent.Id, ActorKind.AutomationAgent, "claude-opus-5",
-            proposal.ExpiresAt, now, Approver.Id, attestation, ConfidenceScore: null, ConfidenceTier: null, IsEscalated: false));
+            proposal.ExpiresAt, now, Approver.Id, attestation, ConfidenceScore: null, ConfidenceTier: null, IsEscalated: false, RequestedBy: Proposer.Id));
 
         proposal.Approve(Approver, AttestationId.New(), now).Should().Be(ProposalErrors.NotOpen with { Message = "The proposal is already Approved." });
         proposal.Reject(Approver, "No", now)!.Code.Should().Be(ProposalErrors.NotOpen.Code);

@@ -307,6 +307,9 @@ public sealed class KernelAuthorizationTests
             public void RecordPermit(AuthorizationDecision permit) =>
                 throw new InvalidOperationException("A denied command has no permit.");
 
+            public void RecordProposalExecution(NodeRef proposal) =>
+                throw new InvalidOperationException("A denied command executes no proposal.");
+
             public Task<IdempotentOutcome?> FindPriorOutcomeAsync(CancellationToken cancellationToken) =>
                 throw new InvalidOperationException("A denied command is not replayed.");
 

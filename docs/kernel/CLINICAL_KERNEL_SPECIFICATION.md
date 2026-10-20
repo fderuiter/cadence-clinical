@@ -1138,8 +1138,16 @@ proposal is `Open` until a person approves it with an `Approved` attestation ove
 rejects it, or its proposer withdraws it; an open proposal past its expiry reads as `Expired`. It sits on its study's
 scope path, derives from its plan in lineage and is defined by each versioned affected object. `Actor.AutomationAgent`
 builds agent actors, and the existing `actor.agent_verb` rule is K-AI-1 for now: an agent can never execute or approve.
-The K-AI-2 execution link, standing grants (b), grants scoped to the requesting human, the `QueryStatus.DraftAi`
-migration and a proposals work-queue source follow in later slices.
+
+**Implemented** (ADR-2632): an agent actor carries the person it acts for (`Actor.ActingFor`, K-AI-6). An agent acting
+for no one is refused everything and sees nothing; otherwise both its own grants and the person's must permit a
+capability, and it sees only what both may see. An agent's proposal and provenance activity record that person. A
+command executes an approved proposal by naming it in `CommandMetadata.Proposal` (K-AI-2): the pipeline requires the
+proposal to be approved and unexpired, approved by the acting person, to have requested the command's capability, and
+the command's object to be in the proposal's study or in none; it then records the proposal on the provenance activity,
+raises `ProposalExecuted` in that activity and writes an `ExecutedUnder` lineage edge from the approved proposal to the
+object version written. Standing grants (b), the `QueryStatus.DraftAi` migration and a proposals work-queue source follow
+in later slices.
 
 AI agents across the platform (ADR-2630, K037) run in one governed runtime, the Intelligence module, whose only
 write into clinical data is a Proposal. Each task configuration declares an autonomy level: 0 inform, 1 draft,
@@ -1326,7 +1334,7 @@ kernel, is merged into another, or is retired.
 | K034 | Observation corrections and locks          | A correction appends an insert-only revision to a stable Observation; value Assertions cite the revision; `Locked`/`Frozen` are scoped Assertions with Attestation and retraction, guarded by shared scope locks                                                    | ADR-2620, ADR-2621 |
 | K035 | eCRF forms on the kernel                   | A form instance is a kernel `CollectionInstance`; one command saves a whole page against per-value revisions; structural checks before commit, edit checks after; a correction supersedes, never erases, a form signature                                           | ADR-2622           |
 | K036 | Typed observation values                   | One polymorphic `ObservationValue` (quantity with UCUM unit, coded with code-system version, text, boolean, partial ISO 8601 date/time, missing with a null flavor) in commands, events, jsonb storage, the API and the SDTM projection                             | ADR-2623           |
-| K037 | AI agents in one governed runtime          | Agents run in the Intelligence module and write only Proposals; autonomy levels 0 to 3; cited content only; configuration version recorded; reads bounded by the requesting person; standing grants for operational commands only                                   | ADR-2630           |
+| K037 | AI agents in one governed runtime          | Agents run in the Intelligence module and write only Proposals; autonomy levels 0 to 3; cited content only; configuration version recorded; reads bounded by the requesting person; standing grants for operational commands only                                   | ADR-2630, ADR-2632 |
 
 ---
 

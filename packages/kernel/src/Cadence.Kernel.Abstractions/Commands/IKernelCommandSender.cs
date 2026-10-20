@@ -20,5 +20,8 @@ public interface IKernelCommandSender
 /// <summary>
 /// Tracing identifiers carried onto provenance, audit and event rows. <see cref="CorrelationId"/> groups everything
 /// caused by one user request; <see cref="CausationId"/> is the event that triggered this command, if any.
+/// <see cref="Proposal"/> names the approved proposal this command executes (K-AI-2, ADR-2632): the pipeline then
+/// requires the proposal to be approved, unexpired, approved by the acting person and to request the command's
+/// capability, and links the proposal to the command's provenance activity, lineage and a <c>ProposalExecuted</c> event.
 /// </summary>
-public sealed record CommandMetadata(Guid CorrelationId, Guid? CausationId = null);
+public sealed record CommandMetadata(Guid CorrelationId, Guid? CausationId = null, ProposalId? Proposal = null);

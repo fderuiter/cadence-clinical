@@ -68,7 +68,8 @@ public sealed record KernelAuthorityOptions(IReadOnlySet<string> PlatformOperato
 /// <item>Grants and delegations held by the actor and in effect at <c>(at, known_at)</c>; a delegation also needs
 /// every grant above it in effect (K-AUTH-3).</item>
 /// <item>The capability is the grant's, or in the granted role, and the grant's scope covers the resource's scope path.</item>
-/// <item>Automation agents may only read and propose (spec §11).</item>
+/// <item>Automation agents may only read and propose (spec §11), each for one requesting person who must be permitted the
+/// same capability on the same resource (K-AI-6, ADR-2632).</item>
 /// <item>Every qualification requirement for the capability in effect over the resource's scope path is met by a
 /// qualification the actor holds, in effect at the same <c>(at, known_at)</c> (K-AUTH-5).</item>
 /// </list>
@@ -94,6 +95,9 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
     /// <summary>Condition: an automation agent acts only within its verb classes.</summary>
     public const string AgentVerbCondition = "actor.agent_verb";
 
+    /// <summary>Condition: an automation agent acts for one requesting person, who may do the same (K-AI-6).</summary>
+    public const string RequesterCondition = "actor.requester";
+
     /// <summary>Condition: the actor holds a current qualification a requirement names (K-AUTH-5).</summary>
     public const string QualificationCondition = "qualification.current";
 
@@ -103,15 +107,19 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
     public async ValueTask<AuthorizationDecision> EvaluateAsync(AuthorizationRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var token = request.Capability.Token;
-
-        if (request.Actor.Kind == ActorKind.AutomationAgent && request.Capability.VerbClass is VerbClass.Execute or VerbClass.Approve)
+        if (request.Actor.Kind == ActorKind.AutomationAgent)
         {
-            return AuthorizationDecision.Deny(
-                $"An automation agent cannot {request.Capability.VerbClass.ToString().ToLowerInvariant()}; a person must.",
-                EvaluatedCondition.Unsatisfied(AgentVerbCondition, "Have a person perform this action"));
+            return await EvaluateAgentAsync(request, cancellationToken).ConfigureAwait(false);
         }
 
+        if (request.Actor.RequestedBy is not null)
+        {
+            return AuthorizationDecision.Deny(
+                "Only an automation agent acts for a requesting person.",
+                EvaluatedCondition.Unsatisfied(RequesterCondition, "Act as yourself"));
+        }
+
+        var token = request.Capability.Token;
         if (request.Actor.Kind == ActorKind.ServiceAccount && options.PlatformOperators.Contains(request.Actor.Id)
             && KernelAuthorityOptions.PlatformCapabilities.Contains(token))
         {
@@ -128,6 +136,53 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
             }
         }
 
+        return await EvaluateGrantsAsync(request, qualified: true, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// An automation agent (spec §11, K-AI-1, K-AI-6, ADR-2632): it acts for exactly one requesting person, never
+    /// executes or approves, and may do only what its own grants and the person's both allow. Its own grants are checked
+    /// without qualification requirements, which describe a person's training; the person's evaluation checks them.
+    /// </summary>
+    private async ValueTask<AuthorizationDecision> EvaluateAgentAsync(AuthorizationRequest request, CancellationToken cancellationToken)
+    {
+        if (request.Actor.RequestedBy is not { } person)
+        {
+            return AuthorizationDecision.Deny(
+                "An automation agent acts only for the person who asked it (K-AI-6).",
+                EvaluatedCondition.Unsatisfied(RequesterCondition, "Run the agent for the person it acts for"));
+        }
+
+        if (request.Capability.VerbClass is VerbClass.Execute or VerbClass.Approve)
+        {
+            return AuthorizationDecision.Deny(
+                $"An automation agent cannot {request.Capability.VerbClass.ToString().ToLowerInvariant()}; a person must.",
+                EvaluatedCondition.Unsatisfied(AgentVerbCondition, "Have a person perform this action"));
+        }
+
+        var own = await EvaluateGrantsAsync(request with { Actor = request.Actor.AsIdentity() }, qualified: false, cancellationToken).ConfigureAwait(false);
+        if (!own.Permitted)
+        {
+            return own;
+        }
+
+        var forPerson = await EvaluateAsync(request with { Actor = person }, cancellationToken).ConfigureAwait(false);
+        var bounded = forPerson.Permitted
+            ? EvaluatedCondition.Satisfied(RequesterCondition, $"Acts for {person.Id}, who may {request.Capability.Token}")
+            : EvaluatedCondition.Unsatisfied(RequesterCondition, $"Act for a person who may {request.Capability.Token}");
+        EvaluatedCondition[] conditions = [.. own.Conditions, bounded, .. forPerson.Conditions];
+        return forPerson.Permitted
+            ? AuthorizationDecision.Permit(conditions: conditions)
+            : AuthorizationDecision.Deny($"{request.Actor.Id} acts for {person.Id}, who may not {request.Capability.Token}: {forPerson.Reason}", conditions);
+    }
+
+    /// <summary>
+    /// The grants and delegations <see cref="AuthorizationRequest.Actor"/> holds that carry the capability and cover the
+    /// resource, in effect, and (when <paramref name="qualified"/>) the qualification requirements over it.
+    /// </summary>
+    private async ValueTask<AuthorizationDecision> EvaluateGrantsAsync(AuthorizationRequest request, bool qualified, CancellationToken cancellationToken)
+    {
+        var token = request.Capability.Token;
         var path = await store.PathOfAsync(request.Tenant, request.Resource, cancellationToken).ConfigureAwait(false);
         var held = await store.GrantsHeldAsync(request.Tenant, request.Actor, cancellationToken).ConfigureAwait(false);
         var roles = await RoleCapabilitiesAsync(request.Tenant, held, cancellationToken).ConfigureAwait(false);
@@ -140,7 +195,7 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
                 EvaluatedCondition[] conditions =
                 [
                     EvaluatedCondition.Satisfied(GrantCondition, $"Holds {token} for {grant.Scope}", NodeRef.For(grant.Id)),
-                    .. await QualificationConditionsAsync(request, path, cancellationToken).ConfigureAwait(false),
+                    .. qualified ? await QualificationConditionsAsync(request, path, cancellationToken).ConfigureAwait(false) : [],
                 ];
                 return conditions.FirstOrDefault(c => !c.Met) is { } missing
                     ? AuthorizationDecision.Deny($"{request.Actor.Id} is not qualified to {token}: {missing.Description}.", conditions)

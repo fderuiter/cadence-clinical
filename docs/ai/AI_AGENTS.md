@@ -92,6 +92,11 @@ change to what the study claims about a participant.
 6. A person reviews the diff and citations and approves with an attestation; the kernel executes the proposal's
    commands as that person (K-AI-2).
 
+The kernel side of steps 3 and 6 is built ([ADR-2632](../adr/2026-10-20-agents-act-for-one-person-and-approved-proposals-execute-as-their-approver.md)):
+an agent acts for one person and is bounded by that person's grants and visibility, and each command a person sends
+under an approved proposal is linked to it in provenance, events and lineage. Standing grants (level 3) follow under
+the same ADR.
+
 ## The agent factory
 
 Agents run as a factory ([ADR-2630 §4.8](../adr/2026-10-20-ai-agents-act-through-proposals-in-one-governed-runtime.md#48-the-agent-factory)):

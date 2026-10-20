@@ -40,9 +40,9 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.outbox_messages`](#kerneloutbox_messages) | `OutboxMessageRecord` | 10 |
 | [`kernel.participants`](#kernelparticipants) | `Participant` | 6 |
 | [`kernel.people`](#kernelpeople) | `Person` | 6 |
-| [`kernel.proposals`](#kernelproposals) | `Proposal` | 32 |
+| [`kernel.proposals`](#kernelproposals) | `Proposal` | 33 |
 | [`kernel.protocol_versions`](#kernelprotocol_versions) | `ProtocolVersion` | 16 |
-| [`kernel.provenance_activities`](#kernelprovenance_activities) | `ProvenanceActivityRecord` | 14 |
+| [`kernel.provenance_activities`](#kernelprovenance_activities) | `ProvenanceActivityRecord` | 16 |
 | [`kernel.qualification_periods`](#kernelqualification_periods) | `QualificationPeriod` | 5 |
 | [`kernel.qualification_requirement_periods`](#kernelqualification_requirement_periods) | `QualificationRequirementPeriod` | 5 |
 | [`kernel.qualification_requirements`](#kernelqualification_requirements) | `QualificationRequirement` | 13 |
@@ -1036,6 +1036,7 @@ Entity: `Proposal`
 | `proposed_by_id` | `character varying(256)` | no |  |  |
 | `proposed_by_kind` | `character varying(32)` | no |  |  |
 | `reason_for_change` | `character varying(1000)` | no |  |  |
+| `requested_by_id` | `character varying(256)` | yes |  |  |
 | `requested_capabilities` | `text[]` | no |  |  |
 | `simulated_impact` | `character varying(71)` | yes |  |  |
 | `status` | `character varying(16)` | no |  |  |
@@ -1066,6 +1067,7 @@ Check constraints:
 - `ck_proposals_expiry`: `expires_at > proposed_at AND expires_at <= proposed_at + interval '90 days'`
 - `ck_proposals_intent`: `char_length(intent) BETWEEN 1 AND 2000`
 - `ck_proposals_model`: `(proposed_by_kind = 'AutomationAgent' AND model_id IS NOT NULL AND char_length(model_id) > 0) OR (proposed_by_kind <> 'AutomationAgent' AND model_id IS NULL)`
+- `ck_proposals_requested_by`: `(proposed_by_kind = 'AutomationAgent' AND requested_by_id IS NOT NULL AND char_length(requested_by_id) > 0) OR (proposed_by_kind <> 'AutomationAgent' AND requested_by_id IS NULL)`
 - `ck_proposals_requested_capabilities`: `cardinality(requested_capabilities) BETWEEN 1 AND 20`
 - `ck_proposals_simulated_impact`: `simulated_impact IS NULL OR simulated_impact ~ '^sha256:[0-9a-f]{64}$'`
 
@@ -1130,13 +1132,16 @@ Entity: `ProvenanceActivityRecord`
 | `correlation_id` | `uuid` | no |  |  |
 | `idempotency_key` | `character varying(200)` | no |  |  |
 | `outcome` | `character varying(32)` | no |  |  |
+| `proposal_id` | `uuid` | yes |  |  |
 | `reason_for_change` | `character varying(2000)` | no |  |  |
 | `recorded_at` | `timestamp with time zone` | no |  |  |
+| `requested_by` | `character varying(256)` | yes |  |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_provenance_activities_correlation_id`: (`correlation_id`)
+- `IX_provenance_activities_tenant_id_proposal_id`: (`tenant_id`, `proposal_id`) where `proposal_id IS NOT NULL`
 - `IX_provenance_activities_tenant_id_recorded_at`: (`tenant_id`, `recorded_at`)
 
 ## kernel.qualification_periods

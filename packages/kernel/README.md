@@ -867,9 +867,14 @@ decide anything else, and approving it does not run its plan (K-SIM-5).
     `(proposal, id, ContentHash)`. The proposer cannot approve (`K.Proposal.SelfApproval`).
   - `RejectProposal` (`proposal.reject`, Approve) takes its reason from the reason for change.
   - `WithdrawProposal` (`proposal.withdraw`, Propose) is for the proposer only (`K.Proposal.NotProposer`).
-  - The events are `ProposalCreated`, `ProposalApproved`, `ProposalRejected` and `ProposalWithdrawn`, in the
+  - The events are `ProposalCreated`, `ProposalApproved`, `ProposalRejected`, `ProposalWithdrawn` and `ProposalExecuted`, in the
     Intelligence family.
-- **Agents (K-AI-1, K-AI-3).** `Actor.AutomationAgent("name")` builds an `agent:name` actor. The evaluator denies an
+- **Agents (K-AI-1, K-AI-3, K-AI-6).** `Actor.AutomationAgent("name")` builds an `agent:name` actor, and
+  `.ActingFor(person)` names the one person it acts for (ADR-2632). An agent acting for no one is refused everything
+  (`actor.requester`) and sees nothing; otherwise its own grants and the person's must both permit a capability, and
+  `GrantNodeVisibility` shows it only what both may see. Grants name the agent without a requester
+  (`K.Authority.GrantTargetInvalid` otherwise), and only the same agent acting for the same person withdraws its
+  proposal. The evaluator denies an
   agent every Execute and Approve command (`actor.agent_verb`), including approving, rejecting and signing
   attestations, so an agent can only read, propose and withdraw its own proposals. Proposing needs a grant of
   `proposal.create` in the study, and the plan and every affected object must be visible to the proposer
@@ -881,8 +886,16 @@ decide anything else, and approving it does not run its plan (K-SIM-5).
   reference is kept on the proposal only.
 - **Attestations.** `Attest` accepts target kind `proposal` through `ProposalAttestationCheck`: the proposal must exist
   and the hash must be its content hash.
-- **Not yet:** the K-AI-2 execution link (`ProposalExecuted`), standing grants for agents, the `QueryStatus.DraftAi`
-  migration and a proposals work-queue source (ADR-2489 §4.5).
+- **Execution (K-AI-2, ADR-2632).** A command executes an approved proposal by naming it in
+  `CommandMetadata.Proposal`. After authorizing the command as the acting person, the pipeline refuses it unless the
+  proposal exists (`K.Proposal.ExecutionUnknown`), is approved (`NotApproved`) and unexpired (`ExecutionExpired`), was
+  approved by the acting person (`NotApprover`), requested the command's capability (`CapabilityNotRequested`), and the
+  command's object is in the proposal's study or in none (`OutsideStudy`). The commit records `proposal_id` on the
+  provenance activity, raises `ProposalExecuted` in that activity, and writes an `ExecutedUnder` lineage edge from the
+  approved proposal version to the object version written. One approved proposal may cover several commands until it
+  expires; the request hash covers the proposal.
+- **Not yet:** standing grants for agents (K-AI-7, ADR-2632 §4.3), the `QueryStatus.DraftAi` migration and a proposals
+  work-queue source (ADR-2489 §4.5).
 
 ## Migrations
 

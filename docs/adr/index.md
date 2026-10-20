@@ -77,7 +77,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 | K034     | Observation corrections and scoped locks                                 | [ADR-2620](2026-10-15-ecrf-correction-transaction-boundary.md), [ADR-2621](2026-10-19-observation-corrections-are-revisions-locks-are-scoped-assertions.md)                                                                                                                                                                                                                        |
 | K035     | eCRF forms as kernel collection instances saved in one command           | [ADR-2622](2026-10-19-ecrf-forms-are-collection-instances-saved-in-one-command.md)                                                                                                                                                                                                                                                                                                 |
 | K036     | Typed observation values                                                 | [ADR-2623](2026-10-19-observation-values-are-typed.md)                                                                                                                                                                                                                                                                                                                             |
-| K037     | AI agents act through Proposals in one governed runtime                  | [ADR-2630](2026-10-20-ai-agents-act-through-proposals-in-one-governed-runtime.md)                                                                                                                                                                                                                                                                                                  |
+| K037     | AI agents act through Proposals in one governed runtime                  | [ADR-2630](2026-10-20-ai-agents-act-through-proposals-in-one-governed-runtime.md), [ADR-2632](2026-10-20-agents-act-for-one-person-and-approved-proposals-execute-as-their-approver.md)                                                                                                                                                                                            |
 
 ## Domain-Based Decisions Log
 
@@ -134,6 +134,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2622: eCRF Forms Are Kernel Collection Instances Saved in One Command](2026-10-19-ecrf-forms-are-collection-instances-saved-in-one-command.md) (2026-10-19)
 - [ADR-2623: Observation Values Are Typed](2026-10-19-observation-values-are-typed.md) (2026-10-19)
 - [ADR-2630: AI Agents Act Through Proposals in One Governed Runtime](2026-10-20-ai-agents-act-through-proposals-in-one-governed-runtime.md) (2026-10-20)
+- [ADR-2632: Agents Act for One Person, and Approved Proposals Execute as Their Approver](2026-10-20-agents-act-for-one-person-and-approved-proposals-execute-as-their-approver.md) (2026-10-20)
 
 ### 1. Core Platform & Execution Engine
 

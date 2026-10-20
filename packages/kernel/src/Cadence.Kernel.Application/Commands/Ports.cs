@@ -99,6 +99,13 @@ public interface IKernelCommandTransaction : IAsyncDisposable
     void RecordPermit(AuthorizationDecision permit);
 
     /// <summary>
+    /// Records that this command executes the approved proposal at <paramref name="proposal"/> (a proposal NodeRef with
+    /// its version), checked by the pipeline (K-AI-2). The commit writes the proposal onto the provenance activity and an
+    /// <see cref="LineageEdgeKind.ExecutedUnder"/> edge from it to the object version the command writes.
+    /// </summary>
+    void RecordProposalExecution(NodeRef proposal);
+
+    /// <summary>
     /// Writes state, provenance, events, the audit entry, outbox rows and the idempotency record in one
     /// transaction (K-TX-2). Returns <see cref="CommitOutcome.IdempotencyRace"/> when a concurrent command with the
     /// same key committed first, and <see cref="CommitOutcome.ConcurrencyConflict"/> when the aggregate changed.
