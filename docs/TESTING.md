@@ -10,7 +10,7 @@ requirement as qualified.
 | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 | Unit and component tests for services and packages, on in-memory fakes, SQLite or the EF Core in-memory provider. Needs no database.         | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
 | `tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj`   | Tests against a real PostgreSQL database (see below). Every test in it carries `Category=Integration`.                                       | `dotnet cadence test --integration`                                            |
-| `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` | Layer and boundary rules (ArchUnitNET), the kernel baseline, suppression and test-layout policies, and the architecture sentinels.           | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
+| `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` | Layer and boundary rules (ArchUnitNET), the kernel baselines, suppression and test-layout policies, and the architecture sentinels.          | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
 | `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   | Black-box HTTP tests against the execution service through `WebApplicationFactory`.                                                          | `dotnet test tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   |
 | `packages/ui/tests/`                                               | Vitest suite for the shared JavaScript signing and UI helpers.                                                                               | `pnpm --filter ui test`                                                        |
 | `apps/web/tests/`                                                  | Vitest suite for the web app's API clients, stores and views (jsdom). Playwright specs under `tests/e2e/` and `tests/browser/` are excluded. | `pnpm --filter web test`                                                       |
@@ -155,6 +155,7 @@ Use `packages/testing/src` or centralized unit test fixtures under `tests/Cadenc
 - `GoldenMasterFixtureLoader` and `GoldenMasterAssert`: golden-master scenarios ported from the Python
   reference.
 - `GxPRequirementAttribute`: declares which requirement a test verifies. See below.
+- `KernelRuleAttribute`: declares which kernel rule (`K-…`) a test proves. See "Linking a test to a kernel rule".
 - `CommandValidationCatalog` (`Cadence.Testing.Commands`): `Violations(services, commandAssembly)` lists the
   commands that have neither a registered FluentValidation validator nor `[NoValidator("why")]`, or both
   (ADR-2600 §4.4). The kernel's tests and each module's tests assert it is empty.
@@ -242,6 +243,45 @@ Rules:
   parent.
 - **No placeholder tests.** A test that asserts on its own literals (`true.Should().BeTrue()`, or a status
   that accepts 201, 400 or 500) verifies nothing. Write a real assertion, or leave the requirement Planned.
+
+## Linking a test to a kernel rule
+
+Every rule in the [kernel specification](kernel/CLINICAL_KERNEL_SPECIFICATION.md) becomes a test (AGENTS.md). A rule
+is defined where a list item or a quoted principle opens with its bold ID (`- **K-FACT-1** …`, `> **K-TRUTH-1** …`);
+any other mention is a reference. A test names the rule it proves with `[KernelRule]` from `Cadence.Testing`, **on the
+test method**, once per rule:
+
+```csharp
+/// <summary>A correction supersedes the recorded value without overwriting it.</summary>
+[Fact]
+[KernelRule("K-FACT-1")]
+public async Task CorrectionCommitsValueRevisionAuditEventAndOutboxAsOneActivity()
+```
+
+The attribute is the only form that counts. A K-ID in a test's name, display name, doc comment or class comment is
+documentation: it can explain the test, but it does not make the test cover the rule. The attribute is allowed on
+methods only.
+
+`KernelRuleCoverageTests` in `Cadence.ArchitectureTests` reads the tags with the same source scan the RTM uses and
+fails when:
+
+- a rule the specification defines has no tagged test and is not listed in
+  `tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage.baseline.txt`;
+- a listed rule now has a tagged test, or the specification no longer defines it: delete its line, by hand or with
+  `CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --filter "FullyQualifiedName~KernelRuleCoverageTests"`,
+  which only ever deletes lines;
+- a test names a rule the specification does not define, for example after a typo or a renamed rule.
+
+The baseline lists the rules with no test yet, mostly concepts the kernel has not built (consent, specimens,
+ingestion, standards projections). It may only shrink: a new rule in the specification comes with its test, or with a
+reviewed line in the baseline.
+
+The rules for `[GxPRequirement]` apply here too. Tag a rule only when the test's assertions would fail if the rule were
+broken, not because the test lives near it, and a test whose assertions contradict the rule is a defect report, not
+coverage. A test may prove several rules. Principle rules that no single assertion can prove are mapped to the checks
+that enforce them: K-TRUTH-1 and K-SCOPE-1 are carried by the K-XS-1 test (applications do not redeclare kernel
+concepts), K-TRUTH-1 also by the K-MOD-1 test (application schemas do not duplicate kernel truth) and the K-PROJ-1 test
+(kernel code names no standard dataset or variable).
 
 ## How the RTM decides a requirement's state
 

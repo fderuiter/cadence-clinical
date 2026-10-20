@@ -7,6 +7,7 @@ using Cadence.Kernel.Application.Simulation;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.Simulation;
+using Cadence.Testing;
 using Cadence.TestSupport.Kernel.Protocol;
 
 using FluentAssertions;
@@ -215,6 +216,7 @@ public sealed class ProtocolDesignTests
     /// an added arm or a removed rule is one change each (K-PROT-1).
     /// </summary>
     [Fact(DisplayName = "StructuralDiff_MatchesDesignElementsById")]
+    [KernelRule("K-PROT-1")]
     public void StructuralDiffMatchesDesignElementsById()
     {
         var before = Complete();
@@ -251,6 +253,7 @@ public sealed class ProtocolDesignTests
 
     /// <summary>A design whose scientific chain is explicit has no findings (K-PROT-3).</summary>
     [Fact(DisplayName = "Findings_CompleteChain_HasNone")]
+    [KernelRule("K-PROT-3")]
     public void FindingsCompleteChainHasNone() =>
         ProtocolDesignReview.Findings(Complete()).Should().BeEmpty();
 

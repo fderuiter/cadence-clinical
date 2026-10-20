@@ -12,6 +12,7 @@ using Cadence.Rules.Evaluation;
 using Cadence.Rules.Expressions;
 using Cadence.Rules.Indicators;
 using Cadence.Rules.Packs;
+using Cadence.Testing;
 using Cadence.TestSupport.Kernel.Rules;
 
 using FluentAssertions;
@@ -79,6 +80,7 @@ public sealed class IndicatorTests
     /// the counted objects are the drill-down (UX-7) and the explanation names the rule version (K-EXP-3).
     /// </summary>
     [Fact]
+    [KernelRule("K-EXP-3")]
     public void Evaluate_CountsMeasuresAndComparesWithTheThreshold()
     {
         var enrollments = SampleIndicatorSets.EnrollmentRecords("Enrolled", "Randomized", "ScreenFailed", "ScreenFailed", "Enrolled");
@@ -107,6 +109,7 @@ public sealed class IndicatorTests
 
     /// <summary>The same inputs give the same hashes in any record order; a changed record or set version changes them (K-RULE-4).</summary>
     [Fact]
+    [KernelRule("K-RULE-4")]
     public void Evaluate_IsReproducibleAndIndependentOfRecordOrder()
     {
         var enrollments = SampleIndicatorSets.EnrollmentRecords("Enrolled", "ScreenFailed", "Randomized");
@@ -132,6 +135,7 @@ public sealed class IndicatorTests
 
     /// <summary>Every indicator runs through <see cref="IRuleEvaluator"/>, once per population (K-RULE-3).</summary>
     [Fact]
+    [KernelRule("K-RULE-3")]
     public void Evaluate_GoesThroughTheRuleEvaluatorPort()
     {
         var port = new RecordingEvaluator();

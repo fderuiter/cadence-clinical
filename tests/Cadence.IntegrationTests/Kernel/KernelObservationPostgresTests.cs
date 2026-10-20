@@ -53,6 +53,7 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
     /// </summary>
     [Fact(DisplayName = "Correction_CommitsValueRevisionAuditEventAndOutbox_AsOneActivity")]
     [GxPRequirement("PRD-SYS-001")]
+    [KernelRule("K-FACT-1")]
     public async Task CorrectionCommitsValueRevisionAuditEventAndOutboxAsOneActivity()
     {
         fixture.SkipIfUnavailable();
@@ -96,6 +97,7 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
     /// the audit chain, the events and the outbox exactly as they were.
     /// </summary>
     [Theory(DisplayName = "Correction_FailingAtAnyCommitStage_ChangesNothing")]
+    [KernelRule("K-TX-2")]
     [MemberData(nameof(CommitStages))]
     public async Task CorrectionFailingAtAnyCommitStageChangesNothing(string stageName)
     {
@@ -177,6 +179,7 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
     /// </summary>
     [Theory(DisplayName = "LockAndCorrection_Race_NoCorrectionCommitsAfterTheLock")]
     [MemberData(nameof(LockScopeKinds))]
+    [KernelRule("K-TX-4")]
     public async Task LockAndCorrectionRaceNoCorrectionCommitsAfterTheLock(string scopeKind)
     {
         fixture.SkipIfUnavailable();

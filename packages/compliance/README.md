@@ -5,7 +5,7 @@ Part 11 support library: audit digest calculation and hash-chain verification, e
 ## Project
 
 - Project: `packages/compliance/src/Cadence.Compliance.csproj` (assembly `Cadence.Compliance`, namespace `Cadence.Compliance`).
-- Main types: `AuditDigestCalculator`, `AuditChainVerifier`, `ComplianceAuditLogRecord`, `ESignatureVerifier`, `GxPSigner`, `Pkcs7Signer`, `GxpSnapshotPolicy`, `PhiRedactorService`, `ProtocolRagService`, `RtmGeneratorService`, and the exceptions `TamperDetectedException` and `UnapprovedAIRecordException`.
+- Main types: `AuditDigestCalculator`, `AuditChainVerifier`, `ComplianceAuditLogRecord`, `ESignatureVerifier`, `GxPSigner`, `Pkcs7Signer`, `GxpSnapshotPolicy`, `PhiRedactorService`, `ProtocolRagService`, `RequirementTagScanner`, `RtmGeneratorService`, and the exceptions `TamperDetectedException` and `UnapprovedAIRecordException`.
 - No Python reference sources remain; `ESignatureVerifierTests` pins the verifier to the deleted `services/esignature_verifier.py` (#4789).
 
 ## Signature verification
@@ -34,6 +34,10 @@ in tests. [docs/TESTING.md](../../docs/TESTING.md) has the workflow.
 directory `TestResults/gxp/preview` that `gxp sync` writes on a feature branch, and `CADENCE_GXP_SNAPSHOT`, which turns
 on snapshot mode. `GenerateRtm(requireCurrentSnapshot: …)` checks that the committed RTM's test mapping matches the
 tags only in snapshot mode, so a branch with new or moved tags passes `check rtm` without committing a new snapshot.
+
+`RequirementTagScanner` finds the test methods under `tests/` and the requirement IDs each declares. The same scan
+reports the kernel rules a method names with `[KernelRule("K-…")]` (`DiscoveredTest.KernelRuleIds`), which
+`KernelRuleCoverageTests` in `Cadence.ArchitectureTests` compares with the kernel specification (#5467).
 
 ## Key dependencies
 

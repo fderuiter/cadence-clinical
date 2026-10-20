@@ -13,6 +13,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.References;
 using Cadence.Kernel.WorkQueues;
+using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -57,6 +58,7 @@ public sealed class WorkQueueTests
     }
 
     [Fact(DisplayName = "Read_KeepsOnlyPermittedItems_AskingForTheDefinitionsCapability")]
+    [KernelRule("K-AUTH-8")]
     public async Task ReadKeepsOnlyPermittedItemsAskingForTheDefinitionsCapability()
     {
         var items = Candidates(3);
@@ -71,6 +73,7 @@ public sealed class WorkQueueTests
     }
 
     [Fact(DisplayName = "Read_MasksHiddenObjectsInPlace")]
+    [KernelRule("K-AUTH-8")]
     public async Task ReadMasksHiddenObjectsInPlace()
     {
         var items = Candidates(2);

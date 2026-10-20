@@ -11,6 +11,7 @@ using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
+using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -126,6 +127,7 @@ public sealed class DependentsPostgresTests(KernelPostgresFixture fixture) : ICl
     /// impact is the parent's dependents without the fork itself. Another open amendment of the same parent is listed.
     /// </summary>
     [Fact(DisplayName = "AmendmentImpact_IsTheParentsDependents_WithoutTheAmendedFork")]
+    [KernelRule("K-PROT-2")]
     public async Task AmendmentImpactIsTheParentsDependentsWithoutTheAmendedFork()
     {
         fixture.SkipIfUnavailable();

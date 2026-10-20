@@ -43,6 +43,7 @@ public sealed class LineagePostgresTests(KernelPostgresFixture fixture) : IClass
     /// ProvenanceActivity as the mapping.
     /// </summary>
     [Fact(DisplayName = "MapConcept_WritesMappingNodeAndDefinedByEdges_InTheCommandActivity")]
+    [KernelRule("K-LIN-2")]
     public async Task MapConceptWritesMappingNodeAndDefinedByEdgesInTheCommandActivity()
     {
         fixture.SkipIfUnavailable();
@@ -102,6 +103,7 @@ public sealed class LineagePostgresTests(KernelPostgresFixture fixture) : IClass
     /// edges are written.
     /// </summary>
     [Fact(DisplayName = "FailedCommit_WritesNoLineage")]
+    [KernelRule("K-LIN-2")]
     public async Task FailedCommitWritesNoLineage()
     {
         fixture.SkipIfUnavailable();
@@ -140,6 +142,7 @@ public sealed class LineagePostgresTests(KernelPostgresFixture fixture) : IClass
     /// nothing, and an input without a version is refused when it is declared.
     /// </summary>
     [Fact(DisplayName = "DerivedObject_WithoutInputs_IsRefused")]
+    [KernelRule("K-LIN-1")]
     public async Task DerivedObjectWithoutInputsIsRefused()
     {
         fixture.SkipIfUnavailable();
@@ -388,6 +391,7 @@ public sealed class LineagePostgresTests(KernelPostgresFixture fixture) : IClass
     /// </summary>
     [Fact(DisplayName = "Trace_FromAnotherTenant_SeesNoEdges")]
     [GxPRequirement("PRD-CRF-013")]
+    [KernelRule("K-ID-2")]
     public async Task TraceFromAnotherTenantSeesNoEdges()
     {
         fixture.SkipIfUnavailable();
@@ -406,6 +410,7 @@ public sealed class LineagePostgresTests(KernelPostgresFixture fixture) : IClass
     /// by writing outside the pipeline) is reported, and versions written by the pipeline are not.
     /// </summary>
     [Fact(DisplayName = "OrphanCheck_ReportsDerivedVersionsWithoutInputs")]
+    [KernelRule("K-LIN-1")]
     public async Task OrphanCheckReportsDerivedVersionsWithoutInputs()
     {
         fixture.SkipIfUnavailable();

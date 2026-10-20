@@ -7,6 +7,7 @@ using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Knowledge;
+using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -78,6 +79,7 @@ public class ConceptRegistryDomainTests
 
     /// <summary>Licensed code systems cannot be registered as open or accepted-terms content (K-SEM-2).</summary>
     [Theory(DisplayName = "CodeSystem_Register_KnownUriWithWrongLicence_IsRefused")]
+    [KernelRule("K-SEM-2")]
     [InlineData(KnownCodeSystems.MedDra, LicenseClass.Open)]
     [InlineData(KnownCodeSystems.SnomedCt, LicenseClass.AcceptedTerms)]
     [InlineData(KnownCodeSystems.WhoDrug, LicenseClass.Open)]
@@ -185,6 +187,7 @@ public class ConceptRegistryDomainTests
     /// named like a MedDRA ASCII release, a WHODrug release or a SNOMED CT RF2 release.
     /// </summary>
     [Fact(DisplayName = "Repository_ContainsNoLicensedTerminologyContent")]
+    [KernelRule("K-SEM-2")]
     public void RepositoryContainsNoLicensedTerminologyContent()
     {
         var root = RepositoryRoot();
