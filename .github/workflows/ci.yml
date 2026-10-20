@@ -176,9 +176,6 @@ jobs:
       - name: Run architecture tests
         run: dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build
 
-      - name: Run hexagonal contract verification
-        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check contracts
-
       - name: Run ADR validation
         run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check adrs
 

@@ -1,5 +1,6 @@
 using System.CommandLine;
 
+using Cadence.Cli.Services;
 using Cadence.Compliance;
 using Cadence.ToolingCore.Services;
 
@@ -38,9 +39,21 @@ public static class ToolCommands
 
     public static void ConfigureGenerateCliDocs(Command command)
     {
-        var check = new Option<bool>("--check") { Description = "Only check that docs/cli.md documents every command" };
+        var check = new Option<bool>("--check")
+        {
+            Description = "Only check that docs/cli.md documents every command and that the gate tables match the registry",
+        };
         command.Options.Add(check);
-        command.SetAction(result => CliDocsGeneratorService.GenerateCliDocs(check: result.GetValue(check)));
+        command.SetAction(result =>
+        {
+            string repoRoot = QualityGateOrchestrator.FindRepoRoot();
+            if (result.GetValue(check))
+            {
+                return QualityGates.Find("cli-docs")!.Run(new GateContext(repoRoot)) ? 0 : 1;
+            }
+
+            return GateDocs.Write(repoRoot) | CliDocsGeneratorService.GenerateCliDocs(check: false, repoRoot: repoRoot);
+        });
     }
 
     public static void ConfigureGenerateDocIndex(Command command)

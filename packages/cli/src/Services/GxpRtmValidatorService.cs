@@ -9,9 +9,10 @@ public static class GxpRtmValidatorService
     /// snapshot fail it. The committed snapshot's test
     /// mapping must be current only while taking a snapshot (ADR-2532); on a feature branch it is the baseline's.
     /// </summary>
-    public static bool ValidateGxpRtm()
+    public static bool ValidateGxpRtm(string? repoRoot = null)
     {
-        return RtmGeneratorService.GenerateRtm(draft: true, validateOnly: true, requireCurrentSnapshot: GxpSnapshotPolicy.IsSnapshotMode(),
+        return RtmGeneratorService.GenerateRtm(
+            draft: true, validateOnly: true, repoRoot: repoRoot, requireCurrentSnapshot: GxpSnapshotPolicy.IsSnapshotMode(),
             requireRecordedEvidence: true) == 0;
     }
 }

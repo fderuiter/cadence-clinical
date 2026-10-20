@@ -153,9 +153,9 @@ public static class AdrValidatorService
         return Directory.GetCurrentDirectory();
     }
 
-    public static bool ValidateAdrs(bool checkGitDiff = true, string[]? targets = null)
+    public static bool ValidateAdrs(bool checkGitDiff = true, string[]? targets = null, string? repoRoot = null)
     {
-        string repoRoot = FindRepoRoot();
+        repoRoot ??= FindRepoRoot();
         string adrDir = Path.Combine(repoRoot, "docs", "adr");
         AnsiConsole.MarkupLine("[cyan]Validating Architectural Decision Records (ADRs)...[/]");
 
@@ -165,7 +165,7 @@ public static class AdrValidatorService
             return false;
         }
 
-        var validReqs = GetValidRequirements();
+        var validReqs = GetValidRequirements(repoRoot);
         bool allPassed = true;
 
         // 1. Directory-wide integrity: unique numbers, "# ADR-NNNN:" headings, index coverage and links.
@@ -236,7 +236,7 @@ public static class AdrValidatorService
             }
         }
 
-        if (checkGitDiff && !CheckArchitecturalChangesRequireAdr())
+        if (checkGitDiff && !CheckArchitecturalChangesRequireAdr(repoRoot))
         {
             allPassed = false;
         }
@@ -357,11 +357,10 @@ public static class AdrValidatorService
         return errors;
     }
 
-    private static bool CheckArchitecturalChangesRequireAdr()
+    private static bool CheckArchitecturalChangesRequireAdr(string repoRoot)
     {
-        string repoRoot = FindRepoRoot();
-        var changedFiles = GetChangedFiles();
-        var architecturalChanges = changedFiles.Where(IsArchitecturalFile).ToList();
+        var changedFiles = GetChangedFiles(repoRoot);
+        var architecturalChanges = changedFiles.Where(f => IsArchitecturalFile(f, repoRoot)).ToList();
         if (architecturalChanges.Count == 0) return true;
 
         bool newAdrAdded = changedFiles.Any(f => f.StartsWith("docs/adr/") && FilenamePattern.IsMatch(Path.GetFileName(f)) && (File.Exists(f) || File.Exists(Path.Combine(repoRoot, f))));
@@ -379,7 +378,7 @@ public static class AdrValidatorService
         return true;
     }
 
-    private static bool IsArchitecturalFile(string filepath)
+    private static bool IsArchitecturalFile(string filepath, string repoRoot)
     {
         if (filepath.StartsWith("tests/") || filepath.Contains("/tests/") ||
             filepath.StartsWith("docs/") || filepath.StartsWith("scripts/") ||
@@ -390,7 +389,7 @@ public static class AdrValidatorService
             return false;
         }
 
-        if (filepath == "package.json") return RootPackageJsonDependenciesChanged();
+        if (filepath == "package.json") return RootPackageJsonDependenciesChanged(repoRoot);
         if (filepath.StartsWith("apps/gateway/")) return true;
         if (filepath.StartsWith("packages/security/") || filepath.StartsWith("packages/ui/")) return true;
 
@@ -428,9 +427,8 @@ public static class AdrValidatorService
         }
     }
 
-    private static bool RootPackageJsonDependenciesChanged()
+    private static bool RootPackageJsonDependenciesChanged(string repoRoot)
     {
-        string repoRoot = FindRepoRoot();
         string workingPath = Path.Combine(repoRoot, "package.json");
         string? after = File.Exists(workingPath) ? File.ReadAllText(workingPath) : null;
         return PackageJsonDependenciesChanged(ReadCommittedFile(repoRoot, "package.json"), after);
@@ -460,9 +458,8 @@ public static class AdrValidatorService
         }
     }
 
-    private static HashSet<string> GetChangedFiles()
+    private static HashSet<string> GetChangedFiles(string repoRoot)
     {
-        string repoRoot = FindRepoRoot();
         var changed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         string changedFilesTxt = Path.Combine(repoRoot, "changed_files.txt");
@@ -507,9 +504,8 @@ public static class AdrValidatorService
         return changed;
     }
 
-    private static HashSet<string> GetValidRequirements()
+    private static HashSet<string> GetValidRequirements(string repoRoot)
     {
-        string repoRoot = FindRepoRoot();
         string docsDir = Path.Combine(repoRoot, "docs");
 
         var reqs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

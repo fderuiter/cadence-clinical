@@ -26,7 +26,7 @@ public static class QueryLinterService
         foreach (var file in csFiles)
         {
             string relPath = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
-            if (relPath.Contains("Services/QueryLinterService.cs") || relPath.Contains("Services/QueryStyleLinterService.cs")) continue;
+            if (relPath.Contains("Services/QueryLinterService.cs")) continue;
 
             string[] lines;
             try { lines = File.ReadAllLines(file); } catch { continue; }

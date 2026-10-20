@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Cadence Clinical Platform - Automated Git Pre-Commit Hook
-# Validates Prettier formatting, C# code formatting, ADR integrity, and 21 GxP quality sentinels.
+# Validates Prettier formatting, C# code formatting and the Cadence quality gates (packages/cli/src/Services/QualityGates.cs).
 # Requirements: PRD-SYS-053, ADR-2233
 # ==============================================================================
 
