@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Lineage;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
 

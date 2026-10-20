@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Activity;
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.References;
 

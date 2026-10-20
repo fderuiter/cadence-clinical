@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 
-using Cadence.Apps.AiGateway.Services;
-using Cadence.Contracts;
+using Cadence.Modules.Intelligence.Intent;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 
@@ -13,7 +12,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
 
-namespace Cadence.Apps.AiGateway.Endpoints;
+namespace Cadence.Modules.Intelligence.Endpoints;
 
 /// <summary>
 /// Minimal API endpoints for the command palette's deterministic navigation router. Requests need an
@@ -50,7 +49,7 @@ public static class IntentEndpoints
         ClaimsPrincipal user,
         ILoggerFactory loggerFactory)
     {
-        var logger = loggerFactory.CreateLogger("Cadence.Apps.AiGateway.IntentRouting");
+        var logger = loggerFactory.CreateLogger("Cadence.Modules.Intelligence.IntentRouting");
 
         if (user?.Identity?.IsAuthenticated != true)
         {

@@ -14,6 +14,12 @@ public static partial class ModuleTenantIsolationSql
     /// <summary>The policy name, the same as on kernel tables.</summary>
     public const string IsolationPolicy = "tenant_isolation";
 
+    /// <summary>
+    /// The session setting the kernel function reads: the same one the kernel's connections set. Module contexts made by
+    /// <see cref="IModuleTenantContextFactory{TContext}"/> set it the same way.
+    /// </summary>
+    public const string TenantSetting = "cadence.tenant_id";
+
     /// <summary>The kernel function that returns the connection's tenant, or <c>NULL</c> when none is set.</summary>
     public const string CurrentTenantFunction = "kernel.current_tenant_id()";
 

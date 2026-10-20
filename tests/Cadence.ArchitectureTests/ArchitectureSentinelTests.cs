@@ -252,7 +252,7 @@ public class ArchitectureSentinelTests
         typeof(TmfDocument).Assembly,
         typeof(QualityDeviation).Assembly,
         typeof(FileRecord).Assembly,
-        typeof(Cadence.Apps.AiGateway.Program).Assembly,
+        typeof(Cadence.Modules.Intelligence.IntelligenceModule).Assembly,
         typeof(Cadence.Apps.Econsent.Program).Assembly,
         typeof(Cadence.Apps.Eisf.Program).Assembly,
         typeof(Cadence.Apps.Gateway.Program).Assembly,

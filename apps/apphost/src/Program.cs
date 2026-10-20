@@ -192,7 +192,6 @@ if (full)
     Service(builder.AddProject<Projects.Cadence_Apps_Knowledge>("knowledge"));
     Service(builder.AddProject<Projects.Cadence_Apps_Payments>("payments"))
         .WithEnvironment("FIELD_ENCRYPTION_KEY", fieldEncryptionKey);
-    Service(builder.AddProject<Projects.Cadence_Apps_AiGateway>("ai-gateway"));
 }
 
 // The gateway is the API entry point the web apps call, through the web dev server's /api proxy. Outside

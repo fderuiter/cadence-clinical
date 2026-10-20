@@ -50,6 +50,20 @@ All services share the `cadence` database, each in its own schema; see [OPERATIO
 | `Kernel__DevelopmentTenant__Name`     | `apps/kernel-api/src/DevelopmentTenantBootstrap.cs`            | `Local development (<code>)` | no                                                                                                                                                                                                                      |
 | `Kernel__DevelopmentTenant__DemoData` | `apps/kernel-api/src/DevelopmentTenantBootstrap.cs` (ADR-2543) | `false`                      | no; read only with `Kernel__DevelopmentTenant__Code`. Seeds the demo study `CADENCE-101` and grants the local realm's users. docker compose and the AppHost set `true`                                                  |
 
+## Intelligence module
+
+The `Intelligence` configuration section (`IntelligenceOptions`) of the Intelligence module, which the kernel API host composes (ADR-2630). Without a provider, agent tasks have no model to call; the intent router (`POST /api/v1/ai/intent/route`) is rule-based and needs none.
+
+| Key                                               | Read by                                       | Default                                                                                | Required                                                                                                                                                                          |
+| ------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Intelligence__Anthropic__ApiKey`                 | `apps/intelligence/src/IntelligenceModule.cs` | none; falls back to `ANTHROPIC_API_KEY`                                                | no; never defaulted. Without a key (here or in `ANTHROPIC_API_KEY`) the Anthropic provider is not configured                                                                      |
+| `ANTHROPIC_API_KEY`                               | same                                          | none                                                                                   | no; read only when `Intelligence__Anthropic__ApiKey` is unset                                                                                                                     |
+| `Intelligence__Anthropic__Tiers__<tier>`          | same                                          | `deep`: `claude-opus-5-5`, `balanced`: `claude-sonnet-5-5`, `fast`: `claude-haiku-5-5` | no; the model a task configuration's `tier:` alias resolves to                                                                                                                    |
+| `Intelligence__FakeProvider`                      | same                                          | `false`                                                                                | no; registers the deterministic fake provider, so tests and local stacks never call a model. The host refuses to start with it outside the Development and `Testing` environments |
+| `Intelligence__RequestTimeoutSeconds`             | same                                          | `120`                                                                                  | no; how long one model call may take                                                                                                                                              |
+| `Intelligence__Prices__<model>__InputPerMillion`  | same                                          | none                                                                                   | no; US dollars per million input tokens, for the agent-run ledger's cost. A model without a price records no cost                                                                 |
+| `Intelligence__Prices__<model>__OutputPerMillion` | same                                          | none                                                                                   | no; US dollars per million output tokens                                                                                                                                          |
+
 ## Notifications service
 
 | Key                        | Read by                                                                | Default                     | Required                                                                                                                                                                                                           |
@@ -112,7 +126,6 @@ Read by `apps/gateway/src/Program.cs`, one per service in the topology manifest 
 | `IMAGING_SERVICE_URL`       | 8014         |
 | `KNOWLEDGE_SERVICE_URL`     | 8015         |
 | `PAYMENTS_SERVICE_URL`      | 8016         |
-| `AI_GATEWAY_SERVICE_URL`    | 8017         |
 | `KERNEL_SERVICE_URL`        | 8018         |
 
 Timeouts and health checks for every route, read by `apps/gateway/src/GatewayClusters.cs` (ADR-2451). Each must be a positive number of seconds; the gateway refuses to start otherwise.

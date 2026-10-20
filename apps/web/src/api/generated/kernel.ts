@@ -394,6 +394,108 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/ai/intent/route": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Match a command-palette query against fixed patterns and return the navigation targets the caller's roles allow. */
+    post: operations["RouteAiIntent"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/ai/runs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The caller's latest agent runs from the interaction ledger, newest first. */
+    get: operations["AiListMyRuns"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/ai/runs/{runId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** One of the caller's agent runs with its request, answer, usage and integrity hash. */
+    get: operations["AiGetMyRun"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/ai/tasks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The agent task configurations in this deployment, with their content hashes. */
+    get: operations["AiListTasks"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/ai/controls": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The tenant's AI kill switches and monthly token budgets. */
+    get: operations["AiListControls"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/ai/controls/{scope}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Switches agents on or off for every task ('*') or one task, and sets the monthly token budget (agent_control.set). */
+    put: operations["AiSetControl"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -412,6 +514,57 @@ export interface components {
        * @default 0
        */
       window_after: number | string;
+    };
+    Kernel_AgentControlRequest: {
+      enabled: boolean;
+      /** Format: int64 */
+      monthly_token_limit: null | number | string;
+    };
+    Kernel_AgentControlResponse: {
+      scope: string;
+      enabled: boolean;
+      /** Format: int64 */
+      monthly_token_limit: null | number | string;
+      /** Format: int64 */
+      version_index: number | string;
+    };
+    Kernel_AgentRunResponse: {
+      summary: components["schemas"]["Kernel_AgentRunSummaryResponse"];
+      provider: string;
+      configuration_hash: string;
+      request_json: string;
+      response_text: null | string;
+      failure_reason: null | string;
+      content_hash: null | string;
+      content_hash_verified: boolean;
+    };
+    Kernel_AgentRunSummaryResponse: {
+      /** Format: uuid */
+      run_id: string;
+      task_key: string;
+      /** Format: int32 */
+      task_version: number | string;
+      model: string;
+      status: string;
+      /** Format: date-time */
+      started_at: string;
+      /** Format: date-time */
+      completed_at: null | string;
+      /** Format: int64 */
+      input_tokens: number | string;
+      /** Format: int64 */
+      output_tokens: number | string;
+      /** Format: double */
+      cost_usd: null | number | string;
+    };
+    Kernel_AgentTaskResponse: {
+      key: string;
+      /** Format: int32 */
+      version: number | string;
+      provider: string;
+      model: string;
+      autonomy_level: string;
+      content_hash: string;
     };
     Kernel_AnonymousTypeOfstringAndstring: {
       status: null | string;
@@ -576,6 +729,28 @@ export interface components {
       design_json: string;
       reasoning_chain: components["schemas"]["Kernel_ProtocolReasoningStep"][];
       initial_gap_check: components["schemas"]["Kernel_MatrixGapFinding"][];
+    };
+    Kernel_IntentRecommendation: {
+      id: string;
+      name: string;
+      description: string;
+      category: string;
+      icon: string;
+      target_route: string;
+      action: null | string;
+      /** Format: double */
+      confidence: number | string;
+      roles: string[];
+    };
+    Kernel_IntentRouteRequest: {
+      query: string;
+      context?: null | {
+        [key: string]: string;
+      };
+    };
+    Kernel_IntentRouteResponse: {
+      query: string;
+      recommendations: components["schemas"]["Kernel_IntentRecommendation"][];
     };
     Kernel_IntercurrentEvent: {
       description: string;
@@ -2242,6 +2417,212 @@ export interface operations {
       };
       /** @description Locked. Kernel errors: `K.Observation.Locked`. */
       423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  RouteAiIntent: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_IntentRouteRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_IntentRouteResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  AiListMyRuns: {
+    parameters: {
+      query?: {
+        limit?: number | string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_AgentRunSummaryResponse"][];
+        };
+      };
+    };
+  };
+  AiGetMyRun: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        runId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_AgentRunResponse"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  AiListTasks: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_AgentTaskResponse"][];
+        };
+      };
+    };
+  };
+  AiListControls: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_AgentControlResponse"][];
+        };
+      };
+    };
+  };
+  AiSetControl: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        scope: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_AgentControlRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_AgentControlResponse"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. */
+      422: {
         headers: {
           [name: string]: unknown;
         };

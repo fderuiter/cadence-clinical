@@ -45,7 +45,6 @@ internal static class ServiceHosts
             ["imaging"] = Boot<Cadence.Apps.Imaging.Program>,
             ["knowledge"] = Boot<Cadence.Apps.Knowledge.Program>,
             ["payments"] = Boot<Cadence.Apps.Payments.Program>,
-            ["ai_gateway"] = Boot<Cadence.Apps.AiGateway.Program>,
             ["kernel"] = Boot<Cadence.Kernel.Host.Program>,
         };
 

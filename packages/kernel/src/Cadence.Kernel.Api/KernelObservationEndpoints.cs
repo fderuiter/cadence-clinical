@@ -19,16 +19,6 @@ using Microsoft.AspNetCore.Routing;
 namespace Cadence.Kernel.Api;
 
 /// <summary>
-/// The reason for change the caller gave, from their verified identity (ADR-2495: the gateway signs it). The host
-/// implements it; the endpoints never read an unsigned reason.
-/// </summary>
-public interface IKernelChangeReason
-{
-    /// <summary>The verified reason for change on the request, or null when it carries none.</summary>
-    string? Read(HttpContext context);
-}
-
-/// <summary>
 /// Observation reads and writes (spec §8.1, ADR-2620). Every write is a kernel command sent through
 /// <see cref="IKernelCommandSender"/>: the reason comes from the signed identity, the idempotency key from the
 /// <c>Idempotency-Key</c> header, and the tenant from <see cref="KernelTenantFilter"/>.

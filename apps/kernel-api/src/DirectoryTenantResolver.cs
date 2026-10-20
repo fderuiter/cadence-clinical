@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Api;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.Tenancy;
 using Cadence.Security.Authentication;
 

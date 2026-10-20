@@ -3,10 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-using Cadence.Contracts;
 using Cadence.Security.Rbac;
 
-namespace Cadence.Apps.AiGateway.Services;
+namespace Cadence.Modules.Intelligence.Intent;
 
 /// <summary>
 /// Rule-based intent router that classifies natural language prompt queries into structured clinical intent actions.

@@ -49,7 +49,7 @@ public sealed class GatewayResilienceTests
 
         var clusters = gateway.Services.GetRequiredService<IProxyConfigProvider>().GetConfig().Clusters;
 
-        clusters.Should().HaveCount(18);
+        clusters.Should().HaveCount(17);
         clusters.Should().AllSatisfy(cluster =>
         {
             cluster.HttpRequest!.ActivityTimeout.Should().Be(TimeSpan.FromSeconds(GatewayClusters.DefaultProxyTimeoutSeconds));

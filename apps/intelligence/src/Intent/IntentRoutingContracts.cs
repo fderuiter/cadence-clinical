@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Cadence.Contracts;
+namespace Cadence.Modules.Intelligence.Intent;
 
 /// <summary>
 /// Request payload for routing natural language prompts to structured clinical intent actions.
@@ -14,7 +14,7 @@ public sealed record IntentRouteRequest(
 );
 
 /// <summary>
-/// Structured intent recommendation returned by the AI Gateway intent router.
+/// Structured intent recommendation returned by the command-palette intent router.
 /// </summary>
 /// <param name="Id">Unique identifier of the intent recommendation.</param>
 /// <param name="Name">Short title or name of the action/destination.</param>
@@ -38,7 +38,7 @@ public sealed record IntentRecommendation(
 );
 
 /// <summary>
-/// Response payload from the AI Gateway intent router service.
+/// Response payload from the command-palette intent router service.
 /// </summary>
 /// <param name="Query">The query that was evaluated.</param>
 /// <param name="Recommendations">List of classified intent recommendations.</param>
