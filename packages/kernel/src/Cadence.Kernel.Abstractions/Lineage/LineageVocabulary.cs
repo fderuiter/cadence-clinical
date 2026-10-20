@@ -36,6 +36,12 @@ public enum LineageEdgeKind
     /// <summary>The downstream object was written under the upstream protocol version.</summary>
     GovernedBy,
 
+    /// <summary>
+    /// The downstream object version was written by a command that executed the upstream approved proposal (K-AI-2,
+    /// ADR-2632). The pipeline writes it; handlers never declare it.
+    /// </summary>
+    ExecutedUnder,
+
     /// <summary>The downstream object is the next version of the upstream one. The pipeline writes it for every update.</summary>
     Supersedes,
 }

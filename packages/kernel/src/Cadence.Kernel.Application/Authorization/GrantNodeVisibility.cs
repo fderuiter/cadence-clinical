@@ -27,7 +27,8 @@ namespace Cadence.Kernel.Application.Authorization;
 /// <item>tenant reference data, roles and the tenant's people, when it holds any grant in the tenant.</item>
 /// </list>
 /// Everything else is masked <see cref="MaskReason.NotPermitted"/>, and a reader with no grant in effect sees nothing.
-/// An object the kernel places on no scope path is visible only through a tenant-wide grant. Blinding and the
+/// An object the kernel places on no scope path is visible only through a tenant-wide grant. An automation agent sees an
+/// object only when both it and the person it acts for would (K-AI-6, ADR-2632), and nothing when it acts for no one. Blinding and the
 /// IdentityVault (#4782) are not decided here yet.
 /// </summary>
 public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : INodeVisibility
@@ -57,11 +58,15 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
             return new Dictionary<NodeRef, MaskReason>();
         }
 
-        var held = await HeldAsync(tenant, reader, cancellationToken).ConfigureAwait(false);
+        // An automation agent sees only what both it and the person it acts for may see; acting for nobody, nothing (K-AI-6).
+        var agent = reader.Kind == ActorKind.AutomationAgent;
+        var held = agent && reader.RequestedBy is null ? [] : await HeldAsync(tenant, reader.AsIdentity(), cancellationToken).ConfigureAwait(false);
+        var requester = agent && reader.RequestedBy is { } person ? await HeldAsync(tenant, person, cancellationToken).ConfigureAwait(false) : null;
         var masked = new Dictionary<NodeRef, MaskReason>();
         foreach (var node in distinct)
         {
-            if (!await VisibleAsync(tenant, node, held, cancellationToken).ConfigureAwait(false))
+            if (!await VisibleAsync(tenant, node, held, cancellationToken).ConfigureAwait(false)
+                || (requester is not null && !await VisibleAsync(tenant, node, requester, cancellationToken).ConfigureAwait(false)))
             {
                 masked[node] = MaskReason.NotPermitted;
             }

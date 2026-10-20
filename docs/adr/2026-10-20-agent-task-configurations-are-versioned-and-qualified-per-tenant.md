@@ -63,8 +63,8 @@ defined context of use and life-cycle monitoring.
 
 `TaskConfiguration` holds the run fields (key, version, provider, model or tier, instructions, output limit, autonomy
 level) and the governance fields: tools, retrieval sources, output schema, the pinned evaluation set (id, version,
-content hash), acceptance criteria, approver role and the credibility assessment (question of interest, context of
-use, model influence, decision consequence). Its `ContentHash` is the kernel content hash (`sha256:` and hex) over all
+content hash), acceptance criteria (the pass rates and limits of ADR-2634), approver role and the credibility
+assessment (question of interest, context of use, model influence, decision consequence). Its `ContentHash` is the kernel content hash (`sha256:` and hex) over all
 of them, so it is the same form as every record a kernel attestation signs. Several versions of a task may be
 registered; registering one version twice, or a malformed one, fails at startup. A published version never changes.
 

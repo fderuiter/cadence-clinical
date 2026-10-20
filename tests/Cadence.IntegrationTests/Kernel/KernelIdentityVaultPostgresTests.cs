@@ -151,7 +151,7 @@ public sealed class KernelIdentityVaultPostgresTests(KernelPostgresFixture fixtu
         await IssueAsync(tenant, agent, "identity.reveal.person", ct);
         await IssueAsync(tenant, agent, "identity.reveal.links", ct);
 
-        fixture.CurrentActor.Actor = agent;
+        fixture.CurrentActor.Actor = agent.ActingFor(Actor.Person("registrar@site.test"));
         var identity = await fixture.IdentityVault.RevealAsync(new RevealPersonIdentity(tenant, person, Key(), "Automated lookup"), ct);
         var links = await fixture.IdentityVault.RevealLinksAsync(new RevealPersonLinks(tenant, person, Key(), "Automated lookup"), ct);
 

@@ -20,7 +20,7 @@ namespace Cadence.Kernel.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("kernel")
-                .HasAnnotation("ProductVersion", "10.0.11")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "btree_gist");
@@ -1348,6 +1348,11 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("reason_for_change");
 
+                    b.Property<string>("RequestedById")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("requested_by_id");
+
                     b.PrimitiveCollection<string[]>("RequestedCapabilities")
                         .IsRequired()
                         .HasColumnType("text[]")
@@ -1402,6 +1407,8 @@ namespace Cadence.Kernel.Persistence.Migrations
                             t.HasCheckConstraint("ck_proposals_intent", "char_length(intent) BETWEEN 1 AND 2000");
 
                             t.HasCheckConstraint("ck_proposals_model", "(proposed_by_kind = 'AutomationAgent' AND model_id IS NOT NULL AND char_length(model_id) > 0) OR (proposed_by_kind <> 'AutomationAgent' AND model_id IS NULL)");
+
+                            t.HasCheckConstraint("ck_proposals_requested_by", "(proposed_by_kind = 'AutomationAgent' AND requested_by_id IS NOT NULL AND char_length(requested_by_id) > 0) OR (proposed_by_kind <> 'AutomationAgent' AND requested_by_id IS NULL)");
 
                             t.HasCheckConstraint("ck_proposals_requested_capabilities", "cardinality(requested_capabilities) BETWEEN 1 AND 20");
 
@@ -3801,6 +3808,10 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasColumnType("character varying(32)")
                         .HasColumnName("outcome");
 
+                    b.Property<Guid?>("ProposalId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("proposal_id");
+
                     b.Property<string>("ReasonForChange")
                         .IsRequired()
                         .HasMaxLength(2000)
@@ -3811,6 +3822,11 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("recorded_at");
 
+                    b.Property<string>("RequestedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("requested_by");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
@@ -3818,6 +3834,9 @@ namespace Cadence.Kernel.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CorrelationId");
+
+                    b.HasIndex("TenantId", "ProposalId")
+                        .HasFilter("proposal_id IS NOT NULL");
 
                     b.HasIndex("TenantId", "RecordedAt");
 

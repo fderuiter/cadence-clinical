@@ -77,7 +77,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 | K034     | Observation corrections and scoped locks                                 | [ADR-2620](2026-10-15-ecrf-correction-transaction-boundary.md), [ADR-2621](2026-10-19-observation-corrections-are-revisions-locks-are-scoped-assertions.md)                                                                                                                                                                                                                        |
 | K035     | eCRF forms as kernel collection instances saved in one command           | [ADR-2622](2026-10-19-ecrf-forms-are-collection-instances-saved-in-one-command.md)                                                                                                                                                                                                                                                                                                 |
 | K036     | Typed observation values                                                 | [ADR-2623](2026-10-19-observation-values-are-typed.md)                                                                                                                                                                                                                                                                                                                             |
-| K037     | AI agents act through Proposals in one governed runtime                  | [ADR-2630](2026-10-20-ai-agents-act-through-proposals-in-one-governed-runtime.md)                                                                                                                                                                                                                                                                                                  |
+| K037     | AI agents act through Proposals in one governed runtime                  | [ADR-2630](2026-10-20-ai-agents-act-through-proposals-in-one-governed-runtime.md), [ADR-2632](2026-10-20-agents-act-for-one-person-and-approved-proposals-execute-as-their-approver.md)                                                                                                                                                                                            |
 
 ## Domain-Based Decisions Log
 
@@ -135,6 +135,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2623: Observation Values Are Typed](2026-10-19-observation-values-are-typed.md) (2026-10-19)
 - [ADR-2630: AI Agents Act Through Proposals in One Governed Runtime](2026-10-20-ai-agents-act-through-proposals-in-one-governed-runtime.md) (2026-10-20)
 - [ADR-2631: Agent Task Configurations Are Versioned and Qualified per Tenant](2026-10-20-agent-task-configurations-are-versioned-and-qualified-per-tenant.md) (2026-10-20)
+- [ADR-2632: Agents Act for One Person, and Approved Proposals Execute as Their Approver](2026-10-20-agents-act-for-one-person-and-approved-proposals-execute-as-their-approver.md) (2026-10-20)
 
 ### 1. Core Platform & Execution Engine
 
@@ -389,6 +390,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2434: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](2026-09-06-gxp-compliance-reporting-ci-alignment.md) (2026-09-06)
 - [ADR-2261: Native C# De-Identification Engine and Cryptographic Canonical Signing Foundation](2026-09-29-native-csharp-deid-engine-and-canonical-signing.md) (2026-09-29)
 - [ADR-2541: Consolidate GxPAuditInterceptor on Cadence.Database and Remove Obsolete Security Interceptor](2026-09-30-consolidate-gxp-audit-interceptor-on-database-package.md) (2026-09-30)
+- [ADR-2634: AI Task Configurations Are Measured by Versioned Evaluations and Production Signals](2026-10-20-ai-task-configurations-are-measured-by-versioned-evaluations-and-production-signals.md) (2026-10-20)
 
 ### 6. Frontend & Design System
 

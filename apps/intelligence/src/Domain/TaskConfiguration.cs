@@ -6,6 +6,10 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
+using Cadence.Modules.Intelligence.Evaluation;
+using Cadence.Modules.Intelligence.Evaluation.Runs;
+using Cadence.Modules.Intelligence.Evaluation.Sets;
+
 namespace Cadence.Modules.Intelligence.Domain;
 
 /// <summary>How far an agent may act on its own (ADR-2630 §4.1).</summary>
@@ -62,8 +66,8 @@ public sealed partial record TaskConfiguration(
     /// <summary>The pinned evaluation set the configuration is qualified against.</summary>
     public EvaluationSetRef? EvaluationSet { get; init; }
 
-    /// <summary>What an evaluation run must show for the configuration to be qualified, one criterion per entry.</summary>
-    public IReadOnlyList<string> AcceptanceCriteria { get; init; } = [];
+    /// <summary>What an evaluation run must show for the configuration to be qualified (ADR-2634): pass rates and limits.</summary>
+    public AcceptanceCriteria? AcceptanceCriteria { get; init; }
 
     /// <summary>The role a person needs to approve the task's proposals; required from <see cref="AutonomyLevel.Draft"/>.</summary>
     public string? ApproverRole { get; init; }
@@ -123,7 +127,7 @@ public sealed partial record TaskConfiguration(
     {
         return [
             .. EvaluationSet is null ? new[] { "Pin an evaluation set." } : [],
-            .. (AcceptanceCriteria ?? []).Any(c => !string.IsNullOrWhiteSpace(c)) ? [] : new[] { "State the acceptance criteria." },
+            .. AcceptanceCriteria is null ? new[] { "State the acceptance criteria." } : [],
             .. Credibility is null ? new[] { "Complete the credibility assessment (question of interest, context of use, model influence, decision consequence)." } : Credibility.Problems(),
             .. Level >= AutonomyLevel.Draft && string.IsNullOrWhiteSpace(ApproverRole) ? new[] { "Name the role that approves the task's proposals." } : [],
         ];
@@ -141,18 +145,6 @@ public sealed partial record TaskConfiguration(
         return new Guid(hash.AsSpan(0, 16));
     }
 }
-
-/// <summary>One version of a task configuration, as a qualification, an evaluation run or a Proposal names it (K-AI-5).</summary>
-/// <param name="Key">The task key.</param>
-/// <param name="Version">The configuration version.</param>
-/// <param name="ContentHash">The configuration's kernel content hash.</param>
-public sealed record ConfigurationRef(string Key, int Version, string ContentHash);
-
-/// <summary>A pinned evaluation set: its id, version and kernel content hash.</summary>
-/// <param name="SetId">The evaluation set's id.</param>
-/// <param name="Version">The set's version.</param>
-/// <param name="ContentHash">The set's kernel content hash.</param>
-public sealed record EvaluationSetRef(string SetId, int Version, string ContentHash);
 
 /// <summary>How much an AI output contributes to a decision, in the FDA credibility framework.</summary>
 public enum ModelInfluence

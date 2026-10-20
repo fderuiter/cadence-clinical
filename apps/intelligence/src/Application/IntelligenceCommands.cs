@@ -4,6 +4,7 @@ using Cadence.Kernel;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Modules.Intelligence.Domain;
+using Cadence.Modules.Intelligence.Evaluation;
 
 namespace Cadence.Modules.Intelligence.Application;
 

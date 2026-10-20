@@ -4,6 +4,7 @@ using System.Text;
 
 using Cadence.Core.Domain;
 using Cadence.Kernel;
+using Cadence.Modules.Intelligence.Evaluation;
 
 namespace Cadence.Modules.Intelligence.Domain;
 

@@ -12,6 +12,7 @@ The Intelligence engine's runtime for AI agents ([ADR-2630](../../docs/adr/2026-
 - `Application/`: the module commands `StartAgentRun`, `CompleteAgentRun` (capability `agent_run.record`, verb Propose), `SetAgentControl` (capability `agent_control.set`, verb Execute), `QualifyTaskConfiguration` (capability `task_configuration.qualify`, verb Approve, so people only) and `SuspendTaskConfiguration` (capability `task_configuration.suspend`, verb Execute) with their handlers and validators; the `task_configuration` attestation target check; the ports `ITaskConfigurationCatalog`, `IModelProvider`, `IModelProviderRegistry`, `IAgentLedger`, `ITaskConfigurationSuspension`; and `AgentRunner`.
 - `Infrastructure/Models/`: the model port is Microsoft.Extensions.AI `IChatClient`. The Anthropic provider uses the official `Anthropic` SDK and is configured only when an API key is set; `FakeChatClient` answers deterministically and is allowed only in `Development` and `Testing`, so CI never calls a real model.
 - `Infrastructure/Persistence/`: `IntelligenceDbContext` (schema `intelligence`, tables `agent_runs`, `agent_controls` and `task_qualifications`, all under tenant Row-Level Security), its migrations, `EfAgentLedger` and `IntelligenceDatabase.GrantAppRoleSql`.
+- `Evaluation/`: the measurement layer ([ADR-2634](../../docs/adr/2026-10-20-ai-task-configurations-are-measured-by-versioned-evaluations-and-production-signals.md), [guide](../../docs/ai/EVALUATION.md)): versioned evaluation sets, deterministic checks, the calibrated LLM judge, the `EvaluationHarness` and its hashed run records, improvement comparisons, and production signals per configuration version (`ConfigurationMonitor`, `ProductionSignalRecorder`). `AddIntelligenceEvaluation()` registers the harness.
 - `Intent/` and `Endpoints/IntentEndpoints.cs`: the rule-based command-palette intent router, moved from the AI gateway unchanged.
 
 ## Qualification
@@ -34,16 +35,16 @@ Every ledger entry holds the task version and configuration hash, the resolved m
 
 All routes need the gateway-signed caller and run in the caller's kernel tenant. The wire is snake_case.
 
-| Route (`/api/v1/ai/…`) | Answers                                                                                                       |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `GET runs`             | The caller's own runs, newest first, each with `content_hash_verified`.                                       |
-| `GET runs/{runId}`     | One of the caller's runs; another person's run is 404.                                                        |
-| `GET tasks`            | The registered task configuration versions with their hashes, risk classes and the tenant's qualifications.   |
+| Route (`/api/v1/ai/…`)                              | Answers                                                                                                                                                                        |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET runs`                                          | The caller's own runs, newest first, each with `content_hash_verified`.                                                                                                        |
+| `GET runs/{runId}`                                  | One of the caller's runs; another person's run is 404.                                                                                                                         |
+| `GET tasks`                                         | The registered task configuration versions with their hashes, risk classes and the tenant's qualifications.                                                                    |
 | `POST tasks/{key}/versions/{version}/qualification` | Qualifies a version (`QualifyTaskConfiguration`): configuration hash, evaluation evidence and the caller's attestation id; needs `Idempotency-Key` and a signed change reason. |
-| `POST tasks/{key}/versions/{version}/suspension`    | Suspends a version (`SuspendTaskConfiguration`); needs `Idempotency-Key` and a signed change reason.                               |
-| `GET controls`         | The tenant's kill switches and budgets.                                                                       |
-| `PUT controls/{scope}` | Sets one control (`*` or a task key); needs `Idempotency-Key` and a signed change reason (`SetAgentControl`). |
-| `POST intent/route`    | Command-palette recommendations for a free-text query (rule based, no model).                                 |
+| `POST tasks/{key}/versions/{version}/suspension`    | Suspends a version (`SuspendTaskConfiguration`); needs `Idempotency-Key` and a signed change reason.                                                                           |
+| `GET controls`                                      | The tenant's kill switches and budgets.                                                                                                                                        |
+| `PUT controls/{scope}`                              | Sets one control (`*` or a task key); needs `Idempotency-Key` and a signed change reason (`SetAgentControl`).                                                                  |
+| `POST intent/route`                                 | Command-palette recommendations for a free-text query (rule based, no model).                                                                                                  |
 
 ## Configuration
 
@@ -57,5 +58,6 @@ Section `Intelligence` ([docs/ENVIRONMENT_VARIABLES.md](../../docs/ENVIRONMENT_V
 
 ## Tests
 
+- `tests/Cadence.UnitTests/Intelligence/Evaluation`: the set loader's refusals, each deterministic check, judge calibration, the harness floors and run records, comparisons, and the production monitor.
 - `tests/Cadence.UnitTests/Intelligence`: domain (hash coverage, risk matrix, qualification gaps and usability), runner (qualification routing and refusals, kill switch, budget, timeout, failure), providers and the intent router.
 - `tests/Cadence.IntegrationTests/Intelligence`: the module on PostgreSQL 18 through the kernel command pipeline: ledger hash and audit, kill switch in the runner and the command, budget, Row-Level Security between tenants, requester checks, qualification (unqualified, changed and suspended configurations refused; the qualifier's own signature, accepted evidence and a complete configuration required), and the application role's missing `DELETE`.

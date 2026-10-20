@@ -7,6 +7,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Trust;
 using Cadence.Modules.Intelligence.Domain;
+using Cadence.Modules.Intelligence.Evaluation;
 
 using FluentValidation;
 

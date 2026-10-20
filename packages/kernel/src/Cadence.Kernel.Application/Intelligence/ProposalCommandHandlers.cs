@@ -107,7 +107,8 @@ internal sealed class ProposeHandler(INodeVisibility visibility) : ICommandHandl
             proposal.ContentHash,
             proposal.ConfidenceScore,
             proposal.EscalationPolicy,
-            proposal.IsEscalated));
+            proposal.IsEscalated,
+            proposal.RequestedById));
 
         if (proposal.IsEscalated && proposal.EscalatedAt.HasValue)
         {

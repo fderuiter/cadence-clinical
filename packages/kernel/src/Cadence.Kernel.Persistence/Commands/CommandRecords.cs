@@ -15,6 +15,10 @@ internal sealed class ProvenanceActivityRecord
     public string CommandType { get; init; } = string.Empty;
     public string ActorId { get; init; } = string.Empty;
     public ActorKind ActorKind { get; init; }
+
+    /// <summary>The person an automation agent acted for (K-AI-6); null for any other actor.</summary>
+    public string? RequestedBy { get; init; }
+
     public DateTimeOffset RecordedAt { get; init; }
     public string ReasonForChange { get; init; } = string.Empty;
     public string IdempotencyKey { get; init; } = string.Empty;
@@ -26,6 +30,9 @@ internal sealed class ProvenanceActivityRecord
 
     /// <summary>The authorization decision as JSON: its reason and every condition with its evidence (K-AUTH-2).</summary>
     public string? Authorization { get; init; }
+
+    /// <summary>The approved proposal this command executed (K-AI-2), or null.</summary>
+    public Guid? ProposalId { get; init; }
 }
 
 /// <summary>A raised domain event in its §5.2 envelope. Insert-only; the outbox carries it to subscribers.</summary>

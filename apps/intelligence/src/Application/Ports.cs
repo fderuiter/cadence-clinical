@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Modules.Intelligence.Domain;
+using Cadence.Modules.Intelligence.Evaluation;
 
 using Microsoft.Extensions.AI;
 

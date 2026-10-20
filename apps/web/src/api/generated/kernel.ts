@@ -534,6 +534,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    Kernel_AcceptanceCriteria: {
+      /** Format: double */
+      minimum_pass_rate: number | string;
+      /** Format: double */
+      minimum_reviewed_pass_rate: number | string;
+      maximum_mean_latency?: null | string;
+      /** Format: double */
+      maximum_mean_cost?: null | number | string;
+    };
     Kernel_ActivityLocation: number;
     Kernel_ActivityTiming: {
       /** Format: int32 */
@@ -602,7 +611,8 @@ export interface components {
       tools: string[];
       retrieval_sources: string[];
       evaluation_set: null | components["schemas"]["Kernel_EvaluationSetRef"];
-      acceptance_criteria: string[];
+      acceptance_criteria:
+        null | components["schemas"]["Kernel_AcceptanceCriteria"];
       risk_class: null | string;
       qualification_gaps: string[];
       qualification:

@@ -10,6 +10,9 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Modules;
 using Cadence.Modules.Intelligence.Application;
 using Cadence.Modules.Intelligence.Domain;
+using Cadence.Modules.Intelligence.Evaluation;
+using Cadence.Modules.Intelligence.Evaluation.Runs;
+using Cadence.Modules.Intelligence.Evaluation.Sets;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 
@@ -218,7 +221,7 @@ public sealed record AgentTaskResponse(
     IReadOnlyList<string> Tools,
     IReadOnlyList<string> RetrievalSources,
     EvaluationSetRef? EvaluationSet,
-    IReadOnlyList<string> AcceptanceCriteria,
+    AcceptanceCriteria? AcceptanceCriteria,
     string? RiskClass,
     IReadOnlyList<string> QualificationGaps,
     TaskQualificationResponse? Qualification)

@@ -6,6 +6,9 @@ using Cadence.Kernel;
 using Cadence.Modules.Intelligence;
 using Cadence.Modules.Intelligence.Application;
 using Cadence.Modules.Intelligence.Domain;
+using Cadence.Modules.Intelligence.Evaluation;
+using Cadence.Modules.Intelligence.Evaluation.Runs;
+using Cadence.Modules.Intelligence.Evaluation.Sets;
 using Cadence.Modules.Intelligence.Infrastructure.Models;
 using Cadence.Modules.Intelligence.Infrastructure.Tasks;
 using Cadence.Testing;
@@ -38,7 +41,7 @@ public sealed class IntelligenceDomainTests
         Tools = ["dictionary.search"],
         RetrievalSources = ["meddra"],
         EvaluationSet = new EvaluationSetRef("coding-gold", 1, "sha256:" + new string('c', 64)),
-        AcceptanceCriteria = ["Top-1 accuracy at least 0.9."],
+        AcceptanceCriteria = new AcceptanceCriteria(MinimumPassRate: 0.9, MinimumReviewedPassRate: 0.95),
         ApproverRole = "medical_coder",
         Credibility = new CredibilityAssessment(
             "Which MedDRA term fits the verbatim?", "A coder reviews each suggestion before it is applied.", ModelInfluence.Medium, DecisionConsequence.Medium),
@@ -65,10 +68,11 @@ public sealed class IntelligenceDomainTests
             Configuration with { RetrievalSources = ["meddra"] },
             Configuration with { OutputSchema = "{\"type\":\"object\"}" },
             Configuration with { EvaluationSet = new EvaluationSetRef("coding-gold", 1, "sha256:" + new string('b', 64)) },
-            Configuration with { AcceptanceCriteria = ["Top-1 accuracy at least 0.9."] },
+            Configuration with { AcceptanceCriteria = new AcceptanceCriteria(0.9, 0.95) },
             Configuration with { ApproverRole = "medical_coder" },
             Governed,
             Governed with { Credibility = Governed.Credibility! with { DecisionConsequence = DecisionConsequence.High } },
+            Governed with { AcceptanceCriteria = Governed.AcceptanceCriteria! with { MinimumPassRate = 0.95 } },
         ];
 
         variants.Select(v => v.ContentHash).Should().OnlyHaveUniqueItems().And.NotContain(Configuration.ContentHash);

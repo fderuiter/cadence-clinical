@@ -2303,6 +2303,47 @@
   },
   "components": {
     "schemas": {
+      "Kernel_AcceptanceCriteria": {
+        "required": [
+          "minimum_pass_rate",
+          "minimum_reviewed_pass_rate"
+        ],
+        "type": "object",
+        "properties": {
+          "minimum_pass_rate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "minimum_reviewed_pass_rate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "maximum_mean_latency": {
+            "pattern": "^-?(\\d\u002B\\.)?\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,7})?$",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "maximum_mean_cost": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
       "Kernel_ActivityLocation": {
         "type": "integer"
       },
@@ -2581,10 +2622,14 @@
             ]
           },
           "acceptance_criteria": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_AcceptanceCriteria"
+              }
+            ]
           },
           "risk_class": {
             "type": [

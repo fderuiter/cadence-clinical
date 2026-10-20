@@ -338,6 +338,9 @@ public sealed partial class KernelCommandPipelineTests
 
         public void RecordPermit(AuthorizationDecision permit) => Permit = permit;
 
+        public void RecordProposalExecution(NodeRef proposal) =>
+            throw new InvalidOperationException("The racing command executes no proposal.");
+
         public Task<IdempotentOutcome?> FindPriorOutcomeAsync(CancellationToken cancellationToken) =>
             Task.FromResult(Lookups++ == 0 ? null : winner);
 

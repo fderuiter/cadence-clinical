@@ -94,7 +94,7 @@ public class Grant : AggregateRoot<GrantId>
         DateTimeOffset recordedAt)
     {
         ArgumentNullException.ThrowIfNull(issuedBy);
-        if (grantee is null || (capability is null) == (roleId is null))
+        if (grantee is null || grantee.RequestedBy is not null || (capability is null) == (roleId is null))
         {
             return AuthorityErrors.GrantTargetInvalid;
         }

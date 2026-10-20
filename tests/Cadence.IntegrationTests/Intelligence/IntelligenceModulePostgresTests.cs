@@ -12,6 +12,8 @@ using Cadence.Kernel.Trust;
 using Cadence.Modules.Intelligence;
 using Cadence.Modules.Intelligence.Application;
 using Cadence.Modules.Intelligence.Domain;
+using Cadence.Modules.Intelligence.Evaluation.Runs;
+using Cadence.Modules.Intelligence.Evaluation.Sets;
 using Cadence.Modules.Intelligence.Infrastructure.Persistence;
 using Cadence.Testing;
 
@@ -42,7 +44,7 @@ public sealed class IntelligenceModulePostgresFixture : KernelPostgresFixture
         "test.echo", 1, "fake", "tier:fast", "Answer briefly about {{topic}}.", 200, AutonomyLevel.Inform)
     {
         EvaluationSet = new EvaluationSetRef("test.echo_gold", 1, "sha256:" + new string('e', 64)),
-        AcceptanceCriteria = ["Every answer names the visit it is about."],
+        AcceptanceCriteria = new AcceptanceCriteria(MinimumPassRate: 0.9, MinimumReviewedPassRate: 0.95),
         Credibility = new CredibilityAssessment(
             "When is the participant's next visit?", "A coordinator reads the answer and checks the schedule.", ModelInfluence.Low, DecisionConsequence.Low),
     };

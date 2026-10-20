@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Application.Evidence;
 using Cadence.Kernel.Application.Execution;
@@ -17,7 +18,10 @@ using Cadence.Kernel.Application.Protocol;
 using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Application.WorkQueues;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Events;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 
 using FluentValidation;
@@ -30,7 +34,8 @@ namespace Cadence.Kernel.Application.Commands;
 
 /// <summary>
 /// The kernel command pipeline (spec §5.1): pipeline-wide checks → resolve actor (K-TX-5) → the command's validators
-/// (ADR-2600 §4.4) → authorize (K-AUTH-1, denials audited) → idempotency (K-TX-3) → handler decides on one aggregate (K-TX-1) → one transaction for state,
+/// (ADR-2600 §4.4) → authorize (K-AUTH-1, denials audited) → idempotency (K-TX-3) → the approved proposal the command
+/// executes, when its metadata names one (K-AI-2) → handler decides on one aggregate (K-TX-1) → one transaction for state,
 /// provenance, events, audit and outbox (K-TX-2).
 /// @req:PRD-SYS-053
 /// </summary>
@@ -85,7 +90,7 @@ public sealed class KernelCommandPipeline(
             KernelTimestamps.ToStoredPrecision(clock.UtcNow),
             Guid.CreateVersion7(),
             metadata ?? new CommandMetadata(Guid.CreateVersion7()),
-            ComputeRequestHash(command, commandType));
+            ComputeRequestHash(command, commandType, metadata?.Proposal));
 
         await using var transaction = unitOfWorkFactory.Begin(execution);
 
@@ -104,6 +109,12 @@ public sealed class KernelCommandPipeline(
         if (await ReplayAsync<TResult>(transaction, execution, cancellationToken).ConfigureAwait(false) is { } replay)
         {
             return replay;
+        }
+
+        if (execution.Metadata.Proposal is { } proposalId
+            && await ExecuteUnderProposalAsync(transaction, execution, proposalId, cancellationToken).ConfigureAwait(false) is { } refused)
+        {
+            return refused;
         }
 
         var context = new CommandContext(actor, command.TenantId, execution.RecordedAt, transaction.Work);
@@ -189,12 +200,73 @@ public sealed class KernelCommandPipeline(
     }
 
     /// <summary>
-    /// SHA-256 over the command type and its JSON payload, so the same key with a different payload is detectable.
+    /// SHA-256 over the command type, its JSON payload and the proposal it executes, so the same key with a different
+    /// payload or under a different proposal is detectable.
     /// </summary>
-    internal static string ComputeRequestHash(ICommand command, Type commandType)
+    internal static string ComputeRequestHash(ICommand command, Type commandType, ProposalId? proposal = null)
     {
         var payload = commandType.FullName + "\n" + JsonSerializer.Serialize(command, commandType, JsonOptions);
+        if (proposal is { } executed)
+        {
+            payload += "\nproposal:" + executed;
+        }
+
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(payload)));
+    }
+
+    /// <summary>
+    /// The execution link (K-AI-2, ADR-2632): the command runs under an approved proposal only when the proposal exists,
+    /// is approved and unexpired, was approved by the acting person, requested the command's capability, and the command
+    /// acts on an object of the proposal's study or of no study. The command has already been authorized as the acting
+    /// person, so the proposal never widens what anyone may do. On success the commit records the proposal on the
+    /// provenance activity and in lineage, and a <see cref="ProposalExecuted"/> event names the agent and model behind it.
+    /// </summary>
+    private async Task<KernelError?> ExecuteUnderProposalAsync(
+        IKernelCommandTransaction transaction, CommandExecution execution, ProposalId proposalId, CancellationToken cancellationToken)
+    {
+        var catalog = services.GetService<KernelCommandCatalog>() ?? KernelCommandCatalog.Kernel;
+        if (catalog.Find(execution.Command.GetType()) is not { } entry || entry.ResourceOf(execution.Command) is not { } resource)
+        {
+            return ProposalErrors.CapabilityNotRequested;
+        }
+
+        if (await transaction.Work.ReadAsync<Proposal>(proposalId, cancellationToken).ConfigureAwait(false) is not { } proposal)
+        {
+            return ProposalErrors.ExecutionUnknown;
+        }
+
+        if (proposal.CheckExecution(execution.Actor, entry.Capability.Token, execution.RecordedAt) is { } refused)
+        {
+            return refused;
+        }
+
+        // Fail closed: without the scope graph the command's study cannot be checked.
+        if (services.GetService<IAuthorityStore>() is not { } store)
+        {
+            return ProposalErrors.OutsideStudy.WithMessage("The command's study cannot be checked against the proposal's.");
+        }
+
+        var path = await store.PathOfAsync(execution.Command.TenantId, resource, cancellationToken).ConfigureAwait(false);
+        if (path.Study is { } study && study != proposal.StudyId)
+        {
+            return ProposalErrors.OutsideStudy;
+        }
+
+        transaction.RecordProposalExecution(NodeRef.For(proposal.Id, proposal.VersionIndex));
+        transaction.Work.Raise(new ProposalExecuted(
+            proposal.TenantId,
+            proposal.Id,
+            proposal.StudyId,
+            execution.CommandType,
+            entry.Capability.Token,
+            resource.ToString(),
+            execution.Actor.Id,
+            proposal.ApprovalAttestationId!.Value,
+            proposal.ProposedById,
+            proposal.ProposedByKind,
+            proposal.ModelId,
+            proposal.RequestedById));
+        return null;
     }
 
 

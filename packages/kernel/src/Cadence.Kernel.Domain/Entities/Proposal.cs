@@ -40,6 +40,7 @@ public class Proposal : AggregateRoot<ProposalId>
         ProposedAt = KernelTimestamps.ToStoredPrecision(proposedAt);
         ProposedById = proposedBy.Id;
         ProposedByKind = proposedBy.Kind;
+        RequestedById = proposedBy.RequestedBy?.Id;
         ModelId = command.ModelId;
         ConfidenceScore = command.ConfidenceScore;
         EscalationPolicy = command.EscalationPolicy;
@@ -100,6 +101,9 @@ public class Proposal : AggregateRoot<ProposalId>
     /// <summary>The proposing actor's kind.</summary>
     public ActorKind ProposedByKind { get; private set; }
 
+    /// <summary>The person an automation agent proposed it for; set exactly when an agent proposed it (K-AI-6).</summary>
+    public string? RequestedById { get; private set; }
+
     /// <summary>The model that produced it; set exactly when an automation agent proposed it (K-PROV-3).</summary>
     public string? ModelId { get; private set; }
 
@@ -157,8 +161,8 @@ public class Proposal : AggregateRoot<ProposalId>
     /// <summary>Why it was rejected or withdrawn.</summary>
     public string? DecisionReason { get; private set; }
 
-    /// <summary>The actor who proposed it.</summary>
-    public Actor ProposedBy => new(ProposedByKind, ProposedById);
+    /// <summary>The actor who proposed it; for an automation agent, acting for the person it proposed for.</summary>
+    public Actor ProposedBy => new(ProposedByKind, ProposedById) { RequestedBy = RequestedById is { } person ? Actor.Person(person) : null };
 
     /// <summary>What an approval of this proposal signs.</summary>
     public AttestationTarget SignableTarget => new(NodeKinds.Proposal, Id.Value, ContentHash);
@@ -218,6 +222,36 @@ public class Proposal : AggregateRoot<ProposalId>
         Decide(ProposalStatus.Approved, approver, now, reason: null);
         ApprovalAttestationId = attestation;
         return null;
+    }
+
+    /// <summary>
+    /// Why <paramref name="executor"/> cannot run a command needing <paramref name="capability"/> under this proposal at
+    /// <paramref name="now"/>, or null (K-AI-2): it is approved and unexpired, the executor is the person who approved it,
+    /// acting as themselves, and it requested the capability. The pipeline still authorizes the command as the executor,
+    /// so a proposal never widens anyone's authority.
+    /// </summary>
+    public KernelError? CheckExecution(Actor executor, string capability, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(executor);
+        ArgumentNullException.ThrowIfNull(capability);
+        if (Status != ProposalStatus.Approved)
+        {
+            return ProposalErrors.NotApproved.WithMessage($"The proposal is {StatusAt(now)}; only an approved proposal can be executed.");
+        }
+
+        if (ExpiresAt <= KernelTimestamps.ToStoredPrecision(now))
+        {
+            return ProposalErrors.ExecutionExpired;
+        }
+
+        if (executor.Kind != ActorKind.Person || DecidedByKind != ActorKind.Person || !string.Equals(executor.Id, DecidedById, StringComparison.Ordinal))
+        {
+            return ProposalErrors.NotApprover;
+        }
+
+        return RequestedCapabilities.Contains(capability, StringComparer.Ordinal)
+            ? null
+            : ProposalErrors.CapabilityNotRequested.WithMessage($"The proposal did not request {capability}.");
     }
 
     /// <summary>Rejects the proposal for <paramref name="reason"/>.</summary>
@@ -287,7 +321,8 @@ public class Proposal : AggregateRoot<ProposalId>
     /// <summary>The proposal as a command result, with its status at <paramref name="now"/>.</summary>
     public ProposalState ToState(DateTimeOffset now) => new(
         Id, StudyId, StatusAt(now), ContentHash, ProposedById, ProposedByKind, ModelId, ExpiresAt, DecidedAt, DecidedById, ApprovalAttestationId,
-        ConfidenceScore, ConfidenceTier, IsEscalated, EscalatedAt, EscalatedById, EscalatedByKind, EscalatedTo, EscalationReason, EscalationPolicy);
+        ConfidenceScore, ConfidenceTier, IsEscalated, EscalatedAt, EscalatedById, EscalatedByKind, EscalatedTo, EscalationReason, EscalationPolicy,
+        RequestedById);
 
     /// <summary>
     /// The content hash of <paramref name="proposal"/>: the kernel content hash (<see cref="Trust.ContentHash"/>) of a JSON
@@ -311,6 +346,7 @@ public class Proposal : AggregateRoot<ProposalId>
             {
                 ["id"] = proposal.ProposedById,
                 ["kind"] = proposal.ProposedByKind.ToString(),
+                ["requestedBy"] = proposal.RequestedById,
             },
             ["modelId"] = proposal.ModelId,
             ["confidenceScore"] = proposal.ConfidenceScore,
@@ -379,6 +415,11 @@ public class Proposal : AggregateRoot<ProposalId>
 
         if (proposedBy.Kind == ActorKind.AutomationAgent)
         {
+            if (proposedBy.RequestedBy is null)
+            {
+                return ProposalErrors.RequesterRequired;
+            }
+
             if (string.IsNullOrWhiteSpace(command.ModelId) || command.ModelId.Length > Propose.MaxModelIdLength)
             {
                 return ProposalErrors.ModelRequired.WithMessage(
@@ -393,8 +434,11 @@ public class Proposal : AggregateRoot<ProposalId>
         return null;
     }
 
+    /// <summary>The same actor, and for an agent the same agent acting for the same person (K-AI-6).</summary>
     private bool IsProposer(Actor actor) =>
-        actor.Kind == ProposedByKind && string.Equals(actor.Id, ProposedById, StringComparison.Ordinal);
+        actor.Kind == ProposedByKind
+        && string.Equals(actor.Id, ProposedById, StringComparison.Ordinal)
+        && string.Equals(actor.RequestedBy?.Id, RequestedById, StringComparison.Ordinal);
 
     private void Decide(ProposalStatus status, Actor actor, DateTimeOffset now, string? reason)
     {

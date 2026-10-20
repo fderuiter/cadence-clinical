@@ -10,6 +10,7 @@ using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Persistence.Commands;
 using Cadence.Kernel.References;
+using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -87,6 +88,7 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
     /// every value at its current revision.
     /// </summary>
     [Fact(DisplayName = "Save_RecordsAndCorrectsAPage_AsOneActivity")]
+    [KernelRule("K-FACT-6")]
     public async Task SaveRecordsAndCorrectsAPageAsOneActivity()
     {
         fixture.SkipIfUnavailable();
@@ -176,6 +178,7 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
     /// saved from a stale screen never overwrites a value they did not see, even alongside a value that was current.
     /// </summary>
     [Fact(DisplayName = "Save_WithOneStaleRevision_IsRefusedWholeAndWritesNothing")]
+    [KernelRule("K-FACT-6")]
     public async Task SaveWithOneStaleRevisionIsRefusedWholeAndWritesNothing()
     {
         fixture.SkipIfUnavailable();
