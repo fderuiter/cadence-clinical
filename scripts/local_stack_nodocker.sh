@@ -23,6 +23,12 @@ up() {
   mkdir -p "$STATE"
 
   # PostgreSQL: own cluster so the machine's main cluster and its passwords stay untouched.
+  # The cluster is throwaway but may hold someone's work, so a cluster from another major is reported, not replaced.
+  if [ -f "$STATE/pg/data/PG_VERSION" ] && [ "$(cat "$STATE/pg/data/PG_VERSION")" != "$(basename "$(dirname "$PG_BIN")")" ]; then
+    echo "$STATE/pg/data is a PostgreSQL $(cat "$STATE/pg/data/PG_VERSION") cluster; the stack runs $PG_BIN (ADR-2533)." >&2
+    echo "Run '$0 down', then move $STATE/pg/data aside, and run '$0 up' again for a new cluster." >&2
+    return 1
+  fi
   if [ ! -d "$STATE/pg/data" ]; then
     mkdir -p "$STATE/pg" && chown postgres "$STATE/pg"
     su postgres -c "$PG_BIN/initdb -D $STATE/pg/data --auth=trust -U postgres -E UTF8 --locale=C.UTF-8" >/dev/null
@@ -96,7 +102,10 @@ down() {
   # kc.sh execs java, so the pid is Keycloak's own. (pkill -f keycloak would also match the calling shell.)
   [ -f "$STATE/keycloak.pid" ] && kill "$(cat "$STATE/keycloak.pid")" 2>/dev/null && rm "$STATE/keycloak.pid" || true
   timeout 60 bash -c 'while curl -s -o /dev/null http://localhost:8080/; do sleep 1; done' || true
-  su postgres -c "$PG_BIN/pg_ctl -D $STATE/pg/data stop" >/dev/null 2>&1 || true
+  # The cluster's own major's pg_ctl, so a cluster from before the move to PostgreSQL 18 still stops.
+  local pg_bin=$PG_BIN
+  [ -f "$STATE/pg/data/PG_VERSION" ] && pg_bin=/usr/lib/postgresql/$(cat "$STATE/pg/data/PG_VERSION")/bin
+  su postgres -c "$pg_bin/pg_ctl -D $STATE/pg/data stop" >/dev/null 2>&1 || true
   echo stopped
 }
 
