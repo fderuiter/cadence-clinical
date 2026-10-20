@@ -133,3 +133,54 @@ function canonical(value: KernelObservationValue): string {
     .sort(([x], [y]) => (x < y ? -1 : 1));
   return JSON.stringify(fields);
 }
+
+/** The reasons a user can record a value as missing (ADR-2623 null flavors; Masked is the kernel's), with how each reads. */
+export const MISSING_REASONS = Object.entries(NULL_FLAVOR_TEXT)
+  .filter(([reason]) => reason !== "Masked")
+  .map(([reason, text]) => ({ reason, text }));
+
+/** What a form item says about the value it takes (Kernel_FormItemResponse). */
+export interface FormEntryItem {
+  value_kind: string | null;
+  unit: string | null;
+  value: KernelObservationValue | null;
+}
+
+/**
+ * Reads what the user typed into a form item as a typed value. An item with a value keeps that value's kind (as a
+ * correction does); otherwise the item's value kind decides: a quantity in the item's UCUM unit, Yes/No, a date/time,
+ * or text. A coded item names no code-system version, so its first value cannot be entered as a code here.
+ */
+export function parseFormEntry(
+  text: string,
+  item: FormEntryItem
+): ParsedCorrection {
+  if (item.value && item.value.type !== "missing") {
+    return parseCorrection(text, item.value);
+  }
+  switch ((item.value_kind ?? "").toLowerCase()) {
+    case "quantity":
+      if (!item.unit) {
+        return { ok: false, message: "This item names no unit." };
+      }
+      return parseCorrection(text, {
+        type: "quantity",
+        value: 0,
+        unit: item.unit,
+      });
+    case "coded":
+      return text.trim().length === 0
+        ? { ok: false, message: "Enter a value." }
+        : {
+            ok: false,
+            message:
+              "A coded value needs its code system from the protocol and cannot be entered here yet; record it as missing instead.",
+          };
+    case "boolean":
+      return parseCorrection(text, { type: "boolean", value: false });
+    case "datetime":
+      return parseCorrection(text, { type: "dateTime", value: "" });
+    default:
+      return parseCorrection(text, { type: "text", value: "" });
+  }
+}

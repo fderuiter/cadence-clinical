@@ -5,7 +5,6 @@ using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
@@ -34,14 +33,11 @@ public sealed class ExecutionWireTypesOpenApiTransformer : IOpenApiSchemaTransfo
         typeof(ObservationId),
         typeof(DomainCode),
         typeof(TestCode),
-        typeof(FormSubmissionId),
-        typeof(FormId),
         typeof(QueryId),
     ];
 
     private static readonly Dictionary<Type, string[]> StatusEnums = new()
     {
-        [typeof(FormSubmissionStatus)] = Enum.GetValues<FormSubmissionStatus>().Select(FormSubmissionStatusCodec.ToCode).ToArray(),
         [typeof(QueryStatus)] = Enum.GetValues<QueryStatus>().Select(QueryStatusCodec.ToCode).ToArray(),
     };
 

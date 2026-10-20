@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Econsent.Infrastructure.Persistence;
+using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Knowledge.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Database.Signatures;
@@ -20,11 +21,10 @@ using Xunit;
 namespace Cadence.IntegrationTests.Database;
 
 /// <summary>
-/// eConsent and Knowledge accept e-signatures, so a token used on one instance of either service must be refused by a
-/// fresh instance on the same database, which is also what a restarted instance sees (#5434, ADR-2515). Each
-/// "instance" is its own service provider over its own context, with no memory shared between them. Execution has the
-/// same proof through its HTTP surface in <c>BatchSignOffSignatureTests</c>. Needs <c>CADENCE_TEST_POSTGRES</c> or
-/// <c>CADENCE_TEST_DOCKER=1</c>.
+/// eConsent, Knowledge and Execution accept e-signatures, so a token used on one instance of any of them must be
+/// refused by a fresh instance on the same database, which is also what a restarted instance sees (#5311, #5434,
+/// ADR-2515). Each "instance" is its own service provider over its own context, with no memory shared between them.
+/// Needs <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c>.
 /// </summary>
 public sealed class SignatureTokenSingleUsePostgresTests(ThrowawayPostgresDatabase database) : IClassFixture<ThrowawayPostgresDatabase>
 {
@@ -47,6 +47,15 @@ public sealed class SignatureTokenSingleUsePostgresTests(ThrowawayPostgresDataba
         UsedOnceAcrossInstancesAsync(
             KnowledgeDbContextFactory.Schema,
             connection => new KnowledgeDbContextFactory().CreateDbContext(Args(connection)));
+
+    /// <summary>Execution: a used CEC chair adjudication token is refused by a second instance.</summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("SRS-SYS-005")]
+    public Task Execution_TokenUsedOnOneInstance_IsRefusedByAFreshInstance() =>
+        UsedOnceAcrossInstancesAsync(
+            ExecutionDbContextFactory.Schema,
+            connection => new ExecutionDbContextFactory().CreateDbContext(Args(connection)));
 
     private async Task UsedOnceAcrossInstancesAsync<TContext>(string schema, Func<string, TContext> createContext)
         where TContext : DbContext

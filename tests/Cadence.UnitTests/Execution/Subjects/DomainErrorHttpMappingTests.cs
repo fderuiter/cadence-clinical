@@ -1,9 +1,6 @@
 using System;
 
 using Cadence.Apps.Execution.Application.Abstractions;
-using Cadence.Apps.Execution.Domain.Forms;
-using Cadence.Apps.Execution.Domain.Forms.Errors;
-using Cadence.Apps.Execution.Domain.Observations.Errors;
 using Cadence.Apps.Execution.Domain.Queries.Errors;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
@@ -166,19 +163,13 @@ public class DomainErrorHttpMappingTests
     }
 
     /// <summary>
-    /// The form, observation and query errors whose status the code table pins. <c>FORM_LOCKED</c> and
-    /// <c>TRIAL_LOCKED</c> are overrides: 423 where their types (validation, forbidden) would give 400 and 403.
+    /// The query errors whose status the code table pins.
     /// </summary>
     [Theory]
-    [InlineData("Form.NotFound", "FORM_NOT_FOUND", StatusCodes.Status404NotFound)]
-    [InlineData("Form.FormReadonly", "FORM_LOCKED", StatusCodes.Status423Locked)]
-    [InlineData("Form.TrialLocked", "TRIAL_LOCKED", StatusCodes.Status423Locked)]
-    [InlineData("Form.UnauthorizedSignerRole", "UNAUTHORIZED_SIGNER_ROLE", StatusCodes.Status403Forbidden)]
-    [InlineData("Observation.NotFound", "OBSERVATION_NOT_FOUND", StatusCodes.Status404NotFound)]
     [InlineData("Query.NotFound", "QUERY_NOT_FOUND", StatusCodes.Status404NotFound)]
     [InlineData("Query.ActiveQueryAlreadyExists", "ACTIVE_QUERY_EXISTS", StatusCodes.Status409Conflict)]
     [InlineData("Query.UnauthorizedRole", "UNAUTHORIZED_QUERY_ROLE", StatusCodes.Status403Forbidden)]
-    public void ToProblemResult_MapsFormObservationAndQueryErrorsToTheirPinnedStatus(string factory, string code, int expectedStatus)
+    public void ToProblemResult_MapsQueryErrorsToTheirPinnedStatus(string factory, string code, int expectedStatus)
     {
         var error = CreateOtherError(factory);
         error.Code.Should().Be(code);
@@ -209,11 +200,6 @@ public class DomainErrorHttpMappingTests
 
     private static DomainError CreateOtherError(string factory) => factory switch
     {
-        "Form.NotFound" => FormErrors.NotFound("FORM-1"),
-        "Form.FormReadonly" => FormErrors.FormReadonly(FormSubmissionId.New()),
-        "Form.TrialLocked" => FormErrors.TrialLocked("The trial is locked."),
-        "Form.UnauthorizedSignerRole" => FormErrors.UnauthorizedSignerRole("CRA"),
-        "Observation.NotFound" => ObservationErrors.NotFound("OBS-1"),
         "Query.NotFound" => QueryErrors.NotFound("QRY-1"),
         "Query.ActiveQueryAlreadyExists" => QueryErrors.ActiveQueryAlreadyExists("SUBJ-001/VS/SYSBP"),
         "Query.UnauthorizedRole" => QueryErrors.UnauthorizedRole("CRA", "close"),

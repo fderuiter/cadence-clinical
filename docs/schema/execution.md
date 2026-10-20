@@ -19,21 +19,18 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.cgt_destruction_certificates`](#edccgt_destruction_certificates) | `CgtDestructionCertificate` | 32 |
 | [`edc.cgt_milestone_events`](#edccgt_milestone_events) | `CgtMilestoneEvent` | 25 |
 | [`edc.cgt_vial_return_reconciliations`](#edccgt_vial_return_reconciliations) | `CgtVialReturnReconciliation` | 20 |
-| [`edc.clinical_observations`](#edcclinical_observations) | `ClinicalObservation` | 40 |
 | [`edc.clinical_queries`](#edcclinical_queries) | `ClinicalQuery` | 30 |
 | [`edc.clinical_subjects`](#edcclinical_subjects) | `ClinicalSubject` | 23 |
 | [`edc.consumed_signature_tokens`](#edcconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
 | [`edc.device_deficiencies`](#edcdevice_deficiencies) | `DeviceDeficiency` | 30 |
 | [`edc.device_inventory_items`](#edcdevice_inventory_items) | `DeviceInventoryItem` | 28 |
 | [`edc.device_quarantine_records`](#edcdevice_quarantine_records) | `DeviceQuarantineRecord` | 19 |
-| [`edc.form_submissions`](#edcform_submissions) | `FormSubmission` | 18 |
 | [`edc.ip_kit_inventory_items`](#edcip_kit_inventory_items) | `IpKitInventoryItem` | 17 |
 | [`edc.ip_kit_reconciliation_batches`](#edcip_kit_reconciliation_batches) | `IpKitReconciliationBatch` | 15 |
 | [`edc.ip_kit_reconciliation_certificates`](#edcip_kit_reconciliation_certificates) | `IpKitReconciliationCertificate` | 15 |
 | [`edc.lab_reference_ranges`](#edclab_reference_ranges) | `LabReferenceRange` | 22 |
-| [`edc.published_form_version_registries`](#edcpublished_form_version_registries) | `PublishedFormVersionRegistry` | 10 |
 | [`edc.site_compliance_caches`](#edcsite_compliance_caches) | `SiteComplianceCache` | 12 |
-| [`edc.staged_adverse_event_reviews`](#edcstaged_adverse_event_reviews) | `StagedAdverseEventReview` | 29 |
+| [`edc.staged_adverse_event_reviews`](#edcstaged_adverse_event_reviews) | `StagedAdverseEventReview` | 28 |
 | [`edc.subject_consents`](#edcsubject_consents) | `SubjectConsent` | 14 |
 | [`edc.synonym_rules`](#edcsynonym_rules) | `SynonymRule` | 15 |
 
@@ -436,62 +433,6 @@ Indexes:
 - `IX_cgt_vial_return_reconciliations_StudyId`: (`StudyId`)
 - `IX_cgt_vial_return_reconciliations_VialIdentifier`: (`VialIdentifier`)
 
-## edc.clinical_observations
-
-Entity: `ClinicalObservation`
-
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `Domain` | `character varying(50)` | no |  |  |
-| `IsOutOfRange` | `boolean` | yes |  |  |
-| `IsOutlier` | `boolean` | no |  |  |
-| `IsSdvFlagged` | `boolean` | no |  |  |
-| `IsSdvVerified` | `boolean` | no |  |  |
-| `LabIndicator` | `text` | yes |  |  |
-| `LabOutOfRange` | `boolean` | yes |  |  |
-| `LabSiteId` | `text` | yes |  |  |
-| `LabSource` | `text` | yes |  |  |
-| `MatchedNormalBounds` | `text` | yes |  |  |
-| `NormalizedUnit` | `character varying(50)` | yes |  |  |
-| `NormalizedValue` | `double precision` | yes |  |  |
-| `ObservationDate` | `timestamp with time zone` | no |  |  |
-| `PageId` | `character varying(255)` | yes |  |  |
-| `ProtocolVersionIndex` | `integer` | yes |  |  |
-| `ProtocolVersionTag` | `character varying(50)` | yes |  |  |
-| `RangeIndicator` | `text` | yes |  |  |
-| `ReasonForChange` | `text` | no |  |  |
-| `ReferenceRangeHigh` | `double precision` | yes |  |  |
-| `ReferenceRangeLow` | `double precision` | yes |  |  |
-| `SdvFlagReason` | `character varying(1000)` | yes |  |  |
-| `SdvVerifiedAt` | `timestamp with time zone` | yes |  |  |
-| `SdvVerifiedBy` | `character varying(255)` | yes |  |  |
-| `SiteId` | `character varying(255)` | yes |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `TestCode` | `character varying(100)` | no |  |  |
-| `TestName` | `character varying(255)` | no |  |  |
-| `Unit` | `character varying(50)` | yes |  |  |
-| `Value` | `double precision` | yes |  |  |
-| `ValueString` | `text` | yes |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `VisitId` | `character varying(255)` | yes |  |  |
-| `_version` | `bigint` | no | `0` |  |
-| `additional_properties` | `jsonb` | no |  |  |
-| `form_submission_id` | `uuid` | yes |  |  |
-| `is_active` | `boolean` | no | `True` |  |
-
-Indexes:
-
-- `idx_observation_coords`: (`StudyId`, `SubjectId`, `VisitId`, `Domain`, `TestCode`)
-- `idx_observation_form_submission_active`: (`form_submission_id`, `is_active`)
-- `idx_observation_subject_date`: (`SubjectId`, `ObservationDate`)
-- `ix_clinical_observations_form_submission_id`: (`form_submission_id`)
-- `ix_clinical_observations_is_active`: (`is_active`)
-- `ix_clinical_observations_site_id`: (`SiteId`)
-
 ## edc.clinical_queries
 
 Entity: `ClinicalQuery`
@@ -702,36 +643,6 @@ Indexes:
 - `IX_device_quarantine_records_DeviceInventoryId`: (`DeviceInventoryId`)
 - `IX_device_quarantine_records_StudyId_Status`: (`StudyId`, `Status`)
 
-## edc.form_submissions
-
-Entity: `FormSubmission`
-
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `ClonedFromId` | `character varying(36)` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `FormId` | `character varying(255)` | no |  |  |
-| `IsActive` | `boolean` | no | `True` |  |
-| `IsReadonly` | `boolean` | no | `False` |  |
-| `ProtocolVersion` | `character varying(50)` | yes |  |  |
-| `ReasonForChange` | `text` | no |  |  |
-| `SiteId` | `character varying(255)` | yes |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `VisitId` | `character varying(255)` | yes |  |  |
-| `_version` | `bigint` | no | `0` |  |
-| `payload` | `jsonb` | yes |  |  |
-| `signature_manifest` | `jsonb` | yes |  |  |
-
-Indexes:
-
-- `idx_form_submissions_coords`: (`StudyId`, `SubjectId`, `VisitId`, `FormId`)
-- `ix_form_submissions_site_id`: (`SiteId`)
-
 ## edc.ip_kit_inventory_items
 
 Entity: `IpKitInventoryItem`
@@ -846,27 +757,6 @@ Indexes:
 - `IX_lab_reference_ranges_StudyId_IsActive`: (`StudyId`, `IsActive`)
 - `IX_lab_reference_ranges_StudyId_TestCode_Source_SiteId_IsActive`: (`StudyId`, `TestCode`, `Source`, `SiteId`, `IsActive`)
 
-## edc.published_form_version_registries
-
-Entity: `PublishedFormVersionRegistry`
-
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `DdfIr` | `jsonb` | no |  |  |
-| `FormHash` | `character varying(255)` | no |  |  |
-| `FormId` | `character varying(255)` | no |  |  |
-| `OpenRosaXml` | `text` | no |  |  |
-| `ProtocolVersion` | `character varying(255)` | no |  |  |
-| `ProtocolVersionId` | `character varying(255)` | no |  |  |
-| `PublishedAt` | `timestamp with time zone` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `TenantId` | `character varying(255)` | no |  |  |
-
-Indexes:
-
-- `IX_published_form_version_registries_StudyId_ProtocolVersion_F~`: unique (`StudyId`, `ProtocolVersion`, `FormId`)
-
 ## edc.site_compliance_caches
 
 Entity: `SiteComplianceCache`
@@ -899,7 +789,6 @@ Entity: `StagedAdverseEventReview`
 | `created_by` | `text` | no |  |  |
 | `ctcae_grade` | `integer` | no |  |  |
 | `delta_percentage` | `double precision` | yes |  |  |
-| `form_submission_id` | `text` | yes |  |  |
 | `grading_scale` | `text` | no |  |  |
 | `investigator_notes` | `text` | yes |  |  |
 | `is_deleted` | `boolean` | no |  |  |

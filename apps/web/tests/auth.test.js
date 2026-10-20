@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { setKeycloakClient } from "../src/auth/keycloak.js";
 import { useAuthStore, PERSONA_PRESETS } from "../src/stores/auth";
-import { useSignatureStore } from "../src/stores/signatures";
 import { useNotificationsStore } from "../src/stores/notifications";
 import { useEtmfStore } from "../src/stores/etmf";
 import { apiClient } from "../src/api/apiClient";
@@ -322,54 +321,6 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
   });
 
   describe("Stores call the API instead of fabricating data", () => {
-    it("submits batch signatures to the API and stores the server response", async () => {
-      const response = {
-        status: "success",
-        signed_forms_count: 2,
-        signatures: [
-          { form_submission_id: "FS-1", payload_hash: "h1" },
-          { form_submission_id: "FS-2", payload_hash: "h2" },
-        ],
-      };
-      const post = vi
-        .spyOn(apiClient, "post")
-        .mockResolvedValueOnce({ sig_token: "step-up-token" })
-        .mockResolvedValueOnce(response);
-      const signatureStore = useSignatureStore();
-
-      const res = await signatureStore.submitBatchSignature({
-        studyId: "STUDY-01",
-        subjectId: "SUBJ-01",
-        formIds: ["FORM-01", "FORM-02"],
-        password: "my-password", // pragma: allowlist secret
-        meaning: "APPROVED",
-      });
-
-      // The password only buys a step-up token bound to these forms (ADR-2515).
-      expect(post).toHaveBeenNthCalledWith(
-        1,
-        "/api/v1/auth/signature-verification",
-        expect.objectContaining({
-          password: "my-password", // pragma: allowlist secret
-          action: "/api/v1/execution/batch-sign-off",
-          semantic_action: "execution.form.approve",
-          batch_id: expect.stringMatching(/^[0-9a-f]{64}$/),
-        })
-      );
-      expect(post).toHaveBeenNthCalledWith(
-        2,
-        "/api/v1/execution/batch-sign-off",
-        expect.not.objectContaining({ password: expect.anything() }),
-        {
-          changeReason: "APPROVED",
-          headers: { "X-Sig-Token": "step-up-token" },
-        }
-      );
-      expect(res).toEqual(response);
-      expect(window.localStorage.getItem("lastSignatureResult")).toBeNull();
-      post.mockRestore();
-    });
-
     it("starts with no notifications and reports API failures", async () => {
       const failure = Object.assign(new Error("Unauthorized"), {
         status: 401,
@@ -460,35 +411,6 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
       if (typeof window !== "undefined" && window.localStorage) {
         window.localStorage.clear();
       }
-    });
-
-    describe("Signatures Store Simulation", () => {
-      it("intercepts batch signature submission and persists to localStorage in demo mode", async () => {
-        authStore.isDemoMode = true;
-        const signatureStore = useSignatureStore();
-
-        const payload = {
-          studyId: "STUDY-01",
-          subjectId: "SUBJ-01",
-          formIds: ["FORM-01", "Form-02"],
-          password: "my-password", // pragma: allowlist secret
-          meaning: "APPROVED",
-        };
-
-        const res = await signatureStore.submitBatchSignature(payload);
-
-        // The demo stores no signature, so it reports none and invents no ids (#5468).
-        expect(res.status).toBe("demo");
-        expect(res.signatures).toEqual([]);
-        expect(res.signed_forms_count).toBe(0);
-        expect(res).not.toHaveProperty("signature_id");
-        expect(signatureStore.lastSignatureResult).toEqual(res);
-
-        // Verify localStorage persistence
-        const stored = window.localStorage.getItem("lastSignatureResult");
-        expect(stored).toBeDefined();
-        expect(JSON.parse(stored)).toEqual(res);
-      });
     });
 
     describe("Notifications Store Simulation", () => {
@@ -606,18 +528,10 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
     describe("Clean Reset Simulation", () => {
       it("successfully clears local storage and returns the stores back to their static baseline states", async () => {
         authStore.isDemoMode = true;
-        const signatureStore = useSignatureStore();
         const notificationsStore = useNotificationsStore();
         const etmfStore = useEtmfStore();
 
         // Mutate all stores
-        await signatureStore.submitBatchSignature({
-          studyId: "S",
-          subjectId: "SU",
-          formIds: ["F"],
-          password: "P",
-          meaning: "M", // pragma: allowlist secret
-        });
         await notificationsStore.fetchNotifications();
         await notificationsStore.acknowledge("notif-001", "R1");
         await etmfStore.uploadDocument({
@@ -626,9 +540,6 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
         });
 
         // Verify they are mutated/stored in localStorage
-        expect(
-          window.localStorage.getItem("lastSignatureResult")
-        ).not.toBeNull();
         // Demo notifications are persisted under the active persona's key
         expect(authStore.currentPersona).toBe("super_admin");
         expect(
@@ -637,19 +548,16 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
         expect(window.localStorage.getItem("demo_documents")).not.toBeNull();
 
         // Trigger reset Demo Storage on each store
-        signatureStore.resetDemoStorage();
         notificationsStore.resetDemoStorage();
         etmfStore.resetDemoStorage();
 
         // Verify localStorage is cleared
-        expect(window.localStorage.getItem("lastSignatureResult")).toBeNull();
         expect(
           window.localStorage.getItem("demo_notifications_super_admin")
         ).toBeNull();
         expect(window.localStorage.getItem("demo_documents")).toBeNull();
 
         // Verify in-memory state is back to pristine default state
-        expect(signatureStore.lastSignatureResult).toBeNull();
         expect(notificationsStore.notifications[0].status).toBe("OPEN"); // originally "OPEN", ack changed it to "ACKNOWLEDGED"
         expect(
           etmfStore.documentsList.some(

@@ -24,6 +24,12 @@ command pipeline, AuditEntry or outbox yet. The only kernel type that `apps/exec
 
 ---
 
+> [!NOTE]
+> #5460 (ADR-2622) deleted Execution's form submissions, batch sign-off, `ClinicalObservation`, the observation and SDV
+> endpoints, the published form version registry and the old edit-check and auto-query engines. eCRF forms are now kernel
+> collection instances served by the Execution module in the kernel host ([apps/execution/module](../../apps/execution/module/README.md)).
+> Rows below that name those files describe the state before that change.
+
 ## 1. Summary
 
 Counts are per declared type, with one row per type. The Migrations folder counts as one row.

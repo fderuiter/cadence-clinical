@@ -18,6 +18,7 @@ using Cadence.Kernel.Persistence.Search;
 using Cadence.Kernel.Persistence.Simulation;
 using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Time;
+using Cadence.Modules.Execution;
 using Cadence.Modules.Intelligence;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
@@ -82,6 +83,7 @@ builder.Services
 builder.Services.AddScoped<ServiceActorScope>();
 builder.Services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
 builder.Services.AddSingleton<IKernelChangeReason, SignedChangeReason>();
+builder.Services.AddScoped<IKernelReadAccess, KernelReadAccess>();
 
 // A reader sees what its grants in effect cover (ADR-2457); everything else is masked in place (ADR-2471). Blinding and
 // the IdentityVault (#4782) are not decided here yet.
@@ -90,6 +92,9 @@ builder.Services.AddKernelGrantVisibility();
 // Modules in this host (ADR-2601). The Intelligence module is the governed AI agent runtime (ADR-2630): agents read and
 // propose, a person approves, and AI is never required for clinical work (K-AI-8).
 builder.Services.AddCadenceIntelligenceModule(builder.Configuration, builder.Environment, connectionString);
+
+// The Execution module: eCRF forms over kernel form instances (ADR-2622).
+builder.Services.AddCadenceExecutionModule(connectionString);
 
 // The kernel tenant comes from the tenant code the gateway signs, through the kernel's tenant directory (ADR-2540).
 builder.Services.AddSingleton<IKernelTenantResolver, DirectoryTenantResolver>();
@@ -107,6 +112,7 @@ app.MapCadenceHealthAndStatusEndpoints(
     "Returns the Clinical Kernel API's operational status.");
 app.MapKernelApi().MapKernelReads().MapKernelObservations();
 app.MapIntelligenceModule();
+app.MapExecutionModule();
 
 await app.RunAsync();
 

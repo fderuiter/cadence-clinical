@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.Trust;
 
 namespace Cadence.Kernel.Evidence;
@@ -23,6 +24,9 @@ public interface ICollectionInstanceRecords
 /// <remarks>
 /// <para><c>ProtocolVersionId</c>: The protocol version that governs the form (K-TIME-8).</para>
 /// <para><c>Version</c>: 1 when opened, one more per save that changed a value.</para>
+/// <para><c>Items</c>: The CollectionSpec's items in the governing version, in the specification's order: what the form
+/// collects, which items are required and the kind of value each takes. Empty when that version no longer has the
+/// specification.</para>
 /// <para><c>Values</c>: One per CollectionSpec item that has a value, ordered by item id.</para>
 /// <para><c>Locks</c>: The locks in force at the form's study, study site, enrollment, the form itself or one of its
 /// values, widest scope first (spec §10.5).</para>
@@ -43,6 +47,7 @@ public sealed record CollectionInstanceRecord(
     string OpenedBy,
     DateTimeOffset OpenedAt,
     long Version,
+    IReadOnlyList<CollectionItem> Items,
     IReadOnlyList<CollectedValueView> Values,
     IReadOnlyList<LockView> Locks,
     IReadOnlyList<AssertionView> Assertions,

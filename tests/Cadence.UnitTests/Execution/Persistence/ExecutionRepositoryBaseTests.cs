@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Domain.Compliance;
-using Cadence.Apps.Execution.Domain.Forms;
+using Cadence.Apps.Execution.Domain.Observations;
+using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
@@ -122,38 +123,37 @@ public class ExecutionRepositoryBaseTests
     [Fact]
     [Trait("Category", "GxP_OQ")]
     [GxPRequirement("PRD-SYS-001")]
-    public async Task TwoConcurrentFormUpdates_OneSucceeds_TheOtherConflicts_AndTheAuditShowsOneChange()
+    public async Task TwoConcurrentQueryAnswers_OneSucceeds_TheOtherConflicts_AndTheAuditShowsOneChange()
     {
         using var connection = OpenSqliteConnection();
-        FormSubmissionId formId;
+        QueryId queryId;
         await using (var setup = CreateContext(connection, "creator"))
         {
             await setup.Database.EnsureCreatedAsync(Ct);
-            var form = FormSubmission.Initialize(Study, new SubjectCode("SUBJ-RACE"), new FormId("FORM-VS"),
-                siteId: null, visitId: null, protocolVersion: "1.0.0", initialPayload: "{}").Value!;
-            setup.FormSubmissions.Add(form);
+            var query = ClinicalQuery.Raise(Study, new SubjectCode("SUBJ-RACE"), new TestCode("SYSBP"), "Value out of range").Value!;
+            setup.ClinicalQueries.Add(query);
             await setup.SaveChangesAsync(Ct);
-            formId = form.Id;
+            queryId = query.Id;
         }
 
         await using var firstContext = CreateContext(connection, "first-editor");
         await using var secondContext = CreateContext(connection, "second-editor");
-        var first = new FormSubmissionRepository(firstContext);
-        var second = new FormSubmissionRepository(secondContext);
+        var first = new ClinicalQueryRepository(firstContext);
+        var second = new ClinicalQueryRepository(secondContext);
 
         // Both read the same version before either saves.
-        var firstCopy = (await first.GetForUpdateAsync(formId, Ct))!;
-        var secondCopy = (await second.GetForUpdateAsync(formId, Ct))!;
+        var firstCopy = (await first.GetForUpdateAsync(queryId, Ct))!;
+        var secondCopy = (await second.GetForUpdateAsync(queryId, Ct))!;
 
-        firstCopy.UpdatePayload("{\"source\": \"first\"}", "First correction").IsSuccess.Should().BeTrue();
+        firstCopy.Answer("first answer", "first-editor").IsSuccess.Should().BeTrue();
         await first.SaveChangesAsync(Ct);
 
-        secondCopy.UpdatePayload("{\"source\": \"second\"}", "Second correction").IsSuccess.Should().BeTrue();
+        secondCopy.Answer("second answer", "second-editor").IsSuccess.Should().BeTrue();
         var act = async () => await second.SaveChangesAsync(Ct);
         await act.Should().ThrowAsync<ConcurrencyConflictException>();
 
         await using var verify = CreateContext(connection);
-        (await verify.FormSubmissions.AsNoTracking().SingleAsync(Ct)).Payload.Should().Be("{\"source\": \"first\"}");
+        (await verify.ClinicalQueries.AsNoTracking().SingleAsync(Ct)).Response.Should().Be("first answer");
         var entries = await verify.AuditLogEntries.AsNoTracking().ToListAsync(Ct);
         entries.Select(e => e.UserId).Should().BeEquivalentTo(["creator", "first-editor"],
             "the rejected edit leaves no audit entry; only the create and the winning change are recorded");

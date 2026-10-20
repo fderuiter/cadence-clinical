@@ -4,11 +4,9 @@ import { createPinia, setActivePinia } from "pinia";
 import { ref } from "vue";
 import { useConsentGating } from "../src/composables/useConsentGating";
 import { useVerification } from "../src/composables/useVerification";
-import { usePiSignoff } from "../src/composables/usePiSignoff";
 import { useSchemaIngestion } from "../src/composables/useSchemaIngestion";
 import CrcFormRenderer from "../src/components/persona/CrcFormRenderer.vue";
 import CraVerificationConsole from "../src/components/persona/CraVerificationConsole.vue";
-import PiSignatureDrawer from "../src/components/persona/PiSignatureDrawer.vue";
 import DesignerSchemaPanel from "../src/components/persona/DesignerSchemaPanel.vue";
 import { useClinicalStore } from "../src/stores/clinical";
 import { useAuthStore } from "../src/stores/auth";
@@ -109,30 +107,6 @@ describe("Persona Sub-Components & Domain Composables Unit Tests", () => {
     });
   });
 
-  describe("usePiSignoff Composable", () => {
-    it("manages target selection and re-authentication modal states", () => {
-      const {
-        signoffTargetType,
-        signoffTargetId,
-        handleSignOffSubmit,
-        showReauthModal,
-        reauthAction,
-        cancelReauth,
-      } = usePiSignoff(clinicalStore, authStore);
-
-      signoffTargetType.value = "VISIT";
-      signoffTargetId.value = "V-SCR";
-
-      handleSignOffSubmit();
-
-      expect(showReauthModal.value).toBe(true);
-      expect(reauthAction.value).toBe("BATCH_SIGN_OFF");
-
-      cancelReauth();
-      expect(showReauthModal.value).toBe(false);
-    });
-  });
-
   describe("useSchemaIngestion Composable", () => {
     it("calculates unreviewed items count and validates candidate promotion rationale", async () => {
       clinicalStore.candidateDraft = {
@@ -178,10 +152,8 @@ describe("Persona Sub-Components & Domain Composables Unit Tests", () => {
           lookupStatuses: {},
           getValidationError: () => null,
           isCraUser: false,
-          isAuthorizedForBulkSdv: false,
           sdvStates: {},
           getSdvKey: () => "",
-          selectedBatchFields: [],
         },
       });
 
@@ -199,33 +171,6 @@ describe("Persona Sub-Components & Domain Composables Unit Tests", () => {
       expect(wrapper.find("#batch-sdv-bar").exists()).toBe(true);
       expect(wrapper.find("#btn-batch-verify").exists()).toBe(true);
       expect(wrapper.text()).toContain("Selected 2 fields");
-    });
-
-    it("renders PiSignatureDrawer worklist and triggers signoff submission", async () => {
-      const wrapper = mount(PiSignatureDrawer, {
-        props: {
-          signoffTargetType: "FORM",
-          signoffTargetId: "FSUB-001",
-          customTargetId: "",
-          signoffReason: "PI approval and sign-off.",
-          availableSubjects: ["SUBJ-001"],
-          availableVisits: ["V-SCR"],
-          availableFormSubmissions: ["FSUB-001"],
-          validSigningReasons: ["PI approval and sign-off."],
-          showReauthModal: false,
-          reauthUsername: "fderuiter",
-          reauthPassword: "",
-          reauthTotp: "",
-          reauthError: "",
-          simulateDelay: false,
-        },
-      });
-
-      expect(wrapper.find("#signoff-target-type").exists()).toBe(true);
-      expect(wrapper.find("#btn-pi-signoff").exists()).toBe(true);
-
-      await wrapper.find("#btn-pi-signoff").trigger("click");
-      expect(wrapper.emitted("submit-signoff")).toBeTruthy();
     });
 
     it("renders DesignerSchemaPanel protocol ingestion controls and draft items", () => {

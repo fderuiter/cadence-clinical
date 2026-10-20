@@ -800,7 +800,7 @@
             <option value="Observation">Observation (Clinical Data)</option>
             <option value="Subject">Subject (Participant)</option>
             <option value="Query">Query (Discrepancy)</option>
-            <option value="FormSubmission">FormSubmission (eCRF)</option>
+            <option value="Form">Form (eCRF)</option>
             <option value="Document">Document (eTMF)</option>
           </select>
         </div>
@@ -1909,7 +1909,7 @@ function getEntityType(log) {
     d.includes("ecrf") ||
     d.includes("submission")
   )
-    return "FormSubmission";
+    return "Form";
   if (
     d.includes("document") ||
     a.includes("document") ||

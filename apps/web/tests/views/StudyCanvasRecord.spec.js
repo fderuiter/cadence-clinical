@@ -10,12 +10,7 @@ import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 vi.mock("../../src/api/executionApi", () => ({
   executionApi: {
     listSubjects: vi.fn(),
-    listObservations: vi.fn(),
-    listFormSubmissions: vi.fn(),
-    verifyObservationSdv: vi.fn(),
-    flagObservationSdv: vi.fn(),
     listQueries: vi.fn(),
-    raiseQuery: vi.fn(),
     respondQuery: vi.fn(),
     closeQuery: vi.fn(),
     reopenQuery: vi.fn(),
@@ -39,60 +34,7 @@ const PARTICIPANT = {
   enrollment_index: 1,
 };
 
-function observation(id, overrides = {}) {
-  return {
-    id,
-    subject_id: "017-0001",
-    study_id: "CAD-101",
-    domain: "VS",
-    test_code: "SYSBP",
-    test_name: "Systolic blood pressure",
-    observation_date: "2027-03-14",
-    visit_id: "Week 12",
-    value: 128,
-    value_string: null,
-    unit: "mmHg",
-    is_outlier: false,
-    is_sdv_verified: false,
-    sdv_verified_by: null,
-    sdv_verified_at: null,
-    ...overrides,
-  };
-}
-
 const OBS_ID = "6b1f0a52-4c1d-4f0e-9a51-0000000000a1";
-const OBSERVATIONS = [
-  observation(OBS_ID),
-  observation("6b1f0a52-4c1d-4f0e-9a51-0000000000a2", {
-    domain: "LB",
-    test_code: "K",
-    test_name: "Potassium",
-    visit_id: "Screening",
-    observation_date: "2027-01-02",
-    value: 5.9,
-    unit: "mmol/L",
-    is_out_of_range: true,
-    range_indicator: "HIGH",
-    is_sdv_verified: true,
-    sdv_verified_by: "monitor1",
-    sdv_verified_at: "2027-01-05T10:00:00Z",
-  }),
-];
-const FORMS = [
-  {
-    id: "f1",
-    study_id: "CAD-101",
-    subject_id: "017-0001",
-    form_id: "VITALS",
-    status: "COMPLETED",
-    visit_id: "Week 12",
-    protocol_version: "3.0",
-    is_active: true,
-    is_readonly: true,
-    version: 2,
-  },
-];
-
 const QUERY_ID = "9a2d6f10-1111-4c2b-8d3e-0000000000b1";
 
 function query(overrides = {}) {
@@ -138,12 +80,6 @@ describe("Clinical Canvas: a participant's data", () => {
       limit: 50,
       offset: 0,
     });
-    vi.mocked(executionApi.listObservations).mockResolvedValue(
-      structuredClone(OBSERVATIONS)
-    );
-    vi.mocked(executionApi.listFormSubmissions).mockResolvedValue(
-      structuredClone(FORMS)
-    );
     vi.mocked(executionApi.listQueries).mockResolvedValue([query()]);
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -179,31 +115,21 @@ describe("Clinical Canvas: a participant's data", () => {
     auth.rawRoles = roles;
   }
 
-  it("opens a participant's observations by visit and its form submissions from Execution", async () => {
+  it("opens a participant's queries and points to the eCRF screen for its forms (ADR-2622)", async () => {
     await openRecord();
 
     expect(router.currentRoute.value.query).toEqual({
       stage: "conduct",
       participant: `participant:${PARTICIPANT_ID}`,
     });
-    expect(executionApi.listObservations).toHaveBeenCalledWith(
+    expect(executionApi.listQueries).toHaveBeenCalledWith(
       "CAD-101",
       "017-0001"
     );
-    expect(executionApi.listFormSubmissions).toHaveBeenCalledWith(
-      "CAD-101",
-      "017-0001"
+    const link = wrapper.find("#record-open-ecrf");
+    expect(link.attributes("href")).toBe(
+      "/ecrf?studyId=CAD-101&subjectId=017-0001"
     );
-
-    const record = wrapper.find("#participant-record");
-    expect(record.findAll(".visit-title").map((h) => h.text())).toEqual([
-      "Screening",
-      "Week 12",
-    ]);
-    expect(record.text()).toContain("5.9 mmol/L");
-    expect(record.text()).toContain("Out of range");
-    expect(wrapper.find("#record-forms").text()).toContain("VITALS");
-    expect(wrapper.find("#record-forms").text()).toContain("Completed, locked");
     // The zoom path now ends at the participant, and the inspector shows it.
     expect(wrapper.find("#zoom-participant").attributes("aria-current")).toBe(
       "page"
@@ -212,115 +138,8 @@ describe("Clinical Canvas: a participant's data", () => {
     expect(wrapper.find("#inspector-open-record").exists()).toBe(false);
   });
 
-  it("fills the inspector with a selected observation, without inventing a kernel reference", async () => {
-    await openRecord();
-
-    await wrapper.find(`#observation-${OBS_ID}`).trigger("click");
-    await flushPromises();
-
-    expect(router.currentRoute.value.query.observation).toBe(OBS_ID);
-    const inspector = wrapper.find("#canvas-inspector");
-    expect(inspector.find("#canvas-inspector-title").text()).toBe(
-      "Systolic blood pressure"
-    );
-    expect(inspector.find("#canvas-inspector-ref").text()).toContain(
-      "no kernel reference yet"
-    );
-    expect(inspector.find("#inspector-result").text()).toBe("128 mmHg");
-    expect(inspector.find("#inspector-sdv-status").text()).toBe(
-      "Not verified."
-    );
-    expect(wrapper.find("#zoom-observation").text()).toBe(
-      "Systolic blood pressure"
-    );
-    expect(wrapper.find("#zoom-participant").element.tagName).toBe("A");
-  });
-
-  it("verifies an observation for a monitor and shows who Execution recorded", async () => {
-    signInWith(["cra"]);
-    await openRecord();
-    await wrapper.find(`#observation-${OBS_ID}`).trigger("click");
-    await flushPromises();
-    vi.mocked(executionApi.verifyObservationSdv).mockResolvedValue(
-      observation(OBS_ID, {
-        is_sdv_verified: true,
-        sdv_verified_by: "monitor1",
-        sdv_verified_at: "2027-03-20T09:00:00Z",
-      })
-    );
-
-    await wrapper.find("#btn-verify-sdv").trigger("click");
-    await flushPromises();
-
-    expect(executionApi.verifyObservationSdv).toHaveBeenCalledWith(OBS_ID);
-    expect(wrapper.find("#inspector-sdv-status").text()).toBe(
-      "Verified by monitor1 on 2027-03-20T09:00:00Z."
-    );
-    expect(wrapper.find("#btn-verify-sdv").exists()).toBe(false);
-    expect(useToastStore().toasts.at(-1)).toMatchObject({ tone: "success" });
-  });
-
-  it("flags an observation for re-verification only with a reason", async () => {
-    signInWith(["data_manager"]);
-    await openRecord();
-    const verifiedId = OBSERVATIONS[1].id;
-    await wrapper.find(`#observation-${verifiedId}`).trigger("click");
-    await flushPromises();
-    vi.mocked(executionApi.flagObservationSdv).mockResolvedValue(
-      observation(verifiedId, { test_name: "Potassium" })
-    );
-
-    expect(wrapper.find("#btn-flag-sdv").attributes()).toHaveProperty(
-      "disabled"
-    );
-    await wrapper
-      .find("#sdv-flag-reason")
-      .setValue("  Unit differs from lab report ");
-    await wrapper.find("#btn-flag-sdv").trigger("click");
-    await flushPromises();
-
-    expect(executionApi.flagObservationSdv).toHaveBeenCalledWith(
-      verifiedId,
-      "Unit differs from lab report"
-    );
-    expect(wrapper.find("#inspector-sdv-status").text()).toBe("Not verified.");
-    expect(wrapper.find("#sdv-flag-reason").element.value).toBe("");
-  });
-
-  it("reports a refused verification and keeps the observation as it was", async () => {
-    signInWith(["cra"]);
-    await openRecord();
-    await wrapper.find(`#observation-${OBS_ID}`).trigger("click");
-    await flushPromises();
-    vi.mocked(executionApi.verifyObservationSdv).mockRejectedValue(
-      Object.assign(new Error("Forbidden"), { status: 403 })
-    );
-
-    await wrapper.find("#btn-verify-sdv").trigger("click");
-    await flushPromises();
-
-    expect(wrapper.find("#inspector-sdv-status").text()).toBe("Not verified.");
-    expect(useToastStore().toasts.at(-1)).toMatchObject({
-      tone: "error",
-      title: "Systolic blood pressure was not verified",
-    });
-  });
-
-  it("offers no verification to a site user", async () => {
-    signInWith(["crc"]);
-    await openRecord();
-    await wrapper.find(`#observation-${OBS_ID}`).trigger("click");
-    await flushPromises();
-
-    expect(wrapper.find("#btn-verify-sdv").exists()).toBe(false);
-    expect(wrapper.find("#btn-flag-sdv").exists()).toBe(false);
-    expect(wrapper.find("#inspector-sdv-note").text()).toContain(
-      "monitor or data manager"
-    );
-  });
-
   it("says so when the participant's data can't be loaded, and retries", async () => {
-    vi.mocked(executionApi.listObservations).mockRejectedValueOnce(
+    vi.mocked(executionApi.listQueries).mockRejectedValueOnce(
       Object.assign(new Error("Unavailable"), { status: 503 })
     );
     await openRecord();
@@ -328,13 +147,13 @@ describe("Clinical Canvas: a participant's data", () => {
     expect(wrapper.find("#record-error").text()).toContain(
       "017-0001's data couldn't be loaded."
     );
-    expect(wrapper.find("#participant-record table").exists()).toBe(false);
+    expect(wrapper.find(`#query-${QUERY_ID}`).exists()).toBe(false);
 
     await wrapper.find("#btn-retry-record").trigger("click");
     await flushPromises();
     await wrapper.vm.$nextTick();
     expect(wrapper.find("#record-error").exists()).toBe(false);
-    expect(wrapper.findAll("#participant-record tbody tr").length).toBe(3);
+    expect(wrapper.find(`#query-${QUERY_ID}`).exists()).toBe(true);
   });
 
   it("says a participant opened by link isn't loaded instead of guessing its code", async () => {
@@ -343,12 +162,12 @@ describe("Clinical Canvas: a participant's data", () => {
     expect(wrapper.find("#record-not-loaded").text()).toContain(
       "isn't among those loaded for CAD-101"
     );
-    expect(executionApi.listObservations).not.toHaveBeenCalled();
+    expect(executionApi.listQueries).not.toHaveBeenCalled();
     expect(executionApi.listSubjects).not.toHaveBeenCalled();
   });
 
   describe("queries", () => {
-    it("lists the participant's queries against their observation", async () => {
+    it("lists the participant's queries with their test and visit", async () => {
       await openRecord();
 
       expect(executionApi.listQueries).toHaveBeenCalledWith(
@@ -357,7 +176,7 @@ describe("Clinical Canvas: a participant's data", () => {
       );
       const item = wrapper.find(`#query-${QUERY_ID}`);
       expect(item.text()).toContain("Open");
-      expect(item.text()).toContain("Systolic blood pressure · Week 12");
+      expect(item.text()).toContain("SYSBP · Week 12");
       expect(item.text()).toContain("Value differs from the source note");
     });
 
@@ -449,49 +268,6 @@ describe("Clinical Canvas: a participant's data", () => {
         tone: "error",
         title: "The query was not cancelled",
       });
-    });
-
-    it("raises a query on the selected observation for a CRA", async () => {
-      signInWith(["cra"]);
-      await openRecord();
-      await wrapper.find(`#observation-${OBS_ID}`).trigger("click");
-      await flushPromises();
-
-      expect(wrapper.find("#inspector-queries-status").text()).toBe(
-        "1 query, 1 still open or awaiting review."
-      );
-      const raised = query({
-        id: "9a2d6f10-1111-4c2b-8d3e-0000000000c2",
-        explanation: "Confirm the cuff size",
-      });
-      vi.mocked(executionApi.raiseQuery).mockResolvedValue(raised);
-
-      await wrapper
-        .find("#query-explanation")
-        .setValue("Confirm the cuff size");
-      await wrapper.find("#btn-raise-query").trigger("click");
-      await flushPromises();
-
-      expect(executionApi.raiseQuery).toHaveBeenCalledWith({
-        studyId: "CAD-101",
-        subjectCode: "017-0001",
-        observation: expect.objectContaining({ id: OBS_ID }),
-        explanation: "Confirm the cuff size",
-      });
-      expect(wrapper.find("#inspector-queries-status").text()).toBe(
-        "2 queries, 2 still open or awaiting review."
-      );
-      expect(wrapper.find(`#query-${raised.id}`).exists()).toBe(true);
-      expect(wrapper.find("#query-explanation").element.value).toBe("");
-    });
-
-    it("offers a site user no way to raise a query", async () => {
-      signInWith(["crc"]);
-      await openRecord();
-      await wrapper.find(`#observation-${OBS_ID}`).trigger("click");
-      await flushPromises();
-
-      expect(wrapper.find("#btn-raise-query").exists()).toBe(false);
     });
 
     it("allows CRA to batch close multiple answered queries with a reason", async () => {

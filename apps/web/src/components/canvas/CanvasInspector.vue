@@ -4,17 +4,8 @@
     class="inspector"
     aria-labelledby="canvas-inspector-title"
   >
-    <template v-if="observation || participant || protocolVersion">
-      <header v-if="observation" class="inspector-header">
-        <span class="inspector-kind">Observation</span>
-        <h2 id="canvas-inspector-title" class="inspector-title">
-          {{ observation.test_name }}
-        </h2>
-        <span id="canvas-inspector-ref" class="inspector-ref">
-          Execution id {{ observation.id }} (no kernel reference yet)
-        </span>
-      </header>
-      <header v-else-if="participant" class="inspector-header">
+    <template v-if="participant || protocolVersion">
+      <header v-if="participant" class="inspector-header">
         <span class="inspector-kind">Participant</span>
         <h2 id="canvas-inspector-title" class="inspector-title">
           {{ participant.subject_id }}
@@ -213,125 +204,6 @@
         </div>
       </section>
 
-      <template v-else-if="observation">
-        <dl class="details">
-          <dt>Result</dt>
-          <dd id="inspector-result" class="numeric">
-            {{ observationValue(observation) }}
-          </dd>
-          <template v-if="observation.normalized_value != null">
-            <dt>Normalized</dt>
-            <dd class="numeric">
-              {{ observation.normalized_value }}
-              {{ observation.normalized_unit || "" }}
-            </dd>
-          </template>
-          <dt>Test</dt>
-          <dd>{{ observation.domain }} · {{ observation.test_code }}</dd>
-          <dt>Date</dt>
-          <dd>{{ observation.observation_date }}</dd>
-          <dt>Visit</dt>
-          <dd>{{ observation.visit_id || "Not recorded" }}</dd>
-          <template
-            v-if="
-              observation.reference_range_low != null ||
-              observation.reference_range_high != null
-            "
-          >
-            <dt>Reference range</dt>
-            <dd class="numeric">
-              {{ observation.reference_range_low ?? "…" }} to
-              {{ observation.reference_range_high ?? "…" }}
-            </dd>
-          </template>
-          <template v-if="observation.is_out_of_range">
-            <dt>Range</dt>
-            <dd id="inspector-range">
-              Out of range{{
-                observation.range_indicator
-                  ? ` (${observation.range_indicator})`
-                  : ""
-              }}
-            </dd>
-          </template>
-        </dl>
-
-        <section
-          id="inspector-sdv"
-          class="sdv"
-          aria-labelledby="inspector-sdv-title"
-        >
-          <h3 id="inspector-sdv-title">Source data verification</h3>
-          <p id="inspector-sdv-status" class="sdv-status">
-            {{
-              observation.is_sdv_verified
-                ? `Verified by ${observation.sdv_verified_by || "an unrecorded user"}${observation.sdv_verified_at ? ` on ${observation.sdv_verified_at}` : ""}.`
-                : "Not verified."
-            }}
-          </p>
-          <template v-if="canVerify">
-            <button
-              v-if="!observation.is_sdv_verified"
-              id="btn-verify-sdv"
-              type="button"
-              class="btn btn-primary"
-              :disabled="sdvBusy"
-              @click="verify"
-            >
-              Mark verified against source
-            </button>
-            <label for="sdv-flag-reason">Reason to re-verify</label>
-            <textarea
-              id="sdv-flag-reason"
-              v-model="flagReason"
-              rows="2"
-              placeholder="What doesn't match the source (recorded in the audit trail)"
-            />
-            <button
-              id="btn-flag-sdv"
-              type="button"
-              class="btn btn-secondary"
-              :disabled="sdvBusy || !flagReason.trim()"
-              @click="flag"
-            >
-              Flag for re-verification
-            </button>
-          </template>
-          <p v-else id="inspector-sdv-note" class="inspector-empty">
-            Source data is verified by a monitor or data manager.
-          </p>
-        </section>
-
-        <section
-          id="inspector-queries"
-          class="sdv"
-          aria-labelledby="inspector-queries-title"
-        >
-          <h3 id="inspector-queries-title">Queries</h3>
-          <p id="inspector-queries-status" class="sdv-status">
-            {{ queriesSummary }}
-          </p>
-          <template v-if="canManage">
-            <label for="query-explanation">New query</label>
-            <textarea
-              id="query-explanation"
-              v-model="queryText"
-              rows="2"
-              placeholder="What the site should check or correct"
-            />
-            <button
-              id="btn-raise-query"
-              type="button"
-              class="btn btn-secondary"
-              :disabled="queryBusy || !queryText.trim()"
-              @click="raise"
-            >
-              Raise query
-            </button>
-          </template>
-        </section>
-      </template>
-
       <dl v-else-if="protocolVersion" id="inspector-version" class="details">
         <dt>Status</dt>
         <dd id="inspector-version-status">
@@ -434,7 +306,7 @@
     <template v-else>
       <h2 id="canvas-inspector-title" class="inspector-title">Inspector</h2>
       <p class="inspector-empty">
-        Select a participant or an observation to see its details here.
+        Select a participant to see its details here.
       </p>
     </template>
 
@@ -549,11 +421,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
-import type {
-  ClinicalQuery,
-  Observation,
-  SubjectSummary,
-} from "../../api/executionApi";
+import type { SubjectSummary } from "../../api/executionApi";
 import { participantStateLabel } from "../../canvas/lifecycle";
 import ParticipantStateChange from "./ParticipantStateChange.vue";
 import KernelActPanel from "./KernelActPanel.vue";
@@ -566,9 +434,8 @@ import { parseNodeRef } from "../../canvas/nodeRef";
  * The Clinical Canvas inspector (docs/ux/CLINICAL_CANVAS.md §2.4, UX-3, UX-5): the selected object's kind,
  * title and node reference, its verbs and its details. Trace, Impact, Act and Explain read the kernel's lineage,
  * dependents, command catalogue and explanations for a selected participant or protocol version (ADR-2540); on an
- * amendment, Impact is the amendment's impact (K-PROT-2). Simulate, and those four
- * verbs on an observation (which has no kernel reference yet), are shown disabled, each saying what it waits on. Nothing here is
- * computed in the browser (§6.1).
+ * amendment, Impact is the amendment's impact (K-PROT-2). Simulate is shown disabled, saying what it waits on. Nothing
+ * here is computed in the browser (§6.1).
  */
 const props = defineProps<{
   studyCode: string;
@@ -582,32 +449,17 @@ const props = defineProps<{
   protocolVersion?: KernelProtocolVersion | null;
   /** Why the selected protocol version couldn't be read. */
   protocolVersionError?: string;
-  /** The selected observation; shown in place of the participant. */
-  observation?: Observation | null;
   /** Where the participant's record opens; absent when it is already open. */
   recordLocation?: RouteLocationRaw | null;
-  /** Whether to offer source data verification (Execution enforces who may, #4920). */
-  canVerify?: boolean;
-  verifySdv?: (observation: Observation) => Promise<boolean>;
-  /** Queries on the selected observation. */
-  observationQueries?: ClinicalQuery[];
-  /** Whether to offer raising a query (Execution records the author). */
-  canManage?: boolean;
   /** Whether to offer changing the participant's state (Execution enforces who may, #4943). */
   canManageParticipants?: boolean;
-  raiseQuery?: (
-    observation: Observation,
-    explanation: string
-  ) => Promise<boolean>;
-  flagSdv?: (observation: Observation, reason: string) => Promise<boolean>;
 }>();
 
 const NO_KERNEL_REF =
-  "an observation has no kernel reference yet, so the kernel can't answer for it.";
+  "this selection has no kernel reference, so the kernel can't answer for it.";
 
-/** The selection's kernel reference, when the kernel can answer for it: a participant or protocol version, not an observation. */
+/** The selection's kernel reference, when the kernel can answer for it: a participant or protocol version. */
 const kernelRef = computed(() => {
-  if (props.observation) return "";
   if (props.participant)
     return parseNodeRef(props.nodeRef) ? props.nodeRef : "";
   const version = props.protocolVersion?.ref;
@@ -712,73 +564,14 @@ function explainCommand(command: KernelCommand) {
   choose("explain");
 }
 
-const flagReason = ref("");
-const sdvBusy = ref(false);
-const queryText = ref("");
-const queryBusy = ref(false);
-
-const LIVE_QUERY = new Set(["OPEN", "ANSWERED", "REOPENED"]);
-const queriesSummary = computed(() => {
-  const queries = props.observationQueries ?? [];
-  if (!queries.length) return "No queries on this observation.";
-  const live = queries.filter((q) => LIVE_QUERY.has(q.status)).length;
-  const noun = queries.length === 1 ? "query" : "queries";
-  return `${queries.length} ${noun}, ${live} still open or awaiting review.`;
-});
-
 watch(
-  () => [props.nodeRef, props.observation?.id, props.protocolVersion?.ref],
+  () => [props.nodeRef, props.protocolVersion?.ref],
   () => {
     shownVerb.value = null;
     currentVerb.value = "details";
     explained.value = null;
-    flagReason.value = "";
-    queryText.value = "";
   }
 );
-
-function observationValue(observation: Observation): string {
-  const value = observation.value_string ?? observation.value;
-  if (value === null || value === undefined || value === "") {
-    return "No value";
-  }
-  return observation.unit ? `${value} ${observation.unit}` : String(value);
-}
-
-async function verify() {
-  const observation = props.observation;
-  if (!observation || !props.verifySdv) return;
-  sdvBusy.value = true;
-  try {
-    await props.verifySdv(observation);
-  } finally {
-    sdvBusy.value = false;
-  }
-}
-
-async function flag() {
-  const observation = props.observation;
-  const reason = flagReason.value.trim();
-  if (!observation || !reason || !props.flagSdv) return;
-  sdvBusy.value = true;
-  try {
-    if (await props.flagSdv(observation, reason)) flagReason.value = "";
-  } finally {
-    sdvBusy.value = false;
-  }
-}
-
-async function raise() {
-  const observation = props.observation;
-  const text = queryText.value.trim();
-  if (!observation || !text || !props.raiseQuery) return;
-  queryBusy.value = true;
-  try {
-    if (await props.raiseQuery(observation, text)) queryText.value = "";
-  } finally {
-    queryBusy.value = false;
-  }
-}
 </script>
 
 <style scoped>

@@ -322,9 +322,6 @@
         </div>
       </div>
 
-      <!-- Batch Verification Action Bar (CRA Persona Integration Slot / Element) -->
-      <slot name="batch-sdv-bar" />
-
       <!-- Unsaved Draft Changes / Local Draft Recovery Banner -->
       <div
         v-if="isDirty || draftRestored"
@@ -557,44 +554,6 @@
                   "
                 >
                   Source Document Verified (SDV)
-                </label>
-              </div>
-
-              <!-- Batch SDV Selection Checkbox -->
-              <div
-                v-if="isAuthorizedForBulkSdv"
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 8px;
-                  background-color: #eff6ff;
-                  border: 1px dashed #bfdbfe;
-                  padding: 8px;
-                  border-radius: 4px;
-                  margin-top: 4px;
-                "
-                class="batch-sdv-box"
-              >
-                <input
-                  :id="`batch-sdv-${field.id}`"
-                  type="checkbox"
-                  :value="field.id"
-                  :checked="selectedBatchFields.includes(field.id)"
-                  style="cursor: pointer"
-                  class="batch-sdv-checkbox"
-                  @change="toggleBatchField(field.id, $event.target.checked)"
-                />
-                <label
-                  :for="`batch-sdv-${field.id}`"
-                  style="
-                    font-size: 0.8rem;
-                    color: #1e40af;
-                    font-weight: 600;
-                    margin: 0;
-                    cursor: pointer;
-                  "
-                >
-                  Select for Batch SDV
                 </label>
               </div>
             </div>
@@ -978,10 +937,8 @@ const props = defineProps({
   lookupStatuses: { type: Object, required: true },
   getValidationError: { type: Function, required: true },
   isCraUser: { type: Boolean, required: true },
-  isAuthorizedForBulkSdv: { type: Boolean, required: true },
   sdvStates: { type: Object, required: true },
   getSdvKey: { type: Function, required: true },
-  selectedBatchFields: { type: Array, required: true },
   dirtyFields: { type: Object, default: () => ({}) },
   isDirty: { type: Boolean, default: false },
   draftRestored: { type: Boolean, default: false },
@@ -995,7 +952,6 @@ const emit = defineEmits([
   "update:econsentSignerName",
   "update:paperIcfDate",
   "update:paperIcfNote",
-  "update:selectedBatchFields",
   "load-ecrf-session",
   "open-econsent-modal",
   "open-paper-icf-modal",
@@ -1178,16 +1134,5 @@ async function handleEnrollSubmit() {
 function updateFieldValue(fieldId, val) {
   const storeInstance = props.store || clinicalStore;
   storeInstance.formValues[fieldId] = val;
-}
-
-function toggleBatchField(fieldId, checked) {
-  const updated = [...props.selectedBatchFields];
-  if (checked) {
-    if (!updated.includes(fieldId)) updated.push(fieldId);
-  } else {
-    const idx = updated.indexOf(fieldId);
-    if (idx !== -1) updated.splice(idx, 1);
-  }
-  emit("update:selectedBatchFields", updated);
 }
 </script>

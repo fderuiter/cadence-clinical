@@ -107,6 +107,14 @@ layout, workflow and screen state are the EDC application's **FormInstance**. On
 page of its values, form locks apply at its scope, and a form signature names its members' exact revisions.
 _Avoid_: page IDs or visit strings on Observations, server-side form drafts
 
+### FormInstance
+
+The Execution module's record of a form, one per Collection Instance and with the same id (#5460): the item order
+snapshotted from the CollectionSpec when the kernel opened the form. The module opens it from the kernel's
+`CollectionInstanceOpened` event as `svc:execution-forms`. Completeness is derived on read (every required item has a
+value, a reasoned missing value included), never stored.
+_Avoid_: copying values, statuses or signatures into it; they stay in the kernel
+
 ### Assertion
 
 A statement by an actor with authority about an Observation or another Assertion: verified (SDV),
@@ -266,7 +274,7 @@ An architectural paradigm establishing a single, unified body of clinical truth 
 
 ### Module command path and module SDK
 
-A module changes clinical state the way the kernel does: it implements a command handler from the module SDK (`Cadence.Kernel.Modules`) and sends its command through the kernel command pipeline. The module's record is written by its own `DbContext`, enlisted on the command's connection and transaction, so the record, its kernel audit chain link, its events and its idempotency record commit together; there is one history per record (ADR-2600). After commit the outbox relay, run by one replica at a time under a PostgreSQL leader lock, delivers each event to the host's **event consumers**; a consumer acts as its own service account and changes state only through a command keyed `<consumer>:<event id>`, so a redelivered event replays instead of acting twice. Before authorization the pipeline runs the command's FluentValidation validators and refuses a malformed command with `K.Command.Invalid` and field errors; a command with nothing to validate says why with `[NoValidator]`. Every error a command can return is a registered code it declares with `[RaisesKernelErrors]`, and the endpoint that sends it publishes those codes in OpenAPI (`x-kernel-errors`), so a client knows every failure it can see. The SDK and `Cadence.Kernel.Abstractions` are the only kernel assemblies a module may reference (K-XS-2).
+A module changes clinical state the way the kernel does: it implements a command handler from the module SDK (`Cadence.Kernel.Modules`) and sends its command through the kernel command pipeline. The module's record is written by its own `DbContext`, enlisted on the command's connection and transaction, so the record, its kernel audit chain link, its events and its idempotency record commit together; there is one history per record (ADR-2600). After commit the outbox relay, run by one replica at a time under a PostgreSQL leader lock, delivers each event to the host's **event consumers**; a consumer acts as its own service account and changes state only through a command keyed `<consumer>:<event id>`, so a redelivered event replays instead of acting twice. Before authorization the pipeline runs the command's FluentValidation validators and refuses a malformed command with `K.Command.Invalid` and field errors; a command with nothing to validate says why with `[NoValidator]`. Every error a command can return is a registered code it declares with `[RaisesKernelErrors]`, and the endpoint that sends it publishes those codes in OpenAPI (`x-kernel-errors`), so a client knows every failure it can see. The SDK and `Cadence.Kernel.Abstractions` are the only kernel assemblies a module may reference (K-XS-2). A module's endpoints take the tenant from `KernelTenantFilter`, the reason from `IKernelChangeReason`, ask `IKernelReadAccess` before showing anything derived from a kernel object, and read their own records through `IModuleTenantContextFactory`.
 
 ### Clinical Kernel Single-Database Schema Standard
 
