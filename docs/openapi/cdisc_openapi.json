@@ -19,99 +19,17 @@
     "/healthz": {
       "get": {
         "tags": [
-          "Cadence.Apps.AiGateway"
+          "Cadence.Apps.Ctms"
         ],
-        "summary": "AI Gateway medical coding proxy health probe.",
-        "operationId": "AiHealthCheck",
+        "summary": "CTMS operations health probe.",
+        "operationId": "CtmsHealthCheck",
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AiGateway_AnonymousTypeOfstringAndstring"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/ai/status": {
-      "get": {
-        "tags": [
-          "Cadence.Apps.AiGateway"
-        ],
-        "summary": "Returns AI Gateway operational status.",
-        "operationId": "AiStatus",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AiGateway_AnonymousTypeOfstringAndstring"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/ai/intent/route": {
-      "post": {
-        "tags": [
-          "IntentEndpoints"
-        ],
-        "summary": "Match a command-palette query against fixed patterns and return the navigation targets the caller\u0027s roles allow.",
-        "operationId": "RouteAiIntent",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AiGateway_IntentRouteRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AiGateway_IntentRouteResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/AiGateway_ProblemDetails"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/AiGateway_ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/AiGateway_ProblemDetails"
+                  "$ref": "#/components/schemas/Ctms_AnonymousTypeOfstringAndstring"
                 }
               }
             }
@@ -8755,6 +8673,310 @@
         ]
       }
     },
+    "/api/v1/ai/intent/route": {
+      "post": {
+        "tags": [
+          "IntentEndpoints"
+        ],
+        "summary": "Match a command-palette query against fixed patterns and return the navigation targets the caller\u0027s roles allow.",
+        "operationId": "RouteAiIntent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_IntentRouteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_IntentRouteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/runs": {
+      "get": {
+        "tags": [
+          "AI agents"
+        ],
+        "summary": "The caller\u0027s latest agent runs from the interaction ledger, newest first.",
+        "operationId": "AiListMyRuns",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kernel_AgentRunSummaryResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/runs/{runId}": {
+      "get": {
+        "tags": [
+          "AI agents"
+        ],
+        "summary": "One of the caller\u0027s agent runs with its request, answer, usage and integrity hash.",
+        "operationId": "AiGetMyRun",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_AgentRunResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/tasks": {
+      "get": {
+        "tags": [
+          "AI agents"
+        ],
+        "summary": "The agent task configurations in this deployment, with their content hashes.",
+        "operationId": "AiListTasks",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kernel_AgentTaskResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/controls": {
+      "get": {
+        "tags": [
+          "AI agents"
+        ],
+        "summary": "The tenant\u0027s AI kill switches and monthly token budgets.",
+        "operationId": "AiListControls",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kernel_AgentControlResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/controls/{scope}": {
+      "put": {
+        "tags": [
+          "AI agents"
+        ],
+        "summary": "Switches agents on or off for every task (\u0027*\u0027) or one task, and sets the monthly token budget (agent_control.set).",
+        "operationId": "AiSetControl",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_AgentControlRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_AgentControlResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          }
+        ]
+      }
+    },
     "/api/v1/knowledge/status": {
       "get": {
         "tags": [
@@ -10649,157 +10871,6 @@
   },
   "components": {
     "schemas": {
-      "AiGateway_AnonymousTypeOfstringAndstring": {
-        "required": [
-          "status",
-          "service"
-        ],
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "service": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "AiGateway_IntentRecommendation": {
-        "required": [
-          "id",
-          "name",
-          "description",
-          "category",
-          "icon",
-          "targetRoute",
-          "action",
-          "confidence",
-          "roles"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "category": {
-            "type": "string"
-          },
-          "icon": {
-            "type": "string"
-          },
-          "targetRoute": {
-            "type": "string"
-          },
-          "action": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "confidence": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "roles": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "AiGateway_IntentRouteRequest": {
-        "required": [
-          "query"
-        ],
-        "type": "object",
-        "properties": {
-          "query": {
-            "type": "string"
-          },
-          "context": {
-            "type": [
-              "null",
-              "object"
-            ],
-            "additionalProperties": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "AiGateway_IntentRouteResponse": {
-        "required": [
-          "query",
-          "recommendations"
-        ],
-        "type": "object",
-        "properties": {
-          "query": {
-            "type": "string"
-          },
-          "recommendations": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AiGateway_IntentRecommendation"
-            }
-          }
-        }
-      },
-      "AiGateway_ProblemDetails": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "title": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "status": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "null",
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "detail": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "instance": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "Ctms_AnonymousTypeOfstringAndstring": {
         "required": [
           "status",
@@ -19904,6 +19975,219 @@
           }
         }
       },
+      "Kernel_AgentControlRequest": {
+        "required": [
+          "enabled",
+          "monthly_token_limit"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "monthly_token_limit": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "Kernel_AgentControlResponse": {
+        "required": [
+          "scope",
+          "enabled",
+          "monthly_token_limit",
+          "version_index"
+        ],
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "monthly_token_limit": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "Kernel_AgentRunResponse": {
+        "required": [
+          "summary",
+          "provider",
+          "configuration_hash",
+          "request_json",
+          "response_text",
+          "failure_reason",
+          "content_hash",
+          "content_hash_verified"
+        ],
+        "type": "object",
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/Kernel_AgentRunSummaryResponse"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "configuration_hash": {
+            "type": "string"
+          },
+          "request_json": {
+            "type": "string"
+          },
+          "response_text": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "failure_reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "content_hash_verified": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Kernel_AgentRunSummaryResponse": {
+        "required": [
+          "run_id",
+          "task_key",
+          "task_version",
+          "model",
+          "status",
+          "started_at",
+          "completed_at",
+          "input_tokens",
+          "output_tokens",
+          "cost_usd"
+        ],
+        "type": "object",
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "task_key": {
+            "type": "string"
+          },
+          "task_version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "model": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "input_tokens": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "output_tokens": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "cost_usd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "Kernel_AgentTaskResponse": {
+        "required": [
+          "key",
+          "version",
+          "provider",
+          "model",
+          "autonomy_level",
+          "content_hash"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "autonomy_level": {
+            "type": "string"
+          },
+          "content_hash": {
+            "type": "string"
+          }
+        }
+      },
       "Kernel_AnonymousTypeOfstringAndstring": {
         "required": [
           "status",
@@ -20600,6 +20884,98 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Kernel_MatrixGapFinding"
+            }
+          }
+        }
+      },
+      "Kernel_IntentRecommendation": {
+        "required": [
+          "id",
+          "name",
+          "description",
+          "category",
+          "icon",
+          "target_route",
+          "action",
+          "confidence",
+          "roles"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "target_route": {
+            "type": "string"
+          },
+          "action": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "confidence": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Kernel_IntentRouteRequest": {
+        "required": [
+          "query"
+        ],
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "context": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Kernel_IntentRouteResponse": {
+        "required": [
+          "query",
+          "recommendations"
+        ],
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "recommendations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_IntentRecommendation"
             }
           }
         }

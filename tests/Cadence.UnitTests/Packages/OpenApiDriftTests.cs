@@ -84,7 +84,7 @@ public sealed class OpenApiDriftTests : IDisposable
     [InlineData("apps/execution/src/Endpoints/SubjectEndpoints.cs", "execution")]
     [InlineData("apps/kernel-api/src/Host/Program.cs", "kernel")]
     [InlineData("apps/ctms/src/Endpoints/CtmsEndpoints.cs", "ctms")]
-    [InlineData("apps/ai_gateway/src/Program.cs", "ai_gateway")]
+    [InlineData("apps/intelligence/src/IntelligenceModule.cs", "kernel")]
     [InlineData("packages/contracts/src/Dto/SubjectDto.cs", null)]
     [InlineData("apps/web/src/components/Footer.vue", null)]
     public void ResolveServiceFromPath_MapsMicroservicePathsCorrectly(string path, string? expectedService)

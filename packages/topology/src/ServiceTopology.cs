@@ -61,8 +61,7 @@ public static class ServiceTopology
         new("imaging", "imaging", 8014, "IMAGING_SERVICE_URL", ["imaging"], Database: true, Core: false),
         new("knowledge", "knowledge", 8015, "KNOWLEDGE_SERVICE_URL", ["knowledge", "training"], Database: true, Core: false),
         new("payments", "payments", 8016, "PAYMENTS_SERVICE_URL", ["payments"], Database: true, Core: false),
-        new("ai-gateway", "ai_gateway", 8017, "AI_GATEWAY_SERVICE_URL", ["ai"], Database: false, Core: false),
-        new("kernel", "kernel-api", 8018, "KERNEL_SERVICE_URL", ["kernel"], Database: true, Core: true),
+        new("kernel", "kernel-api", 8018, "KERNEL_SERVICE_URL", ["kernel", "ai"], Database: true, Core: true),
     ];
 
     /// <summary>The service called <paramref name="name"/>.</summary>

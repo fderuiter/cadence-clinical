@@ -9,6 +9,14 @@ recorded.** The decision is [ADR-2630](../adr/2026-10-20-ai-agents-act-through-p
 This page is the catalogue: the agents, the research-type packs, the autonomy ladder and where each regulatory control
 lives. It is a plan: an agent is built when its row's issue lands, and the **State** column says which exist.
 
+The runtime, the Intelligence module (`apps/intelligence`, composed into the kernel API host,
+[#5374](https://github.com/fderuiter/cadence-clinical/issues/5374)), is in review: the model port, task configurations
+with their content hash, the interaction ledger of agent runs, and per-tenant kill switches and token budgets, under
+`/api/v1/ai`. PHI scrubbing, data residency, more providers and a local-only mode follow in
+[#5550](https://github.com/fderuiter/cadence-clinical/issues/5550); the agent actor and requester-scoped grants in
+[#4783](https://github.com/fderuiter/cadence-clinical/issues/4783); versioned, qualified task configurations in
+[#5385](https://github.com/fderuiter/cadence-clinical/issues/5385).
+
 ## Principles
 
 1. AI output is never clinical fact until a person makes it one. Agents create kernel Proposals only (K-AI-1).

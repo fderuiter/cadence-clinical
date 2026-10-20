@@ -18,7 +18,7 @@ Cross-service DTOs and typed HTTP client interfaces for service-to-service calls
 
 ## Referenced by
 
-The scaffold services (`ai_gateway`, `ctms`, `econsent`, `eisf`, `etmf`, `fileshare`, `imaging`, `interop`, `knowledge`, `notifications`, `org`, `payments`, `quality`, `safety`, `tickets`). None of them uses these types in code yet; `execution`, `designer` and `gateway` do not reference the package.
+The scaffold services (`ctms`, `econsent`, `eisf`, `etmf`, `fileshare`, `imaging`, `interop`, `knowledge`, `notifications`, `org`, `payments`, `quality`, `safety`, `tickets`). None of them uses these types in code yet; `execution`, `designer` and `gateway` do not reference the package.
 
 ## Tests
 

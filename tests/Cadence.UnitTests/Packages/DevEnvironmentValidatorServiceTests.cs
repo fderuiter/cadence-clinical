@@ -39,8 +39,6 @@ public sealed class DevEnvironmentValidatorServiceTests : IDisposable
         DevEnvironmentValidatorService.NormalizeServiceName("front proxy (nginx) → gateway").Should().Be("gateway");
         DevEnvironmentValidatorService.NormalizeServiceName("kernel (`apps/kernel-api`)").Should().Be("kernel");
         DevEnvironmentValidatorService.NormalizeServiceName("DESIGNER_SERVICE_URL").Should().Be("designer");
-        DevEnvironmentValidatorService.NormalizeServiceName("ai-gateway").Should().Be("ai_gateway");
-        DevEnvironmentValidatorService.NormalizeServiceName("ai_gateway").Should().Be("ai_gateway");
         DevEnvironmentValidatorService.NormalizeServiceName("Keycloak").Should().Be("keycloak");
     }
 

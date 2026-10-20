@@ -48,7 +48,7 @@ public sealed class RouteAuthorizationTests
     private static readonly (string Host, string Route, string Reason)[] SignedInCallerRoutes =
     [
         ("kernel", "/api/v1/kernel/*", "The kernel authorizes each object from the caller's grants: reads mask what they do not cover, commands go through the authority evaluator."),
-        ("ai_gateway", "POST /api/v1/ai/intent/route", "Matches fixed patterns, reads and writes no record, and filters recommendations by the caller's signed roles."),
+        ("kernel", "POST /api/v1/ai/intent/route", "Matches fixed patterns, reads and writes no record, and filters recommendations by the caller's signed roles."),
     ];
 
     private const string ProbeHeader = "X-Authorization-Probe";

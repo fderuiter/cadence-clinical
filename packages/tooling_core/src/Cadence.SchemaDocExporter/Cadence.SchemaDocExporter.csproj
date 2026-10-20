@@ -30,6 +30,7 @@
     <ProjectReference Include="..\..\..\..\apps\quality\src\Cadence.Apps.Quality.csproj" />
     <ProjectReference Include="..\..\..\..\apps\safety\src\Cadence.Apps.Safety.csproj" />
     <ProjectReference Include="..\..\..\..\apps\tickets\src\Cadence.Apps.Tickets.csproj" />
+    <ProjectReference Include="..\..\..\..\apps\intelligence\src\Cadence.Modules.Intelligence.csproj" />
     <ProjectReference Include="..\..\..\database\src\Cadence.Database.csproj" />
   </ItemGroup>
 

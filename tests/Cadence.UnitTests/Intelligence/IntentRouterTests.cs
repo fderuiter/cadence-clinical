@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 
-using Cadence.Apps.AiGateway.Endpoints;
-using Cadence.Apps.AiGateway.Services;
-using Cadence.Contracts;
+using Cadence.Modules.Intelligence.Endpoints;
+using Cadence.Modules.Intelligence.Intent;
 
 using FluentAssertions;
 
@@ -14,12 +13,12 @@ using Microsoft.Extensions.Logging;
 
 using Xunit;
 
-namespace Cadence.UnitTests.AiGateway;
+namespace Cadence.UnitTests.Intelligence;
 
 /// <summary>
-/// Unit tests for AI Gateway Intent Classification and Navigation Endpoint.
+/// The Intelligence module's command-palette intent router and its endpoint.
 /// </summary>
-public class AiGatewayIntentTests
+public class IntentRouterTests
 {
     [Fact]
     public void ClassifyIntent_Scenario1_LogAdverseEventForSubject_ReturnsEcrfActionWithSubject()

@@ -117,8 +117,7 @@ public static partial class DevEnvironmentValidatorService
             lower = lower[..^"_service_url".Length];
         }
 
-        if (lower.Contains("gateway") && !lower.Contains("ai")) return "gateway";
-        if (lower.Contains("ai_gateway") || lower.Contains("ai-gateway") || lower.Contains("aigateway")) return "ai_gateway";
+        if (lower.Contains("gateway")) return "gateway";
         if (lower.Contains("kernel")) return "kernel";
         if (lower.Contains("keycloak")) return "keycloak";
 

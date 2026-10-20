@@ -40,17 +40,16 @@ routes answer as the service being down.
   service's port, address variable, database need and profile come from the service topology manifest
   ([`packages/topology`](../../packages/topology/README.md)); a new service still needs its `AddProject` line:
 
-  | Port | Service   | Port | Service       | Port | Service    |
-  | ---- | --------- | ---- | ------------- | ---- | ---------- |
-  | 8000 | gateway   | 8006 | notifications | 8012 | org        |
-  | 8001 | designer  | 8007 | ctms          | 8013 | fileshare  |
-  | 8002 | execution | 8008 | safety        | 8014 | imaging    |
-  | 8003 | etmf      | 8009 | tickets       | 8015 | knowledge  |
-  | 8004 | interop   | 8010 | eisf          | 8016 | payments   |
-  | 8005 | quality   | 8011 | econsent      | 8017 | ai-gateway |
-  |      |           |      |               | 8018 | kernel     |
+  | Port | Service   | Port | Service       | Port | Service   |
+  | ---- | --------- | ---- | ------------- | ---- | --------- |
+  | 8000 | gateway   | 8006 | notifications | 8012 | org       |
+  | 8001 | designer  | 8007 | ctms          | 8013 | fileshare |
+  | 8002 | execution | 8008 | safety        | 8014 | imaging   |
+  | 8003 | etmf      | 8009 | tickets       | 8015 | knowledge |
+  | 8004 | interop   | 8010 | eisf          | 8016 | payments  |
+  | 8005 | quality   | 8011 | econsent      | 8018 | kernel    |
 
-- Every service except the gateway, designer and ai-gateway references the `cadence` database
+- Every service except the gateway and designer references the `cadence` database
   (`ConnectionStrings:cadence`), waits for PostgreSQL, and applies its own migrations on start
   (`Database__MigrateOnStartup=true`), as in docker compose. Each project has a health check on
   `/healthz/ready` (the gateway on `/healthz/live`), shown in the dashboard.

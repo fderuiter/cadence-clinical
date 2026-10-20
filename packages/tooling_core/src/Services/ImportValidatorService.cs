@@ -46,7 +46,7 @@ public static class ImportValidatorService
                             if (subParts.Length >= 3)
                             {
                                 string targetApp = subParts[2].ToLowerInvariant();
-                                // Folder names use snake case (ai_gateway) where namespaces use Pascal case (AiGateway).
+                                // Folder names use snake case (core_models) where namespaces use Pascal case (CoreModels).
                                 if (!NormalizeAppName(targetApp).Equals(NormalizeAppName(appName), StringComparison.OrdinalIgnoreCase) &&
                                     !appName.Equals("gateway", StringComparison.OrdinalIgnoreCase))
                                 {

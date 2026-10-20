@@ -19,7 +19,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\apps\execution\src\Cadence.Apps.Execution.csproj" Aliases="execution" />
-    <ProjectReference Include="..\..\..\..\apps\ai_gateway\src\Cadence.Apps.AiGateway.csproj" Aliases="aigateway" />
     <ProjectReference Include="..\..\..\..\apps\ctms\src\Cadence.Apps.Ctms.csproj" Aliases="ctms" />
     <ProjectReference Include="..\..\..\..\apps\econsent\src\Cadence.Apps.Econsent.csproj" Aliases="econsent" />
     <ProjectReference Include="..\..\..\..\apps\eisf\src\Cadence.Apps.Eisf.csproj" Aliases="eisf" />
