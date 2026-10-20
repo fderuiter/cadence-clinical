@@ -14,6 +14,7 @@ using Cadence.Core.Domain;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Identity;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Persistence.IdentityVault;
@@ -61,7 +62,8 @@ internal sealed class KernelUnitOfWorkFactory(
 }
 
 /// <summary>
-/// One command's persistence (spec §5.1): tracks its single aggregate (K-TX-1), its declared lineage inputs and its
+/// One command's persistence (spec §5.1): tracks its single aggregate (K-TX-1), or a form instance and the observations
+/// it holds (K-TX-1 as amended by ADR-2622, <see cref="LockCollectionAsync"/>), its declared lineage inputs and its
 /// events, then writes state, provenance, lineage, events, the audit link, outbox rows, the idempotency record and any
 /// staged IdentityVault writes in one PostgreSQL transaction (K-TX-2, K-LIN-2, ADR-2458). The aggregate may be the
 /// kernel's or a module's: a module's context is opened on this command's connection and enlisted in the same
@@ -82,7 +84,8 @@ internal sealed class KernelCommandTransaction(
     private readonly List<(NodeRef From, NodeRef To, LineageEdgeKind Kind)> _partEdges = [];
     private readonly List<IIdentityVaultWrite> _vaultWrites = [];
     private readonly List<(IModuleCommandStore Store, ModuleDbContext Context)> _modules = [];
-    private (Type Type, string Key)? _claimed;
+    private readonly HashSet<(Type Type, string Key)> _claimed = [];
+    private CollectionInstanceId? _collection;
     private long? _lockKey;
     private bool _scopeLocked;
     private readonly List<long> _sharedKeys = [];
@@ -109,7 +112,7 @@ internal sealed class KernelCommandTransaction(
         ArgumentNullException.ThrowIfNull(id);
         var store = await StoreForAsync(typeof(TAggregate), cancellationToken).ConfigureAwait(false);
         var found = await store.Set<TAggregate>().FindAsync([id], cancellationToken).ConfigureAwait(false);
-        if (found is not null && _claimed != (typeof(TAggregate), KeyText(id)))
+        if (found is not null && !_claimed.Contains((typeof(TAggregate), KeyText(id))))
         {
             store.Entry(found).State = EntityState.Detached;
         }
@@ -145,13 +148,25 @@ internal sealed class KernelCommandTransaction(
         await LockExclusiveAsync(AdvisoryLockKey(Command.TenantId, typeof(TAggregate), KeyText(id)), cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task LockCollectionAsync(CollectionInstanceId instance, CancellationToken cancellationToken)
+    {
+        if (_claimed.Count > 0 || _sharedKeys.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"K-TX-1: {execution.CommandType} must lock its form instance before it reads, adds or locks anything else (ADR-2622).");
+        }
+
+        await LockExclusiveAsync(AdvisoryLockKey(Command.TenantId, typeof(CollectionInstance), KeyText(instance)), cancellationToken).ConfigureAwait(false);
+        _collection = instance;
+    }
+
     public async Task ShareScopesAsync(IReadOnlyList<NodeRef> scopes, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(scopes);
 
-        // An aggregate's exclusive lock may come first: nothing that holds a shared scope lock waits for an aggregate's
-        // lock, and a lock command holds its exclusive scope lock alone, so this cannot deadlock. A scope's exclusive lock
-        // excludes shared ones (ADR-2621).
+        // An aggregate's or form instance's exclusive lock may come first: nothing that holds a shared scope lock waits
+        // for one, and a lock command holds its exclusive scope lock alone, so this cannot deadlock (ADR-2622). A scope's
+        // exclusive lock excludes shared ones (ADR-2621).
         if (_scopeLocked)
         {
             throw new InvalidOperationException(
@@ -316,13 +331,23 @@ internal sealed class KernelCommandTransaction(
         ChangedAggregate? aggregate = null;
         try
         {
-            aggregate = StampAggregate();
+            var changed = StampAggregates();
+            aggregate = changed.FirstOrDefault();
             Fault(CommitStage.StateStamped);
 
             AddProvenance("Committed", aggregate, _permit);
             Fault(CommitStage.ProvenanceStaged);
 
-            StageLineage(aggregate);
+            if (changed.Count == 0)
+            {
+                StageLineage(null);
+            }
+
+            foreach (var written in changed)
+            {
+                StageLineage(written, withParts: ReferenceEquals(written, aggregate));
+            }
+
             Fault(CommitStage.LineageStaged);
 
             foreach (var (domainEvent, occurredValid) in _events)
@@ -333,7 +358,16 @@ internal sealed class KernelCommandTransaction(
 
             Fault(CommitStage.EventsStaged);
 
-            await AppendAuditAsync(aggregate?.Action ?? "NoChange", aggregate, cancellationToken).ConfigureAwait(false);
+            if (changed.Count == 0)
+            {
+                await AppendAuditAsync("NoChange", null, cancellationToken).ConfigureAwait(false);
+            }
+
+            foreach (var written in changed)
+            {
+                await AppendAuditAsync(written.Action, written, cancellationToken).ConfigureAwait(false);
+            }
+
             Fault(CommitStage.AuditAppended);
 
             db.IdempotencyRecords.Add(new IdempotencyRecord
@@ -551,17 +585,34 @@ internal sealed class KernelCommandTransaction(
 
     private void Claim(Type type, string key)
     {
-        if (_claimed is { } claimed && claimed != (type, key))
+        if (_collection is { } instance)
         {
+            // K-TX-1 as amended (ADR-2622): the form instance and observations, which the commit checks are its members.
+            if (!(type == typeof(CollectionInstance) && key == KeyText(instance)) && type != typeof(Observation))
+            {
+                throw new InvalidOperationException(
+                    $"K-TX-1: {execution.CommandType} changes form instance {instance}; it can change only that instance and its observations, not {type.Name} {key}.");
+            }
+
+            _claimed.Add((type, key));
+            return;
+        }
+
+        if (_claimed.Count > 0 && !_claimed.Contains((type, key)))
+        {
+            var claimed = _claimed.First();
             throw new InvalidOperationException(
                 $"K-TX-1: {execution.CommandType} already changes {claimed.Type.Name} {claimed.Key}; it cannot also change {type.Name} {key}. Use an event-driven saga.");
         }
 
-        _claimed = (type, key);
+        _claimed.Add((type, key));
     }
 
-    /// <summary>Stamps GxP audit fields on the one changed aggregate and captures its change set.</summary>
-    private ChangedAggregate? StampAggregate()
+    /// <summary>
+    /// Stamps GxP audit fields on the changed aggregates and captures their change sets, the primary one first: the one
+    /// changed aggregate (K-TX-1), or a form instance followed by the observations a form save changed (ADR-2622).
+    /// </summary>
+    private List<ChangedAggregate> StampAggregates()
     {
         var changed = db.ChangeTracker.Entries<AggregateRootBase>()
             .Select(e => (Entry: e, Module: (string?)null))
@@ -570,15 +621,38 @@ internal sealed class KernelCommandTransaction(
             .ToList();
         if (changed.Count > 1)
         {
+            changed = OrderFormSave(changed);
+        }
+
+        return [.. changed.Select(c => Stamp(c.Entry, c.Module))];
+    }
+
+    /// <summary>
+    /// The aggregates of a form save, the instance first and its observations by id; anything else is a K-TX-1 defect.
+    /// </summary>
+    private List<(EntityEntry<AggregateRootBase> Entry, string? Module)> OrderFormSave(List<(EntityEntry<AggregateRootBase> Entry, string? Module)> changed)
+    {
+        var instance = _collection is { } id
+            ? changed.Select(c => c.Entry.Entity).OfType<CollectionInstance>().SingleOrDefault(c => c.Id == id)
+            : null;
+        if (instance is null)
+        {
             throw new InvalidOperationException($"K-TX-1: {execution.CommandType} changed {changed.Count} aggregates.");
         }
 
-        if (changed.Count == 0)
+        var observations = changed.Where(c => c.Entry.Entity is Observation).ToList();
+        if (observations.Count != changed.Count - 1
+            || observations.Any(o => o.Module is not null || o.Entry.State == EntityState.Deleted || !instance.Contains(((Observation)o.Entry.Entity).Id)))
         {
-            return null;
+            throw new InvalidOperationException(
+                $"K-TX-1: {execution.CommandType} may change form instance {instance.Id} and its member observations only (ADR-2622).");
         }
 
-        var (entry, module) = changed[0];
+        return [changed.Single(c => ReferenceEquals(c.Entry.Entity, instance)), .. observations.OrderBy(o => ((Observation)o.Entry.Entity).Id)];
+    }
+
+    private ChangedAggregate Stamp(EntityEntry<AggregateRootBase> entry, string? module)
+    {
         var aggregate = entry.Entity;
         string action;
         string changes;
@@ -676,7 +750,7 @@ internal sealed class KernelCommandTransaction(
     /// derived object without an inbound edge, or inputs without an object to attach them to, is a handler defect and
     /// aborts the commit (K-LIN-1).
     /// </summary>
-    private void StageLineage(ChangedAggregate? aggregate)
+    private void StageLineage(ChangedAggregate? aggregate, bool withParts = true)
     {
         if (aggregate?.Subject is not { Version: { } version } subject || aggregate.Action == "Deleted")
         {
@@ -727,7 +801,10 @@ internal sealed class KernelCommandTransaction(
             AddEdge(from, subject.AtVersion(version), kind, validFrom);
         }
 
-        StageParts(subject.AtVersion(version));
+        if (withParts)
+        {
+            StageParts(subject.AtVersion(version));
+        }
     }
 
     /// <summary>

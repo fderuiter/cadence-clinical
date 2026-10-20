@@ -80,6 +80,9 @@ internal sealed class ApplyLockHandler(IAttestationVerifier verifier) : ICommand
             case NodeKinds.Enrollment:
                 var enrollment = await work.ReadAsync<Enrollment>(EnrollmentId.FromGuid(scope.Id), cancellationToken).ConfigureAwait(false);
                 return (enrollment?.StudyId == study, enrollment?.Id);
+            case NodeKinds.CollectionInstance:
+                var instance = await work.ReadAsync<CollectionInstance>(CollectionInstanceId.FromGuid(scope.Id), cancellationToken).ConfigureAwait(false);
+                return (instance?.StudyId == study, instance?.EnrollmentId);
             default:
                 var observation = await work.ReadAsync<Observation>(ObservationId.FromGuid(scope.Id), cancellationToken).ConfigureAwait(false);
                 return (observation?.StudyId == study, observation?.EnrollmentId);
@@ -274,9 +277,10 @@ internal static class ObservationAssertions
             return (null, KernelErrors.NotFound);
         }
 
+        var instance = await CollectionMembership.InstanceOfAsync(context.Work, observationId, cancellationToken).ConfigureAwait(false);
         if (await LocksInForce.AnyAsync(
             context.Work,
-            LockScopes.Covering(enrollment.StudyId, enrollment.StudySiteId, enrollment.Id, observationId),
+            LockScopes.Covering(enrollment.StudyId, enrollment.StudySiteId, enrollment.Id, observationId, instance),
             LocksInForce.DenyingAssertions,
             cancellationToken).ConfigureAwait(false))
         {

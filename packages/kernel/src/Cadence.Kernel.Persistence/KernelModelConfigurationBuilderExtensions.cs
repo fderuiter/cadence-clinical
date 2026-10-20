@@ -31,6 +31,7 @@ public static class KernelModelConfigurationBuilderExtensions
         configurationBuilder.Properties<EffectivityId>().HaveConversion<EffectivityIdValueConverter, EntityIdValueComparer<EffectivityId>>();
         configurationBuilder.Properties<ObservationId>().HaveConversion<ObservationIdValueConverter, EntityIdValueComparer<ObservationId>>();
         configurationBuilder.Properties<AssertionId>().HaveConversion<AssertionIdValueConverter, EntityIdValueComparer<AssertionId>>();
+        configurationBuilder.Properties<CollectionInstanceId>().HaveConversion<CollectionInstanceIdValueConverter, EntityIdValueComparer<CollectionInstanceId>>();
         configurationBuilder.Properties<AttestationId>().HaveConversion<AttestationIdValueConverter, EntityIdValueComparer<AttestationId>>();
         configurationBuilder.Properties<ProtocolVersionId>().HaveConversion<ProtocolVersionIdValueConverter, EntityIdValueComparer<ProtocolVersionId>>();
         configurationBuilder.Properties<FormVersionSnapshotId>().HaveConversion<FormVersionSnapshotIdValueConverter, EntityIdValueComparer<FormVersionSnapshotId>>();

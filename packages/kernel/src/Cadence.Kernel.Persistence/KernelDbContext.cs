@@ -73,6 +73,8 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
 
     public DbSet<Assertion> Assertions => Set<Assertion>();
 
+    public DbSet<CollectionInstance> CollectionInstances => Set<CollectionInstance>();
+
     public DbSet<Role> Roles => Set<Role>();
 
     public DbSet<Grant> Grants => Set<Grant>();

@@ -24,8 +24,8 @@ public interface IObservationRecords
 /// </summary>
 /// <remarks>
 /// <para><c>Version</c>: The version a correction names as expected.</para>
-/// <para><c>Locks</c>: The locks in force at the observation's study, study site, enrollment or the observation itself,
-/// widest scope first (spec §10.5). Empty when nothing covers it.</para>
+/// <para><c>Locks</c>: The locks in force at the observation's study, study site, enrollment, form instance or the
+/// observation itself, widest scope first (spec §10.5). Empty when nothing covers it.</para>
 /// <para><c>Revisions</c>: Oldest first. Each is recorded until the next one is recorded (K-FACT-1).</para>
 /// <para><c>Assertions</c>: Verifications, queries and answers about the observation, retracted ones included, oldest
 /// first (spec §8.2).</para>
@@ -60,7 +60,7 @@ public sealed record ObservationRevisionView(
 
 /// <summary>A lock in force (spec §10.5).</summary>
 /// <remarks>
-/// <para><c>Scope</c>: The study, study site, enrollment or observation it covers.</para>
+/// <para><c>Scope</c>: The study, study site, enrollment, form instance or observation it covers.</para>
 /// <para><c>AttestationId</c>: The signature it was applied with.</para>
 /// </remarks>
 public sealed record LockView(

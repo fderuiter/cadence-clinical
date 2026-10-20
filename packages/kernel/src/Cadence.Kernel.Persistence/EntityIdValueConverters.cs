@@ -80,6 +80,11 @@ public class AssertionIdValueConverter() : ValueConverter<AssertionId, Guid>(
     guid => new AssertionId(guid)
 );
 
+public class CollectionInstanceIdValueConverter() : ValueConverter<CollectionInstanceId, Guid>(
+    id => id.Value,
+    guid => new CollectionInstanceId(guid)
+);
+
 public class AttestationIdValueConverter() : ValueConverter<AttestationId, Guid>(
     id => id.Value,
     guid => new AttestationId(guid)

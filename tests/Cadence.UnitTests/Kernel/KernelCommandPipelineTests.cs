@@ -363,6 +363,8 @@ public sealed partial class KernelCommandPipelineTests
             where TAggregate : AggregateRootBase =>
             Task.CompletedTask;
 
+        public Task LockCollectionAsync(CollectionInstanceId instance, CancellationToken cancellationToken) => Task.CompletedTask;
+
         public Task ShareScopesAsync(IReadOnlyList<NodeRef> scopes, CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task LockScopeAsync(NodeRef scope, CancellationToken cancellationToken) => Task.CompletedTask;

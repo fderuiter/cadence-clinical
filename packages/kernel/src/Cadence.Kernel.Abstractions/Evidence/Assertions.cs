@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
@@ -53,24 +54,42 @@ public enum LockKind
 
 /// <summary>
 /// The scopes a lock can cover, from the widest to the narrowest (spec §10.5, ADR-2621): study, study site, participant
-/// enrollment and observation. A write that a lock can cover takes shared advisory locks on its covering scopes in
-/// this order; a lock command takes the exclusive one on its own scope.
+/// enrollment, form instance (its <c>CollectionInstance</c>, K-FACT-6) and observation. A write that a lock can cover
+/// takes shared advisory locks on its covering scopes in this order; a lock command takes the exclusive one on its own
+/// scope.
 /// </summary>
 public static class LockScopes
 {
     /// <summary>The kinds of scope, widest first.</summary>
     public static IReadOnlyList<string> Kinds { get; } =
-        [NodeKinds.Study, NodeKinds.StudySite, NodeKinds.Enrollment, NodeKinds.Observation];
+        [NodeKinds.Study, NodeKinds.StudySite, NodeKinds.Enrollment, NodeKinds.CollectionInstance, NodeKinds.Observation];
 
     /// <summary>True when <paramref name="scope"/> names an object a lock can cover, without a version.</summary>
     public static bool IsScope(NodeRef? scope) =>
         scope is { Version: null } && Kinds.Contains(scope.Kind) && scope.Id != Guid.Empty;
 
-    /// <summary>The scopes covering an observation of an enrollment, widest first.</summary>
-    public static IReadOnlyList<NodeRef> Covering(StudyId study, StudySiteId studySite, EnrollmentId enrollment, ObservationId? observation = null) =>
-        observation is { } id
-            ? [NodeRef.For(study), NodeRef.For(studySite), NodeRef.For(enrollment), NodeRef.For(id)]
-            : [NodeRef.For(study), NodeRef.For(studySite), NodeRef.For(enrollment)];
+    /// <summary>
+    /// The scopes covering an observation of an enrollment, widest first: its form instance when it was collected in one,
+    /// and the observations themselves when named.
+    /// </summary>
+    public static IReadOnlyList<NodeRef> Covering(
+        StudyId study, StudySiteId studySite, EnrollmentId enrollment, ObservationId? observation = null, CollectionInstanceId? instance = null) =>
+        Covering(study, studySite, enrollment, instance, observation is { } id ? [id] : []);
+
+    /// <summary>The scopes covering <paramref name="observations"/> of a form instance, widest first.</summary>
+    public static IReadOnlyList<NodeRef> Covering(
+        StudyId study, StudySiteId studySite, EnrollmentId enrollment, CollectionInstanceId? instance, IEnumerable<ObservationId> observations)
+    {
+        ArgumentNullException.ThrowIfNull(observations);
+        List<NodeRef> scopes = [NodeRef.For(study), NodeRef.For(studySite), NodeRef.For(enrollment)];
+        if (instance is { } form)
+        {
+            scopes.Add(NodeRef.For(form));
+        }
+
+        scopes.AddRange(observations.Distinct().Order().Select(o => NodeRef.For(o)));
+        return scopes;
+    }
 }
 
 /// <summary>

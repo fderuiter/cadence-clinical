@@ -202,6 +202,9 @@ public class KernelPostgresFixture : IAsyncLifetime
     /// <summary>The observation read port, as the kernel host gets it (ADR-2620).</summary>
     public IObservationRecords ObservationRecords => Scope().GetRequiredService<IObservationRecords>();
 
+    /// <summary>The form instance read port (ADR-2622).</summary>
+    public ICollectionInstanceRecords CollectionInstanceRecords => Scope().GetRequiredService<ICollectionInstanceRecords>();
+
     /// <summary>The tenant code directory, as a host gets it.</summary>
     public ITenantDirectory TenantDirectory => Scope().GetRequiredService<ITenantDirectory>();
 
