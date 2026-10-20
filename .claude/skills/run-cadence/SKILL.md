@@ -12,8 +12,19 @@ was run in a Claude Code cloud container (Ubuntu 24.04, root, no Docker).
 
 ## Prerequisites
 
-Already present in the cloud container: .NET 10 SDK, Node 22 + pnpm, OpenJDK 21 (Keycloak), PostgreSQL 16 binaries
-(`/usr/lib/postgresql/16/bin`), tmux and Chromium at `/opt/pw-browsers/chromium`. Nothing to `apt-get`. Then, once:
+Already present in the cloud container: .NET 10 SDK, Node 22 + pnpm, OpenJDK 21 (Keycloak), tmux and Chromium at
+`/opt/pw-browsers/chromium`. The stack runs PostgreSQL 18 (ADR-2533) from `/usr/lib/postgresql/18/bin`. A cloud
+environment created since #5519 has it. A container that has only `/usr/lib/postgresql/16` needs it from the
+PostgreSQL apt repository:
+
+```bash
+install -d /usr/share/postgresql-common/pgdg
+curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc # deid-ignore: public signing key URL
+echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" > /etc/apt/sources.list.d/pgdg.list # deid-ignore: public apt repository URL
+apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq postgresql-18
+```
+
+Then, once:
 
 ```bash
 pnpm install
@@ -114,9 +125,19 @@ The first takes about a minute (mostly the build), the second about 4 s. The ful
 
 ## Gotchas
 
-- **Kernel reads find nothing.** The kernel host provisions the `cadence-local` tenant on start (ADR-2542), but the
-  realm's users hold no kernel grants (#5452): `search` answers 200 with no hits and `activity` answers 403 "You hold no
-  grant in effect". A 403 "not an active kernel tenant" means the kernel was not started in Development.
+- **The demo study is `CADENCE-101`** (ADR-2543). The kernel host seeds it on start: sites `SITE-101` and `SITE-102`,
+  three screened participants, and a grant for each realm user. `crc.site101` and `cra.monitor` see only `SITE-101`;
+  the other study site and its enrollment show as hidden ("not permitted"). Check it with
+  `fetch GET /api/v1/kernel/search?q=CADENCE-101`, then `nav studies/CADENCE-101`: Recent activity lists the seed's
+  events. The Participants pane there reads Execution, which seeds nothing on a normal start, so it says "No
+  participants" (#5537). Execution's own demo data lives under `DEMO-001` (the examples above).
+- **Grants name the token's `sub`.** Each realm user has a fixed `id` in `docker/cadence-realm.json`, and the kernel
+  grants name it. `up` re-imports the realm over an existing Keycloak (`kc.sh import --override true`, log
+  `/opt/cadence-dev/keycloak-import.log`) so the ids arrive. A kernel read that answers 200 with no hits, or `activity`
+  403 "You hold no grant in effect", means the token's `sub` is not one of those ids. A 403 "not an active kernel
+  tenant" means the kernel was not started in Development.
+- **Stop the stack before `pnpm cadence ci`.** `KernelObservationHostPostgresTests.BrowserCorrection_ReachesTheDatabaseWithItsReason`
+  binds the gateway's port 8000 and fails with "address already in use" while the stack runs.
 - **`ui` must be built.** `apps/web/vite.config.js` aliases `ui` to `packages/ui/dist/index.js`, which `pnpm install`
   does not create; Vite shows "Failed to resolve import "ui" from "src/main.js"". `scripts/local_stack_nodocker.sh up` runs
   `pnpm --filter ui build`. If Vite already started without it, restart the AppHost: Vite keeps the failed
