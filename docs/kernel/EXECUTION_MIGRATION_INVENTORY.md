@@ -30,6 +30,14 @@ through the dead shim `SubjectId.AsParticipantId()`. The kernel has most of thes
 > endpoints, the published form version registry and the old edit-check and auto-query engines. eCRF forms are now kernel
 > collection instances served by the Execution module in the kernel host ([apps/execution/module](../../apps/execution/module/README.md)).
 > Rows below that name those files describe the state before that change.
+>
+> #5461 then deleted Execution's own clinical queries: `ClinicalQuery` and `Domain/Queries`, `IClinicalQueryRepository`,
+> `ClinicalQueryRepository`, `ClinicalQueryConfiguration`, `Application/Queries`, `QueryEndpoints` (every
+> `/api/v1/execution/queries` route and the `/api/v1/queries` alias), the query JSON converters, the `query_lifecycle`
+> permissions and the `ClinicalQueryRaised` event (migration `RetireClinicalQueries` drops `clinical_queries` and the
+> toxicity review's `query_id`). A query is now raised on a form value in the Execution module
+> (`/api/v1/execution/forms/{formId}/queries`). The query rows in §2.6, §2.7, §2.11, §2.12, §2.14 and §2.16 describe the
+> state before that change.
 
 ## 1. Summary
 
@@ -129,6 +137,8 @@ All paths are relative to `apps/execution/src/` unless they start with `packages
 
 ### 2.6 `Application` (root) and `Application/Queries`
 
+The query types in this section were deleted in #5461; queries now live in the Execution module.
+
 | File                                                      | Type(s)                            | Disposition         | Target / change                                                                                                                                                                                                        | Evidence / notes                                                                                                         |
 | --------------------------------------------------------- | ---------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `Application/OperationEnvelopeResponse.cs`                | `OperationEnvelopeResponse`        | KEEP                | Generic wire envelope.                                                                                                                                                                                                 | Used by compliance endpoints and tests. It becomes unused if those endpoints are removed.                                |
@@ -215,6 +225,8 @@ All paths are relative to `apps/execution/src/` unless they start with `packages
 | `Domain/Ports/ISubjectRepository.cs`        | `ISubjectRepository`        | MIGRATE→KERNEL      | Kernel Participant/Enrollment repository. `EnrollNextIndexAsync` becomes the kernel enrollment-number allocator (K-TX-4). |                                                                                              |
 
 ### 2.12 `Domain/Queries`
+
+The query types in this section were deleted in #5461; queries now live in the Execution module.
 
 | File                                   | Type(s)            | Disposition         | Target / change                                                                                                          | Evidence / notes                                                                                                      |
 | -------------------------------------- | ------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |

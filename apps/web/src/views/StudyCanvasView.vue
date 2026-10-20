@@ -147,7 +147,7 @@
               v-if="recordParticipant"
               :participant="recordParticipant"
               :can-manage="canManage"
-              @retry="canvas.loadRecord(recordParticipant.subject_id)"
+              @retry="canvas.loadRecord(recordParticipant)"
             />
             <p v-else id="record-not-loaded" class="stage-empty">
               This participant isn't among those loaded for {{ studyCode }}.
@@ -546,7 +546,9 @@ watch(
 watch(
   [studyCode, () => recordParticipant.value?.subject_id],
   ([, code]) => {
-    if (code && canvas.record.subjectCode !== code) canvas.loadRecord(code);
+    const participant = recordParticipant.value;
+    if (participant && code && canvas.record.subjectCode !== code)
+      canvas.loadRecord(participant);
   },
   { immediate: true }
 );

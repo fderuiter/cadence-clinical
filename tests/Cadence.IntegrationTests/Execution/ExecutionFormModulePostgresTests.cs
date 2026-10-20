@@ -10,6 +10,7 @@ using Cadence.Kernel.Events;
 using Cadence.Kernel.Modules;
 using Cadence.Modules.Execution;
 using Cadence.Modules.Execution.Application;
+using Cadence.Modules.Execution.Domain;
 using Cadence.Modules.Execution.Infrastructure;
 using Cadence.Testing;
 
@@ -76,6 +77,14 @@ public sealed class ExecutionFormModulePostgresFixture : KernelPostgresFixture
         var itemOrder = await reader.GetFieldValueAsync<string[]>(4, ct);
         return new FormInstanceRow(
             reader.GetGuid(0), reader.GetGuid(1), reader.GetString(2), visit, itemOrder, reader.GetString(5), reader.GetInt64(6));
+    }
+
+    /// <summary>The Execution query with <paramref name="id"/>, read as the superuser past Row-Level Security.</summary>
+    public async Task<FormQuery?> ReadQueryAsync(Guid id, CancellationToken ct)
+    {
+        var options = new DbContextOptionsBuilder<ExecutionModuleDbContext>().UseNpgsql(AdminConnectionString).Options;
+        await using var db = new ExecutionModuleDbContext(options);
+        return await db.FormQueries.AsNoTracking().SingleOrDefaultAsync(q => q.Id == id, ct);
     }
 
     /// <summary>How many Execution form instances the module holds for <paramref name="tenant"/>, read as the superuser.</summary>

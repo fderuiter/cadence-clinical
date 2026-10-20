@@ -50,9 +50,9 @@ internal static class DevelopmentDemoData
     /// <summary>The roles the realm's users are granted: code, name and capabilities.</summary>
     internal static readonly (string Code, string Name, string[] Capabilities)[] Roles =
     [
-        ("DEMO_CRC", "Clinical research coordinator", ["participant.register", "participant.screen", "enrollment.change_status", "observation.record", "observation.correct", "collection.open", "collection.record"]),
-        ("DEMO_MONITOR", "Clinical research associate", ["validation_finding.investigate", "validation_finding.classify", "validation_finding.explain"]),
-        ("DEMO_DATA_MANAGER", "Data manager", ["validation_run.record", "validation_finding.accept", "validation_finding.reopen", "observation.lock"]),
+        ("DEMO_CRC", "Clinical research coordinator", ["participant.register", "participant.screen", "enrollment.change_status", "observation.record", "observation.correct", "collection.open", "collection.record", "execution.query.answer"]),
+        ("DEMO_MONITOR", "Clinical research associate", ["validation_finding.investigate", "validation_finding.classify", "validation_finding.explain", "execution.query.raise", "execution.query.manage"]),
+        ("DEMO_DATA_MANAGER", "Data manager", ["validation_run.record", "validation_finding.accept", "validation_finding.reopen", "observation.lock", "execution.query.raise", "execution.query.manage"]),
         ("DEMO_DESIGNER", "Study designer", ["protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.amend"]),
         ("DEMO_SAFETY", "Safety reviewer", ["validation_finding.investigate", "validation_finding.classify"]),
         ("DEMO_AUDITOR", "Auditor", ["validation_finding.investigate"]),
@@ -73,8 +73,16 @@ internal static class DevelopmentDemoData
         ("auditor.lead", "d43095eb-1912-40dd-a528-fa04335a2342", "DEMO_AUDITOR", null),
     ];
 
-    /// <summary>The role of the Execution module's form consumer, <c>svc:execution-forms</c>.</summary>
-    private const string ExecutionFormsRole = "DEMO_EXECUTION_FORMS";
+    /// <summary>
+    /// The Execution module's kernel event consumers (ADR-2622, #5461), each a service account with the role it needs
+    /// across the tenant: opening its side of every form the kernel opens, and stating each query step as a kernel
+    /// assertion. Production grants for module service accounts are #5566.
+    /// </summary>
+    private static readonly (string Consumer, string Role, string Name, string[] Capabilities)[] ModuleServiceAccounts =
+    [
+        ("execution-forms", "DEMO_EXECUTION_FORMS", "Execution forms consumer", ["execution.form.open"]),
+        ("execution-queries", "DEMO_EXECUTION_QUERIES", "Execution queries consumer", ["observation.query", "observation.query.answer", "assertion.retract"]),
+    ];
 
     /// <summary>The capabilities the bootstrap grants itself, tenant-wide, to write the demo study.</summary>
     private static readonly string[] SeederCapabilities =
@@ -130,14 +138,14 @@ internal static class DevelopmentDemoData
                 new DefineRole(tenant, ids.Role(code), code, name, capabilities, Key($"role:{code}"), Reason), cancellationToken).ConfigureAwait(false)).RoleId;
         }
 
-        // The Execution module opens its side of every form the kernel opens, as its consumer's service account
-        // (ADR-2622 §4.1); it needs that one capability across the tenant.
-        var executionForms = await seeder.SendAsync(
-            new DefineRole(tenant, ids.Role(ExecutionFormsRole), ExecutionFormsRole, "Execution forms consumer", ["execution.form.open"], Key($"role:{ExecutionFormsRole}"), Reason),
-            cancellationToken).ConfigureAwait(false);
-        await seeder.SendAsync(
-            new IssueGrant(tenant, ids.Grant("svc:execution-forms"), Actor.ServiceAccount("execution-forms"), null, executionForms.RoleId, AuthorityScope.Tenant(), Epoch, null, false, Key("grant:svc:execution-forms"), Reason),
-            cancellationToken).ConfigureAwait(false);
+        foreach (var (consumer, code, name, capabilities) in ModuleServiceAccounts)
+        {
+            var role = await seeder.SendAsync(
+                new DefineRole(tenant, ids.Role(code), code, name, capabilities, Key($"role:{code}"), Reason), cancellationToken).ConfigureAwait(false);
+            await seeder.SendAsync(
+                new IssueGrant(tenant, ids.Grant($"svc:{consumer}"), Actor.ServiceAccount(consumer), null, role.RoleId, AuthorityScope.Tenant(), Epoch, null, false, Key($"grant:svc:{consumer}"), Reason),
+                cancellationToken).ConfigureAwait(false);
+        }
 
         foreach (var (username, subject, role, site) in Users)
         {

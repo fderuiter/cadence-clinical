@@ -42,7 +42,7 @@ namespace Cadence.UnitTests.Gateway;
 public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.GatewayFixture fixture)
     : IClassFixture<GatewayAuthenticationTests.GatewayFixture>
 {
-    private const string ProxiedPath = "/api/v1/queries/q-1";
+    private const string ProxiedPath = "/api/v1/execution/subjects/s-1";
 
     [Fact]
     [Trait("Category", "GxP_OQ")]

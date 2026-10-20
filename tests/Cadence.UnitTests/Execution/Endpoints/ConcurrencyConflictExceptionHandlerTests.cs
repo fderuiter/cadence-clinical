@@ -39,7 +39,7 @@ public sealed class ConcurrencyConflictExceptionHandlerTests
     public async Task ConcurrencyConflict_IsWrittenAs409WithTheStableCode()
     {
         var (handler, context) = Create();
-        var conflict = new ConcurrencyConflictException(["ClinicalQuery"], new DbUpdateConcurrencyException("stale"));
+        var conflict = new ConcurrencyConflictException(["CecDossier"], new DbUpdateConcurrencyException("stale"));
 
         bool handled = await handler.TryHandleAsync(context, conflict, Ct);
 

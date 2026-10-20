@@ -3,25 +3,37 @@ import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { executionApi } from "../../src/api/executionApi";
+import { ecrfQueriesApi } from "../../src/api/ecrfQueriesApi";
+import { ApiError } from "../../src/api/client";
+import { findKernelEnrollmentRef } from "../../src/canvas/kernelStudy";
 import { useAuthStore } from "../../src/stores/auth";
-import { useToastStore } from "../../src/stores/toasts.js";
 import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 
 vi.mock("../../src/api/executionApi", () => ({
   executionApi: {
     listSubjects: vi.fn(),
-    listQueries: vi.fn(),
-    respondQuery: vi.fn(),
-    closeQuery: vi.fn(),
-    reopenQuery: vi.fn(),
-    cancelQuery: vi.fn(),
-    batchCloseQueries: vi.fn(),
-    batchCancelQueries: vi.fn(),
-    batchRespondQueries: vi.fn(),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
   },
 }));
+
+vi.mock("../../src/api/ecrfQueriesApi", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    ecrfQueriesApi: {
+      raise: vi.fn(),
+      listForForm: vi.fn(),
+      listForEnrollment: vi.fn(),
+      transition: vi.fn(),
+    },
+  };
+});
+
+vi.mock("../../src/canvas/kernelStudy", async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, findKernelEnrollmentRef: vi.fn() };
+});
 
 const PARTICIPANT_ID = "0192f3c4-5e6a-7b8c-9d0e-000000000001";
 const PARTICIPANT = {
@@ -34,20 +46,32 @@ const PARTICIPANT = {
   enrollment_index: 1,
 };
 
-const OBS_ID = "6b1f0a52-4c1d-4f0e-9a51-0000000000a1";
-const QUERY_ID = "9a2d6f10-1111-4c2b-8d3e-0000000000b1";
+const ENROLLMENT_ID = "enrollment-a";
+const QUERY_ID = "query-a";
 
 function query(overrides = {}) {
   return {
-    id: QUERY_ID,
-    study_id: "CAD-101",
-    subject_id: "017-0001",
-    test_code: "SYSBP",
-    observation_id: OBS_ID,
-    visit_id: "Week 12",
-    explanation: "Value differs from the source note",
-    status: "OPEN",
-    response: null,
+    query_id: QUERY_ID,
+    form_id: "form-a",
+    enrollment_id: ENROLLMENT_ID,
+    item_id: "SYSBP",
+    observation_id: "observation-a",
+    revision: 1,
+    current_revision: 1,
+    value_changed: false,
+    status: "open",
+    text: "Value differs from the source note",
+    messages: [
+      {
+        kind: "raised",
+        text: "Value differs from the source note",
+        by: "monitor",
+        at: "2027-03-14T10:00:00Z",
+      },
+    ],
+    raised_by: "monitor",
+    raised_at: "2027-03-14T10:00:00Z",
+    version: 1,
     ...overrides,
   };
 }
@@ -80,7 +104,13 @@ describe("Clinical Canvas: a participant's data", () => {
       limit: 50,
       offset: 0,
     });
-    vi.mocked(executionApi.listQueries).mockResolvedValue([query()]);
+    for (const fn of Object.values(ecrfQueriesApi)) vi.mocked(fn).mockReset();
+    vi.mocked(findKernelEnrollmentRef).mockReset();
+    vi.mocked(findKernelEnrollmentRef).mockResolvedValue({
+      kind: "enrollment",
+      id: ENROLLMENT_ID,
+    });
+    vi.mocked(ecrfQueriesApi.listForEnrollment).mockResolvedValue([query()]);
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -115,16 +145,20 @@ describe("Clinical Canvas: a participant's data", () => {
     auth.rawRoles = roles;
   }
 
-  it("opens a participant's queries and points to the eCRF screen for its forms (ADR-2622)", async () => {
+  it("opens a participant's queries by kernel enrollment and points to the eCRF screen for its forms (#5461)", async () => {
     await openRecord();
 
     expect(router.currentRoute.value.query).toEqual({
       stage: "conduct",
       participant: `participant:${PARTICIPANT_ID}`,
     });
-    expect(executionApi.listQueries).toHaveBeenCalledWith(
+    expect(findKernelEnrollmentRef).toHaveBeenCalledWith(
       "CAD-101",
+      "017",
       "017-0001"
+    );
+    expect(ecrfQueriesApi.listForEnrollment).toHaveBeenCalledWith(
+      ENROLLMENT_ID
     );
     const link = wrapper.find("#record-open-ecrf");
     expect(link.attributes("href")).toBe(
@@ -138,8 +172,8 @@ describe("Clinical Canvas: a participant's data", () => {
     expect(wrapper.find("#inspector-open-record").exists()).toBe(false);
   });
 
-  it("says so when the participant's data can't be loaded, and retries", async () => {
-    vi.mocked(executionApi.listQueries).mockRejectedValueOnce(
+  it("says so when the participant's enrollment can't be looked up, and retries", async () => {
+    vi.mocked(findKernelEnrollmentRef).mockRejectedValueOnce(
       Object.assign(new Error("Unavailable"), { status: 503 })
     );
     await openRecord();
@@ -156,86 +190,109 @@ describe("Clinical Canvas: a participant's data", () => {
     expect(wrapper.find(`#query-${QUERY_ID}`).exists()).toBe(true);
   });
 
+  it("lists no queries, and says why, when the kernel has no enrollment for the participant", async () => {
+    vi.mocked(findKernelEnrollmentRef).mockResolvedValue(null);
+    await openRecord();
+
+    expect(wrapper.find("#record-queries-no-enrollment").text()).toContain(
+      "no enrollment for 017-0001"
+    );
+    expect(ecrfQueriesApi.listForEnrollment).not.toHaveBeenCalled();
+  });
+
   it("says a participant opened by link isn't loaded instead of guessing its code", async () => {
     await mountAt(RECORD_URL);
 
     expect(wrapper.find("#record-not-loaded").text()).toContain(
       "isn't among those loaded for CAD-101"
     );
-    expect(executionApi.listQueries).not.toHaveBeenCalled();
+    expect(findKernelEnrollmentRef).not.toHaveBeenCalled();
     expect(executionApi.listSubjects).not.toHaveBeenCalled();
   });
 
   describe("queries", () => {
-    it("lists the participant's queries with their test and visit", async () => {
+    it("lists the participant's queries with their item, form and messages", async () => {
       await openRecord();
 
-      expect(executionApi.listQueries).toHaveBeenCalledWith(
-        "CAD-101",
-        "017-0001"
-      );
       const item = wrapper.find(`#query-${QUERY_ID}`);
       expect(item.text()).toContain("Open");
-      expect(item.text()).toContain("SYSBP · Week 12");
+      expect(item.text()).toContain("SYSBP, revision 1");
+      expect(item.text()).toContain("form form-a");
       expect(item.text()).toContain("Value differs from the source note");
     });
 
     it("lets a site user answer an open query, and nothing more", async () => {
       signInWith(["crc"]);
       await openRecord();
-      vi.mocked(executionApi.respondQuery).mockResolvedValue(
-        query({ status: "ANSWERED", response: "Corrected per source" })
+      vi.mocked(ecrfQueriesApi.transition).mockResolvedValue(
+        query({ status: "answered", version: 2 })
       );
 
       expect(wrapper.find(`#btn-close-${QUERY_ID}`).exists()).toBe(false);
       expect(wrapper.find(`#btn-cancel-${QUERY_ID}`).exists()).toBe(false);
       expect(wrapper.find("#record-queries-note").exists()).toBe(true);
 
-      await wrapper.find(`#btn-respond-${QUERY_ID}`).trigger("click");
+      await wrapper.find(`#btn-answer-${QUERY_ID}`).trigger("click");
       await wrapper.vm.$nextTick();
       expect(
-        wrapper.find(`#btn-confirm-respond-${QUERY_ID}`).attributes()
+        wrapper.find(`#btn-confirm-answer-${QUERY_ID}`).attributes()
       ).toHaveProperty("disabled");
       await wrapper
         .find(`#query-text-${QUERY_ID}`)
         .setValue(" Corrected per source ");
-      await wrapper.vm.$nextTick();
-      await wrapper.find(`#btn-confirm-respond-${QUERY_ID}`).trigger("click");
+      await wrapper
+        .find(`#query-text-${QUERY_ID}`)
+        .element.form.requestSubmit();
       await flushPromises();
 
-      expect(executionApi.respondQuery).toHaveBeenCalledWith(
-        QUERY_ID,
-        "Corrected per source"
+      expect(ecrfQueriesApi.transition).toHaveBeenCalledWith(
+        "answer",
+        expect.objectContaining({
+          formId: "form-a",
+          queryId: QUERY_ID,
+          text: "Corrected per source",
+          reason: "Corrected per source",
+        })
       );
-      const item = wrapper.find(`#query-${QUERY_ID}`);
-      expect(item.text()).toContain("Answered");
-      expect(item.text()).toContain("Answer: Corrected per source");
-      expect(wrapper.find(`#btn-respond-${QUERY_ID}`).exists()).toBe(false);
+      expect(wrapper.find(`#query-${QUERY_ID}`).text()).toContain("Answered");
+      expect(wrapper.find(`#btn-answer-${QUERY_ID}`).exists()).toBe(false);
+      expect(wrapper.find("#record-queries-outcome").text()).toBe(
+        "Query answered."
+      );
     });
 
-    it("offers a CRA the transitions Execution allows from each state, each with a reason", async () => {
+    it("offers a CRA the transitions the module allows, one request per query", async () => {
       signInWith(["cra"]);
-      vi.mocked(executionApi.listQueries).mockResolvedValue([
-        query({ status: "ANSWERED", response: "Checked" }),
+      vi.mocked(ecrfQueriesApi.listForEnrollment).mockResolvedValue([
+        query({ status: "answered", value_changed: true, current_revision: 2 }),
       ]);
       await openRecord();
 
-      expect(wrapper.find(`#btn-respond-${QUERY_ID}`).exists()).toBe(false);
+      expect(wrapper.find(`#btn-answer-${QUERY_ID}`).exists()).toBe(false);
       expect(wrapper.find(`#btn-close-${QUERY_ID}`).exists()).toBe(true);
       expect(wrapper.find(`#btn-reopen-${QUERY_ID}`).exists()).toBe(true);
       expect(wrapper.find(`#btn-cancel-${QUERY_ID}`).exists()).toBe(true);
+      expect(wrapper.find('[data-testid="query-value-changed"]').text()).toBe(
+        "Value changed (now revision 2)"
+      );
 
-      vi.mocked(executionApi.closeQuery).mockResolvedValue(
-        query({ status: "CLOSED", response: "Checked" })
+      vi.mocked(ecrfQueriesApi.transition).mockResolvedValue(
+        query({ status: "closed", version: 3 })
       );
       await wrapper.find(`#btn-close-${QUERY_ID}`).trigger("click");
       await wrapper.find(`#query-text-${QUERY_ID}`).setValue("Answer accepted");
-      await wrapper.find(`#btn-confirm-close-${QUERY_ID}`).trigger("click");
+      await wrapper
+        .find(`#query-text-${QUERY_ID}`)
+        .element.form.requestSubmit();
       await flushPromises();
 
-      expect(executionApi.closeQuery).toHaveBeenCalledWith(
-        QUERY_ID,
-        "Answer accepted"
+      expect(ecrfQueriesApi.transition).toHaveBeenCalledTimes(1);
+      expect(ecrfQueriesApi.transition).toHaveBeenCalledWith(
+        "close",
+        expect.objectContaining({
+          queryId: QUERY_ID,
+          reason: "Answer accepted",
+        })
       );
       // A closed query can only be reopened.
       expect(wrapper.find(`#btn-close-${QUERY_ID}`).exists()).toBe(false);
@@ -243,170 +300,30 @@ describe("Clinical Canvas: a participant's data", () => {
       expect(wrapper.find(`#btn-reopen-${QUERY_ID}`).exists()).toBe(true);
     });
 
-    it("keeps the query as it was and says why when Execution refuses", async () => {
+    it("keeps the query as it was and says why when the module refuses", async () => {
       signInWith(["cra"]);
       await openRecord();
-      vi.mocked(executionApi.cancelQuery).mockRejectedValue(
-        Object.assign(new Error("Forbidden"), { status: 403 })
+      vi.mocked(ecrfQueriesApi.transition).mockRejectedValue(
+        new ApiError("Forbidden", 403, "Forbidden", {
+          code: "K.Authorization.Denied",
+        })
       );
 
       await wrapper.find(`#btn-cancel-${QUERY_ID}`).trigger("click");
       await wrapper.find(`#query-text-${QUERY_ID}`).setValue("Raised in error");
-      await wrapper.find(`#btn-confirm-cancel-${QUERY_ID}`).trigger("click");
+      await wrapper
+        .find(`#query-text-${QUERY_ID}`)
+        .element.form.requestSubmit();
       await flushPromises();
 
-      expect(executionApi.cancelQuery).toHaveBeenCalledWith(
-        QUERY_ID,
-        "Raised in error"
-      );
       expect(wrapper.find(`#query-${QUERY_ID}`).text()).toContain("Open");
       // The typed reason stays so the user can try again.
       expect(wrapper.find(`#query-text-${QUERY_ID}`).element.value).toBe(
         "Raised in error"
       );
-      expect(useToastStore().toasts.at(-1)).toMatchObject({
-        tone: "error",
-        title: "The query was not cancelled",
-      });
-    });
-
-    it("allows CRA to batch close multiple answered queries with a reason", async () => {
-      signInWith(["cra"]);
-      const q1 = query({
-        id: "q-1",
-        status: "ANSWERED",
-        response: "Checked 1",
-      });
-      const q2 = query({
-        id: "q-2",
-        status: "ANSWERED",
-        response: "Checked 2",
-      });
-      vi.mocked(executionApi.listQueries).mockResolvedValue([q1, q2]);
-      await openRecord();
-
-      expect(wrapper.find("#select-all-queries").exists()).toBe(true);
-      expect(wrapper.find("#btn-batch-close").attributes()).toHaveProperty(
-        "disabled"
+      expect(wrapper.find("#record-queries-outcome").text()).toContain(
+        "You are not allowed"
       );
-
-      await wrapper.find("#select-all-queries").setValue(true);
-      await wrapper.vm.$nextTick();
-
-      expect(
-        wrapper.find("#btn-batch-close").attributes("disabled")
-      ).toBeUndefined();
-
-      vi.mocked(executionApi.batchCloseQueries).mockResolvedValue({
-        queries: [
-          { ...q1, status: "CLOSED" },
-          { ...q2, status: "CLOSED" },
-        ],
-        count: 2,
-      });
-
-      await wrapper.find("#btn-batch-close").trigger("click");
-      await wrapper.vm.$nextTick();
-
-      await wrapper
-        .find("#batch-query-reason")
-        .setValue("Verified batch resolution");
-      await wrapper.find("#btn-confirm-batch-close").trigger("click");
-      await flushPromises();
-
-      expect(executionApi.batchCloseQueries).toHaveBeenCalledWith(
-        ["q-1", "q-2"],
-        "Verified batch resolution"
-      );
-      expect(useToastStore().toasts.at(-1)).toMatchObject({
-        tone: "success",
-        title: "2 queries closed",
-      });
-      expect(wrapper.find("#query-q-1").text()).toContain("Closed");
-      expect(wrapper.find("#query-q-2").text()).toContain("Closed");
-    });
-
-    it("allows CRA to batch cancel multiple queries with a reason", async () => {
-      signInWith(["cra"]);
-      const q1 = query({ id: "q-1", status: "OPEN" });
-      const q2 = query({ id: "q-2", status: "ANSWERED" });
-      vi.mocked(executionApi.listQueries).mockResolvedValue([q1, q2]);
-      await openRecord();
-
-      await wrapper.find("#select-query-q-1").setValue(true);
-      await wrapper.find("#select-query-q-2").setValue(true);
-      await wrapper.vm.$nextTick();
-
-      vi.mocked(executionApi.batchCancelQueries).mockResolvedValue({
-        queries: [
-          { ...q1, status: "CANCELLED", cancellation_reason: "Obsolete" },
-          { ...q2, status: "CANCELLED", cancellation_reason: "Obsolete" },
-        ],
-        count: 2,
-      });
-
-      await wrapper.find("#btn-batch-cancel").trigger("click");
-      await wrapper.vm.$nextTick();
-
-      await wrapper.find("#batch-query-reason").setValue("Obsolete");
-      await wrapper.find("#btn-confirm-batch-cancel").trigger("click");
-      await flushPromises();
-
-      expect(executionApi.batchCancelQueries).toHaveBeenCalledWith(
-        ["q-1", "q-2"],
-        "Obsolete"
-      );
-      expect(wrapper.find("#query-q-1").text()).toContain("Cancelled");
-      expect(wrapper.find("#query-q-2").text()).toContain("Cancelled");
-    });
-
-    it("allows clinical coordinator to batch answer multiple open or reopened queries", async () => {
-      signInWith(["crc"]);
-      const q1 = query({ id: "q-1", status: "OPEN" });
-      const q2 = query({ id: "q-2", status: "REOPENED" });
-      vi.mocked(executionApi.listQueries).mockResolvedValue([q1, q2]);
-      await openRecord();
-
-      expect(wrapper.find("#select-all-queries").exists()).toBe(true);
-      expect(wrapper.find("#btn-batch-respond").attributes()).toHaveProperty(
-        "disabled"
-      );
-
-      await wrapper.find("#select-all-queries").setValue(true);
-      await wrapper.vm.$nextTick();
-
-      expect(
-        wrapper.find("#btn-batch-respond").attributes("disabled")
-      ).toBeUndefined();
-
-      vi.mocked(executionApi.batchRespondQueries).mockResolvedValue({
-        queries: [
-          { ...q1, status: "ANSWERED", response: "Updated per protocol v2" },
-          { ...q2, status: "ANSWERED", response: "Updated per protocol v2" },
-        ],
-        count: 2,
-      });
-
-      await wrapper.find("#btn-batch-respond").trigger("click");
-      await wrapper.vm.$nextTick();
-
-      await wrapper
-        .find("#batch-query-reason")
-        .setValue("Updated per protocol v2");
-      await wrapper.find("#btn-confirm-batch-respond").trigger("click");
-      await flushPromises();
-
-      expect(executionApi.batchRespondQueries).toHaveBeenCalledWith(
-        ["q-1", "q-2"],
-        "Updated per protocol v2",
-        undefined
-      );
-      expect(useToastStore().toasts.at(-1)).toMatchObject({
-        tone: "success",
-        title: "2 queries answered",
-      });
-      expect(wrapper.find("#query-q-1").text()).toContain("Answered");
-      expect(wrapper.find("#query-q-2").text()).toContain("Answered");
     });
   });
 });
