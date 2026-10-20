@@ -596,6 +596,9 @@ The **autonomy level** of a task is how far its agent may go: 0 inform, 1 draft 
 In the Canvas (ADR-2635), **Assist** is the inspector verb where agents answer about the selected object, and the **AI label** is the mark, words and reserved colour on every piece of agent output. The **proposal review** screen is where a person opens what an agent reasoned over and decides its proposal; **AI assistance** is each viewer's own switch for Assist and the palette's Ask, never for proposals already made.
 _Avoid_: "AI gateway microservice", AI draft states on regulated records, "the model" as the thing that is validated
 
+An **inference provider** is one way of reaching a model: the Claude API, Claude Platform on AWS, Amazon Bedrock, Vertex AI, Microsoft Foundry, or an OpenAI-compatible endpoint the operator runs inside the deployment. Each is `External` or `InDeployment`, declares the residency codes it serves and has a **supplier record** the sponsor's quality unit approves (ADR-2636). A tenant's **inference policy** (`LocalOnly`, `ResidencyBound` by default, or `Open`) decides which providers its runs may use; the **inference route** is the provider, model, region and supplier record a run actually used, recorded in the interaction ledger. An **agent sandbox** is the scope an agent run executes in, with no network beyond the routed model endpoint and the read ports.
+_Avoid_: "local mode" for a provider that is merely self-hosted somewhere public; "de-identified prompt" for a scrubbed one
+
 ### Three-Tier Model Routing Strategy
 
 A cost-control and performance routing policy categorizing AI workloads into Tier 1 (local SLMs and embedded vector encoders), Tier 2 (fast, high-throughput cost-effective cloud LLMs), and Tier 3 (frontier multi-modal reasoning models reserved for complex clinical synthesis).
@@ -603,6 +606,7 @@ A cost-control and performance routing policy categorizing AI workloads into Tie
 ### In-Flight De-Identification Air-Gap
 
 A privacy protection pattern where outbound prompts sent to external cloud model providers are automatically scrubbed of Protected Health Information (PHI) and Personally Identifiable Information (PII) using surrogate tokens, with reverse unmasking executed in ephemeral memory or short-lived encrypted cache upon response reception.
+_Superseded_ by ADR-2636 for AI agents: the outbound guard replaces direct identifiers with one-way placeholders and never unmasks a response, so identifiers cannot flow back into a Proposal; identity-layer content refuses the call.
 
 ### Dual-Attribution AI Compliance Ledger
 
