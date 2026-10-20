@@ -117,7 +117,7 @@ public sealed class IntelligenceDomainTests
     public void TaskQualification_UsableOnlyWhileQualifiedAndUnchanged()
     {
         var at = new DateTimeOffset(2026, 10, 20, 9, 0, 0, TimeSpan.Zero);
-        var evidence = new EvaluationEvidence("eval-run-7", Governed.EvaluationSet!.ContentHash, Passed: true, "{\"accuracy\":0.94}");
+        var evidence = new EvaluationEvidence("eval-run-7", "sha256:" + new string('d', 64), Governed.EvaluationSet!.ContentHash, "{\"accuracy\":0.94}");
 
         TaskQualification.WhyNotUsable(null, Governed).Should().Contain("is not qualified in this tenant");
 

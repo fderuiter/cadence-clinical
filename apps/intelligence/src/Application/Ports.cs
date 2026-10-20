@@ -79,6 +79,16 @@ public interface IAgentLedger
     Task<IReadOnlyList<TaskQualification>> QualificationsAsync(TenantId tenant, CancellationToken cancellationToken);
 }
 
+/// <summary>Reads the stored evaluation runs (ADR-2634 §4.4), within one tenant (Row-Level Security).</summary>
+public interface IEvaluationRuns
+{
+    /// <summary>The stored runs of one task, newest first, optionally of one version.</summary>
+    Task<IReadOnlyList<EvaluationRun>> ForTaskAsync(TenantId tenant, string taskKey, int? version, int limit, CancellationToken cancellationToken);
+
+    /// <summary>One stored run by its harness id, or null.</summary>
+    Task<EvaluationRun?> FindAsync(TenantId tenant, Guid runId, CancellationToken cancellationToken);
+}
+
 /// <summary>
 /// Takes a configuration version out of use in a tenant, for example when monitoring finds its quality has drifted
 /// (ADR-2631). Only a new qualification restores it. The evaluation harness (#5548) calls it.

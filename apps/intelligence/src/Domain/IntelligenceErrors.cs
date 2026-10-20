@@ -41,9 +41,17 @@ public static class IntelligenceErrors
     public static readonly KernelError ConfigurationNotQualifiable =
         new("M.Intelligence.Configuration.NotQualifiable", 422, "The task configuration cannot be qualified yet.");
 
-    /// <summary>The evaluation did not meet the acceptance criteria, or ran against another evaluation set.</summary>
+    /// <summary>The stored evaluation run did not meet the acceptance criteria, or evaluated another configuration or set.</summary>
     public static readonly KernelError EvaluationNotAccepted =
         new("M.Intelligence.Qualification.EvaluationNotAccepted", 422, "The evaluation does not support qualification.");
+
+    /// <summary>The evaluation run record cannot be evidence for its configuration.</summary>
+    public static readonly KernelError EvaluationRunInvalid =
+        new("M.Intelligence.Evaluation.RunInvalid", 422, "The evaluation run record cannot be evidence for this task configuration.");
+
+    /// <summary>No stored evaluation run has the id in the tenant.</summary>
+    public static readonly KernelError EvaluationRunNotFound =
+        new("M.Intelligence.Evaluation.RunNotFound", 404, "No evaluation run with this id is stored here. Record the run before qualifying on it.");
 
     /// <summary>The attestation does not sign this configuration version as approved by the person qualifying it.</summary>
     public static readonly KernelError AttestationRejected =

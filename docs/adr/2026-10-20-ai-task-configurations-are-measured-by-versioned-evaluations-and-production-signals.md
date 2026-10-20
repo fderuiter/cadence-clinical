@@ -132,6 +132,11 @@ The harness runs these checks on every case, in order, and the first failure fai
 - In CI the harness runs on the deterministic fake provider and proves the machinery. A real provider runs on demand
   (`CADENCE_AI_EVAL_PROVIDER`), never in CI, and its run record is the evidence qualification (#5385) attests with a
   kernel attestation over the record's hash.
+- The run record is stored in the Intelligence schema by `RecordEvaluationRun` (#5574) before anyone can qualify on
+  it. The server admits a record only when it evaluated a shipped configuration version on its current content against
+  exactly its pinned set, acceptance criteria and provider, no case is marked passed with a failed check, and its
+  metrics and verdict are what the harness computes from its case results. It stores the canonical JSON and its content
+  hash, and qualification names the stored run by id, never a caller-stated pass.
 
 ### 4.5 Production signals per configuration version
 

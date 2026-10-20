@@ -199,6 +199,125 @@ namespace Cadence.Modules.Intelligence.Infrastructure.Persistence.Migrations
                     b.ToTable("agent_runs", "intelligence");
                 });
 
+            modelBuilder.Entity("Cadence.Modules.Intelligence.Domain.EvaluationRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Accepted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("accepted");
+
+                    b.Property<DateTimeOffset>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<string>("ConfigurationHash")
+                        .IsRequired()
+                        .HasMaxLength(71)
+                        .HasColumnType("character varying(71)")
+                        .HasColumnName("configuration_hash");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("EvaluationSetHash")
+                        .IsRequired()
+                        .HasMaxLength(71)
+                        .HasColumnType("character varying(71)")
+                        .HasColumnName("evaluation_set_hash");
+
+                    b.Property<string>("EvaluationSetId")
+                        .IsRequired()
+                        .HasMaxLength(96)
+                        .HasColumnType("character varying(96)")
+                        .HasColumnName("evaluation_set_id");
+
+                    b.Property<int>("EvaluationSetVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("evaluation_set_version");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("model");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason_for_change");
+
+                    b.Property<string>("RecordHash")
+                        .IsRequired()
+                        .HasMaxLength(71)
+                        .HasColumnType("character varying(71)")
+                        .HasColumnName("record_hash");
+
+                    b.Property<string>("RecordJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("record_json");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("run_id");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("SummaryJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("summary_json");
+
+                    b.Property<string>("TaskKey")
+                        .IsRequired()
+                        .HasMaxLength(96)
+                        .HasColumnType("character varying(96)")
+                        .HasColumnName("task_key");
+
+                    b.Property<int>("TaskVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("task_version");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version_index");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "RunId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_evaluation_runs_run");
+
+                    b.HasIndex("TenantId", "TaskKey", "TaskVersion", "CompletedAt")
+                        .HasDatabaseName("ix_evaluation_runs_task");
+
+                    b.ToTable("evaluation_runs", "intelligence");
+                });
+
             modelBuilder.Entity("Cadence.Modules.Intelligence.Domain.TaskQualification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -224,6 +343,12 @@ namespace Cadence.Modules.Intelligence.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("created_by");
+
+                    b.Property<string>("EvaluationRunHash")
+                        .IsRequired()
+                        .HasMaxLength(71)
+                        .HasColumnType("character varying(71)")
+                        .HasColumnName("evaluation_run_hash");
 
                     b.Property<string>("EvaluationRunReference")
                         .IsRequired()

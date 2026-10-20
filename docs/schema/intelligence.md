@@ -8,7 +8,8 @@ Generated from the EF Core model of `Cadence.Modules.Intelligence.Infrastructure
 | --- | --- | --- |
 | [`intelligence.agent_controls`](#intelligenceagent_controls) | `AgentControl` | 9 |
 | [`intelligence.agent_runs`](#intelligenceagent_runs) | `AgentRun` | 22 |
-| [`intelligence.task_qualifications`](#intelligencetask_qualifications) | `TaskQualification` | 19 |
+| [`intelligence.evaluation_runs`](#intelligenceevaluation_runs) | `EvaluationRun` | 21 |
+| [`intelligence.task_qualifications`](#intelligencetask_qualifications) | `TaskQualification` | 20 |
 
 ## intelligence.agent_controls
 
@@ -64,6 +65,39 @@ Indexes:
 - `ix_agent_runs_requester`: (`tenant_id`, `requested_by`, `started_at`)
 - `ix_agent_runs_task`: (`tenant_id`, `task_key`, `started_at`)
 
+## intelligence.evaluation_runs
+
+Entity: `EvaluationRun`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `accepted` | `boolean` | no |  |  |
+| `completed_at` | `timestamp with time zone` | no |  |  |
+| `configuration_hash` | `character varying(71)` | no |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `evaluation_set_hash` | `character varying(71)` | no |  |  |
+| `evaluation_set_id` | `character varying(96)` | no |  |  |
+| `evaluation_set_version` | `integer` | no |  |  |
+| `model` | `character varying(200)` | no |  |  |
+| `provider` | `character varying(64)` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `record_hash` | `character varying(71)` | no |  |  |
+| `record_json` | `text` | no |  |  |
+| `run_id` | `uuid` | no |  |  |
+| `started_at` | `timestamp with time zone` | no |  |  |
+| `summary_json` | `text` | no |  |  |
+| `task_key` | `character varying(96)` | no |  |  |
+| `task_version` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Indexes:
+
+- `ix_evaluation_runs_task`: (`tenant_id`, `task_key`, `task_version`, `completed_at`)
+- `ux_evaluation_runs_run`: unique (`tenant_id`, `run_id`)
+
 ## intelligence.task_qualifications
 
 Entity: `TaskQualification`
@@ -75,6 +109,7 @@ Entity: `TaskQualification`
 | `configuration_hash` | `character varying(71)` | no |  |  |
 | `created_at` | `timestamp with time zone` | no |  |  |
 | `created_by` | `character varying(255)` | no |  |  |
+| `evaluation_run_hash` | `character varying(71)` | no |  |  |
 | `evaluation_run_reference` | `character varying(200)` | no |  |  |
 | `evaluation_set_hash` | `character varying(71)` | no |  |  |
 | `evaluation_summary_json` | `text` | no |  |  |

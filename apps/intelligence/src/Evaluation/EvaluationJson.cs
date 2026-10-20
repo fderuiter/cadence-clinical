@@ -31,4 +31,5 @@ public static class EvaluationJson
 [JsonSerializable(typeof(Rubric))]
 [JsonSerializable(typeof(JudgeCalibration))]
 [JsonSerializable(typeof(EvaluationRunRecord))]
+[JsonSerializable(typeof(EvaluationRunSummary))]
 internal sealed partial class EvaluationJsonContext : JsonSerializerContext;

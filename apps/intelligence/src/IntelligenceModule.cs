@@ -68,6 +68,8 @@ public static class IntelligenceModule
             .AddCommandValidator<CompleteAgentRun, CompleteAgentRunValidator>()
             .AddCommandHandler<SetAgentControl, AgentControlState, SetAgentControlHandler>()
             .AddCommandValidator<SetAgentControl, SetAgentControlValidator>()
+            .AddCommandHandler<RecordEvaluationRun, EvaluationRunState, RecordEvaluationRunHandler>()
+            .AddCommandValidator<RecordEvaluationRun, RecordEvaluationRunValidator>()
             .AddCommandHandler<QualifyTaskConfiguration, TaskQualificationState, QualifyTaskConfigurationHandler>()
             .AddCommandValidator<QualifyTaskConfiguration, QualifyTaskConfigurationValidator>()
             .AddCommandHandler<SuspendTaskConfiguration, TaskQualificationState, SuspendTaskConfigurationHandler>()
@@ -94,7 +96,9 @@ public static class IntelligenceModule
 
         services.TryAddSingleton<IModelProviderRegistry, ModelProviderRegistry>();
         services.TryAddSingleton<ITaskConfigurationCatalog>(sp => new RegisteredTaskConfigurations(sp.GetServices<TaskConfiguration>()));
-        services.TryAddSingleton<IAgentLedger, EfAgentLedger>();
+        services.TryAddSingleton<EfAgentLedger>();
+        services.TryAddSingleton<IAgentLedger>(sp => sp.GetRequiredService<EfAgentLedger>());
+        services.TryAddSingleton<IEvaluationRuns>(sp => sp.GetRequiredService<EfAgentLedger>());
         services.TryAddSingleton(new AgentRunnerOptions(TimeSpan.FromSeconds(Math.Max(1, options.RequestTimeoutSeconds))));
         services.TryAddScoped<AgentRunner>();
         services.AddIntelligenceEvaluation();

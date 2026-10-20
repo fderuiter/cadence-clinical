@@ -150,6 +150,24 @@ model scores those against a written rubric, a versioned file at
 identities, provider and model, start and end times from `IClock`, each case's checks and scores, the metrics and the
 verdict. `ContentHash()` is the kernel content hash qualification attests; `ToJson()` is the stored form.
 
+The record reaches qualification only through storage (#5574):
+
+1. `POST /api/v1/ai/evaluation-runs` with the record as the body sends `RecordEvaluationRun` (capability
+   `evaluation_run.record`). The server refuses it (`M.Intelligence.Evaluation.RunInvalid`) unless it evaluated a
+   configuration version the deployment ships, on its current content hash, against exactly its pinned set, its
+   acceptance criteria and its provider; no case is marked passed with a failed check or a run error; and its metrics
+   and verdict are what `EvaluationHarness.Measure` and `Decide` compute from its case results. Judge scores need the
+   rubric, judge and calibration hash in the record. A rejected run is stored as well.
+2. The server keeps the canonical JSON in `intelligence.evaluation_runs` with its content hash, once per run id and
+   tenant. `GET /api/v1/ai/evaluation-runs/{runId}` returns it exactly as hashed.
+3. `QualifyTaskConfiguration` names the run by id. It refuses a run that is not stored in the tenant
+   (`M.Intelligence.Evaluation.RunNotFound`), evaluated another version or set, or was not accepted, and the
+   qualification records the run's id and content hash. Nobody states that a run passed.
+
+The case results are still produced by the harness the operator runs; the server checks that the record is internally
+consistent and bound to the right configuration, not that the model really answered that way. Running the evaluation
+on the server against the real provider waits on the inference layer (#5550).
+
 The configuration's acceptance criteria set the minimum pass rate (overall and on reviewed cases) and optional
 limits on mean latency and cost. Two floors apply whatever it declares:
 

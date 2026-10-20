@@ -462,6 +462,57 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/ai/evaluation-runs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Stores an evaluation run record after checking it against its task configuration version, set, criteria and case results (evaluation_run.record, ADR-2634). */
+    post: operations["AiRecordEvaluationRun"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/ai/evaluation-runs/{runId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** One stored evaluation run with its record, exactly as hashed. */
+    get: operations["AiGetEvaluationRun"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/ai/tasks/{key}/evaluation-runs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The stored evaluation runs of a task, newest first, optionally of one version. */
+    get: operations["AiListEvaluationRuns"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/ai/tasks/{key}/versions/{version}/qualification": {
     parameters: {
       query?: never;
@@ -471,7 +522,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Qualifies a task configuration version on its evaluation evidence and the caller's signed approval (task_configuration.qualify, ADR-2631). */
+    /** Qualifies a task configuration version on a stored, accepted evaluation run and the caller's signed approval (task_configuration.qualify, ADR-2631). */
     post: operations["AiQualifyTask"];
     delete?: never;
     options?: never;
@@ -824,6 +875,42 @@ export interface components {
       summary_measure: string;
       intervention_ids?: null | string[];
     };
+    Kernel_EvaluationRunResponse: {
+      run: components["schemas"]["Kernel_EvaluationRunSummaryResponse"];
+      record_json: string;
+    };
+    Kernel_EvaluationRunStateResponse: {
+      /** Format: uuid */
+      run_id: string;
+      task_key: string;
+      /** Format: int32 */
+      task_version: number | string;
+      configuration_hash: string;
+      evaluation_set_hash: string;
+      record_hash: string;
+      accepted: boolean;
+      reasons: string[];
+    };
+    Kernel_EvaluationRunSummaryResponse: {
+      /** Format: uuid */
+      run_id: string;
+      task_key: string;
+      /** Format: int32 */
+      task_version: number | string;
+      configuration_hash: string;
+      evaluation_set_id: string;
+      /** Format: int32 */
+      evaluation_set_version: number | string;
+      evaluation_set_hash: string;
+      provider: string;
+      model: string;
+      accepted: boolean;
+      /** Format: date-time */
+      started_at: string;
+      /** Format: date-time */
+      completed_at: string;
+      record_hash: string;
+    };
     Kernel_EvaluationSetRef: {
       set_id: string;
       /** Format: int32 */
@@ -993,6 +1080,7 @@ export interface components {
       route?: null | string;
       regimen?: null | string;
     };
+    Kernel_JsonElement: unknown;
     Kernel_KernelActivityEntryResponse: {
       /** Format: uuid */
       event_id: string;
@@ -1483,10 +1571,8 @@ export interface components {
     };
     Kernel_QualificationRequest: {
       configuration_hash: string;
-      evaluation_run_reference: string;
-      evaluation_set_hash: string;
-      passed: boolean;
-      evaluation_summary_json: string;
+      /** Format: uuid */
+      evaluation_run_id: string;
       /** Format: uuid */
       attestation_id: string;
     };
@@ -1546,6 +1632,7 @@ export interface components {
       configuration_hash: string;
       risk_class: string;
       evaluation_run_reference: string;
+      evaluation_run_hash: string;
       /** Format: date-time */
       qualified_at: string;
       /** Format: date-time */
@@ -2821,6 +2908,131 @@ export interface operations {
       };
     };
   };
+  AiRecordEvaluationRun: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_JsonElement"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_EvaluationRunStateResponse"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `M.Intelligence.Task.Unknown`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `M.Intelligence.Configuration.Changed`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `M.Intelligence.Configuration.NotQualifiable`, `M.Intelligence.Evaluation.RunInvalid`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  AiGetEvaluationRun: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        runId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_EvaluationRunResponse"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  AiListEvaluationRuns: {
+    parameters: {
+      query?: {
+        version?: number | string;
+        limit?: number | string;
+      };
+      header?: never;
+      path: {
+        key: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_EvaluationRunSummaryResponse"][];
+        };
+      };
+    };
+  };
   AiQualifyTask: {
     parameters: {
       query?: never;
@@ -2864,7 +3076,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Not Found. Kernel errors: `M.Intelligence.Task.Unknown`. */
+      /** @description Not Found. Kernel errors: `M.Intelligence.Evaluation.RunNotFound`, `M.Intelligence.Task.Unknown`. */
       404: {
         headers: {
           [name: string]: unknown;

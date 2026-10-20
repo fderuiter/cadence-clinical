@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 using Cadence.Kernel;
 using Cadence.Kernel.Authorization;
@@ -109,14 +110,60 @@ public sealed record AgentRunCompleted(Guid RunId, string TaskKey, int TaskVersi
 public sealed record AgentControlChanged(string Scope, bool Enabled, long? MonthlyTokenLimit);
 
 /// <summary>
-/// Qualifies one task configuration version in the tenant (ADR-2631): its evaluation run met the acceptance criteria
-/// against the pinned evaluation set, and the person sending the command signed an <c>Approved</c> attestation over
-/// the configuration's content hash (21 CFR 11.50, 11.70). Approve verb class: only a person can qualify, never an
-/// agent. A suspended version is qualified again the same way, on new evidence and a new signature.
+/// Stores an evaluation run record (ADR-2634 §4.4, #5574) as the evidence a qualification can rest on. Refused unless
+/// the record evaluated a configuration version this deployment ships, on its current content, against exactly its
+/// pinned evaluation set, acceptance criteria and provider, and its metrics and verdict are the ones its case results
+/// give (<see cref="EvaluationRun.Problems"/>). A rejected run is stored too, as the record that it failed. Execute verb
+/// class: it records evidence and qualifies nothing.
+/// </summary>
+/// <param name="TenantId">The tenant.</param>
+/// <param name="RecordJson">The harness's run record, as JSON (<see cref="Evaluation.Runs.EvaluationRunRecord.ToJson"/>).</param>
+/// <param name="IdempotencyKey">The command's idempotency key (K-TX-3).</param>
+/// <param name="ReasonForChange">Why the run is recorded.</param>
+[KernelCapability("evaluation_run.record", VerbClass.Execute)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(IntelligenceErrors),
+    nameof(IntelligenceErrors.TaskUnknown),
+    nameof(IntelligenceErrors.ConfigurationChanged),
+    nameof(IntelligenceErrors.ConfigurationNotQualifiable),
+    nameof(IntelligenceErrors.EvaluationRunInvalid))]
+public sealed record RecordEvaluationRun(
+    TenantId TenantId,
+    string RecordJson,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<EvaluationRunState>;
+
+/// <summary>A stored evaluation run.</summary>
+/// <param name="RunId">The run.</param>
+/// <param name="Configuration">The configuration version it evaluated.</param>
+/// <param name="EvaluationSetHash">The content hash of the set it used.</param>
+/// <param name="RecordHash">The kernel content hash of the stored record, which a qualification binds to.</param>
+/// <param name="Accepted">True when it met the configuration's acceptance criteria.</param>
+/// <param name="Reasons">Why it was not accepted; empty when it was.</param>
+public sealed record EvaluationRunState(
+    Guid RunId, ConfigurationRef Configuration, string EvaluationSetHash, string RecordHash, bool Accepted, IReadOnlyList<string> Reasons);
+
+/// <summary>Raised when an evaluation run is stored.</summary>
+/// <param name="RunId">The run.</param>
+/// <param name="TaskKey">The task.</param>
+/// <param name="TaskVersion">The configuration version.</param>
+/// <param name="ConfigurationHash">The configuration's content hash.</param>
+/// <param name="RecordHash">The stored record's content hash.</param>
+/// <param name="Accepted">Whether it met the acceptance criteria.</param>
+[KernelEvent("intelligence.EvaluationRunRecorded", 1)]
+public sealed record EvaluationRunRecorded(Guid RunId, string TaskKey, int TaskVersion, string ConfigurationHash, string RecordHash, bool Accepted);
+
+/// <summary>
+/// Qualifies one task configuration version in the tenant (ADR-2631): a stored evaluation run of exactly this version
+/// met its acceptance criteria against the pinned evaluation set (#5574), and the person sending the command signed an
+/// <c>Approved</c> attestation over the configuration's content hash (21 CFR 11.50, 11.70). The qualification records
+/// the run's id and content hash. Approve verb class: only a person can qualify, never an agent. A suspended version is
+/// qualified again the same way, on a stored run and a new signature.
 /// </summary>
 /// <param name="TenantId">The tenant.</param>
 /// <param name="Configuration">The version and the content hash being qualified.</param>
-/// <param name="Evidence">The evaluation run the qualification rests on.</param>
+/// <param name="EvaluationRunId">The stored evaluation run the qualification rests on (<see cref="RecordEvaluationRun"/>).</param>
 /// <param name="AttestationId">The signer's attestation over the configuration version.</param>
 /// <param name="IdempotencyKey">The command's idempotency key (K-TX-3).</param>
 /// <param name="ReasonForChange">Why the version is qualified.</param>
@@ -126,13 +173,14 @@ public sealed record AgentControlChanged(string Scope, bool Enabled, long? Month
     nameof(IntelligenceErrors.TaskUnknown),
     nameof(IntelligenceErrors.ConfigurationChanged),
     nameof(IntelligenceErrors.ConfigurationNotQualifiable),
+    nameof(IntelligenceErrors.EvaluationRunNotFound),
     nameof(IntelligenceErrors.EvaluationNotAccepted),
     nameof(IntelligenceErrors.AttestationRejected),
     nameof(IntelligenceErrors.AlreadyQualified))]
 public sealed record QualifyTaskConfiguration(
     TenantId TenantId,
     ConfigurationRef Configuration,
-    EvaluationEvidence Evidence,
+    Guid EvaluationRunId,
     AttestationId AttestationId,
     string IdempotencyKey,
     string ReasonForChange) : ICommand<TaskQualificationState>;

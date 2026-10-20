@@ -113,3 +113,8 @@ public sealed record EvaluationRunRecord(
         JsonSerializer.Deserialize<EvaluationRunRecord>(json, EvaluationJson.Options)
         ?? throw new JsonException("The run record is empty.");
 }
+
+/// <summary>A stored run's metrics and verdict.</summary>
+/// <param name="Metrics">The run's numbers.</param>
+/// <param name="Verdict">Whether it was accepted, and why not.</param>
+public sealed record EvaluationRunSummary(EvaluationMetrics Metrics, AcceptanceVerdict Verdict);

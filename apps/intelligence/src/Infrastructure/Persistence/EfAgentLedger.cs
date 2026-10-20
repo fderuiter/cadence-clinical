@@ -13,8 +13,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cadence.Modules.Intelligence.Infrastructure.Persistence;
 
-/// <summary>Reads the ledger and controls through a tenant-scoped context, so Row-Level Security limits every query.</summary>
-internal sealed class EfAgentLedger(IModuleTenantContextFactory<IntelligenceDbContext> contexts) : IAgentLedger
+/// <summary>Reads the ledger, controls, qualifications and evaluation runs through a tenant-scoped context, so Row-Level Security limits every query.</summary>
+internal sealed class EfAgentLedger(IModuleTenantContextFactory<IntelligenceDbContext> contexts) : IAgentLedger, IEvaluationRuns
 {
     public async Task<IReadOnlyList<AgentControl>> ControlsAsync(TenantId tenant, CancellationToken cancellationToken)
     {
@@ -60,5 +60,28 @@ internal sealed class EfAgentLedger(IModuleTenantContextFactory<IntelligenceDbCo
             .ThenBy(q => q.TaskVersion)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyList<EvaluationRun>> ForTaskAsync(TenantId tenant, string taskKey, int? version, int limit, CancellationToken cancellationToken)
+    {
+        await using var db = contexts.Create(tenant);
+        var runs = db.EvaluationRuns.AsNoTracking().Where(r => r.TaskKey == taskKey);
+        if (version is { } v)
+        {
+            runs = runs.Where(r => r.TaskVersion == v);
+        }
+
+        return await runs
+            .OrderByDescending(r => r.CompletedAt)
+            .ThenByDescending(r => r.Id)
+            .Take(Math.Clamp(limit, 1, 200))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<EvaluationRun?> FindAsync(TenantId tenant, Guid runId, CancellationToken cancellationToken)
+    {
+        await using var db = contexts.Create(tenant);
+        return await db.EvaluationRuns.AsNoTracking().SingleOrDefaultAsync(r => r.RunId == runId, cancellationToken).ConfigureAwait(false);
     }
 }

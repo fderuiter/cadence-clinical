@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -58,9 +59,23 @@ public static class IntelligenceEndpoints
             .WithName("AiListTasks")
             .WithSummary("The agent task configuration versions in this deployment, with their content hashes and the tenant's qualification of each.");
 
+        group.MapPost("/evaluation-runs", RecordEvaluationRunAsync)
+            .WithName("AiRecordEvaluationRun")
+            .WithSummary("Stores an evaluation run record after checking it against its task configuration version, set, criteria and case results (evaluation_run.record, ADR-2634).")
+            .ProducesKernelCommand<RecordEvaluationRun>();
+
+        group.MapGet("/evaluation-runs/{runId:guid}", GetEvaluationRunAsync)
+            .WithName("AiGetEvaluationRun")
+            .WithSummary("One stored evaluation run with its record, exactly as hashed.")
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapGet("/tasks/{key}/evaluation-runs", ListEvaluationRunsAsync)
+            .WithName("AiListEvaluationRuns")
+            .WithSummary("The stored evaluation runs of a task, newest first, optionally of one version.");
+
         group.MapPost("/tasks/{key}/versions/{version:int}/qualification", QualifyAsync)
             .WithName("AiQualifyTask")
-            .WithSummary("Qualifies a task configuration version on its evaluation evidence and the caller's signed approval (task_configuration.qualify, ADR-2631).")
+            .WithSummary("Qualifies a task configuration version on a stored, accepted evaluation run and the caller's signed approval (task_configuration.qualify, ADR-2631).")
             .ProducesKernelCommand<QualifyTaskConfiguration>();
 
         group.MapPost("/tasks/{key}/versions/{version:int}/suspension", SuspendAsync)
@@ -109,6 +124,39 @@ public static class IntelligenceEndpoints
             [.. catalog.All.Select(c => AgentTaskResponse.From(c, qualifications.GetValueOrDefault((c.Key, c.Version))))]);
     }
 
+    internal static async Task<Results<Ok<EvaluationRunStateResponse>, ProblemHttpResult>> RecordEvaluationRunAsync(
+        JsonElement record,
+        HttpContext context,
+        IKernelCommandSender sender,
+        IKernelChangeReason changeReason,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.SendAsync(
+            new RecordEvaluationRun(
+                KernelRequestTenant.Get(context),
+                record.GetRawText(),
+                context.Request.Headers[IdempotencyKeyHeader].ToString(),
+                changeReason.Read(context) ?? string.Empty),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        return result.Value is { } state ? TypedResults.Ok(EvaluationRunStateResponse.From(state)) : KernelErrorEndpoints.Problem(result.Error!);
+    }
+
+    internal static async Task<Results<Ok<EvaluationRunResponse>, ProblemHttpResult>> GetEvaluationRunAsync(
+        Guid runId, HttpContext context, IEvaluationRuns runs, CancellationToken cancellationToken)
+    {
+        var run = await runs.FindAsync(KernelRequestTenant.Get(context), runId, cancellationToken).ConfigureAwait(false);
+        return run is not null
+            ? TypedResults.Ok(EvaluationRunResponse.From(run))
+            : KernelErrorEndpoints.Problem(IntelligenceErrors.EvaluationRunNotFound.WithMessage($"No evaluation run {runId} is stored here."));
+    }
+
+    internal static async Task<Ok<IReadOnlyList<EvaluationRunSummaryResponse>>> ListEvaluationRunsAsync(
+        string key, int? version, int? limit, HttpContext context, IEvaluationRuns runs, CancellationToken cancellationToken)
+    {
+        var stored = await runs.ForTaskAsync(KernelRequestTenant.Get(context), key, version, limit ?? 50, cancellationToken).ConfigureAwait(false);
+        return TypedResults.Ok<IReadOnlyList<EvaluationRunSummaryResponse>>([.. stored.Select(EvaluationRunSummaryResponse.From)]);
+    }
+
     internal static async Task<Results<Ok<QualificationResponse>, ProblemHttpResult>> QualifyAsync(
         string key,
         int version,
@@ -123,7 +171,7 @@ public static class IntelligenceEndpoints
             new QualifyTaskConfiguration(
                 KernelRequestTenant.Get(context),
                 new ConfigurationRef(key, version, request.ConfigurationHash),
-                new EvaluationEvidence(request.EvaluationRunReference, request.EvaluationSetHash, request.Passed, request.EvaluationSummaryJson),
+                request.EvaluationRunId,
                 new AttestationId(request.AttestationId),
                 context.Request.Headers[IdempotencyKeyHeader].ToString(),
                 changeReason.Read(context) ?? string.Empty),
@@ -249,6 +297,7 @@ public sealed record AgentTaskResponse(
 /// <param name="ConfigurationHash">The content hash qualified.</param>
 /// <param name="RiskClass">The risk class when it was qualified.</param>
 /// <param name="EvaluationRunReference">The evaluation run it rests on.</param>
+/// <param name="EvaluationRunHash">The content hash of the stored run record.</param>
 /// <param name="QualifiedAt">When it was qualified.</param>
 /// <param name="SuspendedAt">When it was suspended, while it is.</param>
 /// <param name="SuspensionReason">Why it was suspended, while it is.</param>
@@ -258,6 +307,7 @@ public sealed record TaskQualificationResponse(
     string ConfigurationHash,
     string RiskClass,
     string EvaluationRunReference,
+    string EvaluationRunHash,
     DateTimeOffset QualifiedAt,
     DateTimeOffset? SuspendedAt,
     string? SuspensionReason)
@@ -269,25 +319,74 @@ public sealed record TaskQualificationResponse(
             q.ConfigurationHash,
             q.RiskClass.ToString(),
             q.EvaluationRunReference,
+            q.EvaluationRunHash,
             q.QualifiedAt,
             q.SuspendedAt,
             q.SuspensionReason);
 }
 
-/// <summary>A qualification to record: the content hash qualified, the evaluation evidence and the signer's attestation.</summary>
+/// <summary>A qualification to record: the content hash qualified, the stored evaluation run and the signer's attestation.</summary>
 /// <param name="ConfigurationHash">The content hash of the version being qualified.</param>
-/// <param name="EvaluationRunReference">The evaluation run's id.</param>
-/// <param name="EvaluationSetHash">The content hash of the evaluation set the run used.</param>
-/// <param name="Passed">True when the run met every acceptance criterion.</param>
-/// <param name="EvaluationSummaryJson">The run's metrics and per-criterion results, as JSON.</param>
+/// <param name="EvaluationRunId">The stored evaluation run it rests on (<c>POST /api/v1/ai/evaluation-runs</c>).</param>
 /// <param name="AttestationId">The caller's <c>Approved</c> attestation over the version (kind <c>task_configuration</c>).</param>
-public sealed record QualificationRequest(
+public sealed record QualificationRequest(string ConfigurationHash, Guid EvaluationRunId, Guid AttestationId);
+
+/// <summary>A stored evaluation run after it was recorded.</summary>
+/// <param name="RunId">The run.</param>
+/// <param name="TaskKey">The task.</param>
+/// <param name="TaskVersion">The configuration version.</param>
+/// <param name="ConfigurationHash">The configuration's content hash.</param>
+/// <param name="EvaluationSetHash">The content hash of the set it used.</param>
+/// <param name="RecordHash">The stored record's content hash, which a qualification binds to.</param>
+/// <param name="Accepted">True when it met the acceptance criteria.</param>
+/// <param name="Reasons">Why it was not accepted; empty when it was.</param>
+public sealed record EvaluationRunStateResponse(
+    Guid RunId, string TaskKey, int TaskVersion, string ConfigurationHash, string EvaluationSetHash, string RecordHash, bool Accepted, IReadOnlyList<string> Reasons)
+{
+    internal static EvaluationRunStateResponse From(EvaluationRunState s) =>
+        new(s.RunId, s.Configuration.Key, s.Configuration.Version, s.Configuration.ContentHash, s.EvaluationSetHash, s.RecordHash, s.Accepted, s.Reasons);
+}
+
+/// <summary>A stored evaluation run in a list.</summary>
+/// <param name="RunId">The run.</param>
+/// <param name="TaskKey">The task.</param>
+/// <param name="TaskVersion">The configuration version.</param>
+/// <param name="ConfigurationHash">The configuration's content hash.</param>
+/// <param name="EvaluationSetId">The set's id.</param>
+/// <param name="EvaluationSetVersion">The set's version.</param>
+/// <param name="EvaluationSetHash">The set's content hash.</param>
+/// <param name="Provider">The provider.</param>
+/// <param name="Model">The model.</param>
+/// <param name="Accepted">True when it met the acceptance criteria.</param>
+/// <param name="StartedAt">When it started.</param>
+/// <param name="CompletedAt">When it ended.</param>
+/// <param name="RecordHash">The stored record's content hash.</param>
+public sealed record EvaluationRunSummaryResponse(
+    Guid RunId,
+    string TaskKey,
+    int TaskVersion,
     string ConfigurationHash,
-    string EvaluationRunReference,
+    string EvaluationSetId,
+    int EvaluationSetVersion,
     string EvaluationSetHash,
-    bool Passed,
-    string EvaluationSummaryJson,
-    Guid AttestationId);
+    string Provider,
+    string Model,
+    bool Accepted,
+    DateTimeOffset StartedAt,
+    DateTimeOffset CompletedAt,
+    string RecordHash)
+{
+    internal static EvaluationRunSummaryResponse From(EvaluationRun r) =>
+        new(r.RunId, r.TaskKey, r.TaskVersion, r.ConfigurationHash, r.EvaluationSetId, r.EvaluationSetVersion, r.EvaluationSetHash, r.Provider, r.Model, r.Accepted, r.StartedAt, r.CompletedAt, r.RecordHash);
+}
+
+/// <summary>A stored evaluation run with its record.</summary>
+/// <param name="Run">The run's identity and outcome.</param>
+/// <param name="RecordJson">The record exactly as hashed; recomputing its kernel content hash gives <c>RecordHash</c>.</param>
+public sealed record EvaluationRunResponse(EvaluationRunSummaryResponse Run, string RecordJson)
+{
+    internal static EvaluationRunResponse From(EvaluationRun r) => new(EvaluationRunSummaryResponse.From(r), r.RecordJson);
+}
 
 /// <summary>A configuration version's qualification after a change.</summary>
 /// <param name="TaskKey">The task.</param>

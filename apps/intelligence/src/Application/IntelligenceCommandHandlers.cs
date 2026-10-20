@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -8,6 +9,7 @@ using Cadence.Kernel.Modules;
 using Cadence.Kernel.Trust;
 using Cadence.Modules.Intelligence.Domain;
 using Cadence.Modules.Intelligence.Evaluation;
+using Cadence.Modules.Intelligence.Evaluation.Runs;
 
 using FluentValidation;
 
@@ -137,18 +139,33 @@ internal sealed class QualifyTaskConfigurationHandler(ITaskConfigurationCatalog 
             return IntelligenceErrors.ConfigurationNotQualifiable.WithMessage(string.Join(" ", gaps));
         }
 
-        if (command.Evidence.EvaluationSetHash != configuration.EvaluationSet!.ContentHash)
+        // The evidence is the stored run, never the caller's word that a run passed (#5574).
+        var run = await context.Work.ReadAsync<EvaluationRun>(EvaluationRun.IdFor(context.TenantId, command.EvaluationRunId), cancellationToken)
+            .ConfigureAwait(false);
+        if (run is null)
         {
-            return IntelligenceErrors.EvaluationNotAccepted.WithMessage(
-                $"The evaluation ran against set {command.Evidence.EvaluationSetHash}, not the pinned {configuration.EvaluationSet.SetId} v{configuration.EvaluationSet.Version} ({configuration.EvaluationSet.ContentHash}).");
+            return IntelligenceErrors.EvaluationRunNotFound.WithMessage($"No evaluation run {command.EvaluationRunId} is stored here. Record the run before qualifying on it.");
         }
 
-        if (!command.Evidence.Passed)
+        if (run.TaskKey != named.Key || run.TaskVersion != named.Version || run.ConfigurationHash != configuration.ContentHash)
         {
             return IntelligenceErrors.EvaluationNotAccepted.WithMessage(
-                $"Evaluation run {command.Evidence.RunReference} did not meet the acceptance criteria.");
+                $"Evaluation run {run.RunId} evaluated {run.TaskKey} v{run.TaskVersion} ({run.ConfigurationHash}), not {named.Key} v{named.Version} ({configuration.ContentHash}).");
         }
 
+        if (run.EvaluationSetHash != configuration.EvaluationSet!.ContentHash)
+        {
+            return IntelligenceErrors.EvaluationNotAccepted.WithMessage(
+                $"Evaluation run {run.RunId} used set {run.EvaluationSetHash}, not the pinned {configuration.EvaluationSet.SetId} v{configuration.EvaluationSet.Version} ({configuration.EvaluationSet.ContentHash}).");
+        }
+
+        if (!run.Accepted)
+        {
+            return IntelligenceErrors.EvaluationNotAccepted.WithMessage(
+                $"Evaluation run {run.RunId} did not meet the acceptance criteria.");
+        }
+
+        var evidence = run.Evidence();
         var target = new AttestationTarget(TaskConfigurationAttestationCheck.TargetKind, TaskConfiguration.AttestationTargetId(named.Key, named.Version), named.ContentHash);
         var verification = await verifier.VerifyAsync(
             new AttestationRequirement(context.TenantId, command.AttestationId, AttestationMeaning.Approved, target, context.Actor), cancellationToken)
@@ -164,7 +181,7 @@ internal sealed class QualifyTaskConfigurationHandler(ITaskConfigurationCatalog 
         if (qualification is null)
         {
             qualification = TaskQualification.Qualify(
-                context.TenantId, configuration, command.Evidence, command.AttestationId.Value, context.Actor.Id, context.RecordedAt);
+                context.TenantId, configuration, evidence, command.AttestationId.Value, context.Actor.Id, context.RecordedAt);
             context.Work.Add(qualification);
         }
         else if (qualification.ConfigurationHash != configuration.ContentHash)
@@ -178,14 +195,63 @@ internal sealed class QualifyTaskConfigurationHandler(ITaskConfigurationCatalog 
         }
         else
         {
-            qualification.Requalify(configuration, command.Evidence, command.AttestationId.Value, context.Actor.Id, context.RecordedAt);
+            qualification.Requalify(configuration, evidence, command.AttestationId.Value, context.Actor.Id, context.RecordedAt);
             version = qualification.VersionIndex + 1;
         }
 
         context.Work.Raise(new TaskConfigurationQualified(
-            named.Key, named.Version, named.ContentHash, qualification.RiskClass, command.Evidence.RunReference, command.AttestationId.Value));
+            named.Key, named.Version, named.ContentHash, qualification.RiskClass, evidence.RunReference, command.AttestationId.Value));
         return CommandResult<TaskQualificationState>.Success(new TaskQualificationState(
             named.Key, named.Version, named.ContentHash, qualification.Status, qualification.RiskClass, version));
+    }
+}
+
+internal sealed class RecordEvaluationRunHandler(ITaskConfigurationCatalog catalog) : ICommandHandler<RecordEvaluationRun, EvaluationRunState>
+{
+    public async Task<CommandResult<EvaluationRunState>> HandleAsync(RecordEvaluationRun command, ICommandContext context, CancellationToken cancellationToken)
+    {
+        EvaluationRunRecord record;
+        try
+        {
+            record = EvaluationRunRecord.FromJson(command.RecordJson);
+        }
+        catch (JsonException ex)
+        {
+            return IntelligenceErrors.EvaluationRunInvalid.WithMessage($"The text is not an evaluation run record: {ex.Message}");
+        }
+
+        var named = record.Configuration;
+        if (catalog.Find(named.Key, named.Version) is not { } configuration)
+        {
+            return IntelligenceErrors.TaskUnknown;
+        }
+
+        if (configuration.ContentHash != named.ContentHash)
+        {
+            return IntelligenceErrors.ConfigurationChanged;
+        }
+
+        if (configuration.QualificationGaps() is { Length: > 0 } gaps)
+        {
+            return IntelligenceErrors.ConfigurationNotQualifiable.WithMessage(string.Join(" ", gaps));
+        }
+
+        if (EvaluationRun.Problems(configuration, record) is { Count: > 0 } problems)
+        {
+            return IntelligenceErrors.EvaluationRunInvalid.WithMessage(string.Join(" ", problems));
+        }
+
+        var id = EvaluationRun.IdFor(context.TenantId, record.RunId);
+        if (await context.Work.ExistsAsync<EvaluationRun>(id, cancellationToken).ConfigureAwait(false))
+        {
+            return KernelErrors.AlreadyExists;
+        }
+
+        var run = EvaluationRun.Record(context.TenantId, record);
+        context.Work.Add(run);
+        context.Work.Raise(new EvaluationRunRecorded(run.RunId, run.TaskKey, run.TaskVersion, run.ConfigurationHash, run.RecordHash, run.Accepted));
+        return CommandResult<EvaluationRunState>.Success(new EvaluationRunState(
+            run.RunId, named, run.EvaluationSetHash, run.RecordHash, run.Accepted, record.Verdict.Reasons));
     }
 }
 
@@ -287,11 +353,19 @@ internal sealed class QualifyTaskConfigurationValidator : AbstractValidator<Qual
             .WithMessage("Name a task key.");
         RuleFor(c => c.Configuration.Version).GreaterThanOrEqualTo(1).When(c => c.Configuration is not null);
         RuleFor(c => c.Configuration.ContentHash).Length(ContentHash.Length).When(c => c.Configuration is not null);
-        RuleFor(c => c.Evidence).NotNull();
-        RuleFor(c => c.Evidence.RunReference).NotEmpty().MaximumLength(200).When(c => c.Evidence is not null);
-        RuleFor(c => c.Evidence.EvaluationSetHash).NotEmpty().MaximumLength(ContentHash.Length).When(c => c.Evidence is not null);
-        RuleFor(c => c.Evidence.SummaryJson).NotEmpty().When(c => c.Evidence is not null);
+        RuleFor(c => c.EvaluationRunId).NotEmpty().WithMessage("Name the stored evaluation run the qualification rests on.");
         RuleFor(c => c.AttestationId.Value).NotEmpty().WithMessage("Sign the qualification: name the attestation.");
+    }
+}
+
+internal sealed class RecordEvaluationRunValidator : AbstractValidator<RecordEvaluationRun>
+{
+    /// <summary>The largest record accepted, in characters; a set's run record is far smaller.</summary>
+    internal const int MaximumRecordLength = 8_000_000;
+
+    public RecordEvaluationRunValidator()
+    {
+        RuleFor(c => c.RecordJson).NotEmpty().MaximumLength(MaximumRecordLength);
     }
 }
 
