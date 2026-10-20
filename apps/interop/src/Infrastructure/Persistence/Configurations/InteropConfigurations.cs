@@ -169,6 +169,8 @@ public class EhrEndpointRecordConfiguration : IEntityTypeConfiguration<EhrEndpoi
         builder.Property(x => x.ClientId).HasMaxLength(255).IsRequired();
         builder.HasIndex(x => x.ClientId);
         builder.Property(x => x.PublicKeyJwksUrl).HasMaxLength(500);
+        builder.Property(x => x.SigningKeyRef).HasMaxLength(64);
+        builder.Property(x => x.SigningKeyId).HasMaxLength(255);
         builder.Property(x => x.ScopesJson).HasColumnType("jsonb");
         builder.HasIndex(x => x.IsActive);
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();

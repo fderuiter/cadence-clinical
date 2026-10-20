@@ -127,6 +127,16 @@ public class EhrEndpointRecord
     public string TokenUrl { get; set; } = string.Empty;
     public string ClientId { get; set; } = string.Empty;
     public string? PublicKeyJwksUrl { get; set; }
+
+    /// <summary>
+    /// Names the server-side private key that signs this endpoint's SMART client assertions
+    /// (configuration <c>SmartSigningKeys:&lt;ref&gt;</c>); the key itself is never stored here (#5436).
+    /// </summary>
+    public string? SigningKeyRef { get; set; }
+
+    /// <summary>The <c>kid</c> the EHR knows the key by, published in this client's JWKS.</summary>
+    public string? SigningKeyId { get; set; }
+
     public string ScopesJson { get; set; } = "[]";
     public int PollingIntervalSec { get; set; } = 300;
     public bool IsActive { get; set; } = true;

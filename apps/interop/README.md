@@ -47,6 +47,16 @@ Reconciliation candidates come only from source data (#5432):
 - `POST /esource/poll` returns `501` until a FHIR client for registered endpoints exists. It never fabricates rows.
 - `GET /esource/candidates` only reads: an empty study returns an empty page.
 
+SMART Backend Services client assertions are signed only with server-side keys (#5436). An EHR endpoint is registered
+with a `SigningKeyRef` and the `SigningKeyId` (`kid`) the EHR knows it by; the PEM private key itself lives in
+configuration `SmartSigningKeys:<ref>` (environment variable `SmartSigningKeys__<ref>`, from a secret store, see
+[ENVIRONMENT_VARIABLES.md](../../docs/ENVIRONMENT_VARIABLES.md)). `POST /esource/smart/assertion` takes the endpoint id
+and a lifetime of at most 300 seconds and signs an RS384 assertion whose issuer and subject are the endpoint's client id
+and whose audience is its token URL. `POST /esource/smart/verify` checks an assertion's signature, issuer, audience and
+lifetime against the same endpoint. An unknown endpoint is `404`; no reference, an unconfigured key, a malformed PEM or a
+public key alone is `422` and signs nothing. Neither route, nor polling, accepts a key in the request body
+([ADR-2517](../../docs/adr/2026-10-19-smart-client-assertions-are-signed-only-with-server-side-endpoint-keys.md)).
+
 ## Persistence
 
 `AddCadencePostgresDbContext<InteropDbContext>()` from [packages/database](../../packages/database/README.md) connects to the shared `cadence` database with its search path set to the `interop` schema ([ADR-2447](../../docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)). The connection string comes from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only the Development environment falls back to `cadence` on `localhost:5432`, and other environments fail at startup. `docker/docker-compose.yml` points it at the compose PostgreSQL and sets `Database__MigrateOnStartup=true`, so the service applies its migrations when it starts.

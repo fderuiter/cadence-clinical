@@ -383,6 +383,14 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb");
 
+                    b.Property<string>("SigningKeyId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("SigningKeyRef")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("SystemType")
                         .IsRequired()
                         .HasMaxLength(50)

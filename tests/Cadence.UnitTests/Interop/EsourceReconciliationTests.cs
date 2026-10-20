@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Interop.Endpoints;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
+using Cadence.Apps.Interop.Infrastructure.Security;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
 using Cadence.Testing;
@@ -16,6 +19,8 @@ using FluentAssertions;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 
 using Xunit;
 
@@ -122,40 +127,136 @@ public class EsourceReconciliationTests
         listObj.Endpoints[0].SystemType.Should().Be("EPIC");
     }
 
+    private const string TokenUrl = "https://ehr.hospital.org/oauth2/token";
+
+    private static ConfigurationSmartSigningKeys Keys(params (string Ref, string Pem)[] keys) =>
+        new(new ConfigurationBuilder()
+            .AddInMemoryCollection(keys.ToDictionary(k => $"{ConfigurationSmartSigningKeys.SectionName}:{k.Ref}", k => (string?)k.Pem))
+            .Build());
+
+    private static async Task<string> RegisterSmartEndpointAsync(InteropDbContext db, FakeClock clock, string? keyRef)
+    {
+        var created = await EsourceEndpoints.RegisterEhrEndpointAsync(
+            new EhrEndpointCreateRequest(
+                Name: "Metro General", SystemType: "EPIC", FhirBaseUrl: "https://ehr.hospital.org/r4", TokenUrl: TokenUrl,
+                ClientId: "cadence-client-99", PublicKeyJwksUrl: null, Scopes: null, PollingIntervalSec: 300,
+                ReasonForChange: "SMART endpoint", SigningKeyRef: keyRef, SigningKeyId: "key-1"),
+            db, clock, CreateMockHttpContext(), TestContext.Current.CancellationToken);
+        return created.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Created<Cadence.Apps.Interop.Domain.EhrEndpointRecord>>().Subject.Value!.Id;
+    }
+
+    /// <summary>
+    /// A client assertion is signed with the endpoint's server-side key: it verifies against that key's public half,
+    /// names the endpoint's client and token URL, and the verify route accepts it (#5436).
+    /// </summary>
     [Fact]
     [GxPRequirement("PRD-ESR-001")]
-    public void GenerateAndVerifySmartAssertion_ValidatesOAuth2AssertionToken()
+    public async Task GenerateAndVerifySmartAssertion_SignsWithTheEndpointsServerSideKey()
     {
-        // Arrange
+        var ct = TestContext.Current.CancellationToken;
+        using var db = CreateDbContext($"Smart_{Guid.NewGuid():N}");
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
-        var request = new SmartAssertionRequest(
-            ClientId: "cadence-client-99",
-            TokenUrl: "https://ehr.hospital.org/oauth2/token",
-            PrivateKeyPem: null,
-            KeyId: "key-1",
-            ExpirationSeconds: 300);
+        using var rsa = RSA.Create(2048);
+        var keys = Keys(("METRO_GENERAL", rsa.ExportPkcs8PrivateKeyPem()));
+        string endpointId = await RegisterSmartEndpointAsync(db, clock, "METRO_GENERAL");
 
-        // Act
-        var genResult = EsourceEndpoints.GenerateClientAssertionAsync(request, clock);
-        var genObj = genResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<SmartAssertionResponse>>().Subject.Value;
+        var generated = await EsourceEndpoints.GenerateClientAssertionAsync(new SmartAssertionRequest(endpointId, 300), db, keys, clock, ct);
+        var assertion = generated.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<SmartAssertionResponse>>().Subject.Value!;
 
-        genObj.Should().NotBeNull();
-        genObj!.ClientAssertionToken.Should().NotBeNullOrEmpty();
-        genObj.ClientAssertionType.Should().Be("urn:ietf:params:oauth:client-assertion-type:jwt-bearer");
+        assertion.ClientAssertionType.Should().Be("urn:ietf:params:oauth:client-assertion-type:jwt-bearer");
+        using var publicOnly = RSA.Create(rsa.ExportParameters(includePrivateParameters: false));
+        new JwtSecurityTokenHandler().ValidateToken(assertion.ClientAssertionToken, new TokenValidationParameters
+        {
+            ValidIssuer = "cadence-client-99",
+            ValidAudience = TokenUrl,
+            IssuerSigningKey = new RsaSecurityKey(publicOnly),
+            ValidateLifetime = false,
+        }, out var validated);
+        var jwt = (JwtSecurityToken)validated;
+        jwt.Header.Alg.Should().Be(SecurityAlgorithms.RsaSha384);
+        jwt.Header.Kid.Should().Be("key-1");
+        jwt.Subject.Should().Be("cadence-client-99");
 
-        var verifyRequest = new SmartVerifyRequest(
-            ClientAssertionToken: genObj.ClientAssertionToken,
-            ClientId: "cadence-client-99",
-            TokenUrl: "https://ehr.hospital.org/oauth2/token",
-            PublicKeyPem: null);
+        var verified = await EsourceEndpoints.VerifyClientAssertionAsync(new SmartVerifyRequest(assertion.ClientAssertionToken, endpointId), db, keys, clock, ct);
+        verified.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<SmartVerifyResponse>>().Subject.Value!.IsValid.Should().BeTrue();
+    }
 
-        var verifyResult = EsourceEndpoints.VerifyClientAssertionAsync(verifyRequest, clock);
-        var verifyObj = verifyResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<SmartVerifyResponse>>().Subject.Value;
+    /// <summary>An assertion signed with any other key, or presented after it expired, does not verify (#5436).</summary>
+    [Fact]
+    public async Task VerifySmartAssertion_SignedByAnotherKeyOrExpired_IsInvalid()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var db = CreateDbContext($"SmartForeign_{Guid.NewGuid():N}");
+        var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+        using var endpointKey = RSA.Create(2048);
+        using var otherKey = RSA.Create(2048);
+        string endpointId = await RegisterSmartEndpointAsync(db, clock, "METRO_GENERAL");
+        var keys = Keys(("METRO_GENERAL", endpointKey.ExportPkcs8PrivateKeyPem()));
+        var foreignKeys = Keys(("METRO_GENERAL", otherKey.ExportPkcs8PrivateKeyPem()));
 
-        // Assert
-        verifyObj.Should().NotBeNull();
-        verifyObj!.IsValid.Should().BeTrue();
-        verifyObj.Subject.Should().Be("cadence-client-99");
+        var foreign = await EsourceEndpoints.GenerateClientAssertionAsync(new SmartAssertionRequest(endpointId, 60), db, foreignKeys, clock, ct);
+        string foreignToken = foreign.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<SmartAssertionResponse>>().Subject.Value!.ClientAssertionToken;
+        var own = await EsourceEndpoints.GenerateClientAssertionAsync(new SmartAssertionRequest(endpointId, 60), db, keys, clock, ct);
+        string ownToken = own.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<SmartAssertionResponse>>().Subject.Value!.ClientAssertionToken;
+
+        var foreignResult = await EsourceEndpoints.VerifyClientAssertionAsync(new SmartVerifyRequest(foreignToken, endpointId), db, keys, clock, ct);
+        clock.Advance(TimeSpan.FromSeconds(61));
+        var expiredResult = await EsourceEndpoints.VerifyClientAssertionAsync(new SmartVerifyRequest(ownToken, endpointId), db, keys, clock, ct);
+
+        foreignResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<SmartVerifyResponse>>().Subject.Value!.IsValid.Should().BeFalse();
+        expiredResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<SmartVerifyResponse>>().Subject.Value!.IsValid.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// With no key reference, an unconfigured key, a malformed PEM or a public key only, nothing is signed: the route
+    /// answers 422 and never falls back to a generated key (#5436).
+    /// </summary>
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("METRO_GENERAL", null)]
+    [InlineData("METRO_GENERAL", "malformed")]
+    [InlineData("METRO_GENERAL", "public")]
+    public async Task GenerateSmartAssertion_WithoutAUsableKey_IsRefusedAndSignsNothing(string? keyRef, string? key)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var db = CreateDbContext($"SmartNoKey_{Guid.NewGuid():N}");
+        var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+        using var rsa = RSA.Create(2048);
+        // The case names stand in for the PEMs, so no private-key header reaches the test results the secret scanner reads.
+        string? configured = key switch
+        {
+            "public" => rsa.ExportSubjectPublicKeyInfoPem(),
+            "malformed" => "-----BEGIN PRIVATE KEY-----\nnot a key\n-----END PRIVATE KEY-----",
+            _ => null,
+        };
+        var keys = configured is null ? Keys() : Keys(("METRO_GENERAL", configured));
+        string endpointId = await RegisterSmartEndpointAsync(db, clock, keyRef);
+
+        var result = await EsourceEndpoints.GenerateClientAssertionAsync(new SmartAssertionRequest(endpointId, 300), db, keys, clock, ct);
+
+        result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Which.StatusCode.Should().Be(422);
+    }
+
+    /// <summary>An unknown endpoint is 404, an assertion lifetime over five minutes is 400, and a bad key reference is refused at registration.</summary>
+    [Fact]
+    public async Task SmartAssertion_RejectsUnknownEndpointsLongLifetimesAndBadKeyReferences()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var db = CreateDbContext($"SmartBad_{Guid.NewGuid():N}");
+        var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+        using var rsa = RSA.Create(2048);
+        var keys = Keys(("METRO_GENERAL", rsa.ExportPkcs8PrivateKeyPem()));
+        string endpointId = await RegisterSmartEndpointAsync(db, clock, "METRO_GENERAL");
+
+        var unknown = await EsourceEndpoints.GenerateClientAssertionAsync(new SmartAssertionRequest("no-such-endpoint", 300), db, keys, clock, ct);
+        var tooLong = await EsourceEndpoints.GenerateClientAssertionAsync(new SmartAssertionRequest(endpointId, 301), db, keys, clock, ct);
+        var badRef = await EsourceEndpoints.RegisterEhrEndpointAsync(
+            new EhrEndpointCreateRequest("X", null, "https://x/r4", null, null, null, null, 300, null, SigningKeyRef: "../etc/passwd"),
+            db, clock, CreateMockHttpContext(), ct);
+
+        unknown.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Which.StatusCode.Should().Be(404);
+        tooLong.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Which.StatusCode.Should().Be(400);
+        badRef.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Which.StatusCode.Should().Be(400);
     }
 
     /// <summary>
@@ -229,7 +330,7 @@ public class EsourceReconciliationTests
     public void PollHospitalEhr_WithNoEhrClient_Answers501()
     {
         var result = EsourceEndpoints.PollHospitalEhrAsync(
-            new EhrPollRequest(EndpointId: null, StudyId: "STUDY-101", SiteId: "SITE-01", SubjectId: "PAT-001", PrivateKeyPem: null),
+            new EhrPollRequest(EndpointId: null, StudyId: "STUDY-101", SiteId: "SITE-01", SubjectId: "PAT-001"),
             CreateMockHttpContext());
 
         result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Which.StatusCode.Should().Be(501);
@@ -557,7 +658,7 @@ public class EsourceReconciliationTests
         var outsider = CreateMockHttpContext("crc_other", "crc", "STUDY-202");
 
         var poll = EsourceEndpoints.PollHospitalEhrAsync(
-            new EhrPollRequest(EndpointId: "none", StudyId: "STUDY-101", SiteId: "SITE-01", SubjectId: "PAT-001", PrivateKeyPem: null), outsider);
+            new EhrPollRequest(EndpointId: "none", StudyId: "STUDY-101", SiteId: "SITE-01", SubjectId: "PAT-001"), outsider);
         var ingest = await EsourceEndpoints.IngestFhirBundleAsync(
             new FhirBundleIngestRequest(StudyId: "STUDY-101", SiteId: "SITE-01", SubjectId: "PAT-001", SubjectPseudonym: null, EhrSystemId: "EPIC", RawFhirBundleJson: SampleBundle),
             db, clock, outsider, ct);
