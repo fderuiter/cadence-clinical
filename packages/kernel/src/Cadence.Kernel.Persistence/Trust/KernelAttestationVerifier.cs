@@ -2,8 +2,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.Persistence.Tenancy;
 
 using Microsoft.EntityFrameworkCore;

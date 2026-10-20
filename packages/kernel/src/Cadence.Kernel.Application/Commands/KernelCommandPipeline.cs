@@ -243,7 +243,7 @@ public static class KernelApplicationServiceCollectionExtensions
     /// <summary>
     /// Registers <see cref="IKernelCommandSender"/> and the kernel's command handlers. The host must also register
     /// <see cref="ICurrentActor"/>, <see cref="IAuthorizer"/> and kernel persistence (which provides
-    /// <see cref="IKernelUnitOfWorkFactory"/>, <see cref="Trust.IAttestationVerifier"/> and
+    /// <see cref="IKernelUnitOfWorkFactory"/>, <see cref="IAttestationVerifier"/> and
     /// <see cref="Execution.IEnrollmentDirectory"/>).
     /// </summary>
     public static IServiceCollection AddKernelCommandPipeline(this IServiceCollection services)

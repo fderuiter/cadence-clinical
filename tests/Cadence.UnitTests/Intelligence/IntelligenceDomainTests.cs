@@ -33,6 +33,17 @@ public sealed class IntelligenceDomainTests
     private static readonly TaskConfiguration Configuration = new(
         "medical_coding.suggest", 1, "anthropic", "tier:balanced", "Suggest {{dictionary}} codes.", 1000, AutonomyLevel.ApproveToExecute);
 
+    private static readonly TaskConfiguration Governed = Configuration with
+    {
+        Tools = ["dictionary.search"],
+        RetrievalSources = ["meddra"],
+        EvaluationSet = new EvaluationSetRef("coding-gold", 1, "sha256:" + new string('c', 64)),
+        AcceptanceCriteria = ["Top-1 accuracy at least 0.9."],
+        ApproverRole = "medical_coder",
+        Credibility = new CredibilityAssessment(
+            "Which MedDRA term fits the verbatim?", "A coder reviews each suggestion before it is applied.", ModelInfluence.Medium, DecisionConsequence.Medium),
+    };
+
     /// <summary>
     /// K-AI-5: the qualified unit is the whole configuration, so changing the prompt, the model, the provider, the
     /// limit or the level changes its content hash, not just changing the model id.
@@ -50,13 +61,91 @@ public sealed class IntelligenceDomainTests
             Configuration with { Level = AutonomyLevel.Draft },
             Configuration with { Version = 2 },
             Configuration with { Key = "medical_coding.suggest_who" },
+            Configuration with { Tools = ["dictionary.search"] },
+            Configuration with { RetrievalSources = ["meddra"] },
+            Configuration with { OutputSchema = "{\"type\":\"object\"}" },
+            Configuration with { EvaluationSet = new EvaluationSetRef("coding-gold", 1, "sha256:" + new string('b', 64)) },
+            Configuration with { AcceptanceCriteria = ["Top-1 accuracy at least 0.9."] },
+            Configuration with { ApproverRole = "medical_coder" },
+            Governed,
+            Governed with { Credibility = Governed.Credibility! with { DecisionConsequence = DecisionConsequence.High } },
         ];
 
         variants.Select(v => v.ContentHash).Should().OnlyHaveUniqueItems().And.NotContain(Configuration.ContentHash);
-        (Configuration with { }).ContentHash.Should().Be(Configuration.ContentHash).And.HaveLength(64);
+        (Configuration with { }).ContentHash.Should().Be(Configuration.ContentHash).And.StartWith("sha256:").And.HaveLength(Cadence.Kernel.Trust.ContentHash.Length);
+        Configuration.Ref.Should().Be(new ConfigurationRef(Configuration.Key, Configuration.Version, Configuration.ContentHash));
     }
 
-    /// <summary>Malformed configurations are reported, and the catalog refuses them and duplicate keys at startup.</summary>
+    /// <summary>The model risk class follows the FDA influence-by-consequence matrix.</summary>
+    [Theory]
+    [InlineData(ModelInfluence.Low, DecisionConsequence.Low, ModelRiskClass.Low)]
+    [InlineData(ModelInfluence.Medium, DecisionConsequence.Low, ModelRiskClass.Low)]
+    [InlineData(ModelInfluence.Low, DecisionConsequence.Medium, ModelRiskClass.Low)]
+    [InlineData(ModelInfluence.High, DecisionConsequence.Low, ModelRiskClass.Medium)]
+    [InlineData(ModelInfluence.Medium, DecisionConsequence.Medium, ModelRiskClass.Medium)]
+    [InlineData(ModelInfluence.Low, DecisionConsequence.High, ModelRiskClass.Medium)]
+    [InlineData(ModelInfluence.High, DecisionConsequence.Medium, ModelRiskClass.High)]
+    [InlineData(ModelInfluence.Medium, DecisionConsequence.High, ModelRiskClass.High)]
+    [InlineData(ModelInfluence.High, DecisionConsequence.High, ModelRiskClass.High)]
+    public void CredibilityAssessment_RiskClassFollowsTheMatrix(ModelInfluence influence, DecisionConsequence consequence, ModelRiskClass expected) =>
+        new CredibilityAssessment("Which code fits?", "Coder reviews each suggestion.", influence, consequence).RiskClass.Should().Be(expected);
+
+    /// <summary>A configuration is qualifiable only with an evaluation set, criteria, a credibility assessment and, when it proposes, an approver role.</summary>
+    [Fact]
+    [GxPRequirement("PRD-SYS-051")]
+    public void QualificationGaps_NameWhatIsMissing()
+    {
+        Governed.QualificationGaps().Should().BeEmpty();
+        Configuration.QualificationGaps().Should().HaveCount(4);
+        (Governed with { ApproverRole = null, Level = AutonomyLevel.Inform }).QualificationGaps().Should().BeEmpty("an Inform task writes no proposals");
+        (Governed with { Credibility = Governed.Credibility! with { ContextOfUse = " " } }).QualificationGaps()
+            .Should().ContainSingle().Which.Should().Be("State the context of use.");
+        (Governed with { Tools = ["dictionary.search", "dictionary.search"] }).Problems().Should().ContainSingle().Which.Should().Contain("listed twice");
+        (Governed with { Tools = ["Bad Tool"] }).Problems().Should().ContainSingle().Which.Should().Contain("'Bad Tool'");
+    }
+
+    /// <summary>
+    /// A qualification makes its configuration usable only while it is qualified and the configuration still has the
+    /// qualified content; suspending it, or changing any field, takes it out of use; requalifying restores it.
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-SYS-051")]
+    public void TaskQualification_UsableOnlyWhileQualifiedAndUnchanged()
+    {
+        var at = new DateTimeOffset(2026, 10, 20, 9, 0, 0, TimeSpan.Zero);
+        var evidence = new EvaluationEvidence("eval-run-7", Governed.EvaluationSet!.ContentHash, Passed: true, "{\"accuracy\":0.94}");
+
+        TaskQualification.WhyNotUsable(null, Governed).Should().Contain("is not qualified in this tenant");
+
+        var qualification = TaskQualification.Qualify(Tenant, Governed, evidence, Guid.NewGuid(), "coding-lead", at);
+        qualification.Id.Should().Be(TaskQualification.IdFor(Tenant, Governed.Key, Governed.Version));
+        qualification.RiskClass.Should().Be(ModelRiskClass.Medium);
+        TaskQualification.WhyNotUsable(qualification, Governed).Should().BeNull();
+
+        var changed = Governed with { Instructions = "Suggest {{dictionary}} codes quickly." };
+        TaskQualification.WhyNotUsable(qualification, changed).Should().Contain("changed after it was qualified")
+            .And.Contain(Governed.ContentHash).And.Contain(changed.ContentHash);
+        var requalifyChanged = () => qualification.Requalify(changed, evidence, Guid.NewGuid(), "coding-lead", at);
+        requalifyChanged.Should().Throw<InvalidOperationException>();
+
+        qualification.Suspend("Override rate rose to 30%.", at.AddDays(1));
+        TaskQualification.WhyNotUsable(qualification, Governed).Should().Contain("is suspended: Override rate rose to 30%.");
+
+        qualification.Requalify(Governed, evidence with { RunReference = "eval-run-8" }, Guid.NewGuid(), "coding-lead", at.AddDays(2));
+        TaskQualification.WhyNotUsable(qualification, Governed).Should().BeNull();
+        qualification.SuspensionReason.Should().BeNull();
+        qualification.EvaluationRunReference.Should().Be("eval-run-8");
+    }
+
+    /// <summary>The attestation target id is stable per key and version, and differs between versions.</summary>
+    [Fact]
+    public void AttestationTargetId_IsStablePerVersion()
+    {
+        TaskConfiguration.AttestationTargetId("medical_coding.suggest", 1).Should().Be(TaskConfiguration.AttestationTargetId("medical_coding.suggest", 1));
+        TaskConfiguration.AttestationTargetId("medical_coding.suggest", 1).Should().NotBe(TaskConfiguration.AttestationTargetId("medical_coding.suggest", 2));
+    }
+
+    /// <summary>Malformed configurations are reported, and the catalog refuses them and a version registered twice at startup.</summary>
     [Fact]
     public void Problems_ReportMalformedConfigurations()
     {
@@ -64,7 +153,11 @@ public sealed class IntelligenceDomainTests
         (Configuration with { Key = "Medical Coding" }).Problems().Should().ContainSingle();
         (Configuration with { Version = 0, MaxOutputTokens = 0, Instructions = " " }).Problems().Should().HaveCount(3);
 
-        var duplicate = () => new RegisteredTaskConfigurations([Configuration, Configuration with { Version = 2 }]);
+        var duplicate = () => new RegisteredTaskConfigurations([Configuration, Configuration with { Instructions = "Other." }]);
+        var catalog = new RegisteredTaskConfigurations([Configuration, Configuration with { Version = 2 }, Configuration with { Version = 3 }]);
+        catalog.Versions(Configuration.Key).Select(c => c.Version).Should().Equal(3, 2, 1);
+        catalog.Find(Configuration.Key, 2)!.Version.Should().Be(2);
+        catalog.Find(Configuration.Key, 4).Should().BeNull();
         var malformed = () => new RegisteredTaskConfigurations([Configuration with { Provider = "" }]);
         duplicate.Should().Throw<InvalidOperationException>().WithMessage("*registered more than once*");
         malformed.Should().Throw<InvalidOperationException>().WithMessage("*Name the provider*");

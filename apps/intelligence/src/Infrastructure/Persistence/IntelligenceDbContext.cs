@@ -27,11 +27,17 @@ public sealed class IntelligenceDbContext(DbContextOptions<IntelligenceDbContext
     /// <summary>The agent controls' table.</summary>
     public const string AgentControlsTable = "agent_controls";
 
+    /// <summary>The task configuration qualifications' table.</summary>
+    public const string TaskQualificationsTable = "task_qualifications";
+
     /// <summary>The interaction ledger.</summary>
     public DbSet<AgentRun> AgentRuns => Set<AgentRun>();
 
     /// <summary>The kill switches and budgets.</summary>
     public DbSet<AgentControl> AgentControls => Set<AgentControl>();
+
+    /// <summary>The task configuration qualifications (ADR-2631).</summary>
+    public DbSet<TaskQualification> TaskQualifications => Set<TaskQualification>();
 
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -45,7 +51,7 @@ public sealed class IntelligenceDbContext(DbContextOptions<IntelligenceDbContext
             run.Property(r => r.TenantId).HasColumnName("tenant_id").HasConversion(t => t.Value, v => new TenantId(v));
             run.Property(r => r.TaskKey).HasColumnName("task_key").HasMaxLength(96).IsRequired();
             run.Property(r => r.TaskVersion).HasColumnName("task_version");
-            run.Property(r => r.ConfigurationHash).HasColumnName("configuration_hash").HasMaxLength(64).IsRequired();
+            run.Property(r => r.ConfigurationHash).HasColumnName("configuration_hash").HasMaxLength(Cadence.Kernel.Trust.ContentHash.Length).IsRequired();
             run.Property(r => r.Provider).HasColumnName("provider").HasMaxLength(64).IsRequired();
             run.Property(r => r.Model).HasColumnName("model").HasMaxLength(200).IsRequired();
             run.Property(r => r.RequestedBy).HasColumnName("requested_by").HasMaxLength(255).IsRequired();
@@ -84,6 +90,33 @@ public sealed class IntelligenceDbContext(DbContextOptions<IntelligenceDbContext
             control.Property(c => c.ReasonForChange).HasColumnName("reason_for_change");
             control.Property(c => c.VersionIndex).HasColumnName("version_index");
             control.HasIndex(c => new { c.TenantId, c.Scope }).IsUnique().HasDatabaseName("ux_agent_controls_scope");
+        });
+
+        modelBuilder.Entity<TaskQualification>(qualification =>
+        {
+            qualification.ToTable(TaskQualificationsTable);
+            qualification.HasKey(q => q.Id);
+            qualification.Property(q => q.Id).HasColumnName("id").ValueGeneratedNever();
+            qualification.Property(q => q.TenantId).HasColumnName("tenant_id").HasConversion(t => t.Value, v => new TenantId(v));
+            qualification.Property(q => q.TaskKey).HasColumnName("task_key").HasMaxLength(96).IsRequired();
+            qualification.Property(q => q.TaskVersion).HasColumnName("task_version");
+            qualification.Property(q => q.ConfigurationHash).HasColumnName("configuration_hash").HasMaxLength(Cadence.Kernel.Trust.ContentHash.Length).IsRequired();
+            qualification.Property(q => q.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(16);
+            qualification.Property(q => q.RiskClass).HasColumnName("risk_class").HasConversion<string>().HasMaxLength(16);
+            qualification.Property(q => q.EvaluationRunReference).HasColumnName("evaluation_run_reference").HasMaxLength(200).IsRequired();
+            qualification.Property(q => q.EvaluationSetHash).HasColumnName("evaluation_set_hash").HasMaxLength(Cadence.Kernel.Trust.ContentHash.Length).IsRequired();
+            qualification.Property(q => q.EvaluationSummaryJson).HasColumnName("evaluation_summary_json").IsRequired();
+            qualification.Property(q => q.AttestationId).HasColumnName("attestation_id");
+            qualification.Property(q => q.QualifiedBy).HasColumnName("qualified_by").HasMaxLength(255).IsRequired();
+            qualification.Property(q => q.QualifiedAt).HasColumnName("qualified_at");
+            qualification.Property(q => q.SuspendedAt).HasColumnName("suspended_at");
+            qualification.Property(q => q.SuspensionReason).HasColumnName("suspension_reason").HasMaxLength(1000);
+            qualification.HasCommandAuditColumns();
+            qualification.Property(q => q.CreatedAt).HasColumnName("created_at");
+            qualification.Property(q => q.CreatedBy).HasColumnName("created_by");
+            qualification.Property(q => q.ReasonForChange).HasColumnName("reason_for_change");
+            qualification.Property(q => q.VersionIndex).HasColumnName("version_index");
+            qualification.HasIndex(q => new { q.TenantId, q.TaskKey, q.TaskVersion }).IsUnique().HasDatabaseName("ux_task_qualifications_version");
         });
     }
 }

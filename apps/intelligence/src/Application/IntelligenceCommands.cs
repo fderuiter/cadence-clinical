@@ -9,7 +9,8 @@ namespace Cadence.Modules.Intelligence.Application;
 
 /// <summary>
 /// Records an agent run in the interaction ledger before its model call, for the person sending it (K-AI-6). Refused
-/// when a kill switch covers the task. A person needs <c>agent_run.record</c> to use AI at all; it is a Propose
+/// when a kill switch covers the task, and when the configuration is not the deployment's or is not qualified in the
+/// tenant on its current content (ADR-2631). A person needs <c>agent_run.record</c> to use AI at all; it is a Propose
 /// capability, because nothing an agent produces is more than a suggestion (K-AI-1).
 /// </summary>
 /// <param name="TenantId">The tenant.</param>
@@ -21,7 +22,12 @@ namespace Cadence.Modules.Intelligence.Application;
 /// <param name="ReasonForChange">Why the run is recorded.</param>
 [KernelCapability("agent_run.record", VerbClass.Propose)]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
-[RaisesKernelErrors(typeof(IntelligenceErrors), nameof(IntelligenceErrors.AgentDisabled))]
+[RaisesKernelErrors(
+    typeof(IntelligenceErrors),
+    nameof(IntelligenceErrors.AgentDisabled),
+    nameof(IntelligenceErrors.TaskUnknown),
+    nameof(IntelligenceErrors.ConfigurationChanged),
+    nameof(IntelligenceErrors.ConfigurationUnqualified))]
 public sealed record StartAgentRun(
     TenantId TenantId,
     Guid RunId,
@@ -100,3 +106,79 @@ public sealed record AgentRunCompleted(Guid RunId, string TaskKey, int TaskVersi
 /// <param name="MonthlyTokenLimit">The monthly token budget; null for no limit.</param>
 [KernelEvent("intelligence.AgentControlChanged", 1)]
 public sealed record AgentControlChanged(string Scope, bool Enabled, long? MonthlyTokenLimit);
+
+/// <summary>
+/// Qualifies one task configuration version in the tenant (ADR-2631): its evaluation run met the acceptance criteria
+/// against the pinned evaluation set, and the person sending the command signed an <c>Approved</c> attestation over
+/// the configuration's content hash (21 CFR 11.50, 11.70). Approve verb class: only a person can qualify, never an
+/// agent. A suspended version is qualified again the same way, on new evidence and a new signature.
+/// </summary>
+/// <param name="TenantId">The tenant.</param>
+/// <param name="Configuration">The version and the content hash being qualified.</param>
+/// <param name="Evidence">The evaluation run the qualification rests on.</param>
+/// <param name="AttestationId">The signer's attestation over the configuration version.</param>
+/// <param name="IdempotencyKey">The command's idempotency key (K-TX-3).</param>
+/// <param name="ReasonForChange">Why the version is qualified.</param>
+[KernelCapability("task_configuration.qualify", VerbClass.Approve)]
+[RaisesKernelErrors(
+    typeof(IntelligenceErrors),
+    nameof(IntelligenceErrors.TaskUnknown),
+    nameof(IntelligenceErrors.ConfigurationChanged),
+    nameof(IntelligenceErrors.ConfigurationNotQualifiable),
+    nameof(IntelligenceErrors.EvaluationNotAccepted),
+    nameof(IntelligenceErrors.AttestationRejected),
+    nameof(IntelligenceErrors.AlreadyQualified))]
+public sealed record QualifyTaskConfiguration(
+    TenantId TenantId,
+    ConfigurationRef Configuration,
+    EvaluationEvidence Evidence,
+    AttestationId AttestationId,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<TaskQualificationState>;
+
+/// <summary>
+/// Takes a qualified configuration version out of use in the tenant until it is qualified again (ADR-2631), for
+/// example when monitoring finds its quality has drifted. Execute verb class: it stops AI use and changes no clinical
+/// data, so the evaluation harness can send it for a person holding the grant.
+/// </summary>
+/// <param name="TenantId">The tenant.</param>
+/// <param name="TaskKey">The task.</param>
+/// <param name="TaskVersion">The version to suspend.</param>
+/// <param name="IdempotencyKey">The command's idempotency key (K-TX-3).</param>
+/// <param name="ReasonForChange">Why the version is suspended; shown to anyone the suspension refuses.</param>
+[KernelCapability("task_configuration.suspend", VerbClass.Execute)]
+[RaisesKernelErrors(typeof(IntelligenceErrors), nameof(IntelligenceErrors.NotQualified))]
+public sealed record SuspendTaskConfiguration(
+    TenantId TenantId,
+    string TaskKey,
+    int TaskVersion,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<TaskQualificationState>;
+
+/// <summary>A configuration version's qualification after a change.</summary>
+/// <param name="TaskKey">The task.</param>
+/// <param name="TaskVersion">The version.</param>
+/// <param name="ConfigurationHash">The content hash the qualification covers.</param>
+/// <param name="Status">Whether the version may be used.</param>
+/// <param name="RiskClass">The configuration's risk class.</param>
+/// <param name="VersionIndex">The qualification record's version after the change.</param>
+public sealed record TaskQualificationState(
+    string TaskKey, int TaskVersion, string ConfigurationHash, QualificationStatus Status, ModelRiskClass RiskClass, long VersionIndex);
+
+/// <summary>Raised when a configuration version is qualified, or qualified again.</summary>
+/// <param name="TaskKey">The task.</param>
+/// <param name="TaskVersion">The version.</param>
+/// <param name="ConfigurationHash">The content hash qualified.</param>
+/// <param name="RiskClass">The risk class.</param>
+/// <param name="EvaluationRunReference">The evaluation run it rests on.</param>
+/// <param name="AttestationId">The signer's attestation.</param>
+[KernelEvent("intelligence.TaskConfigurationQualified", 1)]
+public sealed record TaskConfigurationQualified(
+    string TaskKey, int TaskVersion, string ConfigurationHash, ModelRiskClass RiskClass, string EvaluationRunReference, Guid AttestationId);
+
+/// <summary>Raised when a configuration version is suspended.</summary>
+/// <param name="TaskKey">The task.</param>
+/// <param name="TaskVersion">The version.</param>
+/// <param name="Reason">Why.</param>
+[KernelEvent("intelligence.TaskConfigurationSuspended", 1)]
+public sealed record TaskConfigurationSuspended(string TaskKey, int TaskVersion, string Reason);

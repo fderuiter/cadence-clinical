@@ -10,12 +10,13 @@ This page is the catalogue: the agents, the research-type packs, the autonomy la
 lives. It is a plan: an agent is built when its row's issue lands, and the **State** column says which exist.
 
 The runtime, the Intelligence module (`apps/intelligence`, composed into the kernel API host,
-[#5374](https://github.com/fderuiter/cadence-clinical/issues/5374)), is in review: the model port, task configurations
-with their content hash, the interaction ledger of agent runs, and per-tenant kill switches and token budgets, under
-`/api/v1/ai`. PHI scrubbing, data residency, more providers and a local-only mode follow in
+[#5374](https://github.com/fderuiter/cadence-clinical/issues/5374)), holds the model port, versioned task configurations
+qualified per tenant with a signature on evaluation evidence ([ADR-2631](../adr/2026-10-20-agent-task-configurations-are-versioned-and-qualified-per-tenant.md),
+[#5385](https://github.com/fderuiter/cadence-clinical/issues/5385)), the interaction ledger of agent runs, and
+per-tenant kill switches and token budgets, under `/api/v1/ai`. PHI scrubbing, data residency, more providers and a local-only mode follow in
 [#5550](https://github.com/fderuiter/cadence-clinical/issues/5550); the agent actor and requester-scoped grants in
-[#4783](https://github.com/fderuiter/cadence-clinical/issues/4783); versioned, qualified task configurations in
-[#5385](https://github.com/fderuiter/cadence-clinical/issues/5385).
+[#4783](https://github.com/fderuiter/cadence-clinical/issues/4783); the evaluation harness that produces qualification
+evidence and monitoring that suspends a configuration in [#5548](https://github.com/fderuiter/cadence-clinical/issues/5548).
 
 ## Principles
 
@@ -84,7 +85,8 @@ change to what the study claims about a participant.
 
 1. A person asks (Assist panel, command palette, a form) or a kernel event fires (new data, an SAE, an amendment, an
    indicator breach).
-2. The runtime loads the qualified task configuration for the task and checks the budget and kill switch.
+2. The runtime picks the newest task configuration version the tenant has qualified on its current content (or
+   refuses, saying why) and checks the budget and kill switch.
 3. The agent reads through tools that carry the requester's grants, narrowed by the configuration's allow-list.
 4. The citation verifier drops anything that does not trace to a node the run read.
 5. The runtime writes one kernel Proposal naming the model and configuration version, and records the run in the

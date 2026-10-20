@@ -28,4 +28,32 @@ public static class IntelligenceErrors
     /// <summary>Only the person a run acted for may complete it.</summary>
     public static readonly KernelError RunNotYours =
         new("M.Intelligence.Run.NotYours", 403, "Only the person an agent run acts for may complete it (K-AI-6).");
+
+    /// <summary>The configuration version is not qualified in the tenant, is suspended, or changed after it was qualified.</summary>
+    public static readonly KernelError ConfigurationUnqualified =
+        new("M.Intelligence.Configuration.Unqualified", 409, "This AI task configuration is not qualified for use here. The work can be done without AI.");
+
+    /// <summary>The named configuration is not the one the deployment runs: its content hash differs.</summary>
+    public static readonly KernelError ConfigurationChanged =
+        new("M.Intelligence.Configuration.Changed", 409, "The task configuration changed: its content hash is not the one named. Publish the change as a new version.");
+
+    /// <summary>The configuration lacks what qualification needs.</summary>
+    public static readonly KernelError ConfigurationNotQualifiable =
+        new("M.Intelligence.Configuration.NotQualifiable", 422, "The task configuration cannot be qualified yet.");
+
+    /// <summary>The evaluation did not meet the acceptance criteria, or ran against another evaluation set.</summary>
+    public static readonly KernelError EvaluationNotAccepted =
+        new("M.Intelligence.Qualification.EvaluationNotAccepted", 422, "The evaluation does not support qualification.");
+
+    /// <summary>The attestation does not sign this configuration version as approved by the person qualifying it.</summary>
+    public static readonly KernelError AttestationRejected =
+        new("M.Intelligence.Qualification.AttestationRejected", 422, "The signature does not approve this task configuration version.");
+
+    /// <summary>The version is already qualified on this content.</summary>
+    public static readonly KernelError AlreadyQualified =
+        new("M.Intelligence.Qualification.AlreadyQualified", 409, "This task configuration version is already qualified.");
+
+    /// <summary>The version has no qualification in the tenant to suspend.</summary>
+    public static readonly KernelError NotQualified =
+        new("M.Intelligence.Qualification.NotQualified", 404, "This task configuration version has no qualification here.");
 }

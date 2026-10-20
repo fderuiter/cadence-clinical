@@ -530,6 +530,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2517: SMART Client Assertions Are Signed Only With Server-Side Endpoint Keys](adr/2026-10-19-smart-client-assertions-are-signed-only-with-server-side-endpoint-keys.md) | Current | - Status: Accepted |
 | [ADR-2630: AI Agents Act Through Proposals in One Governed Runtime](adr/2026-10-20-ai-agents-act-through-proposals-in-one-governed-runtime.md) | Current | - Status: Accepted |
 | [ADR-2518: DSUR Approval Is Its Own Capability, Signed by the Verified Caller](adr/2026-10-19-dsur-approval-is-its-own-capability-signed-by-the-verified-caller.md) | Current | - Status: Accepted |
+| [ADR-2631: Agent Task Configurations Are Versioned and Qualified per Tenant](adr/2026-10-20-agent-task-configurations-are-versioned-and-qualified-per-tenant.md) | Current | - Status: Accepted |
 ## Developing and running
 
 | Document | Status | What it is |

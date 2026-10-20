@@ -21,7 +21,7 @@ Dependencies point inward only (spec §2.4, enforced by `tests/Cadence.Architect
 
 - `Cadence.Kernel.Abstractions`: strongly-typed UUIDv7 IDs (`TenantId`, `StudyId`, `ParticipantId`, …), `IClock`, serialization contexts, and the command contracts (`ICommand<T>`, `IKernelCommandSender`, `Actor`, `KernelErrors`, event records). No EF Core, ASP.NET Core or rendering. Application modules reference only this assembly and `Cadence.Kernel.Modules` (K-XS-2).
 - `Cadence.Kernel.Domain`: kernel aggregates, state machines and temporal logic. Pure: no EF Core, ASP.NET Core or Npgsql.
-- `Cadence.Kernel.Modules`: the module SDK ([ADR-2600](../../docs/adr/2026-10-19-modules-write-through-the-kernel-command-path.md)). The command handler contracts kernel and module handlers share (`ICommandHandler<TCommand, TResult>`, `ICommandContext`, `IKernelUnitOfWork`) and `AddCommandHandler<TCommand, TResult, THandler>()`; `ModuleDbContext`, `AddModuleCommandStore<TContext>()` and `ModuleTenantIsolationSql` for a module's own records; `AddModuleMigrations<TContext>()` for its schema migrations and `AddModuleTenantContext<TContext>()` for its tenant-scoped reads; and, for its endpoints, the tenant resolution the host provides (`IKernelTenantResolver`, `KernelTenantFilter`, `KernelRequestTenant`), the signed change reason (`IKernelChangeReason`) and `KernelErrorEndpoints`. A module writes clinical state by implementing a handler and sending its command through `IKernelCommandSender`.
+- `Cadence.Kernel.Modules`: the module SDK ([ADR-2600](../../docs/adr/2026-10-19-modules-write-through-the-kernel-command-path.md)). The command handler contracts kernel and module handlers share (`ICommandHandler<TCommand, TResult>`, `ICommandContext`, `IKernelUnitOfWork`) and `AddCommandHandler<TCommand, TResult, THandler>()`; `ModuleDbContext`, `AddModuleCommandStore<TContext>()` and `ModuleTenantIsolationSql` for a module's own records; `AddModuleMigrations<TContext>()` for its schema migrations and `AddModuleTenantContext<TContext>()` for its tenant-scoped reads; and, for its endpoints, the tenant resolution the host provides (`IKernelTenantResolver`, `KernelTenantFilter`, `KernelRequestTenant`), the signed change reason (`IKernelChangeReason`) and `KernelErrorEndpoints`; and, for signatures over its own records, `IAttestationVerifier`, `IAttestationTargetCheck` and `AddModuleAttestationTarget<TCheck>()` (ADR-2631). A module writes clinical state by implementing a handler and sending its command through `IKernelCommandSender`.
 - `Cadence.Kernel.Application`: the command pipeline (`KernelCommandPipeline`), its ports (`ICurrentActor`, `IAuthorizer`, `IKernelUnitOfWorkFactory`) and the kernel's command handlers, and the authority evaluator (`AuthorityEvaluator`, ADR-2455).
 - `Cadence.Kernel.Persistence`: `KernelDbContext` over the single `kernel` schema (ADR-2247), ID value converters, tenant-scoped contexts and Row-Level Security (`Tenancy/`), the per-command unit of work and audit chain (`KernelCommandTransaction`, `KernelAuditChainVerifier`), `KernelDatabase` (migrate, grant the app role) and migrations. Referenced only by `Cadence.Kernel.Api` and the host ([apps/kernel-api](../../apps/kernel-api/README.md)).
 - `Cadence.Kernel.Api`: Minimal API route group (`/api/v1/kernel`) that slices add endpoints to, and the read endpoints for the Clinical Canvas (`KernelReadEndpoints`: nodes, zoom path, children, command catalogue, CanI, search, protocol versions; `KernelLineageEndpoints`: Trace, dependents, amendment impact; `KernelActivityEndpoints`: the activity stream) behind `KernelTenantFilter`, which resolves the caller's kernel tenant through the host's `IKernelTenantResolver`, with every returned object masked through the host's `INodeVisibility` ([ADR-2540](../../docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md)). The host is [apps/kernel-api](../../apps/kernel-api/README.md).
@@ -128,7 +128,9 @@ await sender.SendAsync(new ApproveProtocolVersion(tenant, versionId, signature.V
   most five minutes old, and the target's current hash must equal the signed one.
 - **Approval and withdrawal.** `ApproveProtocolVersion` and `WithdrawProtocolVersion` name an attestation with meaning
   `Approved` or `Withdrawn`, signed by the person executing the command. `IAttestationVerifier` checks it within the
-  tenant; `AddKernelPersistence` registers it, and standards governance uses the same verifier.
+  tenant; `AddKernelPersistence` registers it, and standards governance uses the same verifier. The verifier's
+  contract is in the module SDK (`Cadence.Kernel.Modules`), so module handlers require signatures the same way
+  (ADR-2631).
 - **Forks.** `ForkProtocolVersion` starts an amended draft from an approved version, numbered after every version in
   the study and carrying a `ProtocolAmendment`. The parent stays approved; `Superseded` is left to Effectivity (#4777).
 - **Database guards.**
@@ -565,8 +567,8 @@ A validation run records what a study's pinned rule packs detected at one stage 
   `DerivedFrom` their run.
 
 A host registers `AddKernelValidation()` and `AddKernelValidationPersistence()`. Attesting other kinds of record:
-register an `IAttestationTargetCheck` for the kind (`Cadence.Kernel.Application.Trust`); `Attest` consults it after the
-core kinds.
+register an `IAttestationTargetCheck` for the kind with `AddModuleAttestationTarget<TCheck>()` (both in the module SDK
+`Cadence.Kernel.Modules`, ADR-2631); `Attest` consults it after the core kinds.
 
 ## Explanations (ADR-2482)
 

@@ -51,7 +51,9 @@ public sealed class RouteAuthorizationTests
         ("kernel", "POST /api/v1/ai/intent/route", "Matches fixed patterns, reads and writes no record, and filters recommendations by the caller's signed roles."),
         ("kernel", "GET /api/v1/ai/runs", "Lists only the caller's own agent runs (requested_by is the signed subject), under the tenant's Row-Level Security."),
         ("kernel", "GET /api/v1/ai/runs/{runId:guid}", "Answers only the caller's own agent run; another person's is 404."),
-        ("kernel", "GET /api/v1/ai/tasks", "The registered task configurations: code-defined, tenant-independent and holding no clinical record."),
+        ("kernel", "GET /api/v1/ai/tasks", "The registered task configurations and the caller's tenant's qualifications of them (Row-Level Security); no clinical record."),
+        ("kernel", "POST /api/v1/ai/tasks/{key}/versions/{version:int}/qualification", "Sends QualifyTaskConfiguration, which the kernel authority evaluator authorizes against task_configuration.qualify (Approve, people only) and which needs the caller's own attestation (ADR-2631)."),
+        ("kernel", "POST /api/v1/ai/tasks/{key}/versions/{version:int}/suspension", "Sends SuspendTaskConfiguration, which the kernel authority evaluator authorizes against task_configuration.suspend (ADR-2631)."),
         ("kernel", "GET /api/v1/ai/controls", "The tenant's AI kill switches and budgets, which every member may see so they know whether an assistant is off."),
         ("kernel", "PUT /api/v1/ai/controls/{scope}", "Sends SetAgentControl, which the kernel authority evaluator authorizes against agent_control.set (ADR-2630)."),
     ];
