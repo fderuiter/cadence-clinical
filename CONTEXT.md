@@ -193,6 +193,16 @@ it expires, and only with a capability it requested. The kernel then links propo
 (`ProposalExecuted`, K-AI-2, ADR-2632).
 _Avoid_: AI draft statuses on regulated records (`DRAFT_AI`), "approved" to mean "executed"
 
+### Agent tools, read set and citation verifier
+
+An **agent tool** is one typed kernel read an agent may call (`get_node`, `search_kernel`, `trace_lineage`, …). It
+reads as the agent acting for one person (the **requester**), and an object is visible only when both may see it
+(K-AI-3). A task configuration's **allow-list** names the tools a run may use; no tool can send a command. Every
+result reaches the model as **untrusted data**. The run's **read set** is every object a tool showed it, with the
+values it showed. The **citation verifier** drops any claim or value that does not trace to the read set (K-AI-4)
+before the Proposal writer records the plan with the model and task configuration version (K-AI-5, ADR-2633).
+_Avoid_: "context" for data an agent was never shown, free-text answers without citations
+
 ### Tenant
 
 The top-level isolation boundary. Every kernel row carries `tenant_id`, enforced by PostgreSQL

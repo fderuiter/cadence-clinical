@@ -136,6 +136,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2630: AI Agents Act Through Proposals in One Governed Runtime](2026-10-20-ai-agents-act-through-proposals-in-one-governed-runtime.md) (2026-10-20)
 - [ADR-2631: Agent Task Configurations Are Versioned and Qualified per Tenant](2026-10-20-agent-task-configurations-are-versioned-and-qualified-per-tenant.md) (2026-10-20)
 - [ADR-2632: Agents Act for One Person, and Approved Proposals Execute as Their Approver](2026-10-20-agents-act-for-one-person-and-approved-proposals-execute-as-their-approver.md) (2026-10-20)
+- [ADR-2633: Agent Tools Read as the Requester, and Every Claim Cites What Was Read](2026-10-20-agent-tools-read-as-the-requester-and-every-claim-cites-what-was-read.md) (2026-10-20)
 
 ### 1. Core Platform & Execution Engine
 

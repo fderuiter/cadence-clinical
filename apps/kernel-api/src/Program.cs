@@ -20,6 +20,8 @@ using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Time;
 using Cadence.Modules.Execution;
 using Cadence.Modules.Intelligence;
+using Cadence.Modules.Intelligence.Mcp;
+using Cadence.Modules.Intelligence.Tools;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
 
@@ -96,6 +98,9 @@ builder.Services.AddCadenceIntelligenceModule(builder.Configuration, builder.Env
 // The Execution module: eCRF forms over kernel form instances (ADR-2622).
 builder.Services.AddCadenceExecutionModule(connectionString);
 
+// The agents' read tools over the kernel reads above, and the MCP server that serves them to outside agents (ADR-2633).
+builder.Services.AddIntelligenceTools().AddIntelligenceMcp();
+
 // The kernel tenant comes from the tenant code the gateway signs, through the kernel's tenant directory (ADR-2540).
 builder.Services.AddSingleton<IKernelTenantResolver, DirectoryTenantResolver>();
 
@@ -113,6 +118,7 @@ app.MapCadenceHealthAndStatusEndpoints(
 app.MapKernelApi().MapKernelReads().MapKernelObservations();
 app.MapIntelligenceModule();
 app.MapExecutionModule();
+app.MapIntelligenceMcp();
 
 await app.RunAsync();
 

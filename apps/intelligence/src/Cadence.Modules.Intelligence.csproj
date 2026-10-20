@@ -3,7 +3,7 @@
   <PropertyGroup>
     <RootNamespace>Cadence.Modules.Intelligence</RootNamespace>
     <AssemblyName>Cadence.Modules.Intelligence</AssemblyName>
-    <Description>Intelligence module: the governed AI agent runtime in the composition host (ADR-2630, #5374). Model port, interaction ledger, budgets and kill switch, and the command-palette intent router.</Description>
+    <Description>Intelligence module: the governed AI agent runtime in the composition host (ADR-2630, #5374). Model port, interaction ledger, budgets and kill switch, the command-palette intent router, and the agent tools, citation verifier and MCP server (ADR-2633).</Description>
     <CadenceRequireXmlDocs>true</CadenceRequireXmlDocs>
   </PropertyGroup>
 
@@ -24,6 +24,7 @@
     <PackageReference Include="FluentValidation" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <!-- PrivateAssets: keeps the OpenAPI source generator out of the host's other projects (spec §2.4). -->
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" PrivateAssets="all" />
