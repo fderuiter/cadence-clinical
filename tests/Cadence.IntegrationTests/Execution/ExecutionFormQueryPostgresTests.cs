@@ -147,6 +147,10 @@ public sealed class ExecutionFormQueryPostgresTests(ExecutionFormModulePostgresF
         (await RaiseAsync(form, value.ObservationId, value.Revision, ct)).Value.Should().NotBeNull("a freeze stops data entry, not queries");
         await scenario.Protocol.OkAsync(await scenario.Observations.ReleaseAsync(tenant, study, freeze.LockId, ct), ct);
 
+        // State both queries in the kernel before the lock, as the relay would; a step still queued when a Locked lock
+        // lands is refused by the kernel and retried until the lock is released (#5586).
+        await RelayAsync(ct);
+
         await scenario.Protocol.OkAsync(await scenario.Observations.LockAsync(tenant, study, NodeRef.For(form.Instance), ct), ct);
         (await RaiseAsync(form, value.ObservationId, value.Revision, ct)).Error!.Code.Should().Be(AssertionErrors.Locked.Code);
         (await StepAsync(new AnswerFormQuery(tenant, id, enrollment, "Confirmed", Key(), Reason), ct)).Error!.Code.Should().Be(AssertionErrors.Locked.Code);
