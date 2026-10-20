@@ -290,7 +290,9 @@ public class DsurCompilerEngineTests
         var approval = entries.Should().ContainSingle(e => e.Action == DsurCompilerEngine.ApprovedAuditAction).Subject;
         approval.UserId.Should().Be("mm-approver");
         approval.ReasonForChange.Should().Be("Annual DSUR medical review complete");
-        approval.ChangesJson.Should().Contain("\"signer_id\":\"mm-approver\"");
+        // The record is IGxPAuditable (#5573): its approval entry holds its changed values, the signer among them, and its version.
+        approval.ChangesJson.Should().Contain("\"ApprovedByUserId\":\"mm-approver\"");
+        approval.VersionIndex.Should().Be(2);
         entries.Should().NotContain(e => e.UserId == InterceptorActor);
     }
 

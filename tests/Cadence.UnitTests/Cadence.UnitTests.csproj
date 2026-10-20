@@ -61,6 +61,8 @@
   <ItemGroup>
     <!-- Golden ICSR XML for IcsrRenderTests (#5464). -->
     <EmbeddedResource Include="Safety\Golden\*.xml" />
+    <!-- The vendored ICH E2B(R3) schema, read from disk by IcsrRenderTests independently of the service (#5573). -->
+    <None Include="..\..\apps\safety\Schemas\ich-e2b-r3\**\*.xsd" Link="Safety\Schemas\ich-e2b-r3\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

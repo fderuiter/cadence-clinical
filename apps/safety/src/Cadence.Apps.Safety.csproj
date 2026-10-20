@@ -26,5 +26,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="..\Templates\**\*.liquid" Link="Templates\%(RecursiveDir)%(Filename)%(Extension)" />
+    <!-- The ICH E2B(R3) ICSR schema (HL7 v3 XSDs from the ICH implementation package) the rendered ICSR is validated against. -->
+    <EmbeddedResource Include="..\Schemas\ich-e2b-r3\**\*.xsd" Link="Schemas\ich-e2b-r3\%(RecursiveDir)%(Filename)%(Extension)" LogicalName="IchE2bR3/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>
