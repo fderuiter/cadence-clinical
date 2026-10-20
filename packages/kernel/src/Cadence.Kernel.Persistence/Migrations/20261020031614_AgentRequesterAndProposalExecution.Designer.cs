@@ -338,6 +338,140 @@ namespace Cadence.Kernel.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.CollectionInstance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CollectedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("collected_at");
+
+                    b.Property<string>("CollectionSpecId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("collection_spec_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid>("EnrollmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("enrollment_id");
+
+                    b.Property<DateTimeOffset>("LastSavedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_saved_at");
+
+                    b.Property<DateTimeOffset>("OpenedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("opened_at");
+
+                    b.Property<string>("OpenedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("opened_by");
+
+                    b.Property<Guid>("ParticipantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("participant_id");
+
+                    b.Property<string>("PlannedActivityId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("planned_activity_id");
+
+                    b.Property<Guid>("ProtocolVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("protocol_version_id");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason_for_change");
+
+                    b.Property<int>("Saves")
+                        .HasColumnType("integer")
+                        .HasColumnName("saves");
+
+                    b.Property<Guid>("StudyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("study_id");
+
+                    b.Property<Guid>("StudySiteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("study_site_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version_index");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "ProtocolVersionId");
+
+                    b.HasIndex("TenantId", "StudySiteId", "StudyId");
+
+                    b.HasIndex("TenantId", "EnrollmentId", "ParticipantId", "StudySiteId");
+
+                    b.ToTable("collection_instances", "kernel");
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.CollectionInstanceMember", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CollectionInstanceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("collection_instance_id");
+
+                    b.Property<string>("ItemId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("item_id");
+
+                    b.Property<DateTimeOffset>("JoinedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("joined_at");
+
+                    b.Property<Guid>("ObservationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("observation_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "ObservationId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "CollectionInstanceId", "ItemId")
+                        .IsUnique();
+
+                    b.ToTable("collection_instance_members", "kernel");
+                });
+
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Effectivity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3885,6 +4019,53 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.CollectionInstance", b =>
+                {
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Cadence.Kernel.Domain.Entities.ProtocolVersion", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ProtocolVersionId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Cadence.Kernel.Domain.Entities.StudySite", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "StudySiteId", "StudyId")
+                        .HasPrincipalKey("TenantId", "Id", "StudyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Enrollment", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "EnrollmentId", "ParticipantId", "StudySiteId")
+                        .HasPrincipalKey("TenantId", "Id", "ParticipantId", "StudySiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.CollectionInstanceMember", b =>
+                {
+                    b.HasOne("Cadence.Kernel.Domain.Entities.CollectionInstance", null)
+                        .WithMany("Members")
+                        .HasForeignKey("TenantId", "CollectionInstanceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Observation", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ObservationId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Effectivity", b =>
                 {
                     b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
@@ -4577,6 +4758,11 @@ namespace Cadence.Kernel.Persistence.Migrations
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Artifact", b =>
                 {
                     b.Navigation("Versions");
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.CollectionInstance", b =>
+                {
+                    b.Navigation("Members");
                 });
 
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Effectivity", b =>
