@@ -25,7 +25,8 @@ public class IcsrReportingEvaluationConfiguration : IEntityTypeConfiguration<Ics
         builder.Property(x => x.ApprovalStatus).HasMaxLength(50).IsRequired();
         builder.HasIndex(x => x.ApprovalStatus);
         builder.Property(x => x.ApprovedByUserId).HasMaxLength(255);
-        builder.Property(x => x.EsignatureManifestId).HasMaxLength(255);
+        // Holds a whole signed GxPSigner manifest, which never fits varchar(255) (#5482, ADR-2519).
+        builder.Property(x => x.EsignatureManifestId).HasColumnType("text");
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
     }
@@ -138,7 +139,8 @@ public class SafetyNarrativeConfiguration : IEntityTypeConfiguration<SafetyNarra
         builder.Property(x => x.ReviewStatus).HasMaxLength(50).IsRequired();
         builder.HasIndex(x => x.ReviewStatus);
         builder.Property(x => x.ApprovedByUserId).HasMaxLength(255);
-        builder.Property(x => x.EsignatureManifestId).HasMaxLength(255);
+        // Holds a whole signed GxPSigner manifest, which never fits varchar(255) (#5482, ADR-2519).
+        builder.Property(x => x.EsignatureManifestId).HasColumnType("text");
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
     }
@@ -273,7 +275,8 @@ public class SafetySignalAlertConfiguration : IEntityTypeConfiguration<SafetySig
         builder.Property(x => x.ReviewJustification).HasMaxLength(2000);
         builder.Property(x => x.ClinicalSummary).HasMaxLength(4000);
         builder.Property(x => x.ReviewedBy).HasMaxLength(255);
-        builder.Property(x => x.EsignatureManifestId).HasMaxLength(255);
+        // Holds a whole signed GxPSigner manifest, which never fits varchar(255) (#5482, ADR-2519).
+        builder.Property(x => x.EsignatureManifestId).HasColumnType("text");
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
     }
@@ -296,7 +299,7 @@ public class PeriodicSafetyReportRecordConfiguration : IEntityTypeConfiguration<
         builder.HasIndex(x => x.Status);
         builder.Property(x => x.ReportPayloadJson).HasColumnType("jsonb");
         builder.Property(x => x.ApprovedByUserId).HasMaxLength(255);
-        // Holds the whole signed GxPSigner manifest, far longer than 255 characters (#5462).
+        // Holds the whole signed GxPSigner manifest, far longer than 255 characters (#5462, ADR-2519).
         builder.Property(x => x.EsignatureManifestId).HasColumnType("text");
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
@@ -336,7 +339,8 @@ public class DeviceSafetyInvestigationConfiguration : IEntityTypeConfiguration<D
         builder.Property(x => x.RootCauseSummary).HasMaxLength(4000);
         builder.Property(x => x.CapaReference).HasMaxLength(255);
         builder.Property(x => x.SafetyPhysicianUserId).HasMaxLength(255);
-        builder.Property(x => x.EsignatureManifestId).HasMaxLength(255);
+        // Holds a whole signed GxPSigner manifest, which never fits varchar(255) (#5482, ADR-2519).
+        builder.Property(x => x.EsignatureManifestId).HasColumnType("text");
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
     }
