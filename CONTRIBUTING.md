@@ -85,8 +85,8 @@ commands, and fails if the .NET tests have no PostgreSQL rather than letting the
 CADENCE_TEST_POSTGRES="Host=localhost;Username=postgres;Password=postgres;Database=postgres" pnpm cadence ci
 ```
 
-In a shell without a terminal (an AI agent, a script, a pipe), prefix it with `TERM=dumb` or run it under
-`script -qc "…" /dev/null`, or the CLI prints its banner and none of the results.
+Without a terminal (an AI agent, a script, a pipe, a git hook) the CLI prints plain text without colours, so its
+output can be redirected to a file as it is.
 
 **PostgreSQL integration tests** are skipped unless you provide a database:
 `CADENCE_TEST_POSTGRES=<Npgsql connection string>` or `CADENCE_TEST_DOCKER=1` (Testcontainers).

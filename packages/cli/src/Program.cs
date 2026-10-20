@@ -2,6 +2,7 @@ using System;
 using System.CommandLine;
 
 using Cadence.Cli.Commands;
+using Cadence.Cli.Services;
 using Cadence.ToolingCore.Services;
 
 using Spectre.Console;
@@ -18,6 +19,10 @@ public static class Program
 {
     public static int Main(string[] args)
     {
+        // Without a terminal (a pipe, a log file, a git hook, an agent shell) Spectre can measure the console as -1
+        // columns and drop every markup line, so pick a plain console first (#5417).
+        CliConsole.ConfigureForCurrentProcess();
+
         // Hooks talk to an agent runtime over standard streams, so they print no banner.
         if (args is not ["hook", ..])
         {
