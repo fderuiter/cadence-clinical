@@ -62,6 +62,44 @@ public sealed class AgentRunnerTests
         complete.CostUsd.Should().Be(new ModelPrice { InputPerMillion = 5m, OutputPerMillion = 25m }.Of(complete.InputTokens, complete.OutputTokens));
     }
 
+    /// <summary>
+    /// When the inference layer refuses the route (tenant policy, residency or supplier, ADR-2636), the run is refused
+    /// before anything is recorded or sent.
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-SYS-051")]
+    public async Task RunAsync_WhenTheRouteIsRefused_RefusesWithoutCallingTheModel()
+    {
+        var model = new FakeChatClient();
+
+        var result = await Runner(model, clients: new FixedClients(IntelligenceErrors.InferenceRefused))
+            .RunAsync(Request(), TestContext.Current.CancellationToken);
+
+        result.Error.Should().Be(IntelligenceErrors.InferenceRefused);
+        model.Calls.Should().Be(0);
+        _sender.Sent.Should().BeEmpty();
+    }
+
+    /// <summary>The ledger entry records where the call went and what the outbound guard scrubbed, never the values.</summary>
+    [Fact]
+    [GxPRequirement("PRD-SYS-051")]
+    public async Task RunAsync_RecordsTheRouteAndScrubCounts()
+    {
+        var model = new FakeChatClient((_, _) => "Done.");
+        var scrubbing = new ScrubCountingClient(model, new Dictionary<string, int> { ["EMAIL"] = 2 });
+        var route = new AgentRunInference("aws-bedrock", "External", "ResidencyBound", "EU");
+
+        var result = await Runner(model, clients: new FixedClients(new RunChatClient(scrubbing, route)))
+            .RunAsync(Request(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue(result.Error?.Message);
+        var inference = _sender.Sent.OfType<CompleteAgentRun>().Single().Inference;
+        inference.Should().NotBeNull();
+        inference!.Supplier.Should().Be("aws-bedrock");
+        inference.Residency.Should().Be("EU");
+        inference.ScrubCountsJson.Should().Be("""{"EMAIL":2}""");
+    }
+
     /// <summary>A switched-off scope, tenant-wide or for the task, refuses the run before any model call or ledger write.</summary>
     [Theory]
     [InlineData(AgentControl.AllTasks)]
@@ -264,7 +302,8 @@ public sealed class AgentRunnerTests
     private static EvaluationEvidence Evidence() => new("eval-run-1", "sha256:" + new string('b', 64), "sha256:" + new string('a', 64), "{}");
 
     private AgentRunner Runner(
-        IChatClient client, TaskConfiguration? task = null, AgentRunnerOptions? options = null, bool qualify = true, TaskConfiguration[]? extra = null)
+        IChatClient client, TaskConfiguration? task = null, AgentRunnerOptions? options = null, bool qualify = true, TaskConfiguration[]? extra = null,
+        IRunChatClientFactory? clients = null)
     {
         TaskConfiguration[] configurations = [task ?? Configuration, .. extra ?? []];
         if (qualify)
@@ -278,11 +317,35 @@ public sealed class AgentRunnerTests
         return new AgentRunner(
             new Cadence.Modules.Intelligence.Infrastructure.Tasks.RegisteredTaskConfigurations(configurations),
             new ModelProviderRegistry([provider]),
+            clients ?? new ProviderRunChatClientFactory(),
             _ledger,
             _sender,
             _clock,
             options ?? AgentRunnerOptions.Default,
             NullLogger<AgentRunner>.Instance);
+    }
+
+    private sealed class FixedClients : IRunChatClientFactory
+    {
+        private readonly CommandResult<RunChatClient> _result;
+
+        public FixedClients(KernelError refusal) => _result = refusal;
+
+        public FixedClients(RunChatClient client) => _result = CommandResult<RunChatClient>.Success(client);
+
+        public Task<CommandResult<RunChatClient>> CreateAsync(AgentRunCall call, CancellationToken cancellationToken) => Task.FromResult(_result);
+    }
+
+    private sealed class ScrubCountingClient(IChatClient inner, Dictionary<string, int> counts) : DelegatingChatClient(inner)
+    {
+        public override async Task<ChatResponse> GetResponseAsync(
+            IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+        {
+            var response = await base.GetResponseAsync(messages, options, cancellationToken);
+            response.AdditionalProperties ??= [];
+            response.AdditionalProperties[AgentRunInference.ScrubCountsKey] = counts;
+            return response;
+        }
     }
 
     private sealed class RecordingSender : IKernelCommandSender

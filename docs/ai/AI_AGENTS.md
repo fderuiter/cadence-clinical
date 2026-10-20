@@ -117,6 +117,17 @@ deployment; orchestration routes each task to its qualified configuration under 
 subject portal and an MCP server. Evaluation sets from real clinical workflows, a calibrated LLM judge and production
 signals measure every configuration, and improvements arrive as reviewed pull requests, never as self-modification.
 
+## Inference and data sovereignty
+
+[ADR-2636](../adr/2026-10-20-inference-is-pluggable-residency-bound-and-sandboxed.md) decides where models run. Claude
+is reached through the Claude API, Claude Platform on AWS, Amazon Bedrock, Google Cloud Vertex AI or Microsoft Foundry,
+and a tenant can be limited to models the operator runs inside the deployment through an OpenAI-compatible endpoint.
+One router applies each tenant's inference policy (`LocalOnly`, `ResidencyBound` by default, or `Open`), the tenant's
+residency, the supplier's approval status and the task configuration's qualified routes, and records the route on the
+run. Every outbound request refuses identity-layer content and scrubs direct identifiers from free text as a
+protective control. Agent runs execute in a sandbox with no network beyond the routed model endpoint and the kernel read
+ports. Each provider has a supplier record the sponsor's quality unit approves (Annex 11 §3).
+
 ## Regulatory map
 
 [ADR-2630 §4.10](../adr/2026-10-20-ai-agents-act-through-proposals-in-one-governed-runtime.md#410-regulatory-map) maps

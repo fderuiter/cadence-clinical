@@ -160,6 +160,11 @@ public sealed class IntelligenceModulePostgresTests(IntelligenceModulePostgresFi
         run.ConfigurationHash.Should().Be(IntelligenceModulePostgresFixture.EchoTask.ContentHash);
         run.ResponseText.Should().Be(result.Value.Text);
         run.InputTokens.Should().BePositive();
+        run.InferenceSupplier.Should().Be("in-process", "the fake provider runs in the host and sends nothing (ADR-2636)");
+        run.InferenceLocality.Should().Be("InDeployment");
+        run.InferencePolicy.Should().Be("ResidencyBound", "a tenant without a policy is residency-bound");
+        run.InferenceResidency.Should().BeNull();
+        run.ScrubCounts.Should().Be("{}", "the outbound guard ran and found nothing to scrub");
         run.ContentHash.Should().NotBeNull().And.Be(run.ComputeContentHash(), "the entry reads back exactly as it was hashed");
         run.VersionIndex.Should().Be(2);
         (await fixture.Ledger.RunsAsync(tenant, KernelPostgresFixture.ActorId, 10, ct)).Select(r => r.Id).Should().Equal(run.Id);

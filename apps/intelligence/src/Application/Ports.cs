@@ -60,6 +60,30 @@ public interface IModelProviderRegistry
     IModelProvider? Find(string name);
 }
 
+/// <summary>One agent run's model call, before the client for it is built.</summary>
+/// <param name="Tenant">The tenant the run is for.</param>
+/// <param name="RunId">The ledger entry the run will write.</param>
+/// <param name="Configuration">The task configuration.</param>
+/// <param name="Provider">The provider the configuration names.</param>
+/// <param name="Model">The model id after any tier was resolved.</param>
+public sealed record AgentRunCall(TenantId Tenant, Guid RunId, TaskConfiguration Configuration, IModelProvider Provider, string Model);
+
+/// <summary>The client a run calls the model through, and where it routes (null when nothing was recorded).</summary>
+/// <param name="Client">The chat client for this run; the caller does not dispose it.</param>
+/// <param name="Inference">The route for the ledger, without scrub counts, which come with the response.</param>
+public sealed record RunChatClient(IChatClient Client, AgentRunInference? Inference);
+
+/// <summary>
+/// Builds the chat client one run calls the model through (ADR-2636 §4.2). The default is the provider's own client;
+/// the inference layer replaces it with the routed one: tenant policy, residency and supplier checks, failover inside
+/// the allowed routes, the outbound guard and the sandbox.
+/// </summary>
+public interface IRunChatClientFactory
+{
+    /// <summary>The client for <paramref name="call"/>, or the registered error saying why there is none.</summary>
+    Task<CommandResult<RunChatClient>> CreateAsync(AgentRunCall call, CancellationToken cancellationToken);
+}
+
 /// <summary>Reads the interaction ledger and the agent controls, within one tenant (Row-Level Security).</summary>
 public interface IAgentLedger
 {

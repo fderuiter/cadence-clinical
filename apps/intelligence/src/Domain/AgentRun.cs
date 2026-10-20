@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -109,6 +111,24 @@ public sealed class AgentRun : AggregateRoot<Guid>
     /// <summary>When the run was completed, from the kernel clock.</summary>
     public DateTimeOffset? CompletedAt { get; private set; }
 
+    /// <summary>The supplier record the model call went to (ADR-2636 §4.5), or null when no route was recorded.</summary>
+    public string? InferenceSupplier { get; private set; }
+
+    /// <summary>Where the model ran: <c>InDeployment</c> or <c>External</c> (ADR-2636 §4.1).</summary>
+    public string? InferenceLocality { get; private set; }
+
+    /// <summary>The tenant inference policy the route was chosen under: <c>ResidencyBound</c>, <c>LocalOnly</c> or <c>Open</c>.</summary>
+    public string? InferencePolicy { get; private set; }
+
+    /// <summary>The tenant's residency code when the route was chosen, or null when the tenant has none.</summary>
+    public string? InferenceResidency { get; private set; }
+
+    /// <summary>
+    /// What the outbound guard scrubbed before the call, as a JSON object of category to count with keys in ordinal
+    /// order (never the values), or null when nothing was recorded.
+    /// </summary>
+    public string? ScrubCounts { get; private set; }
+
     /// <summary>The SHA-256 of the completed entry's canonical JSON, lower-case hex; null while started.</summary>
     public string? ContentHash { get; private set; }
 
@@ -131,18 +151,20 @@ public sealed class AgentRun : AggregateRoot<Guid>
 
     /// <summary>Records the model's answer and usage.</summary>
     /// <exception cref="InvalidOperationException">The run is already completed.</exception>
-    public void Succeed(string responseText, long inputTokens, long outputTokens, decimal? costUsd, DateTimeOffset completedAt)
+    public void Succeed(
+        string responseText, long inputTokens, long outputTokens, decimal? costUsd, DateTimeOffset completedAt, AgentRunInference? inference = null)
     {
         ArgumentNullException.ThrowIfNull(responseText);
-        Complete(AgentRunStatus.Succeeded, responseText, null, inputTokens, outputTokens, costUsd, completedAt);
+        Complete(AgentRunStatus.Succeeded, responseText, null, inputTokens, outputTokens, costUsd, completedAt, inference);
     }
 
     /// <summary>Records that the model call failed.</summary>
     /// <exception cref="InvalidOperationException">The run is already completed.</exception>
-    public void Fail(string failureReason, long inputTokens, long outputTokens, decimal? costUsd, DateTimeOffset completedAt)
+    public void Fail(
+        string failureReason, long inputTokens, long outputTokens, decimal? costUsd, DateTimeOffset completedAt, AgentRunInference? inference = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(failureReason);
-        Complete(AgentRunStatus.Failed, null, failureReason, inputTokens, outputTokens, costUsd, completedAt);
+        Complete(AgentRunStatus.Failed, null, failureReason, inputTokens, outputTokens, costUsd, completedAt, inference);
     }
 
     /// <summary>The hash the completed entry should carry; equal to <see cref="ContentHash"/> unless the row was altered.</summary>
@@ -165,6 +187,11 @@ public sealed class AgentRun : AggregateRoot<Guid>
         OutputTokens,
         CostUsd = CostUsd?.ToString("F6", CultureInfo.InvariantCulture),
         CompletedAt = CompletedAt?.UtcTicks,
+        InferenceSupplier,
+        InferenceLocality,
+        InferencePolicy,
+        InferenceResidency,
+        ScrubCounts,
     }))));
 
     /// <summary>
@@ -184,7 +211,8 @@ public sealed class AgentRun : AggregateRoot<Guid>
         long inputTokens,
         long outputTokens,
         decimal? costUsd,
-        DateTimeOffset completedAt)
+        DateTimeOffset completedAt,
+        AgentRunInference? inference)
     {
         if (Status != AgentRunStatus.Started)
         {
@@ -205,6 +233,36 @@ public sealed class AgentRun : AggregateRoot<Guid>
         OutputTokens = outputTokens;
         CostUsd = costUsd is { } cost ? decimal.Round(cost, CostDecimals, MidpointRounding.AwayFromZero) : null;
         CompletedAt = ToStoredPrecision(completedAt);
+        InferenceSupplier = inference?.Supplier;
+        InferenceLocality = inference?.Locality;
+        InferencePolicy = inference?.Policy;
+        InferenceResidency = inference?.Residency;
+        ScrubCounts = inference?.ScrubCountsJson;
         ContentHash = ComputeContentHash();
     }
+}
+
+/// <summary>
+/// Where a run's model call went and what left with it (ADR-2636 §4.2, §4.3): recorded on the ledger entry and in its
+/// content hash, so an inspector can see that a tenant's data stayed where its policy says.
+/// </summary>
+/// <param name="Supplier">The supplier record's id.</param>
+/// <param name="Locality">Where the model ran: <c>InDeployment</c> or <c>External</c>.</param>
+/// <param name="Policy">The tenant inference policy the route was chosen under.</param>
+/// <param name="Residency">The tenant's residency code, or null.</param>
+/// <param name="Scrubbed">How many values of each category the outbound guard replaced, or null.</param>
+public sealed record AgentRunInference(
+    string Supplier,
+    string Locality,
+    string Policy,
+    string? Residency,
+    IReadOnlyDictionary<string, int>? Scrubbed = null)
+{
+    /// <summary>The response property under which the outbound guard reports its counts.</summary>
+    public const string ScrubCountsKey = "cadence.outbound_scrub";
+
+    /// <summary><see cref="Scrubbed"/> as a JSON object with keys in ordinal order, or null when there is none.</summary>
+    public string? ScrubCountsJson => Scrubbed is null
+        ? null
+        : JsonSerializer.Serialize(new SortedDictionary<string, int>(Scrubbed.ToDictionary(), StringComparer.Ordinal));
 }
