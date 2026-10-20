@@ -26,8 +26,8 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 > GitHub Actions does not run jobs for this repository until 2027: every check on a pull request fails within seconds
 > without running. Until then, run `pnpm cadence ci` (or `make ci`) before merging. It runs the jobs above on your
 > machine with the same commands and needs PostgreSQL for the .NET tests ([cli.md](cli.md#cadence-ci)). A full run
-> takes about 20 minutes: `CADENCE_TEST_POSTGRES=<connection string> pnpm cadence ci`. In a shell without a terminal
-> (an AI agent, a script, a pipe), add `TERM=dumb` or run it under `script -qc "…" /dev/null`, or only the banner prints.
+> takes about 20 minutes: `CADENCE_TEST_POSTGRES=<connection string> pnpm cadence ci`. Without a terminal (an AI agent,
+> a script, a pipe, a git hook) the CLI prints plain text, so its output can be redirected to a file as it is.
 
 ## Quality gates
 

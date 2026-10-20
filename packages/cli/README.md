@@ -7,6 +7,11 @@ Developer and CI command-line tool, published as a Native AOT binary. System.Com
 - Project: `packages/cli/src/Cadence.Cli.csproj` (assembly `cadence`; `PackAsTool` with command name `cadence`).
 - `Program.cs`: command tree, registered with `AddCommand` and `AddBranch` (the `cli-docs` gate reads these calls). `Commands/`: static classes for commands that take options or have their own logic. `Services/`: the gate registry (`QualityGates.cs`: each gate's name, aliases, check and pre-commit behaviour; `cadence check`, its help text, the gate count and the gate tables in `docs/cli.md` and `docs/CI.md` come from it, the tables through `GateDocs.cs`), the local CI runner, the hooks and the GxP guards; most checks delegate to [packages/tooling_core](../tooling_core/README.md).
 - The tool is not registered in `.config/dotnet-tools.json`, so run it with `dotnet run` (or `pnpm cadence`, which does the same).
+- Output without a terminal: `Services/CliConsole.cs` runs first in `Main`. When standard output is redirected (a pipe, a log
+  file, a git hook, an agent shell) or the terminal has no ANSI support, it swaps `AnsiConsole.Console` for a plain
+  console: no escape codes or colours, not interactive, 120 columns. Spectre's own detection measured such a console as
+  -1 columns wide under `TERM=linux` and dropped every markup line, including gate failures (#5417). No `TERM=dumb` or
+  `script` wrapper is needed.
 - Time (K-TIME-3): the project bans `DateTime.Now/UtcNow`. `scaffold adr` takes today's date from `Cadence.Kernel.Time.SystemClock`.
 
 ## Usage
@@ -65,4 +70,6 @@ not AOT-safe fails `dotnet publish packages/cli/src/Cadence.Cli.csproj -c Releas
   and branch validation: two branches with differently tagged tests pass and merge without a conflict on the GxP documents.
 - `tests/Cadence.UnitTests/Packages/BaselineRatchetServiceTests.cs`: the `baseline-ratchet` gate
   (`Services/BaselineRatchetService.cs`): growth fails without a `Baseline-Growth` trailer, and shrinks and reorders pass.
+- `tests/Cadence.UnitTests/Packages/CliConsoleTests.cs`: plain output when there is no terminal (`Services/CliConsole.cs`),
+  including the CLI run as a process with redirected output and `TERM=linux` or no `TERM`, which must print its failure.
 - Architecture rules cover the assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
