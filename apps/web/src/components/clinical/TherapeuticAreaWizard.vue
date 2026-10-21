@@ -14,6 +14,37 @@
       </div>
     </div>
 
+    <!-- Storage Error / Auto-Save Failure Alert Banner -->
+    <div
+      v-if="storageError"
+      class="storage-warning-banner alert alert-warning"
+      role="alert"
+    >
+      <div class="banner-content">
+        <span class="banner-icon" aria-hidden="true">⚠️</span>
+        <div class="banner-text">
+          <strong>Auto-Save Warning:</strong> {{ storageError }}
+        </div>
+      </div>
+      <div class="banner-actions">
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-warning btn-retry-save"
+          @click="saveState"
+        >
+          🔄 Retry Auto-Save
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm btn-link btn-dismiss-warning"
+          aria-label="Dismiss storage warning"
+          @click="dismissStorageError"
+        >
+          ✕ Dismiss
+        </button>
+      </div>
+    </div>
+
     <!-- Step 1: TA Template Selection Cards -->
     <div class="ta-selection-section">
       <h4 class="section-subtitle">
@@ -453,14 +484,19 @@ import {
   type PlannedVisit,
 } from "../../data/therapeuticAreaTemplates";
 import { useOnboardingStore } from "../../stores/onboarding";
+import { useToastStore } from "../../stores/toasts.js";
 
 const emit = defineEmits<{
   (e: "synthesize", payload: Record<string, any>): void;
 }>();
 
 const onboardingStore = useOnboardingStore();
+const toastStore = useToastStore();
 
 const STORAGE_KEY = "cadence_ta_wizard_state";
+
+const storageError = ref<string | null>(null);
+const isStorageAvailable = ref<boolean>(true);
 
 const templateList = computed(() => Object.values(THERAPEUTIC_AREA_TEMPLATES));
 
@@ -474,17 +510,34 @@ function cloneTemplate(template: TherapeuticAreaTemplate) {
 
 // Load initial configuration state from localStorage if available
 function loadSavedState(): { templateId: string; config: any } | null {
-  if (typeof window === "undefined" || !window.localStorage) return null;
+  if (typeof window === "undefined") {
+    isStorageAvailable.value = false;
+    return null;
+  }
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const storage = window.localStorage;
+    if (!storage) {
+      isStorageAvailable.value = false;
+      return null;
+    }
+    const raw = storage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && parsed.templateId && parsed.config) {
+        isStorageAvailable.value = true;
         return parsed;
       }
     }
-  } catch (e) {
+  } catch (e: any) {
     console.warn("Failed to load TA wizard state from localStorage", e);
+    isStorageAvailable.value = false;
+    const detail = e?.message || "Storage read access failed or corrupted data.";
+    storageError.value = `Failed to load saved state: ${detail}`;
+    toastStore.push({
+      tone: "warning",
+      title: "Saved State Load Failure",
+      message: "Could not restore saved protocol design from local storage. Default template loaded.",
+    });
   }
   return null;
 }
@@ -500,27 +553,61 @@ const activeConfig = ref<any>(
     : cloneTemplate(THERAPEUTIC_AREA_TEMPLATES[selectedTemplateId.value])
 );
 
+// Persist active configuration to localStorage
+function saveState(): boolean {
+  if (typeof window === "undefined") {
+    isStorageAvailable.value = false;
+    storageError.value = "Browser environment unavailable for local storage.";
+    return false;
+  }
+  if (!activeConfig.value) return false;
+
+  try {
+    const storage = window.localStorage;
+    if (!storage) {
+      isStorageAvailable.value = false;
+      storageError.value = "Local storage is disabled or restricted in this browser session.";
+      return false;
+    }
+    storage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        templateId: selectedTemplateId.value,
+        config: activeConfig.value,
+      })
+    );
+    isStorageAvailable.value = true;
+    if (storageError.value) {
+      storageError.value = null;
+    }
+    return true;
+  } catch (e: any) {
+    console.warn("Failed to persist TA wizard state to localStorage", e);
+    isStorageAvailable.value = false;
+    const detail = e?.message || "Storage quota exceeded or write permissions restricted.";
+    const newMsg = `Auto-save paused: ${detail}`;
+
+    if (!storageError.value) {
+      toastStore.push({
+        tone: "warning",
+        title: "Auto-Save Failed",
+        message: "Failed to persist protocol design to local storage. Your changes remain preserved in memory.",
+      });
+    }
+    storageError.value = newMsg;
+    return false;
+  }
+}
+
+function dismissStorageError() {
+  storageError.value = null;
+}
+
 // Watch activeConfig and selectedTemplateId for changes to persist
 watch(
-  [selectedTemplateId, activeConfig],
+  () => [selectedTemplateId.value, activeConfig.value],
   () => {
-    if (
-      typeof window !== "undefined" &&
-      window.localStorage &&
-      activeConfig.value
-    ) {
-      try {
-        window.localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify({
-            templateId: selectedTemplateId.value,
-            config: activeConfig.value,
-          })
-        );
-      } catch (e) {
-        console.warn("Failed to persist TA wizard state to localStorage", e);
-      }
-    }
+    saveState();
   },
   { deep: true }
 );
@@ -646,6 +733,70 @@ function synthesizeProtocol() {
   margin-bottom: 24px;
   padding-bottom: 16px;
   border-bottom: 1px solid #f1f5f9;
+}
+
+.storage-warning-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  color: #92400e;
+  font-size: 0.875rem;
+}
+
+.banner-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.banner-icon {
+  font-size: 1.2rem;
+}
+
+.banner-text {
+  line-height: 1.4;
+}
+
+.banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-retry-save {
+  background-color: #fef3c7;
+  border: 1px solid #f59e0b;
+  color: #78350f;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.btn-retry-save:hover {
+  background-color: #fde68a;
+}
+
+.btn-dismiss-warning {
+  background: none;
+  border: none;
+  color: #92400e;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  text-decoration: underline;
+}
+
+.btn-dismiss-warning:hover {
+  color: #78350f;
 }
 
 .header-title-box h3 {

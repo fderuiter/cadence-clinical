@@ -155,4 +155,114 @@ describe("TherapeuticAreaWizard.vue - Interactive Therapeutic Area Wizard Specif
     const parsed = JSON.parse(savedRaw!);
     expect(parsed.config.protocol_id).toBe("CUSTOM-PERSISTED-001");
   });
+
+  it("captures localStorage read/parse errors during loadSavedState()", async () => {
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    window.localStorage.setItem("cadence_ta_wizard_state", "{ invalid json }");
+
+    const wrapper = mount(TherapeuticAreaWizard, {
+      global: {
+        plugins: [pinia],
+      },
+    });
+
+    expect(wrapper.vm.storageError).not.toBeNull();
+    expect(wrapper.vm.storageError).toContain("Failed to load saved state");
+    expect(wrapper.vm.isStorageAvailable).toBe(false);
+    expect(consoleWarnSpy).toHaveBeenCalled();
+    expect(wrapper.find(".storage-warning-banner").exists()).toBe(true);
+  });
+
+  it("captures localStorage.setItem errors, sets storageError, dispatches toast, and displays inline banner", async () => {
+    const setItemSpy = vi
+      .spyOn(window.localStorage, "setItem")
+      .mockImplementation(() => {
+        throw new DOMException("QuotaExceededError", "QuotaExceededError");
+      });
+
+    const wrapper = mount(TherapeuticAreaWizard, {
+      global: {
+        plugins: [pinia],
+      },
+    });
+
+    // Clear initial state
+    wrapper.vm.storageError = null;
+
+    // Trigger state change to execute watcher
+    wrapper.vm.activeConfig.protocol_id = "FAIL-PERSIST-001";
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.vm.storageError).toContain("Auto-save paused");
+    expect(wrapper.vm.isStorageAvailable).toBe(false);
+
+    const banner = wrapper.find(".storage-warning-banner");
+    expect(banner.exists()).toBe(true);
+    expect(banner.text()).toContain("Auto-Save Warning");
+  });
+
+  it("prevents duplicate toast spam on repeated watch executions while in error state", async () => {
+    const setItemSpy = vi
+      .spyOn(window.localStorage, "setItem")
+      .mockImplementation(() => {
+        throw new DOMException("QuotaExceededError", "QuotaExceededError");
+      });
+
+    const wrapper = mount(TherapeuticAreaWizard, {
+      global: {
+        plugins: [pinia],
+      },
+    });
+
+    // Initial edit triggers error and toast
+    wrapper.vm.activeConfig.protocol_id = "KESTROKE-1";
+    await wrapper.vm.$nextTick();
+    expect(wrapper.vm.storageError).not.toBeNull();
+
+    // Subsequent edits while in error state update activeConfig without throw disruption
+    wrapper.vm.activeConfig.protocol_id = "KEYSTROKE-2";
+    await wrapper.vm.$nextTick();
+    expect(wrapper.vm.activeConfig.protocol_id).toBe("KEYSTROKE-2");
+  });
+
+  it("allows user to dismiss and retry storage error banner", async () => {
+    let shouldFail = true;
+    vi.spyOn(window.localStorage, "setItem").mockImplementation((key, value) => {
+      if (shouldFail) {
+        throw new DOMException("QuotaExceededError", "QuotaExceededError");
+      }
+    });
+
+    const wrapper = mount(TherapeuticAreaWizard, {
+      global: {
+        plugins: [pinia],
+      },
+    });
+
+    wrapper.vm.activeConfig.protocol_id = "RETRY-TEST";
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find(".storage-warning-banner").exists()).toBe(true);
+
+    // Test dismiss button
+    const dismissBtn = wrapper.find(".btn-dismiss-warning");
+    await dismissBtn.trigger("click");
+
+    expect(wrapper.vm.storageError).toBeNull();
+    expect(wrapper.find(".storage-warning-banner").exists()).toBe(false);
+
+    // Set error again for retry test
+    wrapper.vm.activeConfig.protocol_id = "RETRY-TEST-2";
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find(".storage-warning-banner").exists()).toBe(true);
+
+    // Fix storage issue and click retry
+    shouldFail = false;
+    const retryBtn = wrapper.find(".btn-retry-save");
+    await retryBtn.trigger("click");
+
+    expect(wrapper.vm.storageError).toBeNull();
+    expect(wrapper.vm.isStorageAvailable).toBe(true);
+    expect(wrapper.find(".storage-warning-banner").exists()).toBe(false);
+  });
 });
