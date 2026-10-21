@@ -241,10 +241,26 @@ public class ConsentWithdrawal
     public string ReasonForChange { get; set; } = string.Empty;
 }
 
+public class BiometricLivenessVerification
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string ConsentId { get; set; } = string.Empty;
+    public string SubjectPseudonym { get; set; } = string.Empty;
+    public string LivenessToken { get; set; } = string.Empty;
+    public string LivenessTokenHash { get; set; } = string.Empty;
+    public decimal AntiSpoofScore { get; set; }
+    public bool IsLive { get; set; }
+    public string Status { get; set; } = "VERIFIED";
+    public required DateTimeOffset VerifiedAt { get; set; }
+    public required DateTimeOffset CreatedAt { get; set; }
+    public string CreatedBy { get; set; } = string.Empty;
+    public string ReasonForChange { get; set; } = string.Empty;
+}
+
 /// <summary>
 /// Binds a captured e-signature to the content it signed (21 CFR 11.70 signature/record linking) without keeping the
 /// raw capture. The binding is SHA-256 over the UTF-8 bytes of
-/// <c>"cadence.econsent.signature-binding.v1\n" + documentDigestSha256 + "\n" + signatureData</c>, lowercase hex.
+/// <c>"cadence.econsent.signature-binding.v1\n" + documentDigestSha256 + "\n" + signatureData[\n + livenessTokenHash]</c>, lowercase hex.
 /// Migration <c>ProtectSignerEmailAndBindSignatureData</c> computes the same value in SQL for existing rows.
 /// </summary>
 public static class ConsentSignatureBinding
@@ -252,11 +268,13 @@ public static class ConsentSignatureBinding
     /// <summary>Domain-separation label; change it (and the version suffix) if the input layout ever changes.</summary>
     public const string Label = "cadence.econsent.signature-binding.v1";
 
-    /// <summary>Returns the lowercase hex SHA-256 binding of <paramref name="signatureData"/> to the document digest.</summary>
-    public static string Compute(string? documentDigestSha256, string signatureData)
+    /// <summary>Returns the lowercase hex SHA-256 binding of <paramref name="signatureData"/> to the document digest and optional liveness token hash.</summary>
+    public static string Compute(string? documentDigestSha256, string signatureData, string? livenessTokenHash = null)
     {
         ArgumentNullException.ThrowIfNull(signatureData);
-        string input = $"{Label}\n{documentDigestSha256 ?? string.Empty}\n{signatureData}";
+        string input = string.IsNullOrWhiteSpace(livenessTokenHash)
+            ? $"{Label}\n{documentDigestSha256 ?? string.Empty}\n{signatureData}"
+            : $"{Label}\n{documentDigestSha256 ?? string.Empty}\n{signatureData}\n{livenessTokenHash}";
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(input)));
     }
 
@@ -264,14 +282,14 @@ public static class ConsentSignatureBinding
     /// True when <paramref name="signatureData"/> and <paramref name="documentDigestSha256"/> reproduce the stored
     /// <paramref name="bindingSha256"/>. Compares in constant time.
     /// </summary>
-    public static bool Matches(string? bindingSha256, string? documentDigestSha256, string signatureData)
+    public static bool Matches(string? bindingSha256, string? documentDigestSha256, string signatureData, string? livenessTokenHash = null)
     {
         if (bindingSha256 is null)
         {
             return false;
         }
 
-        byte[] expected = Encoding.ASCII.GetBytes(Compute(documentDigestSha256, signatureData));
+        byte[] expected = Encoding.ASCII.GetBytes(Compute(documentDigestSha256, signatureData, livenessTokenHash));
         byte[] actual = Encoding.ASCII.GetBytes(bindingSha256.ToLowerInvariant());
         return CryptographicOperations.FixedTimeEquals(expected, actual);
     }

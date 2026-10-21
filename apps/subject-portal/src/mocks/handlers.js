@@ -2,6 +2,38 @@ import { http, HttpResponse, passthrough } from "msw";
 import { isGatewayApiCall, validateGatewayRequest } from "ui/testing";
 
 export const gatewayHandlers = [
+  http.post("*/api/v1/ai/biometrics/verify-liveness", async ({ request }) => {
+    const body = await request.json().catch(() => ({}));
+    const subject = body.subject_pseudonym || "subj-001";
+    const isFallback = Boolean(body.fallback_mode);
+    const frames = body.video_frames || [];
+    const isLive = isFallback || frames.length > 0;
+    const score = isFallback ? 0.92 : isLive ? 0.98 : 0.15;
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    const token = `mock_liveness_token_${subject}_${isFallback ? "fallback" : "camera"}_${Date.now()}`;
+
+    if (!isLive) {
+      return HttpResponse.json(
+        {
+          liveness_token: token,
+          is_live: false,
+          anti_spoof_score: score,
+          expires_at: expiresAt,
+          status: "REJECTED",
+        },
+        { status: 400 }
+      );
+    }
+
+    return HttpResponse.json({
+      liveness_token: token,
+      is_live: true,
+      anti_spoof_score: score,
+      expires_at: expiresAt,
+      status: "VERIFIED",
+    });
+  }),
+
   http.post(
     "*/api/v1/payments/participant/expenses/ocr-extract",
     async ({ request }) => {

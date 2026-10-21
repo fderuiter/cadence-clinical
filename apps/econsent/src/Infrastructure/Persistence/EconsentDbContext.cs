@@ -36,6 +36,7 @@ public sealed class EconsentDbContext(DbContextOptions<EconsentDbContext> option
     public DbSet<SubjectConsentOptionSelection> SubjectConsentOptionSelections => Set<SubjectConsentOptionSelection>();
     public DbSet<ReconsentRequirement> ReconsentRequirements => Set<ReconsentRequirement>();
     public DbSet<ConsentWithdrawal> ConsentWithdrawals => Set<ConsentWithdrawal>();
+    public DbSet<BiometricLivenessVerification> BiometricLivenessVerifications => Set<BiometricLivenessVerification>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -64,6 +65,7 @@ public sealed class EconsentDbContext(DbContextOptions<EconsentDbContext> option
         modelBuilder.ApplyConfiguration(new SubjectConsentOptionSelectionConfiguration());
         modelBuilder.ApplyConfiguration(new ReconsentRequirementConfiguration());
         modelBuilder.ApplyConfiguration(new ConsentWithdrawalConfiguration());
+        modelBuilder.ApplyConfiguration(new BiometricLivenessVerificationConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
 
         modelBuilder.AddTransactionalOutboxEntities();

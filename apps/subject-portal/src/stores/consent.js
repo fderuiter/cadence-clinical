@@ -17,5 +17,7 @@ export const useConsentStore = defineStore("consent", {
       reason: "Protocol Amendment Re-Consent Acknowledgment",
       customReason: "",
     },
+    consentLivenessToken: null,
+    livenessVerified: false,
   }),
 });

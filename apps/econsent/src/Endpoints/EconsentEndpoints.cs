@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -48,6 +50,7 @@ public sealed record CaptureConsentRequest(
     [property: JsonPropertyName("protocol_version")] string? ProtocolVersion,
     [property: JsonPropertyName("digest_sha256")] string? DigestSha256,
     [property: JsonPropertyName("signature_data")] string? SignatureData,
+    [property: JsonPropertyName("liveness_token")] string? LivenessToken,
     [property: JsonPropertyName("device_timestamp")] DateTimeOffset? DeviceTimestamp);
 
 public sealed record CaptureConsentResponse(
@@ -203,6 +206,18 @@ public static class EconsentEndpoints
             errors["signature_data"] = ["SignatureData is required."];
         }
 
+        DateTimeOffset now = timeProvider.GetUtcNow();
+
+        BiometricLivenessTokenData? livenessData = null;
+        if (string.IsNullOrWhiteSpace(request.LivenessToken))
+        {
+            errors["liveness_token"] = ["Valid liveness token is required."];
+        }
+        else if (!BiometricLivenessTokenService.VerifyToken(request.LivenessToken, request.SubjectPseudonym, out livenessData, now: now))
+        {
+            errors["liveness_token"] = ["Liveness token is invalid or expired."];
+        }
+
         if (errors.Count > 0)
         {
             return TypedResults.ValidationProblem(errors);
@@ -216,12 +231,13 @@ public static class EconsentEndpoints
         // The participant or representative signs; the record is attributed to the signed-in staff member who captured it.
         string capturedBy = Caller(httpContext);
 
-        DateTimeOffset now = timeProvider.GetUtcNow();
         string subjectPseudonym = request.SubjectPseudonym!;
         string studyId = request.StudyId!;
         string siteId = request.SiteId!;
         string digestHash = request.DigestSha256!;
         string signatureData = request.SignatureData!;
+        string livenessToken = request.LivenessToken!;
+        string livenessTokenHash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(livenessToken)));
 
         string signerName = !string.IsNullOrWhiteSpace(request.SignerName) ? request.SignerName : subjectPseudonym;
         string signerRole = !string.IsNullOrWhiteSpace(request.SignerRole) ? request.SignerRole : "Subject";
@@ -242,7 +258,7 @@ public static class EconsentEndpoints
 
         string protocolVersion = !string.IsNullOrWhiteSpace(request.ProtocolVersion) ? request.ProtocolVersion : "v1.0";
 
-        var bindingSha256 = ConsentSignatureBinding.Compute(digestHash, signatureData);
+        var bindingSha256 = ConsentSignatureBinding.Compute(digestHash, signatureData, livenessTokenHash);
 
         var manifestData = new
         {
@@ -289,8 +305,40 @@ public static class EconsentEndpoints
             ReasonForChange = meaning
         };
 
+        var livenessRecord = new BiometricLivenessVerification
+        {
+            Id = Guid.NewGuid().ToString(),
+            ConsentId = consentRecord.Id,
+            SubjectPseudonym = subjectPseudonym,
+            LivenessToken = livenessToken,
+            LivenessTokenHash = livenessTokenHash,
+            AntiSpoofScore = livenessData?.AntiSpoofScore ?? 0.98m,
+            IsLive = livenessData?.IsLive ?? true,
+            Status = "VERIFIED",
+            VerifiedAt = livenessData is not null ? DateTimeOffset.FromUnixTimeSeconds(livenessData.IssuedAtUnix) : now,
+            CreatedAt = now,
+            CreatedBy = capturedBy,
+            ReasonForChange = "Facial liveness verification completed"
+        };
+
+        var auditRecord = new ConsentAuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            Timestamp = now,
+            ActorId = capturedBy,
+            ActorRole = signerRole,
+            Action = "BIOMETRIC_LIVENESS_VERIFIED",
+            DocumentId = consentRecord.Id,
+            Details = $"Biometric liveness verified with anti-spoof score {livenessRecord.AntiSpoofScore} for subject {subjectPseudonym}",
+            ReasonForChange = "Liveness verification for consent capture",
+            TenantId = "tenant_default",
+            Sha256Digest = livenessTokenHash
+        };
+
         dbContext.SubjectConsents.Add(consentRecord);
         dbContext.ConsentSignatures.Add(signatureRecord);
+        dbContext.BiometricLivenessVerifications.Add(livenessRecord);
+        dbContext.ConsentAuditLogs.Add(auditRecord);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var response = new CaptureConsentResponse(

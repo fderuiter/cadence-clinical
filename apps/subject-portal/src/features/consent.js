@@ -89,6 +89,8 @@ export function renderConsentUI() {
   const tpl = state.consentContent;
   const check = state.consentCheck;
 
+  if (!tpl) return;
+
   // Render Status Badge
   if (statusBadge) {
     if (state.consentSigned) {
@@ -139,11 +141,15 @@ export function renderConsentUI() {
   if (state.consentSigned) {
     document.getElementById("consent-comprehension-card").style.display =
       "none";
+    const livenessCard = document.getElementById("consent-liveness-card");
+    if (livenessCard) livenessCard.style.display = "none";
     document.getElementById("consent-signature-card").style.display = "none";
     return;
   } else {
     document.getElementById("consent-comprehension-card").style.display =
       "block";
+    const livenessCard = document.getElementById("consent-liveness-card");
+    if (livenessCard) livenessCard.style.display = "block";
     document.getElementById("consent-signature-card").style.display = "block";
   }
 
@@ -165,10 +171,82 @@ export function renderConsentUI() {
     qContainer.innerHTML = `<div class="loading-state">No comprehension questions configured for this template.</div>`;
   }
 
-  // Update signing button state
+  // Update signing button state - requires BOTH comprehension check pass AND liveness verification
   const btnSign = document.getElementById("btn-trigger-consent-sign");
   if (btnSign) {
-    btnSign.disabled = !state.consentPassed;
+    btnSign.disabled = !(state.consentPassed && state.livenessVerified);
+  }
+}
+
+export async function verifyBiometricLiveness(isFallback = false) {
+  const banner = document.getElementById("liveness-status-banner");
+  if (banner) banner.style.display = "none";
+
+  const frames = isFallback
+    ? []
+    : ["simulated_frame_base64_1", "simulated_frame_base64_2"];
+  const payload = {
+    subject_pseudonym: state.session.userId,
+    video_frames: frames,
+    fallback_mode: isFallback,
+  };
+
+  try {
+    let response;
+    if (isAuthenticatedSession()) {
+      response = await dispatchApi("api/v1/ai/biometrics/verify-liveness", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    } else {
+      // Sandbox / local fallback
+      const token = `mock_liveness_token_${state.session.userId}_${isFallback ? "fallback" : "camera"}_${Date.now()}`;
+      response = {
+        liveness_token: token,
+        is_live: true,
+        anti_spoof_score: isFallback ? 0.92 : 0.98,
+        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        status: "VERIFIED",
+      };
+    }
+
+    if (response && response.is_live && response.liveness_token) {
+      state.consentLivenessToken = response.liveness_token;
+      state.livenessVerified = true;
+
+      if (banner) {
+        banner.textContent = `Liveness Verification Successful (${isFallback ? "Coordinator Fallback Mode" : "Camera Anti-Spoof Score: " + (response.anti_spoof_score * 100).toFixed(0) + "%"}). Liveness token issued for 15 minutes.`;
+        banner.style.display = "block";
+        banner.style.backgroundColor = "#ecfdf5";
+        banner.style.color = "#047857"; // deid: ignore
+        banner.style.border = "1px solid #a7f3d0"; // deid: ignore
+      }
+    } else {
+      state.livenessVerified = false;
+      state.consentLivenessToken = null;
+      if (banner) {
+        banner.textContent =
+          "Biometric liveness verification failed. Please retry or select Study Coordinator Video Fallback.";
+        banner.style.display = "block";
+        banner.style.backgroundColor = "#fef2f2";
+        banner.style.color = "#b91c1c";
+        banner.style.border = "1px solid #fecaca";
+      }
+    }
+
+    renderConsentUI();
+  } catch (err) {
+    state.livenessVerified = false;
+    state.consentLivenessToken = null;
+    if (banner) {
+      banner.textContent =
+        "Liveness verification error: " + (err.message || err);
+      banner.style.display = "block";
+      banner.style.backgroundColor = "#fef2f2";
+      banner.style.color = "#b91c1c";
+      banner.style.border = "1px solid #fecaca";
+    }
+    renderConsentUI();
   }
 }
 

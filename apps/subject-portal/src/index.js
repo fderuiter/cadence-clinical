@@ -27,6 +27,7 @@ import {
   loadConsentDetails,
   renderConsentUI,
   submitConsentAnswers,
+  verifyBiometricLiveness,
 } from "./features/consent.js";
 import { acknowledgeNotification, renderInbox } from "./features/inbox.js";
 import { showView } from "./features/navigation.js";
@@ -95,6 +96,7 @@ export {
   loadConsentDetails,
   renderConsentUI,
   submitConsentAnswers,
+  verifyBiometricLiveness,
   openSignatureModal,
   closeSignatureModal,
   markFieldInvalid,

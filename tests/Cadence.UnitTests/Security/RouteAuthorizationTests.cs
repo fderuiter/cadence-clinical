@@ -71,6 +71,7 @@ public sealed class RouteAuthorizationTests
         ("kernel", "GET /api/v1/ai/controls", "The tenant's AI kill switches and budgets, which every member may see so they know whether an assistant is off."),
         ("kernel", "PUT /api/v1/ai/controls/{scope}", "Sends SetAgentControl, which the kernel authority evaluator authorizes against agent_control.set (ADR-2630)."),
         ("kernel", "POST /api/v1/ai/mcp", "Read-only agent tools for outside agents (ADR-2633): every read runs as the signed-in caller, masked for both the caller and the agent, and no tool writes."),
+        ("kernel", "POST /api/v1/ai/biometrics/verify-liveness", "Anti-spoof facial liveness verification generates short-lived HMAC signed tokens for consent capture."),
     ];
 
     private const string ProbeHeader = "X-Authorization-Probe";
