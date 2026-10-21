@@ -133,6 +133,11 @@ public sealed class QualityGateRegistryTests : IDisposable
             Write("apps/alpha/src/Program.cs", "class Program { }\n");
             return Context();
         },
+        ["codeowners"] = () =>
+        {
+            Write(".github/CODEOWNERS", "* @fderuiter\n/nonexistent/path/ @fderuiter\n");
+            return Context();
+        },
         ["imports"] = () =>
         {
             Write("apps/alpha/src/Uses.cs", "using Cadence.Apps.Beta.Domain;\n\nclass Uses { }\n");

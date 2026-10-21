@@ -99,6 +99,8 @@ public static class QualityGates
             ctx => DevEnvironmentValidatorService.ValidateDevEnvironment(ctx.RepoRoot) == 0),
         new("readmes", ["validate-readmes"], "Each directory under `apps/` and `packages/` has a README with a title",
             ctx => ReadmeValidatorService.ValidateReadmes(ctx.RepoRoot) == 0),
+        new("codeowners", ["validate-codeowners"], "Path pattern existence and owner handle syntax in `.github/CODEOWNERS`",
+            ctx => CodeownersValidatorService.ValidateCodeowners(ctx.RepoRoot) == 0),
         new("imports", ["validate-imports"], "No `using` of another service's namespace across `apps/<service>`",
             ctx => ImportValidatorService.ValidateImports(ctx.RepoRoot) == 0),
         new("security", ["audit-security"], "Hard-coded secret patterns (private keys, AWS secret keys)",
