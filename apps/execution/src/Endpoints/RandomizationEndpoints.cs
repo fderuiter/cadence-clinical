@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,6 +25,18 @@ namespace Cadence.Apps.Execution.Endpoints;
 /// </summary>
 public static class RandomizationEndpoints
 {
+    /// <summary>The semantic action a scheme approval step-up token must carry.</summary>
+    public const string ApproveSchemeSemanticAction = "execution.form.approve";
+
+    /// <summary>The semantic action a subject randomization step-up token must carry.</summary>
+    public const string RandomizeSubjectSemanticAction = "execution.subject.randomize";
+
+    /// <summary>The concrete action a scheme approval's step-up token is bound to.</summary>
+    public static string ApproveSchemeAction(Guid schemeId) => $"/api/v1/execution/randomization/schemes/{schemeId:D}/approve";
+
+    /// <summary>The concrete action a subject randomization's step-up token is bound to.</summary>
+    public static string RandomizeSubjectAction(string subjectId) => $"/api/v1/execution/subjects/{subjectId}/randomize";
+
     public static IEndpointRouteBuilder MapRandomizationEndpoints(this IEndpointRouteBuilder app)
     {
         var schemes = app.MapGroup("/api/v1/execution/randomization/schemes").WithTags("Randomization");
@@ -42,10 +55,12 @@ public static class RandomizationEndpoints
             .WithName("ApproveRandomizationScheme")
             .WithSummary("Approves a draft version for go-live, retiring the previous one and generating its list.")
             .Produces<RandomizationSchemeResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission("randomization_scheme:approve")
+            .RequireElectronicSignature(ApproveSchemeSemanticAction, ApproveSchemeActionFor)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         schemes.MapGet("/", ListSchemesAsync)
@@ -62,14 +77,24 @@ public static class RandomizationEndpoints
             .WithSummary("Randomises an enrolled participant under the live scheme and assigns a kit when it needs one.")
             .Produces<RandomizationResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission("subject_enrollment:randomize")
+            .RequireElectronicSignature(RandomizeSubjectSemanticAction, RandomizeSubjectActionFor)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         return app;
     }
+
+    private static string ApproveSchemeActionFor(HttpContext context) =>
+        Guid.TryParse(context.Request.RouteValues["schemeId"]?.ToString(), CultureInfo.InvariantCulture, out var schemeId)
+            ? ApproveSchemeAction(schemeId)
+            : string.Empty;
+
+    private static string RandomizeSubjectActionFor(HttpContext context) =>
+        RandomizeSubjectAction(context.Request.RouteValues["subjectId"]?.ToString() ?? string.Empty);
 
     /// <summary><c>POST /api/v1/execution/randomization/schemes</c>.</summary>
     public static async Task<IResult> DraftSchemeAsync(

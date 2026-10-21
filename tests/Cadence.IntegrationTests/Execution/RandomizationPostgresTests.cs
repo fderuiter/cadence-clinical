@@ -13,9 +13,11 @@ using Cadence.Apps.Execution.Domain.Compliance;
 using Cadence.Apps.Execution.Domain.Randomization;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Domain.Supply;
+using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
+using Cadence.Security.Rbac;
 using Cadence.Testing;
 using Cadence.Testing.Security;
 using Cadence.TestSupport.Execution;
@@ -79,8 +81,9 @@ public sealed class RandomizationPostgresTests(ExecutionPostgresApiFactory facto
         }
         string subject = await SeedEnrolledAsync();
 
-        using var crc = factory.CreateSignedClient(Caller("crc", "crc"));
-        var response = await crc.PostAsJsonAsync($"/api/v1/execution/subjects/{subject}/randomize", new { }, Ct);
+        var crcCaller = Caller("crc", "crc");
+        using var crc = factory.CreateSignedClient(crcCaller);
+        var response = await PostRandomizeSubjectAsync(crc, crcCaller, subject);
 
         string body = await response.Content.ReadAsStringAsync(Ct);
         response.StatusCode.Should().Be(HttpStatusCode.OK, body);
@@ -147,8 +150,9 @@ public sealed class RandomizationPostgresTests(ExecutionPostgresApiFactory facto
 
         var responses = await Task.WhenAll(subjects.Select(async s =>
         {
-            using var client = factory.CreateSignedClient(Caller("crc", "crc"));
-            return await client.PostAsJsonAsync($"/api/v1/execution/subjects/{s}/randomize", new { }, Ct);
+            var crcCaller = Caller("crc", "crc");
+            using var client = factory.CreateSignedClient(crcCaller);
+            return await PostRandomizeSubjectAsync(client, crcCaller, s);
         }));
 
         responses.Should().OnlyContain(r => r.StatusCode == HttpStatusCode.OK);
@@ -164,8 +168,9 @@ public sealed class RandomizationPostgresTests(ExecutionPostgresApiFactory facto
         await using var db = await OpenAsync();
         (await CountAsync(db, "SELECT count(DISTINCT \"Sequence\") FROM randomization_allocations WHERE \"StudyCode\" = @study", Study)).Should().Be(4);
 
-        using var next = factory.CreateSignedClient(Caller("crc", "crc"));
-        var exhausted = await next.PostAsJsonAsync($"/api/v1/execution/subjects/{await SeedEnrolledAsync()}/randomize", new { }, Ct);
+        var nextCaller = Caller("crc", "crc");
+        using var next = factory.CreateSignedClient(nextCaller);
+        var exhausted = await PostRandomizeSubjectAsync(next, nextCaller, await SeedEnrolledAsync());
         exhausted.StatusCode.Should().Be(HttpStatusCode.Conflict);
         (await exhausted.Content.ReadAsStringAsync(Ct)).Should().Contain("RANDOMIZATION_LIST_EXHAUSTED");
     }
@@ -186,11 +191,12 @@ public sealed class RandomizationPostgresTests(ExecutionPostgresApiFactory facto
             requires_kit = false,
         });
 
-        using var crc = factory.CreateSignedClient(Caller("crc", "crc"));
+        var crcCaller = Caller("crc", "crc");
+        using var crc = factory.CreateSignedClient(crcCaller);
         foreach (string sex in new[] { "F", "M", "F", "M" })
         {
-            var response = await crc.PostAsJsonAsync($"/api/v1/execution/subjects/{await SeedEnrolledAsync()}/randomize",
-                new { stratification_factors = new Dictionary<string, string> { ["sex"] = sex } }, Ct);
+            var response = await PostRandomizeSubjectAsync(crc, crcCaller, await SeedEnrolledAsync(),
+                new { stratification_factors = new Dictionary<string, string> { ["sex"] = sex } });
             response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
         }
 
@@ -208,8 +214,9 @@ public sealed class RandomizationPostgresTests(ExecutionPostgresApiFactory facto
         await ApproveDefaultSchemeAsync();
         string subject = await SeedEnrolledAsync(activateSite: false);
 
-        using var crc = factory.CreateSignedClient(Caller("crc-blocked", "crc"));
-        var response = await crc.PostAsJsonAsync($"/api/v1/execution/subjects/{subject}/randomize", new { }, Ct);
+        var crcCaller = Caller("crc-blocked", "crc");
+        using var crc = factory.CreateSignedClient(crcCaller);
+        var response = await PostRandomizeSubjectAsync(crc, crcCaller, subject);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("RANDOMIZATION_BLOCKED_SITE");
@@ -225,8 +232,9 @@ public sealed class RandomizationPostgresTests(ExecutionPostgresApiFactory facto
         await ApproveDefaultSchemeAsync();
         string subject = await SeedEnrolledAsync(consent: false);
 
-        using var crc = factory.CreateSignedClient(Caller("crc-noconsent", "crc"));
-        var response = await crc.PostAsJsonAsync($"/api/v1/execution/subjects/{subject}/randomize", new { }, Ct);
+        var crcCaller = Caller("crc-noconsent", "crc");
+        using var crc = factory.CreateSignedClient(crcCaller);
+        var response = await PostRandomizeSubjectAsync(crc, crcCaller, subject);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("RANDOMIZATION_REQUIRES_CONSENT");
@@ -237,18 +245,20 @@ public sealed class RandomizationPostgresTests(ExecutionPostgresApiFactory facto
     public async Task SchemeApproval_ByItsAuthor_IsRefused_AndStateChangeCannotRandomise()
     {
         factory.SkipIfUnavailable();
-        using var author = factory.CreateSignedClient(Caller("stat-a", "unblinded_statistician"));
+        var authorCaller = Caller("stat-a", "unblinded_statistician");
+        using var author = factory.CreateSignedClient(authorCaller);
         var drafted = await author.PostAsJsonAsync("/api/v1/execution/randomization/schemes", DefaultScheme(), Ct);
         drafted.StatusCode.Should().Be(HttpStatusCode.Created, await drafted.Content.ReadAsStringAsync(Ct));
         using var scheme = JsonDocument.Parse(await drafted.Content.ReadAsStringAsync(Ct));
         string id = scheme.RootElement.GetProperty("id").GetString()!;
 
-        var selfApproval = await author.PostAsync($"/api/v1/execution/randomization/schemes/{id}/approve", null, Ct);
+        var selfApproval = await PostApproveSchemeAsync(author, authorCaller, id);
         selfApproval.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         string subject = await SeedEnrolledAsync();
-        using var crc = factory.CreateSignedClient(Caller("crc", "crc"));
-        var notLive = await crc.PostAsJsonAsync($"/api/v1/execution/subjects/{subject}/randomize", new { }, Ct);
+        var crcCaller = Caller("crc", "crc");
+        using var crc = factory.CreateSignedClient(crcCaller);
+        var notLive = await PostRandomizeSubjectAsync(crc, crcCaller, subject);
         notLive.StatusCode.Should().Be(HttpStatusCode.Conflict);
         (await notLive.Content.ReadAsStringAsync(Ct)).Should().Contain("RANDOMIZATION_NOT_LIVE");
 
@@ -265,8 +275,9 @@ public sealed class RandomizationPostgresTests(ExecutionPostgresApiFactory facto
         factory.SkipIfUnavailable();
         await ApproveDefaultSchemeAsync();
         string subject = await SeedEnrolledAsync();
-        using var crc = factory.CreateSignedClient(Caller("crc", "crc"));
-        (await crc.PostAsJsonAsync($"/api/v1/execution/subjects/{subject}/randomize", new { }, Ct)).StatusCode
+        var crcCaller = Caller("crc", "crc");
+        using var crc = factory.CreateSignedClient(crcCaller);
+        (await PostRandomizeSubjectAsync(crc, crcCaller, subject)).StatusCode
             .Should().Be(HttpStatusCode.OK);
 
         await using var db = await OpenAsync();
@@ -275,8 +286,101 @@ public sealed class RandomizationPostgresTests(ExecutionPostgresApiFactory facto
         await ShouldRefuseAsync(db, "UPDATE randomization_list_slots SET \"AllocationId\" = NULL WHERE \"AllocationId\" IS NOT NULL AND \"SchemeId\" IN (SELECT \"Id\" FROM randomization_schemes WHERE \"StudyCode\" = @study)");
         await ShouldRefuseAsync(db, "DELETE FROM randomization_list_slots WHERE \"SchemeId\" IN (SELECT \"Id\" FROM randomization_schemes WHERE \"StudyCode\" = @study)");
 
-        (await crc.PostAsJsonAsync($"/api/v1/execution/subjects/{subject}/randomize", new { }, Ct)).StatusCode
+        (await PostRandomizeSubjectAsync(crc, crcCaller, subject)).StatusCode
             .Should().Be(HttpStatusCode.Conflict, "a participant is randomised once");
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("SRS-SYS-005")]
+    public async Task SchemeApproval_WithoutSigToken_Returns401ReauthenticationRequired()
+    {
+        factory.SkipIfUnavailable();
+        using var author = factory.CreateSignedClient(Caller("stat-a", "unblinded_statistician"));
+        using var approver = factory.CreateSignedClient(Caller("stat-b", "unblinded_statistician"));
+        var drafted = await author.PostAsJsonAsync("/api/v1/execution/randomization/schemes", DefaultScheme(), Ct);
+        drafted.StatusCode.Should().Be(HttpStatusCode.Created);
+        using var scheme = JsonDocument.Parse(await drafted.Content.ReadAsStringAsync(Ct));
+        string id = scheme.RootElement.GetProperty("id").GetString()!;
+
+        using var response = await approver.PostAsync($"/api/v1/execution/randomization/schemes/{id}/approve", null, Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        string body = await response.Content.ReadAsStringAsync(Ct);
+        body.Should().Contain(SigTokenVerifier.ReauthenticationRequired);
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("SRS-SYS-005")]
+    public async Task SubjectRandomization_WithoutSigToken_Returns401ReauthenticationRequired()
+    {
+        factory.SkipIfUnavailable();
+        await ApproveDefaultSchemeAsync();
+        string subject = await SeedEnrolledAsync();
+
+        using var crc = factory.CreateSignedClient(Caller("crc", "crc"));
+        using var response = await crc.PostAsJsonAsync($"/api/v1/execution/subjects/{subject}/randomize", new { }, Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        string body = await response.Content.ReadAsStringAsync(Ct);
+        body.Should().Contain(SigTokenVerifier.ReauthenticationRequired);
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("SRS-SYS-005")]
+    public async Task SchemeApproval_ReusingConsumedSigToken_Returns401ReauthenticationRequired()
+    {
+        factory.SkipIfUnavailable();
+        var approverCaller = Caller("stat-b", "unblinded_statistician");
+        using var author = factory.CreateSignedClient(Caller("stat-a", "unblinded_statistician"));
+        using var approver = factory.CreateSignedClient(approverCaller);
+        var drafted = await author.PostAsJsonAsync("/api/v1/execution/randomization/schemes", DefaultScheme(), Ct);
+        drafted.StatusCode.Should().Be(HttpStatusCode.Created);
+        using var scheme = JsonDocument.Parse(await drafted.Content.ReadAsStringAsync(Ct));
+        string id = scheme.RootElement.GetProperty("id").GetString()!;
+
+        string path = RandomizationEndpoints.ApproveSchemeAction(Guid.Parse(id));
+        string sigToken = TestSecurityContext.CreateSigToken(
+            approverCaller.UserId,
+            path,
+            RandomizationEndpoints.ApproveSchemeSemanticAction,
+            roles: [RoleNormalization.ROLE_UNBLINDED_STATISTICIAN]);
+
+        using var response1 = await PostApproveSchemeAsync(approver, approverCaller, id, sigToken: sigToken);
+        response1.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var response2 = await PostApproveSchemeAsync(approver, approverCaller, id, sigToken: sigToken);
+        response2.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        string body = await response2.Content.ReadAsStringAsync(Ct);
+        body.Should().Contain(SigTokenVerifier.ReauthenticationRequired);
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("SRS-SYS-005")]
+    public async Task SubjectRandomization_ReusingConsumedSigToken_Returns401ReauthenticationRequired()
+    {
+        factory.SkipIfUnavailable();
+        await ApproveDefaultSchemeAsync();
+        string subject = await SeedEnrolledAsync();
+
+        var crcCaller = Caller("crc", "crc");
+        using var crc = factory.CreateSignedClient(crcCaller);
+
+        string path = RandomizationEndpoints.RandomizeSubjectAction(subject);
+        string sigToken = TestSecurityContext.CreateSigToken(
+            crcCaller.UserId,
+            path,
+            RandomizationEndpoints.RandomizeSubjectSemanticAction,
+            roles: [RoleNormalization.ROLE_CRC]);
+
+        using var response1 = await PostRandomizeSubjectAsync(crc, crcCaller, subject, sigToken: sigToken);
+        response1.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var response2 = await PostRandomizeSubjectAsync(crc, crcCaller, subject, sigToken: sigToken);
+        response2.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        string body = await response2.Content.ReadAsStringAsync(Ct);
+        body.Should().Contain(SigTokenVerifier.ReauthenticationRequired);
     }
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -298,15 +402,54 @@ public sealed class RandomizationPostgresTests(ExecutionPostgresApiFactory facto
     /// <summary>Drafts a scheme as one statistician and approves it as another.</summary>
     private async Task ApproveSchemeAsync(object draft)
     {
-        using var author = factory.CreateSignedClient(Caller("stat-a", "unblinded_statistician"));
-        using var approver = factory.CreateSignedClient(Caller("stat-b", "unblinded_statistician"));
+        var authorCaller = Caller("stat-a", "unblinded_statistician");
+        var approverCaller = Caller("stat-b", "unblinded_statistician");
+        using var author = factory.CreateSignedClient(authorCaller);
+        using var approver = factory.CreateSignedClient(approverCaller);
         var drafted = await author.PostAsJsonAsync("/api/v1/execution/randomization/schemes", draft, Ct);
         drafted.StatusCode.Should().Be(HttpStatusCode.Created, await drafted.Content.ReadAsStringAsync(Ct));
         using var scheme = JsonDocument.Parse(await drafted.Content.ReadAsStringAsync(Ct));
         string id = scheme.RootElement.GetProperty("id").GetString()!;
 
-        var approved = await approver.PostAsync($"/api/v1/execution/randomization/schemes/{id}/approve", null, Ct);
+        var approved = await PostApproveSchemeAsync(approver, approverCaller, id);
         approved.StatusCode.Should().Be(HttpStatusCode.OK, await approved.Content.ReadAsStringAsync(Ct));
+    }
+
+    private static async Task<HttpResponseMessage> PostApproveSchemeAsync(
+        HttpClient client, GatewayIdentity caller, string schemeId, string? sigToken = null)
+    {
+        string path = RandomizationEndpoints.ApproveSchemeAction(Guid.Parse(schemeId));
+        using var request = new HttpRequestMessage(HttpMethod.Post, path);
+        string token = sigToken ?? TestSecurityContext.CreateSigToken(
+            caller.UserId,
+            path,
+            RandomizationEndpoints.ApproveSchemeSemanticAction,
+            roles: [RoleNormalization.ROLE_UNBLINDED_STATISTICIAN]);
+        if (!string.IsNullOrEmpty(token))
+        {
+            request.Headers.Add(GatewayHeaders.SigToken, token);
+        }
+        return await client.SendAsync(request, Ct);
+    }
+
+    private static async Task<HttpResponseMessage> PostRandomizeSubjectAsync(
+        HttpClient client, GatewayIdentity caller, string subjectId, object? body = null, string? sigToken = null)
+    {
+        string path = RandomizationEndpoints.RandomizeSubjectAction(subjectId);
+        using var request = new HttpRequestMessage(HttpMethod.Post, path)
+        {
+            Content = JsonContent.Create(body ?? new { })
+        };
+        string token = sigToken ?? TestSecurityContext.CreateSigToken(
+            caller.UserId,
+            path,
+            RandomizationEndpoints.RandomizeSubjectSemanticAction,
+            roles: [RoleNormalization.NormalizeRole(caller.Roles.FirstOrDefault() ?? "crc")]);
+        if (!string.IsNullOrEmpty(token))
+        {
+            request.Headers.Add(GatewayHeaders.SigToken, token);
+        }
+        return await client.SendAsync(request, Ct);
     }
 
     /// <summary>
