@@ -5,6 +5,7 @@ import { retryCompliance } from "../features/compliance.js";
 import {
   loadConsentDetails,
   submitConsentAnswers,
+  verifyBiometricLiveness,
 } from "../features/consent.js";
 import { retryInbox } from "../features/inbox.js";
 import {
@@ -83,6 +84,20 @@ export function bindPortalControls() {
   if (btnSubmitAnswers) {
     btnSubmitAnswers.addEventListener("click", () => {
       submitConsentAnswers();
+    });
+  }
+
+  const btnVerifyLiveness = document.getElementById("btn-verify-liveness");
+  if (btnVerifyLiveness) {
+    btnVerifyLiveness.addEventListener("click", () => {
+      verifyBiometricLiveness(false);
+    });
+  }
+
+  const btnLivenessFallback = document.getElementById("btn-liveness-fallback");
+  if (btnLivenessFallback) {
+    btnLivenessFallback.addEventListener("click", () => {
+      verifyBiometricLiveness(true);
     });
   }
 

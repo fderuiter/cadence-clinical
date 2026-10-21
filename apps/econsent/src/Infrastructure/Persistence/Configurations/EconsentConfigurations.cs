@@ -303,3 +303,24 @@ public class ConsentWithdrawalConfiguration : IEntityTypeConfiguration<ConsentWi
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
     }
 }
+
+public class BiometricLivenessVerificationConfiguration : IEntityTypeConfiguration<BiometricLivenessVerification>
+{
+    public void Configure(EntityTypeBuilder<BiometricLivenessVerification> builder)
+    {
+        builder.ToTable("biometric_liveness_verifications");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.ConsentId).HasMaxLength(36).IsRequired();
+        builder.HasIndex(x => x.ConsentId);
+        builder.Property(x => x.SubjectPseudonym).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.SubjectPseudonym);
+        builder.Property(x => x.LivenessToken).IsRequired();
+        builder.Property(x => x.LivenessTokenHash).HasMaxLength(64).IsRequired();
+        builder.HasIndex(x => x.LivenessTokenHash);
+        builder.Property(x => x.AntiSpoofScore).HasColumnType("numeric(5,4)").IsRequired();
+        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+    }
+}

@@ -166,9 +166,90 @@
       </div>
 
       <!-- Signature Section -->
+      <!-- Biometric Liveness Check Form Section -->
+      <div id="consent-liveness-card" class="card" style="margin-bottom: 24px">
+        <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px">
+          <span>📹</span> Step 2: Biometric Facial Liveness Verification
+        </h3>
+        <p
+          style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px"
+        >
+          To ensure 21 CFR Part 11 identity verification and prevent spoofing,
+          please complete a short camera video liveness check. Video frames are
+          processed strictly in temporary memory and zero frames are persisted
+          to disk.
+        </p>
+
+        <!-- Status Feedback region -->
+        <div
+          id="liveness-status-banner"
+          style="
+            display: none;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            font-weight: 600;
+          "
+          role="status"
+          aria-live="polite"
+        >
+          <!-- Success / Failure live statuses -->
+        </div>
+
+        <div
+          id="liveness-camera-simulator"
+          style="
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.02);
+            margin-bottom: 16px;
+          "
+        >
+          <div style="font-size: 32px; margin-bottom: 8px">📷</div>
+          <p style="margin: 0; font-size: 14px; font-weight: 500">
+            Camera Active - Anti-Spoofing Frame Capture Simulator
+          </p>
+          <p
+            style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted)"
+          >
+            Ensure your face is clearly visible in the frame before clicking
+            verify.
+          </p>
+        </div>
+
+        <div
+          class="form-actions"
+          style="display: flex; gap: 12px; flex-wrap: wrap"
+        >
+          <button
+            id="btn-verify-liveness"
+            type="button"
+            class="btn btn-primary"
+          >
+            Verify Biometric Liveness
+          </button>
+
+          <button
+            id="btn-liveness-fallback"
+            type="button"
+            class="btn btn-secondary"
+            style="
+              border: 1px solid var(--border-color);
+              background: transparent;
+            "
+          >
+            Study Coordinator Video Fallback
+          </button>
+        </div>
+      </div>
+
+      <!-- Signature Section -->
       <div id="consent-signature-card" class="card" style="margin-bottom: 24px">
         <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px">
-          <span>✍️</span> Step 2: Electronic Signature
+          <span>✍️</span> Step 3: Electronic Signature
         </h3>
         <p
           style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px"

@@ -84,6 +84,12 @@ beforeEach(async () => {
               <button type="button" id="btn-submit-consent-answers">Submit Answers</button>
             </div>
 
+            <div id="consent-liveness-card">
+              <div id="liveness-status-banner" style="display: none;" role="status" aria-live="polite"></div>
+              <button type="button" id="btn-verify-liveness">Verify Liveness</button>
+              <button type="button" id="btn-liveness-fallback">Fallback</button>
+            </div>
+
             <div id="consent-signature-card">
               <button type="button" id="btn-trigger-consent-sign" disabled>Sign Consent</button>
             </div>
@@ -128,6 +134,8 @@ beforeEach(async () => {
   portal.state.pendingSignableAction = null;
   portal.state.consentContent = null;
   portal.state.consentCheck = null;
+  portal.state.consentLivenessToken = null;
+  portal.state.livenessVerified = false;
   portal.state.ledgerBlocks = [];
 });
 
@@ -187,10 +195,51 @@ describe("eConsent Patient Portal - Workflow and Gating Integration Tests", () =
 
     await portal.submitConsentAnswers();
 
-    // Sign action should now be fully available
-    expect(btnTriggerSign.disabled).toBe(false);
+    // Comprehension check passed, but Sign button remains disabled until liveness check is complete
     expect(portal.state.consentPassed).toBe(true);
+    expect(btnTriggerSign.disabled).toBe(true);
     expect(banner.textContent).toContain("Congratulations");
+
+    // Perform liveness verification
+    await portal.verifyBiometricLiveness();
+
+    // Sign action should now be fully available
+    expect(portal.state.livenessVerified).toBe(true);
+    expect(portal.state.consentLivenessToken).toBeDefined();
+    expect(btnTriggerSign.disabled).toBe(false);
+  });
+
+  it("performs biometric liveness verification and sets liveness token in state", async () => {
+    const portal = await import("../src/index.js");
+    await portal.initializeApp();
+    await portal.loadConsentDetails();
+
+    await portal.verifyBiometricLiveness(false);
+
+    expect(portal.state.livenessVerified).toBe(true);
+    expect(portal.state.consentLivenessToken).toContain("mock_liveness_token");
+    expect(portal.state.consentLivenessToken).toContain("camera");
+
+    const livenessBanner = document.getElementById("liveness-status-banner");
+    expect(livenessBanner.style.display).toBe("block");
+    expect(livenessBanner.textContent).toContain(
+      "Liveness Verification Successful"
+    );
+  });
+
+  it("supports study coordinator video fallback for liveness verification", async () => {
+    const portal = await import("../src/index.js");
+    await portal.initializeApp();
+    await portal.loadConsentDetails();
+
+    await portal.verifyBiometricLiveness(true);
+
+    expect(portal.state.livenessVerified).toBe(true);
+    expect(portal.state.consentLivenessToken).toContain("fallback");
+
+    const livenessBanner = document.getElementById("liveness-status-banner");
+    expect(livenessBanner.style.display).toBe("block");
+    expect(livenessBanner.textContent).toContain("Coordinator Fallback Mode");
   });
 
   it("verifies strict credential hygiene: cleans PIN/password inputs immediately on submit or cancel", async () => {
@@ -198,10 +247,13 @@ describe("eConsent Patient Portal - Workflow and Gating Integration Tests", () =
     await portal.initializeApp();
 
     portal.state.consentPassed = true;
+    portal.state.livenessVerified = true;
+    portal.state.consentLivenessToken = "mock-token-123";
     await portal.loadConsentDetails(); // Populates tpl and check structures correctly
     portal.renderConsentUI();
 
     const btnTriggerSign = document.getElementById("btn-trigger-consent-sign");
+    expect(btnTriggerSign.disabled).toBe(false);
     btnTriggerSign.click();
 
     const modal = document.getElementById("portal-sign-modal");
@@ -226,6 +278,8 @@ describe("eConsent Patient Portal - Workflow and Gating Integration Tests", () =
     await portal.initializeApp();
 
     portal.state.consentPassed = true;
+    portal.state.livenessVerified = true;
+    portal.state.consentLivenessToken = "mock-token-123";
     await portal.loadConsentDetails();
     portal.renderConsentUI();
 

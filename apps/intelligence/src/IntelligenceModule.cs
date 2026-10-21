@@ -125,6 +125,6 @@ public static class IntelligenceModule
     public static IEndpointRouteBuilder MapIntelligenceModule(this IEndpointRouteBuilder app)
     {
         ArgumentNullException.ThrowIfNull(app);
-        return app.MapIntentEndpoints().MapIntelligenceEndpoints();
+        return app.MapIntentEndpoints().MapIntelligenceEndpoints().MapBiometricEndpoints();
     }
 }

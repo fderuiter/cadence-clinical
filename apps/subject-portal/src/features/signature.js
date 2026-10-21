@@ -146,6 +146,7 @@ export async function verifyAndSubmitSignature() {
               subject_pseudonym: state.session.userId,
               signature_data: cleanUsername,
               reason_for_change: finalReason,
+              liveness_token: state.consentLivenessToken,
             }),
             headers: {
               "X-Sig-Token": sigToken,
