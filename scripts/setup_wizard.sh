@@ -186,7 +186,7 @@ fi
 # --------------------------------------------------------------------------
 stage "Final Validation" "Running 'cadence doctor' across the whole stack..."
 if command -v dotnet >/dev/null 2>&1; then
-  dotnet run --project packages/cli/src/Cadence.Cli.csproj -- doctor || warn_failed "'cadence doctor' reported issues above — review before continuing."
+  node scripts/run-cli.js doctor || warn_failed "'cadence doctor' reported issues above — review before continuing."
 else
   info "Skipped 'cadence doctor' (.NET SDK not available)."
 fi

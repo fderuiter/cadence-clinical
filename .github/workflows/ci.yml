@@ -139,7 +139,7 @@ jobs:
             global.json
 
       - name: Run Markdown validation
-        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check markdown
+        run: node scripts/run-cli.js check markdown
 
   dotnet-quality:
     name: .NET Quality & Sentinel Checks
@@ -325,7 +325,7 @@ jobs:
       - name: Run static analysis
         id: run_static
         if: always()
-        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check audit-security
+        run: node scripts/run-cli.js check audit-security
 
       - name: Build container image for security scan
         if: github.event_name == 'push'
@@ -355,15 +355,15 @@ jobs:
         if: always()
         run: |
           python3 -m pip install --quiet --upgrade pip pip-audit==2.10.1 || true
-          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check vulnerabilities
+          node scripts/run-cli.js check vulnerabilities
 
       - name: Run secret detection
         id: run_secrets
         if: always()
         run: |
-          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check clean-secrets
+          node scripts/run-cli.js check clean-secrets
           git diff --exit-code .secrets.baseline
-          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check security
+          node scripts/run-cli.js check security
 
       - name: Run detect-secrets against the baseline
         id: run_detect_secrets
@@ -392,7 +392,7 @@ jobs:
             echo "Scanning changed files: $CHANGED_FILES"
             mapfile -t DEID_FILES_ARRAY < <(printf '%s\n' "$CHANGED_FILES" | grep -v '^$')
             if [ ${#DEID_FILES_ARRAY[@]} -gt 0 ] && [ -n "${DEID_FILES_ARRAY[0]}" ]; then
-              dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check deid "${DEID_FILES_ARRAY[@]}"
+              node scripts/run-cli.js check deid "${DEID_FILES_ARRAY[@]}"
             fi
           else
             echo "No changed files to scan."
@@ -602,10 +602,10 @@ jobs:
       - name: Generate Compliance Reports
         # A feature branch validates its requirement tags and results and writes a preview; it never changes the
         # committed snapshot (ADR-2532). Snapshot PRs from the integration owner set CADENCE_GXP_SNAPSHOT=1.
-        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- gxp sync
+        run: node scripts/run-cli.js gxp sync
 
       - name: Check GxP Snapshot Policy
-        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check gxp-snapshot
+        run: node scripts/run-cli.js check gxp-snapshot
 
   classify:
     name: Classify Change

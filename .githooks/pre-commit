@@ -59,7 +59,7 @@ if command -v dotnet >/dev/null 2>&1; then
             exit 1
         fi
     fi
-    dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check --pre-commit
+    node scripts/run-cli.js check --pre-commit
 else
     echo "::error:: .NET SDK not found. Please install .NET 10 SDK to run Cadence quality gates."
     exit 1

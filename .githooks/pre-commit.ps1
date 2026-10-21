@@ -39,7 +39,7 @@ if ($dotnet) {
 
 # 3. Run the quality gates (same as .githooks/pre-commit)
 Write-Host "  Running the Cadence quality gates..." -ForegroundColor Gray
-& dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check --pre-commit
+& node scripts/run-cli.js check --pre-commit
 if ($LASTEXITCODE -ne 0) {
     Write-Host "::error:: A quality gate failed. Run 'pnpm cadence check <gate>' for the failing gate." -ForegroundColor Red
     exit 1

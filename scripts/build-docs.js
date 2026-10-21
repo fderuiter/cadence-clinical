@@ -352,17 +352,17 @@ try {
     );
   } else {
     runCommand(
-      "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check"
+      "node scripts/run-cli.js check"
     );
     runCommand(
-      "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- validate-markdown"
+      "node scripts/run-cli.js validate-markdown"
     );
   }
   runCommand(
-    "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-schema-doc"
+    "node scripts/run-cli.js generate-schema-doc"
   );
   runCommand(
-    "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-api-docs"
+    "node scripts/run-cli.js generate-api-docs"
   );
 
   // 2. Run compliance compiler
@@ -376,11 +376,11 @@ try {
 
   if (hasReport && !isEnvDraft) {
     runCommand(
-      "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-rtm"
+      "node scripts/run-cli.js generate-rtm"
     );
   } else {
     runCommand(
-      "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-rtm --draft"
+      "node scripts/run-cli.js generate-rtm --draft"
     );
   }
 
