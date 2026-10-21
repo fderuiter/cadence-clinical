@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Toxicity;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
@@ -21,6 +22,13 @@ namespace Cadence.Apps.Execution.Endpoints;
 /// </summary>
 public static class LabToxicityEndpoints
 {
+    public const string ReviewActionSemanticAction = "execution.lab_toxicity_review.action";
+
+    public static string ReviewActionPath(string reviewId) => $"/api/v1/execution/labs/toxicity/review/{reviewId}/action";
+
+    private static string ReviewActionFor(HttpContext httpContext) =>
+        ReviewActionPath(httpContext.Request.RouteValues["review_id"]?.ToString() ?? string.Empty);
+
     public static IEndpointRouteBuilder MapLabToxicityEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/v1/execution/labs/toxicity")
@@ -41,9 +49,11 @@ public static class LabToxicityEndpoints
             .WithDescription("Perform Investigator workflow action on a staged Grade 3/4 AE (Confirm, Dismiss, Escalate).")
             .Produces<StagedAdverseEventActionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
             .AddEndpointFilter<ChangeReasonHeaderFilter>()
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("lab_toxicity_review:review");
+            .RequirePermission("lab_toxicity_review:review")
+            .RequireElectronicSignature(ReviewActionSemanticAction, ReviewActionFor);
 
         group.MapPost("/evaluate", EvaluateToxicityAsync)
             .WithName("EvaluateLabToxicityEndpoint")
