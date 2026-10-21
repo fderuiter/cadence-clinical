@@ -32,7 +32,8 @@
     "build:demo": "pnpm --filter ui build && pnpm --filter web build:demo",
     "docs:dev": "node scripts/build-docs.js --prepare-only && vitepress dev docs",
     "docs:build": "node scripts/build-docs.js",
-    "build:docs": "node scripts/build-docs.js"
+    "build:docs": "node scripts/build-docs.js",
+    "prepare": "node scripts/setup-git-hooks.js"
   },
   "repository": {
     "type": "git",
