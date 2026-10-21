@@ -389,4 +389,143 @@ describe("feat(fileshare): 09 — HLS Adaptive Streaming in Media Player (#4316)
 
     wrapper.unmount();
   });
+
+  describe("Strict GxP Playback Audit Gating & Recovery", () => {
+    it("defers checkpoint state tracking until recordPlaybackAudit resolves and pauses video on failure after retries", async () => {
+      fileshareService.recordPlaybackAudit.mockRejectedValue(
+        new Error("Network transmission error")
+      );
+
+      const pauseSpy = vi.fn();
+      const originalPause = HTMLMediaElement.prototype.pause;
+      HTMLMediaElement.prototype.pause = pauseSpy;
+
+      const wrapper = mount(MediaPreviewModal, {
+        props: {
+          fileRecord: mockVideoFile,
+        },
+      });
+
+      await flushPromises();
+
+      // Sidebar initially shows Audit Active
+      const statusBadge = wrapper.find('[data-testid="audit-status-badge"]');
+      expect(statusBadge.text()).toBe("Audit Active");
+
+      const video = wrapper.find("video.video-element");
+      await video.trigger("playing");
+
+      // Advance timers for 0s, 2s, 4s, 8s backoff attempts
+      await vi.advanceTimersByTimeAsync(15000);
+      await flushPromises();
+
+      // 1 initial + 3 retries = 4 attempts total
+      expect(fileshareService.recordPlaybackAudit).toHaveBeenCalledTimes(4);
+      expect(pauseSpy).toHaveBeenCalled();
+
+      // Compliance overlay should appear and sidebar status should be Audit Interrupted
+      expect(wrapper.find('[data-testid="audit-error-overlay"]').exists()).toBe(
+        true
+      );
+      expect(wrapper.text()).toContain("Audit Telemetry Interrupted");
+      expect(statusBadge.text()).toBe("Audit Interrupted");
+
+      HTMLMediaElement.prototype.pause = originalPause;
+      wrapper.unmount();
+    });
+
+    it("resumes playback and restores Audit Active state when manual Retry Audit Connection succeeds", async () => {
+      fileshareService.recordPlaybackAudit.mockRejectedValueOnce(
+        new Error("Temporary telemetry offline")
+      );
+      fileshareService.recordPlaybackAudit.mockRejectedValueOnce(
+        new Error("Temporary telemetry offline")
+      );
+      fileshareService.recordPlaybackAudit.mockRejectedValueOnce(
+        new Error("Temporary telemetry offline")
+      );
+      fileshareService.recordPlaybackAudit.mockRejectedValueOnce(
+        new Error("Temporary telemetry offline")
+      );
+
+      const playSpy = vi.fn().mockResolvedValue();
+      const originalPlay = HTMLMediaElement.prototype.play;
+      HTMLMediaElement.prototype.play = playSpy;
+
+      const wrapper = mount(MediaPreviewModal, {
+        props: {
+          fileRecord: mockVideoFile,
+        },
+      });
+
+      await flushPromises();
+
+      const video = wrapper.find("video.video-element");
+      await video.trigger("playing");
+
+      await vi.advanceTimersByTimeAsync(15000);
+      await flushPromises();
+
+      expect(wrapper.find('[data-testid="audit-error-overlay"]').exists()).toBe(
+        true
+      );
+
+      // Now mock successful retry
+      fileshareService.recordPlaybackAudit.mockResolvedValueOnce({
+        id: "audit-retry-ok",
+        file_record_id: "file-video-001",
+        event: "PLAY_START",
+      });
+
+      const retryBtn = wrapper.find('[data-testid="retry-audit-btn"]');
+      expect(retryBtn.exists()).toBe(true);
+      await retryBtn.trigger("click");
+
+      await vi.advanceTimersByTimeAsync(100);
+      await flushPromises();
+
+      // Overlay should be dismissed and video play resumed
+      expect(wrapper.find('[data-testid="audit-error-overlay"]').exists()).toBe(
+        false
+      );
+      expect(wrapper.find('[data-testid="audit-status-badge"]').text()).toBe(
+        "Audit Active"
+      );
+      expect(playSpy).toHaveBeenCalled();
+
+      HTMLMediaElement.prototype.play = originalPlay;
+      wrapper.unmount();
+    });
+
+    it("enforces strict audit gating rules for external guest reviewer mode", async () => {
+      fileshareService.recordPlaybackAudit.mockRejectedValue(
+        new Error("Guest network timeout")
+      );
+
+      const wrapper = mount(MediaPreviewModal, {
+        props: {
+          fileRecord: mockVideoFile,
+          isGuestView: true,
+          guestToken: "gxt_test_token_123",
+        },
+      });
+
+      await flushPromises();
+
+      const video = wrapper.find("video.video-element");
+      await video.trigger("playing");
+
+      await vi.advanceTimersByTimeAsync(15000);
+      await flushPromises();
+
+      expect(wrapper.find('[data-testid="audit-error-overlay"]').exists()).toBe(
+        true
+      );
+      expect(wrapper.find('[data-testid="audit-status-badge"]').text()).toBe(
+        "Audit Interrupted"
+      );
+
+      wrapper.unmount();
+    });
+  });
 });

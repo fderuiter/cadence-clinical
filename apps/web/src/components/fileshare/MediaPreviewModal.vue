@@ -144,6 +144,16 @@
           <!-- 21 CFR Part 11 Audit Record -->
           <div class="meta-section border-top">
             <h4>21 CFR Part 11 Audit Trail</h4>
+            <div class="meta-row">
+              <span class="meta-label">Audit Status:</span>
+              <span
+                class="meta-value font-bold"
+                :class="auditErrorState ? 'text-danger' : 'text-success'"
+                data-testid="audit-status-badge"
+              >
+                {{ auditErrorState ? "Audit Interrupted" : "Audit Active" }}
+              </span>
+            </div>
             <div class="change-reason-block">
               <h5>Change Justification:</h5>
               <p class="reason-text">
@@ -300,6 +310,31 @@
 
               <!-- 4. Video Player Ready State -->
               <div v-else class="video-player-wrapper">
+                <!-- Compliance Warning Overlay for Audit Failure -->
+                <div
+                  v-if="auditErrorState"
+                  class="audit-compliance-overlay"
+                  role="alert"
+                  data-testid="audit-error-overlay"
+                >
+                  <div class="audit-alert-card">
+                    <span class="alert-icon" aria-hidden="true">⚠️</span>
+                    <h4 class="alert-title">Audit Telemetry Interrupted</h4>
+                    <p class="alert-message">
+                      21 CFR Part 11 compliance requires verified audit trail
+                      transmission. Video playback is paused until telemetry is
+                      restored.
+                    </p>
+                    <button
+                      class="btn btn-sm btn-primary btn-retry-audit"
+                      data-testid="retry-audit-btn"
+                      @click="retryAuditConnection"
+                    >
+                      🔄 Retry Audit Connection
+                    </button>
+                  </div>
+                </div>
+
                 <video
                   ref="videoPlayerRef"
                   controls
@@ -536,6 +571,8 @@ const qualityLevels = ref([]);
 const selectedQuality = ref(-1);
 const hlsInstance = ref(null);
 const reportedCheckpoints = ref(new Set());
+const pendingAuditEvents = ref(new Set());
+const auditErrorState = ref(null);
 
 const currentUserId = computed(() => {
   if (props.isGuestView) return "guest_external_reviewer";
@@ -686,7 +723,9 @@ function handleProtectedKeydown(e) {
 async function sendPlaybackAudit(eventType) {
   if (!props.fileRecord?.id) return;
   if (reportedCheckpoints.value.has(eventType)) return;
-  reportedCheckpoints.value.add(eventType);
+  if (pendingAuditEvents.value.has(eventType)) return;
+
+  pendingAuditEvents.value.add(eventType);
 
   const payload = {
     file_record_id: props.fileRecord.id,
@@ -700,10 +739,48 @@ async function sendPlaybackAudit(eventType) {
     reason_for_change: `Video playback checkpoint ${eventType} telemetry`,
   };
 
-  try {
-    await fileshareService.recordPlaybackAudit(payload);
-  } catch (err) {
-    console.warn(`Failed to record playback audit event ${eventType}:`, err);
+  const backoffs = [0, 2000, 4000, 8000];
+  let lastError = null;
+
+  for (let attempt = 0; attempt < backoffs.length; attempt++) {
+    const delay = backoffs[attempt];
+    if (delay > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+    try {
+      await fileshareService.recordPlaybackAudit(payload);
+      reportedCheckpoints.value.add(eventType);
+      pendingAuditEvents.value.delete(eventType);
+      auditErrorState.value = null;
+      return;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  // All retries failed
+  pendingAuditEvents.value.delete(eventType);
+  auditErrorState.value = {
+    eventType,
+    payload,
+    errorMessage:
+      lastError?.response?.data?.detail ||
+      lastError?.message ||
+      `Audit telemetry transmission failed for ${eventType}`,
+  };
+
+  if (videoPlayerRef.value) {
+    videoPlayerRef.value.pause();
+  }
+}
+
+async function retryAuditConnection() {
+  if (!auditErrorState.value) return;
+  const eventType = auditErrorState.value.eventType;
+  auditErrorState.value = null;
+  await sendPlaybackAudit(eventType);
+  if (!auditErrorState.value && videoPlayerRef.value) {
+    videoPlayerRef.value.play().catch(() => {});
   }
 }
 
@@ -951,6 +1028,8 @@ watch(
   (newId, oldId) => {
     if (newId !== oldId) {
       reportedCheckpoints.value.clear();
+      pendingAuditEvents.value.clear();
+      auditErrorState.value = null;
       clearPolling();
       if (hlsInstance.value) {
         hlsInstance.value.destroy();
@@ -1577,5 +1656,69 @@ function getStatusClass(status) {
   border-top: 1px solid #e2e8f0;
   padding-top: 12px;
   margin-top: 24px;
+}
+
+/* GxP Audit Compliance Warning Overlay */
+.audit-compliance-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.audit-alert-card {
+  background-color: #1e293b;
+  border: 1px solid #ef4444;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 440px;
+  text-align: center;
+  color: #ffffff;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+.audit-alert-card .alert-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.audit-alert-card .alert-title {
+  margin: 0 0 8px 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.audit-alert-card .alert-message {
+  margin: 0 0 16px 0;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+.btn-retry-audit {
+  background-color: #ef4444;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.btn-retry-audit:hover {
+  background-color: #dc2626;
 }
 </style>
