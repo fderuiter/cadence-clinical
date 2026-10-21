@@ -35,7 +35,7 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 
 <!-- quality-gates:begin (generated from packages/cli/src/Services/QualityGates.cs by `pnpm cadence generate-cli-docs`; do not edit) -->
 
-`pnpm cadence check` runs these 26 gates in this order:
+`pnpm cadence check` runs these 27 gates in this order:
 
 | Gate                  | What it checks                                                                                                                                                                                  |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -51,6 +51,7 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 | `env-vars`            | Environment variables read in code are in `.env.example` and `docs/ENVIRONMENT_VARIABLES.md`                                                                                                    |
 | `dev-env`             | Service ports in `docs/LOCAL_DEV_ENVIRONMENT.md` match the gateway and the Aspire AppHost                                                                                                       |
 | `readmes`             | Each directory under `apps/` and `packages/` has a README with a title                                                                                                                          |
+| `codeowners`          | Path pattern existence and owner handle syntax in `.github/CODEOWNERS`                                                                                                                          |
 | `imports`             | No `using` of another service's namespace across `apps/<service>`                                                                                                                               |
 | `security`            | Hard-coded secret patterns (private keys, AWS secret keys)                                                                                                                                      |
 | `deid`                | PHI/PII in tracked files outside tests, docs, scripts and similar folders (all 14 detector categories), ratcheted by `.deid-baseline.txt`; a line that is not PHI takes a `deid-ignore` comment |
