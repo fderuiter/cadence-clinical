@@ -10,7 +10,7 @@ Run it through the root `package.json` script. Run it from the repository root.
 pnpm cadence <command> [arguments] [options]
 ```
 
-The script runs `dotnet run --project packages/cli/src/Cadence.Cli.csproj --`, so it builds the CLI first when needed. Examples:
+The script runs `node scripts/run-cli.js`, which executes the compiled Native AOT binary (`./bin/cadence`) and automatically compiles it on demand when needed. Examples:
 
 ```bash
 pnpm cadence doctor
