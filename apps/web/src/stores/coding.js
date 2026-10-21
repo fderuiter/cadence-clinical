@@ -619,8 +619,9 @@ export const useCodingStore = defineStore("coding", {
 
         this.searchStatus = res.status || "UNCODABLE";
         this.dictionarySearchResults = res.matches || [];
-      } catch {
-        this.error = err.message || "Dictionary lookup failed";
+      } catch (err) {
+        this.error =
+          err?.message || "Dictionary service unavailable. Try again later.";
         this.dictionarySearchResults = [];
         this.searchStatus = "ERROR";
       } finally {

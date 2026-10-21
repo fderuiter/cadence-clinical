@@ -485,8 +485,23 @@
               Search Dictionary
             </button>
           </div>
-          <div v-if="dictSearching" style="font-size: 0.8rem; color: #64748b">
+          <div v-if="dictSearching || codingStore.isSearching" style="font-size: 0.8rem; color: #64748b">
             Querying dictionaries...
+          </div>
+          <div
+            v-else-if="codingStore.error"
+            class="dict-search-error-alert card"
+            style="
+              padding: 8px 12px;
+              background-color: var(--error-bg);
+              border-left: 4px solid var(--error);
+              border-radius: 4px;
+              color: var(--error-text, #991b1b);
+              font-size: 0.85rem;
+              margin-bottom: 8px;
+            "
+          >
+            {{ codingStore.error }}
           </div>
           <div
             v-else-if="dictResults.length > 0"
@@ -739,6 +754,7 @@ import { encodeChangeReason } from "../api/changeReason";
 import { ref, computed, onMounted, watch } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
+import { useCodingStore } from "../stores/coding";
 import { useToastStore } from "../stores/toasts.js";
 import { apiClient } from "@/api/apiClient";
 import ReasonModal from "../components/ReasonModal.vue";
@@ -765,6 +781,7 @@ const rulesReasonOptions = [
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
+const codingStore = useCodingStore();
 const toasts = useToastStore();
 
 // Sub-Issue 11 States
@@ -882,20 +899,24 @@ async function searchDict() {
   }
   dictSearching.value = true;
   try {
-    const res = await apiClient.get(
-      `/api/v1/dictionaries/meddra/search?q=${encodeURIComponent(dictQuery.value.trim())}`
-    );
-    dictResults.value = res || [];
+    await codingStore.searchDictionary({
+      term: dictQuery.value.trim(),
+      version: "26.0",
+    });
+    if (codingStore.error) {
+      dictResults.value = [];
+    } else {
+      const matches = codingStore.dictionarySearchResults || [];
+      dictResults.value = matches.map((m) => ({
+        code: m.code || m.llt_code || m.pt_code || "",
+        name: m.name || m.llt_name || m.pt_name || m.preferred_name || "",
+        dictionary:
+          m.dictionary || (m.version ? `MedDRA v${m.version}` : "MedDRA v26.0"),
+      }));
+    }
   } catch (err) {
-    console.warn("Dictionary search failed, providing mock definitions:", err);
-    dictResults.value = [
-      {
-        code: "10023026",
-        name: "Hypertension (High blood pressure)",
-        dictionary: "MedDRA v25.0",
-      },
-      { code: "10037340", name: "Pulse irregular", dictionary: "MedDRA v25.0" },
-    ];
+    console.warn("Dictionary search failed:", err);
+    dictResults.value = [];
   } finally {
     dictSearching.value = false;
   }

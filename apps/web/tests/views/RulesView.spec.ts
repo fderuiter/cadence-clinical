@@ -251,4 +251,108 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
       clinicalStore.ledgerBlocks[clinicalStore.ledgerBlocks.length - 1].reason
     ).toBe("Added logical safety check for pulse metrics");
   });
+
+  describe("Dictionary Search with Pinia Store and Error UI", () => {
+    it("routes search queries through codingStore.searchDictionary and maps llt_code/llt_name to UI result objects", async () => {
+      vi.mocked(apiClient.get).mockImplementation((url: string) => {
+        if (url.includes("/dictionaries/meddra/code")) {
+          return Promise.resolve({
+            status: "SUCCESS",
+            matches: [
+              { llt_code: "10019211", llt_name: "Hypertension" },
+              { llt_code: "10019218", llt_name: "Hypertension aggravated" },
+            ],
+          });
+        }
+        if (url.includes("/rules")) {
+          return Promise.resolve([]);
+        }
+        return Promise.resolve([]);
+      });
+
+      const wrapper = mount(RulesView, {
+        global: {
+          plugins: [pinia, router],
+        },
+      });
+
+      await flushPromises();
+
+      wrapper.vm.activeTab = "queries";
+      await flushPromises();
+
+      const searchInput = wrapper.find("#dm-dict-lookup-input");
+      await searchInput.setValue("Hypertension");
+
+      const searchBtn = wrapper
+        .findAll("button")
+        .find((b) => b.text().includes("Search Dictionary"));
+      expect(searchBtn).toBeDefined();
+      await searchBtn!.trigger("click");
+
+      await flushPromises();
+
+      expect(apiClient.get).toHaveBeenCalledWith(
+        expect.stringContaining("/api/v1/dictionaries/meddra/code?term=Hypertension&version=26.0"),
+        expect.any(Object)
+      );
+
+      expect(wrapper.vm.dictResults).toEqual([
+        { code: "10019211", name: "Hypertension", dictionary: "MedDRA v26.0" },
+        { code: "10019218", name: "Hypertension aggravated", dictionary: "MedDRA v26.0" },
+      ]);
+
+      expect(wrapper.text()).toContain("10019211");
+      expect(wrapper.text()).toContain("Hypertension");
+      expect(wrapper.find(".dict-search-error-alert").exists()).toBe(false);
+    });
+
+    it("displays inline error alert banner on search failure and does not produce mock codes", async () => {
+      vi.mocked(apiClient.get).mockImplementation((url: string) => {
+        if (url.includes("/dictionaries/meddra/code")) {
+          return Promise.reject(
+            new Error("Dictionary service unavailable. Try again later.")
+          );
+        }
+        if (url.includes("/rules")) {
+          return Promise.resolve([]);
+        }
+        return Promise.resolve([]);
+      });
+
+      const wrapper = mount(RulesView, {
+        global: {
+          plugins: [pinia, router],
+        },
+      });
+
+      await flushPromises();
+
+      wrapper.vm.activeTab = "queries";
+      await flushPromises();
+
+      const searchInput = wrapper.find("#dm-dict-lookup-input");
+      await searchInput.setValue("Hypertension");
+
+      const searchBtn = wrapper
+        .findAll("button")
+        .find((b) => b.text().includes("Search Dictionary"));
+      expect(searchBtn).toBeDefined();
+      await searchBtn!.trigger("click");
+
+      await flushPromises();
+
+      // Error banner must be present
+      const errorAlert = wrapper.find(".dict-search-error-alert");
+      expect(errorAlert.exists()).toBe(true);
+      expect(errorAlert.text()).toContain(
+        "Dictionary service unavailable. Try again later."
+      );
+
+      // dictResults must be empty, with zero fake mock codes (10023026, 10037340)
+      expect(wrapper.vm.dictResults).toEqual([]);
+      expect(wrapper.text()).not.toContain("10023026");
+      expect(wrapper.text()).not.toContain("10037340");
+    });
+  });
 });
