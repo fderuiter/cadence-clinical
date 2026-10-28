@@ -38,8 +38,14 @@ Splitting source across repositories raises questions neither ADR answers:
 Current kernel project graph on `main` (`e3955e1`): `Cadence.Kernel.Modules` references `Abstractions` and
 `engine_core/Cadence.Core.Domain`. It also carries EF Core Relational, Npgsql, FluentValidation and
 `Microsoft.AspNetCore.OpenApi`. Module authors need EF Core because a module defines a `ModuleDbContext`. Npgsql appears
-in the SDK only where the module store and the migrations helper call `UseNpgsql`. `CommandResult<TResult>` in
-`ICommandHandler` comes from `Cadence.Core.Domain`.
+in the SDK only where the module store and the migrations helper call `UseNpgsql`. The SDK also takes `AggregateRootBase`
+and `IGxPAuditable` from `Cadence.Core.Domain`. `CommandResult<TResult>` already lives in `Abstractions/Commands`.
+
+The reference chain is transitive. `Cadence.Core.Domain` references `Cadence.Security`, which references
+`Cadence.Kernel.Abstractions`. A product that takes the SDK therefore also receives `Core.Domain` and `Security`. The
+inventory (`SOURCE_INVENTORY.md`, merged in #5681) records the project graph. It has not been checked for NuGet
+`PackageReference`s. `Core.Domain` is itself in the K-XS-1 baseline (16 entries, all `SubjectAllocationRequest`
+`StudyId`/`SiteId` members). Those members must move before the SDK is published.
 
 ## 2. Decision Drivers & Constraints
 
@@ -66,13 +72,13 @@ in the SDK only where the module store and the migrations helper call `UseNpgsql
 | Option | Summary | Verdict |
 | --- | --- | --- |
 | 1. Keep EF Core, Npgsql and `Cadence.Core.Domain` in `Cadence.Kernel.Modules` | Simplest. Every product inherits every dependency. | **Rejected.** Makes the public SDK carry persistence and a non-kernel dependency. This is the most likely source of a later breaking change. |
-| 2. Split the SDK | `Abstractions` holds contracts with no EF, Npgsql or `engine_core`. `Modules` keeps the EF Core base types module authors must use. Npgsql moves to a host-side adapter. Result types move into a kernel-owned package. | **Proposed, pending inventory.** |
+| 2. Split the SDK | `Abstractions` holds contracts with no EF, Npgsql or `engine_core`. `Modules` keeps the EF Core base types module authors must use. Npgsql moves to a host-side adapter. `AggregateRootBase` and `IGxPAuditable` move or are redefined in kernel-owned code. The K-XS-1 members in `Core.Domain` move first. | **Proposed, pending inventory.** |
 | 3. Publish `engine_core` as a shared kernel dependency | Keeps the reference and publishes it. | **Not preferred.** `engine_core` is not kernel-owned (matrix: "shared domain utilities"). |
 
 Recommended shape under option 2, to be confirmed by K1:
 
-- `Cadence.Kernel.Abstractions`: typed IDs, command and event contracts, `IClock`, and the command result type currently
-  taken from `Cadence.Core.Domain`. No EF Core, Npgsql or `engine_core` reference. *Needs inventory:* the dependency closure
+- `Cadence.Kernel.Abstractions`: typed IDs, command and event contracts, `IClock`, and `CommandResult<TResult>`, which
+  already lives here. No EF Core, Npgsql or `engine_core` reference. *Needs inventory:* the dependency closure
   of that result type.
 - `Cadence.Kernel.Modules`: `ICommandHandler`, `ICommandContext`, `IKernelUnitOfWork`, `AddCommandHandler`,
   `ModuleDbContext` and the migrations helper. It references EF Core Relational as a **pinned, explicit** SDK dependency,
@@ -111,7 +117,8 @@ Recommended shape under option 2, to be confirmed by K1:
 These are proposals to the matrix, not edits to it in this change:
 
 - Add a row for **Cadence.Kernel.Modules SDK contract** (kernel) and **host-side Npgsql adapter** (clinical).
-- Mark `CommandResult` and the command result type as kernel-owned once the inventory confirms its closure.
+- Record `AggregateRootBase` and `IGxPAuditable` as kernel-owned contracts, once the move or redefinition is decided.
+- Note that `Cadence.Security` is a transitive dependency of the SDK today.
 - Keep the seven "Required resolution before extraction" items in the matrix open until the inventory closes them.
 
 ## 6. Consequences & Trade-offs
@@ -138,7 +145,7 @@ No check in this list has been run for this ADR. A green build is not validation
 
 | # | Item | Owner of the answer |
 | --- | --- | --- |
-| 1 | Dependency closure of the command result type, and whether it can move into `Abstractions` | Inventory thread (task 1) |
+| 1 | Move or redefine `AggregateRootBase` and `IGxPAuditable`, and check `PackageReference` closure (not yet checked) | Inventory thread (task 1), then decision |
 | 2 | Name and location of the host-side Npgsql adapter | Kernel prep thread (task 3), with decision here |
 | 3 | Home of `Cadence.Rules` and `Cadence.Standards` | Inventory thread, then decision |
 | 4 | Per-class dispositions: 107 rows marked needs decision in the inventory (92 in `apps/execution`, 15 across `apps/interop`, `apps/knowledge`, `apps/fileshare`, `apps/org`) | Inventory thread, symbol-level review |
