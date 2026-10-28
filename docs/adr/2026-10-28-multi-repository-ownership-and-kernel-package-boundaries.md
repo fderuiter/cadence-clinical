@@ -155,7 +155,7 @@ These are implementation details inside the accepted direction. None of them reo
 | 2 | Exclude the 16 `Core.Domain` baseline namespaces from the SDK path, so the baseline entries clear without moving `Core.Domain` (K1) | Kernel prep thread, with the inventory's symbol review |
 | 3 | Name and location of the host-side Npgsql adapter (K1) | Kernel prep thread, under §4 |
 | 4 | Home of `Cadence.Rules` and `Cadence.Standards`. Still needs inventory review; not covered by this acceptance | Inventory thread, then decision |
-| 5 | Per-class dispositions for the 107 `needs decision` inventory rows, from the symbol-level review in draft PR #5683. The review is read-only and not line-by-line verified, and its owners are suggestions. Each slice must confirm its file list before moving code | Inventory thread, then the slice owner (K3 and later) |
+| 5 | **Provisional until draft PR #5683 is merged.** Per-class dispositions for the 107 `needs decision` inventory rows, from the symbol-level review in that PR. The review is read-only and not line-by-line verified, and its owners are suggestions. Each slice must confirm its file list before moving code | Inventory thread, then the slice owner (K3 and later) |
 | 6 | Whether a later per-product database (option C) needs its own ADR | Deciders, after K3 |
 
 ## 9. Rollback
