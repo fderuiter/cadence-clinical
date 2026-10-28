@@ -148,6 +148,7 @@ Nine additional private, domain-oriented repositories have been initialized for 
 - [Capability ownership matrix](docs/architecture/repository-migration/CAPABILITY_OWNERSHIP_MATRIX.md)
 - [Controlled migration plan](docs/architecture/repository-migration/MIGRATION_PLAN.md)
 - [Agent handoff](docs/architecture/repository-migration/AGENT_HANDOFF.md)
+- [Source inventory and dependency graph](docs/architecture/repository-migration/SOURCE_INVENTORY.md)
 - [Proposed commercial product catalog](docs/strategy/PRODUCT_CATALOG.md)
 - [Market validation hypotheses](docs/strategy/MARKET_HYPOTHESES.md)
 
