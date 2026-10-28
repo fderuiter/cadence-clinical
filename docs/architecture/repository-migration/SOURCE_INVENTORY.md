@@ -513,6 +513,43 @@ Notes:
 - Maturity and API routes for each row are in the review tables above. This pass added no new maturity judgements.
 - Test-method counts are not run counts, and they include tests in the `Cadence.E2ETests` and `Cadence.ArchitectureTests` projects where the app namespace appears.
 
+## A2: row decisions
+
+**Accepted:** the 101 other suggestions from the symbol-level review, as they stand, except the rows deferred below. Authority: Fred's reply "proceed with recommendations and best practices" to the ADR-2602 owner list (chat message `cmsg_01Q5KbvG319KViDdXRuTJgSASD5GoeJSNE5YUYMLcmDxNQ`, 2026-10-28 20:36 UTC). The six area decisions are in ADR-2602 section 8.1.
+
+**Deferred:** rows that are low-confidence in the review, or that the reconciliation contradicted. Each has a reason. A deferred row keeps its suggestion but does not authorise a move. It returns to the ownership issue (#5693) for a decision.
+
+| Row (file or type) | Suggestion | Reason deferred |
+| --- | --- | --- |
+| `interop` `EhrEndpointRecord`, `EhrReconciliationCandidateRecord` | capture (low) | Matrix assigns EHR to clinical-data; the owner is not confirmed |
+| `interop` `Instrument`, `SubjectAssignment` | participants (low) | Low confidence; overlaps subject decision |
+| `interop` `SensorSafetyAlertRecord` | unclear | No owner in the review |
+| `interop` `ClinicalQuery` | kernel (low) | Name is in the K-XS-1 baseline; kernel query model not decided |
+| `interop` `DatabaseLockAuthToken` | evidence (low) | Attestation-like token; signature decision pending |
+| `interop` `DeviceTokenHasher` | evidence (medium) | Scaffold, no caller; device registration overlaps Allocate |
+| `interop` `SmartSigningKeys` | platform-shell (medium) | Review said the owner value is not valid; the eSource flow owner is open |
+| `knowledge` `KnowledgeCategory`, `KnowledgeArticle`, `KnowledgeArticleVersion` | unclear | No owner in the review |
+| `knowledge` `ContextualHelpMapping` | platform-shell (low) | Low confidence |
+| `knowledge` `TrainingCurriculum`, `TrainingAssignment`, `TrainingCertificate` | trial-operations (low) | Qualification authority is kernel; the split is not decided |
+| `knowledge` `DelegationRecord`, `OrgAuditLog`, `KnowledgeArticleAuditLog` | kernel | Duplicates `org` tables; spec forbids module-local delegation and audit |
+| `org` `DelegationOfAuthority` | kernel (medium) | Delegation design is not decided |
+| `org` `TrainingLog` | trial-operations (medium) | Partly qualification, which is kernel |
+| `fileshare` `FileRecord` | platform-shell (medium) | Foreign-key target for four tables with another owner |
+| `fileshare` `ShareGrant`, `GuestLink` | trial-operations (medium) | Foreign keys to `file_records`, a different owner |
+| `execution` `SiteComplianceCache` | unclear (low) | Legacy compliance table, no owner |
+| `execution` `SynonymRule`, `BulkSynonymImportJob` | unclear (low) | Terminology owner (evidence or capture) not decided |
+| `execution` `ConsumedSignatureToken` | platform-shell | Matrix says kernel; the two conflict |
+| `execution` `RandomizationAllocation` | interventions | Foreign key to `clinical_subjects`, a different owner (A3) |
+| `execution` `DomainCode` | capture (medium) | No standards owner in the list |
+| `execution` `TestCode` | evidence (medium) | SDTM representation, conflicts with K-TRUTH-1; replacement needs ConceptRef |
+| `execution` `ProtocolVersionRef`, `StudyCode`, `SiteCode`, `SubjectCode` | kernel or participants | ID replacement is a design decision, tracked in #5693 |
+| `execution` `StagedAdverseEventReview` and toxicity types | safety (medium) | `Grade3ToxicityDetected` has no consumer; confirm before moving |
+| `execution` `AmbientAuditContextAccessor` | kernel (low) | Low confidence; `HttpContext` coupling |
+
+Accepted rows that depend on a decision in ADR-2602 section 8.1 (subject and consent, CGT, CEC, lab ranges, identity and crypto, execution DbContext split) follow that section and are not repeated here.
+
+The deferred list covers the rows the review and reconciliation flagged. Rows not in the table are accepted as suggested. Any row that a slice touches must still confirm its file list before a move, as ADR-2602 requires.
+
 ## Track A reconciliation (current main, read-only)
 
 Reconciled against `origin/main` at `365c74b0` (#5688). This section covers the A1 to A6 items from the 10-repository architecture review, plus the tooling and shared-library split from its §3.
