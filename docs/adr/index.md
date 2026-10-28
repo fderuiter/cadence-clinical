@@ -129,6 +129,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2543: The Kernel Host Seeds the Local Demo Study](2026-10-19-the-kernel-host-seeds-the-local-demo-study.md) (2026-10-19)
 - [ADR-2600: Modules Write Through the Kernel Command Path](2026-10-19-modules-write-through-the-kernel-command-path.md) (2026-10-19)
 - [ADR-2601: One Composition Host for the Kernel and Its Modules](2026-10-19-one-composition-host-for-the-kernel-and-its-modules.md) (2026-10-19)
+- [ADR-2602: Multi-Repository Ownership and Kernel Package Boundaries](2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md) (2026-10-28) _(Proposed)_
 - [ADR-2610: Scaffold Services Become Kernel Modules or Merge](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md) (2026-10-15)
 - [ADR-2620: The eCRF Correction Transaction Boundary](2026-10-15-ecrf-correction-transaction-boundary.md) (2026-10-15)
 - [ADR-2621: Observation Corrections Are Revisions; Locks Are Scoped Assertions](2026-10-19-observation-corrections-are-revisions-locks-are-scoped-assertions.md) (2026-10-19)

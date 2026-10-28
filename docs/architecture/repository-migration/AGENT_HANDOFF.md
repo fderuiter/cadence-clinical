@@ -26,5 +26,15 @@
 4. Demonstrate kernel package consumer and independent Blueprint synthetic-study vertical slice.
 5. Only then schedule Capture extraction; remaining domains follow evidenced priorities.
 
+## Synchronization point
+Actual kernel extraction (any move of kernel or module implementation code) may begin only when all four conditions hold:
+
+1. The source and dependency inventory is complete (task 1), with symbol-level dispositions for every ambiguous row.
+2. An approved architecture decision and ownership matrix exist (task 2), reconciling ADR-2600 and ADR-2610.
+3. Existing clinical transaction, authorization, audit and integrity guarantees have an executable verification baseline that runs against PostgreSQL with zero skips.
+4. The migration has explicit acceptance criteria and a rollback strategy.
+
+Until this section is marked met in the migration plan, tasks 2 and 3 may draft proposals but must not finalize decisions or move code. All tasks share one inventory and one set of decision records; do not duplicate research or build parallel implementations. Preserve the [five-gates roadmap](https://github.com/fderuiter/cadence-clinical/issues/5310) and the current runtime architecture.
+
 ## Reporting
 Each change report: source SHA, destination SHA, moved/untouched files, behavior preserved, commands executed, tests passed/failed/skipped, ADR decisions, known risks, next dependency, and links to the relevant issue/PR. No unverified completion.
