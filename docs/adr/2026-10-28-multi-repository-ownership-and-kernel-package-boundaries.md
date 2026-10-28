@@ -8,7 +8,7 @@
 - **Reconciles:** [ADR-2600](2026-10-19-modules-write-through-the-kernel-command-path.md) and [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md). Both remain **Accepted**. This ADR does not supersede either of them.
 - **Builds on:** [ADR-2601](2026-10-19-one-composition-host-for-the-kernel-and-its-modules.md) (one composition host)
 - **Records:** [Repository registry](../architecture/repository-migration/REPOSITORY_REGISTRY.md), [capability ownership matrix](../architecture/repository-migration/CAPABILITY_OWNERSHIP_MATRIX.md), [migration plan](../architecture/repository-migration/MIGRATION_PLAN.md), [multi-repository agent execution guide](../architecture/repository-migration/AGENT_HANDOFF.md)
-- **Shared inventory:** [`SOURCE_INVENTORY.md`](../architecture/repository-migration/SOURCE_INVENTORY.md) (task 1), merged to `main` in #5681 and carrying the symbol-level review merged in #5683 (`eab3c1e`).
+- **Shared inventory:** `SOURCE_INVENTORY.md` from the inventory thread (task 1), in draft PR #5681. It is not yet on `main`, so this ADR cites it by name and does not link to it.
 
 > [!NOTE]
 > This ADR is **accepted** as of 2026-10-28. Acceptance settles the direction only. It does not start extraction, which
@@ -155,7 +155,7 @@ These are implementation details inside the accepted direction. None of them reo
 | 2 | Exclude the 16 `Core.Domain` baseline namespaces from the SDK path, so the baseline entries clear without moving `Core.Domain` (K1) | Kernel prep thread, with the inventory's symbol review |
 | 3 | Name and location of the host-side Npgsql adapter (K1) | Kernel prep thread, under §4 |
 | 4 | Home of `Cadence.Rules` and `Cadence.Standards`. Still needs inventory review; not covered by this acceptance | Inventory thread, then decision |
-| 5 | **Provisional. Owner choices open for Fred.** Per-class dispositions for the 107 `needs decision` inventory rows, from the symbol-level review merged in #5683. The review is read-only and not line-by-line verified, and its owners are suggestions. Each slice must confirm its file list before moving code | Inventory thread, then the slice owner (K3 and later) |
+| 5 | **Provisional until draft PR #5683 is merged.** Per-class dispositions for the 107 `needs decision` inventory rows, from the symbol-level review in that PR. The review is read-only and not line-by-line verified, and its owners are suggestions. Each slice must confirm its file list before moving code | Inventory thread, then the slice owner (K3 and later) |
 | 6 | Whether a later per-product database (option C) needs its own ADR | Deciders, after K3 |
 
 ## 9. Rollback

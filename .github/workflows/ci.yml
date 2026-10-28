@@ -502,6 +502,23 @@ jobs:
           name: trx-report-dotnet
           path: tests/**/TestResults/*.trx
 
+      # Database tests that do not execute are skipped, not passed: the fixtures report them as skipped when
+      # CADENCE_TEST_POSTGRES is missing (#5325). The benchmark is skipped by design unless CADENCE_LINEAGE_BENCHMARK=1
+      # (DatabaseTestEvidence.OptInTests). NOT YET VERIFIED BY A CI RUN: Actions is out of minutes.
+      - name: Fail the run when a PostgreSQL test did not execute
+        if: steps.run_dotnet_tests.outcome == 'success'
+        run: |
+          trx_files=$(find tests/Cadence.IntegrationTests tests/Cadence.E2ETests -name '*.trx' | wc -l)
+          if [ "$trx_files" -eq 0 ]; then
+            echo "::error::No TRX reports found for the integration and E2E tests, so database tests cannot be verified."
+            exit 1
+          fi
+          skipped=$(find tests/Cadence.IntegrationTests tests/Cadence.E2ETests -name '*.trx' -exec grep -h 'outcome="NotExecuted"' {} + | grep -vc 'BenchmarkTenMillionEdgesTraceLatency' || true)
+          if [ "$skipped" -gt 0 ]; then
+            echo "::error::$skipped PostgreSQL-backed test(s) did not execute. Check that CADENCE_TEST_POSTGRES reaches a PostgreSQL 18 service (docs/CI.md)."
+            exit 1
+          fi
+
   accessibility-e2e:
     name: Parallel E2E Accessibility Testing
     # Playwright browser installs are the most expensive job; run on main only.
