@@ -6,7 +6,7 @@ eCRF forms and their values no longer live here. They live only in the kernel, i
 
 eCRF queries no longer live here either. A query is raised on a form value and answered, reopened, closed or cancelled in the [Execution module](../execution/module/README.md) at `/api/v1/execution/forms/{formId}/queries` (#5461). This service's own `ClinicalQuery`, every `/api/v1/execution/queries` route (including the batch close, cancel and respond routes and the `answer` alias), the `/api/v1/queries` legacy alias, the `query_lifecycle` permissions and the `ClinicalQueryRaised` event with its notifications consumer were deleted with no data migration (migration `RetireClinicalQueries`).
 
-**Status:** a standalone ASP.NET Core 10 service. Under [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and the [clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map, §15 roadmap phase 1, "EDC on the kernel") it is rebuilt on kernel concepts. The type-by-type plan is in [EXECUTION_MIGRATION_INVENTORY.md](../../docs/kernel/EXECUTION_MIGRATION_INVENTORY.md).
+**Status:** a standalone ASP.NET Core 10 service. Under [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and the [clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map, §15 roadmap phase 1, "EDC on the kernel") it is rebuilt on kernel concepts. The type-by-type plan is in the [source inventory](../../docs/architecture/repository-migration/SOURCE_INVENTORY.md).
 
 ## Project
 

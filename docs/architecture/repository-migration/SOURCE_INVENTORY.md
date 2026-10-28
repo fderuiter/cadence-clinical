@@ -512,3 +512,140 @@ Notes:
 - No app in this group makes outbound HTTP calls. Their cross-product dependencies are therefore zero in code, not only in the graph.
 - Maturity and API routes for each row are in the review tables above. This pass added no new maturity judgements.
 - Test-method counts are not run counts, and they include tests in the `Cadence.E2ETests` and `Cadence.ArchitectureTests` projects where the app namespace appears.
+
+## Track A reconciliation (current main, read-only)
+
+Reconciled against `origin/main` at `365c74b0` (#5688). This section covers the A1 to A6 items from the 10-repository architecture review, plus the tooling and shared-library split from its §3.
+
+### A1: delta from the inventory revision (e3955e1)
+
+- **Source, tests and baseline:** no change. `git diff e3955e1 origin/main` over `apps/`, `packages/`, `tests/`, `docs/kernel` and `docs/architecture` changes only the repository-migration docs. The boundary baseline still holds 496 entries, so every count in the first and second passes still holds.
+- **Documentation changes since e3955e1:**
+  - `AGENT_HANDOFF.md`: adds a synchronization-point section listing the four conditions for kernel extraction.
+  - `SOURCE_INVENTORY.md`: first pass (#5681), symbol-level review and test counts (#5683), and the stale open-work line removed (#5686).
+  - ADR-2602 (`docs/adr/2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md`): accepted, with §8.1 recording six owner decisions (#5688). Corrections to the inventory citations (#5687).
+- **Owner decisions applied in this section:** execution DbContext split by owner (platform-shell composition); subjects and consent to participants; CGT custody to interventions; CEC to safety; lab reference ranges to evidence; identity and crypto helpers stay platform-shell. The other 101 suggestions stand as given.
+- **Not yet applied:** the 16 `Core.Domain` namespace exclusions (ADR §8 item 2) are decided in principle but not in code. The inventory's per-row decisions are otherwise unchanged until a slice moves code.
+
+### A3: database ownership
+
+Counts are exact for the code at `365c74b0`. The earlier review said about 30 DbSets in `ExecutionDbContext`. The count is 26.
+
+| Context | DbSets | Real migrations | Notes |
+| --- | ---: | ---: | --- |
+| `apps/execution` `ExecutionDbContext` | 26 | 18 | One context for subjects, CEC, CGT, devices, IP kits, randomization, coding, observations, toxicity, audit and outbox. Split by owner per the approved decision. |
+| `apps/execution/module` (module context) | 2 | 3 | Schema `execution`. Form instances and queries, capture-owned. |
+| `apps/execution` signature-token context | 0 | (shares 3) | Applies the token configuration only. |
+| `apps/interop` `InteropDbContext` | 19 | 4 | Mixed: ePRO, EHR, device and sensor, SCE. |
+| `apps/knowledge` `KnowledgeDbContext` | 12 | 3 | Several DbSets use default table names with no configuration. |
+| `apps/org` `OrgDbContext` | 5 | 2 | |
+| `apps/fileshare` `FileshareDbContext` | 6 | 2 | |
+
+Findings that block a split:
+
+1. **Cross-owner foreign keys.** `randomization_allocations.SubjectId` references `clinical_subjects` (interventions to participants). In fileshare, four tables (`share_grants`, `guest_links`, `playback_audit_logs`, `file_audit_logs`) reference `file_records`, which is platform-shell. Each needs a decision before a split.
+2. **Duplicate concepts.** Knowledge maps `DelegationRecords`, `OrgAuditLogs` and training entities with default names. Org owns `delegations_of_authority`, `org_audit_logs` and `org_training_logs`. Delegation is kernel authority (the kernel row in `CAPABILITY_OWNERSHIP_MATRIX.md`), and K-XS-1 forbids module-local audit tables. `KernelBoundaryRules.cs` names `OrgAuditLog`.
+3. **Name collisions if contexts share one database.** `audit_log_entries` is created by raw SQL in four contexts, and `ExecutionDbContext` uses the default `AuditLogEntries` name. `clinical_queries` is an interop table, while the dev reset recreates execution's retired one. `consumed_signature_tokens` exists in both `public` and `execution`. Only the module context sets `MigrationsHistoryTable`.
+4. **String IDs without foreign keys.** Interop and the execution device, IP kit and CGT entities store study, site and subject IDs as plain strings. Spec §2.3 forbids this for applications, and after a split these references lose integrity.
+5. **Outbox tables.** `OutboxMessage`, `OutboxState` and `InboxState` exist only in `ExecutionDbContext`. A split needs one outbox per owner or one shared kernel outbox (ADR-2600).
+6. **Signature tokens.** The ownership matrix places signatures in kernel. The approved identity and crypto decision places helpers in platform-shell. Record which owns `consumed_signature_tokens`.
+7. **Raw SQL.** Outside migrations, only the dev reset (`packages/cli/src/Services/DatabaseResetService.cs`) creates tables, in one shared `public` schema. No other raw SQL crosses an owner boundary.
+
+Per-table owners are in the agent's table, which is condensed here: participants own `clinical_subjects`, `subject_consents`, `epro_*`, `subject_notifications`. Safety owns `cec_*`, `staged_adverse_event_reviews`. Interventions own `cgt_*`, `device_*`, `ip_kit_*`, `randomization_*`. Evidence owns `lab_reference_ranges`, `bulk_lab_range_import_jobs`, `sce_*` and device registrations and telemetry. Kernel owns every `audit_log_entries`, the outbox and inbox, and delegation. `synonym_rules` and the knowledge article tables are unclear (low confidence).
+
+### A4: API and event contracts
+
+Messages, from the static scan. There are no `ISendEndpoint` or request-client uses in `apps/` or `packages/`.
+
+| Message | Producer | Consumer | Declared in | In `packages/contracts` |
+| --- | --- | --- | --- | --- |
+| `EConsentCompleted` | none in repo | `apps/etmf` consumer | `packages/contracts` | yes |
+| `EConsentCompletedEvent` (execution copy) | none in repo | `apps/execution` consumer | `apps/execution/src/Infrastructure/Consumers` | no, duplicate shape |
+| `EconsentReconsentRequired` | `apps/econsent` | `apps/notifications` consumer | `packages/contracts` | yes |
+| `Grade3ToxicityDetected` | `apps/execution` (`LabToxicityGovernanceService`) | **none in repo** | `packages/contracts` | yes |
+| `EtmfDocumentFilingRequested` | none in repo | `apps/etmf` consumer | `packages/contracts` | yes |
+| `DeviceDeficiencyReportedEvent`, `DeviceQuarantinedEvent` | `apps/execution` | none | `apps/execution/src/Application/Devices` | no |
+
+Findings for Capture and Engage:
+
+1. **`EConsentCompleted` has no producer in the repo.** Only consumers exist. The execution consumer runs only in tests.
+2. **The execution copy duplicates the contract, and the two disagree.** The fields match, but the namespaces differ, so the MassTransit type URNs differ and the types will not match on a bus. Execution rejects a null `SignedAt` (`ConsentEventRejectedException`). The eTMF consumer uses `SignedAt ?? clock.UtcNow`. Consolidate into `packages/contracts` before a split, and decide the null rule once.
+3. **Every host uses the in-memory transport.** `UsingInMemory` appears in execution, eTMF, notifications and eConsent. No broker package is referenced. Messages cannot cross a process boundary in the current code, so the eConsent-to-notifications and eConsent-to-execution paths work only in tests.
+4. **`Grade3ToxicityDetected` has a producer and no consumer.** The safety decision needs a named consumer before the event moves.
+5. **Versioning.** No message type carries a version suffix or schema version. The kernel spec's `schema_version` and K-EVT-1 (additive-only within a major version) apply to kernel events, which do not use MassTransit. The inventory's "must be versioned" requirement is not yet implemented.
+
+HTTP routes are on the same basis. Execution exposes 63 operations including `/healthz`. Interop exposes 28, knowledge 9, fileshare 2 and org 2. Each app has a checked-in OpenAPI snapshot under `docs/openapi`, and the `openapi` gate fails on drift. Anonymous routes are limited to health and status endpoints. The fallback authorization policy denies undeclared endpoints. Execution's form routes are served only by the kernel host, through `apps/kernel-api`.
+
+Compatibility requirements in the repo: K-EVT-1 in `docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md` (event schemas additive-only within a major version), the August 2026 hexagonal-architecture ADR (external HTTP contracts and OpenAPI schemas stay backward compatible), and the August 2026 CDISC submission-compiler ADR (`apps/interop` endpoints and DTOs stay backward compatible). Confirm the wording against those files before a slice relies on them.
+
+### A5: tests mapped to clinical invariants
+
+| Invariant | Integration (PostgreSQL) | Unit (no DB) | Skip path | Gap |
+| --- | --- | --- | --- | --- |
+| G1 Atomic module and kernel write (K-TX) | about 37 methods | about 16 methods | `SkipIfUnavailable()` | No test names a rollback when the kernel write fails. |
+| G2 Authorization (K-AUTH) | 22 methods | about 90 methods | `SkipIfUnavailable()` | PostgreSQL-backed caller-claim path skips. |
+| G3 Audit (PRD-SYS-001, Merkle chain) | 1 method | about 34 methods | `SkipIfUnavailable()` | No test found that targets `VersionIndex` or `ReasonForChange` fill. Unconfirmed, not proven absent. |
+| G4 Integrity: idempotency and concurrency | about 31 methods | about 39 methods | `SkipIfUnavailable()` | The real parallel enrollment race runs only with PostgreSQL. |
+| G5 Tenant isolation (K-ID) | about 25 methods | about 11 methods | `SkipIfUnavailable()` | Cross-study isolation runs only with PostgreSQL. |
+| G6 eCRF workflow (enter, correct, query, review, sign, lock) | 12 methods | about 6 methods | `SkipIfUnavailable()` | No named test for correct or review. The full chain runs only in the E2E journey. |
+| G7 Failure and recovery | about 31 methods | about 59 methods | `SkipIfUnavailable()` | Crash-and-replay and rollback have no test outside the skipped PostgreSQL files. |
+| G8 Randomization and blinding | 27 methods | about 41 methods | `SkipIfUnavailable()` | Database refusal to rewrite an allocation skips without PostgreSQL. |
+| G9 Consent scope | 3 methods | about 47 methods | `SkipIfUnavailable()` | Withdrawal-based capture is tested only with PostgreSQL. |
+| G10 Time (K-TIME-3) | about 20 methods | about 30 methods | `SkipIfUnavailable()` | No architecture test scans for `DateTime.Now`. K-TIME-3 is enforced by the build analyzer, not a test. |
+
+Totals from a static count: about 2,095 unit, 348 integration, 45 architecture and 6 E2E `[Fact]` and `[Theory]` attributes. About 350 PostgreSQL methods report **Skipped**, not Failed, when the environment variable is unset.
+
+Two points for the extraction gate:
+
+1. **Skips are the proof gap.** Groups G1, G4, G5, G6, G7 and G8 have no executed evidence without PostgreSQL. `LocalCiRunner.RejectSkippedDatabaseTests` fails a local run with skipped database tests unless `--allow-skip` is passed.
+2. **This machine cannot run them.** Neither `CADENCE_TEST_POSTGRES` nor `CADENCE_TEST_DOCKER` is set, and the Docker daemon is unreachable. Every PostgreSQL test skips here. Unit and architecture tests (about 2,140) run without a database.
+
+### A6: licence and maturity
+
+Licence facts, from the repository only:
+
+- The root `LICENSE` is ISC, held by "Cadence Clinical Workspace Authors".
+- `Directory.Build.props` asserts "Copyright © 2026 Cadence Clinical. All rights reserved." This conflicts with the ISC file and uses a different holder name. Resolve it before any publication.
+- No `NOTICE`, `THIRD_PARTY` or per-package licence file exists, and no source file has a licence header. No `.csproj` sets a package licence.
+- The 80-plus NuGet packages in `Directory.Packages.props` have no recorded licence. Every status is "unverified". `fo-dicom` (imaging) and `SonarAnalyzer` need a check before publishing.
+
+Third-party and standards content:
+
+- `docs/CDISC/Library` holds about 76 JSON, 35 XML, 36 PDF, 44 XLSX and 36 HTML files. Some carry "proprietary" notices. The repository records no licence or terms for them.
+- `docs/openapi` and `docs/CDISC` hold large specification JSON files (the largest is 5.3 MB).
+- `packages/kernel/src/Cadence.Standards/Seed` holds SDTMIG and ADaMIG seed JSON.
+- MedDRA, WHODrug, LOINC, SNOMED and UCUM appear as about 120 string references in code. The check cannot tell whether dictionary content is included.
+- Fixtures contain date-of-birth-keyed values, an SSN-shaped string and an email-shaped string. These are pattern hits only. They have not been verified as synthetic.
+
+Maturity per ambiguous component:
+
+| Component | Maturity | Evidence |
+| --- | --- | --- |
+| `apps/execution` | running | Subject, CEC, lab and CGT routes mapped |
+| `apps/interop` | scaffold (README) | eSource and SCE routes; the README and `Program.cs` disagree on ePRO |
+| `apps/knowledge` | unclear | README says no endpoints; `Program.cs` maps training routes |
+| `apps/fileshare` | scaffold | Health and status only in `src`; workers run but nothing feeds them |
+| `apps/org` | scaffold | Health and status only |
+| `packages/engine_core` | unclear | Python references still present, C# ports missing |
+| `packages/security` | running | Used by all services |
+| `packages/storage` | running | Filesystem blob store tested |
+
+### Tooling and shared libraries, separated from domain dependencies (review §3)
+
+The graph in this document mixes two kinds of edge. Classify them separately so the extraction does not turn the monorepo into a package-level distributed monolith.
+
+| Class | Projects | Rule for extraction |
+| --- | --- | --- |
+| Composition and tooling | `packages/tooling_core` (references all app projects), `packages/cli`, `apps/apphost`, `apps/kernel-api`, `apps/gateway` | Stays in `cadence-clinical`. Not extracted to a product repo. Tooling reads products through their public contracts only. |
+| Platform shared libraries | `packages/engine_core` (`Cadence.Core.Domain`), `packages/security`, `packages/database`, `packages/telemetry`, `packages/contracts`, `packages/testing`, `packages/compliance`, `packages/deid`, `packages/storage`, `packages/templating` | Versioned packages, not domain code. `Cadence.Core.Domain` is referenced by nearly every app and by the kernel SDK, so its transitive reach into the SDK needs the decision in ADR §8. |
+| Domain dependencies | Edges between product apps and kernel abstractions | These are the edges an extraction must cut. No app-to-app source imports exist. Product coupling is through the contracts above and the shared database. |
+
+The 16 `Core.Domain` baseline namespaces (Randomization, Supply and Rules) are the only shared-library baseline entries. They clear when the SDK path excludes them.
+
+### Open work after Track A
+
+- Ownership decisions for the rows that the six approved decisions do not cover. Items: `ProtocolVersionRef`, `StudyCode`, `SiteCode`, `SubjectCode`, `TestCode` and `DomainCode` as kernel ID or ConceptRef replacements; the outbox and audit table owners; `consumed_signature_tokens`; the knowledge article and help tables.
+- Consumer for `Grade3ToxicityDetected`, and a versioned consolidation of `EConsentCompleted`.
+- A PostgreSQL run that records pass, fail and skip counts against an exact revision. Blocked until CI capacity or a local Docker daemon is available (#5685).
+- Licence reconciliation between `LICENSE` and `Directory.Build.props`, and a per-package licence record.
+- Retirement of `docs/kernel/EXECUTION_MIGRATION_INVENTORY.md` (in this change). Its type-by-type dispositions are in git history at `365c74b0` and are superseded by the sections above.
