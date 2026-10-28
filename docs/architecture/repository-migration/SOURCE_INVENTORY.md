@@ -494,3 +494,22 @@ The row-level facts above come from two read-only Haiku review passes over the r
 - Per-file maturity, API and event contracts, and test-method counts (not file counts).
 - The persistence split (ADR-2447) and the outbox and audit table owners.
 - Licence provenance for `packages/kernel` and the Python reference packages.
+
+## Remaining inventory fields (third pass, read-only)
+
+These fill the open items from the sections above. Counts are for each app's own namespace in `tests/`. Test methods are counted from `[Fact]` and `[Theory]` attributes, so a theory counts once however many cases it runs.
+
+| App | Files referencing the app | Test methods (attributes) | Events published or consumed | Outbound HTTP clients |
+| --- | ---: | ---: | --- | --- |
+| `apps/execution` | 88 | 575 | Publishes `Grade3ToxicityDetected` (no in-repo consumer). Consumes `EConsentCompletedEvent` (`EConsentCompletedConsumer`). | None |
+| `apps/interop` | 12 | 60 | None | None |
+| `apps/knowledge` | 7 | 30 | None | None |
+| `apps/fileshare` | 7 | 19 | None | None |
+| `apps/org` | 4 | 7 | None | None |
+
+Notes:
+
+- The execution app is the only one with an event contract. `EConsentCompletedEvent` crosses from eConsent into execution, so the consumer is an extraction dependency. It must be versioned before Capture or Participants split.
+- No app in this group makes outbound HTTP calls. Their cross-product dependencies are therefore zero in code, not only in the graph.
+- Maturity and API routes for each row are in the review tables above. This pass added no new maturity judgements.
+- Test-method counts are not run counts, and they include tests in the `Cadence.E2ETests` and `Cadence.ArchitectureTests` projects where the app namespace appears.
