@@ -687,7 +687,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | --- | --- |
 | [SECURITY.md](../SECURITY.md) | How to report a vulnerability |
 | [SUPPORT.md](../SUPPORT.md) | Where to get help |
-| [LICENSE](../LICENSE) | ISC license |
+| [LICENSE](../LICENSE) | Proprietary licence, all rights reserved |
 | [Agent working notes](agents/domain.md) | How agents use domain docs, the [issue tracker](agents/issue-tracker.md) and [triage labels](agents/triage-labels.md) |
 
 ## Documentation site
