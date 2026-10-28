@@ -140,6 +140,17 @@ Start at the [documentation index](docs/DOCUMENTATION_INDEX.md). Key entry point
 - [SDLC and GxP validation documents](docs/SDLC/SDLC_Documentation_Suite.md)
 - [Security policy](SECURITY.md) and [support](SUPPORT.md)
 
+## Multi-repository program (planning)
+
+Nine additional private, domain-oriented repositories have been initialized for a proposed 10-repository Cadence ecosystem. **Clinical application code remains here; no runtime or database split has been made.** Existing ADR-2600, ADR-2610 and the five-gates roadmap remain authoritative until explicitly amended.
+
+- [Repository registry](docs/architecture/repository-migration/REPOSITORY_REGISTRY.md)
+- [Capability ownership matrix](docs/architecture/repository-migration/CAPABILITY_OWNERSHIP_MATRIX.md)
+- [Controlled migration plan](docs/architecture/repository-migration/MIGRATION_PLAN.md)
+- [Agent handoff](docs/architecture/repository-migration/AGENT_HANDOFF.md)
+- [Proposed commercial product catalog](docs/strategy/PRODUCT_CATALOG.md)
+- [Market validation hypotheses](docs/strategy/MARKET_HYPOTHESES.md)
+
 ## License
 
 [ISC](LICENSE).
