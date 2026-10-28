@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Cadence.Kernel.ConsumerTests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <Description>C4 package-consumer test (kernel extraction plan, Track C). Compiles a minimal module against the public kernel SDK only.</Description>
+  </PropertyGroup>
+
+  <!-- The consumer references the two public SDK projects and nothing else from the kernel. Kernel-internal projects
+       (Domain, Application, Persistence, Api) must never appear here: ADR-2602 §4.3, K-XS-2. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Cadence.Kernel.Modules\Cadence.Kernel.Modules.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+  </ItemGroup>
+
+</Project>
