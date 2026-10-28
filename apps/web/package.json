@@ -29,7 +29,7 @@
     "vite": "^8.3.4"
   },
   "keywords": [],
-  "license": "ISC",
+  "license": "UNLICENSED",
   "main": "index.js",
   "name": "web",
   "scripts": {
