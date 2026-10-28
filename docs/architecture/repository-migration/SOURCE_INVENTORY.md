@@ -351,7 +351,6 @@ Configuration and migration files are covered by their owning entity, not listed
 ## Open work before task 2 closes
 
 - `docs/kernel/EXECUTION_MIGRATION_INVENTORY.md` is dated 2026-09-29 and stale (see the task 3 plan §10). Reconcile it with this file rather than keeping two execution inventories.
-- Symbol-level review of every `needs decision` row (92 execution, plus 15 in interop, knowledge, fileshare and org).
 - Per-file fields from the next inventory format: maturity, canonical tables, API and events, tests, risk, retirement PR.
 - Test inventory per app and the PostgreSQL baseline for clinical write guarantees.
 - Licence provenance for `packages/kernel` and the Python reference packages.
