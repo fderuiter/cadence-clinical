@@ -43,9 +43,12 @@ and `IGxPAuditable` from `Cadence.Core.Domain`. `CommandResult<TResult>` already
 
 The reference chain is transitive. `Cadence.Core.Domain` references `Cadence.Security`, which references
 `Cadence.Kernel.Abstractions`. A product that takes the SDK therefore also receives `Core.Domain` and `Security`. The
-inventory (`SOURCE_INVENTORY.md`, merged in #5681) records the project graph. It has not been checked for NuGet
-`PackageReference`s. `Core.Domain` is itself in the K-XS-1 baseline (16 entries, all `SubjectAllocationRequest`
-`StudyId`/`SiteId` members). Those members must move before the SDK is published.
+inventory (`SOURCE_INVENTORY.md`, merged in #5681) records the project graph. A consumer of the SDK today also inherits these
+NuGet packages: FluentValidation, `Microsoft.AspNetCore.OpenApi`, EF Core, Npgsql, `System.IdentityModel.Tokens.Jwt` and
+`Microsoft.IdentityModel.Tokens`. `Abstractions` has no package references. `Core.Domain` is itself in the K-XS-1
+baseline (16 entries). They sit in the Randomization, Supply and Rules namespaces, and no SDK, Abstractions, Application
+or Domain file references them. Excluding those namespaces from the SDK path would clear the entries, without moving
+`Core.Domain`. That is an SDK-surface decision and must be made before the SDK is published.
 
 ## 2. Decision Drivers & Constraints
 
@@ -145,7 +148,7 @@ No check in this list has been run for this ADR. A green build is not validation
 
 | # | Item | Owner of the answer |
 | --- | --- | --- |
-| 1 | Move or redefine `AggregateRootBase` and `IGxPAuditable`, and check `PackageReference` closure (not yet checked) | Inventory thread (task 1), then decision |
+| 1 | Move or redefine `AggregateRootBase` and `IGxPAuditable`; decide the SDK package set (EF Core, Npgsql, JWT, FluentValidation, OpenApi) and the 16 `Core.Domain` baseline namespaces | Decision, using the inventory's answers on PackageReference closure |
 | 2 | Name and location of the host-side Npgsql adapter | Kernel prep thread (task 3), with decision here |
 | 3 | Home of `Cadence.Rules` and `Cadence.Standards` | Inventory thread, then decision |
 | 4 | Per-class dispositions: 107 rows marked needs decision in the inventory (92 in `apps/execution`, 15 across `apps/interop`, `apps/knowledge`, `apps/fileshare`, `apps/org`) | Inventory thread, symbol-level review |
