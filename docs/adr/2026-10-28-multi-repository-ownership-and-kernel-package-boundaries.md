@@ -151,7 +151,7 @@ No check in this list has been run for this ADR. A green build is not validation
 | 1 | Move or redefine `AggregateRootBase` and `IGxPAuditable`; decide the SDK package set (EF Core, Npgsql, JWT, FluentValidation, OpenApi) and the 16 `Core.Domain` baseline namespaces | Decision, using the inventory's answers on PackageReference closure |
 | 2 | Name and location of the host-side Npgsql adapter | Kernel prep thread (task 3), with decision here |
 | 3 | Home of `Cadence.Rules` and `Cadence.Standards` | Inventory thread, then decision |
-| 4 | Per-class dispositions: 107 rows marked needs decision in the inventory (92 in `apps/execution`, 15 across `apps/interop`, `apps/knowledge`, `apps/fileshare`, `apps/org`) | Inventory thread, symbol-level review |
+| 4 | Per-class dispositions: 107 rows marked needs decision in the inventory (92 in `apps/execution`, 15 across `apps/interop`, `apps/knowledge`, `apps/fileshare`, `apps/org`) | Symbol-level review is in draft PR #5683 (read-only, not line-by-line verified); decision needed |
 | 5 | Whether a later per-product database (option C) needs its own ADR | Deciders, after K3 |
 
 ## 9. Rollback
