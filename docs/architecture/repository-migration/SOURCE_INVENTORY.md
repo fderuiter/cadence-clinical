@@ -646,6 +646,10 @@ Licence facts, from the repository only:
 - No `NOTICE`, `THIRD_PARTY` or per-package licence file exists, and no source file has a licence header. No `.csproj` sets a package licence.
 - The 80-plus NuGet packages in `Directory.Packages.props` have no recorded licence. Every status is "unverified". `fo-dicom` (imaging) and `SonarAnalyzer` need a check before publishing.
 
+**Decision (2026-10-28, Fred): the repository is private, not public.** The ISC licence is withdrawn and replaced by the proprietary notice in `LICENSE`, consistent with `Directory.Build.props`. The `package.json` files of the root, `apps/web` and `packages/ui` use `"license": "UNLICENSED"`. The change is in draft PR #5698. Open before it leaves draft: the holder name (`Cadence Clinical` in `Directory.Build.props`, `Cadence Clinical Workspace Authors` in the old `LICENSE`), which Fred must confirm, and legal review of the wording. Third-party and standards content keeps its own terms and is not relicensed.
+
+Destination repositories without a root `LICENSE` file: `cadence-kernel`, `cadence-clinical-data`, `cadence-evidence`, `cadence-interventions`, `cadence-participants`, `cadence-quality-regulatory`, `cadence-safety`, `cadence-study-design` and `cadence-trial-operations`. All nine have the same root layout (`.gitignore`, `AGENTS.md`, `ARCHITECTURE.md`, `README.md`, `docs`). None is changed here.
+
 Third-party and standards content:
 
 - `docs/CDISC/Library` holds about 76 JSON, 35 XML, 36 PDF, 44 XLSX and 36 HTML files. Some carry "proprietary" notices. The repository records no licence or terms for them.
