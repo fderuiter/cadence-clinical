@@ -155,8 +155,25 @@ These are implementation details inside the accepted direction. None of them reo
 | 2 | Exclude the 16 `Core.Domain` baseline namespaces from the SDK path, so the baseline entries clear without moving `Core.Domain` (K1) | Kernel prep thread, with the inventory's symbol review |
 | 3 | Name and location of the host-side Npgsql adapter (K1) | Kernel prep thread, under §4 |
 | 4 | Home of `Cadence.Rules` and `Cadence.Standards`. Still needs inventory review; not covered by this acceptance | Inventory thread, then decision |
-| 5 | **Provisional. Owner choices open for Fred.** Per-class dispositions for the 107 `needs decision` inventory rows, from the symbol-level review merged in #5683. The review is read-only and not line-by-line verified, and its owners are suggestions. Each slice must confirm its file list before moving code | Inventory thread, then the slice owner (K3 and later) |
+| 5 | **Six owner choices decided in §8.1. The other 101 suggestions stand as given.** Per-class dispositions for the 107 `needs decision` inventory rows, from the symbol-level review merged in #5683. The review is read-only and not line-by-line verified, and its owners are suggestions. Each slice must confirm its file list before moving code | Inventory thread, then the slice owner (K3 and later) |
 | 6 | Whether a later per-product database (option C) needs its own ADR | Deciders, after K3 |
+
+### 8.1 Owner decisions (accepted 2026-10-28)
+
+@fderuiter approved the recommendations for the six owner choices in the inventory's symbol-level review (#5683). The
+other suggestions in that review stand as given. Each decision takes effect in the matrix at the slice that moves the
+code, not now.
+
+| # | Area | Decision | Owner |
+| --- | --- | --- | --- |
+| 1 | Execution DbContext | Split by owner schema, one context per module, under ADR-2600. The migration plan follows the split. | platform-shell (composition) |
+| 2 | Subject and consent | Participants own the workflow. Kernel keeps participant identity and `ConsentStatus`. Retire the duplicate `/consents` route and the second `SubjectConsent` in econsent. | participants |
+| 3 | CGT custody | Interventions own the workflow. Custody events become kernel provenance. | interventions |
+| 4 | CEC and signatures | Safety owns the CEC. Signatures bind to kernel Attestation. Confirm the consumer of `Grade3ToxicityDetected` before extraction. | safety |
+| 5 | Lab reference ranges and bulk import | Evidence owns the ranges. Capture only reads them. | evidence |
+| 6 | Identity and crypto helpers | Platform-shell for now. Move to kernel IdentityVault later under K006. Retire the dormant `DemographicsNormalizationService`. | platform-shell now, kernel IdentityVault later |
+
+These decisions do not start extraction. The synchronization conditions in the migration plan still apply.
 
 ## 9. Rollback
 
