@@ -333,7 +333,7 @@ The [kernel roadmap (spec §15)](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md#15
 | Phase                          | Outcome                                                                                                        |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------- |
 | 0. Foundations                 | Kernel projects, `IClock`, `tstzrange`, RLS, command pipeline, architecture baseline                           |
-| 1. EDC on the kernel           | `apps/execution` runs on kernel concepts ([migration inventory](docs/kernel/EXECUTION_MIGRATION_INVENTORY.md)) |
+| 1. EDC on the kernel           | `apps/execution` runs on kernel concepts ([source inventory](docs/architecture/repository-migration/SOURCE_INVENTORY.md)) |
 | 2. Knowledge and standards     | Concept Registry, executable protocol, standards registry, rules, lineage                                      |
 | 3. Quality and trust expansion | RBQM, computable consent, specimens, ingestion, AI proposals                                                   |
 | 4. Analysis and submission     | Derivations, ADaM, TLF lineage, Define-XML, submission package                                                 |
