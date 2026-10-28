@@ -34,6 +34,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [Kernel decisions K001–K032](adr/index.md) | Current | Kernel decisions and their ADRs; [ARCHITECTURE §2](../ARCHITECTURE.md#2-key-decisions) summarises them with the platform decisions |
 | [Kernel package guide](https://github.com/fderuiter/cadence-clinical/blob/main/packages/kernel/README.md) | Current | How the kernel projects are built and used: command pipeline, tenancy, NodeRef, explanations, authorization dry runs, search, protocol versions, Concept and Standards Registries, rule packs, validation findings, activity stream, expected schedule, IdentityVault, grants and qualifications |
 | [Source inventory](architecture/repository-migration/SOURCE_INVENTORY.md) | Current | Single source inventory and ownership review for the migration; replaces the retired execution migration inventory |
+| [Kernel extraction plan](architecture/repository-migration/KERNEL_EXTRACTION_PLAN.md) | Proposed | Gating status, tracks C1 to C6, pinned release manifest, acceptance criteria and rollback for the kernel SDK extraction (ADR-2602) |
 | [Rule packs](kernel/RULE_PACKS.md) | Current | Writing, releasing and benchmarking rule packs (spec §10.1, ADR-2461) |
 | [Indicators](kernel/INDICATORS.md) | Current | Writing, releasing and evaluating Study Pulse indicators, KRIs and QTLs (spec §10.4, ADR-2488) |
 | [Mapping specifications](kernel/MAPPING_SPECIFICATIONS.md) | Current | Writing, pinning and applying mapping specifications; K-STD-1 (spec §6.3, ADR-2463) |
