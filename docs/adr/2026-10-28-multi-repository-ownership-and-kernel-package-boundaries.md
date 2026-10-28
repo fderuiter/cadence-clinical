@@ -1,9 +1,9 @@
 # ADR-2602: Multi-Repository Ownership and Kernel Package Boundaries
 
-- **Status:** Proposed
+- **Status:** Accepted (approved by @fderuiter on 2026-10-28 as the recommendations in this draft)
 - **Date:** 2026-10-28
 - **Authors:** @fderuiter, Claude Code
-- **Deciders:** @fderuiter (pending; not to be finalized until the inventory is reconciled)
+- **Deciders:** @fderuiter
 - **Issues:** #4719 (kernel epic), #5310 (five-gates epic), #4787 (scaffold dispositions)
 - **Reconciles:** [ADR-2600](2026-10-19-modules-write-through-the-kernel-command-path.md) and [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md). Both remain **Accepted**. This ADR does not supersede either of them.
 - **Builds on:** [ADR-2601](2026-10-19-one-composition-host-for-the-kernel-and-its-modules.md) (one composition host)
@@ -11,7 +11,8 @@
 - **Shared inventory:** `SOURCE_INVENTORY.md` from the inventory thread (task 1), in draft PR #5681. It is not yet on `main`, so this ADR cites it by name and does not link to it.
 
 > [!NOTE]
-> This is a **proposal**. It records options and a recommended direction for review. It does not finalize the
+> This ADR is **accepted** as of 2026-10-28. Acceptance settles the direction only. It does not start extraction, which
+> stays gated on the migration plan's remaining conditions. Previously, it recorded options and a recommended direction for review. It did not finalize the
 > ownership matrix, the package graph or the repository layout. Items marked *needs inventory* wait for the shared
 > file-level inventory (task 1) before anyone decides them. No code, package or repository has moved.
 
@@ -97,7 +98,7 @@ Recommended shape under option 2, to be confirmed by K1:
 - **Needs decision (matrix item 4):** whether the standards registry belongs to the kernel repository or to a standards
   repository. This waits for the file-level inventory of `packages/kernel` and `apps/knowledge`.
 
-## 4. Decision (proposed)
+## 4. Decision (accepted)
 
 1. **Repositories are source ownership, not runtime.** The composition host in `cadence-clinical` remains the only
    runtime composition authority (ADR-2601). Product repositories publish packages the host composes. Repository
@@ -115,9 +116,9 @@ Recommended shape under option 2, to be confirmed by K1:
 6. **Gating:** extraction starts only when the four conditions in the [migration plan](../architecture/repository-migration/MIGRATION_PLAN.md)
    and the [agent execution guide](../architecture/repository-migration/AGENT_HANDOFF.md#synchronization-point) hold.
 
-## 5. Proposed Ownership Matrix Amendments
+## 5. Ownership Matrix Amendments (approved, to apply in the matrix PR)
 
-These are proposals to the matrix, not edits to it in this change:
+The matrix is not edited in this change. The amendments below are approved and go into the matrix in a follow-up docs PR:
 
 - Add a row for **Cadence.Kernel.Modules SDK contract** (kernel) and **host-side Npgsql adapter** (clinical).
 - Record `AggregateRootBase` and `IGxPAuditable` as kernel-owned contracts, once the move or redefinition is decided.
@@ -144,15 +145,18 @@ These are proposals to the matrix, not edits to it in this change:
 
 No check in this list has been run for this ADR. A green build is not validation.
 
-## 8. Open Items (needs inventory or decision)
+## 8. Open Items (after acceptance)
+
+These are implementation details inside the accepted direction. None of them reopens §4.
 
 | # | Item | Owner of the answer |
 | --- | --- | --- |
-| 1 | Move or redefine `AggregateRootBase` and `IGxPAuditable`; decide the SDK package set (EF Core, Npgsql, JWT, FluentValidation, OpenApi) and the 16 `Core.Domain` baseline namespaces | Decision, using the inventory's answers on PackageReference closure |
-| 2 | Name and location of the host-side Npgsql adapter | Kernel prep thread (task 3), with decision here |
-| 3 | Home of `Cadence.Rules` and `Cadence.Standards` | Inventory thread, then decision |
-| 4 | Per-class dispositions: 107 rows marked needs decision in the inventory (92 in `apps/execution`, 15 across `apps/interop`, `apps/knowledge`, `apps/fileshare`, `apps/org`) | Symbol-level review is in draft PR #5683 (read-only, not line-by-line verified); decision needed |
-| 5 | Whether a later per-product database (option C) needs its own ADR | Deciders, after K3 |
+| 1 | Move or redefine `AggregateRootBase` and `IGxPAuditable` out of `Core.Domain` before the SDK is published (K1) | Kernel prep thread (task 3) |
+| 2 | Exclude the 16 `Core.Domain` baseline namespaces from the SDK path, so the baseline entries clear without moving `Core.Domain` (K1) | Kernel prep thread, with the inventory's symbol review |
+| 3 | Name and location of the host-side Npgsql adapter (K1) | Kernel prep thread, under §4 |
+| 4 | Home of `Cadence.Rules` and `Cadence.Standards`. Still needs inventory review; not covered by this acceptance | Inventory thread, then decision |
+| 5 | Per-class dispositions for the 107 `needs decision` inventory rows, from the symbol-level review in draft PR #5683. The review is read-only and not line-by-line verified, and its owners are suggestions. Each slice must confirm its file list before moving code | Inventory thread, then the slice owner (K3 and later) |
+| 6 | Whether a later per-product database (option C) needs its own ADR | Deciders, after K3 |
 
 ## 9. Rollback
 
