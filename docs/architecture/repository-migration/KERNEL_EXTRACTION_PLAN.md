@@ -98,3 +98,31 @@ These restate the shared rubric in [MIGRATION_PLAN.md](MIGRATION_PLAN.md) as che
 - It does not decide the 107 `needs decision` rows.
 - It does not change the five-gates roadmap (#5310) or the current runtime.
 - It does not claim any test or consumer result. Every such item is marked unverified until a run is recorded.
+
+## 11. Track C status (draft, 2026-10-28)
+
+Everything in this section is **unverified**. No .NET SDK is available in the authoring environment (`dotnet` is missing and the installer download is refused), so nothing below was compiled or run.
+
+| Step | Status | Evidence and notes |
+| --- | --- | --- |
+| C1 SDK surface decision | Draft | Public SDK types come from `Cadence.Kernel` (`TenantId`), `Cadence.Kernel.Commands` (`ICommand`, `CommandResult`, `KernelError`, `Actor`), `Cadence.Kernel.Lineage` and `Cadence.Kernel.References` in `Abstractions`, plus `Cadence.Kernel.Modules`. The `Core.Domain` exclusions wait on ADR-2602 §8 item 2. |
+| C2 Host-side Npgsql adapter | Draft | `Cadence.Kernel.Modules/ModuleCommandServiceCollectionExtensions.cs` imports `Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure` directly. The adapter must take that code out of the SDK. |
+| C3 Public API snapshots | Not started | Snapshot tool not chosen. It needs the C1 surface first. |
+| C4 Package-consumer test | Draft, **unverified** | `packages/kernel/consumer-tests/Cadence.Kernel.ConsumerTests`. Two contract tests reference only `Abstractions` and `Modules`. It is **not in `Cadence.sln`**, and the test-layout rules are not changed. Adding it to the solution is a separate step. |
+| C5 Release manifest | Draft (below) | Every entry is `unverified`, so none may appear in a release candidate. |
+
+### C4 finding that limits the consumer test
+
+`ICommandContext` and `IKernelUnitOfWork` in `Cadence.Kernel.Modules/Commands/CommandHandlerContracts.cs` put `Cadence.Core.Domain.AggregateRootBase` in their **public signatures** (`FindAsync<TAggregate>` and related). Any module that uses the unit of work therefore needs `Core.Domain` at compile time. The C4 test avoids the unit of work for that reason. A consumer that handles aggregates cannot pass the boundary check until ADR-2602 §8 item 1 moves or redefines `AggregateRootBase` and `IGxPAuditable`. That step, not the test, is the real gate for C4.
+
+### C5 pinned release manifest (proposed entries)
+
+| Package or contract | Source repository | Pinned revision | Version | Status |
+| --- | --- | --- | --- | --- |
+| `Cadence.Kernel.Abstractions` | `cadence-clinical` (`packages/kernel`) | `b43e88c` | not published | unverified |
+| `Cadence.Kernel.Modules` | `cadence-clinical` (`packages/kernel`) | `b43e88c` | not published | unverified |
+| Public API snapshot, `Abstractions` | `cadence-clinical` | not created (C3) | none | blocked |
+| Public API snapshot, `Modules` | `cadence-clinical` | not created (C3) | none | blocked |
+| C4 consumer test run | `cadence-clinical` | `b43e88c` + this change | none | unverified |
+
+Rules that apply to the manifest, per §4 above: entries use exact versions and SHAs, never branch heads. `unverified` and `blocked` entries stay out of any release candidate.
