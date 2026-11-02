@@ -12,7 +12,7 @@
     "format": "prettier --write ."
   },
   "dependencies": {
-    "keycloak-js": "^26.2.4",
+    "keycloak-js": "^26.2.5",
     "pinia": "^4.1.0",
     "ui": "workspace:*",
     "usdm-schemas": "workspace:*",
