@@ -2,7 +2,7 @@
   "author": "",
   "dependencies": {
     "hls.js": "^1.7.2",
-    "keycloak-js": "^26.2.4",
+    "keycloak-js": "^26.2.5",
     "openapi-fetch": "^0.13.0",
     "pinia": "^4.1.0",
     "ui": "workspace:*",
