@@ -93,7 +93,7 @@
     <PackageVersion Include="AWSSDK.S3" Version="4.0.104.7" />
 
     <!-- Analyzers & Code Quality -->
-    <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.403" />
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.6.0.109712" />
     <!-- #4784 K-TIME-3: bans direct wall-clock reads (see BannedSymbols.txt); referenced solution-wide in root Directory.Build.props. -->
     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />
