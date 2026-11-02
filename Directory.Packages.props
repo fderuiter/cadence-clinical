@@ -8,7 +8,7 @@
     <!-- ASP.NET Core & OpenTelemetry -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.13" />
     <!-- Gateway OIDC bearer-token validation against Keycloak (#4761). -->
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.14" />
     <!-- MIG-SUBJ-023: WebApplicationFactory(Program) for SubjectEndpointsRoutingTests, the first routing
          test in this repo to need it; pinned to the same 10.0.13 shared-framework servicing release as the
          other Microsoft.AspNetCore.* packages above. -->
