@@ -34,6 +34,8 @@ app.MapCadenceHealthAndStatusEndpoints(
 var ctmsApi = app.MapGroup("/api/v1/ctms");
 ctmsApi.MapLetterTemplateEndpoints();
 ctmsApi.MapStartupGreenlightEndpoints();
+ctmsApi.MapMonitoringVisitEndpoints();
+ctmsApi.MapSiteMilestoneEndpoints();
 
 await app.RunAsync();
 

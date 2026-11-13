@@ -6,7 +6,7 @@ Each page lists the operations a .NET service serves. The specs come from the se
 
 | Service | Operations |
 | ------- | ---------- |
-| [ctms](ctms.md) | 9 |
+| [ctms](ctms.md) | 18 |
 | [designer](designer.md) | 6 |
 | [econsent](econsent.md) | 6 |
 | [eisf](eisf.md) | 2 |
