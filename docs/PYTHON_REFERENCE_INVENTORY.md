@@ -21,7 +21,6 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | [packages/ddf](#packagesddf) | 1 | 0 | 10 |
 | [packages/engine_core](#packagesengine_core) | 5 | 0 | 17 |
 | [packages/security](#packagessecurity) | 9 | 0 | 0 |
-| [packages/storage](#packagesstorage) | 0 | 0 | 2 |
 
 ## packages/ddf
 
@@ -95,10 +94,3 @@ that they are dropped.
 - `verify_inbound_email_signature` (eTMF inbound webhook; `INBOUND_EMAIL_HMAC_SECRET`).
 - `generate_greenlight_token` / `verify_greenlight_token`.
 - `compute_merkle_root` / `compute_block_hash`.
-
-## packages/storage
-
-| Python file | What it does | C# today | Status | Notes |
-| --- | --- | --- | --- | --- |
-| `gdrive.py` | Google Drive run-manifest upload for GxP recordings | Not carried forward ([ADR-2505](adr/2026-09-30-recording-evidence-goes-to-controlled-object-storage.md)): recording evidence goes through `IStoragePort<byte[]>` (S3, MinIO or filesystem), which records and checks each object's SHA-256 | Ported, deletion pending | No C# code used Drive; the `record setup-gdrive` stub and the `Google.Apis.Drive.v3` reference are removed |
-| `local_store.py` | Filesystem provider with checksum and path-traversal guard | `packages/storage/src/FileSystemBlobStore.cs` (`Storage:Provider` `filesystem`); unlike the reference, every read is checked against the hash recorded at write time | Ported, deletion pending | `FileSystemBlobStoreTests` |
