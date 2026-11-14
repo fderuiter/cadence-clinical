@@ -88,7 +88,7 @@ public sealed class MonitoringVisitEndpointsTests
         // Verify entity in DB
         var visit = await _db.CtmsMonitoringVisits.FindAsync([created.Value.Id], TestContext.Current.CancellationToken);
         visit.Should().NotBeNull();
-        visit!.Status.Should().Be("SCHEDULED");
+        visit!.Status.Should().Be(MonitoringVisitStatus.Scheduled);
 
         // Verify audit log
         var audit = await _db.CtmsAuditLogs.SingleAsync(a => a.Action == "SCHEDULE_MONITORING_VISIT", TestContext.Current.CancellationToken);
@@ -146,7 +146,6 @@ public sealed class MonitoringVisitEndpointsTests
             CraId = CraId,
             VisitType = "SIV",
             ScheduledDate = _clock.UtcNow.AddDays(1),
-            Status = "SCHEDULED",
             CreatedAt = _clock.UtcNow.UtcDateTime,
             CreatedBy = "setup",
             ReasonForChange = "Initial"
@@ -158,7 +157,6 @@ public sealed class MonitoringVisitEndpointsTests
             CraId = CraId,
             VisitType = "IMV",
             ScheduledDate = _clock.UtcNow.AddDays(2),
-            Status = "SCHEDULED",
             CreatedAt = _clock.UtcNow.UtcDateTime,
             CreatedBy = "setup",
             ReasonForChange = "Initial"
@@ -186,11 +184,11 @@ public sealed class MonitoringVisitEndpointsTests
             CraId = CraId,
             VisitType = "IMV",
             ScheduledDate = _clock.UtcNow.AddDays(-1),
-            Status = "SCHEDULED",
             CreatedAt = _clock.UtcNow.UtcDateTime,
             CreatedBy = "setup",
             ReasonForChange = "Initial"
         };
+        visit.StartVisit(_clock.UtcNow.AddHours(-4), "cra-user-1", "Starting visit on-site");
         _db.CtmsMonitoringVisits.Add(visit);
         await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
@@ -218,8 +216,8 @@ public sealed class MonitoringVisitEndpointsTests
         // Verify findings in DB
         var findings = await _db.CtmsMonitoringVisitFindings.Where(f => f.VisitId == visit.Id).ToListAsync(TestContext.Current.CancellationToken);
         findings.Should().HaveCount(2);
-        findings.Should().Contain(f => f.Severity == "MAJOR" && f.ResolutionStatus == "OPEN");
-        findings.Should().Contain(f => f.Severity == "MINOR" && f.ResolutionStatus == "RESOLVED");
+        findings.Should().Contain(f => f.Severity == "MAJOR" && f.ResolutionStatus == FindingResolutionStatus.Open);
+        findings.Should().Contain(f => f.Severity == "MINOR" && f.ResolutionStatus == FindingResolutionStatus.Resolved);
 
         // Verify audit log
         var audit = await _db.CtmsAuditLogs.SingleAsync(a => a.Action == "COMPLETE_MONITORING_VISIT", TestContext.Current.CancellationToken);
@@ -245,7 +243,7 @@ public sealed class MonitoringVisitEndpointsTests
     [GxPRequirement("PRD-CTMS-001")]
     public async Task SignOffVisit_OnCompletedVisit_StoresPart11SignatureAndAuditLog()
     {
-        var visit = new CtmsMonitoringVisit
+        var visit = new CtmsMonitoringVisit(Guid.NewGuid().ToString(), MonitoringVisitStatus.Completed)
         {
             StudyId = StudyId,
             SiteId = SiteId,
@@ -253,7 +251,6 @@ public sealed class MonitoringVisitEndpointsTests
             VisitType = "IMV",
             ScheduledDate = _clock.UtcNow.AddDays(-2),
             ActualDate = _clock.UtcNow.AddDays(-1),
-            Status = "COMPLETED",
             CreatedAt = _clock.UtcNow.UtcDateTime,
             CreatedBy = "setup",
             ReasonForChange = "Completed"
@@ -276,7 +273,7 @@ public sealed class MonitoringVisitEndpointsTests
 
         // Verify in DB
         var updated = await _db.CtmsMonitoringVisits.FindAsync([visit.Id], TestContext.Current.CancellationToken);
-        updated!.Status.Should().Be("SIGNED_OFF");
+        updated!.Status.Should().Be(MonitoringVisitStatus.Approved);
         updated.Signer.Should().Be("manager-1");
         updated.SigningTimestamp.Should().Be(_clock.UtcNow);
 
@@ -296,7 +293,6 @@ public sealed class MonitoringVisitEndpointsTests
             CraId = CraId,
             VisitType = "IMV",
             ScheduledDate = _clock.UtcNow.AddDays(1),
-            Status = "SCHEDULED",
             CreatedAt = _clock.UtcNow.UtcDateTime,
             CreatedBy = "setup",
             ReasonForChange = "Initial"
@@ -317,7 +313,7 @@ public sealed class MonitoringVisitEndpointsTests
     [Fact]
     public async Task SignOffVisit_WithoutReason_ReturnsBadRequest()
     {
-        var visit = new CtmsMonitoringVisit
+        var visit = new CtmsMonitoringVisit(Guid.NewGuid().ToString(), MonitoringVisitStatus.Completed)
         {
             StudyId = StudyId,
             SiteId = SiteId,
@@ -325,7 +321,6 @@ public sealed class MonitoringVisitEndpointsTests
             VisitType = "IMV",
             ScheduledDate = _clock.UtcNow.AddDays(-2),
             ActualDate = _clock.UtcNow.AddDays(-1),
-            Status = "COMPLETED",
             CreatedAt = _clock.UtcNow.UtcDateTime,
             CreatedBy = "setup",
             ReasonForChange = "Completed"
@@ -372,5 +367,98 @@ public sealed class MonitoringVisitEndpointsTests
             "VISIT-001", "follow_up_letter", _db, TestContext.Current.CancellationToken);
         missingResult.Should().BeOfType<ProblemHttpResult>()
             .Which.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-CTMS-001")]
+    public async Task StartVisit_OnScheduledVisit_TransitionsToInProgressAndAudits()
+    {
+        var visit = new CtmsMonitoringVisit
+        {
+            StudyId = StudyId,
+            SiteId = SiteId,
+            CraId = CraId,
+            VisitType = "IMV",
+            ScheduledDate = _clock.UtcNow.AddDays(1),
+            CreatedAt = _clock.UtcNow.UtcDateTime,
+            CreatedBy = "setup",
+            ReasonForChange = "Scheduled"
+        };
+        _db.CtmsMonitoringVisits.Add(visit);
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var caller = Caller("CRA", "cra-user-1");
+        caller.Request.Headers["X-Change-Reason"] = "Starting on-site monitoring visit";
+
+        var result = await MonitoringVisitEndpoints.StartMonitoringVisitAsync(
+            visit.Id, _db, caller, _clock, TestContext.Current.CancellationToken);
+
+        var ok = result.Should().BeOfType<Ok<MonitoringVisitResponseDto>>().Subject;
+        ok.Value!.Status.Should().Be("IN_PROGRESS");
+
+        var updated = await _db.CtmsMonitoringVisits.FindAsync([visit.Id], TestContext.Current.CancellationToken);
+        updated!.Status.Should().Be(MonitoringVisitStatus.InProgress);
+
+        var audit = await _db.CtmsAuditLogs.SingleAsync(a => a.Action == "START_MONITORING_VISIT", TestContext.Current.CancellationToken);
+        audit.UserId.Should().Be("cra-user-1");
+        audit.Details.Should().Contain(visit.Id);
+    }
+
+    [Fact]
+    public async Task StartVisit_OnCompletedVisit_ReturnsBadRequest()
+    {
+        var visit = new CtmsMonitoringVisit(Guid.NewGuid().ToString(), MonitoringVisitStatus.Completed)
+        {
+            StudyId = StudyId,
+            SiteId = SiteId,
+            CraId = CraId,
+            VisitType = "IMV",
+            ScheduledDate = _clock.UtcNow.AddDays(-2),
+            ActualDate = _clock.UtcNow.AddDays(-1),
+            CreatedAt = _clock.UtcNow.UtcDateTime,
+            CreatedBy = "setup",
+            ReasonForChange = "Completed"
+        };
+        _db.CtmsMonitoringVisits.Add(visit);
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var caller = Caller("CRA", "cra-user-1");
+        caller.Request.Headers["X-Change-Reason"] = "Attempt restarting completed visit";
+
+        var result = await MonitoringVisitEndpoints.StartMonitoringVisitAsync(
+            visit.Id, _db, caller, _clock, TestContext.Current.CancellationToken);
+
+        result.Should().BeOfType<ProblemHttpResult>()
+            .Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+    }
+
+    [Fact]
+    public async Task CompleteVisit_OnApprovedVisit_ReturnsBadRequest()
+    {
+        var visit = new CtmsMonitoringVisit(Guid.NewGuid().ToString(), MonitoringVisitStatus.Approved)
+        {
+            StudyId = StudyId,
+            SiteId = SiteId,
+            CraId = CraId,
+            VisitType = "IMV",
+            ScheduledDate = _clock.UtcNow.AddDays(-5),
+            ActualDate = _clock.UtcNow.AddDays(-4),
+            CreatedAt = _clock.UtcNow.UtcDateTime,
+            CreatedBy = "setup",
+            ReasonForChange = "Approved"
+        };
+        _db.CtmsMonitoringVisits.Add(visit);
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var caller = Caller("CRA", "cra-user-1");
+        caller.Request.Headers["X-Change-Reason"] = "Attempt edit approved visit";
+
+        var request = new MonitoringVisitCompleteDto(ActualDate: _clock.UtcNow);
+
+        var result = await MonitoringVisitEndpoints.CompleteMonitoringVisitAsync(
+            visit.Id, request, _db, caller, _clock, TestContext.Current.CancellationToken);
+
+        result.Should().BeOfType<ProblemHttpResult>()
+            .Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
     }
 }

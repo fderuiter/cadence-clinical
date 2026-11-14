@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
+using Cadence.Apps.Ctms.Domain.Events;
 using Cadence.Core.Domain;
 
 namespace Cadence.Apps.Ctms.Domain;
@@ -100,34 +103,208 @@ public sealed class CtmsInvestigatorGrant : AggregateRoot<string>
 
 public sealed class CtmsMonitoringVisitFinding : AggregateRoot<string>
 {
+    private readonly List<object> _domainEvents = [];
+
     public string VisitId { get; set; } = string.Empty;
     public string Text { get; set; } = string.Empty;
     public string Severity { get; set; } = string.Empty;
-    public string ResolutionStatus { get; set; } = string.Empty;
+    public FindingResolutionStatus ResolutionStatus { get; private set; } = FindingResolutionStatus.Open;
     public string? OfflineSyncMarkers { get; set; }
     public string? SyncStatus { get; set; }
 
+    [NotMapped]
+    public IReadOnlyList<object> DomainEvents => _domainEvents.AsReadOnly();
+
     public CtmsMonitoringVisitFinding() : base(Guid.NewGuid().ToString()) { }
     public CtmsMonitoringVisitFinding(string id) : base(id) { }
+    public CtmsMonitoringVisitFinding(string id, FindingResolutionStatus initialResolutionStatus) : base(id)
+    {
+        ResolutionStatus = initialResolutionStatus;
+    }
+
+    public void ClearDomainEvents() => _domainEvents.Clear();
+
+    private void RecordDomainEvent(object @event) => _domainEvents.Add(@event);
+
+    public Result<FindingResolutionStatus> TransitionTo(
+        FindingResolutionStatus target,
+        DateTimeOffset timestamp,
+        string userId,
+        string changeReason)
+    {
+        var guardResult = FindingResolutionTransitionGraph.Guard(ResolutionStatus, target);
+        if (guardResult.IsFailure)
+        {
+            return guardResult;
+        }
+
+        var previous = ResolutionStatus;
+        ResolutionStatus = guardResult.Value;
+        ReasonForChange = changeReason;
+        VersionIndex++;
+
+        RecordDomainEvent(new MonitoringVisitFindingStatusChangedDomainEvent(
+            Id,
+            VisitId,
+            previous,
+            ResolutionStatus,
+            timestamp,
+            userId,
+            changeReason));
+
+        return ResolutionStatus;
+    }
+
+    public Result<FindingResolutionStatus> SubmitForReview(DateTimeOffset timestamp, string userId, string changeReason) =>
+        TransitionTo(FindingResolutionStatus.UnderReview, timestamp, userId, changeReason);
+
+    public Result<FindingResolutionStatus> Resolve(DateTimeOffset timestamp, string userId, string changeReason) =>
+        TransitionTo(FindingResolutionStatus.Resolved, timestamp, userId, changeReason);
+
+    public Result<FindingResolutionStatus> Close(DateTimeOffset timestamp, string userId, string changeReason) =>
+        TransitionTo(FindingResolutionStatus.Closed, timestamp, userId, changeReason);
 }
 
 public sealed class CtmsMonitoringVisit : AggregateRoot<string>
 {
+    private readonly List<object> _domainEvents = [];
+
     public string StudyId { get; set; } = string.Empty;
     public string SiteId { get; set; } = string.Empty;
     public string CraId { get; set; } = string.Empty;
     public string VisitType { get; set; } = string.Empty;
     public DateTimeOffset ScheduledDate { get; set; }
     public DateTimeOffset? ActualDate { get; set; }
-    public string Status { get; set; } = string.Empty;
+    public MonitoringVisitStatus Status { get; private set; } = MonitoringVisitStatus.Scheduled;
     public string? SignatureManifestation { get; set; }
     public string? Signer { get; set; }
     public DateTimeOffset? SigningTimestamp { get; set; }
     public string? OfflineSyncMarkers { get; set; }
     public string? SyncStatus { get; set; }
 
+    [NotMapped]
+    public IReadOnlyList<object> DomainEvents => _domainEvents.AsReadOnly();
+
     public CtmsMonitoringVisit() : base(Guid.NewGuid().ToString()) { }
     public CtmsMonitoringVisit(string id) : base(id) { }
+    public CtmsMonitoringVisit(string id, MonitoringVisitStatus initialStatus) : base(id)
+    {
+        Status = initialStatus;
+    }
+
+    public void ClearDomainEvents() => _domainEvents.Clear();
+
+    private void RecordDomainEvent(object @event) => _domainEvents.Add(@event);
+
+    public Result<MonitoringVisitStatus> TransitionTo(
+        MonitoringVisitStatus target,
+        DateTimeOffset timestamp,
+        string userId,
+        string changeReason)
+    {
+        var guardResult = MonitoringVisitTransitionGraph.Guard(Status, target);
+        if (guardResult.IsFailure)
+        {
+            return guardResult;
+        }
+
+        var previous = Status;
+        Status = guardResult.Value;
+        ReasonForChange = changeReason;
+        VersionIndex++;
+
+        RecordDomainEvent(new MonitoringVisitStatusChangedDomainEvent(
+            Id,
+            previous,
+            Status,
+            timestamp,
+            userId,
+            changeReason));
+
+        return Status;
+    }
+
+    public Result<MonitoringVisitStatus> StartVisit(DateTimeOffset timestamp, string userId, string changeReason)
+    {
+        var result = TransitionTo(MonitoringVisitStatus.InProgress, timestamp, userId, changeReason);
+        if (result.IsFailure)
+        {
+            return result;
+        }
+
+        RecordDomainEvent(new MonitoringVisitStartedDomainEvent(Id, timestamp, userId, changeReason));
+        return result;
+    }
+
+    public Result<MonitoringVisitStatus> CompleteVisit(
+        DateTimeOffset actualDate,
+        DateTimeOffset timestamp,
+        string userId,
+        string changeReason)
+    {
+        var result = TransitionTo(MonitoringVisitStatus.Completed, timestamp, userId, changeReason);
+        if (result.IsFailure)
+        {
+            return result;
+        }
+
+        ActualDate = actualDate;
+        RecordDomainEvent(new MonitoringVisitCompletedDomainEvent(Id, actualDate, timestamp, userId, changeReason));
+        return result;
+    }
+
+    public Result<MonitoringVisitStatus> DraftReport(DateTimeOffset timestamp, string userId, string changeReason)
+    {
+        var result = TransitionTo(MonitoringVisitStatus.ReportDrafted, timestamp, userId, changeReason);
+        if (result.IsFailure)
+        {
+            return result;
+        }
+
+        RecordDomainEvent(new MonitoringVisitReportDraftedDomainEvent(Id, timestamp, userId, changeReason));
+        return result;
+    }
+
+    public Result<MonitoringVisitStatus> Approve(
+        string signer,
+        string signatureManifestationJson,
+        DateTimeOffset signingTimestamp,
+        DateTimeOffset timestamp,
+        string userId,
+        string changeReason)
+    {
+        var result = TransitionTo(MonitoringVisitStatus.Approved, timestamp, userId, changeReason);
+        if (result.IsFailure)
+        {
+            return result;
+        }
+
+        Signer = signer;
+        SignatureManifestation = signatureManifestationJson;
+        SigningTimestamp = signingTimestamp;
+
+        RecordDomainEvent(new MonitoringVisitApprovedDomainEvent(
+            Id,
+            signer,
+            signingTimestamp,
+            timestamp,
+            userId,
+            changeReason));
+
+        return result;
+    }
+
+    public Result<MonitoringVisitStatus> Cancel(DateTimeOffset timestamp, string userId, string changeReason)
+    {
+        var result = TransitionTo(MonitoringVisitStatus.Cancelled, timestamp, userId, changeReason);
+        if (result.IsFailure)
+        {
+            return result;
+        }
+
+        RecordDomainEvent(new MonitoringVisitCancelledDomainEvent(Id, timestamp, userId, changeReason));
+        return result;
+    }
 }
 
 public sealed class CtmsRecruitmentRecord : AggregateRoot<string>

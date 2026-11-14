@@ -49,6 +49,14 @@ public static class MonitoringVisitEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .RequirePermission(CreatePermission);
 
+        group.MapPost("/monitoring-visits/{visit_id}/start", StartMonitoringVisitAsync)
+            .WithName("StartMonitoringVisit")
+            .WithSummary("Start an on-site monitoring visit.")
+            .Produces<MonitoringVisitResponseDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission(UpdatePermission);
+
         group.MapPost("/monitoring-visits/{visit_id}/complete", CompleteMonitoringVisitAsync)
             .WithName("CompleteMonitoringVisit")
             .WithSummary("Complete a scheduled monitoring visit with actual date and clinical findings.")
@@ -108,7 +116,14 @@ public static class MonitoringVisitEndpoints
 
         if (!string.IsNullOrWhiteSpace(status))
         {
-            query = query.Where(v => v.Status == status);
+            if (MonitoringVisitStatusCodec.TryParse(status, out var parsedStatus))
+            {
+                query = query.Where(v => v.Status == parsedStatus);
+            }
+            else
+            {
+                return TypedResults.Ok(new List<MonitoringVisitResponseDto>());
+            }
         }
 
         var visits = await query
@@ -168,7 +183,6 @@ public static class MonitoringVisitEndpoints
             CraId = request.CraId.Trim(),
             VisitType = request.VisitType.Trim(),
             ScheduledDate = request.ScheduledDate,
-            Status = "SCHEDULED",
             CreatedAt = now.UtcDateTime,
             CreatedBy = user,
             ReasonForChange = reason,
@@ -194,6 +208,58 @@ public static class MonitoringVisitEndpoints
         await db.SaveChangesAsync(ct);
 
         return TypedResults.Created($"/api/v1/ctms/monitoring-visits/{visit.Id}", ToResponseDto(visit));
+    }
+
+    public static async Task<IResult> StartMonitoringVisitAsync(
+        [FromRoute(Name = "visit_id")] string visitId,
+        CtmsDbContext db,
+        HttpContext httpContext,
+        [FromServices] IClock clock,
+        CancellationToken ct)
+    {
+        var visit = await db.CtmsMonitoringVisits.FirstOrDefaultAsync(v => v.Id == visitId, ct);
+        if (visit is null)
+        {
+            return TypedResults.Problem(
+                title: "Visit not found",
+                detail: $"Monitoring visit '{visitId}' not found.",
+                statusCode: StatusCodes.Status404NotFound);
+        }
+
+        if (!TryExtractReasonForChange(httpContext, null, out string reason, out var problem))
+        {
+            return problem!;
+        }
+
+        var (user, role) = ResolveCaller(httpContext, visit.CraId);
+        DateTimeOffset now = clock.UtcNow;
+
+        var startResult = visit.StartVisit(now, user, reason);
+        if (startResult.IsFailure)
+        {
+            return TypedResults.Problem(
+                title: "Invalid visit status",
+                detail: startResult.Error!.Description,
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        var auditEntry = new CtmsAuditLog
+        {
+            Timestamp = now,
+            UserId = user,
+            UserRole = role,
+            Action = "START_MONITORING_VISIT",
+            Details = $"Started monitoring visit {visit.Id} for site {visit.SiteId} in study {visit.StudyId}.",
+            ReasonForChange = reason,
+            CreatedAt = now.UtcDateTime,
+            CreatedBy = user,
+            VersionIndex = 1
+        };
+        db.CtmsAuditLogs.Add(auditEntry);
+
+        await db.SaveChangesAsync(ct);
+
+        return TypedResults.Ok(ToResponseDto(visit));
     }
 
     public static async Task<IResult> CompleteMonitoringVisitAsync(
@@ -226,21 +292,17 @@ public static class MonitoringVisitEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        if (visit.Status == "SIGNED_OFF")
-        {
-            return TypedResults.Problem(
-                title: "Invalid visit status",
-                detail: $"Monitoring visit '{visitId}' has already been signed off and cannot be completed again.",
-                statusCode: StatusCodes.Status400BadRequest);
-        }
-
         var (user, role) = ResolveCaller(httpContext, visit.CraId);
         DateTimeOffset now = clock.UtcNow;
 
-        visit.ActualDate = request.ActualDate;
-        visit.Status = "COMPLETED";
-        visit.ReasonForChange = reason;
-        visit.VersionIndex++;
+        var completeResult = visit.CompleteVisit(request.ActualDate, now, user, reason);
+        if (completeResult.IsFailure)
+        {
+            return TypedResults.Problem(
+                title: "Invalid visit status",
+                detail: completeResult.Error!.Description,
+                statusCode: StatusCodes.Status400BadRequest);
+        }
 
         int findingsCount = 0;
         if (request.Findings is { Count: > 0 })
@@ -248,12 +310,18 @@ public static class MonitoringVisitEndpoints
             findingsCount = request.Findings.Count;
             foreach (var finding in request.Findings)
             {
-                var findingEntity = new CtmsMonitoringVisitFinding
+                var resolutionStatus = FindingResolutionStatus.Open;
+                if (!string.IsNullOrWhiteSpace(finding.ResolutionStatus) &&
+                    FindingResolutionStatusCodec.TryParse(finding.ResolutionStatus, out var parsedResolution))
+                {
+                    resolutionStatus = parsedResolution;
+                }
+
+                var findingEntity = new CtmsMonitoringVisitFinding(Guid.NewGuid().ToString(), resolutionStatus)
                 {
                     VisitId = visit.Id,
                     Text = finding.Text ?? string.Empty,
                     Severity = finding.Severity ?? "MINOR",
-                    ResolutionStatus = string.IsNullOrWhiteSpace(finding.ResolutionStatus) ? "OPEN" : finding.ResolutionStatus,
                     CreatedAt = now.UtcDateTime,
                     CreatedBy = user,
                     ReasonForChange = reason,
@@ -303,14 +371,6 @@ public static class MonitoringVisitEndpoints
             return problem!;
         }
 
-        if (visit.Status != "COMPLETED")
-        {
-            return TypedResults.Problem(
-                title: "Invalid visit status",
-                detail: $"Monitoring visit must be in 'COMPLETED' status to sign off. Current status is '{visit.Status}'.",
-                statusCode: StatusCodes.Status400BadRequest);
-        }
-
         var (user, role) = ResolveCaller(httpContext, "supervisor");
         DateTimeOffset now = clock.UtcNow;
 
@@ -325,12 +385,14 @@ public static class MonitoringVisitEndpoints
         };
         string signatureJson = JsonSerializer.Serialize(manifestationObj);
 
-        visit.Status = "SIGNED_OFF";
-        visit.Signer = user;
-        visit.SigningTimestamp = now;
-        visit.SignatureManifestation = signatureJson;
-        visit.ReasonForChange = reason;
-        visit.VersionIndex++;
+        var approveResult = visit.Approve(user, signatureJson, now, now, user, reason);
+        if (approveResult.IsFailure)
+        {
+            return TypedResults.Problem(
+                title: "Invalid visit status",
+                detail: approveResult.Error!.Description,
+                statusCode: StatusCodes.Status400BadRequest);
+        }
 
         var auditEntry = new CtmsAuditLog
         {
@@ -448,7 +510,7 @@ public static class MonitoringVisitEndpoints
             VisitType: visit.VisitType,
             ScheduledDate: visit.ScheduledDate.ToString("o"),
             ActualDate: visit.ActualDate?.ToString("o"),
-            Status: visit.Status,
+            Status: MonitoringVisitStatusCodec.ToCode(visit.Status),
             CreatedAt: visit.CreatedAt.ToString("o"),
             CreatedBy: visit.CreatedBy,
             ReasonForChange: visit.ReasonForChange,

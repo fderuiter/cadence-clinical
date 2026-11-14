@@ -57,6 +57,7 @@ public static class LetterTemplateEndpoints
             .WithSummary("Compiles a GxP-compliant PDF visit letter with Part 11 electronic signature, eTMF filing, and automated email dispatch.")
             .Produces<VisitLetterCompilationResultDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission(RenderPermission);
 
@@ -106,6 +107,31 @@ public static class LetterTemplateEndpoints
             return UnknownTemplate(Catalog);
         }
 
+        if (string.IsNullOrWhiteSpace(request.VisitId))
+        {
+            return TypedResults.Problem(
+                title: "Validation error",
+                detail: "visit_id is required to compile and dispatch visit letters.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        var visit = await dbContext.CtmsMonitoringVisits.FirstOrDefaultAsync(v => v.Id == request.VisitId, ct);
+        if (visit is null)
+        {
+            return TypedResults.Problem(
+                title: "Visit not found",
+                detail: $"Monitoring visit '{request.VisitId}' not found.",
+                statusCode: StatusCodes.Status404NotFound);
+        }
+
+        if (visit.Status != MonitoringVisitStatus.Completed && visit.Status != MonitoringVisitStatus.Approved)
+        {
+            return TypedResults.Problem(
+                title: "Invalid visit status",
+                detail: $"Monitoring visit must be in 'COMPLETED' or 'APPROVED' status before compiling and dispatching letters. Current status is '{MonitoringVisitStatusCodec.ToCode(visit.Status)}'.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
         var user = httpContext.User?.Identity?.Name ?? request.CraId;
         var now = clock.UtcNow;
 
@@ -117,7 +143,7 @@ public static class LetterTemplateEndpoints
             clock);
 
         var letterId = "LTR-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
-        var visitId = string.IsNullOrWhiteSpace(request.VisitId) ? ("VISIT-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()) : request.VisitId;
+        var visitId = visit.Id;
         var objectKey = $"letters/{request.StudyId}/{request.SiteId}/{letterId}.pdf";
 
         // File to eTMF if finalized

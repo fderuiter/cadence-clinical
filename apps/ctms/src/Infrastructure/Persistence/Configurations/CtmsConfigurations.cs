@@ -165,19 +165,30 @@ public sealed class CtmsMonitoringVisitFindingConfiguration : IEntityTypeConfigu
 {
     public void Configure(EntityTypeBuilder<CtmsMonitoringVisitFinding> builder)
     {
-        builder.ToTable("ctms_monitoring_visit_findings");
+        builder.ToTable("ctms_monitoring_visit_findings", t =>
+        {
+            t.HasCheckConstraint(
+                "ck_ctms_monitoring_visit_findings_resolution_status",
+                "\"ResolutionStatus\" IN ('OPEN', 'UNDER_REVIEW', 'RESOLVED', 'CLOSED')");
+        });
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasMaxLength(36);
         builder.Property(x => x.VisitId).HasMaxLength(36).IsRequired();
         builder.Property(x => x.Text).HasMaxLength(1000).IsRequired();
         builder.Property(x => x.Severity).HasMaxLength(50).IsRequired();
-        builder.Property(x => x.ResolutionStatus).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.ResolutionStatus)
+            .HasConversion(
+                v => FindingResolutionStatusCodec.ToCode(v),
+                v => FindingResolutionStatusCodec.Parse(v))
+            .HasMaxLength(50)
+            .IsRequired();
         builder.Property(x => x.OfflineSyncMarkers).HasColumnType("jsonb");
         builder.Property(x => x.SyncStatus).HasMaxLength(50);
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
         builder.Property(x => x.VersionIndex).IsRequired();
+        builder.Ignore(x => x.DomainEvents);
 
         builder.HasIndex(x => x.VisitId);
     }
@@ -187,7 +198,12 @@ public sealed class CtmsMonitoringVisitConfiguration : IEntityTypeConfiguration<
 {
     public void Configure(EntityTypeBuilder<CtmsMonitoringVisit> builder)
     {
-        builder.ToTable("ctms_monitoring_visits");
+        builder.ToTable("ctms_monitoring_visits", t =>
+        {
+            t.HasCheckConstraint(
+                "ck_ctms_monitoring_visits_status",
+                "\"Status\" IN ('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'REPORT_DRAFTED', 'APPROVED', 'SIGNED_OFF', 'CANCELLED')");
+        });
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasMaxLength(36);
         builder.Property(x => x.StudyId).HasMaxLength(255).IsRequired();
@@ -195,7 +211,12 @@ public sealed class CtmsMonitoringVisitConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.CraId).HasMaxLength(255).IsRequired();
         builder.Property(x => x.VisitType).HasMaxLength(50).IsRequired();
         builder.Property(x => x.ScheduledDate).IsRequired();
-        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Status)
+            .HasConversion(
+                v => MonitoringVisitStatusCodec.ToCode(v),
+                v => MonitoringVisitStatusCodec.Parse(v))
+            .HasMaxLength(50)
+            .IsRequired();
         builder.Property(x => x.SignatureManifestation).HasColumnType("jsonb");
         builder.Property(x => x.Signer).HasMaxLength(255);
         builder.Property(x => x.OfflineSyncMarkers).HasColumnType("jsonb");
@@ -204,6 +225,7 @@ public sealed class CtmsMonitoringVisitConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
         builder.Property(x => x.VersionIndex).IsRequired();
+        builder.Ignore(x => x.DomainEvents);
 
         builder.HasIndex(x => x.SiteId);
         builder.HasIndex(x => x.StudyId);

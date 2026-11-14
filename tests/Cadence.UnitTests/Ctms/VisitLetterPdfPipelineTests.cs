@@ -155,12 +155,30 @@ public sealed class VisitLetterPdfPipelineTests
     [GxPRequirement("PRD-CTMS-002")]
     public async Task CompileEndpoint_FinalizesAndFilesToEtmf_AndDispatchesEmail()
     {
+        var visitId = "VISIT-017-001";
+        var visit = new CtmsMonitoringVisit(visitId, MonitoringVisitStatus.Completed)
+        {
+            StudyId = "STUDY-101",
+            SiteId = "SITE-017",
+            CraId = "CRA-42",
+            VisitType = "Monitoring",
+            ScheduledDate = new DateTimeOffset(2026, 10, 15, 9, 0, 0, TimeSpan.Zero),
+            ActualDate = new DateTimeOffset(2026, 10, 15, 17, 0, 0, TimeSpan.Zero),
+            CreatedAt = _clock.UtcNow.UtcDateTime,
+            CreatedBy = "CRA-42",
+            ReasonForChange = "Completed monitoring visit",
+            VersionIndex = 1
+        };
+        _ctmsDb.CtmsMonitoringVisits.Add(visit);
+        await _ctmsDb.SaveChangesAsync(TestContext.Current.CancellationToken);
+
         var model = new SiteVisitLetterModel(
             CraId: "CRA-42",
             CreatedAt: "2026-10-01",
             StudyId: "STUDY-101",
             SiteId: "SITE-017",
             ScheduledDate: "2026-10-15",
+            VisitId: visitId,
             Finalize: true,
             SignerName: "Jane Doe CRA",
             SigningPurpose: "Visit Letter Approval",
@@ -219,5 +237,153 @@ public sealed class VisitLetterPdfPipelineTests
         notif!.RecipientUserId.Should().Be("investigator@site017.org");
         notif.Category.Should().Be("VISIT_LETTER_DISPATCH");
         notif.MessageContent.Should().Contain(dto.PdfAccessUrl);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-CTMS-002")]
+    public async Task CompileEndpoint_WhenVisitIdMissing_Returns400BadRequest()
+    {
+        var model = new SiteVisitLetterModel(
+            CraId: "CRA-42",
+            CreatedAt: "2026-10-01",
+            StudyId: "STUDY-101",
+            SiteId: "SITE-017",
+            VisitId: null);
+
+        var httpContext = new DefaultHttpContext();
+        var ct = TestContext.Current.CancellationToken;
+
+        var response = await LetterTemplateEndpoints.CompileAndDispatchLetterAsync(
+            "confirmation_letter",
+            model,
+            FluidTemplateRenderer.Instance,
+            _ctmsDb,
+            _clock,
+            _serviceProvider,
+            httpContext,
+            ct);
+
+        response.Should().BeOfType<ProblemHttpResult>()
+            .Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-CTMS-002")]
+    public async Task CompileEndpoint_WhenVisitNotFound_Returns404NotFound()
+    {
+        var model = new SiteVisitLetterModel(
+            CraId: "CRA-42",
+            CreatedAt: "2026-10-01",
+            StudyId: "STUDY-101",
+            SiteId: "SITE-017",
+            VisitId: "NON-EXISTENT-VISIT");
+
+        var httpContext = new DefaultHttpContext();
+        var ct = TestContext.Current.CancellationToken;
+
+        var response = await LetterTemplateEndpoints.CompileAndDispatchLetterAsync(
+            "confirmation_letter",
+            model,
+            FluidTemplateRenderer.Instance,
+            _ctmsDb,
+            _clock,
+            _serviceProvider,
+            httpContext,
+            ct);
+
+        response.Should().BeOfType<ProblemHttpResult>()
+            .Which.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-CTMS-002")]
+    public async Task CompileEndpoint_WhenVisitStatusIsScheduled_Returns400BadRequest()
+    {
+        var visitId = "VISIT-SCHEDULED-001";
+        var visit = new CtmsMonitoringVisit(visitId, MonitoringVisitStatus.Scheduled)
+        {
+            StudyId = "STUDY-101",
+            SiteId = "SITE-017",
+            CraId = "CRA-42",
+            VisitType = "Monitoring",
+            ScheduledDate = new DateTimeOffset(2026, 10, 15, 9, 0, 0, TimeSpan.Zero),
+            CreatedAt = _clock.UtcNow.UtcDateTime,
+            CreatedBy = "CRA-42",
+            ReasonForChange = "Scheduled visit",
+            VersionIndex = 1
+        };
+        _ctmsDb.CtmsMonitoringVisits.Add(visit);
+        await _ctmsDb.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var model = new SiteVisitLetterModel(
+            CraId: "CRA-42",
+            CreatedAt: "2026-10-01",
+            StudyId: "STUDY-101",
+            SiteId: "SITE-017",
+            VisitId: visitId);
+
+        var httpContext = new DefaultHttpContext();
+        var ct = TestContext.Current.CancellationToken;
+
+        var response = await LetterTemplateEndpoints.CompileAndDispatchLetterAsync(
+            "confirmation_letter",
+            model,
+            FluidTemplateRenderer.Instance,
+            _ctmsDb,
+            _clock,
+            _serviceProvider,
+            httpContext,
+            ct);
+
+        var problem = response.Should().BeOfType<ProblemHttpResult>().Subject;
+        problem.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        problem.ProblemDetails.Detail.Should().Contain("COMPLETED").And.Contain("APPROVED");
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-CTMS-002")]
+    public async Task CompileEndpoint_WhenVisitStatusIsApproved_Succeeds()
+    {
+        var visitId = "VISIT-APPROVED-001";
+        var visit = new CtmsMonitoringVisit(visitId, MonitoringVisitStatus.Approved)
+        {
+            StudyId = "STUDY-101",
+            SiteId = "SITE-017",
+            CraId = "CRA-42",
+            VisitType = "Monitoring",
+            ScheduledDate = new DateTimeOffset(2026, 10, 15, 9, 0, 0, TimeSpan.Zero),
+            ActualDate = new DateTimeOffset(2026, 10, 15, 17, 0, 0, TimeSpan.Zero),
+            CreatedAt = _clock.UtcNow.UtcDateTime,
+            CreatedBy = "CRA-42",
+            ReasonForChange = "Approved visit",
+            VersionIndex = 2
+        };
+        _ctmsDb.CtmsMonitoringVisits.Add(visit);
+        await _ctmsDb.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var model = new SiteVisitLetterModel(
+            CraId: "CRA-42",
+            CreatedAt: "2026-10-01",
+            StudyId: "STUDY-101",
+            SiteId: "SITE-017",
+            ScheduledDate: "2026-10-15",
+            VisitId: visitId,
+            Finalize: false,
+            ReasonForChange: "Draft letter for approved visit");
+
+        var httpContext = new DefaultHttpContext();
+        var ct = TestContext.Current.CancellationToken;
+
+        var response = await LetterTemplateEndpoints.CompileAndDispatchLetterAsync(
+            "confirmation_letter",
+            model,
+            FluidTemplateRenderer.Instance,
+            _ctmsDb,
+            _clock,
+            _serviceProvider,
+            httpContext,
+            ct);
+
+        response.Should().BeOfType<Ok<VisitLetterCompilationResultDto>>();
     }
 }

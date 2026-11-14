@@ -17,7 +17,7 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.11")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -422,120 +422,6 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.ToTable("ctms_generated_letters", (string)null);
                 });
 
-            modelBuilder.Entity("Cadence.Apps.Ctms.Domain.CtmsSiteGreenlightGate", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(36)
-                        .HasColumnType("character varying(36)");
-
-                    b.Property<string>("CountryCode")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<bool>("FacetCtaBudget")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("FacetDoaLog")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("FacetEisfBaseline")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("FacetIpRelease")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("FacetRegulatoryIrb")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("FacetStaffTraining")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTimeOffset?>("GreenlightCertifiedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("GreenlightCertifiedBy")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("GreenlightToken")
-                        .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)");
-
-                    b.Property<bool>("IsOverridden")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("OverallStatus")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<DateTimeOffset?>("OverrideAuthorizedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("OverrideJustification")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<string>("OverrideMedicalUserId")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("OverrideSponsorUserId")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<int>("ReadinessPercentage")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ReasonForChange")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("SiteId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("SiteName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("StudyId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("UnfulfilledReasons")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<long>("VersionIndex")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CountryCode");
-
-                    b.HasIndex("SiteId");
-
-                    b.HasIndex("StudyId");
-
-                    b.HasIndex("StudyId", "CountryCode");
-
-                    b.ToTable("ctms_site_greenlight_gates", (string)null);
-                });
-
             modelBuilder.Entity("Cadence.Apps.Ctms.Domain.CtmsInvestigatorGrant", b =>
                 {
                     b.Property<string>("Id")
@@ -720,7 +606,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("StudyId");
 
-                    b.ToTable("ctms_monitoring_visits", (string)null);
+                    b.ToTable("ctms_monitoring_visits", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_ctms_monitoring_visits_status", "\"Status\" IN ('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'REPORT_DRAFTED', 'APPROVED', 'SIGNED_OFF', 'CANCELLED')");
+                        });
                 });
 
             modelBuilder.Entity("Cadence.Apps.Ctms.Domain.CtmsMonitoringVisitFinding", b =>
@@ -776,7 +665,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("VisitId");
 
-                    b.ToTable("ctms_monitoring_visit_findings", (string)null);
+                    b.ToTable("ctms_monitoring_visit_findings", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_ctms_monitoring_visit_findings_resolution_status", "\"ResolutionStatus\" IN ('OPEN', 'UNDER_REVIEW', 'RESOLVED', 'CLOSED')");
+                        });
                 });
 
             modelBuilder.Entity("Cadence.Apps.Ctms.Domain.CtmsPaymentMilestone", b =>
