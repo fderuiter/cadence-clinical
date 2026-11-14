@@ -367,6 +367,7 @@
           "protocol_version",
           "digest_sha256",
           "signature_data",
+          "liveness_token",
           "device_timestamp"
         ],
         "type": "object",
@@ -432,6 +433,12 @@
             ]
           },
           "signature_data": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "liveness_token": {
             "type": [
               "null",
               "string"

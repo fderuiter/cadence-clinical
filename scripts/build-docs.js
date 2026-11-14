@@ -351,19 +351,11 @@ try {
       "Skipping 'cadence check' and 'validate-markdown' (CADENCE_DOCS_SKIP_CHECKS=1: they already passed in this run)."
     );
   } else {
-    runCommand(
-      "node scripts/run-cli.js check"
-    );
-    runCommand(
-      "node scripts/run-cli.js validate-markdown"
-    );
+    runCommand("node scripts/run-cli.js check openapi");
+    runCommand("node scripts/run-cli.js validate-markdown");
   }
-  runCommand(
-    "node scripts/run-cli.js generate-schema-doc"
-  );
-  runCommand(
-    "node scripts/run-cli.js generate-api-docs"
-  );
+  runCommand("node scripts/run-cli.js generate-schema-doc");
+  runCommand("node scripts/run-cli.js generate-api-docs");
 
   // 2. Run compliance compiler
   console.log("--- Step 2: Running Compliance Tracer ---");
@@ -375,13 +367,9 @@ try {
     envDraft && !["0", "false", "no", "off"].includes(envDraft.toLowerCase());
 
   if (hasReport && !isEnvDraft) {
-    runCommand(
-      "node scripts/run-cli.js generate-rtm"
-    );
+    runCommand("node scripts/run-cli.js generate-rtm");
   } else {
-    runCommand(
-      "node scripts/run-cli.js generate-rtm --draft"
-    );
+    runCommand("node scripts/run-cli.js generate-rtm --draft");
   }
 
   // 3. Prepare files for VitePress
