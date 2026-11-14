@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 
 using Cadence.ToolingCore.Services;
@@ -121,10 +122,11 @@ public static class QualityGates
             "The web API types are generated from the current `docs/openapi`, and the web API clients typecheck against them",
             ctx => ApiClientValidatorService.ValidateApiClients(ctx.RepoRoot) == 0),
         new("schema-doc", ["auto-stage-schema-doc"], "`docs/schema` matches the EF Core models",
-            ctx => SchemaDocGeneratorService.GenerateSchemaDocumentation(validate: true, repoRoot: ctx.RepoRoot) == 0)
+            ctx => CheckSchemaDoc(ctx))
         {
-            PreCommit = PreCommitMode.Skipped,
-            PreCommitNote = "rendering every module's EF Core model takes minutes; `cadence check` and CI run it",
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "runs the drift check when staged files include Entity Framework entities, migrations, or configurations, otherwise skips it",
         },
         new("path-patterns", ["validate-path-patterns"],
             "No `tmp`, `temp`, `scratch` or `old_src` directories, `.vue` files only under `apps/` and `packages/`, `.sh` files only under `scripts/`",
@@ -175,6 +177,58 @@ public static class QualityGates
         bool commandsDocumented = CliDocsGeneratorService.GenerateCliDocs(check: true, repoRoot: repoRoot) == 0;
         bool tablesCurrent = GateDocs.Check(repoRoot);
         return commandsDocumented && tablesCurrent;
+    }
+
+    private static bool CheckSchemaDoc(GateContext ctx)
+    {
+        if (ctx.PreCommit)
+        {
+            var files = ctx.TargetFiles is { Length: > 0 }
+                ? (IEnumerable<string>)ctx.TargetFiles
+                : PreCommitOpenApiService.GetStagedFiles(ctx.RepoRoot);
+
+            if (!files.Any(AffectsEfCoreSchema))
+            {
+                Console.WriteLine("Staged changes do not include Entity Framework entities, migrations, or configurations. Skipping schema documentation check...");
+                return true;
+            }
+        }
+        else if (ctx.Files is { Length: > 0 } && !ctx.Files.Any(AffectsEfCoreSchema))
+        {
+            return true;
+        }
+
+        return SchemaDocGeneratorService.GenerateSchemaDocumentation(validate: true, repoRoot: ctx.RepoRoot) == 0;
+    }
+
+    private static bool AffectsEfCoreSchema(string file)
+    {
+        string normalized = file.Replace('\\', '/');
+        if (!normalized.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (normalized.StartsWith("tests/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("docs/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("scripts/", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        string fileName = Path.GetFileNameWithoutExtension(normalized);
+
+        return normalized.Contains("/migrations/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("migrations/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("/configurations/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("configurations/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("/entities/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("entities/", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Contains("migration", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Contains("configuration", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Contains("entities", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Contains("entity", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Contains("dbcontext", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string Normalize(string name) => name.Trim().ToLowerInvariant().Replace('_', '-');

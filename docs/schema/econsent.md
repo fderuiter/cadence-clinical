@@ -10,6 +10,7 @@ Generated from the EF Core model of `Cadence.Apps.Econsent.Infrastructure.Persis
 | [`econsent.OutboxMessage`](#econsentoutboxmessage) | `OutboxMessage` | 21 |
 | [`econsent.OutboxState`](#econsentoutboxstate) | `OutboxState` | 6 |
 | [`econsent.audit_log_entries`](#econsentaudit_log_entries) | `AuditLogEntry` | 11 |
+| [`econsent.biometric_liveness_verifications`](#econsentbiometric_liveness_verifications) | `BiometricLivenessVerification` | 12 |
 | [`econsent.comprehension_checks`](#econsentcomprehension_checks) | `ComprehensionCheck` | 9 |
 | [`econsent.comprehension_results`](#econsentcomprehension_results) | `ComprehensionResult` | 13 |
 | [`econsent.consent_audit_logs`](#econsentconsent_audit_logs) | `ConsentAuditLog` | 11 |
@@ -127,6 +128,31 @@ Entity: `AuditLogEntry`
 Indexes:
 
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+
+## econsent.biometric_liveness_verifications
+
+Entity: `BiometricLivenessVerification`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `AntiSpoofScore` | `numeric(5,4)` | no |  |  |
+| `ConsentId` | `character varying(36)` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `IsLive` | `boolean` | no |  |  |
+| `LivenessToken` | `text` | no |  |  |
+| `LivenessTokenHash` | `character varying(64)` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `Status` | `character varying(50)` | no |  |  |
+| `SubjectPseudonym` | `character varying(255)` | no |  |  |
+| `VerifiedAt` | `timestamp with time zone` | no |  |  |
+
+Indexes:
+
+- `IX_biometric_liveness_verifications_ConsentId`: (`ConsentId`)
+- `IX_biometric_liveness_verifications_LivenessTokenHash`: (`LivenessTokenHash`)
+- `IX_biometric_liveness_verifications_SubjectPseudonym`: (`SubjectPseudonym`)
 
 ## econsent.comprehension_checks
 
