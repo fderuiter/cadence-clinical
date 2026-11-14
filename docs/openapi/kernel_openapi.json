@@ -2784,6 +2784,47 @@
         ]
       }
     },
+    "/api/v1/ai/biometrics/verify-liveness": {
+      "post": {
+        "tags": [
+          "Biometrics AI Gateway"
+        ],
+        "summary": "Tests video frame payloads for anti-spoofing in temporary memory and returns signed liveness tokens.",
+        "operationId": "AiVerifyLiveness",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_VerifyLivenessRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_VerifyLivenessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/forms": {
       "post": {
         "tags": [
@@ -8291,6 +8332,74 @@
             ]
           }
         }
+      },
+      "Kernel_VerifyLivenessRequest": {
+        "required": [
+          "subject_pseudonym",
+          "video_frames",
+          "challenge_id"
+        ],
+        "type": "object",
+        "properties": {
+          "subject_pseudonym": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "video_frames": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "challenge_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fallback_mode": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "Kernel_VerifyLivenessResponse": {
+        "required": [
+          "liveness_token",
+          "is_live",
+          "anti_spoof_score",
+          "expires_at",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "liveness_token": {
+            "type": "string"
+          },
+          "is_live": {
+            "type": "boolean"
+          },
+          "anti_spoof_score": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
       }
     }
   },
@@ -8312,6 +8421,9 @@
     },
     {
       "name": "AI agents"
+    },
+    {
+      "name": "Biometrics AI Gateway"
     },
     {
       "name": "Execution forms"
