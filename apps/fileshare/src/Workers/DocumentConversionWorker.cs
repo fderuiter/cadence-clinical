@@ -8,80 +8,43 @@ using Cadence.Apps.Fileshare.Infrastructure.Persistence;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Cadence.Apps.Fileshare.Workers;
 
-public sealed partial class DocumentConversionWorker : BackgroundService
+public sealed class DocumentConversionWorker : FileshareWorkerBase
 {
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly FileshareWorkerOptions _options;
-    private readonly ILogger<DocumentConversionWorker> _logger;
-    private readonly SemaphoreSlim _throttle;
-
     public DocumentConversionWorker(
         IServiceScopeFactory scopeFactory,
         IOptions<FileshareWorkerOptions> options,
         ILogger<DocumentConversionWorker> logger)
+        : base(scopeFactory, options, logger)
     {
-        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _options = options?.Value ?? new FileshareWorkerOptions();
-        _throttle = new SemaphoreSlim(_options.MaxConcurrentJobs, _options.MaxConcurrentJobs);
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        _logger.LogInformation("DocumentConversionWorker started.");
+    protected override TimeSpan PollInterval => Options.ConversionPollInterval;
 
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
-                await ProcessPendingConversionsAsync(stoppingToken).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
-            {
-                LogPassFailed(_logger, ex);
-            }
-
-            await Delay(_options.ConversionPollInterval, stoppingToken).ConfigureAwait(false);
-        }
-
-        _logger.LogInformation("DocumentConversionWorker stopping.");
-    }
+    protected override Task ProcessPendingAsync(CancellationToken stoppingToken)
+        => ProcessPendingConversionsAsync(stoppingToken);
 
     public async Task ProcessPendingConversionsAsync(CancellationToken ct)
     {
-        using var scope = _scopeFactory.CreateScope();
+        using var scope = ScopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FileshareDbContext>();
         var processor = scope.ServiceProvider.GetService<IDocumentConverterProcessor>()
                         ?? new DocumentConverterProcessor(scope.ServiceProvider.GetRequiredService<ILogger<DocumentConverterProcessor>>());
 
         var pendingRecords = await dbContext.FileRecords
             .Where(f => f.ConversionStatus == "PENDING" && !f.IsDeleted)
-            .Take(_options.BatchSize)
+            .Take(Options.BatchSize)
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
         if (pendingRecords.Count > 0)
         {
-            await Task.WhenAll(pendingRecords.Select(r => ProcessThrottledRecordAsync(r, rec => ProcessSingleRecordAsync(dbContext, processor, rec, ct), ct))).ConfigureAwait(false);
-        }
-    }
-
-    private async Task ProcessThrottledRecordAsync(FileRecord record, Func<FileRecord, Task> action, CancellationToken ct)
-    {
-        await _throttle.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            await action(record).ConfigureAwait(false);
-        }
-        finally
-        {
-            _throttle.Release();
+            await Task.WhenAll(pendingRecords.Select(r => ExecuteThrottledAsync(
+                () => ProcessSingleRecordAsync(dbContext, processor, r, ct), ct))).ConfigureAwait(false);
         }
     }
 
@@ -100,7 +63,7 @@ public sealed partial class DocumentConversionWorker : BackgroundService
         string? pdfKey = null;
         string? lastError = null;
 
-        while (attempt < _options.MaxRetryCount && !success && !ct.IsCancellationRequested)
+        while (attempt < Options.MaxRetryCount && !success && !ct.IsCancellationRequested)
         {
             attempt++;
             try
@@ -111,12 +74,11 @@ public sealed partial class DocumentConversionWorker : BackgroundService
             catch (Exception ex)
             {
                 lastError = ex.Message;
-                _logger.LogWarning(ex, "Conversion attempt {Attempt}/{MaxRetries} failed for FileRecord {RecordId}", attempt, _options.MaxRetryCount, record.Id);
+                Logger.LogWarning(ex, "Conversion attempt {Attempt}/{MaxRetries} failed for FileRecord {RecordId}", attempt, Options.MaxRetryCount, record.Id);
 
-                if (attempt < _options.MaxRetryCount)
+                if (attempt < Options.MaxRetryCount)
                 {
-                    var backoffDelay = TimeSpan.FromMilliseconds(_options.InitialBackoff.TotalMilliseconds * Math.Pow(2, attempt - 1));
-                    await Delay(backoffDelay, ct).ConfigureAwait(false);
+                    await DelayBackoffAsync(attempt, ct).ConfigureAwait(false);
                 }
             }
         }
@@ -135,19 +97,4 @@ public sealed partial class DocumentConversionWorker : BackgroundService
 
         await dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
     }
-
-    internal static async Task Delay(TimeSpan interval, CancellationToken stoppingToken)
-    {
-        try
-        {
-            await Task.Delay(interval, stoppingToken).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-        {
-            // Host shutdown
-        }
-    }
-
-    [LoggerMessage(Level = LogLevel.Error, Message = "DocumentConversionWorker pass failed; retrying after poll interval.")]
-    private static partial void LogPassFailed(ILogger logger, Exception exception);
 }

@@ -8,61 +8,36 @@ using Cadence.Apps.Fileshare.Infrastructure.Persistence;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Cadence.Apps.Fileshare.Workers;
 
-public sealed partial class MediaTranscoderWorker : BackgroundService
+public sealed class MediaTranscoderWorker : FileshareWorkerBase
 {
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly FileshareWorkerOptions _options;
-    private readonly ILogger<MediaTranscoderWorker> _logger;
-    private readonly SemaphoreSlim _throttle;
-
     public MediaTranscoderWorker(
         IServiceScopeFactory scopeFactory,
         IOptions<FileshareWorkerOptions> options,
         ILogger<MediaTranscoderWorker> logger)
+        : base(scopeFactory, options, logger)
     {
-        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _options = options?.Value ?? new FileshareWorkerOptions();
-        _throttle = new SemaphoreSlim(_options.MaxConcurrentJobs, _options.MaxConcurrentJobs);
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        _logger.LogInformation("MediaTranscoderWorker started.");
+    protected override TimeSpan PollInterval => Options.TranscodePollInterval;
 
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
-                await ProcessPendingTranscodesAsync(stoppingToken).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
-            {
-                LogPassFailed(_logger, ex);
-            }
-
-            await Delay(_options.TranscodePollInterval, stoppingToken).ConfigureAwait(false);
-        }
-
-        _logger.LogInformation("MediaTranscoderWorker stopping.");
-    }
+    protected override Task ProcessPendingAsync(CancellationToken stoppingToken)
+        => ProcessPendingTranscodesAsync(stoppingToken);
 
     public async Task ProcessPendingTranscodesAsync(CancellationToken ct)
     {
-        using var scope = _scopeFactory.CreateScope();
+        using var scope = ScopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FileshareDbContext>();
         var processor = scope.ServiceProvider.GetService<IMediaTranscoderProcessor>()
                         ?? new MediaTranscoderProcessor(scope.ServiceProvider.GetRequiredService<ILogger<MediaTranscoderProcessor>>());
 
         var pendingRecords = await dbContext.FileRecords
             .Where(f => f.TranscodeStatus == "PENDING" && !f.IsDeleted)
-            .Take(_options.BatchSize)
+            .Take(Options.BatchSize)
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
@@ -71,25 +46,8 @@ public sealed partial class MediaTranscoderWorker : BackgroundService
             return;
         }
 
-        await Task.WhenAll(pendingRecords.Select(record => ProcessThrottledRecordAsync(
-            dbContext, processor, record, ct))).ConfigureAwait(false);
-    }
-
-    private async Task ProcessThrottledRecordAsync(
-        FileshareDbContext dbContext,
-        IMediaTranscoderProcessor processor,
-        FileRecord record,
-        CancellationToken ct)
-    {
-        await _throttle.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            await ProcessSingleRecordAsync(dbContext, processor, record, ct).ConfigureAwait(false);
-        }
-        finally
-        {
-            _throttle.Release();
-        }
+        await Task.WhenAll(pendingRecords.Select(record => ExecuteThrottledAsync(
+            () => ProcessSingleRecordAsync(dbContext, processor, record, ct), ct))).ConfigureAwait(false);
     }
 
     private async Task ProcessSingleRecordAsync(
@@ -107,7 +65,7 @@ public sealed partial class MediaTranscoderWorker : BackgroundService
         string? manifestKey = null;
         string? lastError = null;
 
-        while (attempt < _options.MaxRetryCount && !success && !ct.IsCancellationRequested)
+        while (attempt < Options.MaxRetryCount && !success && !ct.IsCancellationRequested)
         {
             attempt++;
             try
@@ -118,12 +76,11 @@ public sealed partial class MediaTranscoderWorker : BackgroundService
             catch (Exception ex)
             {
                 lastError = ex.Message;
-                _logger.LogWarning(ex, "Transcode attempt {Attempt}/{MaxRetries} failed for FileRecord {RecordId}", attempt, _options.MaxRetryCount, record.Id);
+                Logger.LogWarning(ex, "Transcode attempt {Attempt}/{MaxRetries} failed for FileRecord {RecordId}", attempt, Options.MaxRetryCount, record.Id);
 
-                if (attempt < _options.MaxRetryCount)
+                if (attempt < Options.MaxRetryCount)
                 {
-                    var backoffDelay = TimeSpan.FromMilliseconds(_options.InitialBackoff.TotalMilliseconds * Math.Pow(2, attempt - 1));
-                    await Delay(backoffDelay, ct).ConfigureAwait(false);
+                    await DelayBackoffAsync(attempt, ct).ConfigureAwait(false);
                 }
             }
         }
@@ -142,19 +99,4 @@ public sealed partial class MediaTranscoderWorker : BackgroundService
 
         await dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
     }
-
-    internal static async Task Delay(TimeSpan interval, CancellationToken stoppingToken)
-    {
-        try
-        {
-            await Task.Delay(interval, stoppingToken).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-        {
-            // Host shutdown
-        }
-    }
-
-    [LoggerMessage(Level = LogLevel.Error, Message = "MediaTranscoderWorker pass failed; retrying after poll interval.")]
-    private static partial void LogPassFailed(ILogger logger, Exception exception);
 }
