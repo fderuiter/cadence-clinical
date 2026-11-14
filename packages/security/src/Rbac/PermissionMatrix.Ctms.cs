@@ -19,5 +19,30 @@ public static partial class PermissionMatrix
         {
             Grant(role, "ctms_greenlight", "read");
         }
+
+        // Delegation of Authority (DOA)
+        foreach (string role in new[]
+        {
+            RoleNormalization.ROLE_SYSADMIN,
+            RoleNormalization.ROLE_INVESTIGATOR,
+            RoleNormalization.ROLE_CRC,
+            RoleNormalization.ROLE_CRA_CANONICAL,
+            "monitor",
+            RoleNormalization.ROLE_SPONSOR_DM,
+        })
+        {
+            Grant(role, "ctms_doa", "read", "assign", "create", "revoke", "update", "export");
+        }
+
+        foreach (string role in new[]
+        {
+            RoleNormalization.ROLE_SYSADMIN,
+            RoleNormalization.ROLE_INVESTIGATOR,
+        })
+        {
+            Grant(role, "ctms_doa", "sign_off", "sign");
+        }
+
+        Grant(RoleNormalization.ROLE_AUDITOR_CANONICAL, "ctms_doa", "read", "export");
     }
 }

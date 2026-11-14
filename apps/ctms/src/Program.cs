@@ -36,6 +36,7 @@ ctmsApi.MapLetterTemplateEndpoints();
 ctmsApi.MapStartupGreenlightEndpoints();
 ctmsApi.MapMonitoringVisitEndpoints();
 ctmsApi.MapSiteMilestoneEndpoints();
+ctmsApi.MapDoaEndpoints();
 
 await app.RunAsync();
 

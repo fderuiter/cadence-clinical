@@ -214,6 +214,434 @@
         }
       }
     },
+    "/api/v1/ctms/monitoring-visits": {
+      "get": {
+        "tags": [
+          "MonitoringVisitEndpoints"
+        ],
+        "summary": "List monitoring visits filtered by study, site, CRA, or status.",
+        "operationId": "ListMonitoringVisits",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cra_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Ctms_MonitoringVisitResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "MonitoringVisitEndpoints"
+        ],
+        "summary": "Schedule a new monitoring visit.",
+        "operationId": "ScheduleMonitoringVisit",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_MonitoringVisitCreateDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_MonitoringVisitResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/monitoring-visits/{visit_id}/complete": {
+      "post": {
+        "tags": [
+          "MonitoringVisitEndpoints"
+        ],
+        "summary": "Complete a scheduled monitoring visit with actual date and clinical findings.",
+        "operationId": "CompleteMonitoringVisit",
+        "parameters": [
+          {
+            "name": "visit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_MonitoringVisitCompleteDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_MonitoringVisitResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/monitoring-visits/{visit_id}/sign-off": {
+      "post": {
+        "tags": [
+          "MonitoringVisitEndpoints"
+        ],
+        "summary": "Perform supervisory Part 11 sign-off on a completed monitoring visit.",
+        "operationId": "SignOffMonitoringVisit",
+        "parameters": [
+          {
+            "name": "visit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_MonitoringVisitResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/monitoring-visits/{visit_id}/letters": {
+      "get": {
+        "tags": [
+          "MonitoringVisitEndpoints"
+        ],
+        "summary": "Get generated letters for a monitoring visit.",
+        "operationId": "GetMonitoringVisitLetters",
+        "parameters": [
+          {
+            "name": "visit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Ctms_GeneratedLetterResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/monitoring-visits/{visit_id}/letters/{letter_type}": {
+      "get": {
+        "tags": [
+          "MonitoringVisitEndpoints"
+        ],
+        "summary": "Get a generated visit letter by type.",
+        "operationId": "GetMonitoringVisitLetterByType",
+        "parameters": [
+          {
+            "name": "visit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "letter_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_GeneratedLetterResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/site-milestones": {
+      "get": {
+        "tags": [
+          "SiteMilestoneEndpoints"
+        ],
+        "summary": "List site milestones filtered by study or site.",
+        "operationId": "ListSiteMilestones",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Ctms_SiteMilestoneResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "SiteMilestoneEndpoints"
+        ],
+        "summary": "Create a new site milestone.",
+        "operationId": "CreateSiteMilestone",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_SiteMilestoneCreateDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_SiteMilestoneResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/site-milestones/{milestone_id}": {
+      "put": {
+        "tags": [
+          "SiteMilestoneEndpoints"
+        ],
+        "summary": "Update site milestone status, planned date, or actual date.",
+        "operationId": "UpdateSiteMilestone",
+        "parameters": [
+          {
+            "name": "milestone_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_SiteMilestoneUpdateDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_SiteMilestoneResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/ctms/startup/sites/{siteId}/greenlight": {
       "get": {
         "tags": [
@@ -474,6 +902,234 @@
           },
           "403": {
             "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/doa/delegate": {
+      "post": {
+        "tags": [
+          "DoaEndpoints"
+        ],
+        "summary": "Assign site trial task delegation requiring Principal Investigator sign-off.",
+        "operationId": "DelegateSiteTasks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_DelegationTaskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_DelegationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/doa/revoke": {
+      "post": {
+        "tags": [
+          "DoaEndpoints"
+        ],
+        "summary": "Revoke or end a delegated trial duty with reason for change.",
+        "operationId": "RevokeSiteTasks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_RevokeDelegationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_DelegationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/doa/sign-off": {
+      "post": {
+        "tags": [
+          "DoaEndpoints"
+        ],
+        "summary": "Endorse Delegation of Authority task assignment with Principal Investigator eSignature.",
+        "operationId": "SignOffDelegation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_DoaSignOffRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_DelegationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/doa/sites/{site_id}/log": {
+      "get": {
+        "tags": [
+          "DoaEndpoints"
+        ],
+        "summary": "Fetch active and historical DOA log matrix for a site.",
+        "operationId": "GetSiteDoaLog",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_DoaLogResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/doa/sites/{site_id}/export-pdf": {
+      "get": {
+        "tags": [
+          "DoaEndpoints"
+        ],
+        "summary": "Export 21 CFR Part 11 signed DOA PDF log.",
+        "operationId": "ExportSiteDoaPdf",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -2059,6 +2715,16 @@
               }
             }
           },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
           "403": {
             "description": "Forbidden",
             "content": {
@@ -2132,6 +2798,16 @@
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -2282,6 +2958,16 @@
           },
           "422": {
             "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -8561,6 +9247,47 @@
         ]
       }
     },
+    "/api/v1/ai/biometrics/verify-liveness": {
+      "post": {
+        "tags": [
+          "Biometrics AI Gateway"
+        ],
+        "summary": "Tests video frame payloads for anti-spoofing in temporary memory and returns signed liveness tokens.",
+        "operationId": "AiVerifyLiveness",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_VerifyLivenessRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_VerifyLivenessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/forms": {
       "post": {
         "tags": [
@@ -12127,6 +12854,387 @@
           }
         }
       },
+      "Ctms_DelegationResponseDto": {
+        "required": [
+          "record_id",
+          "site_id",
+          "staff_user_id",
+          "task_codes",
+          "start_date",
+          "end_date",
+          "is_active",
+          "signed_off",
+          "reason_for_change",
+          "created_by",
+          "version_index"
+        ],
+        "type": "object",
+        "properties": {
+          "record_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "staff_user_id": {
+            "type": "string"
+          },
+          "task_codes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "signed_off": {
+            "type": "boolean"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "Ctms_DelegationTaskRequest": {
+        "required": [
+          "site_id",
+          "staff_user_id",
+          "task_codes",
+          "start_date",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "site_id": {
+            "type": "string"
+          },
+          "staff_user_id": {
+            "type": "string"
+          },
+          "task_codes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Ctms_DoaAuditHistoryItemDto": {
+        "required": [
+          "id",
+          "timestamp",
+          "user_id",
+          "user_role",
+          "action",
+          "details"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "user_role": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          }
+        }
+      },
+      "Ctms_DoaLogResponseDto": {
+        "required": [
+          "site_id",
+          "pi_name",
+          "delegated_staff",
+          "audit_history"
+        ],
+        "type": "object",
+        "properties": {
+          "site_id": {
+            "type": "string"
+          },
+          "pi_name": {
+            "type": "string"
+          },
+          "delegated_staff": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Ctms_DelegationResponseDto"
+            }
+          },
+          "audit_history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Ctms_DoaAuditHistoryItemDto"
+            }
+          }
+        }
+      },
+      "Ctms_DoaSignOffRequest": {
+        "required": [
+          "record_id",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "record_id": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Ctms_FindingCreateDto": {
+        "required": [
+          "text",
+          "severity"
+        ],
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "resolution_status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Ctms_GeneratedLetterResponseDto": {
+        "required": [
+          "id",
+          "visit_id",
+          "letter_type",
+          "rendered_content",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "visit_id": {
+            "type": "string"
+          },
+          "letter_type": {
+            "type": "string"
+          },
+          "rendered_content": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "Ctms_MonitoringVisitCompleteDto": {
+        "required": [
+          "actual_date"
+        ],
+        "type": "object",
+        "properties": {
+          "actual_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "findings": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Ctms_FindingCreateDto"
+            }
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Ctms_MonitoringVisitCreateDto": {
+        "required": [
+          "study_id",
+          "site_id",
+          "cra_id",
+          "visit_type",
+          "scheduled_date"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "cra_id": {
+            "type": "string"
+          },
+          "visit_type": {
+            "type": "string"
+          },
+          "scheduled_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Ctms_MonitoringVisitResponseDto": {
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "cra_id",
+          "visit_type",
+          "scheduled_date",
+          "actual_date",
+          "status",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "cra_id": {
+            "type": "string"
+          },
+          "visit_type": {
+            "type": "string"
+          },
+          "scheduled_date": {
+            "type": "string"
+          },
+          "actual_date": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "signature_manifestation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signer": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signing_timestamp": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Ctms_ProblemDetails": {
         "type": "object",
         "properties": {
@@ -12158,6 +13266,24 @@
             ]
           },
           "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Ctms_RevokeDelegationRequest": {
+        "required": [
+          "record_id",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "record_id": {
+            "type": "string"
+          },
+          "reason_for_change": {
             "type": [
               "null",
               "string"
@@ -12265,6 +13391,144 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "Ctms_SiteMilestoneCreateDto": {
+        "required": [
+          "site_id",
+          "study_id",
+          "milestone_type"
+        ],
+        "type": "object",
+        "properties": {
+          "site_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "milestone_type": {
+            "type": "string"
+          },
+          "planned_date": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "actual_date": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Ctms_SiteMilestoneResponseDto": {
+        "required": [
+          "id",
+          "site_id",
+          "study_id",
+          "milestone_type",
+          "planned_date",
+          "actual_date",
+          "status",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "milestone_type": {
+            "type": "string"
+          },
+          "planned_date": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "actual_date": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "Ctms_SiteMilestoneUpdateDto": {
+        "type": "object",
+        "properties": {
+          "planned_date": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "actual_date": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -13212,6 +14476,7 @@
           "protocol_version",
           "digest_sha256",
           "signature_data",
+          "liveness_token",
           "device_timestamp"
         ],
         "type": "object",
@@ -13277,6 +14542,12 @@
             ]
           },
           "signature_data": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "liveness_token": {
             "type": [
               "null",
               "string"
@@ -24178,6 +25449,74 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Kernel_VerifyLivenessRequest": {
+        "required": [
+          "subject_pseudonym",
+          "video_frames",
+          "challenge_id"
+        ],
+        "type": "object",
+        "properties": {
+          "subject_pseudonym": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "video_frames": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "challenge_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fallback_mode": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "Kernel_VerifyLivenessResponse": {
+        "required": [
+          "liveness_token",
+          "is_live",
+          "anti_spoof_score",
+          "expires_at",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "liveness_token": {
+            "type": "string"
+          },
+          "is_live": {
+            "type": "boolean"
+          },
+          "anti_spoof_score": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
           }
         }
       },
