@@ -33,7 +33,7 @@ public sealed class CtmsClinicalQueryConfiguration : IEntityTypeConfiguration<Ct
         builder.Property(x => x.StudyId).HasMaxLength(255).IsRequired();
         builder.Property(x => x.SiteId).HasMaxLength(255).IsRequired();
         builder.Property(x => x.VisitId).HasMaxLength(255);
-        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(x => x.Explanation).HasMaxLength(1000);
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
@@ -56,7 +56,7 @@ public sealed class CtmsCraAllocationConfiguration : IEntityTypeConfiguration<Ct
         builder.Property(x => x.CraId).HasMaxLength(255).IsRequired();
         builder.Property(x => x.SiteId).HasMaxLength(255).IsRequired();
         builder.Property(x => x.StudyId).HasMaxLength(255).IsRequired();
-        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(x => x.EffectiveStartDate).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
@@ -79,7 +79,7 @@ public sealed class CtmsDefeatedMonitoringVisitConfiguration : IEntityTypeConfig
         builder.Property(x => x.VisitId).HasMaxLength(255).IsRequired();
         builder.Property(x => x.DeviceTimestamp).IsRequired();
         builder.Property(x => x.OfflineSyncMarkers).HasColumnType("jsonb");
-        builder.Property(x => x.Status).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(100).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(255);
         builder.Property(x => x.ReasonForChange).HasMaxLength(500);
@@ -125,7 +125,7 @@ public sealed class CtmsGeneratedLetterConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.RenderedContent).HasMaxLength(100000).IsRequired();
         builder.Property(x => x.PdfObjectKey).HasMaxLength(1000);
         builder.Property(x => x.PdfSha256Hash).HasMaxLength(64);
-        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(x => x.IsSigned).IsRequired();
         builder.Property(x => x.SignatureManifestation).HasColumnType("jsonb");
         builder.Property(x => x.EtmfDocumentId).HasMaxLength(100);
@@ -150,7 +150,7 @@ public sealed class CtmsInvestigatorGrantConfiguration : IEntityTypeConfiguratio
         builder.Property(x => x.SiteId).HasMaxLength(255).IsRequired();
         builder.Property(x => x.TotalBudget).IsRequired();
         builder.Property(x => x.Currency).HasMaxLength(10).IsRequired();
-        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
@@ -195,7 +195,7 @@ public sealed class CtmsMonitoringVisitConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.CraId).HasMaxLength(255).IsRequired();
         builder.Property(x => x.VisitType).HasMaxLength(50).IsRequired();
         builder.Property(x => x.ScheduledDate).IsRequired();
-        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(x => x.SignatureManifestation).HasColumnType("jsonb");
         builder.Property(x => x.Signer).HasMaxLength(255);
         builder.Property(x => x.OfflineSyncMarkers).HasColumnType("jsonb");
@@ -244,7 +244,7 @@ public sealed class CtmsRegulatoryFormConfiguration : IEntityTypeConfiguration<C
         builder.Property(x => x.SiteId).HasMaxLength(255);
         builder.Property(x => x.FormType).HasMaxLength(50).IsRequired();
         builder.Property(x => x.RenderedContent).HasMaxLength(100000).IsRequired();
-        builder.Property(x => x.ApprovalStatus).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.ApprovalStatus).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(x => x.SignatureManifestation).HasColumnType("jsonb");
         builder.Property(x => x.Signer).HasMaxLength(255);
         builder.Property(x => x.CreatedAt).IsRequired();
@@ -267,7 +267,7 @@ public sealed class CtmsSiteMilestoneConfiguration : IEntityTypeConfiguration<Ct
         builder.Property(x => x.SiteId).HasMaxLength(255).IsRequired();
         builder.Property(x => x.StudyId).HasMaxLength(255).IsRequired();
         builder.Property(x => x.MilestoneType).HasMaxLength(100).IsRequired();
-        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
@@ -341,7 +341,7 @@ public sealed class DoaDelegationRecordConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.StaffUserId).IsRequired();
         builder.Property(x => x.TaskCode).IsRequired();
         builder.Property(x => x.StartDate).IsRequired();
-        builder.Property(x => x.Status).IsRequired();
+        builder.Property(x => x.Status).HasConversion<string>().IsRequired();
         builder.Property(x => x.IsActive).IsRequired();
         builder.Property(x => x.IsDeleted).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
@@ -365,7 +365,7 @@ public sealed class CtmsInvestigatorPayableConfiguration : IEntityTypeConfigurat
         builder.Property(x => x.GrantId).HasMaxLength(36).IsRequired();
         builder.Property(x => x.MilestoneId).HasMaxLength(36);
         builder.Property(x => x.Amount).IsRequired();
-        builder.Property(x => x.PaymentStatus).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.PaymentStatus).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
@@ -397,7 +397,7 @@ public sealed class CtmsSiteGreenlightGateConfiguration : IEntityTypeConfigurati
         builder.Property(x => x.SiteId).HasMaxLength(255).IsRequired();
         builder.Property(x => x.SiteName).HasMaxLength(255).IsRequired();
         builder.Property(x => x.CountryCode).HasMaxLength(10).IsRequired();
-        builder.Property(x => x.OverallStatus).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.OverallStatus).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(x => x.GreenlightToken).HasMaxLength(1024);
         builder.Property(x => x.GreenlightCertifiedBy).HasMaxLength(255);
         builder.Property(x => x.OverrideSponsorUserId).HasMaxLength(255);
