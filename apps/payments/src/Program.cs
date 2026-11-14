@@ -1,10 +1,13 @@
 using Cadence.Apps.Payments.Endpoints;
+using Cadence.Apps.Payments.Infrastructure.Consumers;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.FieldProtection;
 using Cadence.Telemetry;
+
+using MassTransit;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +19,15 @@ builder.Services.AddCadenceSecurity();
 builder.Services.AddCadenceFieldEncryption();
 builder.AddCadencePostgresDbContext<PaymentsDbContext>();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
+
+builder.Services.AddMassTransit(x =>
+{
+    x.AddConsumer<ClinicalVisitCompletedConsumer>();
+    x.UsingInMemory((context, cfg) =>
+    {
+        cfg.ConfigureEndpoints(context);
+    });
+});
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();
