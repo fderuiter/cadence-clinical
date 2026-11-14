@@ -65,6 +65,29 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
             .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
             .ToList();
 
+        if (context.Model.FindEntityType(typeof(TransactionalOutboxMessage)) is not null)
+        {
+            var statefulAggregates = context.ChangeTracker.Entries<IStatefulAggregate>()
+                .Select(e => e.Entity)
+                .ToList();
+
+            if (statefulAggregates.Count > 0)
+            {
+                var outboxSet = context.Set<TransactionalOutboxMessage>();
+                foreach (var aggregate in statefulAggregates)
+                {
+                    if (aggregate.OutboxMessages.Count > 0)
+                    {
+                        foreach (var msg in aggregate.OutboxMessages)
+                        {
+                            outboxSet.Add(msg);
+                        }
+                        aggregate.ClearDomainEvents();
+                    }
+                }
+            }
+        }
+
         foreach (var entry in auditableEntries)
         {
             string entityName = entry.Metadata.ClrType.Name;
