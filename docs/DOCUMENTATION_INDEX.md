@@ -43,6 +43,10 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [AI agents](ai/AI_AGENTS.md) | Current | The AI agent catalogue by lifecycle stage, research-type packs, the autonomy ladder and the regulatory map (ADR-2630) |
 | [Agent tools, grounding and the MCP server](ai/AGENT_TOOLS.md) | Current | The read tools agents call as their requester, tool allow-lists, the citation verifier, the Proposal writer and the MCP endpoint (ADR-2633) |
 | [Evaluating AI task configurations](ai/EVALUATION.md) | Current | Evaluation sets, deterministic checks, the calibrated judge, run records for qualification and production signals (ADR-2634) |
+| [Multi-repository agent execution guide](architecture/repository-migration/AGENT_HANDOFF.md) | Current | This is a planning/orchestration contract, not permission to reorganize or delete application code automatically. |
+| [Capability ownership matrix](architecture/repository-migration/CAPABILITY_OWNERSHIP_MATRIX.md) | Current | Status: target mapping for a file-by-file migration inventory. This is *not* a statement that source paths have moved... |
+| [Cadence: 10-repository controlled migration program](architecture/repository-migration/MIGRATION_PLAN.md) | Current | Status: kickoff plan only — no source implementation migrated. All ten repositories are private; new destinations con... |
+| [Cadence: repository registry and ownership source of truth](architecture/repository-migration/REPOSITORY_REGISTRY.md) | Normative | Status: planning and bootstrap committed 2026-10-28. No clinical implementation has yet been extracted into the nine ... |
 
 ## Architecture decision records
 
@@ -543,6 +547,8 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2464: ICSR Render Emits ICH E2B(R3) Validated Against the ICH Schema](adr/2026-10-20-icsr-render-emits-ich-e2br3-validated-against-the-ich-schema.md) | Current | - Status: Accepted |
 | [ADR-2635: AI in the Canvas Is Labelled, Scoped to the Selection and Ends in a Proposal](adr/2026-10-20-ai-in-the-canvas-is-labelled-scoped-and-ends-in-a-proposal.md) | Current | - Status: Accepted |
 | [ADR-2636: Inference Is Pluggable, Residency-Bound and Sandboxed](adr/2026-10-20-inference-is-pluggable-residency-bound-and-sandboxed.md) | Current | - Status: Accepted |
+| [ADR-2602: Multi-Repository Ownership and Kernel Package Boundaries](adr/2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md) | Current | - Status: Accepted (approved by @fderuiter on 2026-10-28 as the recommendations in this draft) |
+
 ## Developing and running
 
 | Document | Status | What it is |
@@ -631,6 +637,8 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [Functional product specification](FUNCTIONAL_PRODUCT_SPECIFICATION.md) | Baseline | Capabilities reverse-engineered from the Python implementation |
 | [Feature matrix](FEATURE_MATRIX.md) | Baseline | Features by service in the per-service design |
 | [Competitive analysis](COMPETITIVE_ANALYSIS_AND_MARKET_SUPERIORITY.md) | Baseline | Product vision and market positioning |
+| [Cadence market hypotheses and evidence plan](strategy/MARKET_HYPOTHESES.md) | Current | Status: hypotheses, not customer-validated market conclusions. Competitors are active in EDC, eTMF, CDISC, study buil... |
+| [Cadence: proposed product packaging and licensing](strategy/PRODUCT_CATALOG.md) | Current | Status: commercial design proposal; not products available for purchase. Marketing names, suite name and trademarks a... |
 
 ## Design proposals
 
