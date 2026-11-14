@@ -424,6 +424,11 @@ public static class PaymentEndpoints
             .RequirePermission("payments_wallet:read")
             .WithSummary("List digital disbursement dispatches.");
 
+        group.MapPost("/participant/disbursements/{id}/settle", SettleDisbursement)
+            .WithName("SettleDisbursement")
+            .RequirePermission("payments_wallet:disburse")
+            .WithSummary("Marks a dispatched digital disbursement as settled upon confirmation.");
+
         group.MapGet("/audit-logs", GetAuditLogs)
             .WithName("GetPaymentAuditLogs")
             .RequirePermission("payments_audit_log:read")
@@ -1801,27 +1806,29 @@ public static class PaymentEndpoints
             return Results.NotFound(new { detail = $"Expense claim '{claimId}' not found." });
         }
 
-        if (claim.Status is "APPROVED" or "REJECTED")
-        {
-            return Results.BadRequest(new { detail = $"Expense claim '{claimId}' is already in status '{claim.Status}'." });
-        }
-
         DateTimeOffset now = SystemClock.Instance.UtcNow;
 
-        if (request.AdjustedAmount.HasValue)
+        try
         {
-            claim.GrossAmount = request.AdjustedAmount.Value;
-            claim.NetAmount = Math.Round(request.AdjustedAmount.Value - claim.TaxDeduction, 2);
+            if (string.Equals(request.Status, ParticipantExpenseClaimStatus.APPROVED.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                claim.Approve(caller.UserId, now, request.ReviewNotes, request.AdjustedAmount);
+            }
+            else if (string.Equals(request.Status, ParticipantExpenseClaimStatus.REJECTED.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                claim.Reject(caller.UserId, now, request.ReviewNotes);
+            }
+            else
+            {
+                return Results.Conflict(new { detail = $"Invalid review status '{request.Status}'. Only APPROVED or REJECTED are permitted." });
+            }
+        }
+        catch (PaymentDomainException ex)
+        {
+            return Results.Conflict(new { detail = ex.Message });
         }
 
-        claim.Status = request.Status;
-        claim.ReviewedBy = caller.UserId;
-        claim.ReviewedAt = now;
-        claim.ReviewNotes = request.ReviewNotes;
-        claim.UpdatedAt = now;
-        claim.VersionIndex += 1;
-
-        if (request.Status == "APPROVED")
+        if (string.Equals(claim.Status, ParticipantExpenseClaimStatus.APPROVED.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             var wallet = await dbContext.ParticipantWallets
                 .FirstOrDefaultAsync(w => w.Id == claim.WalletId);
@@ -1834,6 +1841,7 @@ public static class PaymentEndpoints
 
             if (wallet != null)
             {
+                claim.RecordWalletCredit();
                 wallet.CurrentBalance += claim.NetAmount;
                 wallet.LifetimeReimbursements += claim.NetAmount;
                 wallet.UpdatedAt = now;
@@ -1959,6 +1967,65 @@ public static class PaymentEndpoints
             .ToListAsync();
 
         return Results.Ok(disbs);
+    }
+
+    private static async Task<IResult> SettleDisbursement(
+        string id,
+        PaymentsDbContext dbContext,
+        [FromServices] IClock clock,
+        ClaimsPrincipal user)
+    {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
+        var disb = await dbContext.ParticipantDisbursements.FirstOrDefaultAsync(d => d.Id == id || d.ReferenceNumber == id);
+        if (disb == null)
+        {
+            return Results.NotFound(new { detail = $"Disbursement '{id}' not found." });
+        }
+
+        var wallet = await dbContext.ParticipantWallets.FirstOrDefaultAsync(w => w.Id == disb.WalletId);
+        if (wallet != null && !caller.Reaches(wallet.StudyId, wallet.SiteId))
+        {
+            return OutsideScope();
+        }
+
+        DateTimeOffset now = clock.UtcNow;
+        try
+        {
+            disb.Settle(now);
+        }
+        catch (PaymentDomainException ex)
+        {
+            return Results.Conflict(new { detail = ex.Message });
+        }
+
+        var audit = new PaymentAuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            EntityType = "ParticipantDisbursement",
+            EntityId = disb.Id,
+            Action = "DIGITAL_DISBURSEMENT_SETTLED",
+            UserId = caller.UserId,
+            UserRoles = caller.RolesText,
+            Details = JsonSerializer.Serialize(new
+            {
+                disbursement_id = disb.Id,
+                reference_number = disb.ReferenceNumber,
+                status = disb.Status,
+                amount = disb.Amount
+            }),
+            CreatedAt = now,
+            CreatedBy = caller.UserId,
+            ReasonForChange = "Disbursement confirmed and settled by payment rail",
+            VersionIndex = disb.VersionIndex
+        };
+        dbContext.PaymentAuditLogs.Add(audit);
+        await dbContext.SaveChangesAsync();
+
+        return Results.Ok(disb);
     }
 
     private static async Task<IResult> DisburseStipendDirect(DisburseStipendRequest request, PaymentsDbContext dbContext, ClaimsPrincipal user)
@@ -2357,27 +2424,29 @@ public static class PaymentEndpoints
         string currency = contract?.Currency ?? "USD";
 
         var pendingPayables = await dbContext.Payables
-            .Where(p => p.StudyId == studyId && p.SiteId == siteId && p.Status != "INVOICED")
+            .Where(p => p.StudyId == studyId && p.SiteId == siteId && p.Status != "INVOICED" && p.Status != "CANCELLED")
             .ToListAsync();
 
-        if (pendingPayables.Count == 0)
+        var eligiblePayables = pendingPayables
+            .Where(p => !p.IsSdvGated || (p.SdvVerifiedAt.HasValue && !string.IsNullOrWhiteSpace(p.SdvVerifiedBy)))
+            .ToList();
+
+        if (eligiblePayables.Count == 0)
         {
             throw new InvalidOperationException($"No pending achieved milestone payables found for site '{siteId}' in study '{studyId}'.");
         }
 
-        decimal totalBase = pendingPayables.Sum(p => p.BaseAmount);
-        decimal totalOverhead = pendingPayables.Sum(p => p.OverheadAmount);
-        decimal totalStipend = pendingPayables.Sum(p => p.PatientStipendAmount);
-        decimal totalTravel = pendingPayables.Sum(p => p.TravelReimbursementAmount);
-        decimal totalGross = pendingPayables.Sum(p => p.GrossAmount);
-        decimal totalHoldback = pendingPayables.Sum(p => p.WithholdingAmount);
+        decimal totalBase = eligiblePayables.Sum(p => p.BaseAmount);
+        decimal totalOverhead = eligiblePayables.Sum(p => p.OverheadAmount);
+        decimal totalStipend = eligiblePayables.Sum(p => p.PatientStipendAmount);
+        decimal totalTravel = eligiblePayables.Sum(p => p.TravelReimbursementAmount);
+        decimal totalGross = eligiblePayables.Sum(p => p.GrossAmount);
+        decimal totalHoldback = eligiblePayables.Sum(p => p.WithholdingAmount);
         decimal totalNet = totalGross - totalHoldback;
 
-        foreach (var p in pendingPayables)
+        foreach (var p in eligiblePayables)
         {
-            p.Status = "INVOICED";
-            p.UpdatedAt = now;
-            p.VersionIndex += 1;
+            p.MarkInvoiced(now);
         }
 
         string invoiceNumber = $"INV-{studyId}-{siteId}-{now.Ticks % 1000000:D6}";
@@ -2399,7 +2468,7 @@ public static class PaymentEndpoints
             TotalGrossAmount = totalGross,
             TotalHoldbackAmount = totalHoldback,
             TotalNetAmount = totalNet,
-            PayableCount = pendingPayables.Count,
+            PayableCount = eligiblePayables.Count,
             Status = autoApprove ? "APPROVED" : "DRAFT",
             ApprovedBy = autoApprove ? userId : null,
             ApprovedAt = autoApprove ? now : null,
@@ -2412,7 +2481,7 @@ public static class PaymentEndpoints
         };
 
         var lineItems = new List<InvoiceLineItem>();
-        foreach (var p in pendingPayables)
+        foreach (var p in eligiblePayables)
         {
             lineItems.Add(new InvoiceLineItem
             {
@@ -2485,7 +2554,7 @@ public static class PaymentEndpoints
                 study_id = studyId,
                 site_id = siteId,
                 billing_cycle = billingCycle,
-                payable_count = pendingPayables.Count,
+                payable_count = eligiblePayables.Count,
                 total_gross_amount = totalGross,
                 total_holdback_amount = totalHoldback,
                 total_net_amount = totalNet,
@@ -2553,6 +2622,10 @@ public static class PaymentEndpoints
 
             return Results.Created($"/api/v1/payments/invoices/{invoice.Id}", MapInvoiceToResponse(invoice, lineItems, remittance));
         }
+        catch (PaymentDomainException ex)
+        {
+            return Results.Conflict(new { detail = ex.Message });
+        }
         catch (InvalidOperationException ex)
         {
             return Results.BadRequest(new { detail = ex.Message });
@@ -2607,7 +2680,7 @@ public static class PaymentEndpoints
                 .ToListAsync();
 
             var payableSites = await dbContext.Payables.AsNoTracking()
-                .Where(p => p.StudyId == request.StudyId && p.Status != "INVOICED")
+                .Where(p => p.StudyId == request.StudyId && p.Status != "INVOICED" && p.Status != "CANCELLED" && (!p.IsSdvGated || (p.SdvVerifiedAt != null && p.SdvVerifiedBy != null)))
                 .Select(p => p.SiteId)
                 .ToListAsync();
 
@@ -2773,11 +2846,14 @@ public static class PaymentEndpoints
         }
 
         DateTimeOffset now = clock.UtcNow;
-        inv.Status = "APPROVED";
-        inv.ApprovedBy = caller.UserId;
-        inv.ApprovedAt = now;
-        inv.UpdatedAt = now;
-        inv.VersionIndex += 1;
+        try
+        {
+            inv.Approve(caller.UserId, now);
+        }
+        catch (PaymentDomainException ex)
+        {
+            return Results.Conflict(new { detail = ex.Message });
+        }
 
         var audit = new PaymentAuditLog
         {
@@ -2909,14 +2985,14 @@ public static class PaymentEndpoints
         }
 
         DateTimeOffset now = clock.UtcNow;
-        inv.Status = "RECONCILED";
-        inv.ReconciledBy = caller.UserId;
-        inv.ReconciledAt = now;
-        inv.ReconciliationReference = request.PaymentReference;
-        inv.ReconciliationNotes = request.Notes;
-        inv.ErpSystem = request.ErpSystem ?? inv.ErpSystem;
-        inv.UpdatedAt = now;
-        inv.VersionIndex += 1;
+        try
+        {
+            inv.Reconcile(caller.UserId, now, request.PaymentReference, request.Notes, request.ErpSystem);
+        }
+        catch (PaymentDomainException ex)
+        {
+            return Results.Conflict(new { detail = ex.Message });
+        }
 
         var audit = new PaymentAuditLog
         {
@@ -2958,12 +3034,14 @@ public static class PaymentEndpoints
         string sys = erp_system ?? "SAP";
         string erpRef = $"ERP-{sys}-{Guid.NewGuid():N}"[..16].ToUpperInvariant();
 
-        inv.ErpSystem = sys;
-        inv.ErpReferenceId = erpRef;
-        inv.ErpSyncStatus = "EXPORTED";
-        inv.ErpSyncedAt = now;
-        inv.UpdatedAt = now;
-        inv.VersionIndex += 1;
+        try
+        {
+            inv.ExportToErp(sys, erpRef, now);
+        }
+        catch (PaymentDomainException ex)
+        {
+            return Results.Conflict(new { detail = ex.Message });
+        }
 
         var erpLog = new ErpSyncLog
         {
