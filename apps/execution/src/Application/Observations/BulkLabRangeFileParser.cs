@@ -8,6 +8,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
+using Cadence.Apps.Execution.Application.Common;
+
 namespace Cadence.Apps.Execution.Application.Observations;
 
 public sealed record ParsedLabRangeRow(
@@ -77,7 +79,7 @@ public static class BulkLabRangeFileParser
             return rows;
         }
 
-        List<string> headers = SplitCsvLine(headerLine);
+        List<string> headers = TabularParsingHelpers.SplitCsvLine(headerLine);
         var colIndices = MapHeaders(headers);
 
         int rowNumber = 1;
@@ -92,7 +94,7 @@ public static class BulkLabRangeFileParser
                 throw new InvalidOperationException($"File exceeds maximum row limit of {MaxRowCount} rows.");
             }
 
-            List<string> values = SplitCsvLine(line);
+            List<string> values = TabularParsingHelpers.SplitCsvLine(line);
             var parsed = BuildRow(rowNumber, values, colIndices);
             if (parsed != null)
             {
@@ -108,45 +110,15 @@ public static class BulkLabRangeFileParser
         using var stream = new MemoryStream(fileBytes);
         using var zip = new ZipArchive(stream, ZipArchiveMode.Read);
 
-        var sharedStrings = new List<string>();
-        var sharedStringsEntry = zip.GetEntry("xl/sharedStrings.xml");
-        if (sharedStringsEntry != null)
-        {
-            using var entryStream = sharedStringsEntry.Open();
-            var xdoc = XDocument.Load(entryStream);
-            XNamespace ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"; // deid-ignore
-
-            foreach (var si in xdoc.Descendants(ns + "si"))
-            {
-                var textNodes = si.Descendants(ns + "t").Select(t => t.Value);
-                sharedStrings.Add(string.Concat(textNodes));
-            }
-        }
-
-        var sheetEntry = zip.GetEntry("xl/worksheets/sheet1.xml") ?? zip.Entries.FirstOrDefault(e => e.FullName.StartsWith("xl/worksheets/sheet", StringComparison.OrdinalIgnoreCase));
-        if (sheetEntry == null)
-        {
-            throw new InvalidOperationException("Invalid XLSX format: missing worksheet data.");
-        }
-
-        using var sheetStream = sheetEntry.Open();
-        var sheetDoc = XDocument.Load(sheetStream);
-        XNamespace sns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"; // deid-ignore
-
-        var sheetData = sheetDoc.Descendants(sns + "sheetData").FirstOrDefault();
-        if (sheetData == null)
-        {
-            return new List<ParsedLabRangeRow>();
-        }
-
-        var xmlRows = sheetData.Elements(sns + "row").ToList();
+        var sharedStrings = TabularParsingHelpers.LoadSharedStrings(zip);
+        var xmlRows = TabularParsingHelpers.LoadWorksheetRows(zip);
         if (xmlRows.Count == 0)
         {
             return new List<ParsedLabRangeRow>();
         }
 
         var headerRow = xmlRows[0];
-        List<string> headers = ExtractRowValues(headerRow, sns, sharedStrings);
+        List<string> headers = TabularParsingHelpers.ExtractRowValues(headerRow, sharedStrings);
         var colIndices = MapHeaders(headers);
 
         var resultRows = new List<ParsedLabRangeRow>();
@@ -161,7 +133,7 @@ public static class BulkLabRangeFileParser
             }
 
             var xmlRow = xmlRows[i];
-            List<string> values = ExtractRowValues(xmlRow, sns, sharedStrings);
+            List<string> values = TabularParsingHelpers.ExtractRowValues(xmlRow, sharedStrings);
 
             var parsed = BuildRow(rowNumber, values, colIndices);
             if (parsed != null)
@@ -175,22 +147,22 @@ public static class BulkLabRangeFileParser
 
     private static ParsedLabRangeRow? BuildRow(int rowNumber, List<string> values, ColumnIndices cols)
     {
-        string testCode = GetValue(values, cols.TestCodeIndex);
-        string testName = GetValue(values, cols.TestNameIndex);
-        string source = GetValue(values, cols.SourceIndex);
-        string siteId = GetValue(values, cols.SiteIdIndex);
-        string unit = GetValue(values, cols.UnitIndex);
-        string normUnit = GetValue(values, cols.NormalizedUnitIndex);
-        string sex = GetValue(values, cols.SexIndex);
-        string studyId = GetValue(values, cols.StudyIdIndex);
-        string loinc = GetValue(values, cols.LoincIndex);
+        string testCode = TabularParsingHelpers.GetValue(values, cols.TestCodeIndex);
+        string testName = TabularParsingHelpers.GetValue(values, cols.TestNameIndex);
+        string source = TabularParsingHelpers.GetValue(values, cols.SourceIndex);
+        string siteId = TabularParsingHelpers.GetValue(values, cols.SiteIdIndex);
+        string unit = TabularParsingHelpers.GetValue(values, cols.UnitIndex);
+        string normUnit = TabularParsingHelpers.GetValue(values, cols.NormalizedUnitIndex);
+        string sex = TabularParsingHelpers.GetValue(values, cols.SexIndex);
+        string studyId = TabularParsingHelpers.GetValue(values, cols.StudyIdIndex);
+        string loinc = TabularParsingHelpers.GetValue(values, cols.LoincIndex);
 
-        double? ageLow = ParseNullableDouble(GetValue(values, cols.AgeLowIndex));
-        double? ageHigh = ParseNullableDouble(GetValue(values, cols.AgeHighIndex));
-        double? lowBound = ParseNullableDouble(GetValue(values, cols.LowBoundIndex));
-        double? highBound = ParseNullableDouble(GetValue(values, cols.HighBoundIndex));
-        double? critLow = ParseNullableDouble(GetValue(values, cols.CriticalLowIndex));
-        double? critHigh = ParseNullableDouble(GetValue(values, cols.CriticalHighIndex));
+        double? ageLow = ParseNullableDouble(TabularParsingHelpers.GetValue(values, cols.AgeLowIndex));
+        double? ageHigh = ParseNullableDouble(TabularParsingHelpers.GetValue(values, cols.AgeHighIndex));
+        double? lowBound = ParseNullableDouble(TabularParsingHelpers.GetValue(values, cols.LowBoundIndex));
+        double? highBound = ParseNullableDouble(TabularParsingHelpers.GetValue(values, cols.HighBoundIndex));
+        double? critLow = ParseNullableDouble(TabularParsingHelpers.GetValue(values, cols.CriticalLowIndex));
+        double? critHigh = ParseNullableDouble(TabularParsingHelpers.GetValue(values, cols.CriticalHighIndex));
 
         // Skip completely empty rows
         if (string.IsNullOrWhiteSpace(testCode) && string.IsNullOrWhiteSpace(testName) && string.IsNullOrWhiteSpace(unit) && lowBound == null && highBound == null)
@@ -226,93 +198,6 @@ public static class BulkLabRangeFileParser
             return res;
         }
         return null;
-    }
-
-    private static List<string> ExtractRowValues(XElement xmlRow, XNamespace sns, List<string> sharedStrings)
-    {
-        var values = new List<string>();
-        int currentColIndex = 0;
-
-        foreach (var c in xmlRow.Elements(sns + "c"))
-        {
-            string r = c.Attribute("r")?.Value ?? string.Empty;
-            int colIndex = ColumnNameToIndex(r);
-            while (currentColIndex < colIndex)
-            {
-                values.Add(string.Empty);
-                currentColIndex++;
-            }
-
-            string t = c.Attribute("t")?.Value ?? string.Empty;
-            string val = c.Element(sns + "v")?.Value ?? string.Empty;
-
-            if (t == "s" && int.TryParse(val, out int sharedIndex) && sharedIndex >= 0 && sharedIndex < sharedStrings.Count)
-            {
-                val = sharedStrings[sharedIndex];
-            }
-            else if (t == "inlineStr")
-            {
-                val = c.Element(sns + "is")?.Element(sns + "t")?.Value ?? string.Empty;
-            }
-
-            values.Add(val);
-            currentColIndex++;
-        }
-
-        return values;
-    }
-
-    private static int ColumnNameToIndex(string cellRef)
-    {
-        if (string.IsNullOrEmpty(cellRef)) return 0;
-        string colName = Regex.Match(cellRef, @"^[A-Za-z]+").Value.ToUpperInvariant();
-        int sum = 0;
-        foreach (char ch in colName)
-        {
-            sum *= 26;
-            sum += (ch - 'A' + 1);
-        }
-        return Math.Max(0, sum - 1);
-    }
-
-    private static List<string> SplitCsvLine(string line)
-    {
-        var result = new List<string>();
-        if (line == null) return result;
-
-        var sb = new StringBuilder();
-        bool inQuotes = false;
-        int i = 0;
-
-        while (i < line.Length)
-        {
-            char c = line[i];
-            if (c == '"')
-            {
-                if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
-                {
-                    sb.Append('"');
-                    i += 2;
-                    continue;
-                }
-                else
-                {
-                    inQuotes = !inQuotes;
-                }
-            }
-            else if (c == ',' && !inQuotes)
-            {
-                result.Add(sb.ToString().Trim());
-                sb.Clear();
-            }
-            else
-            {
-                sb.Append(c);
-            }
-            i++;
-        }
-        result.Add(sb.ToString().Trim());
-        return result;
     }
 
     private sealed record ColumnIndices(
@@ -384,10 +269,5 @@ public static class BulkLabRangeFileParser
             unitIdx, normUnitIdx, sexIdx, ageLowIdx, ageHighIdx,
             lowBoundIdx, highBoundIdx, critLowIdx, critHighIdx, loincIdx);
     }
-
-    private static string GetValue(List<string> values, int index)
-    {
-        if (index < 0 || index >= values.Count) return string.Empty;
-        return values[index]?.Trim() ?? string.Empty;
-    }
 }
+

@@ -7,6 +7,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
+using Cadence.Apps.Execution.Application.Common;
+
 namespace Cadence.Apps.Execution.Application.Coding;
 
 public static class SynonymFileParser
@@ -58,7 +60,7 @@ public static class SynonymFileParser
             return rows;
         }
 
-        List<string> headers = SplitCsvLine(headerLine);
+        List<string> headers = TabularParsingHelpers.SplitCsvLine(headerLine);
         var colIndices = MapHeaders(headers);
 
         int rowNumber = 1; // 1-indexed (data rows start at row 2)
@@ -76,13 +78,13 @@ public static class SynonymFileParser
                 throw new InvalidOperationException($"File exceeds the maximum row limit of {MaxRowCount} rows.");
             }
 
-            List<string> values = SplitCsvLine(line);
-            string verbatim = GetValue(values, colIndices.VerbatimIndex);
-            string dictType = GetValue(values, colIndices.DictionaryTypeIndex);
-            string version = GetValue(values, colIndices.VersionIndex);
-            string code = GetValue(values, colIndices.CodeIndex);
-            string term = GetValue(values, colIndices.TermIndex);
-            string? level = colIndices.LevelIndex >= 0 ? GetValue(values, colIndices.LevelIndex) : null;
+            List<string> values = TabularParsingHelpers.SplitCsvLine(line);
+            string verbatim = TabularParsingHelpers.GetValue(values, colIndices.VerbatimIndex);
+            string dictType = TabularParsingHelpers.GetValue(values, colIndices.DictionaryTypeIndex);
+            string version = TabularParsingHelpers.GetValue(values, colIndices.VersionIndex);
+            string code = TabularParsingHelpers.GetValue(values, colIndices.CodeIndex);
+            string term = TabularParsingHelpers.GetValue(values, colIndices.TermIndex);
+            string? level = colIndices.LevelIndex >= 0 ? TabularParsingHelpers.GetValue(values, colIndices.LevelIndex) : null;
 
             rows.Add(new SynonymRowDto(
                 RowNumber: rowNumber,
@@ -102,40 +104,8 @@ public static class SynonymFileParser
         using var stream = new MemoryStream(fileBytes);
         using var zip = new ZipArchive(stream, ZipArchiveMode.Read);
 
-        // 1. Read shared strings
-        var sharedStrings = new List<string>();
-        var sharedStringsEntry = zip.GetEntry("xl/sharedStrings.xml");
-        if (sharedStringsEntry != null)
-        {
-            using var entryStream = sharedStringsEntry.Open();
-            var xdoc = XDocument.Load(entryStream);
-            XNamespace ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"; // deid-ignore
-
-            foreach (var si in xdoc.Descendants(ns + "si"))
-            {
-                var textNodes = si.Descendants(ns + "t").Select(t => t.Value);
-                sharedStrings.Add(string.Concat(textNodes));
-            }
-        }
-
-        // 2. Read sheet1.xml
-        var sheetEntry = zip.GetEntry("xl/worksheets/sheet1.xml") ?? zip.Entries.FirstOrDefault(e => e.FullName.StartsWith("xl/worksheets/sheet", StringComparison.OrdinalIgnoreCase));
-        if (sheetEntry == null)
-        {
-            throw new InvalidOperationException("Invalid XLSX format: missing worksheet data.");
-        }
-
-        using var sheetStream = sheetEntry.Open();
-        var sheetDoc = XDocument.Load(sheetStream);
-        XNamespace sns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"; // deid-ignore
-
-        var sheetData = sheetDoc.Descendants(sns + "sheetData").FirstOrDefault();
-        if (sheetData == null)
-        {
-            return new List<SynonymRowDto>();
-        }
-
-        var xmlRows = sheetData.Elements(sns + "row").ToList();
+        var sharedStrings = TabularParsingHelpers.LoadSharedStrings(zip);
+        var xmlRows = TabularParsingHelpers.LoadWorksheetRows(zip);
         if (xmlRows.Count == 0)
         {
             return new List<SynonymRowDto>();
@@ -143,7 +113,7 @@ public static class SynonymFileParser
 
         // Row 1: Header
         var headerRow = xmlRows[0];
-        List<string> headers = ExtractRowValues(headerRow, sns, sharedStrings);
+        List<string> headers = TabularParsingHelpers.ExtractRowValues(headerRow, sharedStrings);
         var colIndices = MapHeaders(headers);
 
         var resultRows = new List<SynonymRowDto>();
@@ -158,14 +128,14 @@ public static class SynonymFileParser
             }
 
             var xmlRow = xmlRows[i];
-            List<string> values = ExtractRowValues(xmlRow, sns, sharedStrings);
+            List<string> values = TabularParsingHelpers.ExtractRowValues(xmlRow, sharedStrings);
 
-            string verbatim = GetValue(values, colIndices.VerbatimIndex);
-            string dictType = GetValue(values, colIndices.DictionaryTypeIndex);
-            string version = GetValue(values, colIndices.VersionIndex);
-            string code = GetValue(values, colIndices.CodeIndex);
-            string term = GetValue(values, colIndices.TermIndex);
-            string? level = colIndices.LevelIndex >= 0 ? GetValue(values, colIndices.LevelIndex) : null;
+            string verbatim = TabularParsingHelpers.GetValue(values, colIndices.VerbatimIndex);
+            string dictType = TabularParsingHelpers.GetValue(values, colIndices.DictionaryTypeIndex);
+            string version = TabularParsingHelpers.GetValue(values, colIndices.VersionIndex);
+            string code = TabularParsingHelpers.GetValue(values, colIndices.CodeIndex);
+            string term = TabularParsingHelpers.GetValue(values, colIndices.TermIndex);
+            string? level = colIndices.LevelIndex >= 0 ? TabularParsingHelpers.GetValue(values, colIndices.LevelIndex) : null;
 
             if (string.IsNullOrWhiteSpace(verbatim) && string.IsNullOrWhiteSpace(code) && string.IsNullOrWhiteSpace(dictType))
             {
@@ -183,93 +153,6 @@ public static class SynonymFileParser
         }
 
         return resultRows;
-    }
-
-    private static List<string> ExtractRowValues(XElement xmlRow, XNamespace sns, List<string> sharedStrings)
-    {
-        var values = new List<string>();
-        int currentColIndex = 0;
-
-        foreach (var c in xmlRow.Elements(sns + "c"))
-        {
-            string r = c.Attribute("r")?.Value ?? string.Empty; // e.g. "B2"
-            int colIndex = ColumnNameToIndex(r);
-            while (currentColIndex < colIndex)
-            {
-                values.Add(string.Empty);
-                currentColIndex++;
-            }
-
-            string t = c.Attribute("t")?.Value ?? string.Empty;
-            string val = c.Element(sns + "v")?.Value ?? string.Empty;
-
-            if (t == "s" && int.TryParse(val, out int sharedIndex) && sharedIndex >= 0 && sharedIndex < sharedStrings.Count)
-            {
-                val = sharedStrings[sharedIndex];
-            }
-            else if (t == "inlineStr")
-            {
-                val = c.Element(sns + "is")?.Element(sns + "t")?.Value ?? string.Empty;
-            }
-
-            values.Add(val);
-            currentColIndex++;
-        }
-
-        return values;
-    }
-
-    private static int ColumnNameToIndex(string cellRef)
-    {
-        if (string.IsNullOrEmpty(cellRef)) return 0;
-        string colName = Regex.Match(cellRef, @"^[A-Za-z]+").Value.ToUpperInvariant();
-        int sum = 0;
-        foreach (char ch in colName)
-        {
-            sum *= 26;
-            sum += (ch - 'A' + 1);
-        }
-        return Math.Max(0, sum - 1);
-    }
-
-    private static List<string> SplitCsvLine(string line)
-    {
-        var result = new List<string>();
-        if (line == null) return result;
-
-        var sb = new StringBuilder();
-        bool inQuotes = false;
-        int i = 0;
-
-        while (i < line.Length)
-        {
-            char c = line[i];
-            if (c == '"')
-            {
-                if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
-                {
-                    sb.Append('"');
-                    i += 2;
-                    continue;
-                }
-                else
-                {
-                    inQuotes = !inQuotes;
-                }
-            }
-            else if (c == ',' && !inQuotes)
-            {
-                result.Add(sb.ToString().Trim());
-                sb.Clear();
-            }
-            else
-            {
-                sb.Append(c);
-            }
-            i++;
-        }
-        result.Add(sb.ToString().Trim());
-        return result;
     }
 
     private sealed record ColumnIndices(
@@ -327,11 +210,5 @@ public static class SynonymFileParser
         if (levelIdx < 0 && headers.Count > 5) levelIdx = 5;
 
         return new ColumnIndices(verbatimIdx, dictIdx, versionIdx, codeIdx, termIdx, levelIdx);
-    }
-
-    private static string GetValue(List<string> values, int index)
-    {
-        if (index < 0 || index >= values.Count) return string.Empty;
-        return values[index]?.Trim() ?? string.Empty;
     }
 }
