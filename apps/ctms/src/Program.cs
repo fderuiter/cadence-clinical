@@ -15,6 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
+builder.Services.AddScoped<IDomainEventDispatcher, DefaultDomainEventDispatcher>();
 builder.AddCadencePostgresDbContext<CtmsDbContext>();
 builder.Services.AddFluidTemplating();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);

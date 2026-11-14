@@ -1,4 +1,9 @@
 using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Cadence.Core.Domain;
 
@@ -226,13 +231,69 @@ public sealed class CtmsInvestigatorPayable : AggregateRoot<string>
     public CtmsInvestigatorPayable(string id) : base(id) { }
 }
 
+public enum SiteGreenlightStatus
+{
+    Pending,
+    Approved,
+    Suspended,
+    Revoked
+}
+
+public class SiteGreenlightTransitionException : InvalidOperationException
+{
+    public SiteGreenlightTransitionException(string message) : base(message) { }
+    public SiteGreenlightTransitionException(string message, Exception innerException) : base(message, innerException) { }
+}
+
+public record SiteGreenlightApproved(
+    string GateId,
+    string Study,
+    string Site,
+    string CountryCode,
+    string CertifiedBy,
+    DateTimeOffset CertifiedAt,
+    string GreenlightToken,
+    bool IsOverridden,
+    string? Reason);
+
+public record SiteGreenlightRevoked(
+    string GateId,
+    string Study,
+    string Site,
+    string CountryCode,
+    string RevokedBy,
+    DateTimeOffset RevokedAt,
+    string Reason);
+
+public record SiteGreenlightSuspended(
+    string GateId,
+    string Study,
+    string Site,
+    string CountryCode,
+    string SuspendedBy,
+    DateTimeOffset SuspendedAt,
+    string Reason);
+
+public interface IDomainEventDispatcher
+{
+    Task DispatchAsync(IReadOnlyList<object> events, CancellationToken ct = default);
+}
+
+public sealed class DefaultDomainEventDispatcher : IDomainEventDispatcher
+{
+    public Task DispatchAsync(IReadOnlyList<object> events, CancellationToken ct = default)
+    {
+        return Task.CompletedTask;
+    }
+}
+
 public sealed class CtmsSiteGreenlightGate : AggregateRoot<string>
 {
     public string StudyId { get; set; } = string.Empty;
     public string SiteId { get; set; } = string.Empty;
     public string SiteName { get; set; } = string.Empty;
     public string CountryCode { get; set; } = string.Empty;
-    public string OverallStatus { get; set; } = "PENDING";
+    public SiteGreenlightStatus OverallStatus { get; private set; } = SiteGreenlightStatus.Pending;
     public int ReadinessPercentage { get; set; }
     public bool FacetRegulatoryIrb { get; set; }
     public bool FacetCtaBudget { get; set; }
@@ -240,9 +301,9 @@ public sealed class CtmsSiteGreenlightGate : AggregateRoot<string>
     public bool FacetDoaLog { get; set; }
     public bool FacetStaffTraining { get; set; }
     public bool FacetIpRelease { get; set; }
-    public string? GreenlightToken { get; set; }
-    public string? GreenlightCertifiedBy { get; set; }
-    public DateTimeOffset? GreenlightCertifiedAt { get; set; }
+    public string? GreenlightToken { get; private set; }
+    public string? GreenlightCertifiedBy { get; private set; }
+    public DateTimeOffset? GreenlightCertifiedAt { get; private set; }
     public bool IsOverridden { get; set; }
     public string? OverrideSponsorUserId { get; set; }
     public string? OverrideMedicalUserId { get; set; }
@@ -250,8 +311,194 @@ public sealed class CtmsSiteGreenlightGate : AggregateRoot<string>
     public DateTimeOffset? OverrideAuthorizedAt { get; set; }
     public string? UnfulfilledReasons { get; set; }
 
+    [NotMapped]
+    private readonly List<object> _domainEvents = [];
+    [NotMapped]
+    private readonly List<object> _uncommittedEvents = [];
+
+    [NotMapped]
+    public IReadOnlyList<object> DomainEvents => _domainEvents.AsReadOnly();
+    [NotMapped]
+    public IReadOnlyList<object> Events => _domainEvents.AsReadOnly();
+    [NotMapped]
+    public IReadOnlyList<object> UncommittedEvents => _uncommittedEvents.AsReadOnly();
+
+    public bool IsFullyCompliant => IsOverridden || (
+        FacetRegulatoryIrb &&
+        FacetCtaBudget &&
+        FacetEisfBaseline &&
+        FacetDoaLog &&
+        FacetStaffTraining &&
+        FacetIpRelease);
+
     public CtmsSiteGreenlightGate() : base(Guid.NewGuid().ToString()) { }
     public CtmsSiteGreenlightGate(string id) : base(id) { }
+    public CtmsSiteGreenlightGate(string id, SiteGreenlightStatus initialStatus) : base(id)
+    {
+        OverallStatus = initialStatus;
+    }
+
+    public void RecordEvent(object domainEvent)
+    {
+        ArgumentNullException.ThrowIfNull(domainEvent);
+        _domainEvents.Add(domainEvent);
+        _uncommittedEvents.Add(domainEvent);
+    }
+
+    public IReadOnlyList<object> FlushUncommittedEvents()
+    {
+        var events = _uncommittedEvents.ToList();
+        _uncommittedEvents.Clear();
+        return events;
+    }
+
+    public void ClearEvents()
+    {
+        _domainEvents.Clear();
+        _uncommittedEvents.Clear();
+    }
+
+    public void Certify(string signer, string tokenSecret, DateTimeOffset timestamp, string? reason = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(signer);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tokenSecret);
+
+        if (OverallStatus == SiteGreenlightStatus.Revoked)
+        {
+            throw new SiteGreenlightTransitionException(
+                $"Cannot certify greenlight gate for site {SiteId} because it is in terminal state '{OverallStatus}'.");
+        }
+
+        if (OverallStatus != SiteGreenlightStatus.Pending)
+        {
+            throw new SiteGreenlightTransitionException(
+                $"Cannot certify greenlight gate for site {SiteId} because current status is '{OverallStatus}'. Only gates in Pending status can be certified.");
+        }
+
+        if (!IsFullyCompliant)
+        {
+            throw new InvalidOperationException(
+                $"Site {SiteId} does not fulfill all 6 greenlight facets and cannot be certified.");
+        }
+
+        long issuedAt = timestamp.ToUnixTimeSeconds();
+        long expiresAt = issuedAt + (86400 * 365);
+        string token = GreenlightTokenGenerator.GenerateToken(
+            SiteId, StudyId, CountryCode, signer, tokenSecret, issuedAt, expiresAt, IsOverridden);
+
+        OverallStatus = SiteGreenlightStatus.Approved;
+        GreenlightToken = token;
+        GreenlightCertifiedBy = signer;
+        GreenlightCertifiedAt = timestamp;
+        ReasonForChange = reason ?? "Greenlight activation certified";
+
+        RecordEvent(new SiteGreenlightApproved(
+            Id,
+            StudyId,
+            SiteId,
+            CountryCode,
+            signer,
+            timestamp,
+            token,
+            IsOverridden,
+            ReasonForChange));
+    }
+
+    public void CertifyWithToken(string token, string signer, DateTimeOffset timestamp, string? reason = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(token);
+        ArgumentException.ThrowIfNullOrWhiteSpace(signer);
+
+        if (OverallStatus == SiteGreenlightStatus.Revoked)
+        {
+            throw new SiteGreenlightTransitionException(
+                $"Cannot certify greenlight gate for site {SiteId} because it is in terminal state '{OverallStatus}'.");
+        }
+
+        if (OverallStatus != SiteGreenlightStatus.Pending)
+        {
+            throw new SiteGreenlightTransitionException(
+                $"Cannot certify greenlight gate for site {SiteId} because current status is '{OverallStatus}'. Only gates in Pending status can be certified.");
+        }
+
+        if (!IsFullyCompliant)
+        {
+            throw new InvalidOperationException(
+                $"Site {SiteId} does not fulfill all 6 greenlight facets and cannot be certified.");
+        }
+
+        OverallStatus = SiteGreenlightStatus.Approved;
+        GreenlightToken = token;
+        GreenlightCertifiedBy = signer;
+        GreenlightCertifiedAt = timestamp;
+        ReasonForChange = reason ?? "Greenlight activation certified";
+
+        RecordEvent(new SiteGreenlightApproved(
+            Id,
+            StudyId,
+            SiteId,
+            CountryCode,
+            signer,
+            timestamp,
+            token,
+            IsOverridden,
+            ReasonForChange));
+    }
+
+    public void Revoke(string revokedBy, DateTimeOffset timestamp, string reason)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(revokedBy);
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+
+        if (OverallStatus == SiteGreenlightStatus.Revoked)
+        {
+            throw new SiteGreenlightTransitionException(
+                $"Gate for site {SiteId} is already in terminal state Revoked.");
+        }
+
+        OverallStatus = SiteGreenlightStatus.Revoked;
+        GreenlightToken = null;
+        ReasonForChange = reason;
+
+        RecordEvent(new SiteGreenlightRevoked(
+            Id,
+            StudyId,
+            SiteId,
+            CountryCode,
+            revokedBy,
+            timestamp,
+            reason));
+    }
+
+    public void Suspend(string suspendedBy, DateTimeOffset timestamp, string reason)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(suspendedBy);
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+
+        if (OverallStatus == SiteGreenlightStatus.Revoked)
+        {
+            throw new SiteGreenlightTransitionException(
+                $"Cannot suspend greenlight gate for site {SiteId} because it is in terminal state Revoked.");
+        }
+
+        if (OverallStatus == SiteGreenlightStatus.Suspended)
+        {
+            throw new SiteGreenlightTransitionException(
+                $"Gate for site {SiteId} is already suspended.");
+        }
+
+        OverallStatus = SiteGreenlightStatus.Suspended;
+        ReasonForChange = reason;
+
+        RecordEvent(new SiteGreenlightSuspended(
+            Id,
+            StudyId,
+            SiteId,
+            CountryCode,
+            suspendedBy,
+            timestamp,
+            reason));
+    }
 }
 
 public record SiteVisitFindingModel(

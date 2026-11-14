@@ -263,7 +263,6 @@ public sealed class StartupGreenlightEndpointsTests
                 SiteId = sId,
                 SiteName = $"Performance Test Site {i}",
                 CountryCode = "US",
-                OverallStatus = "PENDING",
                 ReadinessPercentage = 100,
                 FacetRegulatoryIrb = true,
                 FacetCtaBudget = true,
@@ -307,7 +306,6 @@ public sealed class StartupGreenlightEndpointsTests
             SiteId = siteId,
             SiteName = "Overridden Test Site",
             CountryCode = "US",
-            OverallStatus = "PENDING",
             ReadinessPercentage = 50,
             FacetRegulatoryIrb = true,
             FacetCtaBudget = false,
@@ -366,6 +364,150 @@ public sealed class StartupGreenlightEndpointsTests
         (await _db.CtmsAuditLogs.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
     }
 
+    /// <summary>
+    /// Calling certify on a gate with revoked status throws a domain error / returns a validation error and aborts persistence.
+    /// @req:PRD-SSU-003
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-SSU-003")]
+    public async Task CertifySite_WithRevokedGate_IsRejectedAndPersistsNothing()
+    {
+        // Arrange: Seed a revoked gate
+        var gate = new CtmsSiteGreenlightGate("gate-revoked-01", SiteGreenlightStatus.Revoked)
+        {
+            StudyId = Study,
+            SiteId = "SITE-REVOKED-1",
+            SiteName = "Revoked Site",
+            CountryCode = "US",
+            ReadinessPercentage = 100,
+            FacetRegulatoryIrb = true,
+            FacetCtaBudget = true,
+            FacetEisfBaseline = true,
+            FacetDoaLog = true,
+            FacetStaffTraining = true,
+            FacetIpRelease = true,
+            CreatedBy = "test-setup",
+            ReasonForChange = "Setup revoked gate"
+        };
+        _db.CtmsSiteGreenlightGates.Add(gate);
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        _db.ChangeTracker.Clear();
+
+        // Act
+        var result = await StartupGreenlightEndpoints.CertifySiteGreenlightAsync(
+            "SITE-REVOKED-1", Study, "US", "Certify", _db, Caller(), _clock, _config, TestContext.Current.CancellationToken);
+
+        // Assert: rejected with 400 BadRequest, no token issued, no audit log
+        var badRequest = result.Result.Should().BeOfType<BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>().Subject;
+        badRequest.Value!.Detail.Should().Contain("terminal state");
+
+        var persistedGate = await _db.CtmsSiteGreenlightGates.AsNoTracking().SingleAsync(g => g.SiteId == "SITE-REVOKED-1", TestContext.Current.CancellationToken);
+        persistedGate.OverallStatus.Should().Be(SiteGreenlightStatus.Revoked);
+        persistedGate.GreenlightToken.Should().BeNull();
+        (await _db.CtmsAuditLogs.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+    }
+
+    /// <summary>
+    /// The batch certification endpoint returns a client error when any selected site has an invalid initial state (e.g. revoked or approved).
+    /// </summary>
+    [Fact]
+    public async Task BatchCertify_WhenAnySiteHasInvalidInitialState_IsRejectedAndPersistsNothing()
+    {
+        // Arrange: 1 compliant pending site, 1 revoked site
+        await AddGatesAsync(("SITE-US-1", "US", true));
+
+        var revokedGate = new CtmsSiteGreenlightGate("gate-revoked-batch", SiteGreenlightStatus.Revoked)
+        {
+            StudyId = Study,
+            SiteId = "SITE-US-REVOKED",
+            SiteName = "Revoked Batch Site",
+            CountryCode = "US",
+            ReadinessPercentage = 100,
+            FacetRegulatoryIrb = true,
+            FacetCtaBudget = true,
+            FacetEisfBaseline = true,
+            FacetDoaLog = true,
+            FacetStaffTraining = true,
+            FacetIpRelease = true,
+            CreatedBy = "test-setup",
+            ReasonForChange = "Revoked"
+        };
+        _db.CtmsSiteGreenlightGates.Add(revokedGate);
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        _db.ChangeTracker.Clear();
+
+        var request = new BatchCertifyRequestDto(Study, "US", ["SITE-US-1", "SITE-US-REVOKED"], "Batch Certify");
+
+        // Act
+        var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
+            request, "Batch Certify", _db, Caller(), _clock, _config, TestContext.Current.CancellationToken);
+
+        // Assert: 400 Bad Request, neither site certified
+        var badRequest = result.Result.Should().BeOfType<BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>().Subject;
+        badRequest.Value!.Detail.Should().Contain("SITE-US-REVOKED");
+
+        (await _db.CtmsSiteGreenlightGates.CountAsync(g => g.GreenlightToken != null, TestContext.Current.CancellationToken)).Should().Be(0);
+        (await _db.CtmsAuditLogs.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+    }
+
+    /// <summary>
+    /// Verifies that domain events are dispatched during transaction commit.
+    /// </summary>
+    [Fact]
+    public async Task CertifySite_DispatchesQueuedDomainEventsDuringTransactionCommit()
+    {
+        // Arrange: Custom DbContext with test dispatcher
+        var testDispatcher = new TestDomainEventDispatcher();
+        var options = new DbContextOptionsBuilder<CtmsDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        await using var db = new CtmsDbContext(options, testDispatcher);
+
+        var gate = new CtmsSiteGreenlightGate("gate-event-test")
+        {
+            StudyId = Study,
+            SiteId = "SITE-EVT-1",
+            SiteName = "Event Site",
+            CountryCode = "US",
+            ReadinessPercentage = 100,
+            FacetRegulatoryIrb = true,
+            FacetCtaBudget = true,
+            FacetEisfBaseline = true,
+            FacetDoaLog = true,
+            FacetStaffTraining = true,
+            FacetIpRelease = true,
+            CreatedBy = "test-setup",
+            ReasonForChange = "Initial"
+        };
+        db.CtmsSiteGreenlightGates.Add(gate);
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        testDispatcher.DispatchedEvents.Should().BeEmpty();
+
+        // Act
+        var result = await StartupGreenlightEndpoints.CertifySiteGreenlightAsync(
+            "SITE-EVT-1", Study, "US", "Certify Event", db, Caller(), _clock, _config, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Result.Should().BeOfType<Ok<SiteGreenlightGateResponseDto>>();
+        testDispatcher.DispatchedEvents.Should().ContainSingle();
+        var dispatched = testDispatcher.DispatchedEvents.Single().Should().BeOfType<SiteGreenlightApproved>().Subject;
+        dispatched.Site.Should().Be("SITE-EVT-1");
+        dispatched.Study.Should().Be(Study);
+        dispatched.CertifiedBy.Should().Be("sponsor-dm-1");
+    }
+
+    private sealed class TestDomainEventDispatcher : IDomainEventDispatcher
+    {
+        public List<object> DispatchedEvents { get; } = [];
+
+        public Task DispatchAsync(IReadOnlyList<object> events, CancellationToken ct = default)
+        {
+            DispatchedEvents.AddRange(events);
+            return Task.CompletedTask;
+        }
+    }
+
     private async Task AddGatesAsync(params (string SiteId, string Country, bool Compliant)[] sites)
     {
         foreach (var (siteId, country, compliant) in sites)
@@ -376,7 +518,6 @@ public sealed class StartupGreenlightEndpointsTests
                 SiteId = siteId,
                 SiteName = $"Site {siteId}",
                 CountryCode = country,
-                OverallStatus = "PENDING",
                 ReadinessPercentage = compliant ? 100 : 67,
                 FacetRegulatoryIrb = true,
                 FacetCtaBudget = true,

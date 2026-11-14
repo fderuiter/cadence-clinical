@@ -145,30 +145,33 @@ public static class StartupGreenlightEndpoints
             return NoGate(siteId, studyId);
         }
 
-        if (!IsFullyCompliant(gate))
+        string signer = Signer(httpContext);
+        string secret = TokenSecret(config);
+        DateTimeOffset now = clock.UtcNow;
+        string reason = changeReasonHeader ?? "Greenlight activation certified";
+
+        try
+        {
+            gate.Certify(signer, secret, now, reason);
+        }
+        catch (SiteGreenlightTransitionException ex)
+        {
+            return TypedResults.BadRequest(new ProblemDetails
+            {
+                Title = "Invalid Gate State",
+                Detail = ex.Message,
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+        catch (InvalidOperationException ex)
         {
             return TypedResults.BadRequest(new ProblemDetails
             {
                 Title = "Site Non-Compliant",
-                Detail = $"Site {siteId} does not fulfill all 6 greenlight facets and cannot be certified.",
+                Detail = ex.Message,
                 Status = StatusCodes.Status400BadRequest
             });
         }
-
-        string signer = Signer(httpContext);
-        string secret = TokenSecret(config);
-        DateTimeOffset now = clock.UtcNow;
-        long issuedAt = now.ToUnixTimeSeconds();
-        long expiresAt = issuedAt + (86400 * 365);
-
-        string token = GreenlightTokenGenerator.GenerateToken(
-            gate.SiteId, gate.StudyId, gate.CountryCode, signer, secret, issuedAt, expiresAt, gate.IsOverridden);
-
-        gate.OverallStatus = "APPROVED";
-        gate.GreenlightToken = token;
-        gate.GreenlightCertifiedBy = signer;
-        gate.GreenlightCertifiedAt = now;
-        gate.ReasonForChange = changeReasonHeader ?? "Greenlight activation certified";
 
         var auditEntry = new CtmsAuditLog
         {
@@ -273,7 +276,7 @@ public static class StartupGreenlightEndpoints
             });
         }
 
-        var nonCompliantSites = gates.Where(g => !IsFullyCompliant(g)).Select(g => g.SiteId).ToList();
+        var nonCompliantSites = gates.Where(g => !g.IsFullyCompliant).Select(g => g.SiteId).ToList();
         if (nonCompliantSites.Count > 0)
         {
             return TypedResults.BadRequest(new ProblemDetails
@@ -284,26 +287,28 @@ public static class StartupGreenlightEndpoints
             });
         }
 
+        var invalidStatusSites = gates.Where(g => g.OverallStatus != SiteGreenlightStatus.Pending).Select(g => g.SiteId).ToList();
+        if (invalidStatusSites.Count > 0)
+        {
+            return TypedResults.BadRequest(new ProblemDetails
+            {
+                Title = "Batch Certification Rejected",
+                Detail = $"The following requested sites have an invalid status and cannot be certified: {string.Join(", ", invalidStatusSites)}. Only sites with pending status can be batch-certified.",
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+
         // The signer is the signed caller, never a name or title in the request body (ADR-2516).
         string signer = Signer(httpContext);
         string role = CallerScope.Roles(httpContext);
         string secret = TokenSecret(config);
         DateTimeOffset now = clock.UtcNow;
-        long issuedAt = now.ToUnixTimeSeconds();
-        long expiresAt = issuedAt + (86400 * 365);
 
         var certifiedItems = new List<CertifiedSiteItemDto>();
 
         foreach (var gate in gates)
         {
-            string token = GreenlightTokenGenerator.GenerateToken(
-                gate.SiteId, gate.StudyId, gate.CountryCode, signer, secret, issuedAt, expiresAt, gate.IsOverridden);
-
-            gate.OverallStatus = "APPROVED";
-            gate.GreenlightToken = token;
-            gate.GreenlightCertifiedBy = signer;
-            gate.GreenlightCertifiedAt = now;
-            gate.ReasonForChange = changeReasonHeader ?? request.Meaning ?? "21 CFR Part 11 Country-Level Batch Certification";
+            gate.Certify(signer, secret, now, changeReasonHeader ?? request.Meaning ?? "21 CFR Part 11 Country-Level Batch Certification");
 
             var auditEntry = new CtmsAuditLog
             {
@@ -318,10 +323,10 @@ public static class StartupGreenlightEndpoints
             certifiedItems.Add(new CertifiedSiteItemDto(
                 gate.SiteId,
                 gate.SiteName,
-                token,
+                gate.GreenlightToken!,
                 now.ToString("o"),
                 signer,
-                "APPROVED"
+                gate.OverallStatus.ToString().ToUpperInvariant()
             ));
         }
 
@@ -337,16 +342,7 @@ public static class StartupGreenlightEndpoints
         ));
     }
 
-    private static bool IsFullyCompliant(CtmsSiteGreenlightGate gate)
-    {
-        return gate.IsOverridden || (
-               gate.FacetRegulatoryIrb &&
-               gate.FacetCtaBudget &&
-               gate.FacetEisfBaseline &&
-               gate.FacetDoaLog &&
-               gate.FacetStaffTraining &&
-               gate.FacetIpRelease);
-    }
+    private static bool IsFullyCompliant(CtmsSiteGreenlightGate gate) => gate.IsFullyCompliant;
 
     private static SiteGreenlightGateResponseDto ToResponseDto(CtmsSiteGreenlightGate gate)
     {
@@ -378,7 +374,7 @@ public static class StartupGreenlightEndpoints
             SiteId: gate.SiteId,
             SiteName: string.IsNullOrWhiteSpace(gate.SiteName) ? $"Site {gate.SiteId}" : gate.SiteName,
             CountryCode: gate.CountryCode,
-            OverallStatus: gate.OverallStatus,
+            OverallStatus: gate.OverallStatus.ToString().ToUpperInvariant(),
             ReadinessPercentage: percentage,
             FacetRegulatoryIrb: gate.FacetRegulatoryIrb,
             FacetCtaBudget: gate.FacetCtaBudget,
@@ -406,46 +402,6 @@ public static class StartupGreenlightEndpoints
         }
 
         return query.FirstOrDefaultAsync(ct);
-    }
-}
-
-public static class GreenlightTokenGenerator
-{
-    public static string GenerateToken(
-        string siteId,
-        string studyId,
-        string countryCode,
-        string certifiedBy,
-        string secret,
-        long issuedAt,
-        long expiresAt,
-        bool isOverridden = false)
-    {
-        var payloadObj = new Dictionary<string, object?>
-        {
-            ["certified_by"] = certifiedBy,
-            ["country_code"] = countryCode.ToUpperInvariant(),
-            ["expires_at"] = expiresAt,
-            ["is_overridden"] = isOverridden,
-            ["issued_at"] = issuedAt,
-            ["site_id"] = siteId,
-            ["study_id"] = studyId,
-            ["token_type"] = "SITE_GREENLIGHT_ACTIVATION",
-            ["token_version"] = "1"
-        };
-
-        string json = JsonSerializer.Serialize(payloadObj);
-        byte[] jsonBytes = Encoding.UTF8.GetBytes(json);
-        string b64Payload = Convert.ToBase64String(jsonBytes)
-            .Replace('+', '-')
-            .Replace('/', '_')
-            .TrimEnd('=');
-
-        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
-        byte[] hashBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(b64Payload));
-        string hexSig = Convert.ToHexStringLower(hashBytes);
-
-        return $"{b64Payload}.{hexSig}";
     }
 }
 

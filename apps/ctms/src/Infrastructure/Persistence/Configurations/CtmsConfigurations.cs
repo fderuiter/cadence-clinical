@@ -397,7 +397,16 @@ public sealed class CtmsSiteGreenlightGateConfiguration : IEntityTypeConfigurati
         builder.Property(x => x.SiteId).HasMaxLength(255).IsRequired();
         builder.Property(x => x.SiteName).HasMaxLength(255).IsRequired();
         builder.Property(x => x.CountryCode).HasMaxLength(10).IsRequired();
-        builder.Property(x => x.OverallStatus).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.OverallStatus)
+            .HasConversion(
+                v => v.ToString().ToUpperInvariant(),
+                v => Enum.Parse<SiteGreenlightStatus>(v, true))
+            .HasMaxLength(50)
+            .IsRequired();
+
+        builder.Ignore(x => x.DomainEvents);
+        builder.Ignore(x => x.Events);
+        builder.Ignore(x => x.UncommittedEvents);
         builder.Property(x => x.GreenlightToken).HasMaxLength(1024);
         builder.Property(x => x.GreenlightCertifiedBy).HasMaxLength(255);
         builder.Property(x => x.OverrideSponsorUserId).HasMaxLength(255);
