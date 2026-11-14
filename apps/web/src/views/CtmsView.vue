@@ -2767,7 +2767,11 @@ async function confirmSignature() {
 function achieveMilestone() {
   const nextM = milestones.value.find((m) => m.status === "PLANNED");
   if (!nextM) {
-    alert("All milestones have already been achieved!");
+    useToastStore().push({
+      tone: "warning",
+      title: "Milestones",
+      message: "All milestones have already been achieved!",
+    });
     return;
   }
 
@@ -2788,7 +2792,7 @@ function achieveMilestone() {
         );
         await loadOperationsData();
       } catch (err) {
-        alert("Failed to achieve milestone: " + err.message);
+        useToastStore().apiError("Failed to achieve milestone", err);
       }
     }
   );
@@ -2876,7 +2880,11 @@ async function confirmScheduleVisit() {
 function completeVisit() {
   const scheduledVisit = visits.value.find((v) => v.status === "SCHEDULED");
   if (!scheduledVisit) {
-    alert("No scheduled visits to complete!");
+    useToastStore().push({
+      tone: "warning",
+      title: "Monitoring Visits",
+      message: "No scheduled visits to complete!",
+    });
     return;
   }
 
@@ -2897,7 +2905,7 @@ function completeVisit() {
         );
         await loadOperationsData();
       } catch (err) {
-        alert("Failed to complete monitoring visit: " + err.message);
+        useToastStore().apiError("Failed to complete monitoring visit", err);
       }
     }
   );
@@ -2919,7 +2927,7 @@ function signOffVisit(visit) {
         );
         await loadOperationsData();
       } catch (err) {
-        alert("Failed to sign off monitoring visit: " + err.message);
+        useToastStore().apiError("Failed to sign off monitoring visit", err);
       }
     }
   );
@@ -3060,7 +3068,7 @@ function signDelegation(record) {
       );
       await loadDelegationData();
     } catch (err) {
-      alert("Sign-off execution failed: " + err.message);
+      useToastStore().apiError("Sign-off execution failed", err);
     }
   });
 }
@@ -3084,7 +3092,7 @@ function revokeDelegation(record) {
         );
         await loadDelegationData();
       } catch (err) {
-        alert("Revocation failed: " + err.message);
+        useToastStore().apiError("Revocation failed", err);
       }
     }
   );
@@ -3122,7 +3130,7 @@ async function exportDoaPdf() {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(blobUrl);
   } catch (err) {
-    alert("Error exporting compliant GxP PDF: " + err.message);
+    useToastStore().apiError("Error exporting compliant GxP PDF", err);
   }
 }
 
@@ -3264,7 +3272,7 @@ async function confirmCreateTemplate() {
     newTmplName.value = "";
     await loadFinancialData();
   } catch (err) {
-    alert("Failed to create budget template: " + (err.message || err));
+    useToastStore().apiError("Failed to create budget template", err);
   }
 }
 
@@ -3281,7 +3289,7 @@ async function applyTemplate() {
     );
     await loadFinancialData();
   } catch (err) {
-    alert("Failed to apply template: " + (err.message || err));
+    useToastStore().apiError("Failed to apply template", err);
   }
 }
 
@@ -3330,7 +3338,7 @@ async function confirmAddProcedure() {
     await loadProcedureGrids();
     await calculatePayables();
   } catch (err) {
-    alert("Failed to add procedure grid item: " + (err.message || err));
+    useToastStore().apiError("Failed to add procedure grid item", err);
   }
 }
 
@@ -3371,7 +3379,7 @@ async function confirmExecuteAmendment() {
       showAmendmentModal.value = false;
       await loadFinancialData();
     } catch (err) {
-      alert("Failed to execute contract amendment: " + (err.message || err));
+      useToastStore().apiError("Failed to execute contract amendment", err);
     }
   });
 }
@@ -3396,7 +3404,7 @@ async function confirmCreateAdjustment() {
     adjAmount.value = 0;
     await loadFinancialData();
   } catch (err) {
-    alert("Failed to create budget adjustment: " + (err.message || err));
+    useToastStore().apiError("Failed to create budget adjustment", err);
   }
 }
 
@@ -3416,7 +3424,7 @@ async function approveAdjustment(adj) {
       );
       await loadFinancialData();
     } catch (err) {
-      alert("Failed to approve budget adjustment: " + (err.message || err));
+      useToastStore().apiError("Failed to approve budget adjustment", err);
     }
   });
 }

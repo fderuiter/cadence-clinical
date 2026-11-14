@@ -1598,8 +1598,10 @@ import { useAuthStore } from "../stores/auth";
 import { auditorService } from "../api/auditor";
 import { etmfService } from "../api/etmf";
 import SignatureCaptureModal from "../components/SignatureCaptureModal.vue";
+import { useToastStore } from "../stores/toasts.js";
 
 const authStore = useAuthStore();
+const toastStore = useToastStore();
 
 // Global error alert state
 const globalError = ref("");
@@ -1666,7 +1668,11 @@ async function handleSignSuccess(updatedDoc) {
   // Refresh audit logs to show SIGN & APPROVE events
   await fetchAuditLogs();
 
-  alert("Document successfully signed and approved.");
+  toastStore.push({
+    tone: "success",
+    title: "Document Signed",
+    message: "Document successfully signed and approved.",
+  });
 }
 
 // Current user computed metadata
@@ -1749,7 +1755,11 @@ async function uploadTmfDocument() {
     auditLogs.value.unshift(mockLog);
     totalLogs.value++;
 
-    alert("Document successfully uploaded & ingested into eTMF.");
+    toastStore.push({
+      tone: "success",
+      title: "Document Ingested",
+      message: "Document successfully uploaded & ingested into eTMF.",
+    });
     selectedTmfFile.value = null;
     const fileInput = document.getElementById("tmf-file-input");
     if (fileInput) fileInput.value = "";

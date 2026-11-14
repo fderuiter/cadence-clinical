@@ -140,6 +140,7 @@ export default [
       sourceType: "module",
     },
     rules: {
+      "no-alert": "error",
       "no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
@@ -208,6 +209,20 @@ export default [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
+    },
+  },
+  {
+    files: [
+      "apps/subject-portal/src/**/*.js",
+      "apps/web/src/components/**/*.vue",
+      "apps/web/src/composables/**/*.js",
+      "apps/web/src/views/RulesView.vue",
+      "apps/web/src/views/MdrView.vue",
+      "apps/web/src/views/EcrfView.vue",
+      "apps/web/src/views/QualityCockpitView.vue",
+    ],
+    rules: {
+      "no-alert": "warn",
     },
   },
   {
