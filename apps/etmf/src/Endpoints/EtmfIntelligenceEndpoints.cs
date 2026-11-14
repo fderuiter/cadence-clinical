@@ -110,39 +110,42 @@ public static class EtmfIntelligenceEndpoints
             now: now);
 
         var user = Caller(httpContext);
+        var roles = CallerScope.Roles(httpContext);
 
-        var doc = new TmfDocument(docId)
-        {
-            StudyId = request.StudyId,
-            SiteId = request.SiteId,
-            Filename = request.Filename,
-            Content = request.Content,
-            MimeType = request.MimeType ?? "application/pdf",
-            Zone = report.PrimaryClassification.Zone,
-            Section = report.PrimaryClassification.Section,
-            ArtifactCode = report.PrimaryClassification.ArtifactCode,
-            ArtifactType = report.PrimaryClassification.ArtifactType,
-            Status = "TECHNICAL_QC",
-            ApprovalStatus = "TECHNICAL_QC",
-            TaxonomyVersion = request.TaxonomyVersion ?? "v3.2.0-complete",
-            CreatedAt = now.UtcDateTime,
-            CreatedBy = user,
-            VersionIndex = 1,
-            ReasonForChange = request.ReasonForChange,
-            MetadataJson = JsonSerializer.Serialize(new
+        var doc = TmfDocument.CreateForTechnicalQc(
+            id: docId,
+            studyId: request.StudyId,
+            filename: request.Filename,
+            createdBy: user,
+            actorRole: roles,
+            timestamp: now,
+            reasonForChange: request.ReasonForChange,
+            siteId: request.SiteId,
+            zone: report.PrimaryClassification.Zone,
+            section: report.PrimaryClassification.Section,
+            artifactCode: report.PrimaryClassification.ArtifactCode,
+            artifactType: report.PrimaryClassification.ArtifactType,
+            content: request.Content,
+            mimeType: request.MimeType ?? "application/pdf",
+            taxonomyVersion: request.TaxonomyVersion ?? "v3.2.0-complete",
+            metadataJson: JsonSerializer.Serialize(new
             {
                 document_intelligence = report,
                 assigned_cra = request.AssignedCra
             })
-        };
+        );
 
         dbContext.TmfDocuments.Add(doc);
+        foreach (var tr in doc.Transitions)
+        {
+            dbContext.TmfDocumentQcTransitions.Add(tr);
+        }
 
         var audit = new TmfAuditLog
         {
             Timestamp = now,
             UserId = user,
-            UserRole = CallerScope.Roles(httpContext),
+            UserRole = roles,
             Action = "STAGE_QC",
             DocumentId = docId,
             Details = $"Staged document {request.Filename} for CRA QC in study {request.StudyId}.",
@@ -250,52 +253,53 @@ public static class EtmfIntelligenceEndpoints
             return OutsideStudy();
         }
 
-        var now = clock.UtcNow;
-        var user = Caller(httpContext);
-        var roles = CallerScope.Roles(httpContext);
-        var oldStatus = doc.Status;
-
         var decision = request.Decision.ToUpperInvariant();
-        if (decision == "ACCEPT")
-        {
-            doc.Status = "APPROVED";
-            doc.ApprovalStatus = "APPROVED";
-        }
-        else if (decision == "OVERRIDE")
-        {
-            if (!string.IsNullOrWhiteSpace(request.OverrideArtifactCode))
-            {
-                doc.ArtifactCode = request.OverrideArtifactCode;
-                var tax = ResolveTaxonomyByCode(request.OverrideArtifactCode);
-                doc.Zone = tax.Zone;
-                doc.Section = tax.Section;
-                doc.ArtifactType = tax.ArtifactType;
-            }
-            doc.Status = "APPROVED";
-            doc.ApprovalStatus = "APPROVED";
-        }
-        else if (decision == "REJECT")
-        {
-            doc.Status = "REJECTED";
-            doc.ApprovalStatus = "REJECTED";
-        }
-        else
+        if (decision != "ACCEPT" && decision != "OVERRIDE" && decision != "REJECT")
         {
             return TypedResults.BadRequest(new { error = $"Invalid decision '{request.Decision}'. Allowed values: ACCEPT, OVERRIDE, REJECT." });
         }
 
-        var transition = new TmfDocumentQcTransition
+        if (!string.Equals(doc.Status, TmfDocumentLifecycleState.TechnicalQc, StringComparison.OrdinalIgnoreCase))
         {
-            Id = Guid.NewGuid().ToString(),
-            DocumentId = doc_id,
-            TransitionSequence = 1,
-            FromStatus = oldStatus,
-            ToStatus = doc.Status,
-            ActorId = user,
-            ActorRole = roles,
-            ReasonForChange = request.ReasonForChange,
-            Timestamp = now
-        };
+            var allowed = TmfDocument.GetAllowedTransitions(doc.Status);
+            var allowedStr = allowed.Count > 0 ? string.Join(", ", allowed) : "None";
+            return TypedResults.BadRequest(new
+            {
+                error = $"Cannot review document with status '{doc.Status}'. Only documents in 'TECHNICAL_QC' status can be reviewed. Allowed transitions from '{doc.Status}': {allowedStr}."
+            });
+        }
+
+        var now = clock.UtcNow;
+        var user = Caller(httpContext);
+        var roles = CallerScope.Roles(httpContext);
+
+        if (decision == "OVERRIDE" && !string.IsNullOrWhiteSpace(request.OverrideArtifactCode))
+        {
+            var tax = ResolveTaxonomyByCode(request.OverrideArtifactCode);
+            doc.OverrideTaxonomy(tax.Zone, tax.Section, tax.ArtifactType, request.OverrideArtifactCode);
+        }
+
+        var currentSeq = await dbContext.TmfDocumentQcTransitions
+            .Where(t => t.DocumentId == doc_id)
+            .MaxAsync(t => (int?)t.TransitionSequence, ct) ?? 0;
+        var nextSeq = currentSeq + 1;
+
+        TmfDocumentQcTransition transition;
+        try
+        {
+            transition = decision == "REJECT"
+                ? doc.Reject(user, roles, request.ReasonForChange, now, nextSeq)
+                : doc.Approve(user, roles, request.ReasonForChange, now, nextSeq);
+        }
+        catch (InvalidStateTransitionException ex)
+        {
+            return TypedResults.BadRequest(new { error = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return TypedResults.BadRequest(new { error = ex.Message });
+        }
+
         dbContext.TmfDocumentQcTransitions.Add(transition);
 
         var audit = new TmfAuditLog
@@ -372,25 +376,22 @@ public static class EtmfIntelligenceEndpoints
         var user = Caller(httpContext);
         var docId = "DOC-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
 
-        var doc = new TmfDocument(docId)
-        {
-            StudyId = request.StudyId,
-            SiteId = request.SiteId,
-            Filename = request.Filename,
-            Content = request.Content ?? string.Empty,
-            MimeType = request.MimeType ?? "application/pdf",
-            Zone = request.Zone > 0 ? request.Zone : 1,
-            Section = request.Section ?? "01.01",
-            ArtifactCode = request.ArtifactCode ?? "01.01.01",
-            ArtifactType = request.ArtifactType ?? "Clinical Trial Protocol",
-            Status = "DRAFT",
-            ApprovalStatus = "DRAFT",
-            TaxonomyVersion = request.TaxonomyVersion ?? "v3.2.0-complete",
-            CreatedAt = now.UtcDateTime,
-            CreatedBy = user,
-            VersionIndex = 1,
-            ReasonForChange = request.ReasonForChange ?? "Initial filing"
-        };
+        var doc = TmfDocument.CreateDraft(
+            id: docId,
+            studyId: request.StudyId,
+            filename: request.Filename,
+            createdBy: user,
+            createdAt: now.UtcDateTime,
+            reasonForChange: request.ReasonForChange ?? "Initial filing",
+            siteId: request.SiteId,
+            zone: request.Zone > 0 ? request.Zone : 1,
+            section: request.Section ?? "01.01",
+            artifactCode: request.ArtifactCode ?? "01.01.01",
+            artifactType: request.ArtifactType ?? "Clinical Trial Protocol",
+            content: request.Content ?? string.Empty,
+            mimeType: request.MimeType ?? "application/pdf",
+            taxonomyVersion: request.TaxonomyVersion ?? "v3.2.0-complete"
+        );
 
         dbContext.TmfDocuments.Add(doc);
         await dbContext.SaveChangesAsync(ct);
