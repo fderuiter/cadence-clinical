@@ -274,6 +274,24 @@ public sealed class QualityGateRegistryTests : IDisposable
             "| `a\\|b` | x           |\n");
     }
 
+    [Fact]
+    public void SchemaDocGate_InPreCommitMode_SkipsWhenNoModelFilesStaged()
+    {
+        var gate = QualityGates.Find("schema-doc")!;
+        var context = Context(files: ["apps/web/src/App.vue", "docs/guide.md"], preCommit: true);
+
+        gate.Run(context).Should().BeTrue("pre-commit hook skips schema documentation check when staged files do not affect EF Core models");
+    }
+
+    [Fact]
+    public void SchemaDocGate_InPreCommitMode_RunsWhenModelFilesStaged()
+    {
+        var gate = QualityGates.Find("schema-doc")!;
+        var context = Context(files: ["apps/econsent/src/Domain/EconsentEntities.cs"], preCommit: true);
+
+        gate.Run(context).Should().BeFalse("pre-commit hook executes schema documentation drift check when EF Core entity files are staged");
+    }
+
     private GateContext Context(string[]? files = null, bool preCommit = false) => new(_root, files, preCommit);
 
     private static string Region(string body) => $"{GateDocs.BeginMarker}\n\n{body.TrimEnd('\n')}\n\n{GateDocs.EndMarker}\n";
