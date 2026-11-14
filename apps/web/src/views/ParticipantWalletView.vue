@@ -172,6 +172,7 @@
         >
         <button
           class="btn btn-xs btn-success"
+          :disabled="isSubmitting"
           @click="verifyW9Form(selectedWallet.id)"
         >
           Verify W-9 (CRC)
@@ -312,6 +313,7 @@
                           w.virtual_card_token.startsWith('VTOK')
                         "
                         class="btn btn-sm btn-secondary"
+                        :disabled="isSubmitting"
                         @click="issueReloadableCard(w.id)"
                       >
                         Issue Card
@@ -993,13 +995,19 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showW9Modal = false">
+          <button
+            class="btn btn-secondary"
+            :disabled="isSubmitting"
+            @click="showW9Modal = false"
+          >
             Cancel
           </button>
           <button
             class="btn btn-primary"
             :disabled="
-              !w9Form.certify_accurate || w9Form.tax_id_last_four.length !== 4
+              isSubmitting ||
+              !w9Form.certify_accurate ||
+              w9Form.tax_id_last_four.length !== 4
             "
             @click="submitW9Form"
           >
@@ -1118,6 +1126,7 @@ async function fetchBalanceInquiry(walletId: string) {
 }
 
 async function issueReloadableCard(walletId: string) {
+  isSubmitting.value = true;
   try {
     const res = await fetch(
       `/api/v1/payments/participant/wallets/${walletId}/issue-card`,
@@ -1127,16 +1136,18 @@ async function issueReloadableCard(walletId: string) {
         body: JSON.stringify({ card_type: "RELOADABLE_DEBIT" }),
       }
     );
-    if (res.ok) {
-      await loadAllData();
-    }
+    await ensureOk(res);
+    await loadAllData();
   } catch (e) {
-    console.error("Error issuing reloadable card:", e);
+    useToastStore().apiError("Issuing reloadable card failed", e);
+  } finally {
+    isSubmitting.value = false;
   }
 }
 
 async function submitW9Form() {
   if (!selectedWallet.value) return;
+  isSubmitting.value = true;
   try {
     const res = await fetch(
       `/api/v1/payments/participant/wallets/${selectedWallet.value.id}/submit-w9`,
@@ -1151,19 +1162,21 @@ async function submitW9Form() {
         }),
       }
     );
-    if (res.ok) {
-      showW9Modal.value = false;
-      await loadAllData();
-      if (selectedWallet.value) {
-        await selectWallet(selectedWallet.value);
-      }
+    await ensureOk(res);
+    showW9Modal.value = false;
+    await loadAllData();
+    if (selectedWallet.value) {
+      await selectWallet(selectedWallet.value);
     }
   } catch (e) {
-    console.error("Error submitting W-9 form:", e);
+    useToastStore().apiError("Submitting W-9 form failed", e);
+  } finally {
+    isSubmitting.value = false;
   }
 }
 
 async function verifyW9Form(walletId: string) {
+  isSubmitting.value = true;
   try {
     const res = await fetch(
       `/api/v1/payments/participant/wallets/${walletId}/verify-w9`,
@@ -1175,14 +1188,15 @@ async function verifyW9Form(walletId: string) {
         }),
       }
     );
-    if (res.ok) {
-      await loadAllData();
-      if (selectedWallet.value) {
-        await selectWallet(selectedWallet.value);
-      }
+    await ensureOk(res);
+    await loadAllData();
+    if (selectedWallet.value) {
+      await selectWallet(selectedWallet.value);
     }
   } catch (e) {
-    console.error("Error verifying W-9:", e);
+    useToastStore().apiError("Verifying W-9 form failed", e);
+  } finally {
+    isSubmitting.value = false;
   }
 }
 
