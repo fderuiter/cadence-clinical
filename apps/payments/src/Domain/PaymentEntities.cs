@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cadence.Apps.Payments.Domain;
 
@@ -87,7 +88,25 @@ public class Payable
     public decimal WithholdingAmount { get; set; }
     public decimal NetAmount { get; set; }
     public string Currency { get; set; } = "USD";
-    public string Status { get; set; } = "TRIGGERED";
+
+    private string _status = PayableStatus.TRIGGERED.ToString();
+    public string Status
+    {
+        get => _status;
+        init
+        {
+            if (!PaymentStatusExtensions.IsValidPayableStatus(value))
+            {
+                throw new InvalidStateTransitionException(
+                    nameof(Payable),
+                    _status,
+                    value,
+                    $"'{value}' is not a valid declared status for {nameof(Payable)}.");
+            }
+            _status = value.ToUpperInvariant();
+        }
+    }
+
     public bool IsSdvGated { get; set; }
     public DateTimeOffset? SdvVerifiedAt { get; set; }
     public string? SdvVerifiedBy { get; set; }
@@ -96,6 +115,102 @@ public class Payable
     public required DateTimeOffset UpdatedAt { get; set; }
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
+
+    /// <summary>
+    /// Verifies source data (SDV) for this payable.
+    /// </summary>
+    public void VerifySourceData(string verifiedBy, DateTimeOffset verifiedAt)
+    {
+        if (string.IsNullOrWhiteSpace(verifiedBy))
+        {
+            throw new ArgumentException("Verifier user identifier is required.", nameof(verifiedBy));
+        }
+
+        if (string.Equals(_status, PayableStatus.INVOICED.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidStateTransitionException(
+                nameof(Payable),
+                _status,
+                PayableStatus.VERIFIED.ToString(),
+                $"Cannot verify source data for payable '{Id}' because it has already been invoiced.");
+        }
+
+        if (string.Equals(_status, PayableStatus.CANCELLED.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidStateTransitionException(
+                nameof(Payable),
+                _status,
+                PayableStatus.VERIFIED.ToString(),
+                $"Cannot verify source data for payable '{Id}' because it is cancelled.");
+        }
+
+        SdvVerifiedBy = verifiedBy;
+        SdvVerifiedAt = verifiedAt;
+        _status = PayableStatus.VERIFIED.ToString();
+        UpdatedAt = verifiedAt;
+        VersionIndex += 1;
+    }
+
+    /// <summary>
+    /// Transitions this payable to INVOICED status, verifying that source data verification
+    /// rules are satisfied if SDV is gated.
+    /// </summary>
+    public void MarkInvoiced(DateTimeOffset invoicedAt)
+    {
+        if (string.Equals(_status, PayableStatus.INVOICED.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidStateTransitionException(
+                nameof(Payable),
+                _status,
+                PayableStatus.INVOICED.ToString(),
+                $"Payable '{Id}' is already invoiced. Duplicate invoicing is prohibited.");
+        }
+
+        if (string.Equals(_status, PayableStatus.CANCELLED.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidStateTransitionException(
+                nameof(Payable),
+                _status,
+                PayableStatus.INVOICED.ToString(),
+                $"Cannot invoice payable '{Id}' because it has been cancelled.");
+        }
+
+        if (IsSdvGated && (!SdvVerifiedAt.HasValue || string.IsNullOrWhiteSpace(SdvVerifiedBy)))
+        {
+            throw new InvalidStateTransitionException(
+                nameof(Payable),
+                _status,
+                PayableStatus.INVOICED.ToString(),
+                $"Payable '{Id}' cannot be invoiced because source data verification (SDV) is pending.");
+        }
+
+        _status = PayableStatus.INVOICED.ToString();
+        UpdatedAt = invoicedAt;
+        VersionIndex += 1;
+    }
+
+    /// <summary>
+    /// Cancels this payable, preventing subsequent invoicing.
+    /// </summary>
+    public void Cancel(DateTimeOffset cancelledAt, string? reason = null)
+    {
+        if (string.Equals(_status, PayableStatus.INVOICED.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidStateTransitionException(
+                nameof(Payable),
+                _status,
+                PayableStatus.CANCELLED.ToString(),
+                $"Cannot cancel payable '{Id}' because it has already been invoiced.");
+        }
+
+        _status = PayableStatus.CANCELLED.ToString();
+        if (!string.IsNullOrWhiteSpace(reason))
+        {
+            ReasonForChange = reason;
+        }
+        UpdatedAt = cancelledAt;
+        VersionIndex += 1;
+    }
 }
 
 public class PayableAllocation
@@ -178,7 +293,25 @@ public class SelfBillingInvoice
     public decimal TotalHoldbackAmount { get; set; }
     public decimal TotalNetAmount { get; set; }
     public int PayableCount { get; set; }
-    public string Status { get; set; } = "DRAFT";
+
+    private string _status = SelfBillingInvoiceStatus.DRAFT.ToString();
+    public string Status
+    {
+        get => _status;
+        init
+        {
+            if (!PaymentStatusExtensions.IsValidInvoiceStatus(value))
+            {
+                throw new InvalidStateTransitionException(
+                    nameof(SelfBillingInvoice),
+                    _status,
+                    value,
+                    $"'{value}' is not a valid declared status for {nameof(SelfBillingInvoice)}.");
+            }
+            _status = value.ToUpperInvariant();
+        }
+    }
+
     public string? ApprovedBy { get; set; }
     public DateTimeOffset? ApprovedAt { get; set; }
     public string? ErpSystem { get; set; } = "SAP";
@@ -194,6 +327,125 @@ public class SelfBillingInvoice
     public required DateTimeOffset UpdatedAt { get; set; }
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
+
+    /// <summary>
+    /// Approves this draft invoice, authorizing it for ERP export and settlement.
+    /// </summary>
+    public void Approve(string approvedBy, DateTimeOffset approvedAt)
+    {
+        if (string.IsNullOrWhiteSpace(approvedBy))
+        {
+            throw new ArgumentException("Approver user identifier is required.", nameof(approvedBy));
+        }
+
+        if (!string.Equals(_status, SelfBillingInvoiceStatus.DRAFT.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidStateTransitionException(
+                nameof(SelfBillingInvoice),
+                _status,
+                SelfBillingInvoiceStatus.APPROVED.ToString(),
+                $"Invoice '{InvoiceNumber}' cannot be approved because it is in status '{_status}', but '{SelfBillingInvoiceStatus.DRAFT}' is required.");
+        }
+
+        _status = SelfBillingInvoiceStatus.APPROVED.ToString();
+        ApprovedBy = approvedBy;
+        ApprovedAt = approvedAt;
+        UpdatedAt = approvedAt;
+        VersionIndex += 1;
+    }
+
+    /// <summary>
+    /// Records export to an external ERP system. Requires APPROVED status.
+    /// Blocks export if the invoice is in DRAFT, CANCELLED, or any unapproved status.
+    /// </summary>
+    public void ExportToErp(string erpSystem, string erpReferenceId, DateTimeOffset exportedAt)
+    {
+        if (string.IsNullOrWhiteSpace(erpSystem))
+        {
+            throw new ArgumentException("ERP system identifier is required.", nameof(erpSystem));
+        }
+
+        if (string.IsNullOrWhiteSpace(erpReferenceId))
+        {
+            throw new ArgumentException("ERP reference identifier is required.", nameof(erpReferenceId));
+        }
+
+        if (!string.Equals(_status, SelfBillingInvoiceStatus.APPROVED.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidStateTransitionException(
+                nameof(SelfBillingInvoice),
+                _status,
+                "EXPORTED",
+                $"Invoice '{InvoiceNumber}' must be in '{SelfBillingInvoiceStatus.APPROVED}' status before ERP export, but is currently in '{_status}'.");
+        }
+
+        ErpSystem = erpSystem;
+        ErpReferenceId = erpReferenceId;
+        ErpSyncStatus = "EXPORTED";
+        ErpSyncedAt = exportedAt;
+        UpdatedAt = exportedAt;
+        VersionIndex += 1;
+    }
+
+    /// <summary>
+    /// Reconciles settlement against bank wire or ERP clearing statement. Requires APPROVED status.
+    /// </summary>
+    public void Reconcile(
+        string reconciledBy,
+        DateTimeOffset reconciledAt,
+        string? reconciliationReference,
+        string? reconciliationNotes,
+        string? erpSystem = null)
+    {
+        if (string.IsNullOrWhiteSpace(reconciledBy))
+        {
+            throw new ArgumentException("Reconciler user identifier is required.", nameof(reconciledBy));
+        }
+
+        if (!string.Equals(_status, SelfBillingInvoiceStatus.APPROVED.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidStateTransitionException(
+                nameof(SelfBillingInvoice),
+                _status,
+                SelfBillingInvoiceStatus.RECONCILED.ToString(),
+                $"Invoice '{InvoiceNumber}' must be in '{SelfBillingInvoiceStatus.APPROVED}' status before settlement reconciliation, but is currently in '{_status}'.");
+        }
+
+        _status = SelfBillingInvoiceStatus.RECONCILED.ToString();
+        ReconciledBy = reconciledBy;
+        ReconciledAt = reconciledAt;
+        ReconciliationReference = reconciliationReference;
+        ReconciliationNotes = reconciliationNotes;
+        if (!string.IsNullOrWhiteSpace(erpSystem))
+        {
+            ErpSystem = erpSystem;
+        }
+        UpdatedAt = reconciledAt;
+        VersionIndex += 1;
+    }
+
+    /// <summary>
+    /// Cancels this invoice. Cannot cancel an already reconciled invoice.
+    /// </summary>
+    public void Cancel(DateTimeOffset cancelledAt, string? reason = null)
+    {
+        if (string.Equals(_status, SelfBillingInvoiceStatus.RECONCILED.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidStateTransitionException(
+                nameof(SelfBillingInvoice),
+                _status,
+                SelfBillingInvoiceStatus.CANCELLED.ToString(),
+                $"Cannot cancel invoice '{InvoiceNumber}' because it has already been reconciled.");
+        }
+
+        _status = SelfBillingInvoiceStatus.CANCELLED.ToString();
+        if (!string.IsNullOrWhiteSpace(reason))
+        {
+            ReasonForChange = reason;
+        }
+        UpdatedAt = cancelledAt;
+        VersionIndex += 1;
+    }
 }
 
 public class InvoiceLineItem
@@ -365,7 +617,25 @@ public class ParticipantExpenseClaim
     public decimal GrossAmount { get; set; }
     public decimal TaxDeduction { get; set; }
     public decimal NetAmount { get; set; }
-    public string Status { get; set; } = "PENDING_REVIEW";
+
+    private string _status = ParticipantExpenseClaimStatus.PENDING_REVIEW.ToString();
+    public string Status
+    {
+        get => _status;
+        init
+        {
+            if (!PaymentStatusExtensions.IsValidExpenseClaimStatus(value))
+            {
+                throw new InvalidStateTransitionException(
+                    nameof(ParticipantExpenseClaim),
+                    _status,
+                    value,
+                    $"'{value}' is not a valid declared status for {nameof(ParticipantExpenseClaim)}.");
+            }
+            _status = value.ToUpperInvariant();
+        }
+    }
+
     public string? ReceiptImageName { get; set; }
     public string? ReceiptOcrDataJson { get; set; }
     public string? ReviewedBy { get; set; }
@@ -377,6 +647,133 @@ public class ParticipantExpenseClaim
     public required DateTimeOffset UpdatedAt { get; set; }
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
+
+    private bool _walletCredited;
+    /// <summary>
+    /// Indicates whether a wallet credit operation has already been applied for this claim.
+    /// </summary>
+    [NotMapped]
+    public bool IsWalletCredited => _walletCredited || (!string.IsNullOrEmpty(DisbursementReference) && string.Equals(_status, ParticipantExpenseClaimStatus.APPROVED.ToString(), StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Approves this expense claim, authorizing reimbursement.
+    /// Rejects multiple approvals or reviews from non-pending states.
+    /// </summary>
+    public void Approve(string reviewerId, DateTimeOffset reviewedAt, string? reviewNotes = null, decimal? adjustedGrossAmount = null)
+    {
+        if (string.IsNullOrWhiteSpace(reviewerId))
+        {
+            throw new ArgumentException("Reviewer user identifier is required.", nameof(reviewerId));
+        }
+
+        if (!string.Equals(_status, ParticipantExpenseClaimStatus.PENDING_REVIEW.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidStateTransitionException(
+                nameof(ParticipantExpenseClaim),
+                _status,
+                ParticipantExpenseClaimStatus.APPROVED.ToString(),
+                $"Expense claim '{Id}' cannot be approved because it is in status '{_status}', but '{ParticipantExpenseClaimStatus.PENDING_REVIEW}' is required.");
+        }
+
+        if (adjustedGrossAmount.HasValue)
+        {
+            GrossAmount = adjustedGrossAmount.Value;
+            NetAmount = Math.Round(adjustedGrossAmount.Value - TaxDeduction, 2);
+        }
+
+        _status = ParticipantExpenseClaimStatus.APPROVED.ToString();
+        ReviewedBy = reviewerId;
+        ReviewedAt = reviewedAt;
+        ReviewNotes = reviewNotes;
+        UpdatedAt = reviewedAt;
+        VersionIndex += 1;
+    }
+
+    /// <summary>
+    /// Rejects this expense claim. Permits review action only from PENDING_REVIEW.
+    /// </summary>
+    public void Reject(string reviewerId, DateTimeOffset reviewedAt, string? reviewNotes = null)
+    {
+        if (string.IsNullOrWhiteSpace(reviewerId))
+        {
+            throw new ArgumentException("Reviewer user identifier is required.", nameof(reviewerId));
+        }
+
+        if (!string.Equals(_status, ParticipantExpenseClaimStatus.PENDING_REVIEW.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidStateTransitionException(
+                nameof(ParticipantExpenseClaim),
+                _status,
+                ParticipantExpenseClaimStatus.REJECTED.ToString(),
+                $"Expense claim '{Id}' cannot be rejected because it is in status '{_status}', but '{ParticipantExpenseClaimStatus.PENDING_REVIEW}' is required.");
+        }
+
+        _status = ParticipantExpenseClaimStatus.REJECTED.ToString();
+        ReviewedBy = reviewerId;
+        ReviewedAt = reviewedAt;
+        ReviewNotes = reviewNotes;
+        UpdatedAt = reviewedAt;
+        VersionIndex += 1;
+    }
+
+    /// <summary>
+    /// Records that the participant wallet was credited for this approved claim.
+    /// Forbids multiple wallet credit operations.
+    /// </summary>
+    public void RecordWalletCredit()
+    {
+        if (!string.Equals(_status, ParticipantExpenseClaimStatus.APPROVED.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidStateTransitionException(
+                nameof(ParticipantExpenseClaim),
+                _status,
+                "CREDITED",
+                $"Expense claim '{Id}' must be approved before crediting wallet, but is currently in '{_status}'.");
+        }
+
+        if (_walletCredited)
+        {
+            throw new InvalidStateTransitionException(
+                nameof(ParticipantExpenseClaim),
+                _status,
+                "CREDITED",
+                $"Wallet credit has already been processed for expense claim '{Id}'. Duplicate wallet credits are prohibited.");
+        }
+
+        _walletCredited = true;
+    }
+
+    /// <summary>
+    /// Records a disbursement dispatch reference for this approved claim.
+    /// Forbids duplicate disbursement assignment.
+    /// </summary>
+    public void RecordDisbursement(string disbursementReference)
+    {
+        if (string.IsNullOrWhiteSpace(disbursementReference))
+        {
+            throw new ArgumentException("Disbursement reference cannot be empty.", nameof(disbursementReference));
+        }
+
+        if (!string.Equals(_status, ParticipantExpenseClaimStatus.APPROVED.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidStateTransitionException(
+                nameof(ParticipantExpenseClaim),
+                _status,
+                "DISBURSED",
+                $"Expense claim '{Id}' must be approved before disbursement, but is currently in '{_status}'.");
+        }
+
+        if (!string.IsNullOrEmpty(DisbursementReference))
+        {
+            throw new InvalidStateTransitionException(
+                nameof(ParticipantExpenseClaim),
+                _status,
+                "DISBURSED",
+                $"Expense claim '{Id}' already has a disbursement reference '{DisbursementReference}'. Duplicate disbursement is prohibited.");
+        }
+
+        DisbursementReference = disbursementReference;
+    }
 }
 
 public class ParticipantDisbursement
@@ -387,8 +784,90 @@ public class ParticipantDisbursement
     public decimal Amount { get; set; }
     public string DisbursementType { get; set; } = "VIRTUAL_CARD";
     public string ReferenceNumber { get; set; } = string.Empty;
-    public string Status { get; set; } = "DISPATCHED";
+
+    private string _status = ParticipantDisbursementStatus.DISPATCHED.ToString();
+    public string Status
+    {
+        get => _status;
+        init
+        {
+            if (!PaymentStatusExtensions.IsValidDisbursementStatus(value))
+            {
+                throw new InvalidStateTransitionException(
+                    nameof(ParticipantDisbursement),
+                    _status,
+                    value,
+                    $"'{value}' is not a valid declared status for {nameof(ParticipantDisbursement)}.");
+            }
+            _status = value.ToUpperInvariant();
+        }
+    }
+
     public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
     public int VersionIndex { get; set; } = 1;
+
+    /// <summary>
+    /// Progresses lifecycle from DISPATCHED to SETTLED upon network confirmation.
+    /// Forbids duplicate settlement or settling from non-dispatched status.
+    /// </summary>
+    public void Settle(DateTimeOffset settledAt)
+    {
+        if (string.Equals(_status, ParticipantDisbursementStatus.SETTLED.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidStateTransitionException(
+                nameof(ParticipantDisbursement),
+                _status,
+                ParticipantDisbursementStatus.SETTLED.ToString(),
+                $"Disbursement '{Id}' (ref: {ReferenceNumber}) is already settled. Duplicate settlement is prohibited.");
+        }
+
+        if (!string.Equals(_status, ParticipantDisbursementStatus.DISPATCHED.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidStateTransitionException(
+                nameof(ParticipantDisbursement),
+                _status,
+                ParticipantDisbursementStatus.SETTLED.ToString(),
+                $"Disbursement '{Id}' (ref: {ReferenceNumber}) in status '{_status}' cannot be settled. Only dispatched disbursements can be settled.");
+        }
+
+        _status = ParticipantDisbursementStatus.SETTLED.ToString();
+        VersionIndex += 1;
+    }
+
+    /// <summary>
+    /// Marks disbursement as failed. Only permissible from DISPATCHED status.
+    /// </summary>
+    public void Fail(DateTimeOffset failedAt, string? reason = null)
+    {
+        if (!string.Equals(_status, ParticipantDisbursementStatus.DISPATCHED.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidStateTransitionException(
+                nameof(ParticipantDisbursement),
+                _status,
+                ParticipantDisbursementStatus.FAILED.ToString(),
+                $"Disbursement '{Id}' in status '{_status}' cannot be marked failed. Only dispatched disbursements can fail.");
+        }
+
+        _status = ParticipantDisbursementStatus.FAILED.ToString();
+        VersionIndex += 1;
+    }
+
+    /// <summary>
+    /// Cancels disbursement. Only permissible from DISPATCHED status.
+    /// </summary>
+    public void Cancel(DateTimeOffset cancelledAt, string? reason = null)
+    {
+        if (!string.Equals(_status, ParticipantDisbursementStatus.DISPATCHED.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidStateTransitionException(
+                nameof(ParticipantDisbursement),
+                _status,
+                ParticipantDisbursementStatus.CANCELLED.ToString(),
+                $"Disbursement '{Id}' in status '{_status}' cannot be cancelled. Only dispatched disbursements can be cancelled.");
+        }
+
+        _status = ParticipantDisbursementStatus.CANCELLED.ToString();
+        VersionIndex += 1;
+    }
 }

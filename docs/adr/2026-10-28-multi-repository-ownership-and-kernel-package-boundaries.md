@@ -4,6 +4,7 @@
 - **Date:** 2026-10-28
 - **Authors:** @fderuiter, Claude Code
 - **Deciders:** @fderuiter
+- **Requirements:** PRD-SYS-053
 - **Issues:** #4719 (kernel epic), #5310 (five-gates epic), #4787 (scaffold dispositions)
 - **Reconciles:** [ADR-2600](2026-10-19-modules-write-through-the-kernel-command-path.md) and [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md). Both remain **Accepted**. This ADR does not supersede either of them.
 - **Builds on:** [ADR-2601](2026-10-19-one-composition-host-for-the-kernel-and-its-modules.md) (one composition host)
@@ -98,7 +99,7 @@ Recommended shape under option 2, to be confirmed by K1:
 - **Needs decision (matrix item 4):** whether the standards registry belongs to the kernel repository or to a standards
   repository. This waits for the file-level inventory of `packages/kernel` and `apps/knowledge`.
 
-## 4. Decision (accepted)
+## 4. Decision Outcome
 
 1. **Repositories are source ownership, not runtime.** The composition host in `cadence-clinical` remains the only
    runtime composition authority (ADR-2601). Product repositories publish packages the host composes. Repository
@@ -116,7 +117,7 @@ Recommended shape under option 2, to be confirmed by K1:
 6. **Gating:** extraction starts only when the four conditions in the [migration plan](../architecture/repository-migration/MIGRATION_PLAN.md)
    and the [agent execution guide](../architecture/repository-migration/AGENT_HANDOFF.md#synchronization-point) hold.
 
-## 5. Ownership Matrix Amendments (approved, to apply in the matrix PR)
+### 4.1 Ownership Matrix Amendments
 
 The matrix is not edited in this change. The amendments below are approved and go into the matrix in a follow-up docs PR:
 
@@ -125,7 +126,7 @@ The matrix is not edited in this change. The amendments below are approved and g
 - Note that `Cadence.Security` is a transitive dependency of the SDK today.
 - Keep the seven "Required resolution before extraction" items in the matrix open until the inventory closes them.
 
-## 6. Consequences & Trade-offs
+## 5. Consequences & Trade-offs
 
 - ✅ Products depend on a small, versioned public SDK. Persistence stays internal to the kernel and the host.
 - ✅ The single transaction and the single audit chain per tenant (ADR-2600) are preserved.
@@ -134,7 +135,7 @@ The matrix is not edited in this change. The amendments below are approved and g
   throughput still applies.
 - ❌ Splitting the SDK adds one package to publish and test.
 
-## 7. Verification & Acceptance (proposed, for K1)
+## 6. Implementation & Verification
 
 - `Abstractions` and `Modules` public API snapshots pass.
 - A consumer project that references only the packages compiles a minimal module (kernel plan K2).
@@ -145,7 +146,7 @@ The matrix is not edited in this change. The amendments below are approved and g
 
 No check in this list has been run for this ADR. A green build is not validation.
 
-## 8. Open Items (after acceptance)
+### 6.1 Open Items (after acceptance)
 
 These are implementation details inside the accepted direction. None of them reopens §4.
 
@@ -158,7 +159,7 @@ These are implementation details inside the accepted direction. None of them reo
 | 5 | **Six owner choices decided in §8.1. The other 101 suggestions stand as given.** Per-class dispositions for the 107 `needs decision` inventory rows, from the symbol-level review merged in #5683. The review is read-only and not line-by-line verified, and its owners are suggestions. Each slice must confirm its file list before moving code | Inventory thread, then the slice owner (K3 and later) |
 | 6 | Whether a later per-product database (option C) needs its own ADR | Deciders, after K3 |
 
-### 8.1 Owner decisions (accepted 2026-10-28)
+#### 6.1.1 Owner decisions (accepted 2026-10-28)
 
 @fderuiter approved the recommendations for the six owner choices in the inventory's symbol-level review (#5683). The
 other suggestions in that review stand as given. Each decision takes effect in the matrix at the slice that moves the
@@ -175,7 +176,7 @@ code, not now.
 
 These decisions do not start extraction. The synchronization conditions in the migration plan still apply.
 
-## 9. Rollback
+### 6.2 Rollback
 
 This ADR changes documentation only. Reverting its pull request restores the previous state. No runtime, database or
 package is affected.

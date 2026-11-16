@@ -6,27 +6,34 @@
  * compilation fallback when missing or stale.
  */
 
-const fs = require('fs');
-const path = require('path');
-const { spawnSync } = require('child_process');
+const fs = require("fs");
+const path = require("path");
+const { spawnSync } = require("child_process");
 
-const rootDir = path.resolve(__dirname, '..');
-const isWin = process.platform === 'win32';
-const binaryName = isWin ? 'cadence.exe' : 'cadence';
-const binaryPath = path.join(rootDir, 'bin', binaryName);
-const csprojPath = path.join(rootDir, 'packages', 'cli', 'src', 'Cadence.Cli.csproj');
-const cliSrcDir = path.join(rootDir, 'packages', 'cli', 'src');
+const rootDir = path.resolve(__dirname, "..");
+const isWin = process.platform === "win32";
+const binaryName = isWin ? "cadence.exe" : "cadence";
+const binaryPath = path.join(rootDir, "bin", binaryName);
+const csprojPath = path.join(
+  rootDir,
+  "packages",
+  "cli",
+  "src",
+  "Cadence.Cli.csproj"
+);
+const cliSrcDir = path.join(rootDir, "packages", "cli", "src");
+const toolingCoreSrcDir = path.join(rootDir, "packages", "tooling_core", "src");
 
 // Ensure local .NET installation is available in PATH
 const homeDir = process.env.HOME || process.env.USERPROFILE;
 if (homeDir) {
-  const dotnetHome = path.join(homeDir, '.dotnet');
+  const dotnetHome = path.join(homeDir, ".dotnet");
   if (fs.existsSync(dotnetHome)) {
     process.env.DOTNET_ROOT = process.env.DOTNET_ROOT || dotnetHome;
-    const dotnetTools = path.join(dotnetHome, 'tools');
-    const pathSep = isWin ? ';' : ':';
+    const dotnetTools = path.join(dotnetHome, "tools");
+    const pathSep = isWin ? ";" : ":";
     if (!process.env.PATH || !process.env.PATH.includes(dotnetHome)) {
-      process.env.PATH = `${dotnetHome}${pathSep}${dotnetTools}${pathSep}${process.env.PATH || ''}`;
+      process.env.PATH = `${dotnetHome}${pathSep}${dotnetTools}${pathSep}${process.env.PATH || ""}`;
     }
   }
 }
@@ -41,7 +48,11 @@ function getLatestSourceMtime(dir) {
   try {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
-      if (entry.name === 'bin' || entry.name === 'obj' || entry.name.startsWith('.')) {
+      if (
+        entry.name === "bin" ||
+        entry.name === "obj" ||
+        entry.name.startsWith(".")
+      ) {
         continue;
       }
       const fullPath = path.join(dir, entry.name);
@@ -68,7 +79,10 @@ function needsBuild() {
   }
 
   const binaryMtime = fs.statSync(binaryPath).mtimeMs;
-  const latestSourceMtime = getLatestSourceMtime(cliSrcDir);
+  const latestSourceMtime = Math.max(
+    getLatestSourceMtime(cliSrcDir),
+    getLatestSourceMtime(toolingCoreSrcDir)
+  );
 
   return latestSourceMtime > binaryMtime;
 }
@@ -78,37 +92,39 @@ function needsBuild() {
  */
 function buildBinary() {
   // Check if dotnet executable is available
-  const dotnetCheck = spawnSync('dotnet', ['--version'], {
-    stdio: 'ignore',
+  const dotnetCheck = spawnSync("dotnet", ["--version"], {
+    stdio: "ignore",
     env: process.env,
   });
 
-  if (dotnetCheck.error && dotnetCheck.error.code === 'ENOENT') {
-    console.error('::error:: .NET SDK not found. Please install .NET 10 SDK to run Cadence CLI or quality gates.');
+  if (dotnetCheck.error && dotnetCheck.error.code === "ENOENT") {
+    console.error(
+      "::error:: .NET SDK not found. Please install .NET 10 SDK to run Cadence CLI or quality gates."
+    );
     process.exit(1);
   }
 
-  console.log('[run-cli] Compiling Cadence CLI binary...');
+  console.log("[run-cli] Compiling Cadence CLI binary...");
   const publishResult = spawnSync(
-    'dotnet',
+    "dotnet",
     [
-      'publish',
+      "publish",
       csprojPath,
-      '-c',
-      'Release',
-      '--self-contained',
-      '-o',
-      path.join(rootDir, 'bin'),
+      "-c",
+      "Release",
+      "--self-contained",
+      "-o",
+      path.join(rootDir, "bin"),
     ],
     {
-      stdio: 'inherit',
+      stdio: "inherit",
       cwd: rootDir,
       env: process.env,
     }
   );
 
   if (publishResult.status !== 0) {
-    console.error('::error:: Failed to compile Cadence CLI binary.');
+    console.error("::error:: Failed to compile Cadence CLI binary.");
     process.exit(publishResult.status ?? 1);
   }
 }
@@ -120,13 +136,16 @@ function main() {
 
   const args = process.argv.slice(2);
   const runResult = spawnSync(binaryPath, args, {
-    stdio: 'inherit',
+    stdio: "inherit",
     cwd: rootDir,
     env: process.env,
   });
 
   if (runResult.error) {
-    console.error('::error:: Failed to execute Cadence CLI binary:', runResult.error.message);
+    console.error(
+      "::error:: Failed to execute Cadence CLI binary:",
+      runResult.error.message
+    );
     process.exit(1);
   }
 

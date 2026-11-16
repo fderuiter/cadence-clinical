@@ -7,7 +7,7 @@ One document per module, rendered from each module's EF Core design-time model. 
 | Module | DbContext | Tables |
 | --- | --- | --- |
 | [ctms](ctms.md) | `CtmsDbContext` | 18 |
-| [econsent](econsent.md) | `EconsentDbContext` | 19 |
+| [econsent](econsent.md) | `EconsentDbContext` | 20 |
 | [eisf](eisf.md) | `EisfDbContext` | 5 |
 | [etmf](etmf.md) | `EtmfDbContext` | 11 |
 | [execution](execution.md) | `ExecutionDbContext` | 29 |

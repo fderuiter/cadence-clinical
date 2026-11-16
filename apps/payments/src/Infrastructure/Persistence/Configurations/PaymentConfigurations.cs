@@ -81,7 +81,12 @@ public class PayableConfiguration : IEntityTypeConfiguration<Payable>
 {
     public void Configure(EntityTypeBuilder<Payable> builder)
     {
-        builder.ToTable("payments_payables");
+        builder.ToTable("payments_payables", t =>
+        {
+            t.HasCheckConstraint(
+                "ck_payments_payables_status",
+                "\"Status\" IN ('TRIGGERED', 'VERIFIED', 'INVOICED', 'CANCELLED')");
+        });
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasMaxLength(36);
         builder.Property(x => x.StudyId).HasMaxLength(255).IsRequired();
@@ -202,7 +207,12 @@ public class SelfBillingInvoiceConfiguration : IEntityTypeConfiguration<SelfBill
 {
     public void Configure(EntityTypeBuilder<SelfBillingInvoice> builder)
     {
-        builder.ToTable("payments_self_billing_invoices");
+        builder.ToTable("payments_self_billing_invoices", t =>
+        {
+            t.HasCheckConstraint(
+                "ck_payments_self_billing_invoices_status",
+                "\"Status\" IN ('DRAFT', 'APPROVED', 'RECONCILED', 'CANCELLED')");
+        });
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasMaxLength(36);
         builder.Property(x => x.InvoiceNumber).HasMaxLength(100).IsRequired();
@@ -433,7 +443,13 @@ public class ParticipantExpenseClaimConfiguration : IEntityTypeConfiguration<Par
 {
     public void Configure(EntityTypeBuilder<ParticipantExpenseClaim> builder)
     {
-        builder.ToTable("payments_participant_expense_claims");
+        builder.ToTable("payments_participant_expense_claims", t =>
+        {
+            t.HasCheckConstraint(
+                "ck_payments_participant_expense_claims_status",
+                "\"Status\" IN ('PENDING_REVIEW', 'APPROVED', 'REJECTED')");
+        });
+        builder.Ignore(x => x.IsWalletCredited);
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasMaxLength(36);
         builder.Property(x => x.WalletId).HasMaxLength(36).IsRequired();
@@ -466,7 +482,12 @@ public class ParticipantDisbursementConfiguration : IEntityTypeConfiguration<Par
 {
     public void Configure(EntityTypeBuilder<ParticipantDisbursement> builder)
     {
-        builder.ToTable("payments_participant_disbursements");
+        builder.ToTable("payments_participant_disbursements", t =>
+        {
+            t.HasCheckConstraint(
+                "ck_payments_participant_disbursements_status",
+                "\"Status\" IN ('DISPATCHED', 'SETTLED', 'FAILED', 'CANCELLED')");
+        });
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasMaxLength(36);
         builder.Property(x => x.WalletId).HasMaxLength(36).IsRequired();

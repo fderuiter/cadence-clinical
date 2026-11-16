@@ -72,13 +72,26 @@ public sealed class DocIndexSyncServiceTests : IDisposable
     public void DetermineCategory_CategorizesPathsCorrectly()
     {
         DocIndexSyncService.DetermineCategory("kernel/SPEC.md").Should().Be("## Kernel and roadmap");
+        DocIndexSyncService.DetermineCategory("architecture/repository-migration/MIGRATION_PLAN.md").Should().Be("## Kernel and roadmap");
         DocIndexSyncService.DetermineCategory("adr/001.md").Should().Be("## Architecture decision records");
         DocIndexSyncService.DetermineCategory("SDLC/01_PRD.md").Should().Be("## Requirements, validation and GxP");
         DocIndexSyncService.DetermineCategory("migration/PHASE0.md").Should().Be("## Python-to-.NET port (completed)");
         DocIndexSyncService.DetermineCategory("specs/01-spec.md").Should().Be("## Design proposals");
         DocIndexSyncService.DetermineCategory("CDISC/README.md").Should().Be("## Standards reference material");
         DocIndexSyncService.DetermineCategory("agents/domain.md").Should().Be("## Repository policies");
+        DocIndexSyncService.DetermineCategory("strategy/MARKET_HYPOTHESES.md").Should().Be("## Product");
+        DocIndexSyncService.DetermineCategory("FUNCTIONAL_PRODUCT_SPECIFICATION.md").Should().Be("## Product");
         DocIndexSyncService.DetermineCategory("api/designer.md").Should().Be("## Developing and running");
+    }
+
+    [Fact]
+    public void DetermineStatus_AssignsStatusCorrectly()
+    {
+        DocIndexSyncService.DetermineStatus("architecture/repository-migration/REPOSITORY_REGISTRY.md", "").Should().Be("Normative");
+        DocIndexSyncService.DetermineStatus("architecture/repository-migration/MIGRATION_PLAN.md", "").Should().Be("Current");
+        DocIndexSyncService.DetermineStatus("strategy/PRODUCT_CATALOG.md", "").Should().Be("Current");
+        DocIndexSyncService.DetermineStatus("adr/2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md", "").Should().Be("Current");
+        DocIndexSyncService.DetermineStatus("migration/01-old.md", "").Should().Be("Historical");
     }
 
     [Fact]

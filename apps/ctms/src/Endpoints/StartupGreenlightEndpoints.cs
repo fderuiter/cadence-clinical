@@ -164,10 +164,7 @@ public static class StartupGreenlightEndpoints
         string token = GreenlightTokenGenerator.GenerateToken(
             gate.SiteId, gate.StudyId, gate.CountryCode, signer, secret, issuedAt, expiresAt, gate.IsOverridden);
 
-        gate.OverallStatus = "APPROVED";
-        gate.GreenlightToken = token;
-        gate.GreenlightCertifiedBy = signer;
-        gate.GreenlightCertifiedAt = now;
+        gate.Approve(signer, now, token);
         gate.ReasonForChange = changeReasonHeader ?? "Greenlight activation certified";
 
         var auditEntry = new CtmsAuditLog
@@ -299,10 +296,7 @@ public static class StartupGreenlightEndpoints
             string token = GreenlightTokenGenerator.GenerateToken(
                 gate.SiteId, gate.StudyId, gate.CountryCode, signer, secret, issuedAt, expiresAt, gate.IsOverridden);
 
-            gate.OverallStatus = "APPROVED";
-            gate.GreenlightToken = token;
-            gate.GreenlightCertifiedBy = signer;
-            gate.GreenlightCertifiedAt = now;
+            gate.Approve(signer, now, token);
             gate.ReasonForChange = changeReasonHeader ?? request.Meaning ?? "21 CFR Part 11 Country-Level Batch Certification";
 
             var auditEntry = new CtmsAuditLog
@@ -378,7 +372,7 @@ public static class StartupGreenlightEndpoints
             SiteId: gate.SiteId,
             SiteName: string.IsNullOrWhiteSpace(gate.SiteName) ? $"Site {gate.SiteId}" : gate.SiteName,
             CountryCode: gate.CountryCode,
-            OverallStatus: gate.OverallStatus,
+            OverallStatus: gate.OverallStatus.ToString().ToUpperInvariant(),
             ReadinessPercentage: percentage,
             FacetRegulatoryIrb: gate.FacetRegulatoryIrb,
             FacetCtaBudget: gate.FacetCtaBudget,

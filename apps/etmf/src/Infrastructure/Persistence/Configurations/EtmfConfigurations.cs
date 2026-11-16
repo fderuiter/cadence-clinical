@@ -45,6 +45,9 @@ public sealed class TmfDocumentConfiguration : IEntityTypeConfiguration<TmfDocum
         builder.Property(x => x.SyncStatus).HasMaxLength(50);
         builder.Property(x => x.ObjectKey).HasMaxLength(1000);
 
+        builder.Ignore(x => x.TransitionSequence);
+        builder.Ignore(x => x.Transitions);
+
         builder.HasIndex(x => x.ArtifactCode);
         builder.HasIndex(x => x.ArtifactType);
         builder.HasIndex(x => x.CorrelationKey);

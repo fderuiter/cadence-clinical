@@ -106,9 +106,9 @@ public static class MonitoringVisitEndpoints
             query = query.Where(v => v.CraId == craId);
         }
 
-        if (!string.IsNullOrWhiteSpace(status))
+        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<CtmsMonitoringVisitStatus>(status, true, out var statusEnum))
         {
-            query = query.Where(v => v.Status == status);
+            query = query.Where(v => v.Status == statusEnum);
         }
 
         var visits = await query
@@ -161,14 +161,13 @@ public static class MonitoringVisitEndpoints
         var (user, role) = ResolveCaller(httpContext, request.CraId);
         DateTimeOffset now = clock.UtcNow;
 
-        var visit = new CtmsMonitoringVisit
+        var visit = new CtmsMonitoringVisit(Guid.NewGuid().ToString(), CtmsMonitoringVisitStatus.Scheduled)
         {
             StudyId = request.Study.Trim(),
             SiteId = request.Site.Trim(),
             CraId = request.CraId.Trim(),
             VisitType = request.VisitType.Trim(),
             ScheduledDate = request.ScheduledDate,
-            Status = "SCHEDULED",
             CreatedAt = now.UtcDateTime,
             CreatedBy = user,
             ReasonForChange = reason,
@@ -226,21 +225,17 @@ public static class MonitoringVisitEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        if (visit.Status == "SIGNED_OFF")
-        {
-            return TypedResults.Problem(
-                title: "Invalid visit status",
-                detail: $"Monitoring visit '{visitId}' has already been signed off and cannot be completed again.",
-                statusCode: StatusCodes.Status400BadRequest);
-        }
-
         var (user, role) = ResolveCaller(httpContext, visit.CraId);
         DateTimeOffset now = clock.UtcNow;
 
-        visit.ActualDate = request.ActualDate;
-        visit.Status = "COMPLETED";
-        visit.ReasonForChange = reason;
-        visit.VersionIndex++;
+        var completeResult = visit.Complete(request.ActualDate, reason, user, now, role);
+        if (completeResult.IsFailure)
+        {
+            return TypedResults.Problem(
+                title: "Invalid visit status",
+                detail: completeResult.Error!.Description,
+                statusCode: StatusCodes.Status400BadRequest);
+        }
 
         int findingsCount = 0;
         if (request.Findings is { Count: > 0 })
@@ -303,14 +298,6 @@ public static class MonitoringVisitEndpoints
             return problem!;
         }
 
-        if (visit.Status != "COMPLETED")
-        {
-            return TypedResults.Problem(
-                title: "Invalid visit status",
-                detail: $"Monitoring visit must be in 'COMPLETED' status to sign off. Current status is '{visit.Status}'.",
-                statusCode: StatusCodes.Status400BadRequest);
-        }
-
         var (user, role) = ResolveCaller(httpContext, "supervisor");
         DateTimeOffset now = clock.UtcNow;
 
@@ -325,12 +312,14 @@ public static class MonitoringVisitEndpoints
         };
         string signatureJson = JsonSerializer.Serialize(manifestationObj);
 
-        visit.Status = "SIGNED_OFF";
-        visit.Signer = user;
-        visit.SigningTimestamp = now;
-        visit.SignatureManifestation = signatureJson;
-        visit.ReasonForChange = reason;
-        visit.VersionIndex++;
+        var signOffResult = visit.SignOff(user, now, signatureJson, reason, user, role);
+        if (signOffResult.IsFailure)
+        {
+            return TypedResults.Problem(
+                title: "Invalid visit status",
+                detail: signOffResult.Error!.Description,
+                statusCode: StatusCodes.Status400BadRequest);
+        }
 
         var auditEntry = new CtmsAuditLog
         {
@@ -448,7 +437,7 @@ public static class MonitoringVisitEndpoints
             VisitType: visit.VisitType,
             ScheduledDate: visit.ScheduledDate.ToString("o"),
             ActualDate: visit.ActualDate?.ToString("o"),
-            Status: visit.Status,
+            Status: visit.Status.ToString().ToUpperInvariant(),
             CreatedAt: visit.CreatedAt.ToString("o"),
             CreatedBy: visit.CreatedBy,
             ReasonForChange: visit.ReasonForChange,

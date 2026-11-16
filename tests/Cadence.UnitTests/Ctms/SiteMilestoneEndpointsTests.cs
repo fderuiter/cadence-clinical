@@ -84,7 +84,7 @@ public sealed class SiteMilestoneEndpointsTests
         // Verify entity in DB
         var milestone = await _db.CtmsSiteMilestones.FindAsync([created.Value.Id], TestContext.Current.CancellationToken);
         milestone.Should().NotBeNull();
-        milestone!.Status.Should().Be("PLANNED");
+        milestone!.Status.Should().Be(CtmsSiteMilestoneStatus.Planned);
 
         // Verify audit log
         var audit = await _db.CtmsAuditLogs.SingleAsync(a => a.Action == "CREATE_SITE_MILESTONE", TestContext.Current.CancellationToken);
@@ -119,7 +119,6 @@ public sealed class SiteMilestoneEndpointsTests
             StudyId = StudyId,
             MilestoneType = "IRB_APPROVAL",
             PlannedDate = _clock.UtcNow.AddDays(5),
-            Status = "PLANNED",
             CreatedAt = _clock.UtcNow.UtcDateTime,
             CreatedBy = "setup",
             ReasonForChange = "Initial"
@@ -130,7 +129,6 @@ public sealed class SiteMilestoneEndpointsTests
             StudyId = StudyId,
             MilestoneType = "IRB_APPROVAL",
             PlannedDate = _clock.UtcNow.AddDays(10),
-            Status = "PLANNED",
             CreatedAt = _clock.UtcNow.UtcDateTime,
             CreatedBy = "setup",
             ReasonForChange = "Initial"
@@ -156,7 +154,6 @@ public sealed class SiteMilestoneEndpointsTests
             StudyId = StudyId,
             MilestoneType = "SITE_ACTIVATION",
             PlannedDate = _clock.UtcNow.AddDays(-1),
-            Status = "PLANNED",
             CreatedAt = _clock.UtcNow.UtcDateTime,
             CreatedBy = "setup",
             ReasonForChange = "Initial"
@@ -184,7 +181,7 @@ public sealed class SiteMilestoneEndpointsTests
 
         // Verify DB entity
         var updated = await _db.CtmsSiteMilestones.FindAsync([milestone.Id], TestContext.Current.CancellationToken);
-        updated!.Status.Should().Be("ACHIEVED");
+        updated!.Status.Should().Be(CtmsSiteMilestoneStatus.Achieved);
         updated.ActualDate.Should().Be(actualDate);
         updated.ReasonForChange.Should().Be("Site conditions confirmed and greenlight certified");
 

@@ -20,8 +20,8 @@ using Xunit;
 namespace Cadence.UnitTests.Packages;
 
 /// <summary>
-/// The filesystem object store, ported from the Python reference <c>packages/storage/local_store.py</c>: atomic
-/// writes, a SHA-256 checked on every read, keys that cannot leave the storage root, and no URLs.
+/// The filesystem object store: atomic writes, a SHA-256 checked on every read, keys that cannot leave the storage
+/// root, and no URLs.
 /// </summary>
 public sealed class FileSystemBlobStoreTests : IDisposable
 {

@@ -21,8 +21,7 @@ public static class DuplicationDetectorService
     private static readonly HashSet<string>[] ExemptedPairs =
     [
         new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/execution/src/Program.cs", "apps/designer/src/Program.cs", "apps/gateway/src/Program.cs" },
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "packages/engine_core/src/Randomization/BoinEngine.cs", "packages/engine_core/src/Randomization/ResponseAdaptiveEngine.cs" },
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/execution/src/Application/Observations/BulkLabRangeFileParser.cs", "apps/execution/src/Application/Coding/SynonymFileParser.cs" }
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "packages/engine_core/src/Randomization/BoinEngine.cs", "packages/engine_core/src/Randomization/ResponseAdaptiveEngine.cs" }
     ];
 
     public static int DetectDuplication(string[]? targetFiles = null, string? repoRoot = null)

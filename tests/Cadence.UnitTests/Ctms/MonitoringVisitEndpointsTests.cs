@@ -88,7 +88,7 @@ public sealed class MonitoringVisitEndpointsTests
         // Verify entity in DB
         var visit = await _db.CtmsMonitoringVisits.FindAsync([created.Value.Id], TestContext.Current.CancellationToken);
         visit.Should().NotBeNull();
-        visit!.Status.Should().Be("SCHEDULED");
+        visit!.Status.Should().Be(CtmsMonitoringVisitStatus.Scheduled);
 
         // Verify audit log
         var audit = await _db.CtmsAuditLogs.SingleAsync(a => a.Action == "SCHEDULE_MONITORING_VISIT", TestContext.Current.CancellationToken);
@@ -146,7 +146,6 @@ public sealed class MonitoringVisitEndpointsTests
             CraId = CraId,
             VisitType = "SIV",
             ScheduledDate = _clock.UtcNow.AddDays(1),
-            Status = "SCHEDULED",
             CreatedAt = _clock.UtcNow.UtcDateTime,
             CreatedBy = "setup",
             ReasonForChange = "Initial"
@@ -158,7 +157,6 @@ public sealed class MonitoringVisitEndpointsTests
             CraId = CraId,
             VisitType = "IMV",
             ScheduledDate = _clock.UtcNow.AddDays(2),
-            Status = "SCHEDULED",
             CreatedAt = _clock.UtcNow.UtcDateTime,
             CreatedBy = "setup",
             ReasonForChange = "Initial"
@@ -186,7 +184,6 @@ public sealed class MonitoringVisitEndpointsTests
             CraId = CraId,
             VisitType = "IMV",
             ScheduledDate = _clock.UtcNow.AddDays(-1),
-            Status = "SCHEDULED",
             CreatedAt = _clock.UtcNow.UtcDateTime,
             CreatedBy = "setup",
             ReasonForChange = "Initial"
@@ -245,7 +242,7 @@ public sealed class MonitoringVisitEndpointsTests
     [GxPRequirement("PRD-CTMS-001")]
     public async Task SignOffVisit_OnCompletedVisit_StoresPart11SignatureAndAuditLog()
     {
-        var visit = new CtmsMonitoringVisit
+        var visit = new CtmsMonitoringVisit(Guid.NewGuid().ToString(), CtmsMonitoringVisitStatus.Completed)
         {
             StudyId = StudyId,
             SiteId = SiteId,
@@ -253,7 +250,6 @@ public sealed class MonitoringVisitEndpointsTests
             VisitType = "IMV",
             ScheduledDate = _clock.UtcNow.AddDays(-2),
             ActualDate = _clock.UtcNow.AddDays(-1),
-            Status = "COMPLETED",
             CreatedAt = _clock.UtcNow.UtcDateTime,
             CreatedBy = "setup",
             ReasonForChange = "Completed"
@@ -276,7 +272,7 @@ public sealed class MonitoringVisitEndpointsTests
 
         // Verify in DB
         var updated = await _db.CtmsMonitoringVisits.FindAsync([visit.Id], TestContext.Current.CancellationToken);
-        updated!.Status.Should().Be("SIGNED_OFF");
+        updated!.Status.Should().Be(CtmsMonitoringVisitStatus.Signed_Off);
         updated.Signer.Should().Be("manager-1");
         updated.SigningTimestamp.Should().Be(_clock.UtcNow);
 
@@ -289,14 +285,13 @@ public sealed class MonitoringVisitEndpointsTests
     [Fact]
     public async Task SignOffVisit_OnScheduledVisit_ReturnsBadRequest()
     {
-        var visit = new CtmsMonitoringVisit
+        var visit = new CtmsMonitoringVisit(Guid.NewGuid().ToString(), CtmsMonitoringVisitStatus.Scheduled)
         {
             StudyId = StudyId,
             SiteId = SiteId,
             CraId = CraId,
             VisitType = "IMV",
             ScheduledDate = _clock.UtcNow.AddDays(1),
-            Status = "SCHEDULED",
             CreatedAt = _clock.UtcNow.UtcDateTime,
             CreatedBy = "setup",
             ReasonForChange = "Initial"
@@ -317,7 +312,7 @@ public sealed class MonitoringVisitEndpointsTests
     [Fact]
     public async Task SignOffVisit_WithoutReason_ReturnsBadRequest()
     {
-        var visit = new CtmsMonitoringVisit
+        var visit = new CtmsMonitoringVisit(Guid.NewGuid().ToString(), CtmsMonitoringVisitStatus.Completed)
         {
             StudyId = StudyId,
             SiteId = SiteId,
@@ -325,7 +320,6 @@ public sealed class MonitoringVisitEndpointsTests
             VisitType = "IMV",
             ScheduledDate = _clock.UtcNow.AddDays(-2),
             ActualDate = _clock.UtcNow.AddDays(-1),
-            Status = "COMPLETED",
             CreatedAt = _clock.UtcNow.UtcDateTime,
             CreatedBy = "setup",
             ReasonForChange = "Completed"

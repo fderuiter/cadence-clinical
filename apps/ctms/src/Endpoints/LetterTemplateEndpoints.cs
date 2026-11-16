@@ -148,14 +148,14 @@ public static class LetterTemplateEndpoints
         }
 
         // Persist CtmsGeneratedLetter
-        var entity = new CtmsGeneratedLetter(letterId)
+        var letterStatus = pdfResult.IsSigned ? CtmsGeneratedLetterStatus.Finalized : CtmsGeneratedLetterStatus.Draft;
+        var entity = new CtmsGeneratedLetter(letterId, letterStatus)
         {
             VisitId = visitId,
             LetterType = templateName,
             RenderedContent = pdfResult.RenderedHtml,
             PdfObjectKey = objectKey,
             PdfSha256Hash = pdfResult.Sha256Hash,
-            Status = pdfResult.IsSigned ? "FINALIZED" : "DRAFT",
             IsSigned = pdfResult.IsSigned,
             SignatureManifestation = pdfResult.SignatureManifestationJson,
             EtmfDocumentId = etmfDocId,
@@ -191,7 +191,7 @@ public static class LetterTemplateEndpoints
             PdfSha256Hash: pdfResult.Sha256Hash,
             PdfObjectKey: objectKey,
             IsSigned: pdfResult.IsSigned,
-            Status: entity.Status,
+            Status: entity.Status.ToString().ToUpperInvariant(),
             SignatureManifestation: pdfResult.SignatureManifestationJson,
             EtmfDocumentId: etmfDocId,
             DispatchedAt: dispatchedAt,
@@ -432,13 +432,16 @@ public static class EtmfFilingHelper
         SetProp(tmfDoc, "Section", "05.02");
         SetProp(tmfDoc, "ArtifactCode", "05.02.06");
         SetProp(tmfDoc, "ArtifactType", "Monitoring Visit Correspondence");
-        SetProp(tmfDoc, "Status", "APPROVED");
-        SetProp(tmfDoc, "ApprovalStatus", "APPROVED");
+        var reason = request.ReasonForChange ?? "Automated eTMF filing for finalized monitoring visit letter.";
+        var stageMethod = tmfDocType.GetMethod("StageForQc");
+        stageMethod?.Invoke(tmfDoc, [user, "System/CRA", reason, now, 1]);
+        var approveMethod = tmfDocType.GetMethod("Approve");
+        approveMethod?.Invoke(tmfDoc, [user, "System/CRA", reason, now, 2]);
         SetProp(tmfDoc, "TaxonomyVersion", "v3.2.0-complete");
         SetProp(tmfDoc, "CreatedAt", now.UtcDateTime);
         SetProp(tmfDoc, "CreatedBy", user);
         SetProp(tmfDoc, "VersionIndex", 1);
-        SetProp(tmfDoc, "ReasonForChange", request.ReasonForChange ?? "Automated eTMF filing for finalized monitoring visit letter.");
+        SetProp(tmfDoc, "ReasonForChange", reason);
         SetProp(tmfDoc, "MetadataJson", JsonSerializer.Serialize(new
         {
             source = "CTMS_MONITORING_PIPELINE",

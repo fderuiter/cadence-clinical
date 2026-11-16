@@ -21,7 +21,6 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | [packages/ddf](#packagesddf) | 1 | 0 | 10 |
 | [packages/engine_core](#packagesengine_core) | 5 | 0 | 17 |
 | [packages/security](#packagessecurity) | 9 | 0 | 0 |
-| [packages/storage](#packagesstorage) | 0 | 0 | 2 |
 
 ## packages/ddf
 
@@ -61,7 +60,7 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | `sla/models.py` | SLA models | records in `packages/engine_core/src/Sla/SlaModels.cs`; `SlaPolicy.ComputeChecksum` matches the Python checksum | Ported, deletion pending | Audit fields left to the store's GxP audit interceptor |
 | `supply/engine.py` | `PredictiveSupplyEngine` facade (forecast, hierarchy, DTP, unblinding) | none: callers use the engines directly | Ported, deletion pending | Not carried forward (ADR-2520) |
 | `supply/hierarchy.py` | Multi-echelon depot/site hierarchy roll-up and validation | `MultiEchelonHierarchyEngine` (`packages/engine_core/src/Supply/MultiEchelonHierarchyEngine.cs`), tested by `MultiEchelonHierarchyEngineTests` | Ported, deletion pending | #5046 |
-| `supply/models.py` | Supply node, roll-up, forecast, DTP and unblinding models | `packages/engine_core/src/Supply/SupplyModels.cs`; the unblinding shapes are `[Obsolete]` | Ported, deletion pending | Goes with `supply/engine.py`, `supply/hierarchy.py` and `supply/unblinding.py` |
+| `supply/models.py` | Supply node, roll-up, forecast, DTP and unblinding models | `packages/engine_core/src/Supply/SupplyModels.cs`; obsolete unblinding records removed under ADR-2520 | Ported, deletion pending | Goes with `supply/engine.py`, `supply/hierarchy.py` and `supply/unblinding.py` |
 | `supply/unblinding.py` | Emergency unblinding authorisation | none: Execution's `UNBLINDED` state change (PRD-SUB-005, #4982) is the only unblinding path | Ported, deletion pending | Not carried forward (ADR-2520); the kernel target is an Attestation-bearing event (spec Appendix A.1) |
 | `timeline/engine.py` | Visit-window schedule and deviation assessment | `ExpectedSchedule` (kernel, [ADR-2487](adr/2026-09-30-expected-schedule-as-a-pure-function.md)) places timed activities with their windows and window status from the reference start (K-TIME-7) | Port missing | Early/late classification of an actual visit is `ExpectedSchedule.Assess` ([ADR-2507](adr/2026-09-30-visit-timing-anchored-visits-and-cycles-on-the-expected-schedule.md)); major/minor is a Quality rule, not a fixed 7 days. Not in the kernel yet (#5045, ADR-2507): repeating cycle templates and visits anchored on another visit |
 | `timeline/models.py` | Timeline models | none | Port missing |  |
@@ -95,10 +94,3 @@ that they are dropped.
 - `verify_inbound_email_signature` (eTMF inbound webhook; `INBOUND_EMAIL_HMAC_SECRET`).
 - `generate_greenlight_token` / `verify_greenlight_token`.
 - `compute_merkle_root` / `compute_block_hash`.
-
-## packages/storage
-
-| Python file | What it does | C# today | Status | Notes |
-| --- | --- | --- | --- | --- |
-| `gdrive.py` | Google Drive run-manifest upload for GxP recordings | Not carried forward ([ADR-2505](adr/2026-09-30-recording-evidence-goes-to-controlled-object-storage.md)): recording evidence goes through `IStoragePort<byte[]>` (S3, MinIO or filesystem), which records and checks each object's SHA-256 | Ported, deletion pending | No C# code used Drive; the `record setup-gdrive` stub and the `Google.Apis.Drive.v3` reference are removed |
-| `local_store.py` | Filesystem provider with checksum and path-traversal guard | `packages/storage/src/FileSystemBlobStore.cs` (`Storage:Provider` `filesystem`); unlike the reference, every read is checked against the hash recorded at write time | Ported, deletion pending | `FileSystemBlobStoreTests` |

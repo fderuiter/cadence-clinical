@@ -38,35 +38,39 @@ public class EtmfExportTests
     [Fact]
     public void CreateZipArchive_CreatesValidZipWithManifestsAndTaxonomyStructure()
     {
-        var doc1 = new TmfDocument("DOC-101")
-        {
-            StudyId = "STUDY-99",
-            SiteId = "SITE-1",
-            Zone = 1,
-            Section = "01.01",
-            ArtifactCode = "01.01.01",
-            ArtifactType = "Protocol",
-            Filename = "Protocol_v1.pdf",
-            MimeType = "application/pdf",
-            ProtocolVersionIndex = 1,
-            Status = "APPROVED",
-            Content = "Sample protocol content"
-        };
+        var doc1 = TmfDocument.CreateApproved(
+            id: "DOC-101",
+            studyId: "STUDY-99",
+            filename: "Protocol_v1.pdf",
+            createdBy: "test.author",
+            createdAt: _clock.UtcNow.UtcDateTime,
+            reasonForChange: "Uploading approved trial protocol",
+            siteId: "SITE-1",
+            zone: 1,
+            section: "01.01",
+            artifactCode: "01.01.01",
+            artifactType: "Protocol",
+            content: "Sample protocol content",
+            mimeType: "application/pdf",
+            protocolVersionIndex: 1
+        );
 
-        var doc2 = new TmfDocument("DOC-102")
-        {
-            StudyId = "STUDY-99",
-            SiteId = "SITE-1",
-            Zone = 5,
-            Section = "05.02",
-            ArtifactCode = "05.02.01",
-            ArtifactType = "1572",
-            Filename = "FDA_1572.pdf",
-            MimeType = "application/pdf",
-            ProtocolVersionIndex = 1,
-            Status = "APPROVED",
-            Content = "Sample 1572 content"
-        };
+        var doc2 = TmfDocument.CreateApproved(
+            id: "DOC-102",
+            studyId: "STUDY-99",
+            filename: "FDA_1572.pdf",
+            createdBy: "test.author",
+            createdAt: _clock.UtcNow.UtcDateTime,
+            reasonForChange: "Uploading approved 1572 form",
+            siteId: "SITE-1",
+            zone: 5,
+            section: "05.02",
+            artifactCode: "05.02.01",
+            artifactType: "1572",
+            content: "Sample 1572 content",
+            mimeType: "application/pdf",
+            protocolVersionIndex: 1
+        );
 
         var docs = new List<TmfDocument> { doc1, doc2 };
         var zipBytes = EtmfExportPackager.CreateZipArchive("EXP-001", "STUDY-99", docs, _clock.UtcNow);
@@ -110,20 +114,22 @@ public class EtmfExportTests
             .Options;
         await using var dbContext = new EtmfDbContext(options);
 
-        var doc = new TmfDocument("DOC-201")
-        {
-            StudyId = "STUDY-01",
-            SiteId = "SITE-1",
-            Zone = 1,
-            Section = "01.01",
-            ArtifactCode = "01.01.01",
-            ArtifactType = "Protocol",
-            Filename = "Protocol.pdf",
-            MimeType = "application/pdf",
-            ProtocolVersionIndex = 1,
-            Status = "APPROVED",
-            Content = "Protocol Content"
-        };
+        var doc = TmfDocument.CreateApproved(
+            id: "DOC-201",
+            studyId: "STUDY-01",
+            filename: "Protocol.pdf",
+            createdBy: "test.author",
+            createdAt: _clock.UtcNow.UtcDateTime,
+            reasonForChange: "Uploading approved trial protocol",
+            siteId: "SITE-1",
+            zone: 1,
+            section: "01.01",
+            artifactCode: "01.01.01",
+            artifactType: "Protocol",
+            content: "Protocol Content",
+            mimeType: "application/pdf",
+            protocolVersionIndex: 1
+        );
         dbContext.TmfDocuments.Add(doc);
         await dbContext.SaveChangesAsync(ct);
 
@@ -173,20 +179,22 @@ public class EtmfExportTests
             .Options;
         await using var dbContext = new EtmfDbContext(options);
 
-        var doc = new TmfDocument("DOC-301")
-        {
-            StudyId = "STUDY-02",
-            SiteId = "SITE-1",
-            Zone = 2,
-            Section = "02.01",
-            ArtifactCode = "02.01.01",
-            ArtifactType = "IB",
-            Filename = "IB_v1.pdf",
-            MimeType = "application/pdf",
-            ProtocolVersionIndex = 1,
-            Status = "APPROVED",
-            Content = "IB Content"
-        };
+        var doc = TmfDocument.CreateApproved(
+            id: "DOC-301",
+            studyId: "STUDY-02",
+            filename: "IB_v1.pdf",
+            createdBy: "test.author",
+            createdAt: _clock.UtcNow.UtcDateTime,
+            reasonForChange: "Uploading approved IB document",
+            siteId: "SITE-1",
+            zone: 2,
+            section: "02.01",
+            artifactCode: "02.01.01",
+            artifactType: "IB",
+            content: "IB Content",
+            mimeType: "application/pdf",
+            protocolVersionIndex: 1
+        );
         dbContext.TmfDocuments.Add(doc);
 
         var job = new TmfExportJob("JOB-100")
@@ -259,8 +267,8 @@ public class EtmfExportTests
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         await using var dbContext = new EtmfDbContext(options);
-        dbContext.TmfDocuments.Add(new TmfDocument("DOC-A") { StudyId = "STUDY-A", Filename = "a.pdf", MimeType = "application/pdf", Status = "APPROVED" });
-        dbContext.TmfDocuments.Add(new TmfDocument("DOC-B") { StudyId = "STUDY-B", Filename = "b.pdf", MimeType = "application/pdf", Status = "APPROVED" });
+        dbContext.TmfDocuments.Add(TmfDocument.CreateApproved("DOC-A", "STUDY-A", "a.pdf", "u", _clock.UtcNow.UtcDateTime, "Approved document for study A", mimeType: "application/pdf"));
+        dbContext.TmfDocuments.Add(TmfDocument.CreateApproved("DOC-B", "STUDY-B", "b.pdf", "u", _clock.UtcNow.UtcDateTime, "Approved document for study B", mimeType: "application/pdf"));
         dbContext.TmfExportJobs.Add(new TmfExportJob("JOB-A") { StudyId = "STUDY-A", RequestedBy = "u", Status = "COMPLETED", CreatedAt = _clock.UtcNow.UtcDateTime });
         dbContext.TmfExportJobs.Add(new TmfExportJob("JOB-B") { StudyId = "STUDY-B", RequestedBy = "u", Status = "COMPLETED", CreatedAt = _clock.UtcNow.UtcDateTime });
         await dbContext.SaveChangesAsync(ct);
