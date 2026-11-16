@@ -61,6 +61,7 @@ public sealed class CtmsRoutingTests : IAsyncDisposable
                         var ctmsApi = endpoints.MapGroup("/api/v1/ctms");
                         ctmsApi.MapMonitoringVisitEndpoints();
                         ctmsApi.MapSiteMilestoneEndpoints();
+                        ctmsApi.MapDoaEndpoints();
                     });
                 });
             });

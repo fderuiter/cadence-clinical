@@ -913,6 +913,234 @@
         }
       }
     },
+    "/api/v1/ctms/doa/delegate": {
+      "post": {
+        "tags": [
+          "DoaEndpoints"
+        ],
+        "summary": "Assign site trial task delegation requiring Principal Investigator sign-off.",
+        "operationId": "DelegateSiteTasks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_DelegationTaskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_DelegationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/doa/revoke": {
+      "post": {
+        "tags": [
+          "DoaEndpoints"
+        ],
+        "summary": "Revoke or end a delegated trial duty with reason for change.",
+        "operationId": "RevokeSiteTasks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_RevokeDelegationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_DelegationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/doa/sign-off": {
+      "post": {
+        "tags": [
+          "DoaEndpoints"
+        ],
+        "summary": "Endorse Delegation of Authority task assignment with Principal Investigator eSignature.",
+        "operationId": "SignOffDelegation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_DoaSignOffRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_DelegationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/doa/sites/{site_id}/log": {
+      "get": {
+        "tags": [
+          "DoaEndpoints"
+        ],
+        "summary": "Fetch active and historical DOA log matrix for a site.",
+        "operationId": "GetSiteDoaLog",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_DoaLogResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/doa/sites/{site_id}/export-pdf": {
+      "get": {
+        "tags": [
+          "DoaEndpoints"
+        ],
+        "summary": "Export 21 CFR Part 11 signed DOA PDF log.",
+        "operationId": "ExportSiteDoaPdf",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/studies/{id}/rules/batch-validate": {
       "post": {
         "tags": [
@@ -12626,6 +12854,180 @@
           }
         }
       },
+      "Ctms_DelegationResponseDto": {
+        "required": [
+          "record_id",
+          "site_id",
+          "staff_user_id",
+          "task_codes",
+          "start_date",
+          "end_date",
+          "is_active",
+          "signed_off",
+          "reason_for_change",
+          "created_by",
+          "version_index"
+        ],
+        "type": "object",
+        "properties": {
+          "record_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "staff_user_id": {
+            "type": "string"
+          },
+          "task_codes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "signed_off": {
+            "type": "boolean"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "Ctms_DelegationTaskRequest": {
+        "required": [
+          "site_id",
+          "staff_user_id",
+          "task_codes",
+          "start_date",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "site_id": {
+            "type": "string"
+          },
+          "staff_user_id": {
+            "type": "string"
+          },
+          "task_codes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Ctms_DoaAuditHistoryItemDto": {
+        "required": [
+          "id",
+          "timestamp",
+          "user_id",
+          "user_role",
+          "action",
+          "details"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "user_role": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          }
+        }
+      },
+      "Ctms_DoaLogResponseDto": {
+        "required": [
+          "site_id",
+          "pi_name",
+          "delegated_staff",
+          "audit_history"
+        ],
+        "type": "object",
+        "properties": {
+          "site_id": {
+            "type": "string"
+          },
+          "pi_name": {
+            "type": "string"
+          },
+          "delegated_staff": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Ctms_DelegationResponseDto"
+            }
+          },
+          "audit_history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Ctms_DoaAuditHistoryItemDto"
+            }
+          }
+        }
+      },
+      "Ctms_DoaSignOffRequest": {
+        "required": [
+          "record_id",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "record_id": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Ctms_FindingCreateDto": {
         "required": [
           "text",
@@ -12864,6 +13266,24 @@
             ]
           },
           "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Ctms_RevokeDelegationRequest": {
+        "required": [
+          "record_id",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "record_id": {
+            "type": "string"
+          },
+          "reason_for_change": {
             "type": [
               "null",
               "string"

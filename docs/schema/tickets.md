@@ -152,3 +152,7 @@ Indexes:
 - `IX_tickets_Reference`: unique (`Reference`)
 - `IX_tickets_SiteId`: (`SiteId`)
 - `IX_tickets_StudyId`: (`StudyId`)
+
+Check constraints:
+
+- `ck_tickets_status`: `"Status" IN ('OPEN', 'IN_PROGRESS', 'WAITING_ON_SITE', 'WAITING_ON_SPONSOR', 'PENDING_REGULATORY_REVIEW', 'RESOLVED', 'CLOSED', 'REOPENED', 'CANCELLED')`
