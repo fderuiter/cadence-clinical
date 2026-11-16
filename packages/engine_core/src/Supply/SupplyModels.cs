@@ -125,32 +125,3 @@ public record DTPDispatchAuthorization(
     [property: JsonPropertyName("tamper_seal_id")] string? TamperSealId = null,
     [property: JsonPropertyName("authorized_timestamp")] string AuthorizedTimestamp = ""
 );
-
-[Obsolete("Emergency unblinding is Execution's UNBLINDED subject state change (PRD-SUB-005, #4982); this engine is not carried forward (ADR-2520).")]
-[SuppressMessage("Info Code Smell", "S1133:Deprecated code should be removed",
-    Justification = "Removed with supply/models.py once a maintainer approves the deletion (ADR-2520, #4789).")]
-public record EmergencyUnblindingRequest(
-    [property: JsonPropertyName("study_id")] string StudyId,
-    [property: JsonPropertyName("subject_id")] string SubjectId,
-    [property: JsonPropertyName("requester_user_id")] string RequesterUserId,
-    [property: JsonPropertyName("requester_role")] string RequesterRole,
-    [property: JsonPropertyName("reason_for_change")] string ReasonForChange,
-    [property: JsonPropertyName("subject_actual_arm")] string SubjectActualArm
-);
-
-[Obsolete("Emergency unblinding is Execution's UNBLINDED subject state change (PRD-SUB-005, #4982); this engine is not carried forward (ADR-2520).")]
-[SuppressMessage("Info Code Smell", "S1133:Deprecated code should be removed",
-    Justification = "Removed with supply/models.py once a maintainer approves the deletion (ADR-2520, #4789).")]
-public record EmergencyUnblindingResult(
-    [property: JsonPropertyName("study_id")] string StudyId,
-    [property: JsonPropertyName("subject_id")] string SubjectId,
-    [property: JsonPropertyName("unblinded_arm")] string UnblindedArm,
-    [property: JsonPropertyName("authorized_by_user_id")] string AuthorizedByUserId,
-    [property: JsonPropertyName("requester_role")] string RequesterRole,
-    [property: JsonPropertyName("reason_for_change")] string ReasonForChange,
-    [property: JsonPropertyName("digital_seal")] string DigitalSeal,
-    [property: JsonPropertyName("is_authorized")] bool IsAuthorized,
-    [property: JsonPropertyName("timestamp")] string Timestamp = "",
-    [property: JsonPropertyName("safety_notification_required")] bool SafetyNotificationRequired = true,
-    [property: JsonPropertyName("audit_event_type")] string AuditEventType = "EMERGENCY_SUBJECT_UNBLINDING"
-);
