@@ -219,10 +219,6 @@ const config = defineConfig({
             link: "/kernel/CLINICAL_KERNEL_SPECIFICATION#_15-roadmap",
           },
           {
-            text: "Execution Migration Inventory",
-            link: "/kernel/EXECUTION_MIGRATION_INVENTORY",
-          },
-          {
             text: "Clock Migration Backlog",
             link: "/kernel/CLOCK_MIGRATION_BACKLOG",
           },

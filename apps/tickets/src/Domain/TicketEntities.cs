@@ -1,5 +1,7 @@
 using System;
 
+using Cadence.Core.Domain;
+
 namespace Cadence.Apps.Tickets.Domain;
 
 public class Ticket
@@ -10,7 +12,7 @@ public class Ticket
     public string Description { get; set; } = string.Empty;
     public string Category { get; set; } = "OTHER";
     public string Priority { get; set; } = "LOW";
-    public string Status { get; set; } = "OPEN";
+    public TicketStatus Status { get; private set; } = TicketStatus.OPEN;
     public string Reporter { get; set; } = string.Empty;
     public string? AssigneeUser { get; set; }
     public string? AssigneeRole { get; set; }
@@ -45,6 +47,94 @@ public class Ticket
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
+
+    public Result<TicketStatus> TransitionTo(
+        TicketStatus targetStatus,
+        string? resolutionCode = null,
+        string? rootCauseSummary = null,
+        string? rootCauseCategory = null)
+    {
+        if (targetStatus == Status)
+        {
+            return Result<TicketStatus>.Success(Status);
+        }
+
+        var guard = TicketTransitionGraph.Guard(Status, targetStatus);
+        if (guard.IsFailure)
+        {
+            return guard;
+        }
+
+        var effectiveResolutionCode = resolutionCode ?? ResolutionCode;
+        var effectiveRootCauseSummary = rootCauseSummary ?? RootCauseSummary;
+
+        if (targetStatus == TicketStatus.RESOLVED)
+        {
+            if (string.IsNullOrWhiteSpace(effectiveResolutionCode))
+            {
+                return DomainError.Validation(
+                    "RESOLUTION_CODE_REQUIRED",
+                    "Resolution code is required when resolving a ticket.");
+            }
+
+            if (string.IsNullOrWhiteSpace(effectiveRootCauseSummary))
+            {
+                return DomainError.Validation(
+                    "ROOT_CAUSE_REQUIRED",
+                    "Root cause summary is required when resolving a ticket.");
+            }
+        }
+
+        if (TicketTransitionGraph.TerminalStates.Contains(targetStatus)
+            && string.IsNullOrWhiteSpace(effectiveResolutionCode))
+        {
+            return DomainError.Validation(
+                "RESOLUTION_CODE_REQUIRED",
+                "Resolution code is required when transitioning to a terminal state.");
+        }
+
+        if (resolutionCode != null)
+        {
+            ResolutionCode = resolutionCode;
+        }
+
+        if (rootCauseSummary != null)
+        {
+            RootCauseSummary = rootCauseSummary;
+        }
+
+        if (rootCauseCategory != null)
+        {
+            RootCauseCategory = rootCauseCategory;
+        }
+
+        Status = targetStatus;
+        return Result<TicketStatus>.Success(Status);
+    }
+
+    public Result<TicketStatus> TransitionTo(
+        string targetStatus,
+        string? resolutionCode = null,
+        string? rootCauseSummary = null,
+        string? rootCauseCategory = null)
+    {
+        if (!Enum.TryParse<TicketStatus>(targetStatus, ignoreCase: true, out var parsed))
+        {
+            return DomainError.Validation(
+                "INVALID_STATUS",
+                $"'{targetStatus}' is not a valid ticket status.");
+        }
+
+        return TransitionTo(parsed, resolutionCode, rootCauseSummary, rootCauseCategory);
+    }
+
+    public Result<TicketStatus> Resolve(
+        string resolutionCode,
+        string rootCauseSummary,
+        string? rootCauseCategory = null)
+    {
+        return TransitionTo(TicketStatus.RESOLVED, resolutionCode, rootCauseSummary, rootCauseCategory);
+    }
 }
 
 public class TicketComment
