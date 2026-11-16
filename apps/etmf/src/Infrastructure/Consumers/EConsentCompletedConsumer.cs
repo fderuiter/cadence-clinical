@@ -50,30 +50,28 @@ public sealed class EConsentCompletedConsumer(
         var effectiveTimestamp = msg.SignedAt ?? _clock.UtcNow;
 
         var docId = Guid.NewGuid().ToString();
-        var doc = new TmfDocument(docId)
-        {
-            StudyId = msg.StudyId,
-            SiteId = msg.SiteId,
-            Zone = 5, // Zone 05: Informed Consent in TMF Reference Model
-            Section = "05.01",
-            ArtifactType = "05.01.01",
-            ArtifactCode = "ICF",
-            Filename = $"eConsent_{msg.SubjectId}_{msg.VersionTag}.pdf",
-            Content = $"s3://etmf/{msg.StudyId}/{msg.SubjectId}/icf_{msg.VersionTag}.pdf",
-            ObjectKey = $"etmf/{msg.StudyId}/{msg.SubjectId}/icf_{msg.VersionTag}.pdf",
-            Status = "FILED",
-            ApprovalStatus = "APPROVED",
-            IdempotencyKey = key,
-            CorrelationKey = key,
-            SourceSystem = "ECONSENT",
-            SyncStatus = "SYNCHRONIZED",
-            SigningTimestamp = msg.SignedAt,
-            ProtocolVersionTag = msg.VersionTag,
-            ProtocolVersionIndex = msg.VersionIndex,
-            CreatedAt = effectiveTimestamp.UtcDateTime,
-            CreatedBy = "svc:etmf-econsent-consumer",
-            ReasonForChange = "EConsent completed filing sync"
-        };
+        var doc = TmfDocument.CreateFiled(
+            id: docId,
+            studyId: msg.StudyId,
+            filename: $"eConsent_{msg.SubjectId}_{msg.VersionTag}.pdf",
+            createdBy: "svc:etmf-econsent-consumer",
+            createdAt: effectiveTimestamp.UtcDateTime,
+            reasonForChange: "EConsent completed filing sync",
+            siteId: msg.SiteId,
+            zone: 5, // Zone 05: Informed Consent in TMF Reference Model
+            section: "05.01",
+            artifactCode: "ICF",
+            artifactType: "05.01.01",
+            content: $"s3://etmf/{msg.StudyId}/{msg.SubjectId}/icf_{msg.VersionTag}.pdf",
+            objectKey: $"etmf/{msg.StudyId}/{msg.SubjectId}/icf_{msg.VersionTag}.pdf",
+            idempotencyKey: key,
+            correlationKey: key,
+            sourceSystem: "ECONSENT",
+            syncStatus: "SYNCHRONIZED",
+            signingTimestamp: msg.SignedAt,
+            protocolVersionTag: msg.VersionTag,
+            protocolVersionIndex: msg.VersionIndex
+        );
 
         dbContext.TmfDocuments.Add(doc);
         await dbContext.SaveChangesAsync(context.CancellationToken);

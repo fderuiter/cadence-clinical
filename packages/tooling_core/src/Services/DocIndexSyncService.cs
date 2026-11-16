@@ -202,7 +202,8 @@ public static partial class DocIndexSyncService
 
     public static string DetermineCategory(string relPath)
     {
-        if (relPath.StartsWith("kernel/", StringComparison.OrdinalIgnoreCase)) return "## Kernel and roadmap";
+        if (relPath.StartsWith("kernel/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.StartsWith("architecture/", StringComparison.OrdinalIgnoreCase)) return "## Kernel and roadmap";
         if (relPath.StartsWith("adr/", StringComparison.OrdinalIgnoreCase)) return "## Architecture decision records";
         if (relPath.StartsWith("SDLC/", StringComparison.OrdinalIgnoreCase) ||
             relPath.Equals("SRS.md", StringComparison.OrdinalIgnoreCase)) return "## Requirements, validation and GxP";
@@ -213,7 +214,8 @@ public static partial class DocIndexSyncService
         if (relPath.StartsWith("CDISC/", StringComparison.OrdinalIgnoreCase) ||
             relPath.StartsWith("NCI/", StringComparison.OrdinalIgnoreCase)) return "## Standards reference material";
         if (relPath.StartsWith("agents/", StringComparison.OrdinalIgnoreCase)) return "## Repository policies";
-        if (relPath.Equals("FUNCTIONAL_PRODUCT_SPECIFICATION.md", StringComparison.OrdinalIgnoreCase) ||
+        if (relPath.StartsWith("strategy/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.Equals("FUNCTIONAL_PRODUCT_SPECIFICATION.md", StringComparison.OrdinalIgnoreCase) ||
             relPath.Equals("FEATURE_MATRIX.md", StringComparison.OrdinalIgnoreCase) ||
             relPath.Equals("COMPETITIVE_ANALYSIS_AND_MARKET_SUPERIORITY.md", StringComparison.OrdinalIgnoreCase)) return "## Product";
 
@@ -222,6 +224,7 @@ public static partial class DocIndexSyncService
 
     public static string DetermineStatus(string relPath, string fileContent)
     {
+        if (relPath.Equals("architecture/repository-migration/REPOSITORY_REGISTRY.md", StringComparison.OrdinalIgnoreCase)) return "Normative";
         if (relPath.StartsWith("adr/", StringComparison.OrdinalIgnoreCase)) return "Current";
         if (relPath.StartsWith("migration/", StringComparison.OrdinalIgnoreCase)) return "Historical";
         if (relPath.StartsWith("api/", StringComparison.OrdinalIgnoreCase) || relPath.StartsWith("schema/", StringComparison.OrdinalIgnoreCase)) return "Generated";
@@ -310,50 +313,62 @@ public static partial class DocIndexSyncService
             list.Add(doc);
         }
 
-        string[] lines = originalContent.Split('\n');
-        var sb = new StringBuilder();
+        var lines = originalContent.Split('\n').ToList();
 
-        string currentCategory = string.Empty;
-        bool inTable = false;
-        bool hasStatusCol = true;
-
-        for (int i = 0; i < lines.Length; i++)
+        // Identify sections starting with "## "
+        var sectionIndices = new List<int>();
+        for (int i = 0; i < lines.Count; i++)
         {
-            string line = lines[i];
-            string trimmed = line.Trim();
-
-            if (trimmed.StartsWith("## "))
+            if (lines[i].Trim().StartsWith("## "))
             {
-                // If we were in a table in previous category, flush remaining docs for that category before entering new category
-                if (!string.IsNullOrEmpty(currentCategory) && categoryGroups.TryGetValue(currentCategory, out var pendingDocs) && pendingDocs.Count > 0)
+                sectionIndices.Add(i);
+            }
+        }
+
+        // Process sections from bottom to top so insertions don't invalidate earlier section indices
+        for (int s = sectionIndices.Count - 1; s >= 0; s--)
+        {
+            int start = sectionIndices[s];
+            int end = (s + 1 < sectionIndices.Count) ? sectionIndices[s + 1] : lines.Count;
+            string categoryHeader = lines[start].Trim();
+
+            if (categoryGroups.TryGetValue(categoryHeader, out var pendingDocs) && pendingDocs.Count > 0)
+            {
+                // Find last line starting with '|' in this section
+                int lastTableLine = -1;
+                bool hasStatusCol = true;
+                for (int i = start; i < end; i++)
                 {
-                    AppendDocsToTable(sb, pendingDocs, hasStatusCol);
-                    categoryGroups.Remove(currentCategory);
+                    string trimmed = lines[i].Trim();
+                    if (trimmed.StartsWith("| Document |") || trimmed.StartsWith("| Location |"))
+                    {
+                        hasStatusCol = trimmed.Contains("Status");
+                    }
+                    if (trimmed.StartsWith('|'))
+                    {
+                        lastTableLine = i;
+                    }
                 }
 
-                currentCategory = trimmed;
-                inTable = false;
-                hasStatusCol = true;
-            }
-
-            if (trimmed.StartsWith("| Document |") || trimmed.StartsWith("| Location |"))
-            {
-                inTable = true;
-                hasStatusCol = trimmed.Contains("Status");
-            }
-
-            // Detect end of table (blank line or line not starting with '|')
-            if (inTable && !trimmed.StartsWith('|') && !string.IsNullOrWhiteSpace(trimmed))
-            {
-                if (!string.IsNullOrEmpty(currentCategory) && categoryGroups.TryGetValue(currentCategory, out var pendingDocs) && pendingDocs.Count > 0)
+                var renderedRows = RenderDocRows(pendingDocs, hasStatusCol);
+                if (lastTableLine >= 0)
                 {
-                    AppendDocsToTable(sb, pendingDocs, hasStatusCol);
-                    categoryGroups.Remove(currentCategory);
+                    lines.InsertRange(lastTableLine + 1, renderedRows);
                 }
-                inTable = false;
-            }
+                else
+                {
+                    var newTable = new List<string>
+                    {
+                        "",
+                        "| Document | Status | What it is |",
+                        "| --- | --- | --- |"
+                    };
+                    newTable.AddRange(renderedRows);
+                    lines.InsertRange(end, newTable);
+                }
 
-            sb.AppendLine(line);
+                categoryGroups.Remove(categoryHeader);
+            }
         }
 
         // Flush any remaining category groups at end of file
@@ -361,20 +376,21 @@ public static partial class DocIndexSyncService
         {
             if (docs.Count > 0)
             {
-                sb.AppendLine();
-                sb.AppendLine(cat);
-                sb.AppendLine();
-                sb.AppendLine("| Document | Status | What it is |");
-                sb.AppendLine("| --- | --- | --- |");
-                AppendDocsToTable(sb, docs, hasStatusCol: true);
+                lines.Add("");
+                lines.Add(cat);
+                lines.Add("");
+                lines.Add("| Document | Status | What it is |");
+                lines.Add("| --- | --- | --- |");
+                lines.AddRange(RenderDocRows(docs, hasStatusCol: true));
             }
         }
 
-        return sb.ToString().TrimEnd() + "\n";
+        return string.Join('\n', lines).TrimEnd() + "\n";
     }
 
-    private static void AppendDocsToTable(StringBuilder sb, List<MarkdownDocInfo> docs, bool hasStatusCol)
+    private static List<string> RenderDocRows(List<MarkdownDocInfo> docs, bool hasStatusCol)
     {
+        var result = new List<string>();
         foreach (var doc in docs.OrderBy(d => d.RelativePath, StringComparer.OrdinalIgnoreCase))
         {
             string fileContent = File.Exists(doc.FullPath) ? File.ReadAllText(doc.FullPath) : "";
@@ -387,12 +403,13 @@ public static partial class DocIndexSyncService
 
             if (hasStatusCol)
             {
-                sb.AppendLine($"| [{title}]({doc.RelativePath}) | {status} | {desc} |");
+                result.Add($"| [{title}]({doc.RelativePath}) | {status} | {desc} |");
             }
             else
             {
-                sb.AppendLine($"| [{title}]({doc.RelativePath}) | {desc} |");
+                result.Add($"| [{title}]({doc.RelativePath}) | {desc} |");
             }
         }
+        return result;
     }
 }

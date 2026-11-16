@@ -42,27 +42,27 @@ public sealed class EtmfDocumentFilingRequestedConsumer(
         }
 
         int zone = int.TryParse(msg.ZoneCode, out var parsedZone) ? parsedZone : 1;
+        var createdBy = string.IsNullOrWhiteSpace(msg.RequestedBy) ? "svc:etmf-outbox" : msg.RequestedBy;
 
-        var doc = new TmfDocument(msg.DocumentId)
-        {
-            StudyId = msg.StudyId,
-            SiteId = msg.SiteId,
-            Zone = zone,
-            Section = msg.SectionCode,
-            ArtifactType = msg.ArtifactCode,
-            ArtifactCode = msg.ArtifactCode,
-            Filename = msg.DocumentTitle,
-            Content = msg.StoragePath,
-            ObjectKey = msg.StoragePath,
-            Status = "FILED",
-            ApprovalStatus = "APPROVED",
-            IdempotencyKey = msg.DocumentId,
-            SourceSystem = "EXECUTION",
-            SyncStatus = "SYNCHRONIZED",
-            CreatedAt = msg.RequestedAt.UtcDateTime,
-            CreatedBy = string.IsNullOrWhiteSpace(msg.RequestedBy) ? "svc:etmf-outbox" : msg.RequestedBy,
-            ReasonForChange = "eTMF document filing request outbox sync"
-        };
+        var doc = TmfDocument.CreateFiled(
+            id: msg.DocumentId,
+            studyId: msg.StudyId,
+            filename: msg.DocumentTitle,
+            createdBy: createdBy,
+            createdAt: msg.RequestedAt.UtcDateTime,
+            reasonForChange: "eTMF document filing request outbox sync",
+            siteId: msg.SiteId,
+            zone: zone,
+            section: msg.SectionCode,
+            artifactCode: msg.ArtifactCode,
+            artifactType: msg.ArtifactCode,
+            content: msg.StoragePath,
+            mimeType: "application/pdf",
+            objectKey: msg.StoragePath,
+            idempotencyKey: msg.DocumentId,
+            sourceSystem: "EXECUTION",
+            syncStatus: "SYNCHRONIZED"
+        );
 
         dbContext.TmfDocuments.Add(doc);
         await dbContext.SaveChangesAsync(context.CancellationToken);
