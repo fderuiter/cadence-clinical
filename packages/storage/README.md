@@ -12,7 +12,7 @@ Object storage with integrity hashes and presigned URLs: an S3 and MinIO store, 
 - `BlobStore.cs`: `InMemoryBlobStore` (its presigned URLs are placeholders, so it is for tests and Development only).
 - `DocumentModels.cs`: `DocumentMetadata`, `StorageLocation`.
 - There is no Google Drive store: recording evidence goes through `IStoragePort<byte[]>` like any other file ([ADR-2505](../../docs/adr/2026-09-30-recording-evidence-goes-to-controlled-object-storage.md)).
-- Maintainers purged the ported Python S3 storage adapters (`adapters/`, `factory.py`, and `s3_store.py`) after C# port verification. Non-ported reference files (`local_store.py` and `gdrive.py`) remain until maintainers approve their deletion; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) tracks their status.
+- No Python reference sources remain (#4789).
 
 ## Key dependencies
 

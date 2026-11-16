@@ -45,12 +45,11 @@ public class GxPAuditTrailGenerationTests
         await using var context = new CtmsDbContext(options);
 
         // Act 1: Add new CTMS milestone
-        var milestone = new CtmsSiteMilestone
+        var milestone = new CtmsSiteMilestone(Guid.NewGuid().ToString(), CtmsSiteMilestoneStatus.Active)
         {
             SiteId = "SITE-101",
             StudyId = "ST-1001",
             MilestoneType = "INITIATION",
-            Status = "ACTIVE",
             ReasonForChange = "Initial milestone creation"
         };
         context.CtmsSiteMilestones.Add(milestone);
@@ -69,7 +68,7 @@ public class GxPAuditTrailGenerationTests
         firstAudit.BlockHash.Should().NotBeNullOrEmpty();
 
         // Act 2: Update CTMS milestone
-        milestone.Status = "COMPLETED";
+        milestone.Complete(TestUser, SystemClock.Instance.UtcNow, "Site initiation visit completed");
         milestone.ReasonForChange = "Site initiation visit completed";
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
@@ -212,12 +211,11 @@ public class GxPAuditTrailGenerationTests
             .AddInterceptors(new GxPAuditInterceptor(() => throw new InvalidOperationException("no actor"), SystemClock.Instance))
             .Options;
         await using var context = new CtmsDbContext(options);
-        context.CtmsSiteMilestones.Add(new CtmsSiteMilestone
+        context.CtmsSiteMilestones.Add(new CtmsSiteMilestone(Guid.NewGuid().ToString(), CtmsSiteMilestoneStatus.Active)
         {
             SiteId = "SITE-101",
             StudyId = "ST-1001",
             MilestoneType = "INITIATION",
-            Status = "ACTIVE",
             ReasonForChange = "Initial milestone creation"
         });
 

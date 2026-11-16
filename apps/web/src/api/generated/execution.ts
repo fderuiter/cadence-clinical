@@ -2797,6 +2797,15 @@ export interface operations {
           "application/json": components["schemas"]["Execution_RandomizationSchemeResponse"];
         };
       };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
       /** @description Forbidden */
       403: {
         headers: {
@@ -2852,6 +2861,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
         headers: {
           [name: string]: unknown;
         };
@@ -2952,6 +2970,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_StagedAdverseEventActionResponse"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
       /** @description Forbidden */

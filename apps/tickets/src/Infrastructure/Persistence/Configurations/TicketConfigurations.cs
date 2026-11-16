@@ -9,7 +9,12 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
 {
     public void Configure(EntityTypeBuilder<Ticket> builder)
     {
-        builder.ToTable("tickets");
+        builder.ToTable("tickets", t =>
+        {
+            t.HasCheckConstraint(
+                "ck_tickets_status",
+                "\"Status\" IN ('OPEN', 'IN_PROGRESS', 'WAITING_ON_SITE', 'WAITING_ON_SPONSOR', 'PENDING_REGULATORY_REVIEW', 'RESOLVED', 'CLOSED', 'REOPENED', 'CANCELLED')");
+        });
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasMaxLength(36);
         builder.Property(x => x.Reference).HasMaxLength(50).IsRequired();
@@ -17,7 +22,10 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.Property(x => x.Title).HasMaxLength(255).IsRequired();
         builder.Property(x => x.Category).HasMaxLength(50).IsRequired();
         builder.Property(x => x.Priority).HasMaxLength(50).IsRequired();
-        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Status)
+            .HasConversion<string>()
+            .HasMaxLength(50)
+            .IsRequired();
         builder.Property(x => x.Reporter).HasMaxLength(255).IsRequired();
         builder.Property(x => x.AssigneeUser).HasMaxLength(255);
         builder.Property(x => x.AssigneeRole).HasMaxLength(255);

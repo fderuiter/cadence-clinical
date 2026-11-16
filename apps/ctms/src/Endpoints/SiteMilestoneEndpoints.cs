@@ -114,14 +114,19 @@ public static class SiteMilestoneEndpoints
         var (user, role) = ResolveCaller(httpContext);
         DateTimeOffset now = clock.UtcNow;
 
-        var milestone = new CtmsSiteMilestone
+        CtmsSiteMilestoneStatus initialStatus = CtmsSiteMilestoneStatus.Planned;
+        if (!string.IsNullOrWhiteSpace(request.Status) && Enum.TryParse<CtmsSiteMilestoneStatus>(request.Status.Trim(), true, out var parsed))
+        {
+            initialStatus = parsed;
+        }
+
+        var milestone = new CtmsSiteMilestone(Guid.NewGuid().ToString(), initialStatus)
         {
             SiteId = request.Site.Trim(),
             StudyId = request.Study.Trim(),
             MilestoneType = request.MilestoneType.Trim(),
             PlannedDate = request.PlannedDate,
             ActualDate = request.ActualDate,
-            Status = string.IsNullOrWhiteSpace(request.Status) ? "PLANNED" : request.Status.Trim(),
             CreatedAt = now.UtcDateTime,
             CreatedBy = user,
             ReasonForChange = reason,
@@ -176,9 +181,16 @@ public static class SiteMilestoneEndpoints
 
         if (request is not null)
         {
-            if (!string.IsNullOrWhiteSpace(request.Status))
+            if (!string.IsNullOrWhiteSpace(request.Status) && Enum.TryParse<CtmsSiteMilestoneStatus>(request.Status.Trim(), true, out var targetStatus))
             {
-                milestone.Status = request.Status.Trim();
+                var transitionResult = milestone.TransitionTo(targetStatus, user, now, reason, role);
+                if (transitionResult.IsFailure)
+                {
+                    return TypedResults.Problem(
+                        title: "Invalid milestone status transition",
+                        detail: transitionResult.Error!.Description,
+                        statusCode: StatusCodes.Status400BadRequest);
+                }
             }
 
             if (request.ActualDate.HasValue)
@@ -193,7 +205,6 @@ public static class SiteMilestoneEndpoints
         }
 
         milestone.ReasonForChange = reason;
-        milestone.VersionIndex++;
 
         var auditEntry = new CtmsAuditLog
         {
@@ -201,7 +212,7 @@ public static class SiteMilestoneEndpoints
             UserId = user,
             UserRole = role,
             Action = "UPDATE_SITE_MILESTONE",
-            Details = $"Updated site milestone {milestone.MilestoneType} ({milestone.Id}) to status {milestone.Status} for site {milestone.SiteId} in study {milestone.StudyId}.",
+            Details = $"Updated site milestone {milestone.MilestoneType} ({milestone.Id}) to status {milestone.Status.ToString().ToUpperInvariant()} for site {milestone.SiteId} in study {milestone.StudyId}.",
             ReasonForChange = reason,
             CreatedAt = now.UtcDateTime,
             CreatedBy = user,
@@ -233,7 +244,7 @@ public static class SiteMilestoneEndpoints
             MilestoneType: milestone.MilestoneType,
             PlannedDate: milestone.PlannedDate?.ToString("o"),
             ActualDate: milestone.ActualDate?.ToString("o"),
-            Status: milestone.Status,
+            Status: milestone.Status.ToString().ToUpperInvariant(),
             CreatedAt: milestone.CreatedAt.ToString("o"),
             CreatedBy: milestone.CreatedBy,
             ReasonForChange: milestone.ReasonForChange,

@@ -618,6 +618,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/ai/biometrics/verify-liveness": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Tests video frame payloads for anti-spoofing in temporary memory and returns signed liveness tokens. */
+    post: operations["AiVerifyLiveness"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/execution/forms": {
     parameters: {
       query?: never;
@@ -1729,6 +1746,22 @@ export interface components {
       /** Format: date-time */
       suspended_at: null | string;
       suspension_reason: null | string;
+    };
+    Kernel_VerifyLivenessRequest: {
+      subject_pseudonym: null | string;
+      video_frames: null | string[];
+      challenge_id: null | string;
+      /** @default false */
+      fallback_mode: boolean;
+    };
+    Kernel_VerifyLivenessResponse: {
+      liveness_token: string;
+      is_live: boolean;
+      /** Format: double */
+      anti_spoof_score: number | string;
+      /** Format: date-time */
+      expires_at: string;
+      status: string;
     };
   };
   responses: never;
@@ -3477,6 +3510,39 @@ export interface operations {
       };
       /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. */
       422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  AiVerifyLiveness: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_VerifyLivenessRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_VerifyLivenessResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
         headers: {
           [name: string]: unknown;
         };

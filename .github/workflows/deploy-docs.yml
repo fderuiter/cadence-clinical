@@ -36,12 +36,19 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            global.json
+
       - name: Build UI package
         run: pnpm --filter ui build
 
       - name: Build Documentation Portal
-        env:
-          CADENCE_DOCS_SKIP_CHECKS: "1"
         run: pnpm docs:build
 
       - name: Generate Documentation Artifact SHA256 Checksums
