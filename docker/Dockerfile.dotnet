@@ -8,7 +8,7 @@
 # ------------------------------------------------------------------------------
 # Base images are pinned to an exact version and digest so every build uses the same bits.
 # Dependabot (.github/dependabot.yml) proposes updates; bump the SDK and runtime together.
-FROM mcr.microsoft.com/dotnet/sdk:10.0.403@sha256:212fe4cb74627d5adf9817a4088906ae3edff1bd853bb27565d4b46731efe61e AS dev
+FROM mcr.microsoft.com/dotnet/sdk:11.0.100@sha256:65f3c7c6a25a239ab3e6719f2896147e7b68242ff2d8818dd70498bde6ef8bea AS dev
 
 # Install curl, ffmpeg, libreoffice, git, procps for developer introspection
 RUN apt-get update && apt-get install -y --no-install-recommends \
