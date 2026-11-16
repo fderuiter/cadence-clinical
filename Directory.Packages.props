@@ -70,12 +70,12 @@
     <PackageVersion Include="TngTech.ArchUnitNET.xUnit" Version="0.13.4" />
 
     <!-- AI model port and providers (ADR-2630) -->
-    <PackageVersion Include="Anthropic" Version="13.4.0" />
+    <PackageVersion Include="Anthropic" Version="13.9.0" />
     <PackageVersion Include="Microsoft.Extensions.AI" Version="10.11.0" />
     <PackageVersion Include="Anthropic.Aws" Version="1.0.0" />
     <PackageVersion Include="Anthropic.Bedrock" Version="0.14.0" />
     <PackageVersion Include="Anthropic.Foundry" Version="1.0.0" />
-    <PackageVersion Include="Anthropic.Vertex" Version="1.0.1" />
+    <PackageVersion Include="Anthropic.Vertex" Version="1.0.3" />
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.11.0" />
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.11.0" />
 
