@@ -8,10 +8,13 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
+using Cadence.Contracts;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
+
+using MassTransit;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -282,7 +285,8 @@ public static class MonitoringVisitEndpoints
         CtmsDbContext db,
         HttpContext httpContext,
         [FromServices] IClock clock,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromServices] IPublishEndpoint? publishEndpoint = null)
     {
         var visit = await db.CtmsMonitoringVisits.FirstOrDefaultAsync(v => v.Id == visitId, ct);
         if (visit is null)
@@ -336,6 +340,27 @@ public static class MonitoringVisitEndpoints
         db.CtmsAuditLogs.Add(auditEntry);
 
         await db.SaveChangesAsync(ct);
+
+        if (publishEndpoint is not null)
+        {
+            try
+            {
+                await publishEndpoint.Publish(new ClinicalVisitCompleted(
+                    EventId: $"MVR-{visit.Id}",
+                    Study: visit.StudyId,
+                    Site: visit.SiteId,
+                    VisitCode: visit.VisitType,
+                    CompletedAt: now,
+                    CraId: visit.CraId,
+                    Signer: user,
+                    VisitId: visit.Id
+                ), ct);
+            }
+            catch
+            {
+                // Non-blocking asynchronous outbox publishing
+            }
+        }
 
         return TypedResults.Ok(ToResponseDto(visit));
     }

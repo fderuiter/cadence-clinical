@@ -7,6 +7,8 @@ using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
 using Cadence.Templating;
 
+using MassTransit;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,7 +19,14 @@ builder.Services.AddCadenceSecurity();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.AddCadencePostgresDbContext<CtmsDbContext>();
 builder.Services.AddFluidTemplating();
-builder.Services.AddSingleton<IClock>(SystemClock.Instance);
+
+builder.Services.AddMassTransit(x =>
+{
+    x.UsingInMemory((context, cfg) =>
+    {
+        cfg.ConfigureEndpoints(context);
+    });
+});
 
 FluidTemplateRenderer.RegisterType<SiteVisitFindingModel>();
 FluidTemplateRenderer.RegisterType<SiteVisitLetterModel>();

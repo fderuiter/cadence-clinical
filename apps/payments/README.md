@@ -14,7 +14,8 @@ Site and participant payments scaffold. It holds the budget contract, fee schedu
   - `ContractCalculations`: tiered overhead, payee splits (the primary payee absorbs rounding) and SHA-256 line-item and statement digests.
   - `PayableLedger`: turns `PaymentEvent`s into `PayableLineItem`s under a `GrantContract`, with per-participant fee caps, withholding and a capped holdback reserve, and releases the reserve. It takes an `IClock` and an ID source.
   - `GrantContractValidator`: the contract limits (rates, holdback of at most 50%, splits that total 100%).
-  - No endpoint or persistence uses the ledger yet. The EF Core entities are still the stored shape.
+  - `PayableLedger` is integrated with `ClinicalVisitCompletedConsumer` to calculate investigator fee line items, split payee allocations, and holdback retention reserves upon signed visit milestone completion via the transactional outbox.
+- `Infrastructure/Consumers/`: `ClinicalVisitCompletedConsumer` listens for `ClinicalVisitCompleted` domain events and writes `Payable`, `PayableAllocation`, `HoldbackReserve`, and `PaymentAuditLog` entities.
 - `Infrastructure/Persistence/`: `PaymentsDbContext`, a design-time `PaymentsDbContextFactory`, and `Configurations/` (Fluent API mappings).
 - `Infrastructure/Persistence/Migrations/`: `20260924145423_InitialCreate`, `20260925183437_ConvertPaymentPropertiesToDecimal`.
 
