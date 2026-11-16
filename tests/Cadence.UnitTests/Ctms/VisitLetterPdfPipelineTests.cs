@@ -215,7 +215,7 @@ public sealed class VisitLetterPdfPipelineTests
         // Verify CTMS persistence
         var letterInDb = await _ctmsDb.CtmsGeneratedLetters.FirstOrDefaultAsync(l => l.Id == dto.LetterId, ct);
         letterInDb.Should().NotBeNull();
-        letterInDb!.Status.Should().Be("FINALIZED");
+        letterInDb!.Status.Should().Be(CtmsGeneratedLetterStatus.Finalized);
         letterInDb.PdfSha256Hash.Should().Be(dto.PdfSha256Hash);
 
         // Verify CTMS Audit Log

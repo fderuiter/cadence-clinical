@@ -124,7 +124,9 @@ public static class LetterTemplateEndpoints
                 statusCode: StatusCodes.Status404NotFound);
         }
 
-        if (visit.Status != MonitoringVisitStatus.Completed && visit.Status != MonitoringVisitStatus.Approved)
+        if (visit.Status != MonitoringVisitStatus.Completed &&
+            visit.Status != MonitoringVisitStatus.Approved &&
+            visit.Status != MonitoringVisitStatus.Signed_Off)
         {
             return TypedResults.Problem(
                 title: "Invalid visit status",
@@ -174,14 +176,14 @@ public static class LetterTemplateEndpoints
         }
 
         // Persist CtmsGeneratedLetter
-        var entity = new CtmsGeneratedLetter(letterId)
+        var letterStatus = pdfResult.IsSigned ? CtmsGeneratedLetterStatus.Finalized : CtmsGeneratedLetterStatus.Draft;
+        var entity = new CtmsGeneratedLetter(letterId, letterStatus)
         {
             VisitId = visitId,
             LetterType = templateName,
             RenderedContent = pdfResult.RenderedHtml,
             PdfObjectKey = objectKey,
             PdfSha256Hash = pdfResult.Sha256Hash,
-            Status = pdfResult.IsSigned ? "FINALIZED" : "DRAFT",
             IsSigned = pdfResult.IsSigned,
             SignatureManifestation = pdfResult.SignatureManifestationJson,
             EtmfDocumentId = etmfDocId,
@@ -217,7 +219,7 @@ public static class LetterTemplateEndpoints
             PdfSha256Hash: pdfResult.Sha256Hash,
             PdfObjectKey: objectKey,
             IsSigned: pdfResult.IsSigned,
-            Status: entity.Status,
+            Status: entity.Status.ToString().ToUpperInvariant(),
             SignatureManifestation: pdfResult.SignatureManifestationJson,
             EtmfDocumentId: etmfDocId,
             DispatchedAt: dispatchedAt,

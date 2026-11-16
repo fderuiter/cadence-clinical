@@ -1,5 +1,7 @@
 using System;
 
+using Cadence.Core.Domain;
+
 namespace Cadence.Apps.Ctms.Domain.Events;
 
 /// <summary>
@@ -16,7 +18,12 @@ public abstract record MonitoringVisitDomainEvent(
     string VisitId,
     DateTimeOffset Timestamp,
     string UserId,
-    string ChangeReason) : ICtmsDomainEvent;
+    string ChangeReason) : ICtmsDomainEvent, IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public DateTimeOffset OccurredAt => Timestamp;
+    public string EventType => GetType().Name;
+}
 
 public sealed record MonitoringVisitStartedDomainEvent(
     string VisitId,
@@ -64,7 +71,12 @@ public abstract record MonitoringVisitFindingDomainEvent(
     string VisitId,
     DateTimeOffset Timestamp,
     string UserId,
-    string ChangeReason) : ICtmsDomainEvent;
+    string ChangeReason) : ICtmsDomainEvent, IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public DateTimeOffset OccurredAt => Timestamp;
+    public string EventType => GetType().Name;
+}
 
 public sealed record MonitoringVisitFindingStatusChangedDomainEvent(
     string FindingId,

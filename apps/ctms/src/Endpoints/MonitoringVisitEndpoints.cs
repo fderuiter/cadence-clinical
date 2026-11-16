@@ -176,7 +176,7 @@ public static class MonitoringVisitEndpoints
         var (user, role) = ResolveCaller(httpContext, request.CraId);
         DateTimeOffset now = clock.UtcNow;
 
-        var visit = new CtmsMonitoringVisit
+        var visit = new CtmsMonitoringVisit(Guid.NewGuid().ToString(), CtmsMonitoringVisitStatus.Scheduled)
         {
             StudyId = request.Study.Trim(),
             SiteId = request.Site.Trim(),
@@ -295,7 +295,7 @@ public static class MonitoringVisitEndpoints
         var (user, role) = ResolveCaller(httpContext, visit.CraId);
         DateTimeOffset now = clock.UtcNow;
 
-        var completeResult = visit.CompleteVisit(request.ActualDate, now, user, reason);
+        var completeResult = visit.Complete(request.ActualDate, reason, user, now, role);
         if (completeResult.IsFailure)
         {
             return TypedResults.Problem(
@@ -385,12 +385,12 @@ public static class MonitoringVisitEndpoints
         };
         string signatureJson = JsonSerializer.Serialize(manifestationObj);
 
-        var approveResult = visit.Approve(user, signatureJson, now, now, user, reason);
-        if (approveResult.IsFailure)
+        var signOffResult = visit.SignOff(user, now, signatureJson, reason, user, role);
+        if (signOffResult.IsFailure)
         {
             return TypedResults.Problem(
                 title: "Invalid visit status",
-                detail: approveResult.Error!.Description,
+                detail: signOffResult.Error!.Description,
                 statusCode: StatusCodes.Status400BadRequest);
         }
 

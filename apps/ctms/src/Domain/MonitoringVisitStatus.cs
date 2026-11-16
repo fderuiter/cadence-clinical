@@ -1,3 +1,5 @@
+global using CtmsMonitoringVisitStatus = Cadence.Apps.Ctms.Domain.MonitoringVisitStatus;
+
 using System.Collections.Generic;
 using System.Linq;
 
@@ -13,6 +15,7 @@ public enum MonitoringVisitStatus
     Completed,
     ReportDrafted,
     Approved,
+    Signed_Off,
     Cancelled
 }
 
@@ -27,13 +30,22 @@ public static class MonitoringVisitStatusCodec
         ["IN_PROGRESS"] = MonitoringVisitStatus.InProgress,
         ["COMPLETED"] = MonitoringVisitStatus.Completed,
         ["REPORT_DRAFTED"] = MonitoringVisitStatus.ReportDrafted,
-        ["SIGNED_OFF"] = MonitoringVisitStatus.Approved,
+        ["SIGNED_OFF"] = MonitoringVisitStatus.Signed_Off,
         ["APPROVED"] = MonitoringVisitStatus.Approved,
         ["CANCELLED"] = MonitoringVisitStatus.Cancelled,
     };
 
-    public static string ToCode(MonitoringVisitStatus state) =>
-        ByCode.First(kv => kv.Value == state).Key;
+    public static string ToCode(MonitoringVisitStatus state) => state switch
+    {
+        MonitoringVisitStatus.Scheduled => "SCHEDULED",
+        MonitoringVisitStatus.InProgress => "IN_PROGRESS",
+        MonitoringVisitStatus.Completed => "COMPLETED",
+        MonitoringVisitStatus.ReportDrafted => "REPORT_DRAFTED",
+        MonitoringVisitStatus.Approved => "APPROVED",
+        MonitoringVisitStatus.Signed_Off => "SIGNED_OFF",
+        MonitoringVisitStatus.Cancelled => "CANCELLED",
+        _ => state.ToString().ToUpperInvariant()
+    };
 
     public static bool TryParse(string? raw, out MonitoringVisitStatus state)
     {

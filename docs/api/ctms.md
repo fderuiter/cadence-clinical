@@ -13,6 +13,7 @@ Generated from `docs/openapi/ctms_openapi.json` by `pnpm cadence generate-api-do
 | `GET` | `/api/v1/ctms/monitoring-visits/{visit_id}/letters` | GetMonitoringVisitLetters | Get generated letters for a monitoring visit. |
 | `GET` | `/api/v1/ctms/monitoring-visits/{visit_id}/letters/{letter_type}` | GetMonitoringVisitLetterByType | Get a generated visit letter by type. |
 | `POST` | `/api/v1/ctms/monitoring-visits/{visit_id}/sign-off` | SignOffMonitoringVisit | Perform supervisory Part 11 sign-off on a completed monitoring visit. |
+| `POST` | `/api/v1/ctms/monitoring-visits/{visit_id}/start` | StartMonitoringVisit | Start an on-site monitoring visit. |
 | `GET` | `/api/v1/ctms/site-milestones` | ListSiteMilestones | List site milestones filtered by study or site. |
 | `POST` | `/api/v1/ctms/site-milestones` | CreateSiteMilestone | Create a new site milestone. |
 | `PUT` | `/api/v1/ctms/site-milestones/{milestone_id}` | UpdateSiteMilestone | Update site milestone status, planned date, or actual date. |

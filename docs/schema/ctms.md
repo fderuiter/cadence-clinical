@@ -24,6 +24,7 @@ Generated from the EF Core model of `Cadence.Apps.Ctms.Infrastructure.Persistenc
 | [`ctms.ctms_site_greenlight_gates`](#ctmsctms_site_greenlight_gates) | `CtmsSiteGreenlightGate` | 26 |
 | [`ctms.ctms_site_milestones`](#ctmsctms_site_milestones) | `CtmsSiteMilestone` | 11 |
 | [`ctms.doa_delegation_records`](#ctmsdoa_delegation_records) | `DoaDelegationRecord` | 15 |
+| [`ctms.transactional_outbox`](#ctmstransactional_outbox) | `TransactionalOutboxMessage` | 10 |
 
 ## ctms.audit_log_entries
 
@@ -285,6 +286,10 @@ Indexes:
 
 - `IX_ctms_monitoring_visit_findings_VisitId`: (`VisitId`)
 
+Check constraints:
+
+- `ck_ctms_monitoring_visit_findings_resolution_status`: `"ResolutionStatus" IN ('OPEN', 'UNDER_REVIEW', 'RESOLVED', 'CLOSED')`
+
 ## ctms.ctms_monitoring_visits
 
 Entity: `CtmsMonitoringVisit`
@@ -313,6 +318,10 @@ Indexes:
 
 - `IX_ctms_monitoring_visits_SiteId`: (`SiteId`)
 - `IX_ctms_monitoring_visits_StudyId`: (`StudyId`)
+
+Check constraints:
+
+- `ck_ctms_monitoring_visits_status`: `"Status" IN ('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'REPORT_DRAFTED', 'APPROVED', 'SIGNED_OFF', 'CANCELLED')`
 
 ## ctms.ctms_payment_milestones
 
@@ -479,3 +488,25 @@ Indexes:
 - `IX_doa_delegation_records_SiteId`: (`SiteId`)
 - `IX_doa_delegation_records_StaffUserId`: (`StaffUserId`)
 - `IX_doa_delegation_records_TaskCode`: (`TaskCode`)
+
+## ctms.transactional_outbox
+
+Entity: `TransactionalOutboxMessage`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `AggregateId` | `character varying(255)` | no |  |  |
+| `AggregateType` | `character varying(255)` | no |  |  |
+| `Attempts` | `integer` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `DispatchedAt` | `timestamp with time zone` | yes |  |  |
+| `EventId` | `uuid` | no |  |  |
+| `EventType` | `character varying(255)` | no |  |  |
+| `LastError` | `character varying(2000)` | yes |  |  |
+| `Payload` | `text` | no |  |  |
+
+Indexes:
+
+- `IX_transactional_outbox_CreatedAt_DispatchedAt`: (`CreatedAt`, `DispatchedAt`)
+- `IX_transactional_outbox_EventId`: (`EventId`)

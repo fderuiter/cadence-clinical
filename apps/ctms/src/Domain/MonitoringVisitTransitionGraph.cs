@@ -27,13 +27,16 @@ public static class MonitoringVisitTransitionGraph
             [MonitoringVisitStatus.Completed] = new HashSet<MonitoringVisitStatus>
             {
                 MonitoringVisitStatus.ReportDrafted,
-                MonitoringVisitStatus.Approved
+                MonitoringVisitStatus.Approved,
+                MonitoringVisitStatus.Signed_Off
             },
             [MonitoringVisitStatus.ReportDrafted] = new HashSet<MonitoringVisitStatus>
             {
-                MonitoringVisitStatus.Approved
+                MonitoringVisitStatus.Approved,
+                MonitoringVisitStatus.Signed_Off
             },
             [MonitoringVisitStatus.Approved] = new HashSet<MonitoringVisitStatus>(),
+            [MonitoringVisitStatus.Signed_Off] = new HashSet<MonitoringVisitStatus>(),
             [MonitoringVisitStatus.Cancelled] = new HashSet<MonitoringVisitStatus>()
         };
 
@@ -41,7 +44,7 @@ public static class MonitoringVisitTransitionGraph
     /// Checks whether the specified status is terminal (cannot transition to any other status).
     /// </summary>
     public static bool IsTerminal(MonitoringVisitStatus status) =>
-        status is MonitoringVisitStatus.Approved or MonitoringVisitStatus.Cancelled;
+        status is MonitoringVisitStatus.Approved or MonitoringVisitStatus.Signed_Off or MonitoringVisitStatus.Cancelled;
 
     /// <summary>
     /// Validates whether a transition from <paramref name="current"/> to <paramref name="target"/> is legal.
@@ -65,12 +68,7 @@ public static class MonitoringVisitTransitionGraph
                 : CtmsErrors.InvalidVisitStatusTransition("None", target.ToString());
         }
 
-        if (current == MonitoringVisitStatus.Approved)
-        {
-            return CtmsErrors.InvalidVisitStatusTransition(current.Value, target);
-        }
-
-        if (current == MonitoringVisitStatus.Cancelled)
+        if (current is MonitoringVisitStatus.Approved or MonitoringVisitStatus.Signed_Off or MonitoringVisitStatus.Cancelled)
         {
             return CtmsErrors.InvalidVisitStatusTransition(current.Value, target);
         }

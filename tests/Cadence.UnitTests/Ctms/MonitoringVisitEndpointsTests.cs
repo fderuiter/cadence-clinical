@@ -273,7 +273,7 @@ public sealed class MonitoringVisitEndpointsTests
 
         // Verify in DB
         var updated = await _db.CtmsMonitoringVisits.FindAsync([visit.Id], TestContext.Current.CancellationToken);
-        updated!.Status.Should().Be(MonitoringVisitStatus.Approved);
+        updated!.Status.Should().Be(MonitoringVisitStatus.Signed_Off);
         updated.Signer.Should().Be("manager-1");
         updated.SigningTimestamp.Should().Be(_clock.UtcNow);
 
@@ -286,7 +286,7 @@ public sealed class MonitoringVisitEndpointsTests
     [Fact]
     public async Task SignOffVisit_OnScheduledVisit_ReturnsBadRequest()
     {
-        var visit = new CtmsMonitoringVisit
+        var visit = new CtmsMonitoringVisit(Guid.NewGuid().ToString(), CtmsMonitoringVisitStatus.Scheduled)
         {
             StudyId = StudyId,
             SiteId = SiteId,
