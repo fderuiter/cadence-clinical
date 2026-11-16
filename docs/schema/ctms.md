@@ -24,6 +24,7 @@ Generated from the EF Core model of `Cadence.Apps.Ctms.Infrastructure.Persistenc
 | [`ctms.ctms_site_greenlight_gates`](#ctmsctms_site_greenlight_gates) | `CtmsSiteGreenlightGate` | 26 |
 | [`ctms.ctms_site_milestones`](#ctmsctms_site_milestones) | `CtmsSiteMilestone` | 11 |
 | [`ctms.doa_delegation_records`](#ctmsdoa_delegation_records) | `DoaDelegationRecord` | 15 |
+| [`ctms.transactional_outbox`](#ctmstransactional_outbox) | `TransactionalOutboxMessage` | 10 |
 
 ## ctms.audit_log_entries
 
@@ -479,3 +480,25 @@ Indexes:
 - `IX_doa_delegation_records_SiteId`: (`SiteId`)
 - `IX_doa_delegation_records_StaffUserId`: (`StaffUserId`)
 - `IX_doa_delegation_records_TaskCode`: (`TaskCode`)
+
+## ctms.transactional_outbox
+
+Entity: `TransactionalOutboxMessage`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `AggregateId` | `character varying(255)` | no |  |  |
+| `AggregateType` | `character varying(255)` | no |  |  |
+| `Attempts` | `integer` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `DispatchedAt` | `timestamp with time zone` | yes |  |  |
+| `EventId` | `uuid` | no |  |  |
+| `EventType` | `character varying(255)` | no |  |  |
+| `LastError` | `character varying(2000)` | yes |  |  |
+| `Payload` | `text` | no |  |  |
+
+Indexes:
+
+- `IX_transactional_outbox_CreatedAt_DispatchedAt`: (`CreatedAt`, `DispatchedAt`)
+- `IX_transactional_outbox_EventId`: (`EventId`)
