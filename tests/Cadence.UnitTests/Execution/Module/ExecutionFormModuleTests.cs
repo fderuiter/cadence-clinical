@@ -1,15 +1,24 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Cadence.Kernel;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.Protocol.Design;
+using Cadence.Kernel.References;
 using Cadence.Modules.Execution.Domain;
 using Cadence.Modules.Execution.Endpoints;
 using Cadence.Modules.Execution.Infrastructure;
 
 using FluentAssertions;
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 using Xunit;
 
@@ -17,7 +26,8 @@ namespace Cadence.UnitTests.Execution.Module;
 
 /// <summary>
 /// The Execution module's form rules that need no database (ADR-2622): the layout a form opens with, how a form read
-/// derives its order and completeness from the kernel record, and the application role grant.
+/// derives its order and completeness from the kernel record, enrollment form summary read-authority checks, and the
+/// application role grant.
 /// </summary>
 public sealed class ExecutionFormModuleTests
 {
@@ -51,6 +61,7 @@ public sealed class ExecutionFormModuleTests
         var response = FormResponse.From(record, ["comment", "dbp", "sbp"]);
 
         response.Items.Select(i => i.ItemId).Should().Equal("comment", "dbp", "sbp", "pulse");
+        response.CollectionTitle.Should().Be("Vital signs");
         response.MissingRequired.Should().Equal("sbp", "pulse");
         response.Complete.Should().BeFalse();
         response.Items.Single(i => i.ItemId == "dbp").Revision.Should().Be(1);
@@ -59,6 +70,64 @@ public sealed class ExecutionFormModuleTests
         var complete = FormResponse.From(Record([Item("dbp", required: true)], Value("dbp", new MissingValue(NullFlavor.NotDone))), null);
         complete.Complete.Should().BeTrue();
         complete.MissingRequired.Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// Listing an enrollment's forms validates enrollment_id (400), checks read access on the enrollment before touching
+    /// records (403), and returns mapped form summaries when visible (200).
+    /// </summary>
+    [Fact(DisplayName = "FormEndpoints_ListForEnrollment_EnforcesReadAuthority_AndMapsSummaries")]
+    public async Task FormEndpointsListForEnrollmentEnforcesReadAuthorityAndMapsSummaries()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var tenant = TenantId.New();
+        var enrollment = EnrollmentId.New();
+        var summary = new CollectionInstanceSummary(
+            CollectionInstanceId.New(),
+            enrollment,
+            ParticipantId.New(),
+            StudyId.New(),
+            StudySiteId.New(),
+            ProtocolVersionId.New(),
+            "cs.vitals",
+            "act.week12",
+            At,
+            "crc@example.test",
+            At,
+            2,
+            false,
+            3,
+            1,
+            "Vital signs");
+        var http = await ContextWithTenantAsync(tenant);
+        var records = new StubCollectionInstanceRecords([summary]);
+
+        var missing = await FormEndpoints.ListForEnrollmentAsync(null, http, records, new StubReadAccess(true), ct);
+        missing.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+
+        var emptyGuid = await FormEndpoints.ListForEnrollmentAsync(Guid.Empty, http, records, new StubReadAccess(true), ct);
+        emptyGuid.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        records.ListCalls.Should().Be(0);
+
+        var access = new StubReadAccess(false);
+        var denied = await FormEndpoints.ListForEnrollmentAsync(enrollment.Value, http, records, access, ct);
+        denied.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        access.CheckedNode.Should().Be(NodeRef.For(enrollment));
+        records.ListCalls.Should().Be(0);
+
+        var allowed = await FormEndpoints.ListForEnrollmentAsync(enrollment.Value, http, records, new StubReadAccess(true), ct);
+        var ok = allowed.Result.Should().BeOfType<Ok<IReadOnlyList<FormSummaryResponse>>>().Subject;
+        ok.Value.Should().ContainSingle().Which.Should().Match<FormSummaryResponse>(s =>
+            s.FormId == summary.CollectionInstanceId.Value
+            && s.EnrollmentId == enrollment.Value
+            && s.CollectionSpecId == "cs.vitals"
+            && s.CollectionTitle == "Vital signs"
+            && s.PlannedActivityId == "act.week12"
+            && !s.Complete
+            && s.ItemCount == 3
+            && s.RecordedCount == 1
+            && s.Version == 2);
+        records.ListCalls.Should().Be(1);
     }
 
     /// <summary>
@@ -78,6 +147,14 @@ public sealed class ExecutionFormModuleTests
         injected.Should().Throw<ArgumentException>();
     }
 
+    private static async Task<HttpContext> ContextWithTenantAsync(TenantId tenant)
+    {
+        var http = new DefaultHttpContext();
+        var filter = new KernelTenantFilter(new FixedTenantResolver(tenant));
+        await filter.InvokeAsync(new DefaultEndpointFilterInvocationContext(http), static _ => ValueTask.FromResult<object?>(null));
+        return http;
+    }
+
     private static FormInstance Open(string[] layout) =>
         FormInstance.Open(
             CollectionInstanceId.New(), TenantId.New(), EnrollmentId.New(), ParticipantId.New(), StudyId.New(), ProtocolVersionId.New(),
@@ -91,5 +168,39 @@ public sealed class ExecutionFormModuleTests
     private static CollectionInstanceRecord Record(CollectionItem[] items, params CollectedValueView[] values) =>
         new(
             CollectionInstanceId.New(), EnrollmentId.New(), ParticipantId.New(), StudyId.New(), StudySiteId.New(), ProtocolVersionId.New(),
-            "cs.vitals", "act.week12", At, "crc@example.test", At, 1 + values.Length, items, values, [], [], [], null);
+            "cs.vitals", "act.week12", At, "crc@example.test", At, 1 + values.Length, items, values, [], [], [], null, "Vital signs");
+
+    private sealed class FixedTenantResolver(TenantId tenant) : IKernelTenantResolver
+    {
+        public ValueTask<KernelTenantResolution> ResolveAsync(ClaimsPrincipal caller, CancellationToken cancellationToken) =>
+            ValueTask.FromResult(KernelTenantResolution.Resolved(tenant));
+    }
+
+    private sealed class StubReadAccess(bool canSee) : IKernelReadAccess
+    {
+        public NodeRef? CheckedNode { get; private set; }
+
+        public ValueTask<bool> CanSeeAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken)
+        {
+            CheckedNode = node;
+            return ValueTask.FromResult(canSee);
+        }
+    }
+
+    private sealed class StubCollectionInstanceRecords(IReadOnlyList<CollectionInstanceSummary> summaries) : ICollectionInstanceRecords
+    {
+        public int ListCalls { get; private set; }
+
+        public Task<CollectionInstanceRecord?> FindAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken) =>
+            Task.FromResult<CollectionInstanceRecord?>(null);
+
+        public Task<IReadOnlyList<CollectionInstanceSummary>> ListForEnrollmentAsync(
+            TenantId tenant,
+            EnrollmentId enrollment,
+            CancellationToken cancellationToken)
+        {
+            ListCalls++;
+            return Task.FromResult(summaries);
+        }
+    }
 }

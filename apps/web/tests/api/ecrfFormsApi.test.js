@@ -87,6 +87,36 @@ describe("ecrfFormsApi (ADR-2622)", () => {
     );
   });
 
+  it("lists opened form summaries for an enrollment", async () => {
+    const summaries = [
+      {
+        form_id: FORM,
+        enrollment_id: ENROLLMENT,
+        protocol_version_id: "pv",
+        collection_spec_id: "VS",
+        collection_title: "Vital Signs",
+        planned_activity_id: "WEEK2",
+        collected_at: "2027-03-14T09:00:00.000Z",
+        opened_at: "2027-03-14T09:00:00.000Z",
+        opened_by: "crc1",
+        complete: false,
+        item_count: 3,
+        recorded_count: 1,
+        version: 1,
+      },
+    ];
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, summaries));
+
+    const result = await ecrfFormsApi.listForEnrollment(ENROLLMENT);
+
+    expect(result).toEqual(summaries);
+    const request = lastRequest();
+    expect(request.method).toBe("GET");
+    const url = new URL(request.url);
+    expect(url.pathname).toBe("/api/v1/execution/forms");
+    expect(url.searchParams.get("enrollment_id")).toBe(ENROLLMENT);
+  });
+
   it("saves a page with each value's expected revision, the reason and the idempotency key", async () => {
     fetchSpy.mockResolvedValueOnce(
       jsonResponse(200, { form_id: FORM, version: 2, values: [] })

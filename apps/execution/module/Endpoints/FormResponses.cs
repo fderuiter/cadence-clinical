@@ -44,6 +44,61 @@ public sealed record FormStateResponse(
             state.PlannedActivityId, state.CollectedAt, state.Version);
 }
 
+/// <summary>Summary of an opened form for an enrollment's form list.</summary>
+/// <param name="FormId">The form's id.</param>
+/// <param name="EnrollmentId">Its enrollment.</param>
+/// <param name="ParticipantId">The enrollment's participant.</param>
+/// <param name="StudyId">The study.</param>
+/// <param name="StudySiteId">The study site.</param>
+/// <param name="ProtocolVersionId">The protocol version that governs it (K-TIME-8).</param>
+/// <param name="CollectionSpecId">What it collects.</param>
+/// <param name="PlannedActivityId">Its visit, if any.</param>
+/// <param name="CollectedAt">When its values were collected.</param>
+/// <param name="OpenedBy">Who opened it.</param>
+/// <param name="OpenedAt">When it was opened.</param>
+/// <param name="Version">1 when opened, one more per save that changed a value.</param>
+/// <param name="Complete">Whether every required item has a value.</param>
+/// <param name="ItemCount">Total items on the form.</param>
+/// <param name="RecordedCount">Items on the form that currently hold a recorded value.</param>
+/// <param name="CollectionTitle">The CollectionSpec's title in the governing protocol version, when present.</param>
+public sealed record FormSummaryResponse(
+    Guid FormId,
+    Guid EnrollmentId,
+    Guid ParticipantId,
+    Guid StudyId,
+    Guid StudySiteId,
+    Guid ProtocolVersionId,
+    string CollectionSpecId,
+    string? PlannedActivityId,
+    DateTimeOffset CollectedAt,
+    string OpenedBy,
+    DateTimeOffset OpenedAt,
+    long Version,
+    bool Complete,
+    int ItemCount,
+    int RecordedCount,
+    string? CollectionTitle = null)
+{
+    internal static FormSummaryResponse From(CollectionInstanceSummary summary) =>
+        new(
+            summary.CollectionInstanceId.Value,
+            summary.EnrollmentId.Value,
+            summary.ParticipantId.Value,
+            summary.StudyId.Value,
+            summary.StudySiteId.Value,
+            summary.ProtocolVersionId.Value,
+            summary.CollectionSpecId,
+            summary.PlannedActivityId,
+            summary.CollectedAt,
+            summary.OpenedBy,
+            summary.OpenedAt,
+            summary.Version,
+            summary.Complete,
+            summary.ItemCount,
+            summary.RecordedCount,
+            summary.CollectionTitle);
+}
+
 /// <summary>A form as a form screen shows it.</summary>
 /// <param name="FormId">The form's id.</param>
 /// <param name="EnrollmentId">Its enrollment.</param>
@@ -65,6 +120,7 @@ public sealed record FormStateResponse(
 /// <param name="Signatures">The signatures over it, oldest first (spec §9.5).</param>
 /// <param name="ContentHash">The hash a signature over the current values binds to: send it to sign them (#5463); null while
 /// the form has no values.</param>
+/// <param name="CollectionTitle">The CollectionSpec's title in the governing protocol version, when present.</param>
 public sealed record FormResponse(
     Guid FormId,
     Guid EnrollmentId,
@@ -84,7 +140,8 @@ public sealed record FormResponse(
     IReadOnlyList<FormLockResponse> Locks,
     IReadOnlyList<FormAssertionResponse> Assertions,
     IReadOnlyList<FormSignatureResponse> Signatures,
-    string? ContentHash)
+    string? ContentHash,
+    string? CollectionTitle = null)
 {
     /// <summary>
     /// Shapes the kernel's record for a form screen: items in <paramref name="layout"/> order (the specification's order
@@ -123,7 +180,8 @@ public sealed record FormResponse(
             [.. record.Assertions.Select(a => new FormAssertionResponse(
                 a.AssertionId.Value, a.Kind.ToString(), a.Target.ToString(), a.Revision, a.Text, a.AssertedBy, a.AssertedAt, a.ReasonForChange, a.RetractedAt))],
             [.. record.Attestations.Select(FormSignatureResponse.From)],
-            record.ContentHash);
+            record.ContentHash,
+            record.CollectionTitle);
     }
 }
 

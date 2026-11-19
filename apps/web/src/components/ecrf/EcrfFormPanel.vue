@@ -5,10 +5,21 @@
     <!-- Open a new form or reuse one by id (ADR-2622). -->
     <div v-if="!form" class="ecrf-form-open">
       <p class="ecrf-form-hint">
-        Each form is opened once for a participant's visit and then saved a page
-        at a time. Reuse a form by its id, or open a new one.
+        <template v-if="enrollmentContext">
+          Choose a form specification and visit for
+          {{ enrollmentContext.subjectCode || "this participant" }}, then enter
+          when the values were collected.
+        </template>
+        <template v-else>
+          Each form is opened once for a participant's visit and then saved a
+          page at a time. Reuse a form by its id, or open a new one.
+        </template>
       </p>
-      <form class="ecrf-form-row" @submit.prevent="reuse">
+      <form
+        v-if="!enrollmentContext"
+        class="ecrf-form-row"
+        @submit.prevent="reuse"
+      >
         <label for="ecrf-form-id">Form id</label>
         <input
           id="ecrf-form-id"
@@ -28,22 +39,54 @@
       </form>
 
       <form id="ecrf-form-new" class="ecrf-form-grid" @submit.prevent="openNew">
-        <label for="ecrf-enrollment-id">Enrollment id</label>
-        <input
-          id="ecrf-enrollment-id"
-          v-model.trim="enrollmentId"
-          type="text"
-          autocomplete="off"
-        />
+        <template v-if="!enrollmentContext">
+          <label for="ecrf-enrollment-id">Enrollment id</label>
+          <input
+            id="ecrf-enrollment-id"
+            v-model.trim="enrollmentId"
+            type="text"
+            autocomplete="off"
+          />
+        </template>
         <label for="ecrf-collection-spec">Collection spec</label>
+        <select
+          v-if="enrollmentContext && structuredSpecs.length > 0"
+          id="ecrf-collection-spec"
+          v-model="collectionSpecId"
+        >
+          <option value="">Select form specification…</option>
+          <option
+            v-for="spec in structuredSpecs"
+            :key="spec.id"
+            :value="spec.id"
+          >
+            {{ spec.name ? `${spec.name} (${spec.id})` : spec.id }}
+          </option>
+        </select>
         <input
+          v-else
           id="ecrf-collection-spec"
           v-model.trim="collectionSpecId"
           type="text"
           autocomplete="off"
         />
         <label for="ecrf-planned-activity">Visit (planned activity)</label>
+        <select
+          v-if="enrollmentContext && structuredActivities.length > 0"
+          id="ecrf-planned-activity"
+          v-model="plannedActivityId"
+        >
+          <option value="">Unscheduled</option>
+          <option
+            v-for="activity in structuredActivities"
+            :key="activity.id"
+            :value="activity.id"
+          >
+            {{ activityLabel(activity) }}
+          </option>
+        </select>
         <input
+          v-else
           id="ecrf-planned-activity"
           v-model.trim="plannedActivityId"
           type="text"
@@ -185,8 +228,16 @@
                 </td>
                 <td class="ecrf-item-revision">
                   <template v-if="item.value">
-                    {{ item.revision }} by {{ item.recorded_by }} at
-                    {{ item.recorded_at }}
+                    <component
+                      :is="routerLinkTag"
+                      v-if="itemObservationLink(item.observation_id)"
+                      :id="`ecrf-item-observation-${item.item_id}`"
+                      class="ecrf-observation-link"
+                      :to="itemObservationLink(item.observation_id)!"
+                      >{{ item.revision }}</component
+                    >
+                    <template v-else>{{ item.revision }}</template>
+                    by {{ item.recorded_by }} at {{ item.recorded_at }}
                   </template>
                   <template v-else>No value</template>
                 </td>
@@ -345,6 +396,8 @@
           :can-manage="canManageQueries"
           :busy="queries.busy"
           :act="queries.act"
+          :form-to="queryFormLink"
+          :observation-to="queryObservationLink"
         />
         <div
           data-testid="ecrf-query-outcome"
@@ -378,7 +431,15 @@
       </p>
       <ul v-else data-testid="ecrf-form-assertions">
         <li v-for="assertion in form.assertions" :key="assertion.assertion_id">
-          {{ assertion.kind }} on {{ assertion.target }}
+          {{ assertion.kind }} on
+          <component
+            :is="routerLinkTag"
+            v-if="assertionObservationLink(assertion.target)"
+            class="ecrf-observation-link"
+            :to="assertionObservationLink(assertion.target)!"
+            >{{ assertion.target }}</component
+          >
+          <template v-else>{{ assertion.target }}</template>
           <template v-if="assertion.revision !== null">
             (revision {{ assertion.revision }})</template
           >
@@ -452,7 +513,16 @@
                 >
                   <th scope="row">{{ signed.item_id }}</th>
                   <td>{{ formatObservationValue(signed.value) }}</td>
-                  <td>{{ signed.revision }}</td>
+                  <td>
+                    <component
+                      :is="routerLinkTag"
+                      v-if="itemObservationLink(signed.observation_id)"
+                      class="ecrf-observation-link"
+                      :to="itemObservationLink(signed.observation_id)!"
+                      >{{ signed.revision }}</component
+                    >
+                    <template v-else>{{ signed.revision }}</template>
+                  </td>
                   <td>{{ currentValueText(signed.item_id) }}</td>
                   <td>{{ currentOf(signed.item_id)?.revision ?? "None" }}</td>
                 </tr>
@@ -533,7 +603,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from "vue";
+import {
+  computed,
+  getCurrentInstance,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from "vue";
+import type { RouteLocationRaw } from "vue-router";
 import {
   formatObservationValue,
   MISSING_REASONS,
@@ -542,10 +620,17 @@ import {
 import {
   FORM_SIGN_SEMANTIC_ACTION,
   formSignatureAction,
+  type EcrfForm,
   type EcrfFormItem,
   type EcrfFormSignedValue,
   type EcrfSignatureMeaning,
 } from "../../api/ecrfFormsApi";
+import type { FormQueryResponse } from "../../api/ecrfQueriesApi";
+import type {
+  StudyCollectionSpecOption,
+  StudyPlannedActivityOption,
+} from "../../canvas/kernelStudy";
+import { observationNodeRef } from "../../canvas/nodeRef";
 import {
   useEcrfForm,
   type EcrfUnsavedItem,
@@ -555,17 +640,41 @@ import { useAuthStore } from "../../stores/auth.js";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import FormQueryList from "./FormQueryList.vue";
 
+export interface CanvasFormEnrollmentContext {
+  enrollmentId: string;
+  subjectCode?: string;
+  collectionSpecs?: StudyCollectionSpecOption[];
+  plannedActivities?: StudyPlannedActivityOption[];
+}
+
 const props = defineProps<{
   /** A form to load on mount, for example from the route. */
   formId?: string | null;
   enrollmentId?: string | null;
   collectionSpecId?: string | null;
   plannedActivityId?: string | null;
+  /** Enrollment and structured protocol choices supplied when embedded in Clinical Canvas. */
+  enrollmentContext?: CanvasFormEnrollmentContext | null;
+  /** Builds a route location for an observation inside the hosting workspace. */
+  observationLocation?: (
+    observationId: string,
+    formId: string
+  ) => RouteLocationRaw | null;
+  /** Builds a route location for a form inside the hosting workspace. */
+  formLocation?: (formId: string) => RouteLocationRaw | null;
   /** Offer raising, closing, reopening and cancelling queries (a monitor); the module still checks. */
   canManageQueries?: boolean;
 }>();
 
-const emit = defineEmits<{ (e: "dirty-change", dirty: boolean): void }>();
+const emit = defineEmits<{
+  (e: "dirty-change", dirty: boolean): void;
+  (e: "form-loaded", loaded: EcrfForm): void;
+  (e: "closed"): void;
+}>();
+
+const instance = getCurrentInstance();
+const hasRouter = Boolean(instance?.appContext.config.globalProperties.$router);
+const routerLinkTag = instance?.appContext.components.RouterLink ?? "a";
 
 const {
   form,
@@ -595,11 +704,81 @@ const {
 } = useEcrfForm();
 
 const reuseId = ref(props.formId ?? "");
-const enrollmentId = ref(props.enrollmentId ?? "");
+const enrollmentId = ref(
+  props.enrollmentContext?.enrollmentId ?? props.enrollmentId ?? ""
+);
 const collectionSpecId = ref(props.collectionSpecId ?? "");
 const plannedActivityId = ref(props.plannedActivityId ?? "");
 const collectedAt = ref("");
 const reason = ref("");
+
+const structuredSpecs = computed(
+  () => props.enrollmentContext?.collectionSpecs ?? []
+);
+const structuredActivities = computed(() => {
+  const all = props.enrollmentContext?.plannedActivities ?? [];
+  if (!all.length) return [];
+  const selectedSpec = structuredSpecs.value.find(
+    (s) => s.id === collectionSpecId.value
+  );
+  if (!selectedSpec?.plannedActivityIds?.length) return all;
+  const scheduled = new Set(selectedSpec.plannedActivityIds);
+  const matching = all.filter((a) => scheduled.has(a.id));
+  return matching.length > 0 ? matching : all;
+});
+
+function activityLabel(activity: StudyPlannedActivityOption): string {
+  const base = activity.name
+    ? `${activity.name} (${activity.id})`
+    : activity.id;
+  return activity.studyDay !== null
+    ? `${base} · Day ${activity.studyDay}`
+    : base;
+}
+
+watch(
+  () => props.enrollmentContext?.enrollmentId ?? props.enrollmentId ?? "",
+  (next) => {
+    if (next) enrollmentId.value = next;
+  }
+);
+
+watch(structuredActivities, (allowed) => {
+  if (
+    plannedActivityId.value &&
+    allowed.length > 0 &&
+    !allowed.some((a) => a.id === plannedActivityId.value)
+  ) {
+    plannedActivityId.value = "";
+  }
+});
+
+function itemObservationLink(
+  observationId: string | null | undefined
+): RouteLocationRaw | null {
+  if (!hasRouter || !observationId || !form.value) return null;
+  if (props.observationLocation) {
+    return props.observationLocation(observationId, form.value.form_id);
+  }
+  const ref = observationNodeRef(observationId);
+  return ref ? { name: "observation", params: { observationRef: ref } } : null;
+}
+
+function assertionObservationLink(target: string): RouteLocationRaw | null {
+  if (!target.startsWith("observation:")) return null;
+  const ref = observationNodeRef(target);
+  if (!ref) return null;
+  const id = ref.slice("observation:".length);
+  return itemObservationLink(id);
+}
+
+const queryObservationLink = (query: FormQueryResponse) =>
+  itemObservationLink(query.observation_id);
+const queryFormLink = computed(() =>
+  props.formLocation
+    ? (q: FormQueryResponse) => props.formLocation!(q.form_id)
+    : undefined
+);
 
 const canOpen = computed(
   () =>
@@ -636,8 +815,12 @@ watch(
   () => (form.value ? `${form.value.form_id}@${form.value.version}` : null),
   (loaded) => {
     raising.value = null;
-    if (loaded && form.value) void queries.load({ formId: form.value.form_id });
-    else queries.clear();
+    if (loaded && form.value) {
+      emit("form-loaded", form.value);
+      void queries.load({ formId: form.value.form_id });
+    } else {
+      queries.clear();
+    }
   }
 );
 
@@ -762,6 +945,7 @@ function closeForm() {
   }
   clearDraft();
   close();
+  emit("closed");
 }
 
 function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
@@ -781,6 +965,19 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
 onMounted(() => {
   if (props.formId) void load(props.formId);
 });
+
+watch(
+  () => props.formId,
+  (next, prev) => {
+    if (next && next !== form.value?.form_id) {
+      reuseId.value = next;
+      void load(next);
+    } else if (!next && prev && form.value) {
+      clearDraft();
+      close();
+    }
+  }
+);
 
 defineExpose({ dirty, form });
 

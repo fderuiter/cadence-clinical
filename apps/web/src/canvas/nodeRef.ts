@@ -101,3 +101,33 @@ export function formatNodeRef(ref: NodeRef): string {
 export function tryNodeRef(kind: NodeKind, id: unknown): NodeRef | null {
   return typeof id === "string" ? parseNodeRef(`${kind}:${id}`) : null;
 }
+
+/** Canonical `collection_instance:<id>` reference from a form UUID or existing NodeRef, or null. */
+export function collectionInstanceRef(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().toLowerCase();
+  const parsed =
+    parseNodeRef(trimmed) ?? tryNodeRef("collection_instance", trimmed);
+  return parsed?.kind === "collection_instance"
+    ? formatNodeRef({ kind: "collection_instance", id: parsed.id })
+    : null;
+}
+
+/** Extracts the lower-case UUID from a `collection_instance:<id>` reference or raw UUID, or null. */
+export function collectionInstanceId(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().toLowerCase();
+  const parsed =
+    parseNodeRef(trimmed) ?? tryNodeRef("collection_instance", trimmed);
+  return parsed?.kind === "collection_instance" ? parsed.id : null;
+}
+
+/** Canonical unversioned `observation:<id>` reference from an observation UUID or NodeRef, or null. */
+export function observationNodeRef(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().toLowerCase();
+  const parsed = parseNodeRef(trimmed) ?? tryNodeRef("observation", trimmed);
+  return parsed?.kind === "observation"
+    ? formatNodeRef({ kind: "observation", id: parsed.id })
+    : null;
+}

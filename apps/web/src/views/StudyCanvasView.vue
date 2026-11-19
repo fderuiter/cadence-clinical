@@ -14,7 +14,7 @@
       :role="inAppShell ? 'region' : undefined"
       :aria-label="inAppShell ? 'Study context' : undefined"
     >
-      <nav class="zoom-path" aria-label="Zoom path">
+      <nav id="canvas-zoom-path" class="zoom-path" aria-label="Zoom path">
         <ol>
           <li>
             <router-link id="zoom-studies" :to="{ name: 'study' }">
@@ -45,20 +45,36 @@
               Site {{ zoomSite }}
             </router-link>
           </li>
-          <li v-if="zoomParticipant">
+          <li v-if="zoomParticipantCode">
             <span
               v-if="zoomCurrent === 'participant'"
               id="zoom-participant"
               aria-current="page"
-              >{{ zoomParticipant.subject_id }}</span
+              >{{ zoomParticipantCode }}</span
             >
             <router-link
               v-else
               id="zoom-participant"
-              :to="recordLocationFor(zoomParticipant)"
+              :to="zoomParticipantLocation"
             >
-              {{ zoomParticipant.subject_id }}
+              {{ zoomParticipantCode }}
             </router-link>
+          </li>
+          <li v-if="hasOpenForm">
+            <span
+              v-if="zoomCurrent === 'form'"
+              id="zoom-form"
+              aria-current="page"
+              >{{ zoomFormLabel }}</span
+            >
+            <router-link v-else id="zoom-form" :to="zoomFormLocation">
+              {{ zoomFormLabel }}
+            </router-link>
+          </li>
+          <li v-if="openObservationRef">
+            <span id="zoom-observation" aria-current="page">{{
+              zoomObservationLabel
+            }}</span>
           </li>
         </ol>
       </nav>
@@ -179,11 +195,61 @@
             :reviewer="authStore.userId ?? ''"
           />
 
+          <ObservationView
+            v-else-if="openObservationRef"
+            :key="openObservationRef"
+            embedded
+            :observation-ref="openObservationRef"
+            :return-to="observationReturnLocation"
+            :return-label="observationReturnLabel"
+            @loaded="onObservationLoaded"
+          />
+
+          <template v-else-if="hasOpenForm">
+            <p
+              v-if="isNewForm && recordRef && !recordParticipant"
+              id="record-not-loaded"
+              class="stage-empty"
+            >
+              This participant isn't among those loaded for {{ studyCode }}.
+              <router-link
+                :to="
+                  studyLocation({ stage: 'conduct', section: 'participants' })
+                "
+              >
+                Find it in Participants </router-link
+              >.
+            </p>
+            <CanvasFormWorkspace
+              v-else
+              :study-code="studyCode"
+              :participant="activeFormParticipant"
+              :enrollment-id="activeEnrollmentId"
+              :record-loading="canvas.record.loading"
+              :form-id="openFormId"
+              :form-label="
+                loadedForm && loadedForm.form_id === openFormId
+                  ? formatFormLabel(loadedForm)
+                  : undefined
+              "
+              :can-manage-queries="canManage"
+              :back-location="formBackLocation"
+              :back-label="formBackLabel"
+              :form-location="formLocationById"
+              :observation-location="observationLocationFromForm"
+              @form-loaded="onFormLoaded"
+              @closed="onFormClosed"
+            />
+          </template>
+
           <template v-else-if="recordRef">
             <ParticipantRecord
               v-if="recordParticipant"
               :participant="recordParticipant"
               :can-manage="canManage"
+              :form-location="formLocationById"
+              :new-form-location="newFormLocationFor(recordParticipant)"
+              :observation-location="observationLocationFromRecord"
               @retry="canvas.loadRecord(recordParticipant)"
             />
             <p v-else id="record-not-loaded" class="stage-empty">
@@ -277,8 +343,17 @@
           :protocol-version="inspectedVersion"
           :protocol-version-error="inspectedVersionError"
           :record-location="
-            inspectedParticipant && inspectedParticipant !== recordParticipant
+            inspectedParticipant &&
+            (inspectedParticipant !== recordParticipant ||
+              hasOpenForm ||
+              Boolean(openObservationRef))
               ? recordLocationFor(inspectedParticipant)
+              : null
+          "
+          :data-entry-location="
+            inspectedParticipant &&
+            !(isNewForm && inspectedParticipant === recordParticipant)
+              ? dataEntryLocationFor(inspectedParticipant)
               : null
           "
           :can-manage-participants="canChangeParticipants"
@@ -346,8 +421,13 @@ import {
   watch,
 } from "vue";
 import { useRoute, useRouter, type LocationQueryRaw } from "vue-router";
+import type { EcrfForm } from "../api/ecrfFormsApi";
 import type { SubjectSummary } from "../api/executionApi";
-import { kernelApi, type KernelProtocolVersion } from "../api/kernelApi";
+import {
+  kernelApi,
+  type KernelObservation,
+  type KernelProtocolVersion,
+} from "../api/kernelApi";
 import {
   STAGES,
   findSection,
@@ -355,7 +435,10 @@ import {
   isParticipantState,
 } from "../canvas/lifecycle";
 import {
+  collectionInstanceId,
+  collectionInstanceRef,
   formatNodeRef,
+  observationNodeRef,
   parseNodeRef,
   tryNodeRef,
   type NodeRef,
@@ -365,6 +448,7 @@ import type { PaletteTarget } from "../canvas/palette";
 import { UNAVAILABLE_SCREENS_ISSUE } from "../router/availability.js";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import CanvasFormWorkspace from "../components/canvas/CanvasFormWorkspace.vue";
 import CanvasInspector from "../components/canvas/CanvasInspector.vue";
 import CanvasPalette from "../components/canvas/CanvasPalette.vue";
 import ParticipantRecord from "../components/canvas/ParticipantRecord.vue";
@@ -375,6 +459,7 @@ import StudyPulse from "../components/canvas/StudyPulse.vue";
 import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue";
 import NeedsAttention from "../components/ai/NeedsAttention.vue";
 import ProposalReview from "../components/ai/ProposalReview.vue";
+import ObservationView from "./ObservationView.vue";
 import { useAiAssistance } from "../ai/aiAssistance";
 
 /**
@@ -383,10 +468,11 @@ import { useAiAssistance } from "../ai/aiAssistance";
  * service; what no service serves yet is absent rather than mocked (§6.1).
  *
  * The URL holds the whole state, so every view is addressable (UX-2):
- * `/studies/:studyCode?stage=&section=&status=&site=&node=&participant=&proposal=&ask=`. `node` (the participant or
- * protocol version in the inspector), `participant` (the participant whose data is open) and `proposal` (the proposal
- * under review in the workspace, ADR-2635) are kernel NodeRefs (ADR-2481). `ask` is a question from the palette for
- * the inspector's Assist.
+ * `/studies/:studyCode?stage=&section=&status=&site=&node=&participant=&form=&observation=&proposal=&ask=`. `node` (the
+ * participant or protocol version in the inspector), `participant` (the participant whose data is open), `form` (a
+ * `collection_instance` NodeRef or `new`), `observation` (an `observation` NodeRef) and `proposal` (the proposal under
+ * review in the workspace, ADR-2635) are kernel NodeRefs (ADR-2481). `ask` is a question from the palette for the
+ * inspector's Assist.
  */
 interface StudyQuery {
   stage?: string;
@@ -395,6 +481,8 @@ interface StudyQuery {
   site?: string;
   node?: string;
   participant?: string;
+  form?: string;
+  observation?: string;
   proposal?: string;
   ask?: string;
 }
@@ -468,6 +556,15 @@ const participantRef = (value: unknown): NodeRef | null => {
   return node?.kind === "participant" ? node : null;
 };
 const recordRef = computed(() => participantRef(route.query.participant));
+const formQuery = computed(() => single(route.query.form).trim());
+const isNewForm = computed(() => formQuery.value === "new");
+const openFormId = computed(() => collectionInstanceId(formQuery.value));
+const hasOpenForm = computed(
+  () => isNewForm.value || Boolean(openFormId.value)
+);
+const openObservationRef = computed(
+  () => observationNodeRef(route.query.observation) ?? ""
+);
 const proposalRef = computed(() => {
   const node = parseNodeRef(route.query.proposal);
   return node?.kind === "proposal" ? formatNodeRef(node) : "";
@@ -478,8 +575,43 @@ const recordParticipant = computed<SubjectSummary | null>(() =>
     ? (canvas.knownParticipants[recordRef.value.id] ?? null)
     : null
 );
+
+const loadedForm = ref<EcrfForm | null>(null);
+const loadedObservation = ref<KernelObservation | null>(null);
+const resolvedLineage = ref<{ siteCode: string; subjectCode: string } | null>(
+  null
+);
+let lineageRequest = 0;
+
+const loadedFormParticipant = computed<SubjectSummary | null>(() => {
+  const pid = loadedForm.value?.participant_id;
+  return pid ? (canvas.knownParticipants[pid] ?? null) : null;
+});
+const activeFormParticipant = computed<SubjectSummary | null>(
+  () => recordParticipant.value ?? loadedFormParticipant.value
+);
+const activeParticipantNodeText = computed(() => {
+  if (recordRef.value) return formatNodeRef(recordRef.value);
+  const participant = activeFormParticipant.value;
+  const node = participant ? tryNodeRef("participant", participant.id) : null;
+  return node ? formatNodeRef(node) : "";
+});
+const activeEnrollmentId = computed(() => {
+  if (
+    activeFormParticipant.value &&
+    canvas.record.subjectCode === activeFormParticipant.value.subject_id
+  ) {
+    return canvas.record.enrollmentId;
+  }
+  if (loadedForm.value?.enrollment_id) return loadedForm.value.enrollment_id;
+  return null;
+});
+
 const inspectedParticipant = computed(
-  () => selectedParticipant.value ?? recordParticipant.value
+  () =>
+    selectedParticipant.value ??
+    recordParticipant.value ??
+    loadedFormParticipant.value
 );
 const inspectedNodeText = computed(() => {
   const participant = inspectedParticipant.value;
@@ -494,19 +626,58 @@ const navigatorStages = computed(() =>
 );
 
 const zoomParticipant = computed(
-  () => recordParticipant.value ?? selectedParticipant.value
+  () =>
+    recordParticipant.value ??
+    loadedFormParticipant.value ??
+    selectedParticipant.value
+);
+const zoomParticipantCode = computed(
+  () =>
+    zoomParticipant.value?.subject_id ||
+    resolvedLineage.value?.subjectCode ||
+    ""
 );
 const zoomSite = computed(
-  () => zoomParticipant.value?.site_id || siteFilter.value || ""
+  () =>
+    zoomParticipant.value?.site_id ||
+    resolvedLineage.value?.siteCode ||
+    siteFilter.value ||
+    ""
 );
 const zoomCurrent = computed(() => {
-  if (recordParticipant.value) return "participant";
-  if (selectedParticipant.value) return "participant";
+  if (openObservationRef.value) return "observation";
+  if (hasOpenForm.value) return "form";
+  if (zoomParticipantCode.value) return "participant";
   return zoomSite.value ? "site" : "study";
 });
 
+function formatFormLabel(form: EcrfForm): string {
+  const title = form.collection_title || form.collection_spec_id;
+  return form.planned_activity_id
+    ? `${title} · ${form.planned_activity_id}`
+    : title;
+}
+
+const zoomFormLabel = computed(() => {
+  if (isNewForm.value) return "Forms";
+  if (loadedForm.value && loadedForm.value.form_id === openFormId.value) {
+    return formatFormLabel(loadedForm.value);
+  }
+  return "Case report form";
+});
+
+const zoomObservationLabel = computed(
+  () => loadedObservation.value?.concept || "Observation"
+);
+
 const workspaceLabel = computed(() => {
   if (proposalRef.value) return "Proposal review";
+  if (openObservationRef.value) {
+    return `Observation ${zoomObservationLabel.value}`;
+  }
+  if (hasOpenForm.value) {
+    return zoomFormLabel.value;
+  }
   if (recordRef.value) {
     return `${recordParticipant.value?.subject_id ?? "Participant"} data`;
   }
@@ -549,6 +720,174 @@ function recordLocationFor(participant: SubjectSummary) {
   const node = tryNodeRef("participant", participant.id);
   const text = node ? formatNodeRef(node) : "";
   return studyLocation({ stage: "conduct", participant: text });
+}
+
+function newFormLocationFor(participant: SubjectSummary) {
+  const node = tryNodeRef("participant", participant.id);
+  const text = node ? formatNodeRef(node) : "";
+  return studyLocation({ stage: "conduct", participant: text, form: "new" });
+}
+
+function dataEntryLocationFor(participant: SubjectSummary) {
+  return newFormLocationFor(participant);
+}
+
+function formLocationById(formId: string) {
+  const formRef = collectionInstanceRef(formId);
+  return studyLocation({
+    stage: "conduct",
+    site: !activeParticipantNodeText.value
+      ? zoomSite.value || undefined
+      : undefined,
+    participant: activeParticipantNodeText.value || undefined,
+    form: formRef ?? undefined,
+  });
+}
+
+function observationLocationFromRecord(observationId: string, formId?: string) {
+  const obsRef = observationNodeRef(observationId);
+  const formRef = formId ? collectionInstanceRef(formId) : null;
+  return studyLocation({
+    stage: "conduct",
+    participant: activeParticipantNodeText.value || undefined,
+    form: formRef ?? undefined,
+    observation: obsRef ?? undefined,
+  });
+}
+
+function observationLocationFromForm(observationId: string, formId: string) {
+  const obsRef = observationNodeRef(observationId);
+  const formRef = collectionInstanceRef(formId || openFormId.value || "");
+  return studyLocation({
+    stage: "conduct",
+    site: !activeParticipantNodeText.value
+      ? zoomSite.value || undefined
+      : undefined,
+    participant: activeParticipantNodeText.value || undefined,
+    form: formRef ?? undefined,
+    observation: obsRef ?? undefined,
+  });
+}
+
+const zoomParticipantLocation = computed(() => {
+  if (zoomParticipant.value) return recordLocationFor(zoomParticipant.value);
+  return studyLocation({
+    stage: "conduct",
+    section: "participants",
+    site: zoomSite.value || undefined,
+  });
+});
+
+const zoomFormLocation = computed(() => {
+  if (openFormId.value) return formLocationById(openFormId.value);
+  return studyLocation({
+    stage: "conduct",
+    participant: activeParticipantNodeText.value || undefined,
+    form: "new",
+  });
+});
+
+const formBackLocation = computed(() => {
+  if (activeFormParticipant.value) {
+    return recordLocationFor(activeFormParticipant.value);
+  }
+  return studyLocation({
+    stage: "conduct",
+    section: "participants",
+    site: zoomSite.value || undefined,
+  });
+});
+
+const formBackLabel = computed(() => {
+  if (activeFormParticipant.value) {
+    return `Back to ${activeFormParticipant.value.subject_id}`;
+  }
+  if (zoomSite.value) return `Back to Site ${zoomSite.value} participants`;
+  return `Back to ${studyCode.value} participants`;
+});
+
+const observationReturnLocation = computed(() => {
+  if (openFormId.value) return formLocationById(openFormId.value);
+  if (activeFormParticipant.value) {
+    return recordLocationFor(activeFormParticipant.value);
+  }
+  if (zoomSite.value) {
+    return studyLocation({
+      stage: "conduct",
+      section: "participants",
+      site: zoomSite.value,
+    });
+  }
+  return studyLocation();
+});
+
+const observationReturnLabel = computed(() => {
+  if (openFormId.value) {
+    return loadedForm.value && loadedForm.value.form_id === openFormId.value
+      ? `Back to ${formatFormLabel(loadedForm.value)}`
+      : "Back to form";
+  }
+  if (activeFormParticipant.value) {
+    return `Back to ${activeFormParticipant.value.subject_id}`;
+  }
+  if (zoomSite.value) return `Back to Site ${zoomSite.value} participants`;
+  return `Back to ${studyCode.value} home`;
+});
+
+async function resolveEnrollmentLineage(enrollmentRef: string) {
+  if (!enrollmentRef || typeof kernelApi.getZoomPath !== "function") return;
+  const req = ++lineageRequest;
+  try {
+    const steps = await kernelApi.getZoomPath(enrollmentRef);
+    if (req !== lineageRequest) return;
+    const siteStep = steps.find(
+      (s) => s.level === "study_site" && s.mask === null && s.label
+    );
+    const enrollmentStep = steps.find(
+      (s) => s.level === "enrollment" && s.mask === null && s.label
+    );
+    if (siteStep?.label || enrollmentStep?.label) {
+      resolvedLineage.value = {
+        siteCode: siteStep?.label ?? "",
+        subjectCode: enrollmentStep?.label ?? "",
+      };
+    }
+  } catch {
+    // Keep whatever scope context is already known in the URL.
+  }
+}
+
+function onFormLoaded(form: EcrfForm) {
+  loadedForm.value = form;
+  if (isNewForm.value && form.form_id) {
+    const formRef = collectionInstanceRef(form.form_id);
+    if (formRef) {
+      router.replace(
+        studyLocation({
+          stage: "conduct",
+          site: !activeParticipantNodeText.value
+            ? zoomSite.value || undefined
+            : undefined,
+          participant: activeParticipantNodeText.value || undefined,
+          form: formRef,
+        })
+      );
+    }
+  }
+  if (!zoomParticipant.value && form.enrollment_id) {
+    resolveEnrollmentLineage(`enrollment:${form.enrollment_id}`);
+  }
+}
+
+function onFormClosed() {
+  router.push(formBackLocation.value);
+}
+
+function onObservationLoaded(obs: KernelObservation) {
+  loadedObservation.value = obs;
+  if (!zoomParticipant.value && obs.enrollment_ref) {
+    resolveEnrollmentLineage(obs.enrollment_ref);
+  }
 }
 
 function selectVersion(version: KernelProtocolVersion) {
@@ -620,10 +959,35 @@ function openTypedStudy() {
 watch(
   studyCode,
   (code) => {
+    loadedForm.value = null;
+    loadedObservation.value = null;
+    resolvedLineage.value = null;
+    lineageRequest++;
     canvas.openStudy(code);
   },
   { immediate: true }
 );
+
+watch(openFormId, (id) => {
+  if (!id) {
+    loadedForm.value = null;
+  } else if (loadedForm.value && loadedForm.value.form_id !== id) {
+    loadedForm.value = null;
+  }
+});
+
+watch(openObservationRef, (refText) => {
+  if (!refText) {
+    loadedObservation.value = null;
+  }
+});
+
+watch([hasOpenForm, openObservationRef], ([formOpen, obsRef]) => {
+  if (!formOpen && !obsRef) {
+    resolvedLineage.value = null;
+    lineageRequest++;
+  }
+});
 
 // Open a participant's data once the canvas knows which participant it is.
 watch(
@@ -646,7 +1010,13 @@ watch(
     siteFilter,
   ],
   () => {
-    if (!studyCode.value || recordRef.value) return;
+    if (
+      !studyCode.value ||
+      recordRef.value ||
+      hasOpenForm.value ||
+      openObservationRef.value
+    )
+      return;
     if (!stage.value) {
       if (!canvas.pulse && !canvas.pulseLoading) canvas.loadPulse();
       return;

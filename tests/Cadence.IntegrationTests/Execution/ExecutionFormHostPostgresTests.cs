@@ -70,6 +70,7 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
         opened.Version.Should().Be(1);
 
         var empty = await SendAsync<FormResponse>(crc, HttpMethod.Get, $"/{opened.FormId:D}", null, null, HttpStatusCode.OK, ct);
+        empty.CollectionTitle.Should().Be("Vital signs");
         empty.Items.Select(i => (i.ItemId, i.Required, i.Revision)).Should().Equal((Systolic, true, 0), (Diastolic, true, 0), (Comment, false, 0));
         empty.Complete.Should().BeFalse();
         empty.MissingRequired.Should().Equal(Systolic, Diastolic);
@@ -128,6 +129,63 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
 
         var read = await SendAsync<FormResponse>(crc, HttpMethod.Get, $"/{opened.FormId:D}", null, null, HttpStatusCode.OK, ct);
         read.Items.Should().OnlyContain(i => i.Value == null);
+    }
+
+    /// <summary>
+    /// Listing an enrollment's forms returns opened form summaries in opening order with completeness and recorded counts
+    /// for a caller who may see the enrollment, refuses a missing enrollment_id with 400, and refuses an unauthorized
+    /// caller with 403 without exposing whether forms exist.
+    /// </summary>
+    [Fact(DisplayName = "HostForm_ListForEnrollment_ReturnsAuthorizedSummaries_AndRefusesUnauthorizedCaller")]
+    public async Task HostFormListForEnrollmentReturnsAuthorizedSummariesAndRefusesUnauthorizedCaller()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (code, enrollment, collectedAt) = await SeedAsync(ct);
+        using var crc = Client(code, Crc);
+        using var stranger = Client(code, Stranger);
+
+        var initial = await SendAsync<FormSummaryResponse[]>(crc, HttpMethod.Get, $"?enrollment_id={enrollment.Value:D}", null, null, HttpStatusCode.OK, ct);
+        initial.Should().BeEmpty();
+
+        var opened = await SendAsync<FormStateResponse>(crc, HttpMethod.Post, string.Empty, "Week 12 visit performed", new
+        {
+            enrollment_id = enrollment.Value,
+            collection_spec_id = SpecId,
+            planned_activity_id = VisitId,
+            collected_at = collectedAt,
+        }, HttpStatusCode.Created, ct);
+
+        var afterOpen = await SendAsync<FormSummaryResponse[]>(crc, HttpMethod.Get, $"?enrollment_id={enrollment.Value:D}", null, null, HttpStatusCode.OK, ct);
+        afterOpen.Should().ContainSingle().Which.Should().Match<FormSummaryResponse>(s =>
+            s.FormId == opened.FormId
+            && s.EnrollmentId == enrollment.Value
+            && s.CollectionSpecId == SpecId
+            && s.CollectionTitle == "Vital signs"
+            && s.PlannedActivityId == VisitId
+            && !s.Complete
+            && s.ItemCount == 3
+            && s.RecordedCount == 0
+            && s.Version == 1);
+
+        await SendAsync<FormSavedResponse>(crc, HttpMethod.Put, $"/{opened.FormId:D}/values", SaveReason,
+            Page((Systolic, Quantity(124), 0), (Diastolic, Quantity(78), 0)), HttpStatusCode.OK, ct);
+
+        var afterSave = await SendAsync<FormSummaryResponse[]>(crc, HttpMethod.Get, $"?enrollment_id={enrollment.Value:D}", null, null, HttpStatusCode.OK, ct);
+        afterSave.Should().ContainSingle().Which.Should().Match<FormSummaryResponse>(s =>
+            s.FormId == opened.FormId
+            && s.Complete
+            && s.ItemCount == 3
+            && s.RecordedCount == 2
+            && s.Version == 2);
+
+        using (var missingQuery = await crc.SendAsync(Request(HttpMethod.Get, string.Empty, null, null), ct))
+        {
+            missingQuery.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        using var hidden = await stranger.SendAsync(Request(HttpMethod.Get, $"?enrollment_id={enrollment.Value:D}", null, null), ct);
+        hidden.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     private static object Page(params (string Item, object Value, int ExpectedRevision)[] values) =>

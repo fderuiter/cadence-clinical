@@ -1,5 +1,15 @@
 <template>
   <div id="section-observation" class="dashboard-section active">
+    <component
+      :is="routerLinkTag"
+      v-if="hasRouter && returnTo"
+      id="observation-back"
+      class="back"
+      :to="returnTo"
+    >
+      {{ returnLabel || "Back to study" }}
+    </component>
+
     <div class="card">
       <h2>Observation</h2>
 
@@ -10,6 +20,10 @@
 
       <template v-if="observation">
         <dl class="observation-summary">
+          <dt>Concept</dt>
+          <dd data-testid="observation-concept">
+            {{ observation.concept }}
+          </dd>
           <dt>Current value</dt>
           <dd data-testid="observation-value">
             {{ formatObservationValue(observation.value) }}
@@ -156,15 +170,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
+import type { RouteLocationRaw, Router } from "vue-router";
 import ReasonForChangeModal from "../components/ReasonForChangeModal.vue";
 import { useObservationCorrection } from "../composables/useObservationCorrection";
+import { kernelApi, type KernelObservation } from "../api/kernelApi";
 import {
   correctionUnit,
   formatObservationValue,
   parseCorrection,
   sameObservationValue,
 } from "../api/observationValue";
+import { observationNodeRef } from "../canvas/nodeRef";
 
 /**
  * Corrects one kernel observation (ADR-2620). The value shown is always the kernel's: the screen keeps no local
@@ -172,7 +189,22 @@ import {
  * value's kind (ADR-2623): a quantity is corrected in its unit, a code in its code system version. A Locked or
  * Frozen lock at the value, its participant, its site or its study (ADR-2621) closes it to correction.
  */
-const props = defineProps<{ observationRef: string }>();
+const props = defineProps<{
+  observationRef: string;
+  embedded?: boolean;
+  returnTo?: RouteLocationRaw | null;
+  returnLabel?: string;
+}>();
+
+const emit = defineEmits<{
+  (e: "loaded", observation: KernelObservation): void;
+}>();
+
+const instance = getCurrentInstance();
+const activeRouter = (instance?.appContext.config.globalProperties.$router ??
+  null) as Router | null;
+const routerLinkTag = instance?.appContext.components.RouterLink ?? "a";
+const hasRouter = computed(() => activeRouter !== null);
 
 const {
   observation,
@@ -230,11 +262,63 @@ async function onReason(reason: string) {
   if (outcome.value?.kind === "saved") newValue.value = "";
 }
 
+let redirectRequest = 0;
+
+watch(
+  observation,
+  async (obs) => {
+    if (!obs) return;
+    emit("loaded", obs);
+    if (
+      props.embedded ||
+      !activeRouter ||
+      activeRouter.currentRoute.value.name !== "observation" ||
+      typeof kernelApi.getZoomPath !== "function"
+    ) {
+      return;
+    }
+    const request = ++redirectRequest;
+    try {
+      const steps = await kernelApi.getZoomPath(obs.enrollment_ref);
+      if (request !== redirectRequest) return;
+      const studyStep = steps.find(
+        (s) => s.level === "study" && s.mask === null && s.label
+      );
+      const enrollmentStep = steps.find(
+        (s) => s.level === "enrollment" && s.mask === null
+      );
+      if (!studyStep?.label || !enrollmentStep) return;
+      const siteStep = steps.find(
+        (s) => s.level === "study_site" && s.mask === null && s.label
+      );
+      const canonicalRef = observationNodeRef(obs.ref) ?? props.observationRef;
+      await activeRouter.replace({
+        name: "study",
+        params: { studyCode: studyStep.label },
+        query: {
+          stage: "conduct",
+          ...(siteStep?.label ? { site: siteStep.label } : {}),
+          observation: canonicalRef,
+        },
+      });
+    } catch {
+      // Keep the standalone view if scope-path resolution is unauthorized or unavailable.
+    }
+  },
+  { immediate: true }
+);
+
 onMounted(load);
 watch(() => props.observationRef, load);
 </script>
 
 <style scoped>
+.back {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: var(--accent, #2563eb);
+  font-size: 0.85rem;
+}
 .observation-summary {
   display: grid;
   grid-template-columns: max-content 1fr;

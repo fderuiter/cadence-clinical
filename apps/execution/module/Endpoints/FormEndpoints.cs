@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,14 +15,15 @@ using Cadence.Security.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cadence.Modules.Execution.Endpoints;
 
 /// <summary>
-/// eCRF forms (ADR-2622): open a form for a participant's visit, read it with its values, locks, assertions and
-/// signatures, and save a page of values. Every write is a kernel command sent through
+/// eCRF forms (ADR-2622): open a form for a participant's visit, list an enrollment's opened forms, read a form with its
+/// values, locks, assertions and signatures, and save a page of values. Every write is a kernel command sent through
 /// <see cref="IKernelCommandSender"/>, so the kernel authorizes it, audits it and keeps the values as observations; the
 /// reason comes from the signed identity, the idempotency key from the <c>Idempotency-Key</c> header, and the tenant from
 /// <see cref="KernelTenantFilter"/>.
@@ -40,6 +42,12 @@ internal static class FormEndpoints
             .RequireSignedInCaller("Every read checks the caller may see the form's enrollment; every write is a kernel command authorized against the caller's grants.")
             .AddEndpointFilter<KernelTenantFilter>()
             .WithTags("Execution forms");
+
+        group.MapGet(string.Empty, ListForEnrollmentAsync)
+            .WithName("ExecutionListEnrollmentForms")
+            .WithSummary("Lists the forms opened for an enrollment, oldest first.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
 
         group.MapPost(string.Empty, OpenAsync)
             .WithName("ExecutionOpenForm")
@@ -61,6 +69,32 @@ internal static class FormEndpoints
             .ProducesKernelCommand<RecordCollectedValues>();
 
         return endpoints;
+    }
+
+    internal static async Task<Results<Ok<IReadOnlyList<FormSummaryResponse>>, ProblemHttpResult>> ListForEnrollmentAsync(
+        [FromQuery(Name = "enrollment_id")] Guid? enrollmentId,
+        HttpContext context,
+        ICollectionInstanceRecords forms,
+        IKernelReadAccess access,
+        CancellationToken cancellationToken)
+    {
+        if (enrollmentId is not { } id || id == Guid.Empty)
+        {
+            return BadRequest("Invalid request", "Name the enrollment with enrollment_id.");
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        var enrollment = EnrollmentId.FromGuid(id);
+
+        // An enrollment's forms are seen only by callers who may see the enrollment itself (ADR-2457).
+        if (!await access.CanSeeAsync(tenant, NodeRef.For(enrollment), cancellationToken).ConfigureAwait(false))
+        {
+            return TypedResults.Problem(
+                title: "Not visible", detail: $"You may not see enrollment {id:D}.", statusCode: StatusCodes.Status403Forbidden);
+        }
+
+        var summaries = await forms.ListForEnrollmentAsync(tenant, enrollment, cancellationToken).ConfigureAwait(false);
+        return TypedResults.Ok<IReadOnlyList<FormSummaryResponse>>([.. summaries.Select(FormSummaryResponse.From)]);
     }
 
     internal static async Task<Results<Created<FormStateResponse>, ProblemHttpResult>> OpenAsync(

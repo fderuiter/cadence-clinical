@@ -9289,6 +9289,58 @@
       }
     },
     "/api/v1/execution/forms": {
+      "get": {
+        "tags": [
+          "Execution forms"
+        ],
+        "summary": "Lists the forms opened for an enrollment, oldest first.",
+        "operationId": "ExecutionListEnrollmentForms",
+        "parameters": [
+          {
+            "name": "enrollment_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kernel_FormSummaryResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "Execution forms"
@@ -22571,6 +22623,12 @@
               "null",
               "string"
             ]
+          },
+          "collection_title": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -22755,6 +22813,105 @@
               "string"
             ],
             "format": "int64"
+          }
+        }
+      },
+      "Kernel_FormSummaryResponse": {
+        "required": [
+          "form_id",
+          "enrollment_id",
+          "participant_id",
+          "study_id",
+          "study_site_id",
+          "protocol_version_id",
+          "collection_spec_id",
+          "planned_activity_id",
+          "collected_at",
+          "opened_by",
+          "opened_at",
+          "version",
+          "complete",
+          "item_count",
+          "recorded_count"
+        ],
+        "type": "object",
+        "properties": {
+          "form_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "enrollment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "participant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "study_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "study_site_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "protocol_version_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "collection_spec_id": {
+            "type": "string"
+          },
+          "planned_activity_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "collected_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "opened_by": {
+            "type": "string"
+          },
+          "opened_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "item_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "recorded_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "collection_title": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

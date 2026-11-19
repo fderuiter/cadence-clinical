@@ -36,48 +36,46 @@
     </p>
 
     <template v-else>
+      <ParticipantFormsPanel
+        :subject-code="participant.subject_id"
+        :enrollment-id="record.enrollmentId"
+        :form-location="formLocation"
+        :new-form-location="newFormLocation"
+      />
+
       <QueriesPanel
         :subject-code="participant.subject_id"
         :enrollment-id="record.enrollmentId"
         :can-manage="canManage"
+        :form-location="formLocation"
+        :observation-location="observationLocation"
       />
-
-      <section aria-labelledby="record-forms-title">
-        <h3 id="record-forms-title">Forms</h3>
-        <p id="record-forms-empty" class="status-line">
-          Observations and forms are kept as kernel form instances. Open
-          {{ participant.subject_id }}'s case report form on the
-          <router-link
-            id="record-open-ecrf"
-            :to="{
-              path: '/ecrf',
-              query: {
-                studyId: canvas.studyCode,
-                subjectId: participant.subject_id,
-              },
-            }"
-            >eCRF screen</router-link
-          >.
-        </p>
-      </section>
     </template>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
+import type { RouteLocationRaw } from "vue-router";
 import type { SubjectSummary } from "../../api/executionApi";
 import { participantStateLabel } from "../../canvas/lifecycle";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import ParticipantFormsPanel from "./ParticipantFormsPanel.vue";
 import QueriesPanel from "./QueriesPanel.vue";
 
 /**
- * One participant's data: the eCRF queries on the participant's kernel enrollment (#5461), and where the participant's
- * forms open. Values and forms are kernel form instances (ADR-2622), entered and read on the eCRF screen.
+ * One participant's data inside Clinical Canvas: opened case report forms and queries on the participant's kernel
+ * enrollment (ADR-2622, #5461), linking directly to forms and observations in the zoom path.
  */
 defineProps<{
   participant: SubjectSummary;
   canManage: boolean;
+  formLocation: (formId: string) => RouteLocationRaw;
+  newFormLocation: RouteLocationRaw;
+  observationLocation: (
+    observationId: string,
+    formId: string
+  ) => RouteLocationRaw;
 }>();
 const emit = defineEmits<{
   retry: [];

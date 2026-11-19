@@ -236,15 +236,10 @@
           Open participant's data
         </router-link>
         <router-link
+          v-if="dataEntryLocation"
           id="inspector-open-data-entry"
           class="inspector-link"
-          :to="{
-            path: '/ecrf',
-            query: {
-              studyId: participant.study_id,
-              subjectId: participant.subject_id,
-            },
-          }"
+          :to="dataEntryLocation"
         >
           Open in data entry
         </router-link>
@@ -319,6 +314,8 @@ const props = defineProps<{
   protocolVersionError?: string;
   /** Where the participant's record opens; absent when it is already open. */
   recordLocation?: RouteLocationRaw | null;
+  /** Where the participant's forms workspace opens inside Clinical Canvas; absent when already open. */
+  dataEntryLocation?: RouteLocationRaw | null;
   /** Whether to offer changing the participant's state (Execution enforces who may, #4943). */
   canManageParticipants?: boolean;
   /** A question from the palette's Ask entry: opens Assist with it (ADR-2635). */
