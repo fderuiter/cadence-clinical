@@ -64,8 +64,9 @@ it is given a path. Observations and attestations have no path yet.
   visibility for `AddKernelGrantVisibility()`.
 - Visibility is decided now, in both times. A lineage read as of a past time still masks by today's grants, which is
   what the reader may see today.
-- Each distinct object is resolved to its path with its own query, so a read that returns many objects pays one
-  query per object. A bulk path query can replace this without changing the contract.
+- Distinct unversioned objects and held/requester grant scopes are resolved together in one batched `PathsOfAsync`
+  call (1 set-based query per present kind) over a single connection lease, with uncovered participants and sites
+  batched in one `StudySitePathsAsync` call.
 - Blinded content (`Blinded`) and identity-layer content (`IdentityVault`) are not masked yet. The kernel holds no
   arm assignment or identity content today; those conditions arrive with the RTSM assertions and #4782.
 
@@ -73,10 +74,10 @@ it is given a path. Observations and attestations have no path yet.
 
 - Code:
   - `Cadence.Kernel.Application/Authorization/GrantNodeVisibility.cs` holds the rule and `AddKernelGrantVisibility`.
-  - `Cadence.Kernel.Application/Authorization/AuthorityEvaluator.cs` holds `IAuthorityStore.StudySitePathsAsync`
-    and the shared `GrantChain`.
-  - `Cadence.Kernel.Persistence/Authorization/KernelAuthorityStore.cs` implements the study-site paths of
-    participants and sites.
+  - `Cadence.Kernel.Application/Authorization/AuthorityEvaluator.cs` holds `IAuthorityStore` (`PathsOfAsync`,
+    `StudySitePathsAsync`, `FindGrantsAsync`) and the shared `GrantChain`.
+  - `Cadence.Kernel.Persistence/Authorization/KernelAuthorityStore.cs` implements batched per-kind scope paths,
+    parent grant lookups, and study-site paths of participants and sites over shared connection leases.
 - Tests:
   - `tests/Cadence.UnitTests/Kernel/GrantNodeVisibilityTests.cs` covers site, country, study, organization and tenant
     grants, the objects above a scope, grants not yet in effect or revoked, and a delegation under a revoked grant.
