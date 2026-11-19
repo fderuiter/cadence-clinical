@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-19
 - **Deciders:** @fderuiter
+- **Requirements:** PRD-SYS-053
 - **Issues:** #5310, #5699
 - **Partially supersedes:** [ADR-2602](2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md), for source repository topology and cross-repository extraction planning
 
