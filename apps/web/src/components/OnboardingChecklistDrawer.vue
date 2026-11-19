@@ -170,7 +170,7 @@
 <script setup>
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
-import { useFocusTrap } from "../composables/useFocusTrap";
+import { useFocusTrap } from "ui";
 import {
   resolveAuthorizedTaskRoute,
   useOnboardingStore,

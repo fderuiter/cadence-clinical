@@ -259,7 +259,7 @@
 
 <script setup>
 import { ref, watch } from "vue";
-import { useFocusTrap } from "@/composables/useFocusTrap";
+import { useFocusTrap } from "ui";
 
 const props = defineProps({
   show: {

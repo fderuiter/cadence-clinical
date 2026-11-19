@@ -344,7 +344,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
-import { useFocusTrap } from "../composables/useFocusTrap.js";
+import { useFocusTrap } from "ui";
 import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";

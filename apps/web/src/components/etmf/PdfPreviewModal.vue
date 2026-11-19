@@ -307,7 +307,7 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useAuthStore } from "../../stores/auth";
-import { useFocusTrap } from "@/composables/useFocusTrap";
+import { useFocusTrap } from "ui";
 
 const props = defineProps({
   document: {

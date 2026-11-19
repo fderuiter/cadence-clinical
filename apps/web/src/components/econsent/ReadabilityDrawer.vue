@@ -198,7 +198,7 @@
 
 <script setup>
 import { ref, watch, onMounted } from "vue";
-import { useFocusTrap } from "../../composables/useFocusTrap.js";
+import { useFocusTrap } from "ui";
 import { econsentService } from "../../api/econsent.js";
 
 const props = defineProps({

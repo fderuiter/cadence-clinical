@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { ref, defineComponent, nextTick } from "vue";
-import { useFocusTrap } from "../src/composables/useFocusTrap";
-import { useEscapeClose } from "../src/composables/useEscapeClose";
 import {
+  useFocusTrap,
+  useEscapeClose,
   createClinicalLookupInput,
   createSoaBuilderMatrix,
   createClinicalVisitMatrix,

@@ -1016,8 +1016,8 @@
                 Automated Re-Consent Notification Channels:
               </label>
               <ReconsentChannelPicker
-                style="margin-top: 6px"
                 v-model="newAmendment.notification_channels"
+                style="margin-top: 6px"
                 :channels="amendmentChannels"
               />
             </div>
@@ -1238,8 +1238,7 @@
             <strong>{{ selectedSubjectIds.length }} subject(s)</strong>:
             <span class="subject-tags-inline">{{
               selectedSubjectIds.join(", ")
-            }}</span
-            >.
+            }}</span>.
           </p>
 
           <div class="reconsent-options">
@@ -3351,5 +3350,11 @@ onMounted(() => {
 
 .color-dot.dot-gray {
   background: #94a3b8;
+}
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
 }
 </style>

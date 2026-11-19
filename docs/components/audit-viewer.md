@@ -13,7 +13,7 @@ The `AuditLogViewer` renders an interactive, chronological 21 CFR Part 11 audit 
 ```vue
 <script setup>
 import { ref } from "vue";
-import { AuditLogViewer } from "@cadence/ui";
+import { AuditLogViewer } from "ui";
 
 const auditEntries = ref([
   {

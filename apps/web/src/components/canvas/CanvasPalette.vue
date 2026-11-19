@@ -81,7 +81,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
-import { useFocusTrap } from "../../composables/useFocusTrap";
+import { useFocusTrap } from "ui";
 import { kernelApi, type KernelSearchHit } from "../../api/kernelApi";
 import { STAGES, participantStateLabel } from "../../canvas/lifecycle";
 import type { SubjectSummary } from "../../api/executionApi";

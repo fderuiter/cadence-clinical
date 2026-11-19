@@ -519,7 +519,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 import Hls from "hls.js";
 import { fileshareService } from "../../api/fileshare";
 import { useAuthStore } from "../../stores/auth";
-import { useFocusTrap } from "@/composables/useFocusTrap";
+import { useFocusTrap } from "ui";
 import ReAuthModal from "../shared/ReAuthModal.vue";
 
 const props = defineProps({

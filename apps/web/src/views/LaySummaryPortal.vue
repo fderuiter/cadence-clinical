@@ -369,8 +369,7 @@
                   This certifies that participant
                   <strong>{{ lastReceipt.subject_id }}</strong> has accessed,
                   reviewed, and confirmed comprehension of the clinical trial
-                  summary for study <strong>{{ lastReceipt.study_id }}</strong
-                  >.
+                  summary for study <strong>{{ lastReceipt.study_id }}</strong>.
                 </p>
                 <div class="cert-meta-row">
                   <div>
@@ -1461,5 +1460,11 @@ onMounted(() => {
   color: #065f46;
   border-radius: 6px;
   font-size: 0.85rem;
+}
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
 }
 </style>

@@ -117,8 +117,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { ModalErrorAlert } from "ui";
-import { useFocusTrap } from "@/composables/useFocusTrap";
+import { ModalErrorAlert, useFocusTrap } from "ui";
 
 const props = defineProps({
   isOpen: {

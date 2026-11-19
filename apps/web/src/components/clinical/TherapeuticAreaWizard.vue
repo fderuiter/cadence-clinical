@@ -67,8 +67,12 @@
             <span class="ta-icon">{{ tpl.icon }}</span>
             <span class="badge badge-category">{{ tpl.category }}</span>
           </div>
-          <h5 class="ta-title">{{ tpl.title }}</h5>
-          <p class="ta-desc">{{ tpl.description }}</p>
+          <h5 class="ta-title">
+            {{ tpl.title }}
+          </h5>
+          <p class="ta-desc">
+            {{ tpl.description }}
+          </p>
           <div class="ta-card-meta">
             <span class="meta-tag"
               >Phase: {{ tpl.defaultPhase.replace("_", " ") }}</span
@@ -278,7 +282,9 @@
                 v-for="(epoch, idx) in activeConfig.epochs"
                 :key="epoch.id || idx"
               >
-                <td class="seq-num">{{ epoch.sequence_index }}</td>
+                <td class="seq-num">
+                  {{ epoch.sequence_index }}
+                </td>
                 <td>
                   <input
                     v-model="epoch.name"
@@ -531,12 +537,14 @@ function loadSavedState(): { templateId: string; config: any } | null {
   } catch (e: any) {
     console.warn("Failed to load TA wizard state from localStorage", e);
     isStorageAvailable.value = false;
-    const detail = e?.message || "Storage read access failed or corrupted data.";
+    const detail =
+      e?.message || "Storage read access failed or corrupted data.";
     storageError.value = `Failed to load saved state: ${detail}`;
     toastStore.push({
       tone: "warning",
       title: "Saved State Load Failure",
-      message: "Could not restore saved protocol design from local storage. Default template loaded.",
+      message:
+        "Could not restore saved protocol design from local storage. Default template loaded.",
     });
   }
   return null;
@@ -566,7 +574,8 @@ function saveState(): boolean {
     const storage = window.localStorage;
     if (!storage) {
       isStorageAvailable.value = false;
-      storageError.value = "Local storage is disabled or restricted in this browser session.";
+      storageError.value =
+        "Local storage is disabled or restricted in this browser session.";
       return false;
     }
     storage.setItem(
@@ -584,14 +593,16 @@ function saveState(): boolean {
   } catch (e: any) {
     console.warn("Failed to persist TA wizard state to localStorage", e);
     isStorageAvailable.value = false;
-    const detail = e?.message || "Storage quota exceeded or write permissions restricted.";
+    const detail =
+      e?.message || "Storage quota exceeded or write permissions restricted.";
     const newMsg = `Auto-save paused: ${detail}`;
 
     if (!storageError.value) {
       toastStore.push({
         tone: "warning",
         title: "Auto-Save Failed",
-        message: "Failed to persist protocol design to local storage. Your changes remain preserved in memory.",
+        message:
+          "Failed to persist protocol design to local storage. Your changes remain preserved in memory.",
       });
     }
     storageError.value = newMsg;
@@ -1109,5 +1120,11 @@ function synthesizeProtocol() {
   padding: 8px 16px;
   border-radius: 6px;
   cursor: pointer;
+}
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
 }
 </style>

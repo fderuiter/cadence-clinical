@@ -7,7 +7,7 @@ The `PersonaSwitcher` component enables multi-persona simulation across clinical
 ```vue
 <script setup>
 import { ref } from "vue";
-import { PersonaSwitcher } from "@cadence/ui";
+import { PersonaSwitcher } from "ui";
 
 const currentPersona = ref("super_admin");
 

@@ -4,11 +4,16 @@
 /* Cadence Clinical Platform - Modern Interactive Demo Stylesheet */
 
 :root {
-  --primary: var(--semantic-color-text);
-  --primary-light: var(--semantic-color-text-muted);
-  --accent: var(--semantic-color-primary);
-  --accent-light: var(--semantic-color-primary-light);
-  --accent-bg: var(--semantic-color-primary-light);
+  --primary: var(--semantic-color-primary);
+  --primary-dark: var(--semantic-color-primary-dark);
+  --primary-light: var(--semantic-color-primary-light);
+  --accent: var(--semantic-color-accent);
+  --accent-light: var(--semantic-color-accent-light);
+  --accent-bg: var(--semantic-color-accent-bg);
+  --text-main: var(--semantic-color-text);
+  --text-muted: var(--semantic-color-text-muted);
+  --bg-main: var(--semantic-color-surface-muted);
+  --bg-card: var(--semantic-color-surface);
   --neutral-dark: var(--semantic-color-text-muted);
   --neutral-light: var(--semantic-color-surface-muted);
   --border: var(--semantic-color-border);
@@ -18,6 +23,8 @@
   --warning-bg: var(--semantic-color-warning-bg);
   --error: var(--semantic-color-error);
   --error-bg: var(--semantic-color-error-bg);
+  --danger: var(--semantic-color-error);
+  --danger-bg: var(--semantic-color-error-bg);
   --font: var(--semantic-font-family);
 }
 
@@ -29,8 +36,8 @@
 
 body {
   font-family: var(--font);
-  background-color: #f1f5f9;
-  color: var(--primary);
+  background-color: var(--semantic-color-surface-sunken);
+  color: var(--text-main);
   line-height: 1.5;
   display: flex;
   flex-direction: column;
@@ -465,7 +472,7 @@ body {
   margin-top: auto;
   padding: 10px 12px;
   font-size: 0.78rem;
-  color: #64748b;
+  color: var(--semantic-color-text-muted);
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
@@ -549,7 +556,7 @@ main {
 
 .section-header h2 {
   font-size: 1.5rem;
-  color: var(--primary);
+  color: var(--text-main);
   font-weight: 700;
 }
 
@@ -570,7 +577,7 @@ main {
 .card-title {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
   margin-bottom: 16px;
   display: flex;
   justify-content: space-between;
@@ -613,6 +620,7 @@ main {
   width: 100%;
   border-collapse: collapse;
   margin-top: 8px;
+  font-variant-numeric: tabular-nums;
 }
 
 .clinical-visit-matrix th,
@@ -658,11 +666,15 @@ main {
 
 .status-n-a,
 .status-n-a {
-  color: #64748b;
-  background-color: #f1f5f9;
+  color: var(--semantic-color-text-muted);
+  background-color: var(--semantic-color-surface-sunken);
 }
 
 /* Grouped headers & SoA Matrix specific styles (Enhanced for Phase 19 SoA Builder) */
+.clinical-soa-matrix {
+  font-variant-numeric: tabular-nums;
+}
+
 .clinical-soa-matrix th.grouped-header {
   text-align: center;
   font-size: 0.85rem;
@@ -673,15 +685,15 @@ main {
 }
 
 .clinical-soa-matrix th.arm-header {
-  background-color: var(--primary-light);
-  color: white;
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
   font-weight: 800;
   box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.1); /* Subtle visual shadow */
 }
 
 .clinical-soa-matrix th.epoch-header {
   background-color: #e2e8f0; /* Slate 200 */
-  color: var(--primary);
+  color: var(--text-main);
   font-weight: 700;
   border-bottom: 1px solid var(--border);
 }
@@ -829,8 +841,8 @@ main {
 
 .btn-submit-query,
 .btn-respond-query {
-  background-color: var(--accent);
-  color: white;
+  background-color: var(--primary);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .btn-close-query {
@@ -916,14 +928,14 @@ main {
 }
 
 .btn-primary {
-  background-color: var(--accent);
-  color: white;
-  border-color: var(--accent);
+  background-color: var(--primary);
+  color: var(--semantic-color-text-on-primary);
+  border-color: var(--primary);
 }
 
 .can-hover .btn-primary:hover {
-  background-color: var(--accent-light);
-  border-color: var(--accent-light);
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
 }
 
 /* Modals */
@@ -1051,7 +1063,7 @@ main {
   background: none;
   border: none;
   font-size: 1.2rem;
-  color: #94a3b8;
+  color: var(--semantic-color-text-muted);
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 6px;
@@ -1104,7 +1116,7 @@ main {
   font-family: monospace;
   font-size: 0.8rem;
   font-weight: 700;
-  color: #64748b;
+  color: var(--semantic-color-text-muted);
   background-color: var(--neutral-light);
   padding: 2px 8px;
   border-radius: 4px;
@@ -1112,13 +1124,13 @@ main {
 
 .ledger-block-timestamp {
   font-size: 0.8rem;
-  color: #94a3b8;
+  color: var(--semantic-color-text-muted);
 }
 
 .ledger-block-title {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
   margin-bottom: 8px;
 }
 
@@ -1140,7 +1152,7 @@ main {
 
 .ledger-val {
   font-family: monospace;
-  color: var(--primary);
+  color: var(--text-main);
   word-break: break-all;
 }
 
@@ -1301,7 +1313,7 @@ a:focus-visible,
 .can-hover .btn-primary:hover {
   background-color: var(--color-primary-dark, #014d76) !important;
   border-color: var(--color-primary-dark, #014d76) !important;
-  color: #ffffff !important;
+  color: var(--semantic-color-text-on-primary, #ffffff) !important;
 }
 
 /* 4. Skip to Content Link Styles (WCAG 2.4.1 Bypass Blocks) */
@@ -1503,7 +1515,7 @@ a:focus-visible,
 
 .section-drag-handle {
   cursor: grab;
-  color: #94a3b8;
+  color: var(--semantic-color-text-muted);
   font-size: 1.1rem;
   padding: 0 4px;
   touch-action: none;
@@ -1523,8 +1535,8 @@ a:focus-visible,
 
 .section-field-count {
   font-size: 0.72rem;
-  color: #64748b;
-  background-color: #f1f5f9;
+  color: var(--semantic-color-text-muted);
+  background-color: var(--semantic-color-surface-sunken);
   padding: 2px 8px;
   border-radius: 12px;
   font-weight: 600;
@@ -1578,9 +1590,9 @@ a:focus-visible,
   padding: 5px 10px;
   font-size: 0.75rem;
   font-weight: 600;
-  background-color: #f0f9ff;
-  border: 1px solid #bae6fd;
-  color: #0284c7;
+  background-color: var(--semantic-color-primary-light);
+  border: 1px solid var(--semantic-color-info-border);
+  color: var(--semantic-color-primary);
   border-radius: 6px;
   cursor: pointer;
   display: flex;
@@ -1590,8 +1602,8 @@ a:focus-visible,
 }
 
 .btn-add-field:hover {
-  background-color: #e0f2fe;
-  color: #0369a1;
+  background-color: var(--semantic-color-info-light);
+  color: var(--semantic-color-primary-dark);
 }
 
 .btn-section-toggle {
@@ -1610,13 +1622,13 @@ a:focus-visible,
 }
 
 .empty-dropzone-placeholder {
-  border: 2px dashed #cbd5e1;
+  border: 2px dashed var(--semantic-color-border-muted);
   border-radius: 8px;
   padding: 24px;
   text-align: center;
   font-size: 0.85rem;
-  color: #94a3b8;
-  background-color: #ffffff;
+  color: var(--semantic-color-text-muted);
+  background-color: var(--semantic-color-surface);
 }
 
 /* Canvas Field Widget */
@@ -1655,7 +1667,7 @@ a:focus-visible,
 
 .field-drag-handle {
   cursor: grab;
-  color: #94a3b8;
+  color: var(--semantic-color-text-muted);
   font-size: 1.1rem;
   touch-action: none;
   user-select: none;
@@ -1668,7 +1680,7 @@ a:focus-visible,
 }
 
 .field-required-star {
-  color: #ef4444;
+  color: var(--semantic-color-error);
   font-weight: bold;
 }
 
@@ -1676,9 +1688,9 @@ a:focus-visible,
   font-family: monospace;
   font-size: 0.7rem;
   font-weight: 700;
-  color: #0284c7;
-  background-color: #f0f9ff;
-  border: 1px solid #bae6fd;
+  color: var(--semantic-color-primary);
+  background-color: var(--semantic-color-primary-light);
+  border: 1px solid var(--semantic-color-info-border);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -1694,7 +1706,7 @@ a:focus-visible,
   padding: 8px 10px;
   font-size: 0.82rem;
   background-color: #f8fafc;
-  color: #64748b;
+  color: var(--semantic-color-text-muted);
   cursor: pointer;
   box-sizing: border-box;
 }

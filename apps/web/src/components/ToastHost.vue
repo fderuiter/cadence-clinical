@@ -79,7 +79,7 @@ const toastStore = useToastStore();
 }
 .toast-message {
   font-size: 0.85rem;
-  color: var(--primary-light);
+  color: var(--semantic-color-text-muted);
   word-break: break-word;
 }
 .toast-dismiss {
