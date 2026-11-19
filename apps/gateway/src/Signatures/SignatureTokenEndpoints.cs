@@ -114,7 +114,7 @@ public static partial class SignatureTokenEndpoints
         string token = SigTokenIssuer.Issue(
             new SigTokenGrant(subject, username, roles, request.Action!, request.SemanticAction!, NullIfBlank(request.BatchId)),
             timeProvider.GetUtcNow(),
-            GatewayIdentity.EncodeSecret(signing.Value.Secret!));
+            signing.Value.GetSecretBytes());
         logger.LogInformation("E-signature token issued to {Subject} for {SemanticAction} on {Action}.", subject, request.SemanticAction, request.Action);
 
         httpContext.Response.Headers.CacheControl = "no-store";
