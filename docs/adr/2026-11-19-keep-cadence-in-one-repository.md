@@ -5,6 +5,7 @@
 - **Deciders:** @fderuiter
 - **Requirements:** PRD-SYS-053
 - **Issues:** #5310, #5699
+- **Requirements:** PRD-SYS-001
 - **Partially supersedes:** [ADR-2602](2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md), for source repository topology and cross-repository extraction planning
 
 ## 1. Context & Problem Statement

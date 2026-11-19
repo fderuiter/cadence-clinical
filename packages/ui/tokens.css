@@ -157,6 +157,10 @@
   --semantic-drawer-width-md: var(--drawer-width-md);
   --semantic-drawer-width-lg: var(--drawer-width-lg);
   --semantic-drawer-width-xl: var(--drawer-width-xl);
+
+  /* Motion Duration Tokens */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
 }
 
 /* Centralized Component Styles (Zero duplicate component rules maintained separately) */
@@ -286,4 +290,27 @@ textarea[aria-invalid="true"]:focus-visible {
   font-weight: 500;
   font-size: var(--semantic-font-size-base, 15px);
   color: var(--semantic-color-text, #0f172a);
+}
+
+/* Global Reduced Motion Support (WCAG 2.1 AA / Crafted Execution) */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-fast: 0s;
+    --transition-normal: 0s;
+  }
+
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
 }

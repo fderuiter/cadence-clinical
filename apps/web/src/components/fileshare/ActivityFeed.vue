@@ -8,6 +8,7 @@
       role="dialog"
       aria-modal="true"
       aria-label="Document Activity Feed"
+      tabindex="-1"
     >
       <!-- Header -->
       <div class="drawer-header">
@@ -312,7 +313,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
+import { useFocusTrap } from "ui";
 import { useFileshareStore } from "../../stores/fileshare";
 
 const props = defineProps({
@@ -329,6 +331,7 @@ const props = defineProps({
 const emit = defineEmits(["close"]);
 
 const fileshareStore = useFileshareStore();
+const drawerRef = ref(null);
 
 const loading = ref(false);
 const loadingMore = ref(false);
@@ -372,21 +375,15 @@ const hasMore = computed(() => {
   return entries.value.length < total.value;
 });
 
-const handleKeyDown = (e) => {
-  if (e.key === "Escape" && props.isOpen) {
-    emit("close");
-  }
-};
+useFocusTrap(drawerRef, {
+  isOpen: () => props.isOpen,
+  onEscape: () => emit("close"),
+});
 
 onMounted(() => {
-  window.addEventListener("keydown", handleKeyDown);
   if (props.isOpen && props.file?.id) {
     loadFeed(1);
   }
-});
-
-onUnmounted(() => {
-  window.removeEventListener("keydown", handleKeyDown);
 });
 
 watch(

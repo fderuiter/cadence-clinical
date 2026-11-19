@@ -241,7 +241,7 @@ _Avoid_: names or e-mails on kernel tables, reading identities without a reveal 
 
 ### Modular monolith
 
-Cadence is developed in one source repository. Product modules converge on one composition host and use supported kernel contracts. Modules own their workflows and local records, and the kernel owns the canonical clinical state and command transaction. See [ADR-2603](docs/adr/2026-11-19-keep-cadence-in-one-repository.md) and the [project plan](docs/PROJECT_PLAN.md#module-ownership). <!-- deid-ignore: ADR filename date, not PHI -->
+Cadence is developed in one source repository. Product modules converge on one composition host and use supported kernel contracts. Modules own their workflows and local records, and the kernel owns the canonical clinical state and command transaction. See [ADR-2603](docs/adr/2026-11-19-keep-cadence-in-one-repository.md) and the [project plan](docs/PROJECT_PLAN.md#module-ownership). <!-- deid-ignore: ADR filename date -->
 
 ### Clinical Research OS (Engines and Kernel)
 

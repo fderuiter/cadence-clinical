@@ -74,10 +74,22 @@ export const viewRoutes = [
   },
 ];
 
-// The tab bar entries, with the view each one controls.
+// The tab bar entries, with the view each one controls and canonical DOM IDs.
 export const tabs = viewRoutes
   .filter((route) => route.meta.tab)
-  .map((route) => ({ ...route.meta.tab, viewId: route.meta.viewId }));
+  .map((route) => ({
+    ...route.meta.tab,
+    viewId: route.meta.viewId,
+    itemId: `tab-btn-${route.meta.tab.id}`,
+    buttonId: `btn-tab-btn-${route.meta.tab.id}`,
+  }));
+
+export function activeTabForView(viewId) {
+  if (viewId === "view-questionnaire") {
+    return tabs.find((tab) => tab.id === "tasks") || null;
+  }
+  return tabs.find((tab) => tab.viewId === viewId) || null;
+}
 
 export function routeForView(viewId) {
   return viewRoutes.find((route) => route.meta.viewId === viewId);

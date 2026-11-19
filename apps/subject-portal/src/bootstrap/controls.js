@@ -1,6 +1,5 @@
-// Event bindings for the controls the feature modules own, and the tab
-// list's ARIA roles and arrow-key navigation. Called once per initializeApp().
-import { showView } from "../features/navigation.js";
+// Event bindings for the controls the feature modules own. Tab ARIA and
+// keyboard navigation live declaratively in TabBar.vue + router/routes.js.
 import { retryCompliance } from "../features/compliance.js";
 import {
   loadConsentDetails,
@@ -30,21 +29,6 @@ export function bindPortalControls() {
       syncOfflineQueue(true, { autoDisburse: isDemoModeActive() });
     });
   }
-
-  // Attach Global Navigation listeners
-  const btnTasks = document.getElementById("tab-btn-tasks");
-  const btnCompliance = document.getElementById("tab-btn-compliance");
-  const btnInbox = document.getElementById("tab-btn-inbox");
-  const btnConsent = document.getElementById("tab-btn-consent");
-
-  if (btnTasks)
-    btnTasks.addEventListener("click", () => showView("view-tasks"));
-  if (btnCompliance)
-    btnCompliance.addEventListener("click", () => showView("view-compliance"));
-  if (btnInbox)
-    btnInbox.addEventListener("click", () => showView("view-inbox"));
-  if (btnConsent)
-    btnConsent.addEventListener("click", () => showView("view-consent"));
 
   const btnBack = document.getElementById("btn-back-to-tasks");
   if (btnBack && btnBack.dataset.vueBound !== "true") {
@@ -128,88 +112,5 @@ export function bindPortalControls() {
   const btnRetryCompliance = document.getElementById("btn-retry-compliance");
   if (btnRetryCompliance) {
     btnRetryCompliance.addEventListener("click", retryCompliance);
-  }
-}
-
-export function setupTabListAria() {
-  // Setup semantic ARIA roles, states, and arrow key navigation for the tab list
-  const navTabs = document.querySelector(".nav-tabs");
-  if (navTabs) {
-    navTabs.setAttribute("role", "tablist");
-    const tabItems = Array.from(navTabs.querySelectorAll(".nav-item"));
-    tabItems.forEach((item) => {
-      item.setAttribute("role", "presentation");
-      const btn = item.querySelector("button");
-      if (btn) {
-        btn.setAttribute("role", "tab");
-        if (!btn.id) {
-          btn.id = "btn-" + item.id;
-        }
-        let controls = "";
-        if (item.id === "tab-btn-tasks") controls = "view-tasks";
-        else if (item.id === "tab-btn-compliance") controls = "view-compliance";
-        else if (item.id === "tab-btn-inbox") controls = "view-inbox";
-        else if (item.id === "tab-btn-consent") controls = "view-consent";
-        btn.setAttribute("aria-controls", controls);
-
-        const isSelected = item.classList.contains("active");
-        btn.setAttribute("aria-selected", isSelected ? "true" : "false");
-      }
-    });
-
-    document.querySelectorAll(".portal-view").forEach((v) => {
-      v.setAttribute("role", "tabpanel");
-      let btnId = "";
-      if (v.id === "view-tasks") btnId = "btn-tab-btn-tasks";
-      else if (v.id === "view-compliance") btnId = "btn-tab-btn-compliance";
-      else if (v.id === "view-inbox") btnId = "btn-tab-btn-inbox";
-      else if (v.id === "view-consent") btnId = "btn-tab-btn-consent";
-      if (btnId) {
-        v.setAttribute("aria-labelledby", btnId);
-      }
-    });
-
-    // Remove any existing keydown listener to avoid duplicates
-    if (navTabs._keydownListener) {
-      navTabs.removeEventListener("keydown", navTabs._keydownListener);
-    }
-    navTabs._keydownListener = (e) => {
-      const activeElement = document.activeElement;
-      if (
-        !activeElement ||
-        activeElement.tagName !== "BUTTON" ||
-        activeElement.getAttribute("role") !== "tab"
-      ) {
-        return;
-      }
-
-      const buttons = Array.from(
-        navTabs.querySelectorAll("button[role='tab']")
-      );
-      const currentIndex = buttons.indexOf(activeElement);
-      if (currentIndex === -1) return;
-
-      let nextIndex = currentIndex;
-      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
-        nextIndex = (currentIndex + 1) % buttons.length;
-        e.preventDefault();
-      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-        nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
-        e.preventDefault();
-      } else if (e.key === "Home") {
-        nextIndex = 0;
-        e.preventDefault();
-      } else if (e.key === "End") {
-        nextIndex = buttons.length - 1;
-        e.preventDefault();
-      }
-
-      if (nextIndex !== currentIndex) {
-        const nextBtn = buttons[nextIndex];
-        nextBtn.focus();
-        nextBtn.click();
-      }
-    };
-    navTabs.addEventListener("keydown", navTabs._keydownListener);
   }
 }

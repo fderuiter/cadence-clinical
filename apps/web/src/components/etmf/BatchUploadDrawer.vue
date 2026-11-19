@@ -2,12 +2,22 @@
 <template>
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -- backdrop click is a mouse shortcut; the dialog's own close control is the keyboard path -->
   <div v-if="isOpen" class="batch-drawer-overlay" @click.self="handleClose">
-    <div class="batch-drawer">
+    <div
+      ref="drawerRef"
+      class="batch-drawer"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="batch-drawer-title"
+      tabindex="-1"
+    >
       <div class="drawer-header">
         <div style="display: flex; align-items: center; gap: 10px">
           <span style="font-size: 24px">📤</span>
           <div>
-            <h3 style="margin: 0; font-size: 18px; font-weight: 700">
+            <h3
+              id="batch-drawer-title"
+              style="margin: 0; font-size: 18px; font-weight: 700"
+            >
               Batch Ingestion &amp; AI Auto-Classification
             </h3>
             <p
@@ -279,7 +289,14 @@
       class="item-inspection-overlay"
       @click.self="inspectedItem = null"
     >
-      <div class="item-inspection-card">
+      <div
+        ref="inspectionCardRef"
+        class="item-inspection-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="item-inspection-title"
+        tabindex="-1"
+      >
         <div
           style="
             display: flex;
@@ -288,7 +305,7 @@
             margin-bottom: 12px;
           "
         >
-          <h4 style="margin: 0; font-size: 14px">
+          <h4 id="item-inspection-title" style="margin: 0; font-size: 14px">
             AI Classification Preview: {{ inspectedItem.file.name }}
           </h4>
           <button
@@ -354,6 +371,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { useFocusTrap } from "ui";
 import { useEtmfStore } from "../../stores/etmf.js";
 import { useToastStore } from "../../stores/toasts.js";
 
@@ -377,6 +395,8 @@ const emit = defineEmits(["close", "batch-completed"]);
 const etmfStore = useEtmfStore();
 const toastStore = useToastStore();
 
+const drawerRef = ref(null);
+const inspectionCardRef = ref(null);
 const fileInputRef = ref(null);
 const isDragging = ref(false);
 const queue = ref([]);
@@ -596,6 +616,18 @@ function handleClose() {
   }
   emit("close");
 }
+
+useFocusTrap(drawerRef, {
+  isOpen: () => props.isOpen,
+  onEscape: handleClose,
+});
+
+useFocusTrap(inspectionCardRef, {
+  isOpen: () => Boolean(inspectedItem.value),
+  onEscape: () => {
+    inspectedItem.value = null;
+  },
+});
 </script>
 
 <style scoped>

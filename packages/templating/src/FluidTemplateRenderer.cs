@@ -12,7 +12,6 @@ using System.Text.Unicode;
 using System.Threading.Tasks;
 
 using Fluid;
-using Fluid.Accessors;
 using Fluid.Values;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -42,31 +41,11 @@ public class FluidTemplateRenderer : ITemplateRenderer
     /// </summary>
     public static FluidTemplateRenderer Instance => DefaultInstance.Value;
 
-    private readonly Lock _optionsLock = new();
-    private readonly ConcurrentDictionary<Type, byte> _registeredTypes = new();
-    private readonly TemplateOptions? _initialOptions;
-    private volatile TemplateOptions _options;
+    private readonly TemplateOptions _options;
 
     public FluidTemplateRenderer(TemplateOptions? options = null)
     {
-        _initialOptions = options;
-        foreach (var standardType in new[] { typeof(DateTime), typeof(DateTimeOffset), typeof(Guid) })
-        {
-            _registeredTypes.TryAdd(standardType, 0);
-        }
-
-        var initialDiscovered = new List<Type>();
-        foreach (var preRegistered in PreRegisteredTypes)
-        {
-            CollectReachableTypes(preRegistered, initialDiscovered);
-        }
-
-        foreach (var candidate in initialDiscovered)
-        {
-            _registeredTypes.TryAdd(candidate, 0);
-        }
-
-        _options = options ?? BuildOptions();
+        _options = options ?? CreateDefaultOptions();
     }
 
     /// <summary>
@@ -74,7 +53,8 @@ public class FluidTemplateRenderer : ITemplateRenderer
     /// </summary>
     public static void RegisterType<T>()
     {
-        RegisterType(typeof(T));
+        PreRegisteredTypes.Add(typeof(T));
+        RegisterTypeMembers(Instance._options.MemberAccessStrategy, typeof(T));
     }
 
     /// <summary>
@@ -84,10 +64,7 @@ public class FluidTemplateRenderer : ITemplateRenderer
     {
         ArgumentNullException.ThrowIfNull(type);
         PreRegisteredTypes.Add(type);
-        if (DefaultInstance.IsValueCreated)
-        {
-            DefaultInstance.Value.EnsureTypeRegistered(type);
-        }
+        RegisterTypeMembers(Instance._options.MemberAccessStrategy, type);
     }
 
     /// <inheritdoc />
@@ -118,111 +95,40 @@ public class FluidTemplateRenderer : ITemplateRenderer
         return RenderAsync(catalog, key, model).GetAwaiter().GetResult();
     }
 
-    private TemplateOptions BuildOptions()
+    private static TemplateOptions CreateDefaultOptions()
     {
-        var builder = _initialOptions is not null
-            ? _initialOptions.ToBuilder()
-            : new TemplateOptionsBuilder()
-                .AddFilter("format_date", FormatDateFilter)
-                .AddFilter("xml_escape", XmlEscapeFilter)
-                .AddFilter("escape_xml", XmlEscapeFilter);
+        var options = new TemplateOptions();
 
-        return builder
-            .ConfigureMemberAccess(strategy =>
-            {
-                foreach (var type in _registeredTypes.Keys)
-                {
-                    RegisterTypeMembers(strategy, type);
-                }
-            })
-            .Build();
-    }
+        // Register custom Liquid filters
+        options.Filters.AddFilter("format_date", FormatDateFilter);
+        options.Filters.AddFilter("xml_escape", XmlEscapeFilter);
+        options.Filters.AddFilter("escape_xml", XmlEscapeFilter);
 
-    private void EnsureTypeRegistered(Type type)
-    {
-        if (type == null || type.IsPrimitive || type == typeof(string) || type == typeof(decimal)) return;
-        if (_registeredTypes.ContainsKey(type)) return;
+        // Configure member access strategy for standard types
+        RegisterTypeMembers(options.MemberAccessStrategy, typeof(DateTime));
+        RegisterTypeMembers(options.MemberAccessStrategy, typeof(DateTimeOffset));
+        RegisterTypeMembers(options.MemberAccessStrategy, typeof(Guid));
 
-        var discovered = new List<Type>();
-        CollectReachableTypes(type, discovered);
-        if (discovered.Count == 0) return;
-
-        lock (_optionsLock)
+        foreach (var type in PreRegisteredTypes)
         {
-            var pending = discovered.Where(candidate => _registeredTypes.TryAdd(candidate, 0)).ToList();
-            if (pending.Count == 0) return;
-
-            _options = BuildOptions();
-        }
-    }
-
-    private void CollectReachableTypes(Type type, List<Type> discovered)
-    {
-        var visited = new HashSet<Type>();
-        void Visit(Type candidate)
-        {
-            if (candidate.IsPrimitive || candidate == typeof(string) || candidate == typeof(decimal) || !visited.Add(candidate))
-            {
-                return;
-            }
-
-            if (!_registeredTypes.ContainsKey(candidate))
-            {
-                discovered.Add(candidate);
-            }
-
-            var propertyTypes = candidate.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Select(property => Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType);
-            foreach (var propertyType in propertyTypes)
-            {
-                foreach (var nested in new[] { propertyType, ElementType(propertyType) })
-                {
-                    if (nested is not null && IsModelType(nested))
-                    {
-                        Visit(nested);
-                    }
-                }
-            }
+            RegisterTypeMembers(options.MemberAccessStrategy, type);
         }
 
-        Visit(type);
+        return options;
     }
 
     private static void RegisterTypeMembers(MemberAccessStrategy strategy, Type type)
     {
         if (type == null || type.IsPrimitive || type == typeof(string) || type == typeof(decimal)) return;
 
-        foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
-        {
-            if (!prop.CanRead || prop.GetIndexParameters().Length > 0) continue;
+        strategy.MemberNameStrategy = MemberNameStrategies.Default;
+        strategy.Register(type);
 
-            var accessor = new PropertyInfoAccessor(prop);
-            RegisterMemberAliases(strategy, type, prop.Name, accessor);
-        }
+        strategy.MemberNameStrategy = MemberNameStrategies.SnakeCase;
+        strategy.Register(type);
 
-        foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Instance))
-        {
-            var accessor = new FieldInfoAccessor(field);
-            RegisterMemberAliases(strategy, type, field.Name, accessor);
-        }
-    }
-
-    private static void RegisterMemberAliases(MemberAccessStrategy strategy, Type type, string memberName, MemberAccessor accessor)
-    {
-        strategy.Register(type, memberName, accessor);
-
-        string snakeName = ToSnakeCase(memberName);
-        if (!string.Equals(snakeName, memberName, StringComparison.Ordinal))
-        {
-            strategy.Register(type, snakeName, accessor);
-        }
-
-        string camelName = ToCamelCase(memberName);
-        if (!string.Equals(camelName, memberName, StringComparison.Ordinal)
-            && !string.Equals(camelName, snakeName, StringComparison.Ordinal))
-        {
-            strategy.Register(type, camelName, accessor);
-        }
+        strategy.MemberNameStrategy = MemberNameStrategies.CamelCase;
+        strategy.Register(type);
     }
 
     private static (IFluidTemplate Template, string ResourceName) GetOrParseTemplate(TemplateCatalog catalog, string key)
@@ -252,10 +158,7 @@ public class FluidTemplateRenderer : ITemplateRenderer
 
     private TemplateContext CreateContext(object model)
     {
-        EnsureModelTypesRegistered(model);
-
-        var options = _options;
-        var context = new TemplateContext(options, options.ModelNamesComparer);
+        var context = new TemplateContext(_options);
 
         if (model is IDictionary<string, object?> dict)
         {
@@ -277,6 +180,8 @@ public class FluidTemplateRenderer : ITemplateRenderer
         else if (model != null)
         {
             var type = model.GetType();
+            RegisterTypeMembers(_options.MemberAccessStrategy, type);
+
             string typeName = type.Name.ToLowerInvariant();
             context.SetValue(typeName, model);
             context.SetValue("model", model);
@@ -299,79 +204,51 @@ public class FluidTemplateRenderer : ITemplateRenderer
         return context;
     }
 
-    private void EnsureModelTypesRegistered(object? model)
+    private void SetContextValue(TemplateContext context, string name, object? value)
     {
-        if (model is null or string) return;
-
-        if (model is IDictionary<string, object?> dict)
+        if (value != null)
         {
-            foreach (var value in dict.Values)
-            {
-                EnsureModelTypesRegistered(value);
-            }
-            return;
-        }
+            var valueType = value.GetType();
+            RegisterTypeMembers(_options.MemberAccessStrategy, valueType);
+            RegisterPropertyTypes(valueType, [valueType]);
 
-        if (model is IDictionary genericDict)
-        {
-            foreach (DictionaryEntry entry in genericDict)
+            if (value is IEnumerable enumerable && !(value is string) && !(value is IDictionary))
             {
-                EnsureModelTypesRegistered(entry.Value);
-            }
-            return;
-        }
-
-        var type = model.GetType();
-        EnsureTypeRegistered(type);
-
-        if (model is IEnumerable enumerable)
-        {
-            foreach (var item in enumerable.OfType<object>())
-            {
-                EnsureTypeRegistered(item.GetType());
-            }
-            return;
-        }
-
-        foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
-        {
-            if (!prop.CanRead || prop.GetIndexParameters().Length > 0) continue;
-            var val = prop.GetValue(model);
-            if (val is IEnumerable childEnumerable and not string and not IDictionary)
-            {
-                foreach (var item in childEnumerable.OfType<object>())
+                foreach (var item in enumerable)
                 {
-                    EnsureTypeRegistered(item.GetType());
+                    if (item != null)
+                    {
+                        RegisterTypeMembers(_options.MemberAccessStrategy, item.GetType());
+                    }
                 }
             }
-            else if (val is not null)
-            {
-                EnsureTypeRegistered(val.GetType());
-            }
-        }
-    }
-
-    private static void SetContextValue(TemplateContext context, string name, object? value)
-    {
-        if (value is null)
-        {
-            context.SetValue(name, NilValue.Instance);
-        }
-        else
-        {
-            context.SetValue(name, value);
         }
 
+        context.SetValue(name, value);
         string snake = ToSnakeCase(name);
         if (snake != name)
         {
-            if (value is null)
+            context.SetValue(snake, value);
+        }
+    }
+
+    // Registers the model types a value reaches through its public properties (nested records and the element
+    // types of their lists), so a template can read `icsr.patient.patient_id` without each host registering them.
+    private void RegisterPropertyTypes(Type type, HashSet<Type> visited)
+    {
+        var propertyTypes = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(property => Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType);
+        foreach (var propertyType in propertyTypes)
+        {
+            foreach (var candidate in new[] { propertyType, ElementType(propertyType) })
             {
-                context.SetValue(snake, NilValue.Instance);
-            }
-            else
-            {
-                context.SetValue(snake, value);
+                if (candidate is null || !IsModelType(candidate) || !visited.Add(candidate))
+                {
+                    continue;
+                }
+
+                RegisterTypeMembers(_options.MemberAccessStrategy, candidate);
+                RegisterPropertyTypes(candidate, visited);
             }
         }
     }
@@ -388,9 +265,9 @@ public class FluidTemplateRenderer : ITemplateRenderer
 
     private static ValueTask<FluidValue> FormatDateFilter(FluidValue input, FilterArguments arguments, TemplateContext context)
     {
-        if (input.IsNil()) return ValueTask.FromResult(StringValue.Create(string.Empty));
+        if (input.IsNil()) return StringValue.Empty;
 
-        object? value = input.ToObjectValue(context);
+        object? value = input.ToObjectValue();
         DateTime dt;
 
         if (value is DateTime dateTime)
@@ -401,29 +278,29 @@ public class FluidTemplateRenderer : ITemplateRenderer
         {
             dt = dateTimeOffset.LocalDateTime;
         }
-        else if (DateTime.TryParse(input.ToStringValue(context), CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+        else if (DateTime.TryParse(input.ToStringValue(), CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
         {
             dt = parsed;
         }
         else
         {
-            return ValueTask.FromResult(input);
+            return input;
         }
 
         string format = "yyyy-MM-dd";
         if (arguments.Count > 0)
         {
-            format = arguments.At(0).ToStringValue(context);
+            format = arguments.At(0).ToStringValue();
         }
 
-        return ValueTask.FromResult(StringValue.Create(dt.ToString(format, CultureInfo.InvariantCulture)));
+        return new StringValue(dt.ToString(format, CultureInfo.InvariantCulture));
     }
 
     private static ValueTask<FluidValue> XmlEscapeFilter(FluidValue input, FilterArguments arguments, TemplateContext context)
     {
-        if (input.IsNil()) return ValueTask.FromResult(StringValue.Create(string.Empty));
-        string val = input.ToStringValue(context);
-        if (string.IsNullOrEmpty(val)) return ValueTask.FromResult(StringValue.Create(string.Empty));
+        if (input.IsNil()) return StringValue.Empty;
+        string val = input.ToStringValue();
+        if (string.IsNullOrEmpty(val)) return StringValue.Empty;
 
         string escaped = val
             .Replace("&", "&amp;")
@@ -433,17 +310,7 @@ public class FluidTemplateRenderer : ITemplateRenderer
             .Replace("'", "&apos;");
 
         // Already escaped, so the template's encoder must not escape it a second time.
-        return ValueTask.FromResult(StringValue.Create(escaped, false));
-    }
-
-    private static string ToCamelCase(string str)
-    {
-        if (string.IsNullOrEmpty(str) || !char.IsUpper(str[0])) return str;
-        return string.Create(str.Length, str, static (chars, source) =>
-        {
-            source.AsSpan().CopyTo(chars);
-            chars[0] = char.ToLowerInvariant(chars[0]);
-        });
+        return new StringValue(escaped, encode: false);
     }
 
     private static string ToSnakeCase(string str)

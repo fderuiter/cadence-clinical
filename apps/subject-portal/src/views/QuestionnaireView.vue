@@ -45,17 +45,16 @@
     </div>
 
     <!-- Accessible Cancel Confirmation Dialog -->
-    <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
     <div
       v-if="ui.questionnaireCancelConfirmOpen"
       id="questionnaire-cancel-confirm"
+      ref="cancelDialogRef"
       class="modal-overlay"
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="cancel-confirm-title"
       aria-describedby="cancel-confirm-desc"
       tabindex="-1"
-      @keydown="handleCancelDialogKeyDown"
     >
       <div class="modal">
         <div id="cancel-confirm-title" class="modal-header">
@@ -93,7 +92,9 @@
 </template>
 
 <script setup>
-import { trapTabKey } from "../components/focus-trap.js";
+import { ref } from "vue";
+import { useFocusTrap } from "ui";
+
 import {
   confirmCancelQuestionnaire,
   dismissCancelQuestionnaire,
@@ -102,7 +103,14 @@ import {
 } from "../features/questionnaire.js";
 import { useUiStore } from "../stores/ui.js";
 
+const cancelDialogRef = ref(null);
 const ui = useUiStore();
+
+useFocusTrap(cancelDialogRef, {
+  isOpen: () => ui.questionnaireCancelConfirmOpen,
+  onEscape: dismissCancelQuestionnaire,
+  initialFocus: "#btn-cancel-keep-editing",
+});
 
 function submitActiveQuestionnaire() {
   const submitBtn = document.getElementById("btn-submit-questionnaire");
@@ -117,13 +125,5 @@ function handleBackToTasks() {
 
 function handleRequestCancel() {
   requestCancelQuestionnaire();
-}
-
-function handleCancelDialogKeyDown(e) {
-  if (e.key === "Escape") {
-    dismissCancelQuestionnaire();
-    return;
-  }
-  trapTabKey(e, "questionnaire-cancel-confirm");
 }
 </script>

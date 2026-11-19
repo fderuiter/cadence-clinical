@@ -34,11 +34,11 @@
 
     <!-- Persistence & Database Drivers -->
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.13" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.13" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.15" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.13" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.15" />
 
     <!-- Asynchronous Messaging & Transactional Outbox -->
     <PackageVersion Include="MassTransit" Version="8.5.12" />
@@ -49,7 +49,7 @@
     <PackageVersion Include="System.CommandLine" Version="2.0.12" />
 
     <!-- Validation & Security -->
-    <PackageVersion Include="Fluid.Core" Version="3.0.0" />
+    <PackageVersion Include="Fluid.Core" Version="2.40.0" />
     <PackageVersion Include="FluentValidation" Version="12.2.0" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.19.2" />
@@ -67,7 +67,7 @@
     <PackageVersion Include="coverlet.collector" Version="10.1.1" />
     <PackageVersion Include="TngTech.ArchUnitNET.xUnit" Version="0.13.4" />
 
-    <!-- AI model port and providers (ADR-2630) -->
+    <!-- AI model port and providers (ADR-2630; keep Microsoft.Extensions.AI.* aligned on 10.x for net10.0) -->
     <PackageVersion Include="Anthropic" Version="13.10.0" />
     <PackageVersion Include="Microsoft.Extensions.AI" Version="10.11.0" />
     <PackageVersion Include="Anthropic.Aws" Version="1.0.1" />
