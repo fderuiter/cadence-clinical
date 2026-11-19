@@ -48,7 +48,7 @@ public enum CiFileSource
     /// <summary>Files added, copied, modified or renamed against the base ref (<c>--diff-filter=ACMR</c>).</summary>
     ChangedFilesAcmr,
 
-    /// <summary>Every regular file named <c>Dockerfile</c> (<c>find . -type f -name Dockerfile</c>).</summary>
+    /// <summary>Every regular file matching <c>Dockerfile*</c> outside <c>.venv</c> and <c>node_modules</c>.</summary>
     Dockerfiles,
 
     /// <summary>Every <c>*.sh</c> file outside <c>.venv</c> and <c>node_modules</c>.</summary>
@@ -175,6 +175,7 @@ public static class CiPlan
     public static IReadOnlyDictionary<string, string> GitHubOnlyJobs { get; } = new Dictionary<string, string>
     {
         ["actionlint"] = "runs actionlint and workflow action pinning in GitHub Actions",
+        ["container-security"] = "builds container images across a matrix and uploads Trivy SARIF to GitHub Code Scanning",
         ["classify"] = "labels the pull request through the GitHub API",
         ["automerge"] = "approves and merges the pull request through the GitHub API",
         ["release-and-archive"] = "calls the production pipeline on a push to main",
@@ -191,9 +192,13 @@ public static class CiPlan
         CiText = string.Join(' ', args.Prepend("pnpm")),
     };
 
-    /// <summary><c>dotnet run [--no-build] --project packages/cli/... -- args</c>, as the CI steps call the CLI.</summary>
-    private static CiCommand CadenceCli(bool noBuild, params string[] args) =>
-        Dotnet([.. new[] { "run" }, .. noBuild ? new[] { "--no-build" } : [], "--project", Cli, "--", .. args]);
+    /// <summary><c>dotnet run --no-build --project packages/cli/... -- args</c>, as <c>dotnet-quality</c> calls the CLI.</summary>
+    private static CiCommand CadenceCliNoBuild(params string[] args) =>
+        Dotnet(["run", "--no-build", "--project", Cli, "--", .. args]);
+
+    /// <summary><c>node scripts/run-cli.js args</c>, as the Node-equipped CI steps call the CLI.</summary>
+    private static CiCommand NodeCli(params string[] args) =>
+        new("node", ["scripts/run-cli.js", .. args]);
 
     private static List<CiJob> BuildJobs()
     {
@@ -223,7 +228,7 @@ public static class CiPlan
                 Files = CiFileSource.ShellScripts,
                 Commands = [new CiCommand("shellcheck", [])],
             },
-            new("lint-and-static", "Run Markdown validation") { Commands = [CadenceCli(false, "check", "markdown")] },
+            new("lint-and-static", "Run Markdown validation") { Commands = [NodeCli("check", "markdown")] },
         ]);
 
         var dotnetQuality = new CiJob("dotnet-quality", ".NET Quality & Sentinel Checks",
@@ -233,27 +238,27 @@ public static class CiPlan
             {
                 Commands = [Dotnet("format", "Cadence.sln", "--verify-no-changes", "--no-restore")],
             },
-            new("dotnet-quality", "Run Cadence quality sentinels") { Commands = [CadenceCli(true, "check")] },
+            new("dotnet-quality", "Run Cadence quality sentinels") { Commands = [CadenceCliNoBuild("check")] },
             new("dotnet-quality", "Run architecture tests")
             {
                 Commands = [Dotnet("test", "tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj", "--no-build")],
             },
-            new("dotnet-quality", "Run ADR validation") { CoveredBy = QualitySentinels, Commands = [CadenceCli(true, "check", "adrs")] },
-            new("dotnet-quality", "Run CODEOWNERS coverage validation") { Commands = [CadenceCli(true, "validate-codeowners")] },
+            new("dotnet-quality", "Run ADR validation") { CoveredBy = QualitySentinels, Commands = [CadenceCliNoBuild("check", "adrs")] },
+            new("dotnet-quality", "Run CODEOWNERS coverage validation") { Commands = [CadenceCliNoBuild("validate-codeowners")] },
             new("dotnet-quality", "Verify schema documentation freshness")
             {
                 CoveredBy = QualitySentinels,
-                Commands = [CadenceCli(true, "check", "schema-doc")],
+                Commands = [CadenceCliNoBuild("check", "schema-doc")],
             },
-            new("dotnet-quality", "Verify OpenAPI specification drift") { CoveredBy = QualitySentinels, Commands = [CadenceCli(true, "check", "openapi")] },
-            new("dotnet-quality", "Run requirements traceability validation") { Commands = [CadenceCli(true, "check", "rtm")] },
+            new("dotnet-quality", "Verify OpenAPI specification drift") { CoveredBy = QualitySentinels, Commands = [CadenceCliNoBuild("check", "openapi")] },
+            new("dotnet-quality", "Run requirements traceability validation") { Commands = [CadenceCliNoBuild("check", "rtm")] },
             new("dotnet-quality", "Run code duplication verification")
             {
                 CoveredBy = QualitySentinels,
                 Files = CiFileSource.ChangedFiles,
                 FilePattern = @"\.(py|js|vue|css|cs)$",
                 NoFilesMessage = "No relevant files changed.",
-                Commands = [CadenceCli(true, "check", "duplication")],
+                Commands = [CadenceCliNoBuild("check", "duplication")],
             },
         ]);
 
@@ -285,20 +290,17 @@ public static class CiPlan
 
         var security = new CiJob("security", "Security and Vulnerability Audit",
         [
-            new("security", "Run static analysis") { Always = true, CoveredBy = QualitySentinels, Commands = [CadenceCli(false, "check", "audit-security")] },
-            new("security", "Build container image for security scan") { NotRunLocally = $"{PushOnly}, and it needs Docker" },
-            new("security", "Run container vulnerability scan") { NotRunLocally = $"{PushOnly}, and it needs Docker and Trivy" },
-            new("security", "Upload Trivy scan results to GitHub Security tab") { NotRunLocally = $"{PushOnly}, and it needs GitHub SARIF upload" },
-            new("security", "Run dependency audit") { Always = true, CoveredBy = QualitySentinels, Commands = [CadenceCli(false, "check", "vulnerabilities")] },
+            new("security", "Run static analysis") { Always = true, CoveredBy = QualitySentinels, Commands = [NodeCli("check", "audit-security")] },
+            new("security", "Run dependency audit") { Always = true, CoveredBy = QualitySentinels, Commands = [NodeCli("check", "vulnerabilities")] },
             new("security", "Run secret detection")
             {
                 Always = true,
                 CoveredBy = QualitySentinels,
                 Commands =
                 [
-                    CadenceCli(false, "check", "clean-secrets"),
+                    NodeCli("check", "clean-secrets"),
                     new CiCommand("git", ["diff", "--exit-code", ".secrets.baseline"]),
-                    CadenceCli(false, "check", "security"),
+                    NodeCli("check", "security"),
                 ],
             },
             new("security", "Run detect-secrets against the baseline")
@@ -317,7 +319,7 @@ public static class CiPlan
                 Files = CiFileSource.ChangedFiles,
                 FilePattern = @"\.(py|js|ts|tsx|jsx|json|md|log|txt|cs)$",
                 NoFilesMessage = "No changed files to scan.",
-                Commands = [CadenceCli(false, "check", "deid")],
+                Commands = [NodeCli("check", "deid")],
             },
         ]);
 
@@ -341,10 +343,18 @@ public static class CiPlan
                 CleanDirectories = [RtmGeneratorService.DefaultResultsDir],
                 Commands =
                 [
-                    Dotnet("test", "Cadence.sln", "--configuration", "Release", "--no-build",
+                    Dotnet("test", "Cadence.sln", "--configuration", "Release", "-nologo", "--no-build",
                         "--results-directory", RtmGeneratorService.DefaultResultsDir, "--logger", "trx;LogFilePrefix=gxp")
                         with { CiText = "dotnet test Cadence.sln --configuration Release --no-build" },
                 ],
+            },
+            new("dotnet-tests", "Fail the run when a PostgreSQL test did not execute")
+            {
+                // LocalCiRunner already checks DatabaseTestEvidence on the DefaultResultsDir TRX files above; this step
+                // runs the shell gate's own self-test so both gates stay verified locally (#5684, #5689).
+                RequiredTool = "bash",
+                ToolHint = "install bash to run the shell gate self-test; DatabaseTestEvidence already checked the TRX reports",
+                Commands = [new CiCommand("bash", ["scripts/test-check-database-test-results.sh"])],
             },
         ]);
 
@@ -386,7 +396,7 @@ public static class CiPlan
                 },
                 InProcessDisplay = $"generate the RTM and IQ/OQ/PQ report from {RtmGeneratorService.DefaultResultsDir} into {GxpSnapshotPolicy.PreviewDir} " +
                     $"(docs/SDLC with {GxpSnapshotPolicy.SnapshotEnvironmentVariable}=1) and validate tags and results; nothing is staged",
-                InProcessCiText = $"dotnet run --project {Cli} -- gxp sync",
+                InProcessCiText = "node scripts/run-cli.js gxp sync",
             },
             new("compliance", "Check GxP Snapshot Policy")
             {
@@ -394,7 +404,7 @@ public static class CiPlan
                 // with the snapshot instead, ignoring the evidence block, and a match is put back to the staged copy.
                 InProcess = repoRoot => GxpSnapshotGuardService.Check(repoRoot, preCommit: false),
                 InProcessDisplay = $"refuse branch changes to the generated GxP snapshot ({GxpSnapshotPolicy.SnapshotEnvironmentVariable}=1: compare the regenerated documents with it)",
-                InProcessCiText = $"dotnet run --project {Cli} -- check gxp-snapshot",
+                InProcessCiText = "node scripts/run-cli.js check gxp-snapshot",
             },
         ])
         {
@@ -402,7 +412,6 @@ public static class CiPlan
             NeedsStep = new Dictionary<string, string>
             {
                 ["unit-tests"] = "unit-tests/Run frontend unit tests",
-                ["dotnet-tests"] = "dotnet-tests/Execute .NET 10 xUnit Test Suites",
             },
         };
 

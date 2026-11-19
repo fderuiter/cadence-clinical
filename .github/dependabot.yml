@@ -36,6 +36,33 @@ updates:
     labels:
       - "dependencies"
       - "docker"
+    ignore:
+      # .NET major versions are pinned by global.json and Directory.Build.props (ADR-2233).
+      - dependency-name: "mcr.microsoft.com/dotnet/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "dotnet/*"
+        update-types: ["version-update:semver-major"]
+
+  # Statistical computing execution (SCE) base images, pinned by version and digest
+  - package-ecosystem: "docker"
+    directory: "/docker/sce/python"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+
+  - package-ecosystem: "docker"
+    directory: "/docker/sce/r"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
 
   # Local stack images, pinned by digest (docker/docker-compose.yml)
   - package-ecosystem: "docker-compose"

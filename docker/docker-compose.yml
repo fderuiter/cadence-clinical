@@ -62,7 +62,7 @@ services:
       retries: 10
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.8.2-2
+    image: quay.io/keycloak/keycloak:26.8.2-2@sha256:c68e286cacd87b942ac1939a0a1481461109d6acd3a57dc496969a319a76bbf0
     container_name: cadence-keycloak
     restart: unless-stopped
     environment:
@@ -103,7 +103,7 @@ services:
       start_period: 180s
 
   minio:
-    image: minio/minio:RELEASE.2024-05-28T17-19-04Z
+    image: minio/minio:RELEASE.2024-05-28T17-19-04Z@sha256:648817f3b321ec7a2f86c594ba468fa19eff8ee3ac17a07c03acf7a8a35fda33
     container_name: cadence-minio
     profiles:
       - storage
