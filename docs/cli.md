@@ -203,7 +203,7 @@ Where it differs from CI:
 - **Tools are not installed for you.** Hadolint, ShellCheck and detect-secrets run when they are on `PATH` and are
   reported as skipped, with the install command, when they are not.
 - **Not run:** the container build and Trivy scan (push to `main` only, and they need Docker), the Playwright browser
-  install, and the jobs that act on GitHub itself (`classify`, `automerge`, `release-and-archive`, `deploy-docs`).
+  install, and the jobs that act on GitHub itself (`classify`, `automerge`, `release-and-archive`).
 - **Commit first.** CI checks out the commit, so run `cadence ci` on committed work: gates that list files with git (the
   full DEID scan, for example) do not see untracked files, and a changed-files step falls back to the working tree only
   when the branch has no commits over the base.
@@ -282,9 +282,10 @@ Validates a feature branch. It writes and stages nothing under `docs/SDLC`.
 3. Fails if a test failed, a test declares an unknown requirement ID, a document's integrity stamp is broken, or a
    database test in the integration or E2E results did not execute.
 
-| Option      | Description                                                                                                                                                                                       |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--dry-run` | Runs no tests and writes nothing. Validates the requirement tags and integrity stamps, and with `CADENCE_GXP_SNAPSHOT=1` also that the committed RTM's test mapping matches the tags in `tests/`. |
+| Option                | Description                                                                                                                                                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--dry-run`           | Runs no tests and writes nothing. Validates the requirement tags and integrity stamps, and with `CADENCE_GXP_SNAPSHOT=1` also that the committed RTM's test mapping matches the tags in `tests/`. |
+| `--results-dir <dir>` | Reuses existing TRX reports and `*.database.txt` fixture evidence under `<dir>` instead of running `dotnet test`, while enforcing all requirement tag, stamp and skipped-database-test gates.     |
 
 #### `cadence gxp snapshot`
 
