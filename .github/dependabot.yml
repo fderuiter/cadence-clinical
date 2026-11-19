@@ -9,7 +9,6 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
-      - "dotnet"
     ignore:
       # MassTransit 9 is commercial and needs a license key; 8.x stays under Apache 2.0 (#5520, ADR-2524).
       - dependency-name: "MassTransit*"
@@ -35,7 +34,6 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
-      - "docker"
     ignore:
       # .NET major versions are pinned by global.json and Directory.Build.props (ADR-2233).
       - dependency-name: "mcr.microsoft.com/dotnet/*"
@@ -52,7 +50,6 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
-      - "docker"
 
   - package-ecosystem: "docker"
     directory: "/docker/sce/r"
@@ -62,7 +59,6 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
-      - "docker"
 
   # Local stack images, pinned by digest (docker/docker-compose.yml)
   - package-ecosystem: "docker-compose"
@@ -73,7 +69,6 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
-      - "docker"
 
   # GitHub Actions workflow updates
   - package-ecosystem: "github-actions"

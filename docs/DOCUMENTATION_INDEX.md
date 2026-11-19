@@ -26,6 +26,8 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Current | Setup, workflow, local checks, documentation rules |
 | [Project plan](PROJECT_PLAN.md) | Current | Single-repository delivery scope, module ownership, milestones, and engineering practices |
 | [Goals and priorities](GOALS_AND_PRIORITIES.md) | Current | Code-level objectives and measurable outcomes, in priority order |
+| [Issue management](ISSUE_MANAGEMENT.md) | Current | Canonical issue taxonomy, readiness, horizon caps, and maintenance cadence |
+| [Backlog insights archive](BACKLOG_INSIGHTS_ARCHIVE.md) | Historical | Source-to-owner provenance and constraints preserved during the November 2026 reset |
 
 ## Kernel and roadmap
 

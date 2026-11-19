@@ -1,69 +1,66 @@
-name: Feature or task
-description: New behavior or a scoped piece of work. Most work belongs under one of the epics.
-labels: ["type: feature", "needs-triage"]
+name: Scoped feature request
+description: For agreed, vision-aligned work. Discuss raw ideas first.
+labels:
+  - type:feature
+  - status:needs-triage
 body:
   - type: markdown
     attributes:
-      value: |
-        Work is tracked under the epics: kernel #4719, security and GxP defects #4759, hygiene #4760 and web app onto the .NET API #4833. Add this issue as a sub-issue of the right one.
-        A new domain concept follows docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md. It belongs in the kernel if it's needed to explain the provenance, authority, meaning or lifecycle of clinical evidence across products.
-
+      value:
+        Use synthetic data only. Never include credentials, PHI, or real participant data. Report vulnerabilities
+        privately through SECURITY.md.
   - type: dropdown
     id: area
     attributes:
-      label: Area
+      label: Primary area
       options:
-        - "Kernel (packages/kernel)"
-        - "Execution / EDC (apps/execution)"
-        - "Gateway, security and identity"
-        - "Web app and Clinical Canvas (apps/web, packages/ui)"
-        - "Other module (apps/*)"
-        - "Standards, validation and submission (CDISC, rules)"
-        - "CLI, quality gates, CI and developer setup"
-        - "Documentation"
+        - Kernel and trust (packages/kernel, gateway, security)
+        - Capture and Clinical Canvas (execution, apps/web)
+        - Study design and Blueprint (designer, USDM, DDF)
+        - Clinical operations and evidence (consent, safety, quality, interop)
+        - Engineering (CLI, CI, tests, documentation)
     validations:
       required: true
-
   - type: textarea
     id: problem
     attributes:
-      label: Problem
-      description: The user need or gap, in the words of the people who have it (site user, CRA, data manager, sponsor, inspector).
+      label: Problem and vision alignment
+      description: What user problem does this solve? Link the discussion and current project-plan milestone.
     validations:
       required: true
-
-  - type: textarea
-    id: evidence
+  - type: checkboxes
+    id: vision
     attributes:
-      label: Evidence
-      description: Where the gap shows, with `file:line` references at a commit, and the files you expect to change.
+      label: Vision alignment
+      options:
+        - label: This supports the current synthetic-study pilot and the single-repository project plan.
+          required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Proposed outcome
+      description: Describe the user-observable result and expected value.
     validations:
-      required: false
-
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and non-goals
+      description: Describe the smallest useful increment and explicit exclusions.
+    validations:
+      required: true
   - type: textarea
     id: acceptance
     attributes:
       label: Acceptance criteria
-      description: Testable outcomes. Regulated behavior needs a test tagged with its requirement (`[GxPRequirement("PRD-SYS-xxx")]`).
-      value: |
-        - [ ]
-        - [ ] Tests added in `tests/` (xUnit) or next to the frontend package (Vitest).
-        - [ ] Docs affected by the change are updated in the same PR.
+      description: List binary, testable outcomes.
+      value: "- [ ] The scoped user outcome can be demonstrated with synthetic data."
     validations:
       required: true
-
-  - type: input
-    id: refs
-    attributes:
-      label: Spec/ADR refs
-      description: Kernel spec rules (for example K-TIME-4), ADRs and requirement IDs. If this needs a new ADR, create it with `pnpm cadence scaffold adr "<title>"`.
-    validations:
-      required: false
-
   - type: textarea
-    id: depends
+    id: questions
     attributes:
-      label: Depends on
-      description: Issues or PRs that must land first, one per line (`- #123`).
+      label: Dependencies and open questions
+      description: Link prerequisites and identify decisions still needed.
     validations:
       required: false
