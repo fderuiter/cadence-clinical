@@ -32,14 +32,23 @@ import {
 import { acknowledgeNotification, renderInbox } from "./features/inbox.js";
 import { showView } from "./features/navigation.js";
 import {
+  MAX_PIN_UNLOCK_ATTEMPTS,
+  PENDING_OIDC_PIN_RESET_KEY,
   cancelPINReset,
   checkPINWrapper,
   confirmPINReset,
   handlePINSetupSubmit,
   handlePINUnlockSubmit,
+  reauthenticateForPINReset,
   requestPINReset,
 } from "./features/pin.js";
 import {
+  confirmCancelQuestionnaire,
+  dismissCancelQuestionnaire,
+  leaveQuestionnaire,
+  requestCancelQuestionnaire,
+  saveActiveDraftProgress,
+  saveAndLeaveQuestionnaire,
   startQuestionnaire,
   validateActiveQuestionnaire,
 } from "./features/questionnaire.js";
@@ -49,6 +58,16 @@ import {
   openReconsentModal,
   submitReconsentSignature,
 } from "./features/reconsent.js";
+import {
+  COORDINATOR_QUARANTINE_STEPS,
+  DEFAULT_SITE_CONTACT,
+  SITE_CONTACT_STORAGE_KEY,
+  formatAnswersSummary,
+  getSiteSupportContact,
+  hydrateSiteSupportContact,
+  humanizeValidationError,
+  maskParticipantIdentifier,
+} from "./features/site-support.js";
 import {
   closeSignatureModal,
   openSignatureModal,
@@ -63,11 +82,15 @@ import {
   renderSyncQueueList,
   resetSyncRetryInfo,
 } from "./features/sync-status.js";
-import { renderTasks } from "./features/tasks.js";
+import { hydrateDraftPresence, renderTasks } from "./features/tasks.js";
 import { extractReceiptOcr, submitExpenseClaim } from "./features/wallet.js";
 import { isScreenAvailable } from "./router/availability.js";
 import { state } from "./stores/state.js";
-import { clearAllSubmissions } from "./sync-queue.js";
+import {
+  clearAllSubmissions,
+  flagLockedEntriesForPinReset,
+  getDraftAssignmentIds,
+} from "./sync-queue.js";
 import { isDemoBuild, isDemoModeActive } from "./utils/demoMode.js";
 import { markFieldInvalid } from "./widgets/field-errors.js";
 
@@ -81,6 +104,12 @@ export {
   showView,
   startQuestionnaire,
   validateActiveQuestionnaire,
+  saveActiveDraftProgress,
+  saveAndLeaveQuestionnaire,
+  leaveQuestionnaire,
+  requestCancelQuestionnaire,
+  dismissCancelQuestionnaire,
+  confirmCancelQuestionnaire,
   verifyAndSubmitSignature,
   acknowledgeNotification,
   initializeApp,
@@ -88,6 +117,9 @@ export {
   renderSyncQueueList,
   syncOfflineQueue,
   clearAllSubmissions,
+  flagLockedEntriesForPinReset,
+  getDraftAssignmentIds,
+  hydrateDraftPresence,
   dispatchApi,
   fetchAssignments,
   fetchAssignedInstruments,
@@ -114,6 +146,9 @@ export {
   requestPINReset,
   cancelPINReset,
   confirmPINReset,
+  reauthenticateForPINReset,
+  MAX_PIN_UNLOCK_ATTEMPTS,
+  PENDING_OIDC_PIN_RESET_KEY,
   openReconsentModal,
   closeReconsentModal,
   checkPendingReconsent,
@@ -127,4 +162,12 @@ export {
   isDemoBuild,
   isDemoModeActive,
   isScreenAvailable,
+  SITE_CONTACT_STORAGE_KEY,
+  DEFAULT_SITE_CONTACT,
+  COORDINATOR_QUARANTINE_STEPS,
+  hydrateSiteSupportContact,
+  getSiteSupportContact,
+  maskParticipantIdentifier,
+  formatAnswersSummary,
+  humanizeValidationError,
 };

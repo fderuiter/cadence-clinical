@@ -20,8 +20,7 @@ public static class DuplicationDetectorService
     // The service hosts share their startup wiring by design until they merge into the kernel host (ADR-2244).
     private static readonly HashSet<string>[] ExemptedPairs =
     [
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/execution/src/Program.cs", "apps/designer/src/Program.cs", "apps/gateway/src/Program.cs" },
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "packages/engine_core/src/Randomization/BoinEngine.cs", "packages/engine_core/src/Randomization/ResponseAdaptiveEngine.cs" }
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/execution/src/Program.cs", "apps/designer/src/Program.cs", "apps/gateway/src/Program.cs" }
     ];
 
     public static int DetectDuplication(string[]? targetFiles = null, string? repoRoot = null)

@@ -10,8 +10,18 @@ Read first:
 2. [ARCHITECTURE.md](ARCHITECTURE.md): target architecture and the running services today.
 3. [CONTEXT.md](CONTEXT.md): domain vocabulary.
 4. [CONTRIBUTING.md](CONTRIBUTING.md): workflow, local checks and pull requests.
+5. [Project plan](docs/PROJECT_PLAN.md) and [goals and priorities](docs/GOALS_AND_PRIORITIES.md): active delivery scope, module ownership, and verification outcomes.
 
 ---
+
+## Issue workflow
+
+Follow [docs/ISSUE_MANAGEMENT.md](docs/ISSUE_MANAGEMENT.md) when filing or working issues.
+Check current code, recent PRs, and the project plan before proposing work or closure.
+Use its canonical taxonomy and horizon caps; Now work must meet its Definition of Ready.
+Prefer an existing owner, native sub-issues, and native dependencies over duplicate tickets.
+Preserve original context and salvage unique source and comment evidence before consolidation.
+Keep raw ideas in Discussions and preserve unmet dependency gates until replacements are verified.
 
 ## Product mission
 
@@ -274,6 +284,9 @@ The CLI is not installed as a `dotnet` tool. Run it as `pnpm cadence <command>` 
 | Architecture tests                                                    | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`                                                                                                                                                                         |
 | Formatting                                                            | `dotnet format Cadence.sln --verify-no-changes`                                                                                                                                                                                                        |
 | Action pinning check                                                  | `python3 scripts/check-action-pinning.py`                                                                                                                                                                                                              |
+| Dockerfile lint (Hadolint)                                            | `find docker -type f -name "Dockerfile*" -exec hadolint --failure-threshold error {} +`                                                                                                                                                                |
+| Container builds (.NET & SCE)                                         | `docker build -t cadence-gateway:latest -f docker/Dockerfile.dotnet --build-arg APP_NAME=gateway .` (also `APP_NAME=kernel-api`, `docker/sce/python`, `docker/sce/r`)                                                                                  |
+| Container vulnerability scan (Trivy)                                  | `trivy image --exit-code 1 --ignore-unfixed --pkg-types os,library --severity CRITICAL,HIGH cadence-gateway:latest`                                                                                                                                    |
 | Provision local `pip-audit` (required for `vulnerabilities` gate)     | `python3 -m venv .venv && .venv/bin/python -m pip install --upgrade pip pip-audit==2.10.1`                                                                                                                                                             |
 | All quality gates (pre-commit; requires restored `Cadence.sln`)       | `dotnet restore Cadence.sln && pnpm cadence check`                                                                                                                                                                                                     |
 | Whole CI workflow locally (before merging; Actions is off until 2027) | `CADENCE_TEST_POSTGRES=<connection string> pnpm cadence ci` (about 20 minutes, [docs/CI.md](docs/CI.md); requires `pip-audit` in `.venv` or on `PATH` and restored `Cadence.sln`)                                                                      |

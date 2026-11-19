@@ -186,7 +186,8 @@ public sealed class LocalCiEnvironment
         {
             CiFileSource.ChangedFiles => ChangedFiles(repoRoot, baseRef, acmrOnly: false),
             CiFileSource.ChangedFilesAcmr => ChangedFiles(repoRoot, baseRef, acmrOnly: true),
-            CiFileSource.Dockerfiles => FindUnderRoot(repoRoot, "Dockerfile", _ => true),
+            CiFileSource.Dockerfiles => FindUnderRoot(repoRoot, "Dockerfile*",
+                path => !path.Contains("/.venv/", StringComparison.Ordinal) && !path.Contains("/node_modules/", StringComparison.Ordinal)),
             CiFileSource.ShellScripts => FindUnderRoot(repoRoot, "*.sh",
                 path => !path.Contains("/.venv/", StringComparison.Ordinal) && !path.Contains("/node_modules/", StringComparison.Ordinal)),
             _ => [],

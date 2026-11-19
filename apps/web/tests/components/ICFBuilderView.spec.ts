@@ -132,8 +132,18 @@ describe("ICFBuilderView.vue and Pinia Store Unit Tests", () => {
     const modal = wrapper.findComponent({ name: "SignatureCaptureModal" });
     expect(modal.exists()).toBe(true);
     expect(modal.props("isOpen")).toBe(true);
-    expect(modal.props("semanticAction")).toBe("econsent.icf.capture_consent");
-    expect(modal.props("actionUrl")).not.toContain("/api/v1/");
+    expect(modal.props("semanticAction")).toBe("econsent.consent.capture");
+    expect(modal.props("actionUrl")).toBe(
+      "/api/v1/econsent/templates/icf-001/versions/1/capture-consent"
+    );
+
+    // Publishing a new version in demo mode updates the bound version index in actionUrl
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    store.publishIcfVersion("Amendment v2.0");
+    await wrapper.vm.$nextTick();
+    expect(modal.props("actionUrl")).toBe(
+      "/api/v1/econsent/templates/icf-001/versions/2/capture-consent"
+    );
 
     // Simulate signature success
     const mockSigManifest = {

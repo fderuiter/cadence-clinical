@@ -32,6 +32,10 @@ export const useSessionStore = defineStore("session", {
         pin: "",
         error: "",
         confirmingReset: false,
+        failedAttempts: 0,
+        maxAttempts: 5,
+        isLockedOut: false,
+        requiresReauth: false,
       },
     };
   },

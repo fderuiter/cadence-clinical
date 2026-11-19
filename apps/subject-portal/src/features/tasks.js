@@ -7,6 +7,7 @@ import {
 import { state } from "../stores/state.js";
 import {
   getAssignmentsFromDB,
+  getDraftAssignmentIds,
   getInstrumentsFromDB,
   saveAssignmentsToDB,
   saveInstrumentsToDB,
@@ -104,6 +105,10 @@ export function renderTasks() {
         "Assigned Instrument";
       const isCompleted = task.status === "COMPLETED" || task.version_index > 1;
       const isPendingSync = task.status === "PENDING_SYNC";
+      const hasDraft =
+        !isCompleted &&
+        !isPendingSync &&
+        Boolean(task.has_draft || state.draftPresence?.[task.id]);
       const isOverdue =
         !isCompleted &&
         !isPendingSync &&
@@ -113,18 +118,28 @@ export function renderTasks() {
         ? "pending"
         : isOverdue
           ? "overdue"
-          : "pending";
+          : hasDraft
+            ? "in-progress"
+            : "pending";
       const statusLabel = isPendingSync
         ? "Pending Sync"
         : isOverdue
-          ? "Overdue"
-          : "Pending";
+          ? hasDraft
+            ? "Overdue · Draft Saved"
+            : "Overdue"
+          : hasDraft
+            ? "Draft Saved"
+            : "Pending";
       const dueText = task.due_at
         ? new Date(task.due_at).toLocaleString()
         : "—";
+      const ctaLabel = hasDraft ? "Resume Survey" : "Start Survey";
+      const ctaClasses = hasDraft
+        ? "btn btn-primary btn-start-task btn-resume-task"
+        : "btn btn-primary btn-start-task";
       const actionHtml = isPendingSync
         ? `<span class="task-queued-note" style="font-size: 13px; color: var(--text-muted);">Awaiting server confirmation</span>`
-        : `<button type="button" class="btn btn-primary btn-start-task" data-id="${task.id}">Start Survey</button>`;
+        : `<button type="button" class="${ctaClasses}" data-id="${task.id}">${ctaLabel}</button>`;
 
       return `
         <div class="task-item" id="task-card-${task.id}">
@@ -148,6 +163,23 @@ export function renderTasks() {
       startQuestionnaire(taskId);
     });
   });
+}
+
+// Hydrates saved draft markers from IndexedDB so tasks show "Resume Survey" across reloads.
+export async function hydrateDraftPresence(userId) {
+  const ids = await getDraftAssignmentIds(userId);
+  const nextPresence = {};
+  for (const id of ids) {
+    nextPresence[id] = true;
+  }
+  for (const assign of state.assignments || []) {
+    if (assign?.has_draft) {
+      nextPresence[assign.id] = true;
+    } else if (nextPresence[assign?.id]) {
+      assign.has_draft = true;
+    }
+  }
+  state.draftPresence = nextPresence;
 }
 
 // Loads the participant's assignments, falling back to the IndexedDB cache.

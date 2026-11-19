@@ -1,7 +1,9 @@
 # Contributing to Cadence
 
-This guide covers setup, the development workflow, local checks and pull requests. Coding rules live
-in [AGENTS.md](AGENTS.md) and apply to everyone, human or AI agent.
+This guide covers the maintainer workflow for setup, development, local checks, and pull requests.
+For feedback and feature ideas, see the [README’s contribution guidance](README.md#contributing).
+Coding rules live in [AGENTS.md](AGENTS.md) and apply to everyone, human or AI agent.
+Use the [project plan](docs/PROJECT_PLAN.md) to find the module owner and the [goals and priorities](docs/GOALS_AND_PRIORITIES.md) to find the active work and its verification outcome.
 
 ## Quick reference
 
@@ -39,7 +41,8 @@ points Git at the repository hooks (`git config core.hooksPath .githooks`), crea
 `.env.example`, and runs `cadence doctor`. Use `--dev` (or `-y`) to skip prompts and `--minimal` to
 skip the Playwright browser download.
 
-Already have the SDK? `dotnet restore Cadence.sln && pnpm install` is enough.
+With the [prerequisites installed](docs/LOCAL_DEV_ENVIRONMENT.md#1-prerequisites), restore the workspaces
+with `dotnet restore Cadence.sln && pnpm install --frozen-lockfile`.
 
 NuGet restores from the v3 feed configured in [`NuGet.Config`](NuGet.Config).
 
@@ -48,11 +51,10 @@ To run the services locally, see [README: Running the services](README.md#runnin
 
 ## 2. Workflow
 
-1. Pick or open an issue. The backlog is organised in epics: kernel
-   ([#4719](https://github.com/fderuiter/cadence-clinical/issues/4719)), security and GxP defects
-   ([#4759](https://github.com/fderuiter/cadence-clinical/issues/4759)) and hygiene
-   ([#4760](https://github.com/fderuiter/cadence-clinical/issues/4760)). Kernel work follows the
-   [spec roadmap](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap).
+1. Pick agreed work using the [issue workflow](docs/ISSUE_MANAGEMENT.md). It defines the vision,
+   canonical labels, horizon caps, native relationships, and Definition of Ready. Promote a bounded
+   outcome from an existing owner before creating another ticket. Feedback and uncommitted ideas
+   start in [Discussions](https://github.com/fderuiter/cadence-clinical/discussions).
 2. Branch from `main` (`feature/<issue>-<slug>`, `fix/<issue>-<slug>`, `docs/<slug>`, `chore/<slug>`).
 3. Make the change, with tests and the documentation it affects (see section 5).
 4. Run the local checks (section 3). Commit with a
@@ -88,8 +90,7 @@ CADENCE_TEST_POSTGRES="Host=localhost;Username=postgres;Password=postgres;Databa
 Without a terminal (an AI agent, a script, a pipe, a git hook) the CLI prints plain text without colours, so its
 output can be redirected to a file as it is.
 
-**PostgreSQL integration tests** are skipped unless you provide a database:
-`CADENCE_TEST_POSTGRES=<Npgsql connection string>` or `CADENCE_TEST_DOCKER=1` (Testcontainers).
+For **PostgreSQL integration tests**, see the [database setup and test commands](docs/TESTING.md#tests-that-need-postgresql).
 
 **Warnings are errors.** Fix a warning rather than suppressing it. When a suppression is the right call
 (a generated EF migration, an established acronym, an analyzer false positive), scope it to the member

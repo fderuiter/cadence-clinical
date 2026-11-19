@@ -95,8 +95,6 @@ apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|b5
 apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|bf5ae80329c1baf8
 apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|d91f42cf6f25bcfc
 apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|e23da0986515bad0
-apps/web/src/components/clinical/DisproportionalitySignalReviewer.vue|dates|07a3e1d97240c0ff
-apps/web/src/components/clinical/DisproportionalitySignalReviewer.vue|dates|388e75fb805ded42
 apps/web/src/components/clinical/LabGovernanceConsole.vue|dates|0615762b960a5fa1
 apps/web/src/components/clinical/LabGovernanceConsole.vue|dates|0615762b960a5fa1
 apps/web/src/components/clinical/LabGovernanceConsole.vue|dates|0615762b960a5fa1
@@ -148,10 +146,6 @@ apps/web/src/components/etmf/PdfPreviewModal.vue|email|938a9a4080776dae
 apps/web/src/components/etmf/PdfPreviewModal.vue|ssn_national_id|be2c1c1457cc705e
 apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue|ip_mac_addresses|0fc09638c565f57f
 apps/web/src/components/imaging/OncologyCalipers.vue|zip_geographic|e5edcbfdc3c191cd
-apps/web/src/components/payments/SelfBillingInvoicingConsole.vue|dates|20c04126f8b319c1
-apps/web/src/components/payments/SelfBillingInvoicingConsole.vue|dates|20c04126f8b319c1
-apps/web/src/components/payments/SelfBillingInvoicingConsole.vue|dates|b77491bd614362c2
-apps/web/src/components/payments/SelfBillingInvoicingConsole.vue|dates|b77491bd614362c2
 apps/web/src/components/persona/CrcFormRenderer.vue|zip_geographic|92c673752b9e2cb2
 apps/web/src/components/quality/StatisticalForensicsViewer.vue|telephone_fax|205a70949afe01c4
 apps/web/src/components/quality/StatisticalForensicsViewer.vue|zip_geographic|8d3e810cb0b4ecab
@@ -307,4 +301,3 @@ packages/ui/src/components/FileUploadModal.vue|telephone_fax|12fb350172e8b29d
 packages/ui/src/components/FileUploadModal.vue|telephone_fax|66884420b488d8a8
 packages/ui/src/components/FileUploadModal.vue|telephone_fax|c4026bd5a8c59412
 packages/ui/src/components/FileUploadModal.vue|telephone_fax|f10d8a0b7dd68410
-packages/ui/src/components/MediaPlayer.vue|zip_geographic|4777f58bd433081f

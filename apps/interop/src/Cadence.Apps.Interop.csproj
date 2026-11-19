@@ -5,6 +5,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Cadence.UnitTests" />
+    <InternalsVisibleTo Include="Cadence.IntegrationTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\..\packages\engine_core\src\Cadence.Core.Domain.csproj" />
     <ProjectReference Include="..\..\..\packages\security\src\Cadence.Security.csproj" />
     <ProjectReference Include="..\..\..\packages\telemetry\src\Cadence.Telemetry.csproj" />

@@ -18,7 +18,7 @@ pnpm cadence check duplication
 pnpm cadence gxp sync --dry-run
 ```
 
-Some commands also have a `make` target. The Makefile publishes the CLI to `./bin/cadence` the first time and reuses that binary afterwards. Delete `./bin` to pick up CLI changes.
+Some commands also have a `make` target. Those targets use `pnpm cadence` and share its on-demand CLI build.
 
 | `make` target                            | Runs                                          |
 | ---------------------------------------- | --------------------------------------------- |
@@ -202,8 +202,8 @@ Where it differs from CI:
   committed ones outside their evidence block, and puts the committed copies back when they match.
 - **Tools are not installed for you.** Hadolint, ShellCheck and detect-secrets run when they are on `PATH` and are
   reported as skipped, with the install command, when they are not.
-- **Not run:** the container build and Trivy scan (push to `main` only, and they need Docker), the Playwright browser
-  install, and the jobs that act on GitHub itself (`classify`, `automerge`, `release-and-archive`, `deploy-docs`).
+- **Not run:** the Playwright browser install, and the jobs that act on GitHub or container registries (`actionlint`,
+  `container-security`, `classify`, `automerge`, `release-and-archive`, `deploy-docs`).
 - **Commit first.** CI checks out the commit, so run `cadence ci` on committed work: gates that list files with git (the
   full DEID scan, for example) do not see untracked files, and a changed-files step falls back to the working tree only
   when the branch has no commits over the base.

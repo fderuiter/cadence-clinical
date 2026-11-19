@@ -90,6 +90,7 @@
           </div>
 
           <button
+            v-if="onboardingStore.totalTasksCount > 0"
             id="btn-onboarding-checklist-trigger"
             type="button"
             class="shell-control-btn"
@@ -97,10 +98,7 @@
             @click="onboardingStore.toggleDrawer()"
           >
             <span>Orientation</span>
-            <span
-              v-if="onboardingStore.totalTasksCount > 0"
-              class="setup-progress-pill"
-            >
+            <span class="setup-progress-pill">
               {{ onboardingStore.completedTasksCount }}/{{
                 onboardingStore.totalTasksCount
               }}
@@ -298,7 +296,11 @@ const showOnboardingTour = computed(
   () =>
     Boolean(authStore.isAuthenticated) &&
     route?.name !== "login" &&
-    route?.path !== "/login"
+    route?.path !== "/login" &&
+    route?.name !== "forbidden" &&
+    route?.path !== "/forbidden" &&
+    route?.name !== "unavailable" &&
+    route?.path !== "/unavailable"
 );
 
 function handlePersonaChange(event) {

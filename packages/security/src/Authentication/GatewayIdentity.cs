@@ -56,12 +56,12 @@ public sealed record GatewayIdentity(
     // TenantId is the tenant code the sign-in token names, or null when it names none: there is no fallback tenant
     // (#5038). A kernel host refuses a caller without one.
 
-    internal string RolesHeader => string.Join(',', Roles);
+    internal string RolesHeader => FormatList(Roles);
 
-    internal string SiteIdsHeader => string.Join(',', SiteIds);
+    internal string SiteIdsHeader => FormatList(SiteIds);
 
     // The studies the caller is assigned to, or "*" for every study (ADR-2516). Study scope fails closed without one.
-    internal string StudyIdsHeader => string.Join(',', StudyIds ?? []);
+    internal string StudyIdsHeader => FormatList(StudyIds);
 
     /// <summary>
     /// Produces the full set of signed identity headers for this identity at <paramref name="issuedAt"/>.
@@ -71,39 +71,47 @@ public sealed record GatewayIdentity(
         ArgumentNullException.ThrowIfNull(secret);
 
         string timestamp = issuedAt.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture);
+        string rolesHeader = RolesHeader;
+        string? siteIdsHeader = NullIfBlank(SiteIdsHeader);
+        string? studyIdsHeader = NullIfBlank(StudyIdsHeader);
+        string? sponsorId = NullIfBlank(SponsorId);
+        string? tenantId = NullIfBlank(TenantId);
+        string? changeReason = NullIfBlank(ChangeReason);
+        string? sigToken = NullIfBlank(SigToken);
+
         string signature = HmacSigner.GenerateGatewaySignature(
             userId: UserId,
-            roles: RolesHeader,
+            roles: rolesHeader,
             timestamp: timestamp,
             secret: secret,
-            changeReason: NullIfBlank(ChangeReason),
-            siteId: NullIfBlank(SiteIdsHeader),
-            studyIds: NullIfBlank(StudyIdsHeader),
-            sponsorId: NullIfBlank(SponsorId),
+            changeReason: changeReason,
+            siteId: siteIdsHeader,
+            studyIds: studyIdsHeader,
+            sponsorId: sponsorId,
             unblindedAccess: UnblindedAccess,
-            tenantId: NullIfBlank(TenantId),
-            sigToken: NullIfBlank(SigToken));
+            tenantId: tenantId,
+            sigToken: sigToken);
 
-        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        var headers = new Dictionary<string, string>(capacity: 11, StringComparer.OrdinalIgnoreCase)
         {
             [GatewayHeaders.UserId] = UserId,
-            [GatewayHeaders.Roles] = RolesHeader,
+            [GatewayHeaders.Roles] = rolesHeader,
             [GatewayHeaders.UnblindedAccess] = UnblindedAccess ? "true" : "false",
             [GatewayHeaders.Timestamp] = timestamp,
             [GatewayHeaders.Signature] = signature,
         };
 
-        AddIfPresent(headers, GatewayHeaders.TenantId, TenantId);
-        AddIfPresent(headers, GatewayHeaders.SiteId, SiteIdsHeader);
-        AddIfPresent(headers, GatewayHeaders.StudyIds, StudyIdsHeader);
-        AddIfPresent(headers, GatewayHeaders.SponsorId, SponsorId);
+        AddIfPresent(headers, GatewayHeaders.TenantId, tenantId);
+        AddIfPresent(headers, GatewayHeaders.SiteId, siteIdsHeader);
+        AddIfPresent(headers, GatewayHeaders.StudyIds, studyIdsHeader);
+        AddIfPresent(headers, GatewayHeaders.SponsorId, sponsorId);
         // The signature covers the reason as typed; the header carries it in its ASCII wire form (ADR-2495).
-        if (NullIfBlank(ChangeReason) is { } changeReason)
+        if (changeReason is not null)
         {
             headers[GatewayHeaders.ChangeReason] = ChangeReasonHeader.Encode(changeReason);
         }
 
-        AddIfPresent(headers, GatewayHeaders.SigToken, SigToken);
+        AddIfPresent(headers, GatewayHeaders.SigToken, sigToken);
 
         return headers;
     }
@@ -117,6 +125,13 @@ public sealed record GatewayIdentity(
             : header.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
     internal static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
+
+    private static string FormatList(IReadOnlyList<string>? values) => values switch
+    {
+        null or { Count: 0 } => string.Empty,
+        { Count: 1 } => values[0] ?? string.Empty,
+        _ => string.Join(',', values),
+    };
 
     private static void AddIfPresent(Dictionary<string, string> headers, string name, string? value)
     {

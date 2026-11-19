@@ -1,10 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { nextTick } from "vue";
 import { mount, flushPromises, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import EcrfFormPanel from "../../src/components/ecrf/EcrfFormPanel.vue";
 import { ecrfFormsApi } from "../../src/api/ecrfFormsApi";
 import { ApiError } from "../../src/api/client";
 import { ecrfQueriesApi } from "../../src/api/ecrfQueriesApi";
+import { useAuthStore } from "../../src/stores/auth.js";
+import { scopedKey } from "../../src/utils/userScopedStorage.js";
+
+vi.mock("../../src/auth/keycloak.js", () => ({
+  getKeycloakClient: () => null,
+}));
 
 vi.mock("../../src/api/ecrfQueriesApi", async (importOriginal) => {
   const actual =
@@ -104,10 +111,25 @@ function resetQueries() {
   vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([]);
 }
 
+function signInUser(sub = "crc-1", tenantId: string | undefined = "tenant-1") {
+  const auth = useAuthStore();
+  auth.setAuth({
+    authenticated: true,
+    token: `token-${sub}`,
+    tokenParsed: {
+      sub,
+      ...(tenantId === undefined ? {} : { tenant_id: tenantId }),
+      realm_access: { roles: ["CRC"] },
+    },
+  });
+  return auth;
+}
+
 describe("EcrfFormPanel: a kernel form instance saved a page at a time (ADR-2622)", () => {
   let wrapper: VueWrapper | undefined;
 
   beforeEach(() => {
+    localStorage.clear();
     setActivePinia(createPinia());
     vi.mocked(ecrfFormsApi.getForm).mockReset();
     vi.mocked(ecrfFormsApi.openForm).mockReset();
@@ -118,6 +140,9 @@ describe("EcrfFormPanel: a kernel form instance saved a page at a time (ADR-2622
   afterEach(() => {
     wrapper?.unmount();
     wrapper = undefined;
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    localStorage.clear();
   });
 
   async function mountWith(props: Record<string, unknown> = {}) {
@@ -267,16 +292,48 @@ describe("EcrfFormPanel: a kernel form instance saved a page at a time (ADR-2622
     );
   });
 
-  it("tells the user to reload when someone saved first (409), and reloading discards the unsaved entries", async () => {
-    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
+  it("shows per-item 409 errors when someone saved first, and reloading resets conflicting items while retaining non-stale edits", async () => {
+    vi.mocked(ecrfFormsApi.getForm)
+      .mockResolvedValueOnce(form() as never)
+      .mockResolvedValueOnce(
+        form({
+          version: 3,
+          items: [
+            item({
+              item_id: "SYSBP",
+              concept: "C25298@1",
+              unit: "mm[Hg]",
+              value_kind: "Quantity",
+              required: true,
+              value: { type: "quantity", value: 126, unit: "mm[Hg]" },
+              observation_id: OBS_ID,
+              revision: 4,
+              recorded_by: "crc2",
+              recorded_at: "2027-03-14T09:06:00Z",
+            }),
+            item({
+              item_id: "DIABP",
+              unit: "mm[Hg]",
+              value_kind: "Quantity",
+              required: true,
+              revision: 0,
+            }),
+            item({ item_id: "COMMENT", value_kind: "Text", revision: 0 }),
+          ],
+        }) as never
+      );
     vi.mocked(ecrfFormsApi.saveValues).mockRejectedValue(
       new ApiError("The form changed since you opened it.", 409, null, {
         code: "K.Collection.RevisionStale",
+        errors: {
+          SYSBP: ["Item SYSBP is at revision 4, not 3."],
+        },
       })
     );
     const view = await mountWith({ formId: FORM_ID });
 
     await view.find("#ecrf-item-SYSBP").setValue("130");
+    await view.find("#ecrf-item-DIABP").setValue("82");
     await view.find("#ecrf-save-reason").setValue("Correction");
     await view.find("#ecrf-form-page").trigger("submit");
     await flushPromises();
@@ -285,18 +342,33 @@ describe("EcrfFormPanel: a kernel form instance saved a page at a time (ADR-2622
     expect(outcome.attributes("role")).toBe("alert");
     expect(outcome.text()).toContain("nothing was saved");
     expect(outcome.text()).toContain("Reload the form");
-    // The entry stays on screen until the user reloads.
+    expect(view.find("#ecrf-item-SYSBP-error").text()).toBe(
+      "Item SYSBP is at revision 4, not 3."
+    );
+    expect(view.find("#ecrf-item-SYSBP").attributes("aria-invalid")).toBe(
+      "true"
+    );
+    // Both entries stay on screen until the user reloads.
     expect(
       (view.find("#ecrf-item-SYSBP").element as HTMLInputElement).value
     ).toBe("130");
+    expect(
+      (view.find("#ecrf-item-DIABP").element as HTMLInputElement).value
+    ).toBe("82");
 
     await view.find("#ecrf-form-reload").trigger("click");
     await flushPromises();
 
     expect(ecrfFormsApi.getForm).toHaveBeenCalledTimes(2);
+    // Conflicting SYSBP resets to server's revision 4 value; non-stale DIABP retains its edit.
     expect(
       (view.find("#ecrf-item-SYSBP").element as HTMLInputElement).value
-    ).toBe("120");
+    ).toBe("126");
+    expect(view.find("#ecrf-item-SYSBP-error").text()).toBe("");
+    expect(
+      (view.find("#ecrf-item-DIABP").element as HTMLInputElement).value
+    ).toBe("82");
+    expect(view.find("#ecrf-form-save").text()).toBe("Save page (1)");
     expect(view.find('[data-testid="ecrf-form-outcome"]').exists()).toBe(false);
   });
 
@@ -424,6 +496,7 @@ describe("useEcrfForm outcomes (ADR-2622)", () => {
   let wrapper: VueWrapper | undefined;
 
   beforeEach(() => {
+    localStorage.clear();
     setActivePinia(createPinia());
     vi.mocked(ecrfFormsApi.getForm).mockReset();
     vi.mocked(ecrfFormsApi.openForm).mockReset();
@@ -434,6 +507,9 @@ describe("useEcrfForm outcomes (ADR-2622)", () => {
   afterEach(() => {
     wrapper?.unmount();
     wrapper = undefined;
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    localStorage.clear();
   });
 
   async function edit(text: string) {
@@ -446,18 +522,52 @@ describe("useEcrfForm outcomes (ADR-2622)", () => {
     return wrapper;
   }
 
-  it("reports a locked form (423), saves nothing and reloads it", async () => {
-    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
+  it("reports a locked form (423), reloads it, and preserves unsaved item values in the outcome", async () => {
+    vi.mocked(ecrfFormsApi.getForm)
+      .mockResolvedValueOnce(form() as never)
+      .mockResolvedValueOnce(
+        form({
+          locks: [
+            {
+              lock_id: "l1",
+              kind: "Frozen",
+              scope: `collection_instance:${FORM_ID}`,
+              locked_at: "2027-04-01T00:00:00Z",
+              locked_by: "dm1",
+              reason: "Database lock",
+            },
+          ],
+        }) as never
+      );
     vi.mocked(ecrfFormsApi.saveValues).mockRejectedValue(
       new ApiError("Locked", 423)
     );
 
-    const view = await edit("note");
+    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    await flushPromises();
+    await wrapper.find("#ecrf-item-SYSBP").setValue("128");
+    await wrapper
+      .find('select[aria-label="Why DIABP is missing"]')
+      .setValue("NotDone");
+    await wrapper.find("#ecrf-item-COMMENT").setValue("note");
+    await wrapper.find("#ecrf-save-reason").setValue("Entry");
+    await wrapper.find("#ecrf-form-page").trigger("submit");
+    await flushPromises();
 
-    expect(view.find('[data-testid="ecrf-form-outcome"]').text()).toBe(
-      "This form is locked; nothing was saved."
-    );
+    const outcome = wrapper.find('[data-testid="ecrf-form-outcome"]');
+    expect(outcome.text()).toContain("This form is locked; nothing was saved.");
+    const unsaved = wrapper.find('[data-testid="ecrf-locked-unsaved"]');
+    expect(unsaved.exists()).toBe(true);
+    expect(unsaved.text()).toContain("SYSBP: 128 mm[Hg]");
+    expect(unsaved.text()).toContain("DIABP: Not done");
+    expect(unsaved.text()).toContain("COMMENT: note");
     expect(ecrfFormsApi.getForm).toHaveBeenCalledTimes(2);
+    expect(
+      (wrapper.find("#ecrf-item-SYSBP").element as HTMLInputElement).value
+    ).toBe("120");
+    expect(
+      wrapper.find("#ecrf-item-SYSBP").attributes("disabled")
+    ).toBeDefined();
   });
 
   it("retries a request that never reached the kernel with the same idempotency key", async () => {
@@ -509,6 +619,37 @@ describe("useEcrfForm outcomes (ADR-2622)", () => {
 
     await wrapper.find("#ecrf-form-close").trigger("click");
     expect(wrapper.find("#ecrf-form-id").exists()).toBe(true);
+  });
+
+  it("confirms before closing a dirty form and clears the saved draft when confirmed", async () => {
+    vi.useFakeTimers();
+    signInUser("crc-1", "tenant-1");
+    const draftKey = scopedKey(
+      { tenantId: "tenant-1", userId: "crc-1" },
+      "ecrf_form_draft",
+      FORM_ID
+    )!;
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
+    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    await flushPromises();
+
+    await wrapper.find("#ecrf-item-COMMENT").setValue("unsaved note");
+    await nextTick();
+    vi.advanceTimersByTime(500);
+    expect(localStorage.getItem(draftKey)).not.toBeNull();
+
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    await wrapper.find("#ecrf-form-close").trigger("click");
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-testid="ecrf-form-id"]').exists()).toBe(true);
+    expect(localStorage.getItem(draftKey)).not.toBeNull();
+
+    confirmSpy.mockReturnValue(true);
+    await wrapper.find("#ecrf-form-close").trigger("click");
+    expect(confirmSpy).toHaveBeenCalledTimes(2);
+    expect(wrapper.find("#ecrf-form-id").exists()).toBe(true);
+    expect(localStorage.getItem(draftKey)).toBeNull();
+    expect(wrapper.emitted("dirty-change")?.at(-1)).toEqual([false]);
   });
 
   it("treats an unchanged value or an unchanged missing reason as no edit", async () => {
@@ -796,6 +937,13 @@ describe("EcrfFormPanel: signing a form (#5463)", () => {
       `/api/v1/execution/forms/${FORM_ID}/signatures`
     );
     expect(modal.props("semanticAction")).toBe("execution.form.sign");
+    expect(modal.props("reasons")).toEqual([
+      "Investigator Certification",
+      "INVESTIGATOR_SIGNATURE",
+      "APPROVAL",
+      "CLINICAL_QC",
+      "REVIEW",
+    ]);
     const [formId, request, sigToken, reason, key] = vi.mocked(
       ecrfFormsApi.signForm
     ).mock.calls[0];
@@ -847,7 +995,18 @@ describe("EcrfFormPanel: signing a form (#5463)", () => {
     );
     const view = await mountWith();
 
-    await signThroughDialog(view);
+    const { modal, result } = await signThroughDialog(view);
+    expect(await result).toBeInstanceOf(Error);
+    expect(String(await result)).toContain(
+      "This form changed after you opened it"
+    );
+
+    // Dismissing the modal leaves the reload banner visible on the form panel.
+    modal.vm.$emit("cancel");
+    await nextTick();
+    expect(view.findComponent({ name: "SignatureCaptureModal" }).exists()).toBe(
+      false
+    );
 
     const outcome = view.find('[data-testid="ecrf-sign-outcome"]');
     expect(outcome.attributes("role")).toBe("alert");
@@ -859,7 +1018,7 @@ describe("EcrfFormPanel: signing a form (#5463)", () => {
     expect(view.find('[data-testid="ecrf-sign-outcome"]').exists()).toBe(false);
   });
 
-  it("says the user may not sign (403)", async () => {
+  it("says the user may not sign (403) and rejects signWithToken so the modal does not close on error", async () => {
     vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
     vi.mocked(ecrfFormsApi.signForm).mockRejectedValue(
       new ApiError("Forbidden", 403, "Forbidden", {
@@ -868,12 +1027,56 @@ describe("EcrfFormPanel: signing a form (#5463)", () => {
     );
     const view = await mountWith();
 
-    await signThroughDialog(view);
+    const { result } = await signThroughDialog(view);
 
+    expect(await result).toBeInstanceOf(Error);
+    expect(String(await result)).toContain(
+      "You are not authorised to sign this form"
+    );
     expect(view.find('[data-testid="ecrf-sign-outcome"]').text()).toContain(
       "You are not authorised to sign this form"
     );
     expect(view.find("#ecrf-sign-reload").exists()).toBe(false);
+  });
+
+  it("prefills signer identity from auth store and surfaces 500 errors inline in SignatureCaptureModal", async () => {
+    const auth = useAuthStore();
+    auth.setAuth({
+      authenticated: true,
+      token: "token-pi-1", // pragma: allowlist secret
+      tokenParsed: {
+        sub: "pi-1",
+        preferred_username: "pi.investigator",
+        given_name: "Alex", // deid-ignore
+        family_name: "Investigator", // deid-ignore
+        tenant_id: "tenant-1",
+        realm_access: { roles: ["Site Investigator"] },
+      },
+    });
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
+    vi.mocked(ecrfFormsApi.signForm).mockRejectedValue(
+      new ApiError("Kernel storage unavailable", 500, "Internal Server Error")
+    );
+
+    const view = await mountWith();
+    await view.find("#ecrf-form-sign").trigger("click");
+
+    const modal = view.findComponent({ name: "SignatureCaptureModal" });
+    expect(modal.exists()).toBe(true);
+    expect(modal.props("username")).toBe("pi.investigator");
+    expect(modal.props("signerName")).toBe("Alex Investigator"); // deid-ignore
+    expect(modal.props("reasons")).not.toContain("I agree to participate");
+
+    const onSign = modal.props("onSign") as (
+      token: string,
+      reason: string
+    ) => Promise<unknown>;
+    await expect(
+      onSign("sig-token-500", "Investigator Certification")
+    ).rejects.toThrow("Kernel storage unavailable");
+    expect(view.find('[data-testid="ecrf-sign-outcome"]').text()).toContain(
+      "Kernel storage unavailable"
+    );
   });
 
   it("hands a refused step-up token (401) back to the signature dialog", async () => {
@@ -935,5 +1138,201 @@ describe("EcrfFormPanel: signing a form (#5463)", () => {
     expect(current.find('[data-testid="ecrf-signed-values"]').exists()).toBe(
       false
     );
+  });
+});
+
+describe("EcrfFormPanel: account-scoped browser drafts", () => {
+  let wrapper: VueWrapper | undefined;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    localStorage.clear();
+    setActivePinia(createPinia());
+    vi.mocked(ecrfFormsApi.getForm).mockReset();
+    vi.mocked(ecrfFormsApi.saveValues).mockReset();
+    resetQueries();
+  });
+
+  afterEach(() => {
+    wrapper?.unmount();
+    wrapper = undefined;
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  it("auto-saves dirty entries with revisions after 500ms, restores matching revisions on load, and deletes the draft on save", async () => {
+    signInUser("crc-1", "tenant-1");
+    const draftKey = scopedKey(
+      { tenantId: "tenant-1", userId: "crc-1" },
+      "ecrf_form_draft",
+      FORM_ID
+    )!;
+    expect(draftKey).toBe(
+      `cadence_user:tenant-1:crc-1:ecrf_form_draft:${FORM_ID}`
+    );
+
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
+    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    await flushPromises();
+
+    await wrapper.find("#ecrf-item-SYSBP").setValue("132");
+    await wrapper.find("#ecrf-item-DIABP").setValue("84");
+    await nextTick();
+
+    vi.advanceTimersByTime(400);
+    expect(localStorage.getItem(draftKey)).toBeNull();
+
+    vi.advanceTimersByTime(150);
+    const savedDraft = JSON.parse(localStorage.getItem(draftKey)!);
+    expect(savedDraft).toEqual({
+      form_id: FORM_ID,
+      items: {
+        SYSBP: { text: "132", missing: "", revision: 3 },
+        DIABP: { text: "84", missing: "", revision: 0 },
+      },
+    });
+
+    // Simulate reload / remount: matching revisions restore dirty entries.
+    wrapper.unmount();
+    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    await flushPromises();
+
+    expect(
+      (wrapper.find("#ecrf-item-SYSBP").element as HTMLInputElement).value
+    ).toBe("132");
+    expect(
+      (wrapper.find("#ecrf-item-DIABP").element as HTMLInputElement).value
+    ).toBe("84");
+    expect(wrapper.find("#ecrf-form-save").text()).toBe("Save page (2)");
+    expect(wrapper.emitted("dirty-change")?.at(-1)).toEqual([true]);
+
+    // Saving deletes the persisted draft and does not re-apply it after reload.
+    vi.mocked(ecrfFormsApi.saveValues).mockResolvedValue({
+      form_id: FORM_ID,
+      version: 3,
+      values: [],
+    } as never);
+    await wrapper.find("#ecrf-save-reason").setValue("Initial entry");
+    await wrapper.find("#ecrf-form-page").trigger("submit");
+    await flushPromises();
+
+    expect(localStorage.getItem(draftKey)).toBeNull();
+    expect(wrapper.emitted("dirty-change")?.at(-1)).toEqual([false]);
+  });
+
+  it("discards draft items whose server revision advanced or when the form is locked", async () => {
+    signInUser("crc-1", "tenant-1");
+    const draftKey = scopedKey(
+      { tenantId: "tenant-1", userId: "crc-1" },
+      "ecrf_form_draft",
+      FORM_ID
+    )!;
+    localStorage.setItem(
+      draftKey,
+      JSON.stringify({
+        form_id: FORM_ID,
+        items: {
+          SYSBP: { text: "132", missing: "", revision: 3 },
+          DIABP: { text: "84", missing: "", revision: 0 },
+        },
+      })
+    );
+
+    // Server advanced SYSBP to revision 4 while DIABP is still at revision 0.
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValueOnce(
+      form({
+        items: [
+          item({
+            item_id: "SYSBP",
+            unit: "mm[Hg]",
+            value_kind: "Quantity",
+            required: true,
+            value: { type: "quantity", value: 125, unit: "mm[Hg]" },
+            observation_id: OBS_ID,
+            revision: 4,
+          }),
+          item({
+            item_id: "DIABP",
+            unit: "mm[Hg]",
+            value_kind: "Quantity",
+            required: true,
+            revision: 0,
+          }),
+        ],
+      }) as never
+    );
+
+    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    await flushPromises();
+
+    expect(
+      (wrapper.find("#ecrf-item-SYSBP").element as HTMLInputElement).value
+    ).toBe("125");
+    expect(
+      (wrapper.find("#ecrf-item-DIABP").element as HTMLInputElement).value
+    ).toBe("84");
+    expect(JSON.parse(localStorage.getItem(draftKey)!)).toEqual({
+      form_id: FORM_ID,
+      items: {
+        DIABP: { text: "84", missing: "", revision: 0 },
+      },
+    });
+
+    // When the loaded form has a lock, any saved draft is discarded and removed.
+    wrapper.unmount();
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValueOnce(
+      form({
+        locks: [
+          {
+            lock_id: "l1",
+            kind: "Frozen",
+            scope: `collection_instance:${FORM_ID}`,
+            locked_at: "2027-04-01T00:00:00Z",
+            locked_by: "dm1",
+            reason: "Interim analysis",
+          },
+        ],
+      }) as never
+    );
+    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    await flushPromises();
+
+    expect(
+      (wrapper.find("#ecrf-item-DIABP").element as HTMLInputElement).value
+    ).toBe("");
+    expect(localStorage.getItem(draftKey)).toBeNull();
+  });
+
+  it("skips localStorage when storageScopeOf returns null and tolerates storage quota errors", async () => {
+    const getSpy = vi.spyOn(window.localStorage, "getItem");
+    const setSpy = vi.spyOn(window.localStorage, "setItem");
+
+    // Unauthenticated: storageScopeOf returns null -> no localStorage access.
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
+    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    await flushPromises();
+    await wrapper.find("#ecrf-item-COMMENT").setValue("offline note");
+    await nextTick();
+    vi.advanceTimersByTime(600);
+
+    expect(getSpy).not.toHaveBeenCalled();
+    expect(setSpy).not.toHaveBeenCalled();
+
+    // Authenticated, but setItem throws QuotaExceededError -> editing still succeeds without throwing.
+    wrapper.unmount();
+    signInUser("crc-1", "tenant-1");
+    setSpy.mockImplementation(() => {
+      throw new DOMException("Quota exceeded", "QuotaExceededError");
+    });
+
+    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    await flushPromises();
+    await wrapper.find("#ecrf-item-COMMENT").setValue("quota note");
+    await nextTick();
+    expect(() => vi.advanceTimersByTime(600)).not.toThrow();
+    expect(
+      (wrapper.find("#ecrf-item-COMMENT").element as HTMLInputElement).value
+    ).toBe("quota note");
   });
 });

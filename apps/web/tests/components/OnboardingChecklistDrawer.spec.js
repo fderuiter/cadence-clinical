@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { mount } from "@vue/test-utils";
+import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createRouter, createWebHistory } from "vue-router";
 import AppShell from "../../src/components/AppShell.vue";
@@ -9,31 +9,117 @@ import {
   DEFAULT_SETUP_TASKS,
 } from "../../src/stores/onboarding";
 import { useAuthStore } from "../../src/stores/auth";
-
-vi.mock("../../src/router/availability", async (importOriginal) => ({
-  ...(await importOriginal()),
-  isScreenAvailable: () => true,
-}));
+import {
+  AVAILABLE_SCREENS,
+  isScreenAvailable,
+} from "../../src/router/availability";
+import { hasRequiredRole } from "../../src/router";
 
 const DummyView = { template: "<div>Dummy</div>" };
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: "/", name: "home", component: DummyView },
-    { path: "/overview", name: "overview", component: DummyView },
-    { path: "/studies/:studyCode?", name: "study", component: DummyView },
-    { path: "/ecrf", name: "ecrf", component: DummyView },
-    { path: "/ctms", name: "ctms", component: DummyView },
-    { path: "/ssu", name: "ssu", component: DummyView },
+    { path: "/", name: "landing", redirect: "/overview" },
+    {
+      path: "/overview",
+      name: "overview",
+      component: DummyView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/forbidden",
+      name: "forbidden",
+      component: DummyView,
+      meta: { requiresAuth: false },
+    },
+    {
+      path: "/unavailable",
+      name: "unavailable",
+      component: DummyView,
+      meta: { requiresAuth: false },
+    },
+    {
+      path: "/studies/:studyCode?",
+      name: "study",
+      component: DummyView,
+      meta: { requiresAuth: true, layout: "canvas" },
+    },
+    {
+      path: "/ecrf",
+      name: "ecrf",
+      component: DummyView,
+      meta: {
+        requiresAuth: true,
+        requiresRole: [
+          "site_investigator",
+          "crc",
+          "data_manager",
+          "sponsor_admin",
+          "cra",
+          "monitor",
+        ],
+      },
+    },
+    {
+      path: "/ctms",
+      name: "ctms",
+      component: DummyView,
+      meta: {
+        requiresAuth: true,
+        requiresRole: ["cra", "monitor", "sponsor_admin"],
+      },
+    },
+    {
+      path: "/ssu",
+      name: "ssu",
+      component: DummyView,
+      meta: {
+        requiresAuth: true,
+        requiresRole: [
+          "cra",
+          "monitor",
+          "sponsor_admin",
+          "site_investigator",
+          "crc",
+        ],
+      },
+    },
+    {
+      path: "/mdr",
+      name: "mdr",
+      component: DummyView,
+      meta: {
+        requiresAuth: true,
+        requiresRole: ["sponsor_designer", "data_manager", "sponsor_admin"],
+      },
+    },
   ],
 });
 
+router.beforeEach((to) => {
+  const authStore = useAuthStore();
+  const requiredRoles = to.meta?.requiresRole;
+  if (
+    requiredRoles?.length > 0 &&
+    authStore.rawRoles?.length > 0 &&
+    !hasRequiredRole(authStore.normalizedRoles, requiredRoles)
+  ) {
+    return { path: "/forbidden" };
+  }
+  if (to.name && !isScreenAvailable(String(to.name))) {
+    return { name: "unavailable", query: { screen: String(to.name) } };
+  }
+});
+
 describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    vi.restoreAllMocks();
     window.localStorage.clear();
     const pinia = createPinia();
     setActivePinia(pinia);
+    await router.push("/overview");
+    await router.isReady();
   });
 
   it("renders setup progress badge in AppShell header and opens drawer on click", async () => {
@@ -232,5 +318,87 @@ describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
     const keydownEvent = new KeyboardEvent("keydown", { key: "Escape" });
     window.dispatchEvent(keydownEvent);
     expect(onboardingStore.isDrawerOpen).toBe(false);
+  });
+
+  it("hides #btn-onboarding-checklist-trigger in AppShell when zero tasks are available", () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Auditor"];
+
+    const onboardingStore = useOnboardingStore();
+    onboardingStore.tasks = [
+      {
+        id: "task_hidden",
+        title: "Hidden MDR Task",
+        description: "Targets unavailable route",
+        routeName: "mdr",
+        route: "/mdr",
+        completed: false,
+      },
+      {
+        id: "task_forbidden",
+        title: "Forbidden CTMS Task",
+        description: "Targets unauthorized route",
+        routeName: "ctms",
+        route: "/ctms",
+        completed: false,
+      },
+    ];
+
+    expect(onboardingStore.totalTasksCount).toBe(0);
+
+    const wrapper = mount(AppShell, {
+      global: { plugins: [router] },
+    });
+
+    expect(wrapper.find("#btn-onboarding-checklist-trigger").exists()).toBe(
+      false
+    );
+  });
+
+  it("guards navigateToTask against unavailable or unauthorized routes and maps CRC site readiness to /ssu", async () => {
+    await router.push("/overview");
+    await flushPromises();
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["CRC"];
+    authStore.currentPersona = "site_crc";
+
+    const onboardingStore = useOnboardingStore();
+    onboardingStore.loadPersonaState("site_crc");
+    onboardingStore.openDrawer();
+
+    const wrapper = mount(OnboardingChecklistDrawer, {
+      global: { plugins: [router] },
+    });
+
+    const readinessTask = onboardingStore.visibleTasks.find(
+      (t) => t.id === "task_rules"
+    );
+    expect(readinessTask?.route).toBe("/ssu");
+
+    // Attempt to invoke navigateToTask with an unavailable task via store state injection
+    const pushSpy = vi.spyOn(router, "push");
+    wrapper.vm.$.setupState.navigateToTask({
+      id: "bad_mdr",
+      routeName: "mdr",
+      route: "/mdr",
+    });
+    wrapper.vm.$.setupState.navigateToTask({
+      id: "bad_ctms",
+      routeName: "ctms",
+      route: "/ctms",
+    });
+    expect(pushSpy).not.toHaveBeenCalled();
+    expect(onboardingStore.isDrawerOpen).toBe(true);
+
+    // Clicking live CRC site readiness task navigates to /ssu
+    const readinessIndex = onboardingStore.visibleTasks.findIndex(
+      (t) => t.id === "task_rules"
+    );
+    const navBtns = wrapper.findAll(".btn-navigate-task");
+    await navBtns[readinessIndex].trigger("click");
+    expect(pushSpy).toHaveBeenCalledWith("/ssu");
+    pushSpy.mockRestore();
   });
 });

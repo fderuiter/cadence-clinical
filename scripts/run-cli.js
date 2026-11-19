@@ -23,6 +23,13 @@ const csprojPath = path.join(
 );
 const cliSrcDir = path.join(rootDir, "packages", "cli", "src");
 const toolingCoreSrcDir = path.join(rootDir, "packages", "tooling_core", "src");
+const buildConfigFiles = [
+  "Directory.Build.props",
+  "Directory.Build.targets",
+  "Directory.Packages.props",
+  "NuGet.Config",
+  "global.json",
+];
 
 // Ensure local .NET installation is available in PATH
 const homeDir = process.env.HOME || process.env.USERPROFILE;
@@ -81,7 +88,12 @@ function needsBuild() {
   const binaryMtime = fs.statSync(binaryPath).mtimeMs;
   const latestSourceMtime = Math.max(
     getLatestSourceMtime(cliSrcDir),
-    getLatestSourceMtime(toolingCoreSrcDir)
+    getLatestSourceMtime(toolingCoreSrcDir),
+    ...buildConfigFiles.map(
+      (file) =>
+        fs.statSync(path.join(rootDir, file), { throwIfNoEntry: false })
+          ?.mtimeMs ?? 0
+    )
   );
 
   return latestSourceMtime > binaryMtime;

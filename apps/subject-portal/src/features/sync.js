@@ -1,22 +1,32 @@
-// Offline queue reconciliation with the gateway (epro/sync), retry with
-// backoff and the automatic stipend disbursement after a successful sync.
+// Offline queue reconciliation with the gateway (epro/sync + isolated epro/submit
+// fallback), automatic exponential retry, instrument refresh, and auto-disbursement.
 import { validateEproPayload } from "usdm-schemas";
 
-import { dispatchApi } from "../api/client.js";
+import {
+  dispatchApi,
+  fetchAssignedInstruments,
+  fetchInstrument,
+  isAuthenticatedSession,
+} from "../api/client.js";
+import { MOCK_INSTRUMENTS } from "../data/mock-data.js";
 import { state } from "../stores/state.js";
 import {
   bulkUpdateSubmissionStatuses,
   getQueuedSubmissions,
   saveAssignmentsToDB,
+  saveInstrumentsToDB,
   updateSubmissionStatus,
 } from "../sync-queue.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
 import { logAuditRecord } from "./audit.js";
 import { renderCompliance } from "./compliance.js";
+import { humanizeValidationError } from "./site-support.js";
 import {
   checkOnline,
   emitSyncLifecycleEvent,
   refreshSubmissionsState,
   renderSyncQueueList,
+  resetSyncRetryInfo,
 } from "./sync-status.js";
 import { renderTasks } from "./tasks.js";
 
@@ -27,10 +37,237 @@ const CONFIRMED_SYNC_STATUSES = new Set([
   "SYNCED",
 ]);
 
+function isValidationFailure(err) {
+  if (!err) return false;
+  if (err.isValidationError || err.status === 400 || err.status === 422) {
+    return true;
+  }
+  const msg = String(err.message || "");
+  return /validation|unprocessable|schema|invalid|out of range|http error (400|422)/i.test(
+    msg
+  );
+}
+
+function buildSingleSubmissionPayload(item) {
+  return {
+    subject_id: item.subject_id,
+    diary_id: item.diary_id,
+    version_index:
+      typeof item.version_index === "number" ? item.version_index : 1,
+    device_timestamp: item.device_timestamp,
+    answers: item.answers,
+    offline_sync_markers: {
+      sequence_number: item.sequence_number,
+      client_id: item.client_id,
+      conflict_strategy: "CLIENT_WINS",
+    },
+  };
+}
+
+async function refreshActiveSurveyDefinitions(queued = []) {
+  let refreshed = false;
+  const updatedList = [];
+
+  if (isAuthenticatedSession() && state.session.userId) {
+    try {
+      const assigned = await fetchAssignedInstruments(state.session.userId);
+      if (Array.isArray(assigned) && assigned.length > 0) {
+        if (!state.instruments) state.instruments = {};
+        for (const inst of assigned) {
+          if (inst && inst.id) {
+            state.instruments[inst.id] = inst;
+            updatedList.push(inst);
+          }
+        }
+        refreshed = updatedList.length > 0;
+      }
+    } catch (err) {
+      console.warn(
+        "Could not reload assigned instruments during manual sync:",
+        err
+      );
+    }
+  }
+
+  if (!refreshed) {
+    const candidateIds = new Set();
+    for (const assign of state.assignments || []) {
+      if (assign?.instrument_id) candidateIds.add(assign.instrument_id);
+    }
+    for (const q of queued || []) {
+      if (q?.diary_id) candidateIds.add(q.diary_id);
+    }
+    for (const sub of state.submissions || []) {
+      if (
+        sub?.diary_id &&
+        (sub.status === "QUARANTINED" ||
+          sub.status === "LOCAL_QUARANTINED" ||
+          sub.status === "QUEUED")
+      ) {
+        candidateIds.add(sub.diary_id);
+      }
+    }
+
+    for (const instId of candidateIds) {
+      try {
+        const fetched = await fetchInstrument(instId);
+        if (fetched && fetched.id) {
+          if (!state.instruments) state.instruments = {};
+          state.instruments[fetched.id] = fetched;
+          updatedList.push(fetched);
+          refreshed = true;
+        }
+      } catch (err) {
+        console.warn(`Could not reload instrument ${instId}:`, err);
+      }
+    }
+  }
+
+  if (!refreshed && isDemoModeActive()) {
+    if (!state.instruments) state.instruments = {};
+    for (const [id, mockInst] of Object.entries(MOCK_INSTRUMENTS)) {
+      if (!state.instruments[id]) {
+        state.instruments[id] = JSON.parse(JSON.stringify(mockInst));
+      }
+    }
+    refreshed = true;
+  }
+
+  if (updatedList.length > 0) {
+    try {
+      await saveInstrumentsToDB(updatedList);
+    } catch (dbErr) {
+      console.warn(
+        "Could not persist refreshed instruments to IndexedDB:",
+        dbErr
+      );
+    }
+  }
+
+  if (refreshed) {
+    renderTasks();
+  }
+
+  return { refreshed };
+}
+
+async function isolateSubmissionsIndividually(validSubmissions) {
+  const updates = [];
+  let hasQuarantined = false;
+  let localQuarantinedCount = 0;
+  let transientError = null;
+
+  for (const item of validSubmissions) {
+    const singlePayload = buildSingleSubmissionPayload(item);
+    try {
+      const singleRes = await dispatchApi("epro/submit", {
+        method: "POST",
+        body: JSON.stringify(singlePayload),
+        change_reason:
+          item.change_reason || "Reconcile isolated offline submission",
+      });
+
+      const rawStatus = singleRes?.status;
+      const isServerQuarantined = rawStatus === "QUARANTINED";
+      if (isServerQuarantined) {
+        hasQuarantined = true;
+      }
+
+      const resolvedStatus =
+        rawStatus &&
+        (CONFIRMED_SYNC_STATUSES.has(rawStatus) ||
+          rawStatus === "QUARANTINED" ||
+          rawStatus === "IGNORED_SERVER_WINS")
+          ? rawStatus
+          : "CREATED";
+
+      updates.push({
+        sequence_number: item.sequence_number,
+        status: resolvedStatus,
+        additionalFields: {
+          resolved_answers: singleRes?.answers ?? item.answers,
+          resolved_at: new Date().toISOString(),
+          error: isServerQuarantined
+            ? "Survey form version changed on the study server. Tap Sync Now to refresh active forms or contact your study coordinator."
+            : null,
+        },
+      });
+    } catch (itemErr) {
+      if (isValidationFailure(itemErr)) {
+        localQuarantinedCount += 1;
+        updates.push({
+          sequence_number: item.sequence_number,
+          status: "LOCAL_QUARANTINED",
+          additionalFields: {
+            resolved_at: new Date().toISOString(),
+            error: humanizeValidationError(itemErr.message),
+          },
+        });
+      } else {
+        transientError = itemErr;
+      }
+    }
+  }
+
+  return { updates, hasQuarantined, localQuarantinedCount, transientError };
+}
+
+function scheduleExponentialRetry({
+  isManual,
+  options,
+  currentAttempt,
+  maxRetries,
+  baseDelay,
+  seqNumber,
+  queuedCount,
+  err,
+  statusTextEl,
+}) {
+  const nextDelay = baseDelay * Math.pow(2, currentAttempt - 1);
+  const nextTimestamp = Date.now() + nextDelay;
+
+  if (currentAttempt < maxRetries && !options.noRetry) {
+    emitSyncLifecycleEvent("sync:retry-scheduled", {
+      attempt: currentAttempt,
+      maxRetries,
+      nextRetryDelay: nextDelay,
+      nextRetryTimestamp: nextTimestamp,
+      sequenceNumber: seqNumber,
+      queuedCount,
+      error: humanizeValidationError(err?.message || "Network connection lost"),
+    });
+
+    const shouldAutoRetry = options.autoRetry !== false && !options.noRetry;
+    if (shouldAutoRetry) {
+      if (state.__syncRetryTimer) {
+        clearTimeout(state.__syncRetryTimer);
+      }
+      const timer = setTimeout(() => {
+        syncOfflineQueue(isManual, {
+          ...options,
+          attempt: currentAttempt + 1,
+        });
+      }, nextDelay);
+      if (timer && typeof timer.unref === "function") {
+        timer.unref();
+      }
+      state.__syncRetryTimer = timer;
+    }
+  } else {
+    resetSyncRetryInfo();
+    const txtFailed = `Sync failed. ${queuedCount} submission(s) still queued.`;
+    if (statusTextEl) {
+      statusTextEl.textContent = txtFailed;
+    }
+    state.syncStatusText = txtFailed;
+  }
+}
+
 export async function syncOfflineQueue(isManual = false, options = {}) {
-  const statusTextEl = document.getElementById("sync-queue-status-text");
-  const queued = await getQueuedSubmissions();
-  const online = checkOnline();
+  const statusTextEl =
+    typeof document !== "undefined"
+      ? document.getElementById("sync-queue-status-text")
+      : null;
 
   if (state.autoSyncSuspended && !isManual) {
     console.log(
@@ -38,6 +275,9 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
     );
     return;
   }
+
+  const queued = await getQueuedSubmissions();
+  const online = checkOnline();
 
   if (!online) {
     const txt = `Offline Mode. ${queued.length} submission(s) queued locally.`;
@@ -50,7 +290,19 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
     return;
   }
 
+  let manualRefreshResult = { refreshed: false };
+  if (isManual) {
+    if (state.__syncRetryTimer) {
+      clearTimeout(state.__syncRetryTimer);
+      state.__syncRetryTimer = null;
+    }
+    manualRefreshResult = await refreshActiveSurveyDefinitions(queued);
+  }
+
   if (queued.length === 0) {
+    if (isManual && manualRefreshResult.refreshed) {
+      state.autoSyncSuspended = false;
+    }
     const txt = "Online. All submissions synchronized.";
     if (statusTextEl) {
       statusTextEl.textContent = txt;
@@ -66,12 +318,24 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
     (item) => item.status !== "DECRYPTION_ERROR"
   );
 
-  // Pre-transmission schema gate: validate queued submissions against USDM Zod schema
+  // Pre-transmission schema gate: isolate invalid items locally while allowing valid siblings through
   const validSubmissions = [];
+  let preCheckQuarantinedCount = 0;
   for (const item of decryptable) {
+    const activeInstrument = state.instruments?.[item.diary_id];
+    if (
+      isManual &&
+      activeInstrument &&
+      typeof activeInstrument.version_index === "number" &&
+      item.version_index !== activeInstrument.version_index
+    ) {
+      item.version_index = activeInstrument.version_index;
+    }
+
     const validation = validateEproPayload(item.answers || {});
     if (!validation.valid) {
-      const errMsg = `Local schema quarantine: ${validation.errors.join("; ")}`;
+      preCheckQuarantinedCount += 1;
+      const errMsg = humanizeValidationError(validation.errors.join("; "));
       await updateSubmissionStatus(item.sequence_number, "LOCAL_QUARANTINED", {
         error: errMsg,
       });
@@ -81,7 +345,13 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
   }
 
   if (validSubmissions.length === 0) {
-    const txtComplete = "Online. Sync complete.";
+    if (isManual && manualRefreshResult.refreshed) {
+      state.autoSyncSuspended = false;
+    }
+    const txtComplete =
+      preCheckQuarantinedCount > 0
+        ? `Action needed: ${preCheckQuarantinedCount} survey(s) quarantined for coordinator review.`
+        : "Online. Sync complete.";
     if (statusTextEl) {
       statusTextEl.textContent = txtComplete;
     }
@@ -110,108 +380,115 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
   await refreshSubmissionsState();
 
   const payload = {
-    submissions: validSubmissions.map((item) => ({
-      subject_id: item.subject_id,
-      diary_id: item.diary_id,
-      version_index:
-        typeof item.version_index === "number" ? item.version_index : 1,
-      device_timestamp: item.device_timestamp,
-      answers: item.answers,
-      offline_sync_markers: {
-        sequence_number: item.sequence_number,
-        client_id: item.client_id,
-        conflict_strategy: "CLIENT_WINS",
-      },
-    })),
+    submissions: validSubmissions.map(buildSingleSubmissionPayload),
   };
 
   try {
-    const response = await dispatchApi("epro/sync", {
-      method: "POST",
-      body: JSON.stringify(payload),
-      change_reason: "Reconcile offline submissions",
-    });
+    let updates = [];
+    let hasQuarantined = false;
+    let isolatedQuarantinedCount = 0;
+    let transientFallbackError = null;
 
-    if (response && response.results) {
-      const updates = [];
-      let hasQuarantined = false;
-      const hasKeys = response.results.some((res) => {
-        return (
-          (res.offline_sync_markers?.sequence_number !== undefined &&
-            res.offline_sync_markers?.client_id !== undefined) ||
-          (res.sequence_number !== undefined && res.client_id !== undefined)
-        );
+    try {
+      const response = await dispatchApi("epro/sync", {
+        method: "POST",
+        body: JSON.stringify(payload),
+        change_reason: "Reconcile offline submissions",
       });
 
-      if (hasKeys) {
-        for (const res of response.results) {
-          const resSeq =
-            res.offline_sync_markers?.sequence_number ?? res.sequence_number;
-          const resClientId =
-            res.offline_sync_markers?.client_id ?? res.client_id;
-          const item = validSubmissions.find(
-            (q) => q.sequence_number === resSeq && q.client_id === resClientId
+      if (response && response.results) {
+        const hasKeys = response.results.some((res) => {
+          return (
+            (res.offline_sync_markers?.sequence_number !== undefined &&
+              res.offline_sync_markers?.client_id !== undefined) ||
+            (res.sequence_number !== undefined && res.client_id !== undefined)
           );
-          if (item) {
-            const isQuar = res.status === "QUARANTINED";
-            if (isQuar) {
-              hasQuarantined = true;
+        });
+
+        if (hasKeys) {
+          for (const res of response.results) {
+            const resSeq =
+              res.offline_sync_markers?.sequence_number ?? res.sequence_number;
+            const resClientId =
+              res.offline_sync_markers?.client_id ?? res.client_id;
+            const item = validSubmissions.find(
+              (q) => q.sequence_number === resSeq && q.client_id === resClientId
+            );
+            if (item) {
+              const isQuar = res.status === "QUARANTINED";
+              if (isQuar) {
+                hasQuarantined = true;
+              }
+              updates.push({
+                sequence_number: item.sequence_number,
+                status: res.status,
+                additionalFields: {
+                  resolved_answers: res.answers,
+                  resolved_at: new Date().toISOString(),
+                  error: isQuar
+                    ? "Survey form version changed on the study server. Tap Sync Now to refresh active forms or contact your study coordinator."
+                    : null,
+                },
+              });
             }
-            updates.push({
-              sequence_number: item.sequence_number,
-              status: res.status,
-              additionalFields: {
-                resolved_answers: res.answers,
-                resolved_at: new Date().toISOString(),
-                error: isQuar
-                  ? "Version mismatch: client version index does not match the active instrument version."
-                  : null,
-              },
-            });
           }
-        }
-      } else {
-        // Graceful fallback to index matching
-        for (let i = 0; i < validSubmissions.length; i++) {
-          const item = validSubmissions[i];
-          const res = response.results[i];
-          if (res) {
-            const isQuar = res.status === "QUARANTINED";
-            if (isQuar) {
-              hasQuarantined = true;
+        } else {
+          // Graceful fallback to index matching
+          for (let i = 0; i < validSubmissions.length; i++) {
+            const item = validSubmissions[i];
+            const res = response.results[i];
+            if (res) {
+              const isQuar = res.status === "QUARANTINED";
+              if (isQuar) {
+                hasQuarantined = true;
+              }
+              updates.push({
+                sequence_number: item.sequence_number,
+                status: res.status,
+                additionalFields: {
+                  resolved_answers: res.answers,
+                  resolved_at: new Date().toISOString(),
+                  error: isQuar
+                    ? "Survey form version changed on the study server. Tap Sync Now to refresh active forms or contact your study coordinator."
+                    : null,
+                },
+              });
             }
-            updates.push({
-              sequence_number: item.sequence_number,
-              status: res.status,
-              additionalFields: {
-                resolved_answers: res.answers,
-                resolved_at: new Date().toISOString(),
-                error: isQuar
-                  ? "Version mismatch: client version index does not match the active instrument version."
-                  : null,
-              },
-            });
           }
         }
       }
-
-      if (updates.length > 0) {
-        await bulkUpdateSubmissionStatuses(updates);
+    } catch (batchErr) {
+      if (!isValidationFailure(batchErr)) {
+        throw batchErr;
       }
+      // Batch validation failed: isolate surveys individually via POST epro/submit
+      const isolated = await isolateSubmissionsIndividually(validSubmissions);
+      updates = isolated.updates;
+      hasQuarantined = isolated.hasQuarantined;
+      isolatedQuarantinedCount = isolated.localQuarantinedCount;
+      transientFallbackError = isolated.transientError;
+    }
 
-      // Promote matching assignments from PENDING_SYNC to COMPLETED only after server confirmation
-      let assignmentsPromoted = false;
-      for (const upd of updates) {
-        if (CONFIRMED_SYNC_STATUSES.has(upd.status)) {
-          const syncedSub = validSubmissions.find(
-            (s) => s.sequence_number === upd.sequence_number
-          );
-          if (syncedSub && syncedSub.assignment_id) {
+    if (updates.length > 0) {
+      await bulkUpdateSubmissionStatuses(updates);
+    }
+
+    const confirmedSubs = [];
+    let assignmentsPromoted = false;
+    for (const upd of updates) {
+      if (CONFIRMED_SYNC_STATUSES.has(upd.status)) {
+        const syncedSub = validSubmissions.find(
+          (s) => s.sequence_number === upd.sequence_number
+        );
+        if (syncedSub) {
+          confirmedSubs.push(syncedSub);
+          if (syncedSub.assignment_id) {
             const assign = state.assignments.find(
               (a) => a.id === syncedSub.assignment_id
             );
             if (assign && assign.status !== "COMPLETED") {
               assign.status = "COMPLETED";
+              assign.has_draft = false;
               assign.submitted_at =
                 syncedSub.device_timestamp || new Date().toISOString();
               assignmentsPromoted = true;
@@ -219,135 +496,130 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
           }
         }
       }
-      if (assignmentsPromoted) {
+    }
+
+    if (assignmentsPromoted) {
+      try {
+        await saveAssignmentsToDB(state.assignments);
+      } catch (dbErr) {
+        console.warn(
+          "Could not persist synced assignment status to IndexedDB:",
+          dbErr
+        );
+      }
+      renderTasks();
+      renderCompliance();
+    }
+
+    // Automatic Stipend Wallet Disbursement upon confirmed ePRO sync
+    if (
+      confirmedSubs.length > 0 &&
+      typeof options.autoDisburse === "boolean" &&
+      options.autoDisburse
+    ) {
+      for (const sub of confirmedSubs) {
         try {
-          await saveAssignmentsToDB(state.assignments);
-        } catch (dbErr) {
-          console.warn(
-            "Could not persist synced assignment status to IndexedDB:",
-            dbErr
-          );
-        }
-        renderTasks();
-        renderCompliance();
-      }
+          const targetSubjectId = sub.subject_id || state.session.userId;
+          const disbursePayload = {
+            subject_id: targetSubjectId,
+            study_id: "study_01",
+            site_id: "site_01",
+            sequence_number: sub.sequence_number,
+            assignment_id: sub.assignment_id,
+            diary_id: sub.diary_id,
+            amount: 25.0,
+            idempotency_key: `seq_${sub.sequence_number}_${targetSubjectId}`,
+            disbursement_type: "STIPEND",
+            answers: sub.answers,
+          };
 
-      // Automatic Stipend Wallet Disbursement upon successful ePRO sync
-      if (
-        validSubmissions.length > 0 &&
-        typeof options.autoDisburse === "boolean" &&
-        options.autoDisburse
-      ) {
-        for (const sub of validSubmissions) {
-          try {
-            const targetSubjectId = sub.subject_id || state.session.userId;
-            const disbursePayload = {
-              subject_id: targetSubjectId,
-              study_id: "study_01",
-              site_id: "site_01",
-              sequence_number: sub.sequence_number,
-              assignment_id: sub.assignment_id,
-              diary_id: sub.diary_id,
-              amount: 25.0,
-              idempotency_key: `seq_${sub.sequence_number}_${targetSubjectId}`,
-              disbursement_type: "STIPEND",
-              answers: sub.answers,
-            };
-
-            const disburseRes = await dispatchApi("payments/disburse", {
-              method: "POST",
-              body: JSON.stringify(disbursePayload),
-            });
-
-            if (disburseRes && typeof disburseRes.new_balance === "number") {
-              state.walletBalance = disburseRes.new_balance;
-            } else if (
-              disburseRes &&
-              typeof disburseRes.NewBalance === "number"
-            ) {
-              state.walletBalance = disburseRes.NewBalance;
-            }
-
-            await logAuditRecord(
-              "AUTOMATIC_STIPEND_DISBURSED",
-              {
-                subject_id: targetSubjectId,
-                sequence_number: sub.sequence_number,
-                stipend_amount:
-                  disburseRes?.amount ?? disburseRes?.Amount ?? 25.0,
-                new_balance: state.walletBalance,
-              },
-              "Instant ePRO survey auto-disbursement"
-            );
-          } catch (disburseErr) {
-            console.warn(
-              "Auto-disbursement payment call warning:",
-              disburseErr
-            );
-          }
-        }
-      }
-
-      if (hasQuarantined) {
-        state.autoSyncSuspended = true;
-        const msg =
-          "ALERT: Outdated Form Structure! Please perform manual refresh to reload active clinical structures.";
-        state.syncStatusText = msg;
-        if (statusTextEl) {
-          statusTextEl.textContent = msg;
-        }
-        alert(msg);
-      } else if (isManual) {
-        state.autoSyncSuspended = false;
-      }
-    }
-
-    const txtComplete = "Online. Sync complete.";
-    if (statusTextEl) {
-      statusTextEl.textContent = txtComplete;
-    }
-    state.syncStatusText = txtComplete;
-
-    emitSyncLifecycleEvent("sync:success", {
-      syncedCount: validSubmissions.length,
-      sequenceNumber: seqNumber,
-      queuedCount: 0,
-    });
-  } catch (err) {
-    console.error("Sync failed:", err);
-    const nextDelay = baseDelay * Math.pow(2, currentAttempt - 1);
-    const nextTimestamp = Date.now() + nextDelay;
-
-    if (currentAttempt < maxRetries && !options.noRetry) {
-      emitSyncLifecycleEvent("sync:retry-scheduled", {
-        attempt: currentAttempt,
-        maxRetries,
-        nextRetryDelay: nextDelay,
-        nextRetryTimestamp: nextTimestamp,
-        sequenceNumber: seqNumber,
-        queuedCount: validSubmissions.length,
-        error: err.message,
-      });
-
-      if (options.autoRetry) {
-        if (state.__syncRetryTimer) {
-          clearTimeout(state.__syncRetryTimer);
-        }
-        state.__syncRetryTimer = setTimeout(() => {
-          syncOfflineQueue(isManual, {
-            ...options,
-            attempt: currentAttempt + 1,
+          const disburseRes = await dispatchApi("payments/disburse", {
+            method: "POST",
+            body: JSON.stringify(disbursePayload),
           });
-        }, nextDelay);
+
+          if (disburseRes && typeof disburseRes.new_balance === "number") {
+            state.walletBalance = disburseRes.new_balance;
+          } else if (
+            disburseRes &&
+            typeof disburseRes.NewBalance === "number"
+          ) {
+            state.walletBalance = disburseRes.NewBalance;
+          }
+
+          await logAuditRecord(
+            "AUTOMATIC_STIPEND_DISBURSED",
+            {
+              subject_id: targetSubjectId,
+              sequence_number: sub.sequence_number,
+              stipend_amount:
+                disburseRes?.amount ?? disburseRes?.Amount ?? 25.0,
+              new_balance: state.walletBalance,
+            },
+            "Instant ePRO survey auto-disbursement"
+          );
+        } catch (disburseErr) {
+          console.warn("Auto-disbursement payment call warning:", disburseErr);
+        }
+      }
+    }
+
+    if (transientFallbackError) {
+      const remainingQueued = await getQueuedSubmissions();
+      scheduleExponentialRetry({
+        isManual,
+        options,
+        currentAttempt,
+        maxRetries,
+        baseDelay,
+        seqNumber: remainingQueued[0]?.sequence_number ?? seqNumber,
+        queuedCount: remainingQueued.length,
+        err: transientFallbackError,
+        statusTextEl,
+      });
+    } else if (hasQuarantined) {
+      state.autoSyncSuspended = true;
+      resetSyncRetryInfo();
+      const msg =
+        "Outdated form structure detected. Tap Manual Sync / Refresh to reload active survey definitions.";
+      state.syncStatusText = msg;
+      if (statusTextEl) {
+        statusTextEl.textContent = msg;
       }
     } else {
-      state.syncRetryInfo.isRetrying = false;
-      const txtFailed = `Sync failed. ${queued.length} submission(s) still queued.`;
-      if (statusTextEl) {
-        statusTextEl.textContent = txtFailed;
+      if (isManual) {
+        state.autoSyncSuspended = false;
       }
-      state.syncStatusText = txtFailed;
+      const totalQuarantined =
+        preCheckQuarantinedCount + isolatedQuarantinedCount;
+      const txtComplete =
+        totalQuarantined > 0
+          ? `Online. ${confirmedSubs.length} synced; ${totalQuarantined} quarantined for coordinator review.`
+          : "Online. Sync complete.";
+      if (statusTextEl) {
+        statusTextEl.textContent = txtComplete;
+      }
+      state.syncStatusText = txtComplete;
+
+      emitSyncLifecycleEvent("sync:success", {
+        syncedCount: confirmedSubs.length,
+        sequenceNumber: seqNumber,
+        queuedCount: 0,
+      });
     }
+  } catch (err) {
+    console.error("Sync failed:", err);
+    scheduleExponentialRetry({
+      isManual,
+      options,
+      currentAttempt,
+      maxRetries,
+      baseDelay,
+      seqNumber,
+      queuedCount: validSubmissions.length,
+      err,
+      statusTextEl,
+    });
   }
 
   await renderSyncQueueList();

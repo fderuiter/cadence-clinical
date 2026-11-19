@@ -280,7 +280,7 @@
             class="btn btn-secondary"
             type="button"
             :disabled="saving"
-            @click="close"
+            @click="closeForm"
           >
             Close form
           </button>
@@ -299,6 +299,19 @@
           version {{ outcome.version }}.
         </template>
         <template v-else>{{ outcome.message }}</template>
+        <div
+          v-if="outcome.kind === 'locked' && outcome.unsaved.length > 0"
+          class="ecrf-locked-unsaved"
+          data-testid="ecrf-locked-unsaved"
+        >
+          <span>Unsaved values not recorded:</span>
+          <ul>
+            <li v-for="entry in outcome.unsaved" :key="entry.item_id">
+              <strong>{{ entry.item_id }}:</strong>
+              {{ formatUnsavedEntry(entry) }}
+            </li>
+          </ul>
+        </div>
         <button
           v-if="outcome.kind === 'stale'"
           id="ecrf-form-reload"
@@ -505,7 +518,10 @@
       <SignatureCaptureModal
         v-if="showSignModal"
         :is-open="showSignModal"
+        :username="signerUsername"
+        :signer-name="signerFullName"
         signer-role="Investigator"
+        :reasons="ECRF_INVESTIGATOR_REASONS"
         :action-url="formSignatureAction(form.form_id)"
         :semantic-action="FORM_SIGN_SEMANTIC_ACTION"
         :on-sign="signWithToken"
@@ -521,6 +537,7 @@ import { computed, onMounted, reactive, ref, watch } from "vue";
 import {
   formatObservationValue,
   MISSING_REASONS,
+  type KernelObservationValue,
 } from "../../api/observationValue";
 import {
   FORM_SIGN_SEMANTIC_ACTION,
@@ -529,8 +546,12 @@ import {
   type EcrfFormSignedValue,
   type EcrfSignatureMeaning,
 } from "../../api/ecrfFormsApi";
-import { useEcrfForm } from "../../composables/useEcrfForm";
+import {
+  useEcrfForm,
+  type EcrfUnsavedItem,
+} from "../../composables/useEcrfForm";
 import { isLiveQuery, useFormQueries } from "../../composables/useFormQueries";
+import { useAuthStore } from "../../stores/auth.js";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import FormQueryList from "./FormQueryList.vue";
 
@@ -564,6 +585,7 @@ const {
   dirty,
   editedItems,
   isEdited,
+  clearDraft,
   load,
   reload,
   open,
@@ -663,6 +685,26 @@ async function reloadAfterStale() {
 // this form's signing URL, and the signature binds the form's content hash as it was read.
 const signMeaning = ref<EcrfSignatureMeaning>("approved");
 const showSignModal = ref(false);
+const authStore = useAuthStore();
+
+const ECRF_INVESTIGATOR_REASONS = [
+  "Investigator Certification",
+  "INVESTIGATOR_SIGNATURE",
+  "APPROVAL",
+  "CLINICAL_QC",
+  "REVIEW",
+];
+
+const signerUsername = computed(() => authStore.identity?.username ?? "");
+const signerFullName = computed(() => {
+  const identity = authStore.identity;
+  if (!identity) return "";
+  const fullName = [identity.firstName, identity.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return fullName || identity.username || "";
+});
 
 const MEANING_LABELS: Record<string, string> = {
   approved: "Approved",
@@ -697,12 +739,43 @@ function changedSince(signed: EcrfFormSignedValue): boolean {
 
 /** The signature dialog's callback: it has the step-up token and the signing reason the user chose. */
 async function signWithToken(sigToken: string, signingReason: string) {
-  return sign(signMeaning.value, sigToken, signingReason);
+  const result = await sign(signMeaning.value, sigToken, signingReason);
+  if (!result || result.kind !== "signed") {
+    throw new Error(result?.message ?? "The form could not be signed.");
+  }
+  return result;
 }
 
 async function submit() {
   await save(reason.value.trim());
   if (outcome.value?.kind === "saved") reason.value = "";
+}
+
+function closeForm() {
+  if (
+    dirty.value &&
+    !window.confirm(
+      "You have unsaved changes on this form. Discard them and close?"
+    )
+  ) {
+    return;
+  }
+  clearDraft();
+  close();
+}
+
+function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
+  if (entry.missing) {
+    return formatObservationValue({
+      type: "missing",
+      reason: entry.missing as Extract<
+        KernelObservationValue,
+        { type?: "missing" }
+      >["reason"],
+    });
+  }
+  const typed = entry.text.trim();
+  return entry.unit ? `${typed} ${entry.unit}` : typed;
 }
 
 onMounted(() => {
@@ -827,6 +900,14 @@ watch(dirty, (value) => emit("dirty-change", value));
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+}
+.ecrf-locked-unsaved {
+  flex-basis: 100%;
+  margin-top: 4px;
+}
+.ecrf-locked-unsaved ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
 }
 .ecrf-signatures {
   list-style: none;

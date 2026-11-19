@@ -293,9 +293,9 @@ describe("Portal Availability Guards and PIN Security", () => {
     expect(fetchCalls.length).toBe(2);
     const stepUpBody = JSON.parse(fetchCalls[0].opts.body);
     expect(stepUpBody.action).toBe(
-      "/api/v1/econsent/templates/template-icf/versions/1/sign"
+      "/api/v1/econsent/templates/template-icf/versions/1/capture-consent"
     );
-    expect(stepUpBody.semantic_action).toBe("econsent.icf.sign");
+    expect(stepUpBody.semantic_action).toBe("econsent.consent.capture");
     expect(state.consentSigned).toBe(false);
     expect(
       document.getElementById("modal-error-banner")?.textContent

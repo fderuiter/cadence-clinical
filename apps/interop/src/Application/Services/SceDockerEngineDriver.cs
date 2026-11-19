@@ -15,12 +15,13 @@ public record SandboxExecutionRequest(
     string SourceCode,
     string LockfileContent,
     string LockType,
-    int MaxMemoryMb = 2048,
-    int TimeoutSeconds = 300,
+    int MaxMemoryMb = SceDockerEngineDriver.DefaultMemoryMb,
+    int TimeoutSeconds = SceDockerEngineDriver.DefaultTimeoutSeconds,
     bool NetworkIsolated = true,
     bool FilesystemReadonlyRoot = true,
     string? ContainerImageOverride = null,
-    Dictionary<string, string>? EnvironmentVariables = null
+    Dictionary<string, string>? EnvironmentVariables = null,
+    long MaxOutputBytes = SceDockerEngineDriver.DefaultMaxOutputBytes
 );
 
 public record GeneratedArtifactDto(
@@ -51,8 +52,139 @@ public interface ISceDockerEngineDriver
 
 public class SceDockerEngineDriver : ISceDockerEngineDriver
 {
+    public const string DefaultPlaceholderImageDigest = "sha256:cadence-sce-r4.4-py3.14-validated-base-2026";
+    public const string DefaultPythonImage = "cadence-sce-py:latest";
+    public const string DefaultRImage = "cadence-sce-r:latest";
+
+    public const int MinMemoryMb = 256;
+    public const int DefaultMemoryMb = 2048;
+    public const int MaxMemoryMbLimit = 8192;
+
+    public const int MinTimeoutSeconds = 1;
+    public const int DefaultTimeoutSeconds = 300;
+    public const int MaxTimeoutSecondsLimit = 3600;
+
+    public const long DefaultMaxOutputBytes = 10L * 1024 * 1024;
+    public const long MaxOutputBytesLimit = 10L * 1024 * 1024;
+
+    private static readonly IReadOnlyDictionary<string, IReadOnlySet<string>> ApprovedImagesByLanguage =
+        new Dictionary<string, IReadOnlySet<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["PYTHON"] = new HashSet<string>(StringComparer.Ordinal)
+            {
+                DefaultPythonImage,
+            },
+            ["R"] = new HashSet<string>(StringComparer.Ordinal)
+            {
+                DefaultRImage,
+            },
+        };
+
+    internal static int ClampMemoryMb(int memoryMb) =>
+        Math.Clamp(memoryMb, MinMemoryMb, MaxMemoryMbLimit);
+
+    internal static int ClampTimeoutSeconds(int timeoutSeconds) =>
+        Math.Clamp(timeoutSeconds, MinTimeoutSeconds, MaxTimeoutSecondsLimit);
+
+    internal static long ClampMaxOutputBytes(long maxOutputBytes) =>
+        maxOutputBytes <= 0
+            ? DefaultMaxOutputBytes
+            : Math.Min(maxOutputBytes, MaxOutputBytesLimit);
+
+    internal static bool TryResolveApprovedImage(
+        string? language,
+        string? requestedImage,
+        out string resolvedImage,
+        out string error)
+    {
+        if (string.IsNullOrWhiteSpace(language)
+            || !ApprovedImagesByLanguage.TryGetValue(language, out var allowedImages))
+        {
+            resolvedImage = string.Empty;
+            error = $"Unsupported statistical computing language '{language}'.";
+            return false;
+        }
+
+        string defaultImage = language.Equals("R", StringComparison.OrdinalIgnoreCase)
+            ? DefaultRImage
+            : DefaultPythonImage;
+
+        if (string.IsNullOrWhiteSpace(requestedImage)
+            || string.Equals(requestedImage, DefaultPlaceholderImageDigest, StringComparison.Ordinal))
+        {
+            resolvedImage = defaultImage;
+            error = string.Empty;
+            return true;
+        }
+
+        if (requestedImage.StartsWith('-') || !allowedImages.Contains(requestedImage))
+        {
+            resolvedImage = string.Empty;
+            error = $"Container image '{requestedImage}' is not in the approved SCE allow-list for language '{language.ToUpperInvariant()}'.";
+            return false;
+        }
+
+        resolvedImage = requestedImage;
+        error = string.Empty;
+        return true;
+    }
+
+    internal static IReadOnlyList<string> BuildDockerArguments(
+        SandboxExecutionRequest request,
+        string tempDir,
+        string imageName)
+    {
+        int clampedMemoryMb = ClampMemoryMb(request.MaxMemoryMb);
+        string cmdRunner = request.Language.Equals("R", StringComparison.OrdinalIgnoreCase)
+            ? "Rscript /workspace/script.R"
+            : "python /workspace/script.py";
+
+        var args = new List<string>
+        {
+            "run",
+            "--rm",
+            "--network=none",
+            "--read-only",
+            "--cap-drop=ALL",
+            "--security-opt=no-new-privileges",
+            "--tmpfs",
+            "/tmp:rw,noexec,nosuid,size=64m",
+            "--memory",
+            $"{clampedMemoryMb}m",
+            "-v",
+            $"{tempDir}:/workspace:rw",
+            "-w",
+            "/workspace",
+        };
+
+        if (request.EnvironmentVariables != null)
+        {
+            foreach (var (k, v) in request.EnvironmentVariables)
+            {
+                if (IsValidEnvironmentVariableName(k))
+                {
+                    args.Add("-e");
+                    args.Add($"{k}={v}");
+                }
+            }
+        }
+
+        args.Add("--");
+        args.Add(imageName);
+        args.Add("sh");
+        args.Add("-c");
+        args.Add(cmdRunner);
+
+        return args;
+    }
+
     public async Task<SandboxExecutionResult> ExecuteInSandboxAsync(SandboxExecutionRequest request, CancellationToken ct = default)
     {
+        if (!TryResolveApprovedImage(request.Language, request.ContainerImageOverride, out string imageName, out string imageError))
+        {
+            return CreateFailureResult(imageError, exitCode: 126);
+        }
+
         var stopwatch = Stopwatch.StartNew();
         string tempDir = Path.Combine(Path.GetTempPath(), "cadence_sce_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDir);
@@ -62,9 +194,6 @@ public class SceDockerEngineDriver : ISceDockerEngineDriver
             string ext = request.Language.Equals("R", StringComparison.OrdinalIgnoreCase) ? "R" : "py";
             string scriptPath = Path.Combine(tempDir, $"script.{ext}");
             await File.WriteAllTextAsync(scriptPath, request.SourceCode, ct);
-
-            string imageName = request.ContainerImageOverride ??
-                (request.Language.Equals("R", StringComparison.OrdinalIgnoreCase) ? "cadence-sce-r:latest" : "cadence-sce-py:latest");
 
             var dockerResult = await ExecuteDockerContainerAsync(request, tempDir, imageName, ct);
             stopwatch.Stop();
@@ -95,9 +224,8 @@ public class SceDockerEngineDriver : ISceDockerEngineDriver
     {
         try
         {
-            string cmdRunner = request.Language.Equals("R", StringComparison.OrdinalIgnoreCase)
-                ? "Rscript /workspace/script.R"
-                : "python /workspace/script.py";
+            int timeoutSeconds = ClampTimeoutSeconds(request.TimeoutSeconds);
+            long maxOutputBytes = ClampMaxOutputBytes(request.MaxOutputBytes);
 
             var psi = new ProcessStartInfo
             {
@@ -108,45 +236,17 @@ public class SceDockerEngineDriver : ISceDockerEngineDriver
                 CreateNoWindow = true
             };
 
-            psi.ArgumentList.Add("run");
-            psi.ArgumentList.Add("--rm");
-            if (request.NetworkIsolated)
+            foreach (string arg in BuildDockerArguments(request, tempDir, imageName))
             {
-                psi.ArgumentList.Add("--network=none");
+                psi.ArgumentList.Add(arg);
             }
-            if (request.FilesystemReadonlyRoot)
-            {
-                psi.ArgumentList.Add("--read-only");
-            }
-            psi.ArgumentList.Add("--tmpfs");
-            psi.ArgumentList.Add("/tmp:rw,noexec,nosuid,size=64m");
-            psi.ArgumentList.Add("--memory");
-            psi.ArgumentList.Add($"{request.MaxMemoryMb}m");
-            psi.ArgumentList.Add("-v");
-            psi.ArgumentList.Add($"{tempDir}:/workspace:rw");
-            psi.ArgumentList.Add("-w");
-            psi.ArgumentList.Add("/workspace");
-
-            if (request.EnvironmentVariables != null)
-            {
-                foreach (var (k, v) in request.EnvironmentVariables)
-                {
-                    psi.ArgumentList.Add("-e");
-                    psi.ArgumentList.Add($"{k}={v}");
-                }
-            }
-
-            psi.ArgumentList.Add(imageName);
-            psi.ArgumentList.Add("sh");
-            psi.ArgumentList.Add("-c");
-            psi.ArgumentList.Add(cmdRunner);
 
             using var process = new Process { StartInfo = psi };
             var stdoutBuilder = new StringBuilder();
             var stderrBuilder = new StringBuilder();
 
-            process.OutputDataReceived += (_, e) => { if (e.Data != null) stdoutBuilder.AppendLine(e.Data); };
-            process.ErrorDataReceived += (_, e) => { if (e.Data != null) stderrBuilder.AppendLine(e.Data); };
+            process.OutputDataReceived += (_, e) => AppendBoundedLine(stdoutBuilder, e.Data, maxOutputBytes);
+            process.ErrorDataReceived += (_, e) => AppendBoundedLine(stderrBuilder, e.Data, maxOutputBytes);
 
             if (!process.Start())
             {
@@ -157,14 +257,14 @@ public class SceDockerEngineDriver : ISceDockerEngineDriver
             process.BeginErrorReadLine();
 
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts.CancelAfter(TimeSpan.FromSeconds(request.TimeoutSeconds));
+            cts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
 
             await process.WaitForExitAsync(cts.Token);
 
             string stdout = stdoutBuilder.ToString();
             string stderr = stderrBuilder.ToString();
 
-            if (process.ExitCode == 125 || process.ExitCode == 127 || stdout.Contains("Unable to find image") || stderr.Contains("Unable to find image"))
+            if (process.ExitCode == 125 || process.ExitCode == 127 || stdout.Contains("Unable to find image", StringComparison.Ordinal) || stderr.Contains("Unable to find image", StringComparison.Ordinal))
             {
                 string errorMsg;
                 if (!string.IsNullOrWhiteSpace(stderr))
@@ -184,7 +284,7 @@ public class SceDockerEngineDriver : ISceDockerEngineDriver
                 return CreateFailureResult($"Container runtime execution failed: {errorMsg}", failureExitCode);
             }
 
-            var artifacts = CollectArtifacts(tempDir);
+            var artifacts = CollectArtifacts(tempDir, maxOutputBytes);
             string artifactsDigest = ComputeArtifactsMerkleDigest(artifacts);
             string imageDigest = ComputeSha256("docker:" + imageName);
 
@@ -204,29 +304,39 @@ public class SceDockerEngineDriver : ISceDockerEngineDriver
         }
     }
 
-    public static async Task<SandboxExecutionResult> ExecuteFallbackSandboxAsync(
+    internal static async Task<SandboxExecutionResult> ExecuteFallbackSandboxAsync(
         SandboxExecutionRequest request,
         string scriptPath,
         string tempDir,
         CancellationToken ct)
     {
+        if (!TryResolveApprovedImage(request.Language, request.ContainerImageOverride, out _, out string imageError))
+        {
+            return CreateFailureResult(imageError, exitCode: 126);
+        }
+
+        int timeoutSeconds = ClampTimeoutSeconds(request.TimeoutSeconds);
+        long maxOutputBytes = ClampMaxOutputBytes(request.MaxOutputBytes);
         string runner = request.Language.Equals("R", StringComparison.OrdinalIgnoreCase) ? "Rscript" : "python3";
         var psi = new ProcessStartInfo
         {
             FileName = runner,
-            Arguments = $"\"{scriptPath}\"",
-            WorkingDirectory = tempDir,
             UseShellExecute = false,
+            WorkingDirectory = tempDir,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             CreateNoWindow = true
         };
+        psi.ArgumentList.Add(scriptPath);
 
         if (request.EnvironmentVariables != null)
         {
             foreach (var (k, v) in request.EnvironmentVariables)
             {
-                psi.EnvironmentVariables[k] = v;
+                if (IsValidEnvironmentVariableName(k))
+                {
+                    psi.EnvironmentVariables[k] = v;
+                }
             }
         }
 
@@ -239,7 +349,7 @@ public class SceDockerEngineDriver : ISceDockerEngineDriver
             }
 
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts.CancelAfter(TimeSpan.FromSeconds(request.TimeoutSeconds));
+            cts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
 
             var stdoutTask = process.StandardOutput.ReadToEndAsync(cts.Token);
             var stderrTask = process.StandardError.ReadToEndAsync(cts.Token);
@@ -247,16 +357,15 @@ public class SceDockerEngineDriver : ISceDockerEngineDriver
             await Task.WhenAll(stdoutTask, stderrTask);
             await process.WaitForExitAsync(cts.Token);
 
-            var artifacts = CollectArtifacts(tempDir);
+            var artifacts = CollectArtifacts(tempDir, maxOutputBytes);
             string artifactsDigest = ComputeArtifactsMerkleDigest(artifacts);
-            string imageDigest = "sha256:cadence-sce-r4.4-py3.14-validated-base-2026";
 
             return new SandboxExecutionResult(
                 ExitCode: process.ExitCode,
                 Stdout: stdoutTask.Result,
                 Stderr: stderrTask.Result,
                 DurationMs: 0,
-                ContainerImageDigest: imageDigest,
+                ContainerImageDigest: DefaultPlaceholderImageDigest,
                 Artifacts: artifacts,
                 OutputArtifactsDigest: artifactsDigest
             );
@@ -281,55 +390,256 @@ public class SceDockerEngineDriver : ISceDockerEngineDriver
         );
     }
 
-    private static List<GeneratedArtifactDto> CollectArtifacts(string dirPath)
+    internal static List<GeneratedArtifactDto> CollectArtifacts(string dirPath, long maxOutputBytes = DefaultMaxOutputBytes)
     {
         var artifacts = new List<GeneratedArtifactDto>();
-        if (!Directory.Exists(dirPath)) return artifacts;
-
-        var files = Directory.GetFiles(dirPath, "*", SearchOption.AllDirectories);
-        foreach (var file in files)
+        if (string.IsNullOrWhiteSpace(dirPath) || maxOutputBytes <= 0 || !Directory.Exists(dirPath))
         {
-            string fileName = Path.GetFileName(file);
-            if (fileName.StartsWith("script.")) continue;
+            return artifacts;
+        }
 
-            var fi = new FileInfo(file);
-            string content = File.ReadAllText(file);
-            string sha256 = ComputeSha256(content);
-            string ext = Path.GetExtension(file).ToLowerInvariant();
+        long effectiveMaxBytes = Math.Min(maxOutputBytes, MaxOutputBytesLimit);
+        var rootInfo = new DirectoryInfo(dirPath);
+        if (IsSymbolicLinkOrReparsePoint(rootInfo))
+        {
+            return artifacts;
+        }
 
-            string artifactType = ext switch
+        string canonicalRoot = Path.GetFullPath(rootInfo.FullName)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        long totalBytesCollected = 0;
+        var pendingDirs = new Stack<DirectoryInfo>();
+        pendingDirs.Push(rootInfo);
+
+        while (pendingDirs.Count > 0)
+        {
+            var currentDir = pendingDirs.Pop();
+            FileSystemInfo[] entries;
+            try
             {
-                ".csv" or ".tsv" => "DATASET",
-                ".json" or ".xml" => "TABLE",
-                ".png" or ".jpg" or ".pdf" or ".svg" => "FIGURE",
-                ".txt" or ".log" => "LOG",
-                _ => "TABLE"
-            };
-
-            string mimeType = ext switch
+                entries = currentDir.EnumerateFileSystemInfos()
+                    .OrderBy(e => e.Name, StringComparer.Ordinal)
+                    .ToArray();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                ".csv" => "text/csv",
-                ".json" => "application/json",
-                ".pdf" => "application/pdf",
-                ".png" => "image/png",
-                _ => "text/plain"
-            };
+                continue;
+            }
 
-            string preview = content.Length > 2048 ? content[..2048] + "..." : content;
+            // Push subdirectories in reverse alphabetical order so Pop visits them in deterministic order.
+            for (int i = entries.Length - 1; i >= 0; i--)
+            {
+                if (entries[i] is DirectoryInfo subDir && !IsSymbolicLinkOrReparsePoint(subDir))
+                {
+                    string canonicalSubDir = Path.GetFullPath(subDir.FullName);
+                    if (IsUnder(canonicalSubDir, canonicalRoot))
+                    {
+                        pendingDirs.Push(subDir);
+                    }
+                }
+            }
 
-            artifacts.Add(new GeneratedArtifactDto(
-                ArtifactId: "art-" + Guid.NewGuid().ToString("N")[..12],
-                Name: fileName,
-                ArtifactType: artifactType,
-                FilePath: Path.GetRelativePath(dirPath, file),
-                MimeType: mimeType,
-                SizeBytes: fi.Length,
-                Sha256Digest: sha256,
-                ContentPreview: preview
-            ));
+            foreach (var entry in entries)
+            {
+                if (entry is not FileInfo fileInfo)
+                {
+                    continue;
+                }
+
+                if (fileInfo.Name.StartsWith("script.", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (IsSymbolicLinkOrReparsePoint(fileInfo)
+                    || !TryResolveContainedFilePath(fileInfo, canonicalRoot, out string canonicalFile))
+                {
+                    continue;
+                }
+
+                long remainingBytes = effectiveMaxBytes - totalBytesCollected;
+                if (remainingBytes < 0)
+                {
+                    break;
+                }
+
+                if (!TryReadBoundedFileBytes(fileInfo, canonicalFile, remainingBytes, out byte[] fileBytes))
+                {
+                    continue;
+                }
+
+                totalBytesCollected += fileBytes.Length;
+                string content = Encoding.UTF8.GetString(fileBytes);
+                string sha256 = Convert.ToHexStringLower(SHA256.HashData(fileBytes));
+                string ext = Path.GetExtension(canonicalFile).ToLowerInvariant();
+
+                string artifactType = ext switch
+                {
+                    ".csv" or ".tsv" => "DATASET",
+                    ".json" or ".xml" => "TABLE",
+                    ".png" or ".jpg" or ".pdf" or ".svg" => "FIGURE",
+                    ".txt" or ".log" => "LOG",
+                    _ => "TABLE"
+                };
+
+                string mimeType = ext switch
+                {
+                    ".csv" => "text/csv",
+                    ".json" => "application/json",
+                    ".pdf" => "application/pdf",
+                    ".png" => "image/png",
+                    _ => "text/plain"
+                };
+
+                string preview = content.Length > 2048 ? content[..2048] + "..." : content;
+
+                artifacts.Add(new GeneratedArtifactDto(
+                    ArtifactId: "art-" + Guid.NewGuid().ToString("N")[..12],
+                    Name: fileInfo.Name,
+                    ArtifactType: artifactType,
+                    FilePath: Path.GetRelativePath(canonicalRoot, canonicalFile),
+                    MimeType: mimeType,
+                    SizeBytes: fileBytes.LongLength,
+                    Sha256Digest: sha256,
+                    ContentPreview: preview
+                ));
+            }
         }
 
         return artifacts;
+    }
+
+    private static bool IsSymbolicLinkOrReparsePoint(FileSystemInfo info)
+    {
+        try
+        {
+            if (info.LinkTarget is not null)
+            {
+                return true;
+            }
+
+            if ((info.Attributes & FileAttributes.ReparsePoint) != 0)
+            {
+                return true;
+            }
+
+            return info.ResolveLinkTarget(returnFinalTarget: true) is not null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return true;
+        }
+    }
+
+    private static bool TryResolveContainedFilePath(FileInfo fileInfo, string canonicalRoot, out string canonicalFile)
+    {
+        canonicalFile = Path.GetFullPath(fileInfo.FullName);
+        if (!IsUnder(canonicalFile, canonicalRoot))
+        {
+            return false;
+        }
+
+        var parent = fileInfo.Directory;
+        while (parent is not null)
+        {
+            string parentPath = Path.GetFullPath(parent.FullName)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            if (string.Equals(parentPath, canonicalRoot, StringComparison.Ordinal))
+            {
+                return !IsSymbolicLinkOrReparsePoint(parent);
+            }
+
+            if (!IsUnder(parentPath, canonicalRoot) || IsSymbolicLinkOrReparsePoint(parent))
+            {
+                return false;
+            }
+
+            parent = parent.Parent;
+        }
+
+        return false;
+    }
+
+    private static bool TryReadBoundedFileBytes(
+        FileInfo fileInfo,
+        string canonicalFile,
+        long maxBytesToRead,
+        out byte[] bytes)
+    {
+        bytes = [];
+        try
+        {
+            fileInfo.Refresh();
+            if (!fileInfo.Exists || IsSymbolicLinkOrReparsePoint(fileInfo))
+            {
+                return false;
+            }
+
+            long length = fileInfo.Length;
+            if (length < 0 || length > maxBytesToRead || length > int.MaxValue - 1)
+            {
+                return false;
+            }
+
+            using var stream = new FileStream(canonicalFile, FileMode.Open, FileAccess.Read, FileShare.Read);
+            if (stream.Length < 0 || stream.Length > maxBytesToRead)
+            {
+                return false;
+            }
+
+            int limit = (int)maxBytesToRead;
+            var buffer = new byte[(int)Math.Min(stream.Length + 1, limit + 1L)];
+            int totalRead = 0;
+            while (totalRead < buffer.Length)
+            {
+                int read = stream.Read(buffer, totalRead, buffer.Length - totalRead);
+                if (read == 0)
+                {
+                    break;
+                }
+
+                totalRead += read;
+                if (totalRead > limit)
+                {
+                    return false;
+                }
+            }
+
+            bytes = totalRead == buffer.Length ? buffer : buffer[..totalRead];
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    private static bool IsUnder(string path, string folder) =>
+        path.StartsWith(folder + Path.DirectorySeparatorChar, StringComparison.Ordinal);
+
+    private static bool IsValidEnvironmentVariableName(string? name) =>
+        !string.IsNullOrWhiteSpace(name)
+        && (char.IsLetter(name[0]) || name[0] == '_')
+        && name.All(c => char.IsLetterOrDigit(c) || c == '_');
+
+    private static void AppendBoundedLine(StringBuilder builder, string? line, long maxBytes)
+    {
+        if (line is null || builder.Length >= maxBytes)
+        {
+            return;
+        }
+
+        long remaining = maxBytes - builder.Length;
+        if (line.Length + Environment.NewLine.Length <= remaining)
+        {
+            builder.AppendLine(line);
+        }
+        else if (remaining > 0)
+        {
+            builder.Append(line.AsSpan(0, (int)Math.Min(line.Length, remaining)));
+        }
     }
 
     private static string ComputeArtifactsMerkleDigest(List<GeneratedArtifactDto> artifacts)

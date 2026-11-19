@@ -134,7 +134,7 @@ else
       fail_blocking "pnpm install failed — see output above. Every 'pnpm cadence' command needs it."
     fi
   else
-    fail_blocking "pnpm not found even after 'corepack enable'; enable corepack (Node 22+) so pnpm follows the packageManager pin."
+    fail_blocking "pnpm not found. Install Corepack if needed ('npm install --global corepack'), then run 'corepack enable'."
   fi
 fi
 
@@ -167,7 +167,7 @@ stage "Clinical Datastores" "Probing PostgreSQL (5432)..."
 if command -v nc >/dev/null 2>&1 && nc -z 127.0.0.1 5432 2>/dev/null; then
   ok "PostgreSQL running on port 5432."
 else
-  info "PostgreSQL not reachable. Start via: docker compose up -d postgres"
+  info "PostgreSQL not reachable. Start via: docker compose -f docker/docker-compose.yml up -d postgres"
 fi
 
 # --------------------------------------------------------------------------

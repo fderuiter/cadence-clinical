@@ -47,13 +47,16 @@ delegation checks, module-local audit mixins) describe behaviour the kernel spec
 
 - **Chosen Option:** Option 2
 - **Justification:** It keeps the only record of unported behaviour while removing everything that is ported,
-  tested or superseded. The first pass deletes 76 files (and 6 `pyproject.toml`) and inventories 55 files in 7 packages.
+  tested or superseded. The first pass deleted 76 files (and 6 `pyproject.toml`) and inventoried 55 files in 7 packages;
+  subsequent ports and the consolidated retirement pass remove all remaining ported, superseded and manifest files,
+  leaving 13 `Port missing` `.py` files across `packages/ddf`, `packages/engine_core` and `packages/security` (and 0
+  `pyproject.toml` or `__init__.py` files).
 
 ## 5. Consequences & Trade-offs
 
 - **Positive Impact:** Search and review stop surfacing dead Python; the duplication gate no longer scans `.py`
   files; Dependabot tracks NuGet instead of a Python workspace that no longer exists.
-- **Negative Impact / Technical Debt:** 55 Python files remain until their ports are written or tested.
+- **Negative Impact / Technical Debt:** 13 Python files remain until their ports are written or dispositioned.
 - **Mitigation Strategy:** A PR that ports or tests one of them deletes the Python file and its inventory row in
   the same change (`docs/MIGRATION_WORKFLOW.md` §4).
 

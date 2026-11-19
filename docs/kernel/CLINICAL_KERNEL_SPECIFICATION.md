@@ -1,11 +1,11 @@
 # Cadence Clinical Research OS: Ontology and Kernel Specification v0.2
 
-|                    |                                                                                                                                                          |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**         | Proposed. Normative once accepted (then v1.0).                                                                                                           |
-| **Scope**          | The concepts, invariants and boundaries that every Cadence capability builds on, across the whole lifecycle of developing evidence about an intervention |
-| **Supersedes**     | Kernel specification v0.1 (same file, 2026-09-29) and the per-service entity models inherited from the Python topology (§16)                             |
-| **Companion work** | ADR-2244…ADR-2255 (§17), execution migration inventory (retired; see [source inventory](../architecture/repository-migration/SOURCE_INVENTORY.md)), epic #4719          |
+|                    |                                                                                                                                                                  |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**         | Proposed. Normative once accepted (then v1.0).                                                                                                                   |
+| **Scope**          | The concepts, invariants and boundaries that every Cadence capability builds on, across the whole lifecycle of developing evidence about an intervention         |
+| **Supersedes**     | Kernel specification v0.1 (same file, 2026-09-29) and the per-service entity models inherited from the Python topology (§16)                                     |
+| **Companion work** | ADR-2244…ADR-2255 (§17), [project plan](../PROJECT_PLAN.md), [historical source inventory](../architecture/repository-migration/SOURCE_INVENTORY.md), epic #4719 |
 
 Keywords **MUST**, **MUST NOT**, **SHOULD**, **MAY** follow RFC 2119. Every rule tagged `K-…` is an invariant
 that becomes an automated test (architecture test, property test, database constraint or acceptance test).

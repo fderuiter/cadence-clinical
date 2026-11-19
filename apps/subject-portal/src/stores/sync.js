@@ -12,18 +12,40 @@ export const useSyncStore = defineStore("sync", {
       maxRetries: 5,
       nextRetryDelay: 0,
       nextRetryTimestamp: null,
+      remainingSeconds: 0,
       sequenceNumber: null,
       isRetrying: false,
     },
     __syncRetryTimer: null,
+    __syncCountdownTimer: null,
   }),
   getters: {
     queuedSubmissionsCount: (s) =>
       s.submissions
-        ? s.submissions.filter((x) => x.status === "QUEUED").length
+        ? s.submissions.filter(
+            (x) =>
+              x.status === "QUEUED" ||
+              x.status === "LOCAL_QUARANTINED" ||
+              x.status === "QUARANTINED"
+          ).length
+        : 0,
+    quarantinedSubmissionsCount: (s) =>
+      s.submissions
+        ? s.submissions.filter(
+            (x) =>
+              x.status === "LOCAL_QUARANTINED" || x.status === "QUARANTINED"
+          ).length
         : 0,
     isSyncFailed: (s) =>
-      s.syncStatusText && s.syncStatusText.toLowerCase().includes("failed"),
+      Boolean(
+        (s.syncStatusText &&
+          s.syncStatusText.toLowerCase().includes("failed")) ||
+        (s.submissions &&
+          s.submissions.some(
+            (x) =>
+              x.status === "LOCAL_QUARANTINED" || x.status === "QUARANTINED"
+          ))
+      ),
   },
   actions: {
     toggleSyncDrawer() {

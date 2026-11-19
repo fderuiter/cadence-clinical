@@ -1,17 +1,13 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
-using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Observations;
-using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
+using Cadence.Testing;
 using Cadence.Testing.Time;
 
 using FluentAssertions;
@@ -36,7 +32,12 @@ public sealed class LabRangeImportServiceTests
         return db;
     }
 
+    /// <summary>
+    /// Validates CSV batch ingestion dry-run with LOINC code mapping and UCUM SI unit conversion.
+    /// @req:PRD-SYS-170
+    /// </summary>
     [Fact]
+    [GxPRequirement("PRD-SYS-170")]
     public async Task DryRunAsync_ValidCsv_ReturnsSuccessAndMappedFields()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -45,10 +46,9 @@ public sealed class LabRangeImportServiceTests
         await using var db = CreateInMemoryDbContext(connection);
 
         var ucum = new UcumNormalizationService();
-        var rangeService = new LabRangeService();
         var clock = new FakeClock();
 
-        var service = new LabRangeImportService(db, ucum, rangeService, clock);
+        var service = new LabRangeImportService(db, ucum, clock);
 
         string csvContent =
             "Test Code,Test Name,Source,Site ID,Unit,Normalized Unit,Sex,Age Low,Age High,Low Bound,High Bound,Critical Low,Critical High,LOINC\n" +
@@ -95,10 +95,9 @@ public sealed class LabRangeImportServiceTests
         await using var db = CreateInMemoryDbContext(connection);
 
         var ucum = new UcumNormalizationService();
-        var rangeService = new LabRangeService();
         var clock = new FakeClock();
 
-        var service = new LabRangeImportService(db, ucum, rangeService, clock);
+        var service = new LabRangeImportService(db, ucum, clock);
 
         string csvContent =
             "Test Code,Test Name,Source,Site ID,Unit,Normalized Unit,Sex,Age Low,Age High,Low Bound,High Bound,Critical Low,Critical High,LOINC\n" +
@@ -134,10 +133,9 @@ public sealed class LabRangeImportServiceTests
         await using var db = CreateInMemoryDbContext(connection);
 
         var ucum = new UcumNormalizationService();
-        var rangeService = new LabRangeService();
         var clock = new FakeClock();
 
-        var service = new LabRangeImportService(db, ucum, rangeService, clock);
+        var service = new LabRangeImportService(db, ucum, clock);
 
         byte[] xlsxBytes = CreateSampleXlsxBytes();
 
@@ -155,7 +153,12 @@ public sealed class LabRangeImportServiceTests
         result.Rows[0].TestName.Should().Be("Aspartate Aminotransferase");
     }
 
+    /// <summary>
+    /// Commits CSV batch reference range ingestion with LOINC mapping and SI unit conversion, keeping ranges and jobs scoped per study.
+    /// @req:PRD-SYS-170
+    /// </summary>
     [Fact]
+    [GxPRequirement("PRD-SYS-170")]
     public async Task CommitImportAsync_ValidImport_PersistsRangesAndCreatesJob()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -164,10 +167,9 @@ public sealed class LabRangeImportServiceTests
         await using var db = CreateInMemoryDbContext(connection);
 
         var ucum = new UcumNormalizationService();
-        var rangeService = new LabRangeService();
         var clock = new FakeClock();
 
-        var service = new LabRangeImportService(db, ucum, rangeService, clock);
+        var service = new LabRangeImportService(db, ucum, clock);
 
         string csvContent =
             "Test Code,Test Name,Source,Site ID,Unit,Normalized Unit,Sex,Age Low,Age High,Low Bound,High Bound,Critical Low,Critical High,LOINC\n" +
@@ -193,6 +195,7 @@ public sealed class LabRangeImportServiceTests
         var persistedRanges = await db.LabReferenceRanges.ToListAsync(ct);
         persistedRanges.Should().HaveCount(1);
         var range = persistedRanges[0];
+        range.StudyId.Should().Be("STUDY-101");
         range.TestCode.Should().Be("HEMOGLOBIN");
         range.NormalizedUnit.Should().Be("g/L");
         range.LowBound.Should().BeApproximately(135.0, 0.1);
@@ -203,9 +206,32 @@ public sealed class LabRangeImportServiceTests
         var persistedJob = await db.BulkLabRangeImportJobs.FirstOrDefaultAsync(j => j.JobId == jobResponse.JobId, ct);
         persistedJob.Should().NotBeNull();
         persistedJob!.Status.Should().Be("COMPLETED");
+
+        await service.CommitImportAsync(new BulkLabRangeImportCommitRequest(
+            StudyId: "STUDY-202",
+            LabSource: "CENTRAL",
+            FileName: "study202_ranges.csv",
+            RawFileContent:
+                "Test Code,Test Name,Source,Site ID,Unit,Normalized Unit,Sex,Age Low,Age High,Low Bound,High Bound,Critical Low,Critical High,LOINC\n" +
+                "GLUC,Glucose,CENTRAL,,mg/dL,mg/dL,ALL,18,65,70.0,99.0,,,2345-7\n",
+            ReasonForChange: "Importing separate study reference range"
+        ), "user@cadence.clinical", ct);
+
+        (await service.GetReferenceRangesAsync("STUDY-101", null, ct))
+            .Should().ContainSingle()
+            .Which.Should().Match<LabReferenceRangeResponse>(r => r.StudyId == "STUDY-101" && r.TestCode == "HEMOGLOBIN");
+        (await service.GetReferenceRangesAsync("STUDY-202", null, ct))
+            .Should().ContainSingle()
+            .Which.Should().Match<LabReferenceRangeResponse>(r => r.StudyId == "STUDY-202" && r.TestCode == "GLUC");
+        (await service.GetReferenceRangesAsync("STUDY-999", null, ct)).Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Governs reference range creation, LOINC/UCUM normalization, study- and site-scoped retrieval, versioned updates, and deactivation.
+    /// @req:PRD-SYS-170
+    /// </summary>
     [Fact]
+    [GxPRequirement("PRD-SYS-170")]
     public async Task CrudOperations_CreateUpdateDeleteGet_SucceedsWithAuditTrail()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -214,12 +240,11 @@ public sealed class LabRangeImportServiceTests
         await using var db = CreateInMemoryDbContext(connection);
 
         var ucum = new UcumNormalizationService();
-        var rangeService = new LabRangeService();
         var clock = new FakeClock();
 
-        var service = new LabRangeImportService(db, ucum, rangeService, clock);
+        var service = new LabRangeImportService(db, ucum, clock);
 
-        // Create
+        // Create in STUDY-101 (central) and STUDY-202 + site-specific local ranges to verify study/site scoping
         var createReq = new LabReferenceRangeCreateRequest(
             StudyId: "STUDY-101",
             TestCode: "BILI",
@@ -239,6 +264,19 @@ public sealed class LabRangeImportServiceTests
         created.NormalizedUnit.Should().Be("umol/L");
         created.LoincCode.Should().Be("1975-2");
 
+        await service.CreateReferenceRangeAsync(new LabReferenceRangeCreateRequest(
+            StudyId: "STUDY-202",
+            TestCode: "GLUC",
+            TestName: "Glucose",
+            Source: "CENTRAL",
+            Unit: "mg/dL",
+            NormalizedUnit: "mmol/L",
+            SexApplicability: "ALL",
+            LowBound: 70.0,
+            HighBound: 99.0,
+            ReasonForChange: "Separate study reference range"
+        ), "user@cadence.clinical", ct);
+
         Guid id = Guid.Parse(created.Id);
 
         // Get by ID
@@ -246,9 +284,45 @@ public sealed class LabRangeImportServiceTests
         fetched.Should().NotBeNull();
         fetched!.TestName.Should().Be("Bilirubin");
 
-        // List
+        // Study-scoped list: STUDY-101 never includes STUDY-202's ranges, and vice versa
         var list = await service.GetReferenceRangesAsync("STUDY-101", null, ct);
-        list.Should().HaveCount(1);
+        list.Should().ContainSingle(r => r.StudyId == "STUDY-101" && r.TestCode == "BILI");
+
+        var otherStudyList = await service.GetReferenceRangesAsync("STUDY-202", null, ct);
+        otherStudyList.Should().ContainSingle(r => r.StudyId == "STUDY-202" && r.TestCode == "GLUC");
+
+        // Site-scoped query includes central (null site) and matching local site ranges, excluding other sites
+        var site1Range = await service.CreateReferenceRangeAsync(new LabReferenceRangeCreateRequest(
+            StudyId: "STUDY-101",
+            TestCode: "ALT",
+            TestName: "Alanine Aminotransferase",
+            Source: "LOCAL",
+            SiteId: "SITE-001",
+            Unit: "U/L",
+            SexApplicability: "F",
+            LowBound: 7.0,
+            HighBound: 35.0,
+            ReasonForChange: "Site 001 local lab range"
+        ), "user@cadence.clinical", ct);
+
+        await service.CreateReferenceRangeAsync(new LabReferenceRangeCreateRequest(
+            StudyId: "STUDY-101",
+            TestCode: "ALT",
+            TestName: "Alanine Aminotransferase",
+            Source: "LOCAL",
+            SiteId: "SITE-002",
+            Unit: "U/L",
+            SexApplicability: "F",
+            LowBound: 9.0,
+            HighBound: 40.0,
+            ReasonForChange: "Site 002 local lab range"
+        ), "user@cadence.clinical", ct);
+
+        var site1Scoped = await service.GetReferenceRangesAsync("STUDY-101", "SITE-001", ct);
+        site1Scoped.Should().HaveCount(2);
+        site1Scoped.Should().Contain(r => r.Id == created.Id && r.SiteId == null);
+        site1Scoped.Should().Contain(r => r.Id == site1Range.Id && r.SiteId == "SITE-001");
+        site1Scoped.Should().NotContain(r => r.SiteId == "SITE-002");
 
         // Update
         var updateReq = new LabReferenceRangeUpdateRequest(
@@ -278,10 +352,9 @@ public sealed class LabRangeImportServiceTests
         await using var db = CreateInMemoryDbContext(connection);
 
         var ucum = new UcumNormalizationService();
-        var rangeService = new LabRangeService();
         var clock = new FakeClock();
 
-        var service = new LabRangeImportService(db, ucum, rangeService, clock);
+        var service = new LabRangeImportService(db, ucum, clock);
 
         var conv = service.ConvertUnit(new UnitConversionRequest(
             TestCode: "CREAT",

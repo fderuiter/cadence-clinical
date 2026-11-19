@@ -23,7 +23,23 @@ namespace Cadence.Apps.Gateway;
 /// </summary>
 public sealed class GatewaySigningOptions
 {
-    public string? Secret { get; set; }
+    private string? _secret;
+    private byte[] _secretBytes = [];
+
+    public string? Secret
+    {
+        get => _secret;
+        set
+        {
+            _secret = value;
+            _secretBytes = string.IsNullOrEmpty(value) ? [] : GatewayIdentity.EncodeSecret(value);
+        }
+    }
+
+    /// <summary>Cached UTF-8 bytes of <see cref="Secret"/>, or empty when unset.</summary>
+    public ReadOnlyMemory<byte> SecretBytes => _secretBytes;
+
+    internal byte[] GetSecretBytes() => _secretBytes;
 }
 
 /// <summary>
@@ -36,6 +52,14 @@ public static class GatewayIdentityForwarding
     public const string RoleClaimType = "role";
 
     private static readonly string[] ChangeReasonHeaders = [GatewayHeaders.ChangeReason, "X-Reason-For-Change"];
+
+    private static readonly string[] StrippedRequestHeaders =
+    [
+        .. GatewayHeaders.GatewayAsserted,
+        GatewayHeaders.ChangeReason,
+        GatewayHeaders.SigToken,
+        "Authorization",
+    ];
 
     /// <summary>
     /// Keycloak puts realm roles in a nested <c>realm_access.roles</c> JSON claim; flatten them into plain
@@ -104,9 +128,16 @@ public static class GatewayIdentityForwarding
         string? tenant = user.FindFirst(CadenceClaimTypes.TenantId)?.Value is { } t && !string.IsNullOrWhiteSpace(t) ? t : null;
         bool unblinded = string.Equals(user.FindFirst(CadenceClaimTypes.UnblindedAccess)?.Value, "true", StringComparison.OrdinalIgnoreCase);
 
-        string? changeReason = ChangeReasonHeaders
-            .Select(h => ChangeReasonHeader.TryDecode(httpContext.Request.Headers[h].ToString(), out string? reason) ? reason : null)
-            .FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
+        string? changeReason = null;
+        foreach (string header in ChangeReasonHeaders)
+        {
+            if (ChangeReasonHeader.TryDecode(httpContext.Request.Headers[header].ToString(), out string? reason)
+                && !string.IsNullOrWhiteSpace(reason))
+            {
+                changeReason = reason;
+                break;
+            }
+        }
 
         return new GatewayIdentity(
             UserId: subject,
@@ -152,7 +183,7 @@ public static class GatewayIdentityForwarding
         builderContext.AddRequestTransform(transformContext =>
         {
             var proxyHeaders = transformContext.ProxyRequest.Headers;
-            foreach (string header in GatewayHeaders.GatewayAsserted.Concat([GatewayHeaders.ChangeReason, GatewayHeaders.SigToken, "Authorization"]))
+            foreach (string header in StrippedRequestHeaders)
             {
                 proxyHeaders.Remove(header);
             }
@@ -166,7 +197,7 @@ public static class GatewayIdentityForwarding
             var signing = transformContext.HttpContext.RequestServices.GetRequiredService<IOptions<GatewaySigningOptions>>().Value;
             var timeProvider = transformContext.HttpContext.RequestServices.GetService<TimeProvider>() ?? TimeProvider.System;
             IReadOnlyDictionary<string, string> signed = identity.ToSignedHeaders(
-                timeProvider.GetUtcNow(), GatewayIdentity.EncodeSecret(signing.Secret!));
+                timeProvider.GetUtcNow(), signing.GetSecretBytes());
 
             foreach (var (name, value) in signed)
             {

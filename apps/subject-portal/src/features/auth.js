@@ -166,6 +166,34 @@ export async function signIn() {
 export async function login() {
   state.authError = "";
   try {
+    let storageUser = null;
+    let storageToken = null;
+    try {
+      storageUser =
+        (typeof sessionStorage !== "undefined" &&
+          sessionStorage.getItem("mock_user_id")) ||
+        (typeof localStorage !== "undefined" &&
+          localStorage.getItem("mock_user_id"));
+      storageToken =
+        (typeof sessionStorage !== "undefined" &&
+          sessionStorage.getItem("mock_token")) ||
+        (typeof localStorage !== "undefined" &&
+          localStorage.getItem("mock_token"));
+    } catch {
+      storageUser = null;
+      storageToken = null;
+    }
+
+    if (storageToken && (storageUser || state.session.userId)) {
+      const resolvedUser = storageUser || state.session.userId;
+      state.session.userId = resolvedUser;
+      state.session.token = storageToken;
+      state.session.isOfflineMode = false;
+      state.session.isDemoMode = false;
+      setActiveUserId(resolvedUser);
+      return;
+    }
+
     let keycloak = window.keycloakInstance;
     if (!keycloak && typeof window !== "undefined") {
       const KeycloakClass =
@@ -237,6 +265,7 @@ export async function logout() {
     if (typeof sessionStorage !== "undefined") {
       sessionStorage.removeItem("mock_user_id");
       sessionStorage.removeItem("mock_token");
+      sessionStorage.removeItem("oidc_pending_pin_reset");
     }
   } catch (err) {
     console.warn("Failed to clear session storage keys on logout:", err);
@@ -255,6 +284,9 @@ export async function logout() {
   state.pinUnlock.pin = "";
   state.pinUnlock.error = "";
   state.pinUnlock.confirmingReset = false;
+  state.pinUnlock.failedAttempts = 0;
+  state.pinUnlock.isLockedOut = false;
+  state.pinUnlock.requiresReauth = false;
 
   state.activeQuestionnaire = null;
   state.walletBalance = null;

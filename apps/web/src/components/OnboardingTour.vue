@@ -215,7 +215,16 @@ import {
   isTourRouteAuthorized,
   useOnboardingStore,
 } from "../stores/onboarding";
-import { useAuthStore } from "../stores/auth";
+import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
+import { isScreenAvailable } from "../router/availability";
+import { hasRequiredRole } from "../router";
+
+const NON_SHELL_TOUR_ROUTES = new Set([
+  "landing",
+  "login",
+  "forbidden",
+  "unavailable",
+]);
 
 const props = defineProps({
   activeTab: {
@@ -243,7 +252,59 @@ const currentStep = computed(() => onboardingStore.currentStep);
 const currentStepConfig = computed(
   () => onboardingStore.currentStepConfig || {}
 );
-const totalSteps = computed(() => onboardingStore.totalSteps || 5);
+const totalSteps = computed(() => onboardingStore.totalSteps || 1);
+
+const effectiveRoles = computed(() => {
+  if (authStore.rawRoles?.length > 0) {
+    return authStore.normalizedRoles || [];
+  }
+  const personaKey =
+    authStore.currentPersona || onboardingStore.currentPersona || "super_admin";
+  const preset = PERSONA_PRESETS.find((p) => p.key === personaKey);
+  return preset ? [...preset.requires] : ["sponsor_admin"];
+});
+
+function canNavigateToTourRoute(routeName) {
+  if (!routeName || NON_SHELL_TOUR_ROUTES.has(routeName)) {
+    return false;
+  }
+  if (!isScreenAvailable(routeName)) {
+    return false;
+  }
+  if (!isTourRouteAuthorized(routeName, effectiveRoles.value)) {
+    return false;
+  }
+  if (!router) {
+    return false;
+  }
+  if (typeof router.hasRoute === "function" && !router.hasRoute(routeName)) {
+    return false;
+  }
+  if (typeof router.resolve === "function") {
+    const resolved = router.resolve({ name: routeName });
+    if (
+      resolved?.meta?.requiresAuth === false ||
+      resolved?.meta?.shell === false ||
+      resolved?.meta?.layout === "standalone"
+    ) {
+      return false;
+    }
+    const matchedRoles = (resolved?.matched || []).flatMap(
+      (record) => record.meta?.requiresRole || []
+    );
+    const requiredRoles =
+      matchedRoles.length > 0
+        ? matchedRoles
+        : resolved?.meta?.requiresRole || [];
+    if (
+      requiredRoles.length > 0 &&
+      !hasRequiredRole(effectiveRoles.value, requiredRoles)
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
 
 const stepTitle = computed(() => currentStepConfig.value?.title || "");
 const stepDescription = computed(
@@ -268,27 +329,33 @@ let currentRafId = null;
 
 async function syncStepRoute() {
   if (!onboardingStore.isActive || onboardingStore.disabled) return;
+  if (onboardingStore.currentStep > totalSteps.value) {
+    onboardingStore.currentStep = totalSteps.value;
+    onboardingStore.persist();
+  }
   const config = currentStepConfig.value;
   if (!config) return;
 
-  if (
-    authStore.rawRoles?.length > 0 &&
-    !isTourRouteAuthorized(config.routeName, authStore.normalizedRoles || [])
-  ) {
-    return;
-  }
-
   if (router && route) {
-    const hasNamedRoute =
-      typeof router.hasRoute === "function" && config.routeName
-        ? router.hasRoute(config.routeName)
-        : Boolean(config.routeName);
-    if (config.routeName && hasNamedRoute && route.name !== config.routeName) {
-      const query = config.query
-        ? { ...route.query, ...config.query }
-        : { ...route.query };
-      await router.push({ name: config.routeName, query });
-    } else if (config.query) {
+    const targetRouteName = config.routeName;
+    if (targetRouteName) {
+      if (!canNavigateToTourRoute(targetRouteName)) {
+        return;
+      }
+      if (route.name !== targetRouteName) {
+        const query = config.query
+          ? { ...route.query, ...config.query }
+          : { ...route.query };
+        await router.push({ name: targetRouteName, query });
+        return;
+      }
+    }
+
+    if (config.query) {
+      const queryRouteName = targetRouteName || route.name;
+      if (!canNavigateToTourRoute(queryRouteName)) {
+        return;
+      }
       let needsUpdate = false;
       const newQuery = { ...route.query };
       for (const [k, v] of Object.entries(config.query)) {
@@ -297,9 +364,9 @@ async function syncStepRoute() {
           needsUpdate = true;
         }
       }
-      if (needsUpdate && (hasNamedRoute || route.name)) {
+      if (needsUpdate) {
         await router.push({
-          name: config.routeName || route.name,
+          name: queryRouteName,
           query: newQuery,
         });
       }
