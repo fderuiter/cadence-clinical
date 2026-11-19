@@ -141,6 +141,9 @@ jobs:
       - name: Run Markdown validation
         run: node scripts/run-cli.js check markdown
 
+      - name: Validate web API clients against OpenAPI types
+        run: node scripts/run-cli.js check api-clients
+
   dotnet-quality:
     name: .NET Quality & Sentinel Checks
     runs-on: ubuntu-latest
@@ -167,52 +170,11 @@ jobs:
       - name: Build .NET solution
         run: dotnet build Cadence.sln
 
-      - name: Verify .NET C# code formatting (.editorconfig)
-        run: dotnet format Cadence.sln --verify-no-changes --no-restore
-
       - name: Run Cadence quality sentinels
-        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check
+        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude api-clients --exclude vulnerabilities
 
       - name: Run architecture tests
         run: dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build
-
-      - name: Run ADR validation
-        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check adrs
-
-      - name: Run CODEOWNERS coverage validation
-        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- validate-codeowners
-
-      - name: Verify schema documentation freshness
-        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check schema-doc
-
-      - name: Verify OpenAPI specification drift
-        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check openapi
-
-      - name: Run requirements traceability validation
-        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check rtm
-
-      - name: Run code duplication verification
-        run: |
-          git fetch origin main --depth=1 || true
-          CHANGED_FILES=""
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '\.(py|js|vue|css|cs)$' || true)
-          else
-            CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '\.(py|js|vue|css|cs)$' || true)
-          fi
-          if [ -n "$CHANGED_FILES" ]; then
-            mapfile -t FILES_ARRAY <<< "$CHANGED_FILES"
-            dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check duplication "${FILES_ARRAY[@]}"
-          else
-            # Fallback to scanning git status (staged/unstaged files)
-            CHANGED_FILES=$(git status --porcelain | awk '{print $2}' | grep -E '\.(py|js|vue|css|cs)$' || true)
-            if [ -n "$CHANGED_FILES" ]; then
-              mapfile -t FILES_ARRAY <<< "$CHANGED_FILES"
-              dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check duplication "${FILES_ARRAY[@]}"
-            else
-              echo "No relevant files changed."
-            fi
-          fi
 
       - name: Upload Duplication Summary
         if: always()
@@ -330,7 +292,10 @@ jobs:
         id: run_audit
         if: always()
         run: |
-          python3 -m pip install --quiet --upgrade pip pip-audit==2.10.1 || true
+          python3 -m venv "$RUNNER_TEMP/pip-audit-venv"
+          "$RUNNER_TEMP/pip-audit-venv/bin/python" -m pip install --quiet --upgrade pip pip-audit==2.10.1
+          export PATH="$RUNNER_TEMP/pip-audit-venv/bin:$PATH"
+          dotnet restore Cadence.sln
           node scripts/run-cli.js check vulnerabilities
 
       - name: Run secret detection
@@ -571,6 +536,24 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    services:
+      postgres:
+        # BrowserCorrectionReachesTheDatabaseWithItsReason verifies browser-to-PostgreSQL 18 observation corrections (ADR-2533, ADR-2620).
+        image: postgres:18-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5
+        env:
+          POSTGRES_USER: cadence
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: cadence
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cadence"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CADENCE_TEST_POSTGRES: Host=localhost;Port=5432;Database=cadence;Username=cadence
+      CADENCE_TEST_BROWSER: "1"
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -625,6 +608,18 @@ jobs:
 
       - name: Run Web Application E2E Accessibility Tests
         run: pnpm --filter web test:e2e
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            global.json
+
+      - name: Run Browser-to-Database Correction Integration Test
+        run: dotnet test tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj --configuration Release --filter FullyQualifiedName~BrowserCorrectionReachesTheDatabaseWithItsReason
 
   compliance:
     name: GxP Compliance & Qualification Reporting

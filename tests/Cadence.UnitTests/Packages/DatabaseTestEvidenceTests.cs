@@ -62,7 +62,8 @@ public sealed class DatabaseTestEvidenceTests : IDisposable
             ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Kernel.RlsTests", "Passes", "Passed"),
             ("Cadence.E2ETests.dll", "Cadence.E2ETests.E2E.Flow", "Pending", "Inconclusive"),
             ("Cadence.UnitTests.dll", "Cadence.UnitTests.Some", "Skipped", "NotExecuted"),
-            ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Kernel.LineageBenchmarkPostgresTests", "BenchmarkTenMillionEdgesTraceLatency", "NotExecuted"));
+            ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Kernel.LineageBenchmarkPostgresTests", "BenchmarkTenMillionEdgesTraceLatency", "NotExecuted"),
+            ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Kernel.KernelObservationHostPostgresTests", "BrowserCorrectionReachesTheDatabaseWithItsReason", "NotExecuted"));
 
         var skipped = DatabaseTestEvidence.FindSkipped(_dir);
 

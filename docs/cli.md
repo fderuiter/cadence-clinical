@@ -66,17 +66,19 @@ It exits `1` when pnpm is missing, crashes or differs from the pin, and `0` othe
 Runs the quality gates.
 
 ```bash
-pnpm cadence check                 # every gate
-pnpm cadence check <gate>          # one gate
-pnpm cadence check <gate> <files>  # one gate, limited to these files
-pnpm cadence check --pre-commit    # what the pre-commit hook runs
+pnpm cadence check                       # every gate
+pnpm cadence check <gate>                # one gate
+pnpm cadence check <gate> <files>        # one gate, limited to these files
+pnpm cadence check --exclude <gate>      # every gate except the named gate (repeatable)
+pnpm cadence check --pre-commit          # what the pre-commit hook runs
 ```
 
-| Argument       | Description                                                                                                                                                             |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `[gate]`       | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens.                                        |
-| `[files]`      | Files to check. Only the gates marked in the table below use them.                                                                                                      |
-| `--pre-commit` | What the pre-commit hook runs: the staged files are the `[files]`, and each gate runs, runs a quicker variant or is skipped as the last column of the table below says. |
+| Argument           | Description                                                                                                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[gate]`           | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens.                                        |
+| `[files]`          | Files to check. Only the gates marked in the table below use them.                                                                                                      |
+| `--exclude <gate>` | Skip a gate by name or alias when running all gates (repeatable). Fails on an unknown gate name or when combined with `[gate]`.                                         |
+| `--pre-commit`     | What the pre-commit hook runs: the staged files are the `[files]`, and each gate runs, runs a quicker variant or is skipped as the last column of the table below says. |
 
 With no gate, every gate runs in the order below. A failing gate does not stop the run. The command exits `1` if any
 gate failed. An unknown gate name prints the gate names and exits `1`.
@@ -183,11 +185,14 @@ Where it differs from CI:
   `CADENCE_TEST_DOCKER=1` ([TESTING.md](TESTING.md#tests-that-need-postgresql)) the test step fails before it starts
   instead of passing with every database test skipped. After the test step passes, its TRX files are read, and any test
   in `Cadence.IntegrationTests` or `Cadence.E2ETests` that was skipped or did not execute fails the step too (#5325),
-  except the opt-in lineage benchmark listed in `DatabaseTestEvidence.OptInTests`. `--allow-skip` accepts the skips.
-- **Checks already run once are not repeated.** A step that runs one gate of `cadence check` (ADRs, Markdown, schema
-  doc, OpenAPI, duplication, the security audit, vulnerabilities, secrets and DEID) is reported as
-  _covered_ when the full `Run Cadence quality sentinels` step passed. If that step failed, each of them runs on its own
-  so the summary shows which gate failed. The Node install and UI build in later jobs are covered by earlier jobs.
+  except the opt-in lineage benchmark and browser correction check listed in `DatabaseTestEvidence.OptInTests` (the
+  browser correction check runs with `CADENCE_TEST_BROWSER=1` in `--job accessibility-e2e`). `--allow-skip` accepts the
+  skips.
+- **Checks already run once are not repeated.** `lint-and-static` runs `markdown` and `api-clients`, `dotnet-quality`
+  runs `cadence check --exclude api-clients --exclude vulnerabilities`, and `security` runs `vulnerabilities`. Steps in
+  `security` whose gate already ran inside `Run Cadence quality sentinels` (the static security audit, secrets and DEID)
+  are reported as _covered_ when `Run Cadence quality sentinels` passed; if that step failed, each runs on its own so
+  the summary shows which gate failed. The Node install and UI build in later jobs are covered by earlier jobs.
   The documentation build (`pnpm docs:build`) also starts with `cadence check` and Markdown validation; after that step
   passed it runs with `CADENCE_DOCS_SKIP_CHECKS=1`, which skips them and saves about two and a half minutes.
 - **The docs build leaves the reports alone.** `pnpm docs:build` regenerates the RTM and IQ/OQ/PQ report as drafts;
