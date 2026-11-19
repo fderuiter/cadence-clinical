@@ -41,10 +41,10 @@ export default defineConfig({
       ],
       thresholds: {
         // A ratchet floor under the whole package: raise it when coverage rises, never lower it.
-        lines: 37,
-        statements: 36,
-        functions: 29,
-        branches: 33,
+        lines: 44,
+        statements: 43,
+        functions: 35,
+        branches: 38,
         // The Part 11 signing and eConsent helpers carry the 80 percent file gate (#5335).
         "{signing,econsent}.js": {
           lines: 80,

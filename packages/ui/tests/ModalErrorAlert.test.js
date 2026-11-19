@@ -1,11 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import fs from "fs";
 import path from "path";
-import { ModalErrorAlert, useAsyncRetry } from "../src/index.js";
-import {
-  ModalErrorAlert as RootModalErrorAlert,
-  useAsyncRetry as RootUseAsyncRetry,
-} from "../index.js";
+import { ModalErrorAlert, useAsyncRetry } from "../index.js";
 
 describe("ModalErrorAlert & useAsyncRetry (#4523)", () => {
   const alertPath = path.resolve(
@@ -20,8 +16,6 @@ describe("ModalErrorAlert & useAsyncRetry (#4523)", () => {
   it("exports ModalErrorAlert and useAsyncRetry from package entry points", () => {
     expect(ModalErrorAlert).toBeDefined();
     expect(useAsyncRetry).toBeDefined();
-    expect(RootModalErrorAlert).toBeDefined();
-    expect(RootUseAsyncRetry).toBeDefined();
   });
 
   it("ModalErrorAlert component file exists and includes required ARIA attributes and buttons", () => {

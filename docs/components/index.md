@@ -13,14 +13,11 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 ## Component Catalog
 
-| Component                                  | Description                                                                                                                   | ARIA Landmark / Role              |
-| :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- |
-| [`ClinicalDataTable`](./data-table.md)     | Accessible, sortable, paginated clinical dataset table with row selection                                                     | `table`, `region`, `columnheader` |
-| [`ClinicalModal`](./modal.md)              | Accessible modal dialog with focus trap and backdrop blur                                                                     | `dialog`, `aria-modal="true"`     |
-| [`PersonaSwitcher`](./persona-switcher.md) | Top-bar multi-role persona switcher (`super_admin`, `sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `auditor`) | `menu`, `menuitem`                |
-| [`AuditLogViewer`](./audit-viewer.md)      | 21 CFR Part 11 immutable audit trail explorer with diff viewer                                                                | `feed`, `article`                 |
-| `ClinicalLookupInput`                      | Real-time terminology lookup field with dynamic status indicators                                                             | `combobox`, `aria-live`           |
-| `ClinicalQueryPanel`                       | Clinical query discussion thread with Part 11 compliance                                                                      | `region`, `list`                  |
+| Component                     | Description                                                       | ARIA Landmark / Role          |
+| :---------------------------- | :---------------------------------------------------------------- | :---------------------------- |
+| [`ClinicalModal`](./modal.md) | Accessible modal dialog with focus trap and backdrop blur         | `dialog`, `aria-modal="true"` |
+| `ClinicalLookupInput`         | Real-time terminology lookup field with dynamic status indicators | `combobox`, `aria-live`       |
+| `ClinicalQueryPanel`          | Clinical query discussion thread with Part 11 compliance          | `region`, `list`              |
 
 ---
 
