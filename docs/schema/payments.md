@@ -257,6 +257,10 @@ Indexes:
 - `IX_payments_participant_disbursements_SubjectId`: (`SubjectId`)
 - `IX_payments_participant_disbursements_WalletId`: (`WalletId`)
 
+Check constraints:
+
+- `ck_payments_participant_disbursements_status`: `"Status" IN ('DISPATCHED', 'SETTLED', 'FAILED', 'CANCELLED')`
+
 ## payments.payments_participant_expense_claims
 
 Entity: `ParticipantExpenseClaim`
@@ -294,6 +298,10 @@ Indexes:
 - `IX_payments_participant_expense_claims_StudyId`: (`StudyId`)
 - `IX_payments_participant_expense_claims_SubjectId`: (`SubjectId`)
 - `IX_payments_participant_expense_claims_WalletId`: (`WalletId`)
+
+Check constraints:
+
+- `ck_payments_participant_expense_claims_status`: `"Status" IN ('PENDING_REVIEW', 'APPROVED', 'REJECTED')`
 
 ## payments.payments_participant_stipend_rules
 
@@ -478,6 +486,10 @@ Indexes:
 - `IX_payments_payables_TriggerType`: (`TriggerType`)
 - `IX_payments_payables_VisitCode`: (`VisitCode`)
 
+Check constraints:
+
+- `ck_payments_payables_status`: `"Status" IN ('TRIGGERED', 'VERIFIED', 'INVOICED', 'CANCELLED')`
+
 ## payments.payments_remittance_advices
 
 Entity: `RemittanceAdvice`
@@ -569,6 +581,10 @@ Indexes:
 - `IX_payments_self_billing_invoices_SiteId`: (`SiteId`)
 - `IX_payments_self_billing_invoices_Status`: (`Status`)
 - `IX_payments_self_billing_invoices_StudyId`: (`StudyId`)
+
+Check constraints:
+
+- `ck_payments_self_billing_invoices_status`: `"Status" IN ('DRAFT', 'APPROVED', 'RECONCILED', 'CANCELLED')`
 
 ## payments.payments_split_payees
 

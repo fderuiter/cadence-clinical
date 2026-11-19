@@ -347,25 +347,25 @@ describe("Accessibility Composables & Query Panel Integration", () => {
       wrapper.unmount();
     });
 
-    it("clears typed password immediately when ApprovalHandoffModal is dismissed via Escape", async () => {
-      const { default: ApprovalHandoffModal } =
-        await import("../src/components/crf/ApprovalHandoffModal.vue");
+    it("clears typed credential immediately when ReAuthModal is dismissed via Escape", async () => {
+      const { default: ReAuthModal } =
+        await import("../src/components/shared/ReAuthModal.vue");
       const triggerBtn = document.createElement("button");
       container.appendChild(triggerBtn);
       triggerBtn.focus();
 
-      const wrapper = mount(ApprovalHandoffModal, {
+      const wrapper = mount(ReAuthModal, {
         props: {
           isOpen: true,
-          unresolvedCount: 0,
-          editChecksVerified: true,
+          username: "monitor.01",
+          filename: "protocol_v2.pdf",
         },
         attachTo: container,
       });
       await nextTick();
       await nextTick();
 
-      const pwInput = wrapper.find("#approval-password");
+      const pwInput = wrapper.find("#reauth-credential");
       await pwInput.setValue("Part11SecretPassword!");
       expect(pwInput.element.value).toBe("Part11SecretPassword!");
 

@@ -28,68 +28,10 @@ public static class BoinEngine
 
     public static double BetaInc(double a, double b, double x)
     {
-        if (x <= 0.0) return 0.0;
-        if (x >= 1.0) return 1.0;
-
-        if (Math.Abs(a % 1) < 1e-9 && Math.Abs(b % 1) < 1e-9 && a >= 1 && b >= 1)
-        {
-            int ia = (int)a;
-            int ib = (int)b;
-            int n = ia + ib - 1;
-
-            double logTerm = LogGamma(n + 1.0) - LogGamma(ia + 1.0) - LogGamma(ib)
-                           + ia * Math.Log(x) + (ib - 1.0) * Math.Log(1.0 - x);
-            double currentTerm = Math.Exp(logTerm);
-            double total = currentTerm;
-
-            double ratioFactor = x / (1.0 - x);
-            for (int k = ia; k < n; k++)
-            {
-                currentTerm *= ((double)(n - k) / (k + 1)) * ratioFactor;
-                if (currentTerm <= 0.0)
-                {
-                    break;
-                }
-                total += currentTerm;
-            }
-            return Math.Round(Math.Clamp(total, 0.0, 1.0), 6);
-        }
-
-        double lbeta = LogGamma(a) + LogGamma(b) - LogGamma(a + b);
-        int steps = 1000;
-        double h = x / steps;
-        double totalSimp = 0.0;
-        for (int i = 0; i <= steps; i++)
-        {
-            double t = i * h;
-            double val;
-            if (t <= 0.0 || t >= 1.0) val = 0.0;
-            else val = Math.Exp((a - 1.0) * Math.Log(t) + (b - 1.0) * Math.Log(1.0 - t) - lbeta);
-
-            double weight;
-            if (i == 0 || i == steps) weight = 1.0;
-            else if (i % 2 == 1) weight = 4.0;
-            else weight = 2.0;
-
-            totalSimp += weight * val;
-        }
-        double res = (h / 3.0) * totalSimp;
-        return Math.Max(0.0, Math.Min(1.0, res));
-    }
-
-    private static double LogGamma(double x)
-    {
-        double[] p = {
-            676.5203681218851, -1259.139216722289, 771.32342877765313,
-            -176.61502916214059, 12.507343278686905, -0.13857109526572012,
-            9.9843695780195716e-6, 1.5056327351493116e-7
-        };
-        if (x < 0.5) return Math.Log(Math.PI / Math.Sin(Math.PI * x)) - LogGamma(1 - x);
-        x -= 1;
-        double a = 0.99999999999980993;
-        double t = x + 7.5;
-        for (int i = 0; i < p.Length; i++) a += p[i] / (x + i + 1);
-        return 0.5 * Math.Log(2 * Math.PI) + (x + 0.5) * Math.Log(t) - t + Math.Log(a);
+        double result = RandomizationMath.RegularizedIncompleteBeta(a, b, x);
+        return RandomizationMath.HasIntegerShapeParameters(a, b)
+            ? Math.Round(result, 6)
+            : result;
     }
 
     public static double CalculatePosteriorProbToxic(int observedDlts, int evaluatedSubjects, double targetDltRate)

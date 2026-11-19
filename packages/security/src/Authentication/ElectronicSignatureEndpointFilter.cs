@@ -34,12 +34,13 @@ public sealed class ElectronicSignatureEndpointFilter(Func<EndpointFilterInvocat
 
         var httpContext = context.HttpContext;
         string? userId = httpContext.User.FindFirst(CadenceClaimTypes.Subject)?.Value;
-        string? secret = httpContext.RequestServices
+        byte[] secretBytes = httpContext.RequestServices
             .GetRequiredService<IOptionsMonitor<GatewayAuthenticationOptions>>()
-            .Get(GatewayAuthenticationHandler.SchemeName).GatewaySecret;
+            .Get(GatewayAuthenticationHandler.SchemeName)
+            .GetGatewaySecretBytes();
         // A binding the request cannot produce (for example a batch body that does not parse) signs nothing.
         var binding = resolveBinding(context);
-        if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrEmpty(secret) || binding is null)
+        if (string.IsNullOrWhiteSpace(userId) || secretBytes.Length == 0 || binding is null)
         {
             return ReauthenticationRequired();
         }
@@ -50,7 +51,7 @@ public sealed class ElectronicSignatureEndpointFilter(Func<EndpointFilterInvocat
                 httpContext.Request.Headers[GatewayHeaders.SigToken].ToString(),
                 userId,
                 binding,
-                GatewayIdentity.EncodeSecret(secret),
+                secretBytes,
                 httpContext.RequestAborted).ConfigureAwait(false);
             httpContext.Items[VerifiedTokenItemKey] = token;
         }

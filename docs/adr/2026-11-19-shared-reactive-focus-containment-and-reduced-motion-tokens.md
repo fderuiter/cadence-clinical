@@ -27,7 +27,7 @@ Modal dialogs, slide-over drawers, and tab bars across the clinician workspace (
 - **Pros:**
   - ✅ Browser-managed top-layer rendering.
 - **Cons:**
-  - ❌ High visual regression blast radius across 48 clinical modals, multi-step consoles, and slide-over drawers, plus inconsistent `jsdom` behavior in existing synchronous unit test suites.
+  - ❌ High visual regression blast radius across 46 clinical modals, multi-step consoles, and slide-over drawers, plus inconsistent `jsdom` behavior in existing synchronous unit test suites.
 
 ### Option 2: Centralize Reactive `useFocusTrap` and Reduced-Motion Rules in `packages/ui` (Selected)
 
@@ -42,7 +42,7 @@ Modal dialogs, slide-over drawers, and tab bars across the clinician workspace (
 ## 4. Decision Outcome
 
 - **Chosen Option:** Option 2
-- **Justification:** Centralizing `useFocusTrap`, `useEscapeClose`, and reduced-motion token rules in `packages/ui` achieves consistent WCAG 2.1 AA keyboard containment, focus restoration, and motion accessibility across all 48 overlays with minimal layout risk and full compatibility with 21 CFR Part 11 credential-clearing and PIN lock requirements.
+- **Justification:** Centralizing `useFocusTrap`, `useEscapeClose`, and reduced-motion token rules in `packages/ui` achieves consistent WCAG 2.1 AA keyboard containment, focus restoration, and motion accessibility across all 46 overlays with minimal layout risk and full compatibility with 21 CFR Part 11 credential-clearing and PIN lock requirements.
 
 ## 5. Consequences & Trade-offs
 

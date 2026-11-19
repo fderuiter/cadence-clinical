@@ -132,20 +132,6 @@ export const ClinicalQueryPanel: DefineComponent<
   any
 >;
 
-export const MediaPlayer: DefineComponent<
-  {
-    src: string;
-    mimeType?: string;
-    title?: string;
-    isWatermarked?: boolean;
-    watermarkText?: string;
-    autoplay?: boolean;
-    initialZoom?: number;
-  },
-  {},
-  any
->;
-
 export const FileUploadModal: DefineComponent<
   {
     modelValue: boolean;

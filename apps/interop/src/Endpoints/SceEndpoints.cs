@@ -553,18 +553,10 @@ public static class SceEndpoints
                 return Results.UnprocessableEntity(new { error = "LOCKFILE_TAMPERED", details = lockValidation.Details });
             }
 
-            var sandboxConfig = req.SandboxConfig ?? new ExecutionSandboxConfigDto();
-            var sandboxReq = new SandboxExecutionRequest(
-                Language: program.Language,
-                SourceCode: program.SourceCode,
-                LockfileContent: lockfileContent,
-                LockType: program.LockType,
-                MaxMemoryMb: sandboxConfig.MaxMemoryMb,
-                TimeoutSeconds: sandboxConfig.TimeoutSeconds,
-                NetworkIsolated: sandboxConfig.NetworkIsolated,
-                FilesystemReadonlyRoot: sandboxConfig.FilesystemReadonlyRoot,
-                ContainerImageOverride: sandboxConfig.DockerImageDigest
-            );
+            if (!TryBuildSandboxExecutionRequest(program, lockfileContent, req.SandboxConfig, out var sandboxReq, out var policyError))
+            {
+                return policyError;
+            }
 
             var execResult = await driver.ExecuteInSandboxAsync(sandboxReq);
             var execEnd = clock.UtcNow;
@@ -939,6 +931,56 @@ public static class SceEndpoints
     /// <summary>The signed claims of a lock token. The expiry is in whole Unix seconds.</summary>
     private static string LockTokenPayload(string tokenId, string studyId, string lockId, string issuedTo, DateTimeOffset expiresAt) =>
         $"{tokenId}|{studyId}|{lockId}|{issuedTo}|{expiresAt.ToUnixTimeSeconds()}";
+
+    internal static bool TryBuildSandboxExecutionRequest(
+        StatisticalProgram program,
+        string lockfileContent,
+        ExecutionSandboxConfigDto? sandboxConfig,
+        out SandboxExecutionRequest sandboxReq,
+        [NotNullWhen(false)] out IResult? errorResult)
+    {
+        var config = sandboxConfig ?? new ExecutionSandboxConfigDto();
+        if (!config.NetworkIsolated || !config.FilesystemReadonlyRoot)
+        {
+            sandboxReq = null!;
+            errorResult = Results.BadRequest(new
+            {
+                error = "SANDBOX_POLICY_VIOLATION",
+                details = "Network isolation and a read-only root filesystem are mandatory for SCE sandbox execution."
+            });
+            return false;
+        }
+
+        if (!SceDockerEngineDriver.TryResolveApprovedImage(
+            program.Language,
+            config.DockerImageDigest,
+            out string resolvedImage,
+            out string imageError))
+        {
+            sandboxReq = null!;
+            errorResult = Results.BadRequest(new
+            {
+                error = "UNAPPROVED_CONTAINER_IMAGE",
+                details = imageError
+            });
+            return false;
+        }
+
+        sandboxReq = new SandboxExecutionRequest(
+            Language: program.Language,
+            SourceCode: program.SourceCode,
+            LockfileContent: lockfileContent,
+            LockType: program.LockType,
+            MaxMemoryMb: SceDockerEngineDriver.ClampMemoryMb(config.MaxMemoryMb),
+            TimeoutSeconds: SceDockerEngineDriver.ClampTimeoutSeconds(config.TimeoutSeconds),
+            NetworkIsolated: true,
+            FilesystemReadonlyRoot: true,
+            ContainerImageOverride: resolvedImage,
+            MaxOutputBytes: SceDockerEngineDriver.ClampMaxOutputBytes(config.MaxOutputBytes)
+        );
+        errorResult = null;
+        return true;
+    }
 
     private static string ComputeSha256(string raw)
     {

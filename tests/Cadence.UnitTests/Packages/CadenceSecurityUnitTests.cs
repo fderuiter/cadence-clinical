@@ -5,8 +5,11 @@ using System.IO;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Gateway;
 using Cadence.Core.Domain.Randomization;
 using Cadence.Kernel.Time;
 using Cadence.Security.Audit;
@@ -224,6 +227,199 @@ public class CadenceSecurityUnitTests
         );
 
         isInvalid.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(null, false, "Corrected entry")]
+    [InlineData("", true, "a<b & c>d 'quoted' \"dq\" \\slash\t\n")]
+    [InlineData("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.stepup", false, "IRB approval — 治験 Zürich – São Paulo")]
+    [InlineData("sig-token-large", true, "")]
+    public void HmacSigner_MatchesLegacySortedDictionaryCanonicalVectors(
+        string? sigToken,
+        bool unblindedAccess,
+        string changeReason)
+    {
+        byte[] secret = Encoding.UTF8.GetBytes(TestSecret);
+        const string timestamp = "2026-11-19T17:45:00.0000000+00:00";
+        string effectiveReason = sigToken == "sig-token-large" ? new string('R', 1200) : changeReason;
+
+        var legacyPayload = new SortedDictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["change_reason"] = effectiveReason,
+            ["roles"] = "CRA,Site Investigator",
+            ["site_id"] = "SITE-101,SITE-102",
+            ["sponsor_id"] = "SPONSOR-1",
+            ["study_ids"] = "STUDY-A,STUDY-B",
+            ["tenant_id"] = "tenant-default",
+            ["timestamp"] = timestamp,
+            ["unblinded_access"] = unblindedAccess,
+            ["user_id"] = "usr-01",
+        };
+        if (sigToken is not null)
+        {
+            legacyPayload["sig_token"] = sigToken;
+        }
+
+        string expected = Cadence.Security.CanonicalSigner.GenerateCanonicalSignature(legacyPayload, secret);
+        string actual = HmacSigner.GenerateGatewaySignature(
+            userId: "usr-01",
+            roles: "CRA,Site Investigator",
+            timestamp: timestamp,
+            secret: secret,
+            changeReason: effectiveReason,
+            siteId: "SITE-101,SITE-102",
+            studyIds: "STUDY-A,STUDY-B",
+            sponsorId: "SPONSOR-1",
+            unblindedAccess: unblindedAccess,
+            tenantId: "tenant-default",
+            sigToken: sigToken);
+
+        actual.Should().Be(expected);
+        HmacSigner.CanonicalSerialize(new Dictionary<string, object?>(legacyPayload))
+            .Should().Equal(Cadence.Security.CanonicalSigner.CanonicalSerialize(legacyPayload));
+    }
+
+    [Fact]
+    public void HmacSigner_CanonicalSerialize_SortsNestedObjectsWithoutReflection()
+    {
+        using var parsedDoc = JsonDocument.Parse("{\"z\":\"é <&>\",\"a\":[1,true,null]}");
+        var payload = new Dictionary<string, object?>
+        {
+            ["zeta"] = 42,
+            ["alpha"] = new Dictionary<string, object?>
+            {
+                ["note"] = "a<b & c>d 'q'",
+                ["arr"] = new object?[] { "治験", false, 3.5, null },
+            },
+            ["element"] = parsedDoc.RootElement,
+            ["node"] = new JsonObject { ["b"] = 2, ["a"] = "x" },
+            ["bravo"] = null,
+        };
+
+        byte[] actual = HmacSigner.CanonicalSerialize(payload);
+        byte[] expected = Cadence.Security.CanonicalSigner.CanonicalSerialize(payload);
+
+        Encoding.UTF8.GetString(actual).Should().Be(Encoding.UTF8.GetString(expected));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("abc")]
+    [InlineData("deadbeef")]
+    [InlineData("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz")]
+    public void HmacSigner_VerifyGatewaySignature_AcceptsHexCaseAndRejectsMalformedOrTamperedInputs(string malformedSignature)
+    {
+        byte[] secret = Encoding.UTF8.GetBytes(TestSecret);
+        const string timestamp = "2026-11-19T17:45:00.0000000+00:00";
+
+        string sig = HmacSigner.GenerateGatewaySignature(
+            userId: "usr-01",
+            roles: "investigator",
+            timestamp: timestamp,
+            secret: secret,
+            changeReason: "Initial",
+            siteId: "SITE-A",
+            studyIds: "STUDY-1",
+            sponsorId: "SPONSOR-1",
+            unblindedAccess: false,
+            tenantId: "tenant-default",
+            sigToken: "tok-1");
+
+        HmacSigner.VerifyGatewaySignature(
+            "usr-01", "investigator", timestamp, sig.ToUpperInvariant(), secret,
+            "Initial", "SITE-A", "STUDY-1", "SPONSOR-1", false, "tenant-default", "tok-1").Should().BeTrue();
+
+        // Tampered scope/token fields, wrong secret, and malformed hex strings all return false without throwing.
+        HmacSigner.VerifyGatewaySignature(
+            "usr-01", "investigator", timestamp, sig, secret,
+            "Initial", "SITE-A", "STUDY-1", "SPONSOR-1", false, "tenant-default", sigToken: null).Should().BeFalse();
+        HmacSigner.VerifyGatewaySignature(
+            "usr-01", "investigator", timestamp, sig, Encoding.UTF8.GetBytes("different-secret-32-chars-long-99999"), // pragma: allowlist secret
+            "Initial", "SITE-A", "STUDY-1", "SPONSOR-1", false, "tenant-default", "tok-1").Should().BeFalse();
+        HmacSigner.VerifyGatewaySignature(
+            "usr-01", "investigator", timestamp, malformedSignature, secret).Should().BeFalse();
+        HmacSigner.VerifyGatewaySignature(
+            "usr-01", "investigator", timestamp, sig[..^1], secret).Should().BeFalse();
+        HmacSigner.VerifyGatewaySignature(
+            "usr-01", "investigator", timestamp, sig, []).Should().BeFalse();
+    }
+
+    [Fact]
+    public void GatewayOptionsAndIdentity_CacheSecretBytesAndReuseFormattedHeaders()
+    {
+        var authOptions = new GatewayAuthenticationOptions { GatewaySecret = TestSecret };
+        authOptions.GatewaySecretBytes.ToArray().Should().Equal(Encoding.UTF8.GetBytes(TestSecret));
+        authOptions.GatewaySecret = null;
+        authOptions.GatewaySecretBytes.IsEmpty.Should().BeTrue();
+
+        var signingOptions = new GatewaySigningOptions { Secret = TestSecret };
+        signingOptions.SecretBytes.ToArray().Should().Equal(Encoding.UTF8.GetBytes(TestSecret));
+        signingOptions.Secret = string.Empty;
+        signingOptions.SecretBytes.IsEmpty.Should().BeTrue();
+
+        byte[] secret = GatewayIdentity.EncodeSecret(TestSecret);
+        var issuedAt = new DateTimeOffset(2026, 11, 19, 17, 45, 0, TimeSpan.Zero);
+        var identity = new GatewayIdentity(
+            UserId: "usr-01",
+            Roles: ["CRA", "Monitor"],
+            SiteIds: ["SITE-1"],
+            SponsorId: "SPONSOR-1",
+            UnblindedAccess: true,
+            TenantId: "tenant-1",
+            ChangeReason: "IRB approval — 治験",
+            SigToken: "sig-tok-1",
+            StudyIds: ["STUDY-1", "STUDY-2"]);
+
+        var headers = identity.ToSignedHeaders(issuedAt, secret);
+        headers[GatewayHeaders.Roles].Should().Be("CRA,Monitor");
+        headers[GatewayHeaders.SiteId].Should().Be("SITE-1");
+        headers[GatewayHeaders.StudyIds].Should().Be("STUDY-1,STUDY-2");
+        HmacSigner.VerifyGatewaySignature(
+            userId: headers[GatewayHeaders.UserId],
+            roles: headers[GatewayHeaders.Roles],
+            timestamp: headers[GatewayHeaders.Timestamp],
+            signature: headers[GatewayHeaders.Signature],
+            secret: secret,
+            changeReason: "IRB approval — 治験",
+            siteId: headers[GatewayHeaders.SiteId],
+            studyIds: headers[GatewayHeaders.StudyIds],
+            sponsorId: headers[GatewayHeaders.SponsorId],
+            unblindedAccess: true,
+            tenantId: headers[GatewayHeaders.TenantId],
+            sigToken: headers[GatewayHeaders.SigToken]).Should().BeTrue();
+    }
+
+    [Fact]
+    public void HmacSigner_VerifyGatewaySignature_EliminatesPerRequestHeapAllocations()
+    {
+        byte[] secret = GatewayIdentity.EncodeSecret(TestSecret);
+        const string timestamp = "2026-11-19T17:45:00.0000000+00:00";
+        string sig = HmacSigner.GenerateGatewaySignature(
+            "usr-01", "CRA,Monitor", timestamp, secret, "IRB approval — 治験",
+            "SITE-1", "STUDY-1", "SPONSOR-1", false, "tenant-1", "sig-tok-1");
+
+        // Warm up the thread-cached Utf8JsonWriter and ArrayPool bucket on the current thread.
+        for (int i = 0; i < 8; i++)
+        {
+            HmacSigner.VerifyGatewaySignature(
+                "usr-01", "CRA,Monitor", timestamp, sig, secret, "IRB approval — 治験",
+                "SITE-1", "STUDY-1", "SPONSOR-1", false, "tenant-1", "sig-tok-1").Should().BeTrue();
+        }
+
+        const int iterations = 200;
+        bool allValid = true;
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < iterations; i++)
+        {
+            allValid &= HmacSigner.VerifyGatewaySignature(
+                "usr-01", "CRA,Monitor", timestamp, sig, secret, "IRB approval — 治験",
+                "SITE-1", "STUDY-1", "SPONSOR-1", false, "tenant-1", "sig-tok-1");
+        }
+
+        long allocatedPerCall = (GC.GetAllocatedBytesForCurrentThread() - before) / iterations;
+        allValid.Should().BeTrue();
+        allocatedPerCall.Should().BeLessThan(64, "VerifyGatewaySignature should stream to pooled UTF-8 buffers without per-call heap allocations");
     }
 
     /// <summary>

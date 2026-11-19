@@ -111,6 +111,19 @@ public class BoinEngineTests
         BoinEngine.BetaInc(a, b, x).Should().BeApproximately(expected, 1e-6);
     }
 
+    [Fact]
+    public void BetaInc_RoundsIntegerParametersToSixDecimals_WhileKeepingSimpsonUnrounded()
+    {
+        // Exact I_0.33(1, 4) = 1 - 0.67^4 = 0.79848879; BoinEngine rounds integer inputs to 6 decimals.
+        double integerResult = BoinEngine.BetaInc(1.0, 4.0, 0.33);
+        integerResult.Should().Be(0.798489);
+
+        // Non-integer parameters delegate to 1000-step Simpson quadrature without 6-decimal rounding.
+        double nonIntegerResult = BoinEngine.BetaInc(2.5, 1.5, 0.4);
+        nonIntegerResult.Should().Be(ResponseAdaptiveEngine.FastBetaCdf(2.5, 1.5, 0.4));
+        nonIntegerResult.Should().NotBe(System.Math.Round(nonIntegerResult, 6));
+    }
+
     // ---------------------------------------------------------------- Posterior probability of toxicity
 
     /// <summary>
