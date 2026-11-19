@@ -17,7 +17,7 @@ eCRF queries no longer live here either. A query is raised on a form value and a
 - `Application/`: application services per slice, audit-context abstractions, validators, and snake_case JSON settings (`Serialization/`).
 - `Infrastructure/Persistence/`: `ExecutionDbContext`, design-time factory, Fluent API `Configurations/`, `Repositories/`, `EfAuditLogWriter`, concurrency interceptor, seeder, and `Migrations/`.
 - `Infrastructure/Consumers/`: `EConsentCompletedConsumer` (MassTransit).
-- `Infrastructure/Normalization/`, `Infrastructure/Security/`: UCUM and lab-range services, AES-GCM demographics encryption.
+- `Infrastructure/Normalization/`, `Infrastructure/Security/`: UCUM normalization service, demographics normalization and AES-GCM encryption.
 - `Endpoints/`: Minimal API route groups and `Filters/` (`ValidationFilter<T>`, `ChangeReasonHeaderFilter`).
 
 ## HTTP surface
@@ -40,10 +40,10 @@ eCRF queries no longer live here either. A query is raised on a form value and a
 
 ## Lab reference ranges and toxicity review
 
-Custom lab reference ranges are imported per study (`/api/v1/execution/lab-ranges`, `/api/v1/execution/labs/import/*`).
-`LabRangeService` keeps them as an in-process snapshot: each import, update or delete rebuilds it and swaps it in one
-step (#5435). A range never applies to another study, and a range with no study never applies. A second instance sees
-another instance's import only after it restarts (durable shared state is #5364).
+Custom lab reference ranges are imported and managed per study (`/api/v1/execution/lab-ranges`,
+`/api/v1/execution/labs/import/*`) with LOINC mapping and UCUM unit conversion, persisted in PostgreSQL
+(`LabReferenceRanges`, `BulkLabRangeImportJobs`), and queried directly per study (and optional site). Standalone
+observation range evaluation retired with `ClinicalObservation` ([ADR-2622](../../docs/adr/2026-10-19-ecrf-forms-are-collection-instances-saved-in-one-command.md)).
 
 Grade 3/4 lab toxicity reviews (`/api/v1/execution/labs/toxicity`) keep their queue, the investigator's confirm,
 dismiss and escalate actions (confirm and escalate publish `Grade3ToxicityDetected` through the outbox), and the

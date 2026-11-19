@@ -2082,8 +2082,6 @@ export interface components {
       action: string;
       reason_for_change: string;
       investigator_notes?: null | string;
-      causality_assessment?: null | string;
-      electronic_signature_password?: null | string;
     };
     Execution_StagedAdverseEventActionResponse: {
       id: string;

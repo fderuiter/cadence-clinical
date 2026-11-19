@@ -33,9 +33,7 @@ public record StagedAdverseEventReviewResponse(
 public record StagedAdverseEventActionRequest(
     [property: JsonPropertyName("action")] string Action,
     [property: JsonPropertyName("reason_for_change")] string ReasonForChange,
-    [property: JsonPropertyName("investigator_notes")] string? InvestigatorNotes = null,
-    [property: JsonPropertyName("causality_assessment")] string? CausalityAssessment = null,
-    [property: JsonPropertyName("electronic_signature_password")] string? ElectronicSignaturePassword = null
+    [property: JsonPropertyName("investigator_notes")] string? InvestigatorNotes = null
 );
 
 public record StagedAdverseEventActionResponse(

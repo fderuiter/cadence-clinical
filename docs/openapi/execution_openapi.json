@@ -6301,18 +6301,6 @@
               "null",
               "string"
             ]
-          },
-          "causality_assessment": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "electronic_signature_password": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
