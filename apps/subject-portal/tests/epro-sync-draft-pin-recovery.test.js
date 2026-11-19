@@ -2,7 +2,6 @@ import "fake-indexeddb/auto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
-import { trapTabKey } from "../src/components/focus-trap.js";
 import {
   MAX_PIN_UNLOCK_ATTEMPTS,
   SITE_CONTACT_STORAGE_KEY,
@@ -722,7 +721,7 @@ describe("Client-side ePRO sync, draft preservation, PIN recovery, and offline s
       bubbles: true,
       cancelable: true,
     });
-    trapTabKey(shiftTabEvt, "portal-pin-unlock-modal");
+    modal.dispatchEvent(shiftTabEvt);
     expect(document.activeElement).toBe(mailLink);
 
     // Tab from last element (mailto link) wraps directly back to #btn-pin-unlock-reset
@@ -732,7 +731,7 @@ describe("Client-side ePRO sync, draft preservation, PIN recovery, and offline s
       bubbles: true,
       cancelable: true,
     });
-    trapTabKey(forwardTabEvt, "portal-pin-unlock-modal");
+    modal.dispatchEvent(forwardTabEvt);
     expect(document.activeElement).toBe(resetBtn);
 
     // Request PIN reset while unauthenticated -> requires OIDC identity verification

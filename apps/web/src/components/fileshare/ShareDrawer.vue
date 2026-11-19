@@ -8,6 +8,7 @@
       role="dialog"
       aria-modal="true"
       aria-label="Share Management Drawer"
+      tabindex="-1"
     >
       <!-- Drawer Header -->
       <div class="drawer-header">
@@ -372,8 +373,7 @@
             <h4>Revoke Access Delegation</h4>
             <p>
               Are you sure you want to revoke access for
-              <strong>{{ grantToRevoke.granted_to_user_id }}</strong
-              >?
+              <strong>{{ grantToRevoke.granted_to_user_id }}</strong>?
             </p>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -415,8 +415,8 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { useFocusTrap } from "ui";
 import { useFileshareStore } from "../../stores/fileshare";
-import { useEscapeClose } from "@/composables/useEscapeClose";
 
 const props = defineProps({
   isOpen: {
@@ -439,7 +439,10 @@ const emit = defineEmits([
 const fileshareStore = useFileshareStore();
 const drawerRef = ref(null);
 
-useEscapeClose(() => emit("close"));
+useFocusTrap(drawerRef, {
+  isOpen: () => props.isOpen,
+  onEscape: () => emit("close"),
+});
 
 const activeTab = ref("internal");
 const isSubmitting = ref(false);

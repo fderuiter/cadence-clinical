@@ -26,6 +26,8 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Current | Setup, workflow, local checks, documentation rules |
 | [Project plan](PROJECT_PLAN.md) | Current | Single-repository delivery scope, module ownership, milestones, and engineering practices |
 | [Goals and priorities](GOALS_AND_PRIORITIES.md) | Current | Code-level objectives and measurable outcomes, in priority order |
+| [Issue management](ISSUE_MANAGEMENT.md) | Current | Canonical issue taxonomy, readiness, horizon caps, and maintenance cadence |
+| [Backlog insights archive](BACKLOG_INSIGHTS_ARCHIVE.md) | Historical | Source-to-owner provenance and constraints preserved during the November 2026 reset |
 
 ## Kernel and roadmap
 
@@ -556,6 +558,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2636: Inference Is Pluggable, Residency-Bound and Sandboxed](adr/2026-10-20-inference-is-pluggable-residency-bound-and-sandboxed.md) | Current | - Status: Accepted |
 | [ADR-2602: Multi-Repository Ownership and Kernel Package Boundaries](adr/2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md) | Current | Kernel boundaries and accepted ownership decisions. Source repository split superseded by ADR-2603. |
 | [ADR-2603: Keep Cadence in One Repository](adr/2026-11-19-keep-cadence-in-one-repository.md) | Current | Single-repository development and integration for the modular monolith |
+| [ADR-2544: Shared Reactive Focus Containment and Global Reduced-Motion Tokens](adr/2026-11-19-shared-reactive-focus-containment-and-reduced-motion-tokens.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

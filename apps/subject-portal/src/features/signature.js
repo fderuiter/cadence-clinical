@@ -1,4 +1,5 @@
 // 21 CFR Part 11 electronic signature modal for ePRO and eConsent.
+import { sha256 } from "ui";
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
 import {
@@ -51,10 +52,11 @@ export function openSignatureModal(actionType = "epro") {
   }
 
   document.getElementById("portal-sign-modal").style.display = "flex";
+  state.signatureModalOpen = true;
 
-  // Focus trap: set focus to the first focusable element inside the modal
+  // Ensure initial focus lands inside the modal even if rendered outside Vue mount
   const modal = document.getElementById("portal-sign-modal");
-  if (modal) {
+  if (modal && !modal.contains(document.activeElement)) {
     const focusableSelectors =
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
     let elements = Array.from(
@@ -69,9 +71,12 @@ export function openSignatureModal(actionType = "epro") {
 }
 
 export function closeSignatureModal() {
-  // Credential hygiene: clear PIN / password from DOM immediately on cancel
-  document.getElementById("sign-password").value = "";
-  document.getElementById("portal-sign-modal").style.display = "none";
+  // Credential hygiene: clear PIN / password from DOM immediately on cancel or Escape
+  const passwordEl = document.getElementById("sign-password");
+  if (passwordEl) passwordEl.value = "";
+  const modalEl = document.getElementById("portal-sign-modal");
+  if (modalEl) modalEl.style.display = "none";
+  state.signatureModalOpen = false;
   if (
     state.initiatingButton &&
     typeof state.initiatingButton.focus === "function"
@@ -107,6 +112,15 @@ export async function verifyAndSubmitSignature() {
     } else {
       alert("Please enter both User ID and Security PIN/Password to sign.");
     }
+    if (
+      !username &&
+      usernameInput &&
+      typeof usernameInput.focus === "function"
+    ) {
+      usernameInput.focus();
+    } else if (passwordInput && typeof passwordInput.focus === "function") {
+      passwordInput.focus();
+    }
     return;
   }
 
@@ -126,11 +140,14 @@ export async function verifyAndSubmitSignature() {
 
   if (actionType === "consent") {
     // eConsent GxP/Part 11 Step-up signature flow
+    const tpl = state.consentContent;
+    const templateId = tpl?.template_id || "template-icf";
+    const versionIndex = tpl?.version_index ?? 1;
+    const captureActionPath = `/api/v1/econsent/templates/${encodeURIComponent(templateId)}/versions/${versionIndex}/capture-consent`;
+
     if (isAuthenticatedSession()) {
       try {
         // Step 1: obtain short-lived sig_token bound to exact gateway action & semantic_action
-        const signActionPath =
-          "/api/v1/econsent/templates/template-icf/versions/1/sign";
         const tokenResponse = await dispatchApi(
           "api/v1/auth/signature-verification",
           {
@@ -138,8 +155,8 @@ export async function verifyAndSubmitSignature() {
             body: JSON.stringify({
               username: cleanUsername,
               password: cleanPassword,
-              action: signActionPath,
-              semantic_action: "econsent.icf.sign",
+              action: captureActionPath,
+              semantic_action: "econsent.consent.capture",
             }),
           }
         );
@@ -151,22 +168,42 @@ export async function verifyAndSubmitSignature() {
           );
         }
 
-        // Step 2: Sign consent document
-        const signResponse = await dispatchApi(
-          "api/v1/econsent/templates/template-icf/versions/1/sign",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              subject_pseudonym: state.session.userId,
-              signature_data: cleanUsername,
-              reason_for_change: finalReason,
-              liveness_token: state.consentLivenessToken,
-            }),
-            headers: {
-              "X-Sig-Token": sigToken,
-            },
-          }
-        );
+        const subjectPseudonym = state.session.userId || cleanUsername;
+        const studyId = tpl?.study_id || state.session.studyId || "study_01";
+        const siteId = tpl?.site_id || state.session.siteId || "site_01";
+        const protocolVersion = tpl?.protocol_version || "v1.0";
+        const digestSha256 =
+          tpl?.digest_sha256 ||
+          (await sha256(
+            JSON.stringify(
+              tpl || {
+                template_id: templateId,
+                version_index: versionIndex,
+              }
+            )
+          ));
+
+        // Step 2: Capture signed consent document per EconsentEndpoints CaptureConsentRequest
+        const signResponse = await dispatchApi(captureActionPath, {
+          method: "POST",
+          body: JSON.stringify({
+            subject_pseudonym: subjectPseudonym,
+            study_id: studyId,
+            site_id: siteId,
+            signer_name: cleanUsername,
+            signer_role: "Subject",
+            meaning: finalReason,
+            signing_reason: finalReason,
+            protocol_version: protocolVersion,
+            digest_sha256: digestSha256,
+            signature_data: cleanUsername,
+            liveness_token: state.consentLivenessToken,
+            device_timestamp: new Date().toISOString(),
+          }),
+          headers: {
+            "X-Sig-Token": sigToken,
+          },
+        });
 
         if (
           !signResponse ||
@@ -186,9 +223,9 @@ export async function verifyAndSubmitSignature() {
         await logAuditRecord(
           "SIGN_CONSENT",
           {
-            template_id: "template-icf",
-            version_index: 1,
-            subject_pseudonym: state.session.userId,
+            template_id: templateId,
+            version_index: versionIndex,
+            subject_pseudonym: subjectPseudonym,
           },
           `Informed Consent Signed and Verified: "${cleanUsername}" with declaration: "${finalReason}"`
         );
@@ -197,12 +234,15 @@ export async function verifyAndSubmitSignature() {
         alert("Informed Consent successfully signed and archived!");
         loadConsentDetails();
       } catch (err) {
-        // Show in accessible error status banner and preserve credential hygiene
+        // Show in accessible error status banner, focus #sign-password for retry, and preserve credential hygiene
         if (errorBanner) {
           errorBanner.textContent = `Signature Verification Rejected: ${err.message}`;
           errorBanner.style.display = "block";
         } else {
           alert(`Signature Verification Rejected: ${err.message}`);
+        }
+        if (passwordInput && typeof passwordInput.focus === "function") {
+          passwordInput.focus();
         }
       }
     } else if (allowUnbackedAction("Electronic consent signature")) {
@@ -212,8 +252,8 @@ export async function verifyAndSubmitSignature() {
       await logAuditRecord(
         "SIGN_CONSENT",
         {
-          template_id: "template-icf",
-          version_index: 1,
+          template_id: templateId,
+          version_index: versionIndex,
           subject_pseudonym: state.session.userId,
         },
         `Informed Consent Signed and Verified (Demo Mode): "${cleanUsername}" with declaration: "${finalReason}"`
@@ -230,6 +270,9 @@ export async function verifyAndSubmitSignature() {
         errorBanner.style.display = "block";
       } else {
         alert(refusalMsg);
+      }
+      if (passwordInput && typeof passwordInput.focus === "function") {
+        passwordInput.focus();
       }
     }
   } else {
@@ -308,81 +351,5 @@ export async function verifyAndSubmitSignature() {
 
     // Attempt sync immediately (promotes to COMPLETED only when server confirms)
     await syncOfflineQueue(false, { autoDisburse: isDemoModeActive() });
-  }
-}
-
-// Keeps Tab focus inside the open signature modal (document listener).
-export function installDocumentSignatureFocusTrap() {
-  if (!window.__TAB_LISTENER_REGISTERED__) {
-    window.__TAB_LISTENER_REGISTERED__ = true;
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Tab") {
-        const modal = document.getElementById("portal-sign-modal");
-        if (modal && modal.style.display !== "none") {
-          const focusableSelectors =
-            "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])";
-          const focusableElements = Array.from(
-            modal.querySelectorAll(focusableSelectors)
-          );
-          if (focusableElements.length === 0) return;
-
-          const first = focusableElements[0];
-          const last = focusableElements[focusableElements.length - 1];
-
-          if (e.shiftKey) {
-            if (document.activeElement === first) {
-              last.focus();
-              e.preventDefault();
-            }
-          } else {
-            if (document.activeElement === last) {
-              first.focus();
-              e.preventDefault();
-            }
-          }
-        }
-      }
-    });
-  }
-}
-
-// Keeps Tab focus inside the open signature modal (window listener).
-export function installWindowSignatureFocusTrap() {
-  if (typeof window !== "undefined") {
-    if (!window.__TAB_TRAP_LISTENER_ADDED__) {
-      window.addEventListener("keydown", (e) => {
-        if (e.key === "Tab") {
-          const modal = document.getElementById("portal-sign-modal");
-          if (modal && modal.style.display !== "none") {
-            const focusableSelectors =
-              'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-            let elements = Array.from(
-              modal.querySelectorAll(focusableSelectors)
-            ).filter((el) => !el.disabled);
-            const visible = elements.filter((el) => el.offsetParent !== null);
-            const focusableElements = visible.length > 0 ? visible : elements;
-
-            if (focusableElements.length > 0) {
-              const firstFocusable = focusableElements[0];
-              const lastFocusable =
-                focusableElements[focusableElements.length - 1];
-
-              if (e.shiftKey) {
-                if (document.activeElement === firstFocusable) {
-                  lastFocusable.focus();
-                  e.preventDefault();
-                }
-              } else {
-                if (document.activeElement === lastFocusable) {
-                  firstFocusable.focus();
-                  e.preventDefault();
-                }
-              }
-            }
-          }
-        }
-      });
-      window.__TAB_TRAP_LISTENER_ADDED__ = true;
-    }
   }
 }

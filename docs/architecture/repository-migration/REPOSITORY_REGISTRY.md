@@ -7,20 +7,21 @@
 
 ## Repositories (10 total)
 
-| GitHub source repository | Provisional product/foundation | Target bounded context | Initial state |
-| --- | --- | --- | --- |
-| `cadence-clinical` | Workspace / Complete | Platform composition, gateway, shared client shell, CLI, release integration | existing source; integration authority |
-| `cadence-kernel` | Core (not a paid SKU) | Canonical clinical identity, temporal record, permissions, audit, command SDK | documentation initialized; implementation remains in source |
-| `cadence-study-design` | Blueprint | USDM/protocol authoring, study build, study standards authoring | documentation initialized |
-| `cadence-clinical-data` | Capture | EDC, eCRF, eSource, CDMS, clinical coding and queries | documentation initialized |
-| `cadence-trial-operations` | Orbit | CTMS, startup, eTMF/eISF, monitoring, site finance, operational workflows | documentation initialized |
-| `cadence-participants` | Engage | Recruitment, eConsent, eCOA/ePRO, participant portal/DCT | documentation initialized |
-| `cadence-interventions` | Allocate | RTSM, approved randomization, supply, device accountability | documentation initialized |
-| `cadence-safety` | Vigil | Safety case, SAE reconciliation, PV, E2B(R3), signal detection | documentation initialized |
-| `cadence-evidence` | Lens | Labs, imaging, DHT, statistical analysis, standardized datasets and RWE | documentation initialized |
-| `cadence-quality-regulatory` | Assure | QMS, CAPA, inspection, RIM, submissions and transparency | documentation initialized |
+| GitHub source repository     | Provisional product/foundation | Target bounded context                                                        | Initial state                                               |
+| ---------------------------- | ------------------------------ | ----------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `cadence-clinical`           | Workspace / Complete           | Platform composition, gateway, shared client shell, CLI, release integration  | existing source; integration authority                      |
+| `cadence-kernel`             | Core (not a paid SKU)          | Canonical clinical identity, temporal record, permissions, audit, command SDK | documentation initialized; implementation remains in source |
+| `cadence-study-design`       | Blueprint                      | USDM/protocol authoring, study build, study standards authoring               | documentation initialized                                   |
+| `cadence-clinical-data`      | Capture                        | EDC, eCRF, eSource, CDMS, clinical coding and queries                         | documentation initialized                                   |
+| `cadence-trial-operations`   | Orbit                          | CTMS, startup, eTMF/eISF, monitoring, site finance, operational workflows     | documentation initialized                                   |
+| `cadence-participants`       | Engage                         | Recruitment, eConsent, eCOA/ePRO, participant portal/DCT                      | documentation initialized                                   |
+| `cadence-interventions`      | Allocate                       | RTSM, approved randomization, supply, device accountability                   | documentation initialized                                   |
+| `cadence-safety`             | Vigil                          | Safety case, SAE reconciliation, PV, E2B(R3), signal detection                | documentation initialized                                   |
+| `cadence-evidence`           | Lens                           | Labs, imaging, DHT, statistical analysis, standardized datasets and RWE       | documentation initialized                                   |
+| `cadence-quality-regulatory` | Assure                         | QMS, CAPA, inspection, RIM, submissions and transparency                      | documentation initialized                                   |
 
 ## Principles
+
 - Repository != bounded-context runtime service != purchasable application. The first governs source ownership; a product may license several application modules from one repository.
 - Product domains own workflows, not duplicate kernel canonical `Study`, `Site`, `Participant`, `Observation`, `Source`, `Artifact`, `Grant`, policy, audit or transaction authority.
 - `cadence-clinical` remains the **only active implementation and composition authority** until each extraction clears its gates. Do not edit the original code as though it has already moved.
@@ -30,13 +31,16 @@
 - No production clinical records or validations are implied by repo initialization. Use synthetic data until separate readiness qualification.
 
 ## What lives where
+
 See [capability ownership](CAPABILITY_OWNERSHIP_MATRIX.md) for current-source disposition and exact domain conflicts. Each destination repository contains a separate `ARCHITECTURE.md`, `AGENTS.md`, and `docs/MIGRATION.md` defining its intended boundary and proof.
 
 ## Cross-repo version strategy
+
 - Target: pinned, immutable NuGet libraries/modules for the .NET host and versioned npm Vue feature libraries for the workspace; use published OpenAPI/schema/event contracts for external services.
 - Until packages are actually published, these are design goals, not existing artifact feeds.
 - No floating dependency on another repo's `main`; no cross-repo private `DbContext` or domain internals.
 - Composition manifest in `cadence-clinical` will pin verified versions. Consumer/producer contract tests and a system-level synthetic journey gate upgrades.
 
 ## Governance
+
 Use [migration plan](MIGRATION_PLAN.md), [agent handoff](AGENT_HANDOFF.md), and the existing [five-gates epic](https://github.com/fderuiter/cadence-clinical/issues/5310). Future architecture ADRs must explicitly reconcile ADR-2610 and ADR-2600; do not silently reclassify them as superseded.

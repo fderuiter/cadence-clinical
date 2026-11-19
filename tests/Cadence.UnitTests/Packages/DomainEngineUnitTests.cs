@@ -1,5 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 
 using Cadence.Core.Domain.Randomization;
 using Cadence.Core.Domain.Rules;
@@ -7,6 +11,7 @@ using Cadence.Core.Domain.Supply;
 using Cadence.Core.Domain.Toxicity;
 using Cadence.Testing;
 using Cadence.Testing.Time;
+using Cadence.ToolingCore.Services;
 
 using FluentAssertions;
 
@@ -117,6 +122,121 @@ public class DomainEngineUnitTests
         result.AssignedArm.Should().Match(a => a == "ARM_A" || a == "ARM_B");
         result.ImbalanceScore.Should().NotBeNull();
         result.DeterministicChecksum.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public void BlockAndMinimizationEngines_PreserveDefaultSeedsStrataAndSha256Checksums()
+    {
+        var blockRequest = new SubjectAllocationRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-101",
+            SiteId: "SITE-1",
+            StratificationFactors: new Dictionary<string, object> { { "AGE", "ADULT" } }
+        );
+        var blockDefault = BlockRandomizationEngine.Allocate(
+            new StratifiedBlockConfig(
+                ArmsRatios: new Dictionary<string, int> { { "ARM_A", 1 }, { "ARM_B", 1 } },
+                StratificationFactors: new List<string> { "AGE" },
+                BlockSizes: new List<int> { 2, 4 },
+                Seed: null),
+            blockRequest);
+        var blockSeed42 = BlockRandomizationEngine.Allocate(
+            new StratifiedBlockConfig(
+                ArmsRatios: new Dictionary<string, int> { { "ARM_A", 1 }, { "ARM_B", 1 } },
+                StratificationFactors: new List<string> { "AGE" },
+                BlockSizes: new List<int> { 2, 4 },
+                Seed: 42),
+            blockRequest);
+
+        blockDefault.AssignedArm.Should().Be(blockSeed42.AssignedArm);
+        blockDefault.BlockIndex.Should().Be(blockSeed42.BlockIndex);
+        string expectedBlockPayload = $"{blockRequest.StudyId}:{blockRequest.SubjectId}:{blockDefault.StratumKey}:{blockDefault.AllocationIndex}:{blockDefault.BlockIndex}:{blockDefault.AssignedArm}";
+        blockDefault.DeterministicChecksum.Should().Be(
+            Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(expectedBlockPayload))));
+
+        var minRequest = new SubjectAllocationRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-202",
+            SiteId: "SITE-1",
+            StratificationFactors: new Dictionary<string, object> { { "STAGE", "III" }, { "CENTER", "NY" } }
+        );
+        var minDefault = MinimizationEngine.Allocate(
+            new MinimizationConfig(
+                ArmsRatios: new Dictionary<string, int> { { "ARM_A", 1 }, { "ARM_B", 1 } },
+                StratificationFactors: new List<string> { "STAGE", "CENTER" },
+                DistanceMetric: ImbalanceDistanceMetric.RANGE,
+                PPreferred: 0.8,
+                Seed: null),
+            minRequest);
+        var minSeed101 = MinimizationEngine.Allocate(
+            new MinimizationConfig(
+                ArmsRatios: new Dictionary<string, int> { { "ARM_A", 1 }, { "ARM_B", 1 } },
+                StratificationFactors: new List<string> { "STAGE", "CENTER" },
+                DistanceMetric: ImbalanceDistanceMetric.RANGE,
+                PPreferred: 0.8,
+                Seed: 101),
+            minRequest);
+
+        minDefault.AssignedArm.Should().Be(minSeed101.AssignedArm);
+        minDefault.StratumKey.Should().Be("CENTER=NY|STAGE=III");
+        string expectedMinPayload = $"{minRequest.StudyId}:{minRequest.SubjectId}:{minDefault.AssignedArm}:{minDefault.AllocationIndex}:{minDefault.ImbalanceScore}";
+        minDefault.DeterministicChecksum.Should().Be(
+            Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(expectedMinPayload))));
+    }
+
+    [Fact]
+    public void DuplicationDetectorService_RandomizationFilesPassCleanly_WithoutExemption()
+    {
+        string repoRoot = FindRepoRoot();
+        string tempRoot = Path.Combine(Path.GetTempPath(), $"cadence-dup-rand-{Guid.NewGuid():N}");
+        try
+        {
+            string sourceDir = Path.Combine(repoRoot, "packages", "engine_core", "src", "Randomization");
+            string destDir = Path.Combine(tempRoot, "packages", "engine_core", "src", "Randomization");
+            Directory.CreateDirectory(destDir);
+
+            var copiedFiles = new List<string>();
+            foreach (string srcFile in Directory.EnumerateFiles(sourceDir, "*.cs"))
+            {
+                string destFile = Path.Combine(destDir, Path.GetFileName(srcFile));
+                File.Copy(srcFile, destFile);
+                copiedFiles.Add(destFile);
+            }
+
+            DuplicationDetectorService.DetectDuplication(copiedFiles.ToArray(), tempRoot).Should().Be(0);
+
+            // Verify BoinEngine.cs and ResponseAdaptiveEngine.cs are no longer exempted when >=15 lines match.
+            string dupLines = string.Join(
+                "\n",
+                Enumerable.Range(1, 18).Select(i => $"        double checkVal{i} = System.Math.Sin({i} * 0.125);"));
+            string dupHelper = $"\ninternal static class DupProbe\n{{\n    internal static void Probe()\n    {{\n{dupLines}\n    }}\n}}\n";
+
+            File.AppendAllText(Path.Combine(destDir, "BoinEngine.cs"), dupHelper);
+            File.AppendAllText(Path.Combine(destDir, "ResponseAdaptiveEngine.cs"), dupHelper);
+
+            DuplicationDetectorService.DetectDuplication(copiedFiles.ToArray(), tempRoot).Should().Be(1);
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
+    private static string FindRepoRoot()
+    {
+        string? dir = AppContext.BaseDirectory;
+        while (!string.IsNullOrEmpty(dir))
+        {
+            if (File.Exists(Path.Combine(dir, "Cadence.sln")))
+            {
+                return dir;
+            }
+            dir = Directory.GetParent(dir)?.FullName;
+        }
+        throw new InvalidOperationException("Could not locate Cadence.sln repository root.");
     }
 
     [Fact]

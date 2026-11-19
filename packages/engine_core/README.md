@@ -9,7 +9,7 @@ Shared domain library (folder `engine_core`): aggregate root base types, the `IG
 - `Cadence.Core.Domain.Audit`: `AuditLogEntry` (the hash-chained audit row written by `Cadence.Database.GxPAuditInterceptor`).
 - `Cadence.Core.Domain.Rules`: rule AST (`ExpressionNode`, `FieldReference`, `RuleDefinition`) and `RuleEvaluator`. Retired by [ADR-2506](../../docs/adr/2026-09-30-the-engine-core-rule-ast-is-superseded-by-the-one-rule-language.md): nothing new may call it, because rules go through the one rule language (`IRuleEvaluator`, K-RULE-3).
 - `Cadence.Core.Domain.Derived`: `DerivedVariableEngine` (BMI, BSA, eGFR, QTc, MAP and Cockcroft-Gault with unit normalisation and plausibility bounds) and `DerivedFormulaDefinition` with its checksum ([ADR-2522](../../docs/adr/2026-09-30-derived-variables-ported-as-fixed-standard-formulas.md)). Custom formulas are `Cadence.Rules` expressions.
-- `Cadence.Core.Domain.Randomization`: `BlockRandomizationEngine`, `MinimizationEngine`, `StochasticRandomizationEngine`, `BoinEngine` and their models.
+- `Cadence.Core.Domain.Randomization`: `BlockRandomizationEngine`, `MinimizationEngine`, `ResponseAdaptiveEngine`, `StochasticRandomizationEngine`, `BoinEngine`, internal `RandomizationMath` helpers and their models.
 - `Cadence.Core.Domain.Supply`: `DTPLogisticsEngine`, `MultiEchelonHierarchyEngine`, `PredictiveDemandForecastingEngine` and supply models. The emergency unblinding shapes are `[Obsolete]`: Execution's `UNBLINDED` state change is the only unblinding path (ADR-2520).
 - `Cadence.Core.Domain.Sla`: `SlaEngine` (due dates around the clock or in business hours, countdown clocks, escalation tiers) and `SlaPolicy` with its checksum.
 - `Cadence.Core.Domain.Toxicity`: `LabToxicityGradingEngine` and CTCAE grading models.

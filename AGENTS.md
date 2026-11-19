@@ -14,6 +14,15 @@ Read first:
 
 ---
 
+## Issue workflow
+
+Follow [docs/ISSUE_MANAGEMENT.md](docs/ISSUE_MANAGEMENT.md) when filing or working issues.
+Check current code, recent PRs, and the project plan before proposing work or closure.
+Use its canonical taxonomy and horizon caps; Now work must meet its Definition of Ready.
+Prefer an existing owner, native sub-issues, and native dependencies over duplicate tickets.
+Preserve original context and salvage unique source and comment evidence before consolidation.
+Keep raw ideas in Discussions and preserve unmet dependency gates until replacements are verified.
+
 ## Product mission
 
 Cadence is an **operating system for clinical research**: one kernel holding a single body of
@@ -275,6 +284,9 @@ The CLI is not installed as a `dotnet` tool. Run it as `pnpm cadence <command>` 
 | Architecture tests                                                    | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`                                                                                                                                                                         |
 | Formatting                                                            | `dotnet format Cadence.sln --verify-no-changes`                                                                                                                                                                                                        |
 | Action pinning check                                                  | `python3 scripts/check-action-pinning.py`                                                                                                                                                                                                              |
+| Dockerfile lint (Hadolint)                                            | `find docker -type f -name "Dockerfile*" -exec hadolint --failure-threshold error {} +`                                                                                                                                                                |
+| Container builds (.NET & SCE)                                         | `docker build -t cadence-gateway:latest -f docker/Dockerfile.dotnet --build-arg APP_NAME=gateway .` (also `APP_NAME=kernel-api`, `docker/sce/python`, `docker/sce/r`)                                                                                  |
+| Container vulnerability scan (Trivy)                                  | `trivy image --exit-code 1 --ignore-unfixed --pkg-types os,library --severity CRITICAL,HIGH cadence-gateway:latest`                                                                                                                                    |
 | All quality gates (pre-commit)                                        | `pnpm cadence check`                                                                                                                                                                                                                                   |
 | Whole CI workflow locally (before merging; Actions is off until 2027) | `CADENCE_TEST_POSTGRES=<connection string> pnpm cadence ci` (about 20 minutes, [docs/CI.md](docs/CI.md))                                                                                                                                               |
 | One gate                                                              | `pnpm cadence check <gate>` (for example `adrs`, `markdown`, `readmes`, `arch-drift`)                                                                                                                                                                  |

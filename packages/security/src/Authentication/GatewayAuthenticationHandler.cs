@@ -23,11 +23,27 @@ public sealed class GatewayAuthenticationOptions : AuthenticationSchemeOptions
     /// <summary>HMAC-SHA256 key length floor: one full hash block of entropy.</summary>
     public const int MinimumSecretLength = 32;
 
+    private string? _gatewaySecret;
+    private byte[] _gatewaySecretBytes = [];
+
     /// <summary>The shared gateway secret. Bound from <c>GATEWAY_SECRET</c>; there is no default.</summary>
-    public string? GatewaySecret { get; set; }
+    public string? GatewaySecret
+    {
+        get => _gatewaySecret;
+        set
+        {
+            _gatewaySecret = value;
+            _gatewaySecretBytes = string.IsNullOrEmpty(value) ? [] : GatewayIdentity.EncodeSecret(value);
+        }
+    }
+
+    /// <summary>Cached UTF-8 bytes of <see cref="GatewaySecret"/>, or empty when unset.</summary>
+    public ReadOnlyMemory<byte> GatewaySecretBytes => _gatewaySecretBytes;
 
     /// <summary>How far a signed timestamp may drift from this service's clock before it is rejected.</summary>
     public TimeSpan AllowedClockSkew { get; set; } = TimeSpan.FromMinutes(2);
+
+    internal byte[] GetGatewaySecretBytes() => _gatewaySecretBytes;
 }
 
 /// <summary>
@@ -89,7 +105,7 @@ public sealed class GatewayAuthenticationHandler(
             roles: rolesHeader,
             timestamp: timestamp,
             signature: signature,
-            secret: GatewayIdentity.EncodeSecret(Options.GatewaySecret ?? string.Empty),
+            secret: Options.GetGatewaySecretBytes(),
             changeReason: GatewayIdentity.NullIfBlank(changeReason),
             siteId: GatewayIdentity.NullIfBlank(siteHeader),
             studyIds: GatewayIdentity.NullIfBlank(studyHeader),

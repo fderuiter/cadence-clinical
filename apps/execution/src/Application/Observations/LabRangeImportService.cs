@@ -25,18 +25,15 @@ public sealed class LabRangeImportService : ILabRangeImportService
 {
     private readonly ExecutionDbContext _dbContext;
     private readonly IUcumNormalizationService _ucumNormalizationService;
-    private readonly ILabRangeService _labRangeService;
     private readonly IClock _clock;
 
     public LabRangeImportService(
         ExecutionDbContext dbContext,
         IUcumNormalizationService ucumNormalizationService,
-        ILabRangeService labRangeService,
         IClock clock)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _ucumNormalizationService = ucumNormalizationService ?? throw new ArgumentNullException(nameof(ucumNormalizationService));
-        _labRangeService = labRangeService ?? throw new ArgumentNullException(nameof(labRangeService));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
     }
 
@@ -290,14 +287,6 @@ public sealed class LabRangeImportService : ILabRangeImportService
 
         await _dbContext.SaveChangesAsync(ct);
 
-        // Refresh active range cache in ILabRangeService
-        var allActiveRanges = await _dbContext.LabReferenceRanges
-            .AsNoTracking()
-            .Where(r => r.IsActive && !r.IsDeleted)
-            .ToListAsync(ct);
-
-        _labRangeService.UpdateActiveRanges(allActiveRanges);
-
         return MapJobToResponse(jobEntity);
     }
 
@@ -357,9 +346,6 @@ public sealed class LabRangeImportService : ILabRangeImportService
         _dbContext.LabReferenceRanges.Add(entity);
         await _dbContext.SaveChangesAsync(ct);
 
-        var allActive = await _dbContext.LabReferenceRanges.AsNoTracking().Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
-        _labRangeService.UpdateActiveRanges(allActive);
-
         return MapRangeToResponse(entity);
     }
 
@@ -388,9 +374,6 @@ public sealed class LabRangeImportService : ILabRangeImportService
 
         await _dbContext.SaveChangesAsync(ct);
 
-        var allActive = await _dbContext.LabReferenceRanges.AsNoTracking().Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
-        _labRangeService.UpdateActiveRanges(allActive);
-
         return MapRangeToResponse(entity);
     }
 
@@ -401,9 +384,6 @@ public sealed class LabRangeImportService : ILabRangeImportService
 
         entity.Deactivate(updatedBy, reasonForChange);
         await _dbContext.SaveChangesAsync(ct);
-
-        var allActive = await _dbContext.LabReferenceRanges.AsNoTracking().Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
-        _labRangeService.UpdateActiveRanges(allActive);
 
         return true;
     }

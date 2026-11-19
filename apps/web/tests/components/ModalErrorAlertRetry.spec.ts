@@ -69,6 +69,109 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
       // Verify confirm action was re-invoked and succeeded
       expect(mockOnSign).toHaveBeenCalledTimes(2);
     });
+
+    it("focuses #sig-password on Retry when password was wiped after step-up expiry without clobbering the error", async () => {
+      const mockOnSign = vi
+        .fn()
+        .mockRejectedValueOnce(new Error("REAUTHENTICATION_REQUIRED"))
+        .mockResolvedValueOnce({ kind: "signed", meaning: "approved" });
+
+      const mockSignatureService = {
+        verifySignature: vi.fn(async () => ({
+          sig_token: "mock-sig-token-expired",
+        })),
+      };
+
+      const wrapper = mount(SignatureCaptureModal, {
+        attachTo: document.body,
+        props: {
+          isOpen: true,
+          username: "dr_smith",
+          signerName: "Dr. Smith", // deid-ignore
+          reasons: ["Investigator Certification", "APPROVAL"],
+          actionUrl: "/api/v1/execution/forms/form-1/signatures",
+          semanticAction: "execution.form.sign",
+          onSign: mockOnSign,
+        },
+        global: {
+          provide: {
+            signatureService: mockSignatureService,
+          },
+        },
+      });
+
+      const options = wrapper
+        .findAll("#sig-reason option")
+        .map((o) => o.text());
+      expect(options).toContain("Investigator Certification");
+      expect(options).not.toContain("I agree to participate");
+
+      await wrapper.find("#sig-password").setValue("Secret123!"); // pragma: allowlist secret
+      await wrapper.find("#sig-reason").setValue("Investigator Certification");
+      await wrapper.find("#btn-confirm-sig").trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.vm.password).toBe("");
+      expect(wrapper.find("#sig-error-msg").text()).toContain(
+        "Identity verification expired or invalid"
+      );
+
+      // Clicking Retry while password is empty focuses #sig-password and preserves the actionable error
+      const retryBtn = wrapper.find('[data-testid="modal-error-retry-btn"]');
+      await retryBtn.trigger("click");
+
+      expect(document.activeElement?.id).toBe("sig-password");
+      expect(mockOnSign).toHaveBeenCalledTimes(1);
+      expect(wrapper.find("#sig-error-msg").text()).toContain(
+        "Identity verification expired or invalid"
+      );
+
+      // Entering password and clicking Retry completes the signature
+      await wrapper.find("#sig-password").setValue("Secret123!"); // pragma: allowlist secret
+      await retryBtn.trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(mockOnSign).toHaveBeenCalledTimes(2);
+      expect(wrapper.emitted("success")).toBeTruthy();
+      wrapper.unmount();
+    });
+
+    it("guards against failed onSign outcome objects without emitting success", async () => {
+      const mockOnSign = vi.fn(async () => ({
+        kind: "denied",
+        message: "You are not authorised to sign this form.",
+      }));
+
+      const mockSignatureService = {
+        verifySignature: vi.fn(async () => ({
+          sig_token: "mock-sig-token-403",
+        })),
+      };
+
+      const wrapper = mount(SignatureCaptureModal, {
+        props: {
+          isOpen: true,
+          username: "dr_smith",
+          actionUrl: "/api/v1/execution/forms/form-1/signatures",
+          semanticAction: "execution.form.sign",
+          onSign: mockOnSign,
+        },
+        global: {
+          provide: {
+            signatureService: mockSignatureService,
+          },
+        },
+      });
+
+      wrapper.vm.password = "Secret123!"; // pragma: allowlist secret
+      wrapper.vm.signingReason = "APPROVAL";
+      await wrapper.vm.confirm();
+
+      expect(wrapper.emitted("success")).toBeUndefined();
+      expect(wrapper.find("#sig-error-msg").text()).toContain(
+        "You are not authorised to sign this form."
+      );
+    });
   });
 
   describe("UpversioningImpactDrawer.vue", () => {

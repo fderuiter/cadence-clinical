@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace Cadence.Core.Domain.Randomization;
 
@@ -87,9 +85,7 @@ public static class BlockRandomizationEngine
         int targetCount)
     {
         string baseSeedStr = $"{config.Seed ?? 42}:{stratumKey}";
-        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(baseSeedStr));
-        int seedHash = BitConverter.ToInt32(hash, 0) & 0x7FFFFFFF;
-        var rng = new Random(seedHash);
+        var rng = RandomizationMath.CreateSeededRandom(baseSeedStr);
 
         int ratioSum = config.ArmsRatios.Values.Sum();
         var allowedBlockSizes = config.BlockSizes != null && config.BlockSizes.Count > 0
@@ -140,8 +136,7 @@ public static class BlockRandomizationEngine
         }
 
         string checksumPayload = $"{request.StudyId}:{request.SubjectId}:{stratumKey}:{nextAllocationIdx}:{currentBlockIdx}:{assignedArm}";
-        byte[] csBytes = SHA256.HashData(Encoding.UTF8.GetBytes(checksumPayload));
-        string checksum = Convert.ToHexString(csBytes).ToLowerInvariant();
+        string checksum = RandomizationMath.ComputeSha256Hex(checksumPayload);
 
         return new SubjectAllocationResult(
             StudyId: request.StudyId,

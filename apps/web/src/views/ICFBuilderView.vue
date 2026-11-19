@@ -208,8 +208,8 @@
       username="participant.cadence101"
       signer-name="Participant Jane Doe"
       signer-role="Subject"
-      action-url="econsent.icf.capture_consent"
-      semantic-action="econsent.icf.capture_consent"
+      :action-url="captureConsentActionUrl"
+      :semantic-action="ECONSENT_CAPTURE_SEMANTIC_ACTION"
       :on-sign="handleExecuteSignature"
       @cancel="showSignatureModal = false"
       @success="onSignatureSuccess"
@@ -264,6 +264,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import {
+  ECONSENT_CAPTURE_SEMANTIC_ACTION,
+  econsentCaptureAction,
+} from "../api/econsent";
 import { useEconsentStore } from "../stores/econsent.js";
 import IcfSectionEditor from "../components/econsent/IcfSectionEditor.vue";
 import ComprehensionQuizBuilder from "../components/econsent/ComprehensionQuizBuilder.vue";
@@ -285,6 +289,14 @@ const newSectionTitle = ref("");
 const activeSection = computed(() =>
   econsentStore.sections.find((s) => s.id === activeSectionId.value)
 );
+
+const captureConsentActionUrl = computed(() => {
+  const templateId = econsentStore.currentIcf?.id || "icf-001";
+  const rawVersion = String(econsentStore.currentIcf?.version || "v1.0");
+  const versionMatch = rawVersion.match(/^v?(\d+)/i);
+  const versionIndex = versionMatch ? Number.parseInt(versionMatch[1], 10) : 1;
+  return econsentCaptureAction(templateId, versionIndex);
+});
 
 onMounted(() => {
   econsentStore.loadIcf();

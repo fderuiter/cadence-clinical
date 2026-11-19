@@ -18,10 +18,6 @@ import {
   hydrateSiteSupportContact,
   maskParticipantIdentifier,
 } from "../features/site-support.js";
-import {
-  installDocumentSignatureFocusTrap,
-  installWindowSignatureFocusTrap,
-} from "../features/signature.js";
 import { syncOfflineQueue } from "../features/sync.js";
 import { resetSyncRetryInfo } from "../features/sync-status.js";
 import {
@@ -33,7 +29,7 @@ import {
 import { state } from "../stores/state.js";
 import { getAssignmentsFromDB, getInstrumentsFromDB } from "../sync-queue.js";
 import { isDemoBuild, isDemoModeActive } from "../utils/demoMode.js";
-import { bindPortalControls, setupTabListAria } from "./controls.js";
+import { bindPortalControls } from "./controls.js";
 import { mountPortal } from "./mount.js";
 
 // Bootstrap Initialization
@@ -61,9 +57,6 @@ export async function initializeApp() {
 
     // Dynamic Hover Pointer Capability Detection
     initHoverDetection();
-
-    // Set up global focus trapping for the signature modal dialog
-    installDocumentSignatureFocusTrap();
   }
 
   // Graceful OIDC Keycloak setup
@@ -163,13 +156,8 @@ export async function initializeApp() {
     });
   }
 
-  // Sync Now, navigation, questionnaire, signature modal, eConsent and retry
-  // buttons, then the tab list's ARIA roles and keyboard navigation
+  // Sync Now, questionnaire, signature modal, eConsent and retry buttons
   bindPortalControls();
-  setupTabListAria();
-
-  // Focus trap for the signature modal (prevents escaping focus)
-  installWindowSignatureFocusTrap();
 
   // Switch database context and prompt PIN unlock/setup when active user identity changes
   watchUserIdentity();

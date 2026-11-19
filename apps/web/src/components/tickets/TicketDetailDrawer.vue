@@ -3,10 +3,12 @@
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div v-if="isOpen" class="drawer-backdrop" @click.self="close">
     <div
+      ref="drawerRef"
       class="drawer-panel"
       role="dialog"
       aria-modal="true"
       aria-labelledby="drawer-ticket-title"
+      tabindex="-1"
     >
       <!-- Drawer Header -->
       <div class="drawer-header">
@@ -627,9 +629,12 @@
       @click.self="closeCitationViewer"
     >
       <div
+        ref="citationModalRef"
         class="citation-modal-panel"
         role="dialog"
+        aria-modal="true"
         aria-labelledby="citation-viewer-title"
+        tabindex="-1"
       >
         <div class="citation-modal-header">
           <div class="citation-modal-meta">
@@ -713,6 +718,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { useFocusTrap } from "ui";
 import TicketSignModal from "./TicketSignModal.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 import EmptyState from "../common/EmptyState.vue";
@@ -752,6 +758,8 @@ const emit = defineEmits([
   "signed",
 ]);
 
+const drawerRef = ref(null);
+const citationModalRef = ref(null);
 const activeTab = ref("overview");
 const actionLoading = ref(false);
 const isSignModalOpen = ref(false);
@@ -806,6 +814,16 @@ const uploadSubmitting = ref(false);
 const close = () => {
   emit("close");
 };
+
+useFocusTrap(drawerRef, {
+  isOpen: () => props.isOpen,
+  onEscape: close,
+});
+
+useFocusTrap(citationModalRef, {
+  isOpen: () => Boolean(isCitationViewerOpen.value && activeCitation.value),
+  onEscape: closeCitationViewer,
+});
 
 // SLA calculations
 const slaElapsedPercent = computed(() => {

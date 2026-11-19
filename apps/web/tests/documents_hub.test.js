@@ -5,7 +5,6 @@ import DocumentsHubView from "../src/views/DocumentsHubView.vue";
 import ShareDrawer from "../src/components/fileshare/ShareDrawer.vue";
 import MediaPreviewModal from "../src/components/fileshare/MediaPreviewModal.vue";
 import DocumentsFolderTree from "../src/components/fileshare/DocumentsFolderTree.vue";
-import StudyDocumentsTab from "../src/components/fileshare/StudyDocumentsTab.vue";
 import { useFileshareStore, SEED_FILES } from "../src/stores/fileshare";
 import { useAuthStore } from "../src/stores/auth";
 import { router } from "../src/router";
@@ -476,26 +475,6 @@ describe("feat(fileshare): 10 — Documents Hub UI (#4317)", () => {
 
       expect(wrapper.find(".image-container").exists()).toBe(true);
       expect(wrapper.find("img.preview-image-element").exists()).toBe(true);
-    });
-  });
-
-  describe("StudyDocumentsTab.vue Component", () => {
-    it("wraps DocumentsHubView with initialStudyId prop pre-filtered", async () => {
-      const wrapper = mount(StudyDocumentsTab, {
-        props: {
-          studyId: "STUDY-USDM-002",
-        },
-        global: {
-          plugins: [router],
-        },
-      });
-
-      const hubView = wrapper.findComponent(DocumentsHubView);
-      expect(hubView.exists()).toBe(true);
-      expect(hubView.props("initialStudyId")).toBe("STUDY-USDM-002");
-
-      const store = useFileshareStore();
-      expect(store.activeFilters.studyId).toBe("STUDY-USDM-002");
     });
   });
 

@@ -1,5 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 
 using Cadence.Core.Domain.Randomization;
 
@@ -182,6 +185,33 @@ public class ResponseAdaptiveEngineTests
         resultDifferent.DeterministicChecksum.Should().NotBe(result1.DeterministicChecksum);
     }
 
+    [Fact]
+    public void Allocate_DefaultSeed2026AndChecksumPayload_PreservesExactSha256Digest()
+    {
+        var armStates = new List<ResponseArmState>
+        {
+            new("ArmA", EvaluatedSubjects: 5, ObservedResponses: 3),
+            new("ArmB", EvaluatedSubjects: 5, ObservedResponses: 2)
+        };
+        var request = CreateRequest(studyId: "STUDY-RAR-SEED", subjectId: "SUBJ-2026");
+
+        var implicitSeedResult = ResponseAdaptiveEngine.Allocate(
+            new ResponseAdaptiveConfig(Seed: null, BurnInThreshold: 20),
+            armStates,
+            request);
+        var explicitSeedResult = ResponseAdaptiveEngine.Allocate(
+            new ResponseAdaptiveConfig(Seed: 2026, BurnInThreshold: 20),
+            armStates,
+            request);
+
+        implicitSeedResult.AssignedArm.Should().Be(explicitSeedResult.AssignedArm);
+        implicitSeedResult.DeterministicChecksum.Should().Be(explicitSeedResult.DeterministicChecksum);
+
+        string expectedPayload = $"STUDY-RAR-SEED:SUBJ-2026:BIOMARKER=POSITIVE:0:{implicitSeedResult.AssignedArm}:0.500000";
+        string expectedHex = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(expectedPayload)));
+        implicitSeedResult.DeterministicChecksum.Should().Be(expectedHex);
+    }
+
     /// <summary>
     /// Ten arms allocate every subject to one of the arms, under the configured caps. The test asserts behaviour, not
     /// how long the machine took (#5415).
@@ -301,5 +331,20 @@ public class ResponseAdaptiveEngineTests
         result.ImbalanceScore.Value.Should().BeGreaterThan(0.0);
         result.UnblindedAuditRationale.Should().NotContain("NaN");
         result.UnblindedAuditRationale.Should().NotContain("Infinity");
+    }
+
+    [Fact]
+    public void FastBetaCdf_AndBetaPdf_PreserveUnroundedPrecisionAndBoundaries()
+    {
+        // Exact I_0.33(1, 4) = 1 - 0.67^4 = 0.79848879 (unrounded, unlike BoinEngine.BetaInc's 0.798489).
+        ResponseAdaptiveEngine.FastBetaCdf(1.0, 4.0, 0.33).Should().BeApproximately(0.79848879, 1e-12);
+        ResponseAdaptiveEngine.FastBetaCdf(2.0, 3.0, 0.0).Should().Be(0.0);
+        ResponseAdaptiveEngine.FastBetaCdf(2.0, 3.0, 1.0).Should().Be(1.0);
+        ResponseAdaptiveEngine.FastBetaCdf(2.5, 1.5, 0.4).Should().Be(BoinEngine.BetaInc(2.5, 1.5, 0.4));
+
+        // Beta(2, 3) PDF at x = 0.5 is 12 * 0.5 * 0.25 = 1.5, and 0 outside (0, 1).
+        ResponseAdaptiveEngine.BetaPdf(2.0, 3.0, 0.0).Should().Be(0.0);
+        ResponseAdaptiveEngine.BetaPdf(2.0, 3.0, 1.0).Should().Be(0.0);
+        ResponseAdaptiveEngine.BetaPdf(2.0, 3.0, 0.5).Should().BeApproximately(1.5, 1e-12);
     }
 }

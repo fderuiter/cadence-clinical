@@ -1,62 +1,79 @@
 name: Bug report
-description: Something behaves wrongly. Give the evidence so it can be reproduced and fixed.
-title: "[Bug] "
-labels: ["type: bug", "needs-triage"]
+description: Report a reproducible defect with its impact and expected result.
+labels:
+  - type:bug
+  - status:needs-triage
 body:
   - type: markdown
     attributes:
-      value: |
-        Never paste secrets, PHI or real participant data. Report security vulnerabilities privately (see SECURITY.md).
-
+      value:
+        Use synthetic data only. Never include credentials, PHI, or real participant data. Report vulnerabilities
+        privately through SECURITY.md.
   - type: dropdown
     id: area
     attributes:
-      label: Area
+      label: Primary area
       options:
-        - "Kernel (packages/kernel)"
-        - "Execution / EDC (apps/execution)"
-        - "Gateway, security and identity"
-        - "Web app and Clinical Canvas (apps/web, packages/ui)"
-        - "Other module (apps/*)"
-        - "Standards, validation and submission (CDISC, rules)"
-        - "CLI, quality gates, CI and developer setup"
-        - "Documentation"
+        - Kernel and trust (packages/kernel, gateway, security)
+        - Capture and Clinical Canvas (execution, apps/web)
+        - Study design and Blueprint (designer, USDM, DDF)
+        - Clinical operations and evidence (consent, safety, quality, interop)
+        - Engineering (CLI, CI, tests, documentation)
     validations:
       required: true
-
   - type: textarea
     id: problem
     attributes:
-      label: Problem
-      description: What happens, and what should happen instead. Say whether it affects regulated data or the audit trail.
+      label: Problem and impact
+      description:
+        Describe the affected workflow, its impact, and any workaround. State whether evidence
+        or audit integrity is affected.
     validations:
       required: true
-
   - type: textarea
-    id: evidence
+    id: repro
     attributes:
-      label: Evidence
-      description: Steps to reproduce, the failing command or test, and `file:line` references at a commit.
-      placeholder: |
-        1. `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter ...`
-        2. apps/execution/src/Application/Subjects/SubjectApplicationService.cs:120 @ abc1234
+      label: Steps to reproduce
+      description:
+        Provide the smallest synthetic reproduction, command or navigation path, and inspected
+        commit.
     validations:
       required: true
-
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What observable result should occur?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead? Include exact errors.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description:
+        Commit, .NET/Node/browser versions, startup preset, database version, and relevant synthetic
+        role/site.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and evidence
+      description: Include sanitized stack traces, screenshots, test output, and links.
+    validations:
+      required: false
   - type: textarea
     id: acceptance
     attributes:
       label: Acceptance criteria
-      description: How we know it's fixed. Include the regression test that must pass.
-      value: |
-        - [ ] A test reproduces the bug and passes after the fix.
+      description: Describe a binary observable regression check.
+      value: "- [ ] The reproduction produces the expected result and the relevant regression check passes."
     validations:
       required: true
-
-  - type: input
-    id: refs
-    attributes:
-      label: Spec/ADR refs
-      description: Kernel spec rules (for example K-AUTH-4), ADRs or requirement IDs (PRD-SYS-xxx) this touches.
-    validations:
-      required: false

@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace Cadence.Core.Domain.Randomization;
 
@@ -128,9 +126,7 @@ public static class MinimizationEngine
         var nonPreferredArms = arms.Except(preferredArms).ToList();
 
         string seedStr = $"{config.Seed ?? 101}:{request.StudyId}:{request.SubjectId}:{history.Count}";
-        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(seedStr));
-        int seedHash = BitConverter.ToInt32(hash, 0) & 0x7FFFFFFF;
-        var rng = new Random(seedHash);
+        var rng = RandomizationMath.CreateSeededRandom(seedStr);
 
         string assignedArm;
         if (preferredArms.Count == arms.Count || nonPreferredArms.Count == 0)
@@ -156,8 +152,7 @@ public static class MinimizationEngine
         string stratumKey = string.Join("|", stratumParts);
 
         string checksumPayload = $"{request.StudyId}:{request.SubjectId}:{assignedArm}:{allocationIndex}:{imbalanceScores[assignedArm]}";
-        byte[] csBytes = SHA256.HashData(Encoding.UTF8.GetBytes(checksumPayload));
-        string checksum = Convert.ToHexString(csBytes).ToLowerInvariant();
+        string checksum = RandomizationMath.ComputeSha256Hex(checksumPayload);
 
         return new SubjectAllocationResult(
             StudyId: request.StudyId,

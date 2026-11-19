@@ -123,7 +123,6 @@ builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.Services.AddSingleton<IDemographicsEncryptionService, AesGcmDemographicsEncryptionService>();
 builder.Services.AddSingleton<IDemographicsNormalizationService, DemographicsNormalizationService>();
 builder.Services.AddSingleton<IUcumNormalizationService, UcumNormalizationService>();
-builder.Services.AddSingleton<ILabRangeService>(sp => new LabRangeService(sp.GetRequiredService<IServiceScopeFactory>()));
 
 // ExecutionDbContext (Scoped, the EF Core default `AddDbContext` lifetime) -- the connection string mirrors
 // ExecutionDbContextFactory's own design-time convention exactly (same POSTGRES_CONNECTION_STRING

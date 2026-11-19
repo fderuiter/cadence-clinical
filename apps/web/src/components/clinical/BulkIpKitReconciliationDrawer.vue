@@ -4,13 +4,14 @@
     class="drawer-backdrop"
     role="presentation"
     @click.self="closeDrawer"
-    @keydown.self="closeDrawer"
   >
     <aside
+      ref="drawerRef"
       class="bulk-ip-reconciliation-drawer"
       role="dialog"
       aria-modal="true"
       aria-labelledby="drawer-heading"
+      tabindex="-1"
     >
       <!-- Drawer Header -->
       <header class="drawer-header">
@@ -412,12 +413,14 @@
         class="modal-backdrop"
         role="presentation"
         @click.self="showCertificateModal = false"
-        @keydown.self="showCertificateModal = false"
       >
         <div
+          ref="certificateModalRef"
           class="modal-card modal-lg cert-modal"
           role="dialog"
+          aria-modal="true"
           aria-labelledby="cert-modal-title"
+          tabindex="-1"
         >
           <header class="cert-modal-header">
             <div class="cert-badge">📜 21 CFR Part 11 Digital Certificate</div>
@@ -515,6 +518,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { useFocusTrap } from "ui";
 
 export interface ScannedKitBufferItem {
   kitNumber: string;
@@ -555,6 +559,8 @@ const emit = defineEmits<{
   (e: "reconciled", batchResult: any): void;
 }>();
 
+const drawerRef = ref<HTMLElement | null>(null);
+const certificateModalRef = ref<HTMLElement | null>(null);
 const barcodeInputRef = ref<HTMLInputElement | null>(null);
 const barcodeInputValue = ref("");
 const scannedItems = ref<ScannedKitBufferItem[]>([]);
@@ -796,6 +802,19 @@ function closeDrawerAndReset() {
 function closeDrawer() {
   emit("close");
 }
+
+useFocusTrap(drawerRef, {
+  isOpen: () => props.isOpen,
+  initialFocus: () => barcodeInputRef.value,
+  onEscape: closeDrawer,
+});
+
+useFocusTrap(certificateModalRef, {
+  isOpen: () => Boolean(showCertificateModal.value && certificateData.value),
+  onEscape: () => {
+    showCertificateModal.value = false;
+  },
+});
 
 function formatDate(iso: string) {
   if (!iso) return "";

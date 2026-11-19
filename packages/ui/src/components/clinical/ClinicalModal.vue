@@ -1,5 +1,6 @@
 <script setup>
-import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { ref } from "vue";
+import { useFocusTrap } from "../../composables/useFocusTrap.js";
 
 const props = defineProps({
   modelValue: {
@@ -23,40 +24,15 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue", "close", "confirm"]);
 
 const dialogRef = ref(null);
-const previousActiveElement = ref(null);
 
 const closeModal = () => {
   emit("update:modelValue", false);
   emit("close");
 };
 
-const handleKeyDown = (e) => {
-  if (e.key === "Escape" && props.modelValue) {
-    closeModal();
-  }
-};
-
-watch(
-  () => props.modelValue,
-  async (isOpen) => {
-    if (isOpen) {
-      previousActiveElement.value = document.activeElement;
-      await nextTick();
-      if (dialogRef.value) {
-        dialogRef.value.focus();
-      }
-    } else if (previousActiveElement.value) {
-      previousActiveElement.value.focus();
-    }
-  }
-);
-
-onMounted(() => {
-  window.addEventListener("keydown", handleKeyDown);
-});
-
-onUnmounted(() => {
-  window.removeEventListener("keydown", handleKeyDown);
+useFocusTrap(dialogRef, {
+  isOpen: () => props.modelValue,
+  onEscape: closeModal,
 });
 </script>
 
@@ -90,7 +66,7 @@ onUnmounted(() => {
         </div>
 
         <div class="modal-body">
-          <slot></slot>
+          <slot />
         </div>
 
         <div class="modal-footer">

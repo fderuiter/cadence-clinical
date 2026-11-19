@@ -4,7 +4,7 @@
     class="portal-view"
     :class="{ active: ui.currentView === 'view-compliance' }"
     role="tabpanel"
-    aria-labelledby="tab-btn-compliance"
+    aria-labelledby="btn-tab-btn-compliance"
     tabindex="0"
   >
     <div class="view-header">

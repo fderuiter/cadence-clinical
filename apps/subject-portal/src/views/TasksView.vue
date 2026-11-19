@@ -4,7 +4,7 @@
     class="portal-view"
     :class="{ active: ui.currentView === 'view-tasks' }"
     role="tabpanel"
-    aria-labelledby="tab-btn-tasks"
+    aria-labelledby="btn-tab-btn-tasks"
     tabindex="0"
   >
     <div class="view-header">

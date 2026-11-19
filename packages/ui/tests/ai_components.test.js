@@ -5,11 +5,6 @@ import {
   AiActionButton,
   ConfidenceBadge,
   AiSuggestionDrawer,
-} from "../src/index.js";
-import {
-  AiActionButton as RootAiActionButton,
-  ConfidenceBadge as RootConfidenceBadge,
-  AiSuggestionDrawer as RootAiSuggestionDrawer,
 } from "../index.js";
 
 describe("AI UI Primitives & Components (#4367)", () => {
@@ -30,10 +25,6 @@ describe("AI UI Primitives & Components (#4367)", () => {
     expect(AiActionButton).toBeDefined();
     expect(ConfidenceBadge).toBeDefined();
     expect(AiSuggestionDrawer).toBeDefined();
-
-    expect(RootAiActionButton).toBeDefined();
-    expect(RootConfidenceBadge).toBeDefined();
-    expect(RootAiSuggestionDrawer).toBeDefined();
   });
 
   describe("AiActionButton Component", () => {

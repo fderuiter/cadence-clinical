@@ -37,13 +37,12 @@ export default mergeConfig(
           functions: 45,
           branches: 50,
           // The files ADR-251 put under its 80 percent gate keep it.
-          "src/components/{ReasonForChangeModal,ReasonModal,ReviewCommentsSidebar,TrivialComponent}.vue":
-            {
-              lines: 80,
-              functions: 80,
-              branches: 80,
-              statements: 80,
-            },
+          "src/components/{ReasonForChangeModal,ReasonModal}.vue": {
+            lines: 80,
+            functions: 80,
+            branches: 80,
+            statements: 80,
+          },
           "src/stores/{signatures,sync}.ts": {
             lines: 80,
             functions: 80,

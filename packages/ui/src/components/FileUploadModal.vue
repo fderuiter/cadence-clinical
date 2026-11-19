@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import ModalErrorAlert from "./ModalErrorAlert.vue";
+import { useFocusTrap } from "../composables/useFocusTrap.js";
 
 const props = defineProps({
   modelValue: {
@@ -35,6 +36,7 @@ const props = defineProps({
 
 const emit = defineEmits(["update:modelValue", "close", "uploaded", "error"]);
 
+const dialogRef = ref(null);
 const fileInputRef = ref(null);
 const selectedFile = ref(null);
 const reasonForChange = ref("");
@@ -227,6 +229,11 @@ watch(
   }
 );
 
+useFocusTrap(dialogRef, {
+  isOpen: () => props.modelValue,
+  onEscape: closeModal,
+});
+
 defineExpose({
   errorMessage,
   selectedFile,
@@ -248,10 +255,12 @@ defineExpose({
       @click.self="closeModal"
     >
       <div
+        ref="dialogRef"
         class="modal-dialog"
         role="dialog"
         aria-modal="true"
         :aria-label="title"
+        tabindex="-1"
       >
         <div class="modal-header">
           <h2 class="modal-title">

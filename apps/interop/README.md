@@ -46,7 +46,12 @@ that names a study also requires the caller to be assigned to it in the signed `
 caller's studies are empty, a program, token or run outside them is not found, and creating a program, issuing or
 revoking a token, or executing outside them returns `403` and writes nothing. A run's program must belong to the run's
 study (#5402,
-[ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
+[ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)). `POST /sce/execute`
+enforces a server-side sandbox policy: `network_isolated: false`, `filesystem_readonly_root: false` and unapproved
+container images are rejected (`400`), `max_memory_mb`, `timeout_seconds` and `max_output_bytes` are clamped to server
+bounds, `SceDockerEngineDriver` always runs approved R/Python images with `--network=none`, `--read-only`,
+`--cap-drop=ALL`, `--security-opt=no-new-privileges` and `--` before the image name, and artifact collection skips
+symbolic links/reparse points and enforces canonical workspace containment and `max_output_bytes` before reading files.
 
 The eSource routes (`/api/v1/interop/esource/**`) need `esource_endpoint:read`/`configure` or `esource_candidate:read`/`ingest`/`reconcile`/`query` (`PermissionMatrix.Interop.cs`). Site staff ingest and reconcile; monitors and data management raise queries. Polling, ingesting and reconciling refuse a study the caller is not assigned to, lists show only the caller's studies, and signatures and audit entries name the signed caller ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
 
