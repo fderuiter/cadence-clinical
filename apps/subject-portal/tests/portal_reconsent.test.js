@@ -13,6 +13,8 @@ describe("Subject Portal Immediate Re-Consent Workflow", () => {
       window.__MOCK_TEST_ENV__ = true;
     }
     // Reset state before each test
+    state.session.isDemoMode = true;
+    state.session.token = null;
     state.pendingReconsent = null;
     state.reconsentModalOpen = false;
     state.reconsentModalError = "";

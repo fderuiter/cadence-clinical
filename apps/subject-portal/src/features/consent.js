@@ -12,6 +12,8 @@ import {
   MOCK_COMPREHENSION_CHECK,
 } from "../data/mock-data.js";
 import { state } from "../stores/state.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
+import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { createClinicalRadioGrid } from "../widgets/clinical-fields.js";
 import {
   clearFieldInvalid,
@@ -42,8 +44,8 @@ export async function loadConsentDetails() {
       state.consentCheck = await dispatchApi(
         `api/v1/econsent/templates/template-icf/versions/1/comprehension-checks`
       );
-    } else {
-      // Offline fallback using language matched mock structures
+    } else if (isDemoModeActive()) {
+      // Explicit demo mode fallback using language matched synthetic structures
       const localApproved = JSON.parse(JSON.stringify(MOCK_APPROVED_CONTENT));
       localApproved.language_code = state.consentLanguage;
       if (state.consentLanguage === "es") {
@@ -66,6 +68,12 @@ export async function loadConsentDetails() {
       }
       state.consentContent = localApproved;
       state.consentCheck = JSON.parse(JSON.stringify(MOCK_COMPREHENSION_CHECK));
+    } else {
+      state.consentContent = null;
+      state.consentCheck = null;
+      throw new Error(
+        "Please sign in with an active study connection to access your electronic consent documents."
+      );
     }
 
     renderConsentUI();
@@ -198,8 +206,8 @@ export async function verifyBiometricLiveness(isFallback = false) {
         method: "POST",
         body: JSON.stringify(payload),
       });
-    } else {
-      // Sandbox / local fallback
+    } else if (allowUnbackedAction("Biometric liveness verification")) {
+      // Explicit demo mode fallback
       const token = `mock_liveness_token_${state.session.userId}_${isFallback ? "fallback" : "camera"}_${Date.now()}`;
       response = {
         liveness_token: token,
@@ -208,6 +216,10 @@ export async function verifyBiometricLiveness(isFallback = false) {
         expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
         status: "VERIFIED",
       };
+    } else {
+      throw new Error(
+        "Biometric liveness verification service is unavailable while unauthenticated or offline."
+      );
     }
 
     if (response && response.is_live && response.liveness_token) {
@@ -304,8 +316,8 @@ export async function submitConsentAnswers() {
           body: JSON.stringify(payload),
         }
       );
-    } else {
-      // Sandbox local evaluation
+    } else if (allowUnbackedAction("Consent comprehension verification")) {
+      // Explicit demo mode local evaluation
       let correct = 0;
       Object.entries(check.expected_answers).forEach(([qid, expected]) => {
         if (answers[qid] === expected) {
@@ -322,6 +334,10 @@ export async function submitConsentAnswers() {
           ? "Congratulations! You have passed the comprehension check and can proceed to sign the consent form."
           : `You got ${correct} out of ${check.questions.length} questions correct. The passing threshold is ${minRequired}. Please review the material and try again.`,
       };
+    } else {
+      throw new Error(
+        "Consent comprehension verification service is unavailable while unauthenticated or offline."
+      );
     }
 
     // Interpret using ui helper
@@ -346,6 +362,16 @@ export async function submitConsentAnswers() {
     // Refresh UI triggers
     renderConsentUI();
   } catch (err) {
-    alert("Answers submission failed: " + err.message);
+    state.consentPassed = false;
+    const msg = "Answers submission failed: " + (err.message || err);
+    if (banner) {
+      banner.textContent = msg;
+      banner.style.display = "block";
+      banner.style.backgroundColor = "#fef2f2";
+      banner.style.color = "#b91c1c";
+      banner.style.border = "1px solid #fecaca";
+    }
+    alert(msg);
+    renderConsentUI();
   }
 }

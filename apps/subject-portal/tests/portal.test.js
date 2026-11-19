@@ -340,10 +340,36 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     const isValid = portal.validateActiveQuestionnaire();
     expect(isValid).toBe(true);
 
-    // Sign and Confirm submission
+    // Sign and Confirm submission while offline: stays Pending Sync (33%) until server confirms
     document.getElementById("sign-username").value = "subject_001";
     document.getElementById("sign-password").value = "pass123";
     await portal.verifyAndSubmitSignature();
+
+    expect(document.getElementById("compliance-rate-pct").textContent).toBe(
+      "33%"
+    );
+    expect(
+      document.getElementById("compliance-history-tbody").innerHTML
+    ).toContain("Pending Sync");
+
+    // Transition online and confirm server persistence
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          status: "success",
+          results: [
+            {
+              status: "CREATED",
+              id: "sub_confirmed_01",
+              diary_id: "inst_daily_diary",
+              answers: { vssbp: "120" },
+            },
+          ],
+        }),
+    });
+    portal.state.session.isOfflineMode = false;
+    await portal.syncOfflineQueue();
 
     // Compliance should now be 2 completed out of 3 = 67%
     expect(document.getElementById("compliance-rate-pct").textContent).toBe(

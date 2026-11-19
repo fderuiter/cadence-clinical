@@ -3,6 +3,7 @@ import { nextTick } from "vue";
 
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
+import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { showToast } from "../widgets/toast.js";
 import { logAuditRecord } from "./audit.js";
 
@@ -17,7 +18,7 @@ export function openReconsentModal() {
     };
   }
   state.reconsentModalError = "";
-  state.reconsentForm.username = state.session.userId || "subject_001";
+  state.reconsentForm.username = state.session.userId || "";
   state.reconsentForm.password = "";
   state.reconsentForm.reason = "Protocol Amendment Re-Consent Acknowledgment";
   state.reconsentForm.customReason = "";
@@ -30,6 +31,7 @@ export function openReconsentModal() {
 }
 
 export function closeReconsentModal() {
+  state.reconsentForm.password = "";
   state.reconsentModalOpen = false;
   state.reconsentModalError = "";
 }
@@ -79,14 +81,21 @@ export async function checkPendingReconsent() {
 }
 
 export async function submitReconsentSignature() {
-  if (!state.reconsentForm.username) {
+  const cleanUsername = (state.reconsentForm.username || "").trim();
+  const cleanPassword = state.reconsentForm.password || "";
+
+  if (!cleanUsername) {
     state.reconsentModalError = "Please enter your User ID / Username.";
     return;
   }
-  if (!state.reconsentForm.password) {
+  if (!cleanPassword) {
     state.reconsentModalError = "Please enter your Security PIN / Password.";
     return;
   }
+
+  // Credential hygiene: clear password immediately before async network work
+  state.reconsentForm.password = "";
+  state.reconsentModalError = "";
 
   const studyId = state.pendingReconsent?.study_id || "STUDY-01";
   const protocolVersion = state.pendingReconsent?.protocol_version || "2.0";
@@ -98,39 +107,80 @@ export async function submitReconsentSignature() {
 
   try {
     if (isAuthenticatedSession()) {
-      await dispatchApi("api/v1/execution/amendments/reconsent", {
-        method: "POST",
-        body: JSON.stringify({
-          subject_id: state.reconsentForm.username,
-          study_id: studyId,
-          protocol_version: protocolVersion,
-          version_index: state.pendingReconsent?.new_version_index || 2,
-          icf_signed: true,
-          signature_type: "ECONSENT",
-        }),
-        change_reason: declReason,
-      });
+      const reconsentActionPath = "/api/v1/execution/amendments/reconsent";
+      const tokenResponse = await dispatchApi(
+        "api/v1/auth/signature-verification",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            username: cleanUsername,
+            password: cleanPassword,
+            action: reconsentActionPath,
+            semantic_action: "econsent.reconsent.sign",
+          }),
+        }
+      );
+
+      const sigToken = tokenResponse?.sig_token;
+      if (!sigToken || typeof sigToken !== "string") {
+        throw new Error(
+          "Signature verification service is unavailable or did not issue a signature token. Nothing was saved."
+        );
+      }
+
+      const persistRes = await dispatchApi(
+        "api/v1/execution/amendments/reconsent",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            subject_id: cleanUsername,
+            study_id: studyId,
+            protocol_version: protocolVersion,
+            version_index: state.pendingReconsent?.new_version_index || 2,
+            icf_signed: true,
+            signature_type: "ECONSENT",
+          }),
+          headers: {
+            "X-Sig-Token": sigToken,
+          },
+          change_reason: declReason,
+        }
+      );
+
+      if (
+        !persistRes ||
+        typeof persistRes !== "object" ||
+        persistRes.error ||
+        persistRes.persisted === false
+      ) {
+        throw new Error(
+          "Re-consent persistence service is unavailable. Nothing was saved."
+        );
+      }
 
       if (requirementId && !requirementId.startsWith("req_")) {
-        try {
-          await dispatchApi(
-            `api/v1/econsent/reconsent/complete/${requirementId}`,
-            {
-              method: "POST",
-              change_reason: declReason,
-            }
-          );
-        } catch (e) {
-          console.warn("Could not mark reconsent requirement complete:", e);
-        }
+        await dispatchApi(
+          `api/v1/econsent/reconsent/complete/${requirementId}`,
+          {
+            method: "POST",
+            headers: {
+              "X-Sig-Token": sigToken,
+            },
+            change_reason: declReason,
+          }
+        );
       }
+    } else if (!allowUnbackedAction("Protocol amendment re-consent")) {
+      state.reconsentModalError =
+        "Protocol amendment re-consent cannot be completed while unauthenticated or when signature verification services are unavailable. Nothing was saved.";
+      return;
     }
 
     // 21 CFR Part 11 Audit Log entry
     await logAuditRecord(
       "RECONSENT_EXECUTED",
       {
-        subject_id: state.reconsentForm.username,
+        subject_id: cleanUsername,
         study_id: studyId,
         protocol_version: protocolVersion,
         signature_type: "ECONSENT",

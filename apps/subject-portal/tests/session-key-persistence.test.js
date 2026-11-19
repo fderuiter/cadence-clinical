@@ -1,12 +1,11 @@
 import "fake-indexeddb/auto";
 import { describe, it, expect, beforeEach } from "vitest";
-import { encryptAESGCM, decryptAESGCM } from "ui";
+import { encryptAESGCM, decryptAESGCM, deriveSessionKey } from "ui";
 import {
   initSessionKey,
   saveSessionKeyToDB,
   getSessionKeyFromDB,
   restoreSessionKeyFromDB,
-  clearSessionKeyFromDB,
   clearSessionKey,
   clearInMemoryKey,
   getInMemorySessionKey,
@@ -15,33 +14,51 @@ import {
   getDraft,
   queueSubmission,
   getQueuedSubmissions,
-  clearAllSubmissions,
   setActiveUserId,
 } from "../src/sync-queue.js";
-import { initializeApp, logout, state } from "../src/index.js";
+import {
+  initializeApp,
+  logout,
+  state,
+  handlePINSetupSubmit,
+  handlePINUnlockSubmit,
+} from "../src/index.js";
 
-describe("Offline Session Key Persistence in IndexedDB", () => {
+async function readRawConfigEntry(userId, key) {
+  const db = await openDatabase(userId);
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("config", "readonly");
+    const req = tx.objectStore("config").get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+describe("ADR-2360 Memory-Only PIN Encryption Key & Per-User Isolation", () => {
   beforeEach(async () => {
     localStorage.clear();
+    sessionStorage.clear();
     clearInMemoryKey();
-    clearSessionKey("user_test_01");
-    clearSessionKey("user_test_02");
-    clearSessionKey();
+    await clearSessionKey("user_test_01");
+    await clearSessionKey("user_test_02");
+    await clearSessionKey();
 
-    // Clear indexedDB config store for user_test_01 and default DB
     for (const uid of ["user_test_01", "user_test_02", null]) {
       const db = await openDatabase(uid);
       await new Promise((resolve) => {
-        const tx = db.transaction("config", "readwrite");
+        const tx = db.transaction(
+          ["config", "drafts", "submissions"],
+          "readwrite"
+        );
         tx.objectStore("config").clear();
+        tx.objectStore("drafts").clear();
+        tx.objectStore("submissions").clear();
         tx.oncomplete = resolve;
       });
-      const txDrafts = db.transaction("drafts", "readwrite");
-      txDrafts.objectStore("drafts").clear();
     }
   });
 
-  it("Requirement 1: initSessionKey writes derived session encryption key to IndexedDB config store under 'session_key'", async () => {
+  it("ADR-2360: initSessionKey keeps key strictly in memory and never writes unwrapped 'session_key' to IndexedDB", async () => {
     const userId = "user_test_01";
     await initSessionKey("secret-session-material", userId);
 
@@ -49,121 +66,140 @@ describe("Offline Session Key Persistence in IndexedDB", () => {
     expect(inMemoryKey).toBeDefined();
     expect(inMemoryKey).not.toBeNull();
 
-    // Verify key was written to IndexedDB config store under key 'session_key'
+    // Unwrapped session_key must NEVER exist in IndexedDB
     const persistedValue = await getSessionKeyFromDB(userId);
-    expect(persistedValue).toBeDefined();
-    expect(persistedValue).not.toBeNull();
+    expect(persistedValue).toBeNull();
 
-    // Verify Web Crypto non-extractable constraint where supported
-    if (
-      typeof CryptoKey !== "undefined" &&
-      persistedValue instanceof CryptoKey
-    ) {
-      expect(persistedValue.extractable).toBe(false);
-    }
+    const rawEntry = await readRawConfigEntry(userId, "session_key");
+    expect(rawEntry).toBeUndefined();
+
+    // saveSessionKeyToDB is a deprecated no-op that purges any legacy key
+    await saveSessionKeyToDB(inMemoryKey, userId);
+    expect(await readRawConfigEntry(userId, "session_key")).toBeUndefined();
   });
 
-  it("Requirement 2: restoreSessionKeyFromDB restores session_key from IndexedDB if inMemorySessionKey is null", async () => {
+  it("ADR-2360: restoreSessionKeyFromDB purges legacy unwrapped 'session_key' entries and returns null", async () => {
     const userId = "user_test_01";
-    await initSessionKey("secret-session-material", userId);
+    const db = await openDatabase(userId);
+    await new Promise((resolve) => {
+      const tx = db.transaction("config", "readwrite");
+      tx.objectStore("config").put({
+        key: "session_key",
+        value: new Uint8Array(32),
+      });
+      tx.oncomplete = resolve;
+    });
 
-    // Simulate page unload / memory reset
     clearInMemoryKey();
-    expect(getInMemorySessionKey()).toBeNull();
-
-    // Restore key
     const restoredKey = await restoreSessionKeyFromDB(userId);
-    expect(restoredKey).toBeDefined();
-    expect(restoredKey).not.toBeNull();
-    expect(getInMemorySessionKey()).toBe(restoredKey);
+    expect(restoredKey).toBeNull();
+    expect(getInMemorySessionKey()).toBeNull();
+    expect(await readRawConfigEntry(userId, "session_key")).toBeUndefined();
   });
 
-  it("Requirement 2 & Acceptance Criteria: initializeApp restores inMemorySessionKey on browser restart offline", async () => {
+  it("prompts for PIN unlock on offline browser reload instead of auto-restoring an unwrapped key", async () => {
     const userId = "user_test_01";
     localStorage.setItem("oidc_user_id", userId);
+    state.session.userId = userId;
+    state.session.isDemoMode = false;
+    setActiveUserId(userId);
 
-    await initSessionKey("secret-session-material", userId);
+    // Establish wrapped master key via PIN setup
+    state.pinSetup.isOpen = true;
+    state.pinSetup.pin = "246810";
+    state.pinSetup.confirmPin = "246810";
+    await handlePINSetupSubmit();
+    expect(getInMemorySessionKey()).toBeInstanceOf(Uint8Array);
 
-    // Simulate full browser reload offline: wipe memory & set offline state
+    // Simulate full browser reload offline: wipe memory
     clearInMemoryKey();
     expect(getInMemorySessionKey()).toBeNull();
     window.__MOCK_TEST_ENV__ = true;
     state.session.isOfflineMode = true;
 
-    // Run app bootstrap initialization flow
     await initializeApp();
 
-    expect(getInMemorySessionKey()).not.toBeNull();
+    // Key remains null until user enters PIN, and PinUnlockModal is opened
+    expect(getInMemorySessionKey()).toBeNull();
+    expect(state.pinUnlock.isOpen).toBe(true);
   });
 
-  it("Requirement 3 & Acceptance Criteria: saveDraft, getDraft, and queueSubmission succeed after offline browser reload", async () => {
+  it("keeps encrypted drafts and queued diaries intact across reload and unlocks them after PIN entry", async () => {
     const userId = "user_test_01";
     localStorage.setItem("oidc_user_id", userId);
-    await initSessionKey("secret-session-material", userId);
+    state.session.userId = userId;
+    state.session.isDemoMode = false;
+    state.session.isOfflineMode = true;
+    setActiveUserId(userId);
 
-    // Save initial draft
+    // Setup PIN
+    state.pinSetup.isOpen = true;
+    state.pinSetup.pin = "135790";
+    state.pinSetup.confirmPin = "135790";
+    await handlePINSetupSubmit();
+
     const assignmentId = "assign_offline_01";
     const answers = { vssbp: "120", vsdpb: "80" };
     await saveDraft(assignmentId, answers);
-
-    // Simulate full browser reload (memory wipe)
-    clearInMemoryKey();
-    expect(getInMemorySessionKey()).toBeNull();
-
-    // Verify draft retrieval auto-restores key and decrypts content
-    const restoredDraft = await getDraft(assignmentId);
-    expect(restoredDraft).toEqual(answers);
-
-    // Simulate memory wipe again and verify queueSubmission auto-restores key and encrypts
-    clearInMemoryKey();
-    expect(getInMemorySessionKey()).toBeNull();
-
-    const queued = await queueSubmission({
+    await queueSubmission({
       subject_id: userId,
       diary_id: "inst_daily_diary",
       assignment_id: assignmentId,
-      answers: answers,
-      change_reason: "Offline submission after reload",
+      answers,
+      change_reason: "Offline submission before reload",
       username: userId,
     });
 
-    expect(queued).toBeDefined();
-    expect(queued.sequence_number).toBeGreaterThan(0);
+    // Simulate browser reload (memory cleared)
+    clearInMemoryKey();
+    expect(getInMemorySessionKey()).toBeNull();
 
-    const queuedItems = await getQueuedSubmissions();
-    expect(queuedItems.length).toBe(1);
-    expect(queuedItems[0].answers).toEqual(answers);
+    // While locked, draft cannot be read in plaintext and queued item reports DECRYPTION_ERROR without mutating DB
+    expect(await getDraft(assignmentId)).toBeNull();
+    const lockedItems = await getQueuedSubmissions();
+    expect(lockedItems).toHaveLength(1);
+    expect(lockedItems[0].status).toBe("DECRYPTION_ERROR");
+
+    // Unlock with valid PIN
+    state.pinUnlock.isOpen = true;
+    state.pinUnlock.pin = "135790";
+    await handlePINUnlockSubmit();
+
+    expect(state.pinUnlock.isOpen).toBe(false);
+    expect(await getDraft(assignmentId)).toEqual(answers);
+    const unlockedItems = await getQueuedSubmissions();
+    expect(unlockedItems).toHaveLength(1);
+    expect(unlockedItems[0].status).toBe("QUEUED");
+    expect(unlockedItems[0].answers).toEqual(answers);
   });
 
-  it("Per-User Database Separation: obey IndexedDB per-user database separation (SubjectPortalSyncDB_${userId})", async () => {
-    await initSessionKey("material-user-A", "user_test_01");
-    await initSessionKey("material-user-B", "user_test_02");
+  it("Per-User Database Separation: isolates wrapped keys and encrypted data per SubjectPortalSyncDB_${userId}", async () => {
+    const info = "cadence-subject-portal-offline-v1";
+    const keyUserA = await deriveSessionKey("pin-user-A", "user_test_01", info);
+    const keyUserB = await deriveSessionKey("pin-user-B", "user_test_02", info);
 
-    const keyUserA = await getSessionKeyFromDB("user_test_01");
-    const keyUserB = await getSessionKeyFromDB("user_test_02");
-
-    expect(keyUserA).toBeDefined();
-    expect(keyUserB).toBeDefined();
-
-    // Verify cryptographic separation: ciphertext encrypted with User A's key cannot be decrypted by User B's key
     const encryptedWithA = await encryptAESGCM(
       { data: "user_a_secret" },
       keyUserA
     );
     await expect(decryptAESGCM(encryptedWithA, keyUserB)).rejects.toThrow();
+
+    await initSessionKey("pin-user-A", "user_test_01");
+    await saveDraft("shared_assign", { secret: "only_user_a" });
+
+    await initSessionKey("pin-user-B", "user_test_02");
+    expect(await getDraft("shared_assign")).toBeNull();
   });
 
-  it("Requirement 4 & Acceptance Criteria: logout clears persisted session_key from IndexedDB and localStorage", async () => {
+  it("logout clears active in-memory key and cached OIDC identity", async () => {
     const userId = "user_test_01";
     localStorage.setItem("oidc_user_id", userId);
     await initSessionKey("secret-session-material", userId);
-
     state.session.userId = userId;
 
-    expect(await getSessionKeyFromDB(userId)).not.toBeNull();
+    expect(getInMemorySessionKey()).not.toBeNull();
     expect(localStorage.getItem("oidc_user_id")).toBe(userId);
 
-    // Execute logout
     await logout();
 
     expect(localStorage.getItem("oidc_user_id")).toBeNull();

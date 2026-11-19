@@ -4,6 +4,7 @@ import { debounce, validateField } from "ui";
 import { fetchInstrument, isAuthenticatedSession } from "../api/client.js";
 import { MOCK_INSTRUMENTS } from "../data/mock-data.js";
 import { state } from "../stores/state.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
 import {
   deleteDraft,
   getDraft,
@@ -49,7 +50,7 @@ export async function startQuestionnaire(assignmentId) {
   if (!assignment) return;
 
   let instrument = state.instruments[assignment.instrument_id];
-  if (!instrument && !isAuthenticatedSession()) {
+  if (!instrument && isDemoModeActive()) {
     instrument = MOCK_INSTRUMENTS[assignment.instrument_id];
   }
 

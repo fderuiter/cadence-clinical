@@ -78,7 +78,13 @@
               <p class="item-desc">
                 {{ getStatusDescription(item) }}
               </p>
-              <div class="item-data">
+              <div
+                v-if="
+                  item.answers !== undefined &&
+                  item.status !== 'DECRYPTION_ERROR'
+                "
+                class="item-data"
+              >
                 <strong>Local Answers:</strong>
                 <code class="data-code">{{
                   JSON.stringify(item.answers)
@@ -187,7 +193,10 @@ function getStatusDescription(item) {
   } else if (item.status === "QUARANTINED") {
     return "Quarantined: Under review by clinical trial managers due to validation/version mismatch errors.";
   } else if (item.status === "DECRYPTION_ERROR") {
-    return item.error || "Decryption failed: Secure key cleared.";
+    return item.locked
+      ? "Locked — enter your security PIN to decrypt queued answers."
+      : item.error ||
+          "Locked — enter your security PIN to decrypt queued answers.";
   }
   return "";
 }

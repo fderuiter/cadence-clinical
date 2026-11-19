@@ -1,19 +1,18 @@
 // The portal router. Every view stays mounted (the imperative feature modules
 // render into their elements), so the router does not swap components: it
 // keeps the URL and `state.currentView` in step in both directions.
-//
-// - showView(), or any write to state.currentView, pushes the view's route.
-// - A URL change (back/forward, or a deep link on load) calls showView().
+import { watch } from "vue";
 import {
   START_LOCATION,
   createMemoryHistory,
   createRouter,
   createWebHistory,
 } from "vue-router";
-import { watch } from "vue";
 
 import { showView } from "../features/navigation.js";
 import { state } from "../stores/state.js";
+import UnavailableView from "../views/UnavailableView.vue";
+import { isScreenAvailable } from "./availability.js";
 import { routeForView, viewRoutes } from "./routes.js";
 
 // Vite serves and builds the portal under this base (vite.config.js).
@@ -32,6 +31,18 @@ export function createPortalHistory() {
     : createWebHistory(ROUTER_BASE);
 }
 
+const unavailableRoute = {
+  path: "/unavailable",
+  name: "unavailable",
+  component: UnavailableView,
+  meta: { viewId: "view-unavailable" },
+};
+
+function findRouteForView(viewId) {
+  if (viewId === "view-unavailable") return unavailableRoute;
+  return routeForView(viewId);
+}
+
 let router = null;
 
 // The router singleton, created on first mount and shared by later mounts.
@@ -42,28 +53,47 @@ export function getPortalRouter() {
     history: createPortalHistory(),
     routes: [
       ...viewRoutes,
+      unavailableRoute,
       { path: "/:pathMatch(.*)*", redirect: { name: "tasks" } },
     ],
   });
 
-  // On mount (the first navigation, and the first after every app unmounted):
-  // with memory history the current view wins, so mounting never changes it;
-  // with browser history the URL wins (a deep link), except that the
-  // questionnaire needs one in progress and otherwise opens the tasks.
   router.beforeEach((to, from) => {
+    if (from === START_LOCATION && memoryHistory) {
+      const initialRoute = findRouteForView(state.currentView);
+      if (initialRoute && isScreenAvailable(initialRoute.name)) {
+        return to.name === initialRoute.name
+          ? undefined
+          : { name: initialRoute.name };
+      }
+      if (initialRoute && !isScreenAvailable(initialRoute.name)) {
+        state.unavailableScreen = String(initialRoute.name);
+        return {
+          name: "unavailable",
+          query: { screen: String(initialRoute.name) },
+        };
+      }
+    }
+
+    if (to.name && !isScreenAvailable(to.name)) {
+      state.unavailableScreen = String(to.name);
+      return { name: "unavailable", query: { screen: String(to.name) } };
+    }
+
+    if (to.name === "unavailable" && to.query?.screen) {
+      state.unavailableScreen = String(to.query.screen);
+    }
+
     if (from !== START_LOCATION || to.meta.viewId === state.currentView) {
       return;
     }
-    if (memoryHistory) {
-      const route = routeForView(state.currentView);
-      return route ? { name: route.name } : undefined;
-    }
+
     if (to.meta.requiresActiveQuestionnaire && !state.activeQuestionnaire) {
       return { name: "tasks" };
     }
   });
 
-  router.afterEach((to, from, failure) => {
+  router.afterEach((to, _from, failure) => {
     if (!failure && to.meta.viewId && to.meta.viewId !== state.currentView) {
       showView(to.meta.viewId);
     }
@@ -73,9 +103,32 @@ export function getPortalRouter() {
   watch(
     () => state.currentView,
     (viewId) => {
-      const route = routeForView(viewId);
+      const route = findRouteForView(viewId);
       if (!route) return;
-      router.push({ name: route.name }).catch(console.warn);
+
+      if (!isScreenAvailable(route.name)) {
+        state.unavailableScreen = String(route.name);
+        state.currentView = "view-unavailable";
+        return;
+      }
+
+      if (route.name === "unavailable") {
+        if (router.currentRoute.value.name !== "unavailable") {
+          router
+            .push({
+              name: "unavailable",
+              query: state.unavailableScreen
+                ? { screen: state.unavailableScreen }
+                : undefined,
+            })
+            .catch(console.warn);
+        }
+        return;
+      }
+
+      if (router.currentRoute.value.name !== route.name) {
+        router.push({ name: route.name }).catch(console.warn);
+      }
     },
     { flush: "sync" }
   );

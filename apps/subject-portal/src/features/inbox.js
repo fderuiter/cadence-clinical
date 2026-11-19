@@ -5,6 +5,8 @@ import {
   isAuthenticatedSession,
 } from "../api/client.js";
 import { state } from "../stores/state.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
+import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { logAuditRecord } from "./audit.js";
 import { openReconsentModal } from "./reconsent.js";
 
@@ -52,9 +54,13 @@ export function renderInbox() {
   }
 
   if (state.notifications.length === 0) {
+    const emptyMsg =
+      !isAuthenticatedSession() && !isDemoModeActive() && !state.session.userId
+        ? "Sign in to view your study notifications."
+        : "No notifications found.";
     container.innerHTML = `
       <div class="card" style="text-align: center; padding: 32px; color: var(--text-muted);">
-        <p style="font-size: 16px; font-weight: 700;">No notifications found.</p>
+        <p style="font-size: 16px; font-weight: 700;">${emptyMsg}</p>
       </div>
     `;
     return;
@@ -159,8 +165,8 @@ export async function acknowledgeNotification(notificationId) {
       state.notificationsError = err.message || err;
       renderInbox();
     }
-  } else {
-    // Sandbox mode: original optimistic flow
+  } else if (allowUnbackedAction("Acknowledge study notification")) {
+    // Explicit demo mode optimistic flow
     notif.is_read = true;
     notif.read_at = new Date().toISOString();
 
@@ -179,10 +185,14 @@ export async function acknowledgeNotification(notificationId) {
         change_reason: actionReason,
       });
     } catch {
-      console.info("Acknowledged notification offline.");
+      console.info("Acknowledged notification in demo mode.");
     }
 
     // Refresh inbox & count badges
+    renderInbox();
+  } else {
+    state.notificationsError =
+      "Cannot acknowledge notification while offline or unauthenticated. Please sign in and retry.";
     renderInbox();
   }
 }

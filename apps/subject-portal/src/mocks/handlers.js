@@ -38,16 +38,28 @@ export const gatewayHandlers = [
     "*/api/v1/payments/participant/expenses/ocr-extract",
     async ({ request }) => {
       const body = await request.json().catch(() => ({}));
+      const fileName = String(body.file_name || "").toLowerCase();
       const text =
         body.raw_text ||
         body.rawText ||
         "METRO TRANSIT AUTHORITY\nRoute: Clinical Trial Express\nDate: 2026-08-23\nFare Paid: $28.50"; // deid-ignore
-      const category = body.category_hint || body.categoryHint || "TRANSIT";
+      let category = body.category_hint || body.categoryHint || "TRANSIT";
+      if (!body.category_hint && !body.categoryHint) {
+        if (fileName.includes("meal")) category = "MEAL";
+        else if (fileName.includes("fuel") || fileName.includes("gas"))
+          category = "MILEAGE";
+      }
 
       let grossAmount = 28.5;
-      if (text.includes("125.00") || text.includes("125")) grossAmount = 125.0;
+      if (
+        text.includes("125.00") ||
+        text.includes("125") ||
+        category === "MEAL"
+      )
+        grossAmount = 125.0;
       else if (text.includes("85.00") || text.includes("85"))
         grossAmount = 85.0;
+      else if (category === "MILEAGE") grossAmount = 45.0;
       else if (text.includes("28.50")) grossAmount = 28.5;
 
       return HttpResponse.json({

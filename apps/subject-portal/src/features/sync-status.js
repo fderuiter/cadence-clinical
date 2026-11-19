@@ -1,8 +1,8 @@
 // Offline sync status: retry bookkeeping, lifecycle events and the queue list.
-import { isAuthenticatedSession } from "../api/client.js";
 import { MOCK_INSTRUMENTS } from "../data/mock-data.js";
 import { state } from "../stores/state.js";
 import { getAllSubmissions } from "../sync-queue.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
 
 export function resetSyncRetryInfo() {
   if (state.__syncRetryTimer) {
@@ -107,7 +107,7 @@ export async function renderSyncQueueList() {
     .map((item) => {
       const instName =
         (state.instruments && state.instruments[item.diary_id]?.name) ||
-        (!isAuthenticatedSession() && MOCK_INSTRUMENTS[item.diary_id]?.name) ||
+        (isDemoModeActive() && MOCK_INSTRUMENTS[item.diary_id]?.name) ||
         item.diary_id;
       const submittedTime = new Date(item.device_timestamp).toLocaleString();
 
@@ -148,10 +148,16 @@ export async function renderSyncQueueList() {
       } else if (item.status === "DECRYPTION_ERROR") {
         badgeClass = "pending";
         statusLabel = "DECRYPTION_ERROR";
-        statusDesc = item.error || "Decryption failed: Secure key cleared.";
+        statusDesc = item.locked
+          ? "Locked — enter your security PIN to decrypt queued answers."
+          : item.error ||
+            "Locked — enter your security PIN to decrypt queued answers.";
       }
 
-      let answersDetails = `<strong>Local Answers:</strong> <code style="background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 4px;">${JSON.stringify(item.answers)}</code>`;
+      let answersDetails =
+        item.status === "DECRYPTION_ERROR"
+          ? ""
+          : `<strong>Local Answers:</strong> <code style="background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 4px;">${JSON.stringify(item.answers)}</code>`;
       if (item.resolved_answers && item.status === "MERGED") {
         answersDetails += `<br/><strong>Merged Result:</strong> <code style="background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 4px;">${JSON.stringify(item.resolved_answers)}</code>`;
       }

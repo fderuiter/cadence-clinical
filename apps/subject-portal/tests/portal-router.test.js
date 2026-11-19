@@ -64,10 +64,16 @@ describe("Subject portal router and stores", () => {
     ).toBe("true");
   });
 
-  it("follows a direct write to state.currentView", async () => {
+  it("follows a direct write to state.currentView and redirects unavailable views outside demo mode", async () => {
+    state.session.isDemoMode = false;
+    state.currentView = "view-consent";
+    await settle();
+    expect(router.currentRoute.value.path).toBe("/consent");
+
     state.currentView = "view-wallet";
     await settle();
-    expect(router.currentRoute.value.path).toBe("/wallet");
+    expect(router.currentRoute.value.path).toBe("/unavailable");
+    expect(state.currentView).toBe("view-unavailable");
   });
 
   it("activates the view of a route the router navigates to", async () => {

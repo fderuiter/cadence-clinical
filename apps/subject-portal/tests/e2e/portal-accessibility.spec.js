@@ -1,6 +1,26 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+async function completeInitialPinSetupIfOpen(page) {
+  const pinSetupModal = page.locator("#portal-pin-setup-modal");
+  const pinUnlockModal = page.locator("#portal-pin-unlock-modal");
+  await Promise.race([
+    pinSetupModal.waitFor({ state: "visible", timeout: 4000 }),
+    pinUnlockModal.waitFor({ state: "visible", timeout: 4000 }),
+  ]).catch(() => {});
+
+  if (await pinSetupModal.isVisible().catch(() => false)) {
+    await page.fill("#setup-pin", "246810");
+    await page.fill("#confirm-setup-pin", "246810");
+    await page.click("#btn-pin-setup-confirm");
+    await expect(pinSetupModal).toBeHidden();
+  } else if (await pinUnlockModal.isVisible().catch(() => false)) {
+    await page.fill("#unlock-pin", "246810");
+    await page.click("#btn-pin-unlock-confirm");
+    await expect(pinUnlockModal).toBeHidden();
+  }
+}
+
 // Dedicated end-to-end accessibility testing suite verifying full WCAG 2.1 AA compliance across all views
 test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
   test.beforeEach(async ({ page }) => {
@@ -169,6 +189,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     page,
   }) => {
     await page.goto("");
+    await completeInitialPinSetupIfOpen(page);
 
     // Verify name is rendered based on injected storage mock credentials
     await expect(page.locator("#session-subject-id")).toContainText(
@@ -190,6 +211,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     page,
   }) => {
     await page.goto("");
+    await completeInitialPinSetupIfOpen(page);
 
     // Click "Start" / "Start Survey" on the Daily Health & Vital Diary task
     const startSurveyBtn = page.locator("#task-card-assign_01 .btn-start-task");
@@ -214,6 +236,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     page,
   }) => {
     await page.goto("");
+    await completeInitialPinSetupIfOpen(page);
 
     // Open questionnaire
     const startSurveyBtn = page.locator("#task-card-assign_01 .btn-start-task");
@@ -241,6 +264,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     page,
   }) => {
     await page.goto("");
+    await completeInitialPinSetupIfOpen(page);
 
     // Switch to My Compliance view
     await page.click("#tab-btn-compliance button");
@@ -261,6 +285,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     page,
   }) => {
     await page.goto("");
+    await completeInitialPinSetupIfOpen(page);
 
     // Switch to My Inbox view
     await page.click("#tab-btn-inbox button");
@@ -277,10 +302,11 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     expect(auditResults.violations).toEqual([]);
   });
 
-  test("should verify specific WCAG 2.1 AA remediation elements (skip link, main landmark, dropzone, forms, aria-live)", async ({
+  test("should verify specific WCAG 2.1 AA remediation elements (skip link, main landmark, unavailable guard, forms, aria-live)", async ({
     page,
   }) => {
     await page.goto("");
+    await completeInitialPinSetupIfOpen(page);
 
     // 1. Skip link & Main Landmark
     const skipLink = page.locator(".skip-link");
@@ -296,19 +322,20 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await expect(syncStatusText).toHaveAttribute("role", "status");
     await expect(syncStatusText).toHaveAttribute("aria-live", "polite");
 
-    // 3. Financial Wallet Travel Receipt Dropzone
-    await page.click("#tab-btn-wallet button");
-    const dropzone = page.locator("#receipt-upload-dropzone");
-    await expect(dropzone).toBeVisible();
-    await expect(dropzone).toHaveAttribute("tabindex", "0");
-    await expect(dropzone).toHaveAttribute("role", "button");
-    await expect(dropzone).toHaveAttribute(
-      "aria-label",
-      "Upload receipt image for travel reimbursement"
-    );
+    // 3. Unavailable workflow guard outside demo mode (/wallet redirects to #view-unavailable)
+    await expect(page.locator("#tab-btn-wallet")).toHaveCount(0);
+    await page.goto("wallet");
+    await completeInitialPinSetupIfOpen(page);
+    await expect(page.locator("#view-unavailable")).toBeVisible();
+    const unavailableAudit = await new AxeBuilder({ page })
+      .include("#view-unavailable")
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(unavailableAudit.violations).toEqual([]);
+    await page.click("#btn-unavailable-return-tasks");
 
     // 4. Form wrappers and numeric input attributes
-    await page.click("#tab-btn-tasks button");
+    await expect(page.locator("#view-tasks")).toBeVisible();
     const startSurveyBtn = page.locator("#task-card-assign_01 .btn-start-task");
     await startSurveyBtn.click();
 
@@ -318,5 +345,36 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     const numericInput = page.locator("#vssbp");
     await expect(numericInput).toHaveAttribute("type", "number");
     await expect(numericInput).toHaveAttribute("inputmode", "numeric");
+  });
+
+  test("should pass accessibility audits on unauthenticated login prompt and PIN unlock recovery modal", async ({
+    page,
+  }) => {
+    await page.goto("");
+    await completeInitialPinSetupIfOpen(page);
+
+    // Reload triggers PIN unlock modal (memory-only PIN key cleared on reload)
+    await page.reload();
+    const pinUnlockModal = page.locator("#portal-pin-unlock-modal");
+    await expect(pinUnlockModal).toBeVisible();
+    await expect(page.locator("#btn-pin-unlock-signout")).toBeVisible();
+    await expect(page.locator("#btn-pin-unlock-reset")).toBeVisible();
+
+    const unlockAudit = await new AxeBuilder({ page })
+      .include("#portal-pin-unlock-modal")
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(unlockAudit.violations).toEqual([]);
+
+    // Sign out from PinUnlockModal transitions cleanly to unauthenticated login prompt
+    await page.evaluate(() => sessionStorage.clear());
+    await page.click("#btn-pin-unlock-signout");
+    await expect(page.locator("#tasks-signin-prompt")).toBeVisible();
+    await expect(page.locator("#btn-login")).toBeVisible();
+
+    const unauthAudit = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(unauthAudit.violations).toEqual([]);
   });
 });

@@ -11,6 +11,8 @@ import {
   saveAssignmentsToDB,
   saveInstrumentsToDB,
 } from "../sync-queue.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
+import { login } from "./auth.js";
 import { startQuestionnaire } from "./questionnaire.js";
 
 // 1. My Tasks (Assigned Surveys)
@@ -56,6 +58,28 @@ export function renderTasks() {
     container.style.display = "block";
   }
 
+  if (
+    !isAuthenticatedSession() &&
+    !isDemoModeActive() &&
+    !state.session.userId &&
+    state.assignments.length === 0
+  ) {
+    container.innerHTML = `
+      <div id="tasks-signin-prompt" class="card" style="text-align: center; padding: 32px;">
+        <p style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">Sign in to access your study tasks</p>
+        <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px;">Authenticate with your participant credentials to view assigned questionnaires and sync clinical entries.</p>
+        <button id="btn-tasks-login" type="button" class="btn btn-primary">Sign In</button>
+      </div>
+    `;
+    const btnLogin = container.querySelector("#btn-tasks-login");
+    if (btnLogin) {
+      btnLogin.addEventListener("click", () => {
+        login();
+      });
+    }
+    return;
+  }
+
   // To support both authenticated and unauthenticated mappings cleanly:
   const activeTasks = state.assignments.filter((task) => {
     const isCompleted = task.status === "COMPLETED" || task.version_index > 1;
@@ -79,15 +103,28 @@ export function renderTasks() {
         task.instrument_name ||
         "Assigned Instrument";
       const isCompleted = task.status === "COMPLETED" || task.version_index > 1;
+      const isPendingSync = task.status === "PENDING_SYNC";
       const isOverdue =
         !isCompleted &&
+        !isPendingSync &&
         (task.status === "OVERDUE" ||
           (task.due_at && new Date(task.due_at) < new Date()));
-      const statusClass = isOverdue ? "overdue" : "pending";
-      const statusLabel = isOverdue ? "Overdue" : "Pending";
+      const statusClass = isPendingSync
+        ? "pending"
+        : isOverdue
+          ? "overdue"
+          : "pending";
+      const statusLabel = isPendingSync
+        ? "Pending Sync"
+        : isOverdue
+          ? "Overdue"
+          : "Pending";
       const dueText = task.due_at
         ? new Date(task.due_at).toLocaleString()
         : "—";
+      const actionHtml = isPendingSync
+        ? `<span class="task-queued-note" style="font-size: 13px; color: var(--text-muted);">Awaiting server confirmation</span>`
+        : `<button type="button" class="btn btn-primary btn-start-task" data-id="${task.id}">Start Survey</button>`;
 
       return `
         <div class="task-item" id="task-card-${task.id}">
@@ -97,7 +134,7 @@ export function renderTasks() {
           </div>
           <div style="display: flex; align-items: center; gap: 16px;">
             <span class="status-pill ${statusClass}">${statusLabel}</span>
-            <button type="button" class="btn btn-primary btn-start-task" data-id="${task.id}">Start Survey</button>
+            ${actionHtml}
           </div>
         </div>
       `;
