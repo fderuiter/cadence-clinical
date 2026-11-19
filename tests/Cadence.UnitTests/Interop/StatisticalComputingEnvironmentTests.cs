@@ -1,6 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json.Nodes;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Interop.Application.Services;
@@ -8,12 +13,19 @@ using Cadence.Apps.Interop.Domain;
 using Cadence.Apps.Interop.Endpoints;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
 using Cadence.Testing;
+using Cadence.Testing.Hosting;
+using Cadence.Testing.Security;
 using Cadence.Testing.Time;
 
 using FluentAssertions;
 
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 using NSubstitute;
 
@@ -399,6 +411,304 @@ version = ""1.0.0""
         sigBlock.Should().NotBeNull();
         sigBlock!.HmacSignature.Should().BeEmpty();
         sigBlock.SignatureMeaning.Should().Contain("refused");
+    }
+
+    [Fact(DisplayName = "TryResolveApprovedImage_MapsDefaultPlaceholderAndRejectsUnapprovedImages")]
+    public void TryResolveApprovedImage_MapsDefaultPlaceholderAndRejectsUnapprovedImages()
+    {
+        SceDockerEngineDriver.TryResolveApprovedImage("PYTHON", null, out string pyDefault, out _)
+            .Should().BeTrue();
+        pyDefault.Should().Be(SceDockerEngineDriver.DefaultPythonImage);
+
+        SceDockerEngineDriver.TryResolveApprovedImage("R", SceDockerEngineDriver.DefaultPlaceholderImageDigest, out string rPlaceholder, out _)
+            .Should().BeTrue();
+        rPlaceholder.Should().Be(SceDockerEngineDriver.DefaultRImage);
+
+        SceDockerEngineDriver.TryResolveApprovedImage("PYTHON", SceDockerEngineDriver.DefaultPlaceholderImageDigest, out string pyPlaceholder, out _)
+            .Should().BeTrue();
+        pyPlaceholder.Should().Be(SceDockerEngineDriver.DefaultPythonImage);
+
+        SceDockerEngineDriver.TryResolveApprovedImage("PYTHON", SceDockerEngineDriver.DefaultPythonImage, out string pyExplicit, out _)
+            .Should().BeTrue();
+        pyExplicit.Should().Be(SceDockerEngineDriver.DefaultPythonImage);
+
+        // Cross-language, arbitrary images, flag-like values, and unknown languages are rejected.
+        SceDockerEngineDriver.TryResolveApprovedImage("PYTHON", SceDockerEngineDriver.DefaultRImage, out _, out string mismatchError)
+            .Should().BeFalse();
+        mismatchError.Should().Contain("allow-list");
+
+        SceDockerEngineDriver.TryResolveApprovedImage("R", "alpine:latest", out _, out string unapprovedError)
+            .Should().BeFalse();
+        unapprovedError.Should().Contain("allow-list");
+
+        SceDockerEngineDriver.TryResolveApprovedImage("PYTHON", "--privileged", out _, out string flagError)
+            .Should().BeFalse();
+        flagError.Should().Contain("allow-list");
+
+        SceDockerEngineDriver.TryResolveApprovedImage("BASH", null, out _, out string languageError)
+            .Should().BeFalse();
+        languageError.Should().Contain("Unsupported");
+    }
+
+    [Fact(DisplayName = "ExecuteInSandbox_WithUnapprovedImageOverride_FailsClosedBeforeExecution")]
+    public async Task ExecuteInSandbox_WithUnapprovedImageOverride_FailsClosedBeforeExecution()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var request = new SandboxExecutionRequest(
+            Language: "PYTHON",
+            SourceCode: "print('hello')",
+            LockfileContent: "",
+            LockType: "UV_LOCK",
+            ContainerImageOverride: "alpine:latest"
+        );
+
+        var result = await _dockerDriver.ExecuteInSandboxAsync(request, ct);
+
+        result.ExitCode.Should().Be(126);
+        result.Artifacts.Should().BeEmpty();
+        result.Stderr.Should().Contain("allow-list");
+    }
+
+    [Fact(DisplayName = "BuildDockerArguments_AlwaysEnforcesIsolationFlagsClampedMemoryAndImageSeparator")]
+    public void BuildDockerArguments_AlwaysEnforcesIsolationFlagsClampedMemoryAndImageSeparator()
+    {
+        string workspaceDir = Path.Combine(Path.GetTempPath(), "sce_args_check");
+        var request = new SandboxExecutionRequest(
+            Language: "R",
+            SourceCode: "cat('ok')",
+            LockfileContent: "{}",
+            LockType: "RENV_LOCK",
+            MaxMemoryMb: 999999,
+            TimeoutSeconds: 999999,
+            NetworkIsolated: false,
+            FilesystemReadonlyRoot: false,
+            EnvironmentVariables: new Dictionary<string, string>
+            {
+                ["STUDY_ID"] = "STUDY-001",
+                ["--privileged"] = "true"
+            }
+        );
+
+        var args = SceDockerEngineDriver.BuildDockerArguments(request, workspaceDir, SceDockerEngineDriver.DefaultRImage);
+
+        args.Should().ContainInOrder("run", "--rm", "--network=none", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges");
+        args.Should().ContainInOrder("--memory", $"{SceDockerEngineDriver.MaxMemoryMbLimit}m");
+        args.Should().Contain("STUDY_ID=STUDY-001");
+        args.Should().NotContain(a => a.Contains("--privileged", StringComparison.Ordinal));
+
+        int separatorIndex = args.ToList().IndexOf("--");
+        separatorIndex.Should().BeGreaterThan(0);
+        args[separatorIndex + 1].Should().Be(SceDockerEngineDriver.DefaultRImage);
+        args[separatorIndex + 2].Should().Be("sh");
+        args[separatorIndex + 3].Should().Be("-c");
+        args[separatorIndex + 4].Should().Be("Rscript /workspace/script.R");
+
+        var minMemoryRequest = request with { MaxMemoryMb = 1 };
+        var minMemoryArgs = SceDockerEngineDriver.BuildDockerArguments(minMemoryRequest, workspaceDir, SceDockerEngineDriver.DefaultRImage);
+        minMemoryArgs.Should().ContainInOrder("--memory", $"{SceDockerEngineDriver.MinMemoryMb}m");
+    }
+
+    [Fact(DisplayName = "ExecuteEndpoint_RejectsDisabledIsolationAndUnapprovedImagesAndClampsDefaultFrontendConfig")]
+    public async Task ExecuteEndpoint_RejectsDisabledIsolationAndUnapprovedImagesAndClampsDefaultFrontendConfig()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        SandboxExecutionRequest? capturedRequest = null;
+        var mockDriver = Substitute.For<ISceDockerEngineDriver>();
+        mockDriver.ExecuteInSandboxAsync(Arg.Do<SandboxExecutionRequest>(r => capturedRequest = r), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new SandboxExecutionResult(
+                ExitCode: 0,
+                Stdout: "ok",
+                Stderr: string.Empty,
+                DurationMs: 12,
+                ContainerImageDigest: "sha256:approved-py",
+                Artifacts: [],
+                OutputArtifactsDigest: "empty_digest"
+            )));
+
+        string dbName = $"sce-policy-{Guid.NewGuid():N}";
+        var inMemoryProvider = new ServiceCollection()
+            .AddEntityFrameworkInMemoryDatabase()
+            .BuildServiceProvider();
+
+        await using var factory = new WebApplicationFactory<Cadence.Apps.Interop.Program>().WithWebHostBuilder(host =>
+        {
+            host.UseTestGatewaySecret()
+                .UseTestPostgresConnectionString()
+                .UseTestFieldProtectionKeys()
+                .UseTestSceSigningKey();
+
+            host.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<DbContextOptions<InteropDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<InteropDbContext>>();
+                services.AddDbContext<InteropDbContext>(options =>
+                {
+                    options.UseInMemoryDatabase(dbName);
+                    options.UseInternalServiceProvider(inMemoryProvider);
+                });
+
+                services.RemoveAll<ISceDockerEngineDriver>();
+                services.AddSingleton(mockDriver);
+            });
+        });
+
+        const string studyId = "STUDY-SCE-POLICY";
+        string programId;
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<InteropDbContext>();
+            var program = new StatisticalProgram
+            {
+                StudyId = studyId,
+                Name = "adam_adsl.py",
+                Title = "ADSL",
+                Language = "PYTHON",
+                SourceCode = "print('ok')",
+                CodeHash = "hash-code",
+                LockType = "UV_LOCK",
+                LockDigest = "hash-lock",
+                CreatedAt = _clock.UtcNow,
+                CreatedBy = "stat-user"
+            };
+            db.StatisticalPrograms.Add(program);
+            await db.SaveChangesAsync(ct);
+            programId = program.Id;
+        }
+
+        var caller = TestSecurityContext.Identity("stat-user", "sponsor_statistician") with { StudyIds = [studyId] };
+        using var client = factory.CreateSignedClient(caller);
+
+        // 1. network_isolated: false is rejected
+        var netOffResp = await client.PostAsJsonAsync("/api/v1/interop/sce/execute", new JsonObject
+        {
+            ["study_id"] = studyId,
+            ["program_id"] = programId,
+            ["snapshot_id"] = "snap-1",
+            ["sandbox_config"] = new JsonObject
+            {
+                ["network_isolated"] = false
+            }
+        }, ct);
+        netOffResp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        // 2. filesystem_readonly_root: false is rejected
+        var roOffResp = await client.PostAsJsonAsync("/api/v1/interop/sce/execute", new JsonObject
+        {
+            ["study_id"] = studyId,
+            ["program_id"] = programId,
+            ["snapshot_id"] = "snap-1",
+            ["sandbox_config"] = new JsonObject
+            {
+                ["filesystem_readonly_root"] = false
+            }
+        }, ct);
+        roOffResp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        // 3. Unapproved docker_image_digest is rejected
+        var badImgResp = await client.PostAsJsonAsync("/api/v1/interop/sce/execute", new JsonObject
+        {
+            ["study_id"] = studyId,
+            ["program_id"] = programId,
+            ["snapshot_id"] = "snap-1",
+            ["sandbox_config"] = new JsonObject
+            {
+                ["docker_image_digest"] = "alpine:latest"
+            }
+        }, ct);
+        badImgResp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        capturedRequest.Should().BeNull();
+
+        // 4. Frontend-style payload (default placeholder digest omitted, huge memory & timeout) succeeds with clamped limits and server-resolved image
+        var validResp = await client.PostAsJsonAsync("/api/v1/interop/sce/execute", new JsonObject
+        {
+            ["study_id"] = studyId,
+            ["program_id"] = programId,
+            ["snapshot_id"] = "snap-1",
+            ["sandbox_config"] = new JsonObject
+            {
+                ["timeout_seconds"] = 999999,
+                ["max_memory_mb"] = 999999,
+                ["max_output_bytes"] = 999999999L,
+                ["network_isolated"] = true
+            }
+        }, ct);
+        validResp.StatusCode.Should().Be(HttpStatusCode.OK, await validResp.Content.ReadAsStringAsync(ct));
+        capturedRequest.Should().NotBeNull();
+        capturedRequest!.NetworkIsolated.Should().BeTrue();
+        capturedRequest.FilesystemReadonlyRoot.Should().BeTrue();
+        capturedRequest.MaxMemoryMb.Should().Be(SceDockerEngineDriver.MaxMemoryMbLimit);
+        capturedRequest.TimeoutSeconds.Should().Be(SceDockerEngineDriver.MaxTimeoutSecondsLimit);
+        capturedRequest.MaxOutputBytes.Should().Be(SceDockerEngineDriver.MaxOutputBytesLimit);
+        capturedRequest.ContainerImageOverride.Should().Be(SceDockerEngineDriver.DefaultPythonImage);
+    }
+
+    [Fact(DisplayName = "CollectArtifacts_RejectsFileAndDirectorySymlinksAndCollectsContainedRegularFiles")]
+    public void CollectArtifacts_RejectsFileAndDirectorySymlinksAndCollectsContainedRegularFiles()
+    {
+        string testRoot = Path.Combine(Path.GetTempPath(), "sce_symlink_test_" + Guid.NewGuid().ToString("N"));
+        string workspaceDir = Path.Combine(testRoot, "workspace");
+        string outsideDir = Path.Combine(testRoot, "outside");
+        Directory.CreateDirectory(workspaceDir);
+        Directory.CreateDirectory(Path.Combine(workspaceDir, "nested"));
+        Directory.CreateDirectory(outsideDir);
+
+        try
+        {
+            string outsideSecret = Path.Combine(outsideDir, "host_secret.txt");
+            File.WriteAllText(outsideSecret, "TOP_SECRET_HOST_CONTENT");
+            File.WriteAllText(Path.Combine(outsideDir, "leaked.csv"), "LEAKED,1\n");
+
+            File.WriteAllText(Path.Combine(workspaceDir, "script.py"), "print('ignored')");
+            File.WriteAllText(Path.Combine(workspaceDir, "valid_table.csv"), "ARM,N\nA,10\n");
+            File.WriteAllText(Path.Combine(workspaceDir, "nested", "summary.json"), "{\"ok\":true}");
+
+            // Symlinks: absolute outside file, relative outside file, internal file symlink, dangling symlink, and directory symlink
+            File.CreateSymbolicLink(Path.Combine(workspaceDir, "symlink_outside.txt"), outsideSecret);
+            File.CreateSymbolicLink(Path.Combine(workspaceDir, "symlink_relative.txt"), Path.Combine("..", "outside", "host_secret.txt"));
+            File.CreateSymbolicLink(Path.Combine(workspaceDir, "symlink_inside.csv"), Path.Combine(workspaceDir, "valid_table.csv"));
+            File.CreateSymbolicLink(Path.Combine(workspaceDir, "dangling.csv"), Path.Combine(outsideDir, "does_not_exist.csv"));
+            Directory.CreateSymbolicLink(Path.Combine(workspaceDir, "linked_outside_dir"), outsideDir);
+
+            var artifacts = SceDockerEngineDriver.CollectArtifacts(workspaceDir);
+
+            artifacts.Select(a => a.FilePath.Replace('\\', '/'))
+                .Should().BeEquivalentTo("valid_table.csv", "nested/summary.json");
+            artifacts.Should().NotContain(a => a.ContentPreview != null && a.ContentPreview.Contains("TOP_SECRET", StringComparison.Ordinal));
+            artifacts.Should().NotContain(a => a.ContentPreview != null && a.ContentPreview.Contains("LEAKED", StringComparison.Ordinal));
+        }
+        finally
+        {
+            if (Directory.Exists(testRoot))
+            {
+                Directory.Delete(testRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact(DisplayName = "CollectArtifacts_EnforcesMaxOutputBytesBeforeReadingOversizedFiles")]
+    public void CollectArtifacts_EnforcesMaxOutputBytesBeforeReadingOversizedFiles()
+    {
+        string workspaceDir = Path.Combine(Path.GetTempPath(), "sce_bounds_test_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(workspaceDir);
+
+        try
+        {
+            File.WriteAllText(Path.Combine(workspaceDir, "a_first.csv"), new string('a', 60));
+            File.WriteAllText(Path.Combine(workspaceDir, "b_second.csv"), new string('b', 60));
+            File.WriteAllText(Path.Combine(workspaceDir, "c_oversized.csv"), new string('c', 500));
+
+            var artifacts = SceDockerEngineDriver.CollectArtifacts(workspaceDir, maxOutputBytes: 100);
+
+            artifacts.Should().ContainSingle()
+                .Which.Name.Should().Be("a_first.csv");
+        }
+        finally
+        {
+            if (Directory.Exists(workspaceDir))
+            {
+                Directory.Delete(workspaceDir, recursive: true);
+            }
+        }
     }
 }
 
