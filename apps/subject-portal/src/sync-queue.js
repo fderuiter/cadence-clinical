@@ -495,6 +495,23 @@ async function decryptRecord(record) {
   // Project into a shallow copy so encrypted ciphertext in IndexedDB is never mutated or wiped.
   const decrypted = { ...record };
 
+  if (
+    decrypted.unrecoverable === true ||
+    decrypted.status === "DECRYPTION_ERROR"
+  ) {
+    decrypted.status = "DECRYPTION_ERROR";
+    decrypted.locked = true;
+    decrypted.unrecoverable = Boolean(decrypted.unrecoverable);
+    decrypted.error =
+      decrypted.error ||
+      "Locked — enter your security PIN to decrypt queued answers.";
+    delete decrypted.answers;
+    delete decrypted.subject_id;
+    delete decrypted.username;
+    delete decrypted.resolved_answers;
+    return decrypted;
+  }
+
   if (!inMemorySessionKey) {
     decrypted.status = "DECRYPTION_ERROR";
     decrypted.error = "DECRYPTION_ERROR: Missing encryption key";
@@ -801,6 +818,86 @@ export async function clearLockedOfflineData(userId) {
     };
     /* v8 ignore stop */
   });
+}
+
+export async function flagLockedEntriesForPinReset(userId) {
+  inMemorySessionKey = null;
+  const db = await openDatabase(userId);
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(["submissions", "drafts", "config"], "readwrite");
+    const submissionsStore = tx.objectStore("submissions");
+    tx.objectStore("drafts").clear();
+    const configStore = tx.objectStore("config");
+    configStore.delete("wrapped_master_key");
+    configStore.delete("pbkdf2_salt");
+    configStore.delete("session_key");
+
+    let flaggedCount = 0;
+    const getAllReq = submissionsStore.getAll();
+    getAllReq.onsuccess = () => {
+      const records = getAllReq.result || [];
+      for (const sub of records) {
+        const wasUnsynced =
+          sub.status === "QUEUED" ||
+          sub.status === "DECRYPTION_ERROR" ||
+          Boolean(sub.unrecoverable);
+        // Strip encrypted or plaintext PII fields so zero clinical PII remains
+        delete sub.answers;
+        delete sub.subject_id;
+        delete sub.username;
+        delete sub.resolved_answers;
+        if (wasUnsynced) {
+          sub.status = "DECRYPTION_ERROR";
+          sub.locked = true;
+          sub.unrecoverable = true;
+          sub.resolved_at = new Date().toISOString();
+          sub.error =
+            "Locked under a previous security PIN. Unsent answers were cleared to protect participant privacy — please contact your study coordinator if a survey needs to be reassigned.";
+          flaggedCount += 1;
+        }
+        submissionsStore.put(sub);
+      }
+    };
+    /* v8 ignore start */
+    getAllReq.onerror = () => {
+      reject(getAllReq.error);
+    };
+    /* v8 ignore stop */
+    tx.oncomplete = () => {
+      resolve({ flaggedCount });
+    };
+    /* v8 ignore start */
+    tx.onerror = () => {
+      reject(tx.error);
+    };
+    /* v8 ignore stop */
+  });
+}
+
+export async function getDraftAssignmentIds(userId) {
+  try {
+    const db = await openDatabase(userId);
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("drafts", "readonly");
+      const store = tx.objectStore("drafts");
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const drafts = Array.isArray(req.result) ? req.result : [];
+        resolve(
+          drafts
+            .map((d) => d && d.assignment_id)
+            .filter((id) => typeof id === "string" && id.length > 0)
+        );
+      };
+      /* v8 ignore start */
+      req.onerror = () => {
+        reject(req.error);
+      };
+      /* v8 ignore stop */
+    });
+  } catch {
+    return [];
+  }
 }
 
 export async function saveDraft(assignmentId, answers) {

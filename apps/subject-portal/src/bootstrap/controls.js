@@ -8,8 +8,9 @@ import {
 } from "../features/consent.js";
 import { retryInbox } from "../features/inbox.js";
 import {
-  leaveQuestionnaire,
+  requestCancelQuestionnaire,
   requestQuestionnaireSignature,
+  saveAndLeaveQuestionnaire,
 } from "../features/questionnaire.js";
 import {
   closeSignatureModal,
@@ -30,10 +31,14 @@ export function bindPortalControls() {
   }
 
   const btnBack = document.getElementById("btn-back-to-tasks");
-  if (btnBack) btnBack.addEventListener("click", leaveQuestionnaire);
+  if (btnBack && btnBack.dataset.vueBound !== "true") {
+    btnBack.addEventListener("click", saveAndLeaveQuestionnaire);
+  }
 
   const btnCancel = document.getElementById("btn-cancel-questionnaire");
-  if (btnCancel) btnCancel.addEventListener("click", leaveQuestionnaire);
+  if (btnCancel && btnCancel.dataset.vueBound !== "true") {
+    btnCancel.addEventListener("click", requestCancelQuestionnaire);
+  }
 
   const btnSubmit = document.getElementById("btn-submit-questionnaire");
   if (btnSubmit)

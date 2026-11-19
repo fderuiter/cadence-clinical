@@ -22,13 +22,7 @@
           </p>
           <div
             v-if="sessionStore.pinSetup.error"
-            class="error-state"
-            style="
-              color: var(--danger);
-              font-weight: bold;
-              font-size: 14px;
-              margin-bottom: 12px;
-            "
+            class="error-state pin-error-msg"
             role="status"
             aria-live="polite"
           >
@@ -59,15 +53,7 @@
             />
           </div>
         </div>
-        <div
-          class="modal-footer"
-          style="
-            display: flex;
-            gap: 8px;
-            justify-content: space-between;
-            flex-wrap: wrap;
-          "
-        >
+        <div class="modal-footer modal-footer-between">
           <button
             id="btn-pin-setup-signout"
             type="button"
@@ -84,6 +70,14 @@
             Save and Configure
           </button>
         </div>
+        <div class="modal-support-strip">
+          <SiteContactLinks
+            id="pin-setup-site-contacts"
+            compact
+            heading="Study Site Coordinator"
+            region-label="PIN setup study site coordinator contacts"
+          />
+        </div>
       </form>
     </div>
   </div>
@@ -96,6 +90,7 @@ import { useFocusTrap } from "ui";
 import { logout } from "../features/auth.js";
 import { handlePINSetupSubmit } from "../features/pin.js";
 import { useSessionStore } from "../stores/session.js";
+import SiteContactLinks from "./SiteContactLinks.vue";
 
 const modalRef = ref(null);
 const sessionStore = useSessionStore();

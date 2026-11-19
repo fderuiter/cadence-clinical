@@ -18,28 +18,27 @@
         class="btn-sync-status"
         :class="{
           'has-queued': queuedSubmissionsCount > 0,
+          'has-quarantined': quarantinedSubmissionsCount > 0,
           'sync-failed': isSyncFailed,
           'sync-retrying': sync.syncRetryInfo?.isRetrying,
         }"
         aria-label="Toggle sync status drawer"
         @click="toggleSyncDrawer"
       >
-        <span class="sync-icon">🔄</span>
+        <span class="sync-icon" aria-hidden="true">{{
+          quarantinedSubmissionsCount > 0 ? "⚠️" : "🔄"
+        }}</span>
         <span
           v-if="queuedSubmissionsCount > 0"
+          id="header-sync-badge"
           class="sync-badge"
+          :class="{ 'sync-badge-quarantined': quarantinedSubmissionsCount > 0 }"
           aria-live="polite"
           aria-atomic="true"
         >
           {{ queuedSubmissionsCount }}
         </span>
-        <span class="sync-btn-label">
-          {{
-            sync.syncRetryInfo?.isRetrying
-              ? `Retrying (${sync.syncRetryInfo.attempt}/${sync.syncRetryInfo.maxRetries})`
-              : "Sync Status"
-          }}
-        </span>
+        <span class="sync-btn-label">{{ headerSyncLabel }}</span>
       </button>
     </div>
   </header>
@@ -52,8 +51,21 @@ import { storeToRefs } from "pinia";
 import { useSyncStore } from "../stores/sync.js";
 
 const sync = useSyncStore();
-const { queuedSubmissionsCount, isSyncFailed } = storeToRefs(sync);
+const { queuedSubmissionsCount, quarantinedSubmissionsCount, isSyncFailed } =
+  storeToRefs(sync);
 const { toggleSyncDrawer } = sync;
 
 const brandName = computed(() => import.meta.env.VITE_BRAND_NAME || "Cadence");
+
+const headerSyncLabel = computed(() => {
+  if (sync.syncRetryInfo?.isRetrying) {
+    const base = `Retrying (${sync.syncRetryInfo.attempt}/${sync.syncRetryInfo.maxRetries})`;
+    const rem = sync.syncRetryInfo.remainingSeconds;
+    return typeof rem === "number" && rem > 0 ? `${base} · ${rem}s` : base;
+  }
+  if (quarantinedSubmissionsCount.value > 0) {
+    return "Sync Status · Review Needed";
+  }
+  return "Sync Status";
+});
 </script>

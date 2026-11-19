@@ -204,6 +204,90 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
     expect(document.activeElement).toBe(trigger);
   });
 
+  it("traps focus inside QuestionnaireView cancel confirmation dialog and restores focus on Escape", async () => {
+    state.assignments = [
+      {
+        id: "assign_cancel_test",
+        subject_id: "subj_01",
+        instrument_id: "inst_cancel_test",
+        instrument_name: "Daily Symptom Diary",
+        status: "PENDING",
+      },
+    ];
+    state.instruments = {
+      inst_cancel_test: {
+        id: "inst_cancel_test",
+        name: "Daily Symptom Diary",
+        description: "Record symptoms",
+        items: {
+          symptom_score: {
+            label: "Symptom Score",
+            type: "numeric",
+            required: true,
+            min: 0,
+            max: 10,
+          },
+        },
+      },
+    };
+    state.activeQuestionnaire = {
+      assignment: state.assignments[0],
+      instrument: state.instruments.inst_cancel_test,
+      answers: { symptom_score: 4 },
+    };
+    showView("view-questionnaire");
+    await settle();
+
+    const cancelBtn = document.getElementById("btn-cancel-questionnaire");
+    expect(cancelBtn).not.toBeNull();
+    cancelBtn.focus();
+    cancelBtn.click();
+    await settle();
+
+    const dialog = document.getElementById("questionnaire-cancel-confirm");
+    const keepBtn = document.getElementById("btn-cancel-keep-editing");
+    const discardBtn = document.getElementById("btn-cancel-confirm-discard");
+    expect(state.questionnaireCancelConfirmOpen).toBe(true);
+    expect(dialog).not.toBeNull();
+    expect(document.activeElement).toBe(keepBtn);
+
+    // Shift+Tab wraps from Keep Editing to Discard Draft & Leave
+    dialog.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Tab",
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    expect(document.activeElement).toBe(discardBtn);
+
+    // Forward Tab wraps back to Keep Editing
+    dialog.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Tab",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    expect(document.activeElement).toBe(keepBtn);
+
+    // Escape dismisses confirmation dialog without discarding active questionnaire and restores focus
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await settle();
+
+    expect(state.questionnaireCancelConfirmOpen).toBe(false);
+    expect(state.activeQuestionnaire).not.toBeNull();
+    expect(document.activeElement).toBe(cancelBtn);
+    state.activeQuestionnaire = null;
+  });
+
   it("drives participant portal tabs from a single state source in both 4-tab production mode and 6-tab demo mode", async () => {
     expect(tabs).toHaveLength(6);
 

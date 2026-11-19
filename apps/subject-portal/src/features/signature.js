@@ -281,11 +281,17 @@ export async function verifyAndSubmitSignature() {
     );
 
     // Keep assignment in PENDING_SYNC until server sync confirms persistence
+    if (state.draftPresence && state.draftPresence[active.assignment.id]) {
+      const nextPresence = { ...state.draftPresence };
+      delete nextPresence[active.assignment.id];
+      state.draftPresence = nextPresence;
+    }
     const foundAssign = state.assignments.find(
       (a) => a.id === active.assignment.id
     );
     if (foundAssign) {
       foundAssign.status = "PENDING_SYNC";
+      foundAssign.has_draft = false;
       foundAssign.queued_at = queuedItem.device_timestamp;
       try {
         await saveAssignmentsToDB(state.assignments);

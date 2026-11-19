@@ -10,6 +10,7 @@
   />
 
   <div
+    id="global-sync-drawer"
     ref="drawerRef"
     class="global-drawer"
     :class="{ active: sync.isSyncDrawerOpen }"
@@ -25,7 +26,7 @@
       <button
         id="btn-close-sync-drawer"
         type="button"
-        class="btn-close-drawer"
+        class="btn-close-drawer touch-target-interactive"
         aria-label="Close drawer"
         @click="toggleSyncDrawer"
       >
@@ -38,11 +39,24 @@
         <p class="status-text" role="status" aria-live="polite">
           {{ sync.syncStatusText || "Checking sync status..." }}
         </p>
+        <p
+          v-if="
+            sync.syncRetryInfo?.isRetrying &&
+            sync.syncRetryInfo.remainingSeconds > 0
+          "
+          id="sync-drawer-retry-countdown"
+          class="retry-countdown-banner"
+          aria-live="polite"
+        >
+          Next automatic retry in
+          <strong>{{ sync.syncRetryInfo.remainingSeconds }}s</strong> (Attempt
+          {{ sync.syncRetryInfo.attempt }} of
+          {{ sync.syncRetryInfo.maxRetries }})
+        </p>
         <button
           id="btn-drawer-sync-now"
           type="button"
-          class="btn btn-primary btn-sync-trigger"
-          style="width: 100%; margin-top: 8px"
+          class="btn btn-primary btn-sync-trigger drawer-sync-btn"
           @click="triggerManualSync"
         >
           Sync Now
@@ -81,30 +95,43 @@
                 {{ getStatusDescription(item) }}
               </p>
               <div
-                v-if="
-                  item.answers !== undefined &&
-                  item.status !== 'DECRYPTION_ERROR'
-                "
-                class="item-data"
+                v-if="isQuarantinedItem(item)"
+                class="quarantine-guidance"
+                role="note"
               >
-                <strong>Local Answers:</strong>
+                <p class="quarantine-next-steps">
+                  {{ COORDINATOR_QUARANTINE_STEPS }}
+                </p>
+              </div>
+              <div v-if="shouldShowAnswersSummary(item)" class="item-data">
+                <strong>Recorded Values:</strong>
                 <code class="data-code">{{
-                  JSON.stringify(item.answers)
+                  formatAnswersSummary(item.answers)
                 }}</code>
               </div>
               <div
-                v-if="item.resolved_answers && item.status === 'MERGED'"
+                v-if="
+                  item.resolved_answers &&
+                  item.status === 'MERGED' &&
+                  formatAnswersSummary(item.resolved_answers)
+                "
                 class="item-data merged-data"
               >
                 <strong>Merged Result:</strong>
                 <code class="data-code">{{
-                  JSON.stringify(item.resolved_answers)
+                  formatAnswersSummary(item.resolved_answers)
                 }}</code>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <SiteContactLinks
+        id="sync-drawer-site-contacts"
+        heading="Study Site Support"
+        region-label="Sync drawer study site coordinator contacts"
+      />
     </div>
   </div>
 </template>
@@ -113,10 +140,17 @@
 import { ref } from "vue";
 import { useFocusTrap } from "ui";
 
+import {
+  COORDINATOR_QUARANTINE_STEPS,
+  formatAnswersSummary,
+  humanizeValidationError,
+} from "../features/site-support.js";
 import { syncOfflineQueue } from "../features/sync.js";
 import { describeQueuedSync } from "../features/sync-status.js";
 import { useSyncStore } from "../stores/sync.js";
 import { useTasksStore } from "../stores/tasks.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
+import SiteContactLinks from "./SiteContactLinks.vue";
 
 const drawerRef = ref(null);
 const sync = useSyncStore();
@@ -133,7 +167,22 @@ useFocusTrap(drawerRef, {
 });
 
 function triggerManualSync() {
-  syncOfflineQueue();
+  syncOfflineQueue(true, { autoDisburse: isDemoModeActive() });
+}
+
+function isQuarantinedItem(item) {
+  return item.status === "QUARANTINED" || item.status === "LOCAL_QUARANTINED";
+}
+
+function shouldShowAnswersSummary(item) {
+  if (
+    item.status === "DECRYPTION_ERROR" ||
+    item.status === "QUARANTINED" ||
+    item.status === "LOCAL_QUARANTINED"
+  ) {
+    return false;
+  }
+  return Boolean(formatAnswersSummary(item.answers));
 }
 
 function getInstrumentName(diaryId) {
@@ -160,9 +209,9 @@ function getSubmissionClass(item) {
       item.status === "CREATED" || item.status === "UPDATED_CLIENT_WINS",
     "submission-merged": item.status === "MERGED",
     "submission-ignored": item.status === "IGNORED_SERVER_WINS",
-    "submission-quarantined": item.status === "QUARANTINED",
+    "submission-quarantined": isQuarantinedItem(item),
     "submission-error":
-      item.status === "DECRYPTION_ERROR" || item.status === "QUARANTINED",
+      item.status === "DECRYPTION_ERROR" || isQuarantinedItem(item),
   };
 }
 
@@ -177,7 +226,7 @@ function getBadgeClass(item) {
   if (
     item.status === "IGNORED_SERVER_WINS" ||
     item.status === "DECRYPTION_ERROR" ||
-    item.status === "QUARANTINED"
+    isQuarantinedItem(item)
   )
     return "overdue";
   return "pending";
@@ -189,29 +238,33 @@ function getStatusLabel(item) {
     return "SYNCED";
   if (item.status === "MERGED") return "MERGED";
   if (item.status === "IGNORED_SERVER_WINS") return "CONFLICT (Ignored)";
-  if (item.status === "QUARANTINED") return "QUARANTINED";
+  if (isQuarantinedItem(item)) return "QUARANTINED";
+  if (item.status === "DECRYPTION_ERROR" && item.unrecoverable)
+    return "LOCKED (RESET)";
   return item.status;
 }
 
 function getStatusDescription(item) {
   if (item.status === "QUEUED") {
     return describeQueuedSync(sync.syncRetryInfo, item);
-  } else if (
-    item.status === "CREATED" ||
-    item.status === "UPDATED_CLIENT_WINS"
-  ) {
+  }
+  if (item.status === "CREATED" || item.status === "UPDATED_CLIENT_WINS") {
     return "Successfully synchronized with clinical database.";
-  } else if (item.status === "MERGED") {
+  }
+  if (item.status === "MERGED") {
     return "Conflict resolved: Local and server entries were combined.";
-  } else if (item.status === "IGNORED_SERVER_WINS") {
+  }
+  if (item.status === "IGNORED_SERVER_WINS") {
     return "Conflict resolved: Server data was preserved; local entry archived.";
-  } else if (item.status === "QUARANTINED") {
-    return "Quarantined: Under review by clinical trial managers due to validation/version mismatch errors.";
-  } else if (item.status === "DECRYPTION_ERROR") {
-    return item.locked
-      ? "Locked — enter your security PIN to decrypt queued answers."
-      : item.error ||
-          "Locked — enter your security PIN to decrypt queued answers.";
+  }
+  if (isQuarantinedItem(item)) {
+    return humanizeValidationError(item.error);
+  }
+  if (item.status === "DECRYPTION_ERROR") {
+    if (item.unrecoverable) {
+      return humanizeValidationError(item.error);
+    }
+    return "Locked — enter your security PIN to decrypt queued answers.";
   }
   return "";
 }

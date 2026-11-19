@@ -1,17 +1,20 @@
-// 2. Questionnaire completion: compiling the form, drafts and validation.
+// 2. Questionnaire completion: compiling the form, preserving drafts on Back,
+// confirming Cancel before discarding, and validating before signature.
 import { debounce, validateField } from "ui";
+import { nextTick } from "vue";
 
 import { fetchInstrument, isAuthenticatedSession } from "../api/client.js";
 import { MOCK_INSTRUMENTS } from "../data/mock-data.js";
 import { state } from "../stores/state.js";
-import { isDemoModeActive } from "../utils/demoMode.js";
 import {
   deleteDraft,
   getDraft,
   getInstrumentFromDB,
+  saveAssignmentsToDB,
   saveDraft,
   saveInstrumentsToDB,
 } from "../sync-queue.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
 import {
   createClinicalInput,
   createClinicalRadioGrid,
@@ -24,22 +27,91 @@ import {
 import { showToast } from "../widgets/toast.js";
 import { showView } from "./navigation.js";
 import { openSignatureModal } from "./signature.js";
+import { renderTasks } from "./tasks.js";
+
+function isSliderField(field) {
+  return (
+    field.type === "visual_analog" ||
+    field.type === "vas" ||
+    field.type === "slider" ||
+    field.type === "range"
+  );
+}
+
+function readCurrentFormAnswers(instrument, existingAnswers = {}) {
+  const collected = {};
+  Object.entries(instrument.items || {}).forEach(([id, field]) => {
+    if (field.type === "choice_single") {
+      collected[id] =
+        document.querySelector(`input[name="${id}"]:checked`)?.value || "";
+      return;
+    }
+
+    const inputEl = document.getElementById(id);
+    if (!inputEl) {
+      collected[id] = existingAnswers[id] ?? "";
+      return;
+    }
+
+    if (isSliderField(field)) {
+      const defaultMin = String(field.min !== undefined ? field.min : 0);
+      const wasTouched =
+        inputEl.getAttribute("data-touched") === "true" ||
+        (existingAnswers[id] !== undefined && existingAnswers[id] !== "") ||
+        String(inputEl.value) !== defaultMin;
+      collected[id] = wasTouched ? String(inputEl.value).trim() : "";
+      return;
+    }
+
+    collected[id] = inputEl.value?.trim() || "";
+  });
+  return collected;
+}
+
+function hasAnyRecordedAnswer(answers) {
+  return Object.values(answers || {}).some(
+    (val) => val !== "" && val !== null && val !== undefined
+  );
+}
+
+function setDraftPresenceFlag(assignmentId, hasDraft) {
+  const nextPresence = { ...(state.draftPresence || {}) };
+  if (hasDraft) {
+    nextPresence[assignmentId] = true;
+  } else {
+    delete nextPresence[assignmentId];
+  }
+  state.draftPresence = nextPresence;
+
+  const targetAssignment = (state.assignments || []).find(
+    (a) => a.id === assignmentId
+  );
+  if (targetAssignment) {
+    targetAssignment.has_draft = Boolean(hasDraft);
+  }
+}
 
 export async function saveActiveDraftProgress() {
-  if (!state.activeQuestionnaire) return;
-  const { instrument } = state.activeQuestionnaire;
-  Object.entries(instrument.items).forEach(([id, field]) => {
-    const val =
-      field.type === "choice_single"
-        ? document.querySelector(`input[name="${id}"]:checked`)?.value || ""
-        : document.getElementById(id)?.value?.trim() || "";
-    state.activeQuestionnaire.answers[id] = val;
-  });
-
-  await saveDraft(
-    state.activeQuestionnaire.assignment.id,
+  if (!state.activeQuestionnaire) return false;
+  const { instrument, assignment } = state.activeQuestionnaire;
+  const collected = readCurrentFormAnswers(
+    instrument,
     state.activeQuestionnaire.answers
   );
+  state.activeQuestionnaire.answers = collected;
+
+  if (!hasAnyRecordedAnswer(collected)) {
+    return false;
+  }
+
+  await saveDraft(assignment.id, collected);
+  setDraftPresenceFlag(assignment.id, true);
+  try {
+    await saveAssignmentsToDB(state.assignments);
+  } catch (err) {
+    console.warn("Could not persist draft flag on assignment:", err);
+  }
+  return true;
 }
 
 export const debouncedSaveActiveDraft = debounce(saveActiveDraftProgress, 1500);
@@ -99,6 +171,7 @@ export async function startQuestionnaire(assignmentId) {
     return;
   }
 
+  state.questionnaireCancelConfirmOpen = false;
   state.activeQuestionnaire = {
     assignment,
     instrument,
@@ -119,13 +192,7 @@ export async function startQuestionnaire(assignmentId) {
   formHtml += `<h2 class="form-title">Enter Clinical Findings</h2>`;
 
   Object.entries(instrument.items).forEach(([id, field]) => {
-    const isSlider =
-      field.type === "visual_analog" ||
-      field.type === "vas" ||
-      field.type === "slider" ||
-      field.type === "range";
-
-    if (isSlider) {
+    if (isSliderField(field)) {
       formHtml += createClinicalSlider(id, field.label, "", null, 12, field);
     } else if (field.type === "choice_single") {
       formHtml += createClinicalRadioGrid(
@@ -156,9 +223,15 @@ export async function startQuestionnaire(assignmentId) {
   formHtml += `</div>`;
   formContainer.innerHTML = formHtml;
 
-  // Set up listeners for real-time background auto-saving
-  formContainer.addEventListener("input", debouncedSaveActiveDraft);
-  formContainer.addEventListener("change", debouncedSaveActiveDraft);
+  // Set up listeners for real-time background auto-saving and slider interaction tracking
+  const markSliderTouchedAndSave = (event) => {
+    if (event?.target?.type === "range") {
+      event.target.setAttribute("data-touched", "true");
+    }
+    debouncedSaveActiveDraft();
+  };
+  formContainer.addEventListener("input", markSliderTouchedAndSave);
+  formContainer.addEventListener("change", markSliderTouchedAndSave);
 
   // Render and navigate synchronously
   showView("view-questionnaire");
@@ -168,13 +241,14 @@ export async function startQuestionnaire(assignmentId) {
     const draftAnswers = await getDraft(assignmentId);
     if (
       draftAnswers &&
-      Object.keys(draftAnswers).length > 0 &&
+      hasAnyRecordedAnswer(draftAnswers) &&
       state.activeQuestionnaire &&
       state.activeQuestionnaire.assignment.id === assignmentId
     ) {
-      state.activeQuestionnaire.answers = draftAnswers;
+      state.activeQuestionnaire.answers = { ...draftAnswers };
+      setDraftPresenceFlag(assignmentId, true);
       Object.entries(draftAnswers).forEach(([id, val]) => {
-        if (!val) return;
+        if (val === "" || val === null || val === undefined) return;
         const field = instrument.items[id];
         if (field) {
           if (field.type === "choice_single") {
@@ -187,7 +261,10 @@ export async function startQuestionnaire(assignmentId) {
           } else {
             const inputEl = document.getElementById(id);
             if (inputEl) {
-              inputEl.value = val;
+              inputEl.value = String(val);
+              if (inputEl.type === "range") {
+                inputEl.setAttribute("data-touched", "true");
+              }
               const dispEl = document.getElementById(`${id}_display`);
               if (dispEl) {
                 dispEl.textContent = `Value: ${val}`;
@@ -222,10 +299,7 @@ export function validateActiveQuestionnaire() {
     const isNumericField =
       field.type === "numeric" ||
       field.type === "number" ||
-      field.type === "visual_analog" ||
-      field.type === "vas" ||
-      field.type === "slider" ||
-      field.type === "range";
+      isSliderField(field);
 
     const fieldMeta = {
       id: id,
@@ -252,16 +326,68 @@ export function validateActiveQuestionnaire() {
   return allValid;
 }
 
-// Back / Cancel: drops the draft and returns to the task list.
-export async function leaveQuestionnaire() {
+// Back button: preserves partial answers as an encrypted draft and marks the task for resumption.
+export async function saveAndLeaveQuestionnaire() {
+  let saved = false;
   if (state.activeQuestionnaire && state.activeQuestionnaire.assignment) {
     try {
-      await deleteDraft(state.activeQuestionnaire.assignment.id);
+      saved = await saveActiveDraftProgress();
     } catch (err) {
-      console.warn("Could not delete draft:", err);
+      console.warn("Could not save draft before leaving questionnaire:", err);
     }
   }
+  state.questionnaireCancelConfirmOpen = false;
   state.activeQuestionnaire = null;
+  renderTasks();
+  if (saved) {
+    showToast("Draft saved — resume anytime from My Tasks");
+  }
+  showView("view-tasks");
+}
+
+export async function leaveQuestionnaire() {
+  await saveAndLeaveQuestionnaire();
+}
+
+// Cancel button: prompts confirmation before discarding the draft.
+export function requestCancelQuestionnaire() {
+  if (!state.activeQuestionnaire) {
+    showView("view-tasks");
+    return;
+  }
+  state.questionnaireCancelConfirmOpen = true;
+  nextTick(() => {
+    const keepBtn = document.getElementById("btn-cancel-keep-editing");
+    if (keepBtn) keepBtn.focus();
+  });
+}
+
+export function dismissCancelQuestionnaire() {
+  state.questionnaireCancelConfirmOpen = false;
+  nextTick(() => {
+    const cancelBtn = document.getElementById("btn-cancel-questionnaire");
+    if (cancelBtn) cancelBtn.focus();
+  });
+}
+
+export async function confirmCancelQuestionnaire() {
+  if (state.activeQuestionnaire && state.activeQuestionnaire.assignment) {
+    const assignmentId = state.activeQuestionnaire.assignment.id;
+    try {
+      await deleteDraft(assignmentId);
+    } catch (err) {
+      console.warn("Could not delete draft on cancel:", err);
+    }
+    setDraftPresenceFlag(assignmentId, false);
+    try {
+      await saveAssignmentsToDB(state.assignments);
+    } catch (err) {
+      console.warn("Could not update assignment draft flag:", err);
+    }
+  }
+  state.questionnaireCancelConfirmOpen = false;
+  state.activeQuestionnaire = null;
+  renderTasks();
   showView("view-tasks");
 }
 
