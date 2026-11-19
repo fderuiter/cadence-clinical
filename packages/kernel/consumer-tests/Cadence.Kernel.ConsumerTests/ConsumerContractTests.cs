@@ -41,7 +41,7 @@ public sealed class RecordSyntheticNoteHandler : ICommandHandler<RecordSynthetic
 /// </summary>
 public sealed class ConsumerContractTests
 {
-    private static readonly TenantId Tenant = new(Guid.Parse("00000000-0000-0000-0000-000000000001"));
+    private static readonly TenantId Tenant = new(Guid.Parse("00000000-0000-0000-0000-000000000001")); // deid-ignore: synthetic zero-prefixed GUID, not PHI
 
     [Fact]
     public async Task Handler_returns_success_for_a_valid_synthetic_command()

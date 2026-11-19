@@ -3,8 +3,11 @@ packages:
   - "packages/*"
 
 overrides:
+  glob: ">=14.0.2"
   js-yaml: "^4.1.0"
+  minimatch: ">=11.0.1"
   undici: ">=8.11.2"
+  "vitepress>vite": "^6.4.6"
 
 allowBuilds:
   esbuild: true
