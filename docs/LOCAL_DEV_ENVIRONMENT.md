@@ -8,12 +8,12 @@ requests see [CONTRIBUTING.md](../CONTRIBUTING.md); for every setting see
 
 ## 1. Prerequisites
 
-| Tool                  | Version                                                                                                                       | Notes                                                    |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| .NET SDK              | 10.0 (pinned in [`global.json`](../global.json))                                                                              | `dotnet --version`                                       |
-| Node.js + pnpm        | Node 22.13+ on the 22.x line or Node 24+ as specified in [`package.json`](../package.json). Enable Corepack to use the `packageManager` pin. | Frontend workspace and the `pnpm cadence` shortcut |
-| Docker                | Recent Docker Engine or Desktop                                                                                               | Compose stack and Testcontainers                         |
-| PowerShell (optional) | 7+                                                                                                                            | `scripts/manage_migrations.ps1` (a `.sh` variant exists) |
+| Tool                  | Version                                                                                                                                      | Notes                                                    |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| .NET SDK              | 10.0 (pinned in [`global.json`](../global.json))                                                                                             | `dotnet --version`                                       |
+| Node.js + pnpm        | Node 22.13+ on the 22.x line or Node 24+ as specified in [`package.json`](../package.json). Enable Corepack to use the `packageManager` pin. | Frontend workspace and the `pnpm cadence` shortcut       |
+| Docker                | Recent Docker Engine or Desktop                                                                                                              | Compose stack and Testcontainers                         |
+| PowerShell (optional) | 7+                                                                                                                                           | `scripts/manage_migrations.ps1` (a `.sh` variant exists) |
 
 If Corepack is missing from your Node.js installation, install it with `npm install --global corepack`,
 then run `corepack enable`. Use the setup wizard to prepare the workspace:

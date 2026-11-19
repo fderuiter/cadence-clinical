@@ -1,14 +1,13 @@
 <template>
-  <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
   <div
     v-if="consent.reconsentModalOpen"
     id="portal-reconsent-modal"
+    ref="modalRef"
     class="modal-overlay"
     role="dialog"
     aria-modal="true"
     aria-labelledby="portal-reconsent-modal-title"
     tabindex="-1"
-    @keydown="handleReconsentModalKeyDown"
   >
     <div class="modal" style="max-width: 600px">
       <form
@@ -150,21 +149,21 @@
 </template>
 
 <script setup>
+import { ref } from "vue";
+import { useFocusTrap } from "ui";
+
 import {
   closeReconsentModal,
   submitReconsentSignature,
 } from "../features/reconsent.js";
 import { useConsentStore } from "../stores/consent.js";
-import { trapTabKey } from "./focus-trap.js";
 
+const modalRef = ref(null);
 const consent = useConsentStore();
 
-function handleReconsentModalKeyDown(e) {
-  trapTabKey(e, "portal-reconsent-modal", [
-    "input",
-    "select",
-    "textarea",
-    "button",
-  ]);
-}
+useFocusTrap(modalRef, {
+  isOpen: () => consent.reconsentModalOpen,
+  onEscape: closeReconsentModal,
+  initialFocus: "#reconsent-sign-password",
+});
 </script>

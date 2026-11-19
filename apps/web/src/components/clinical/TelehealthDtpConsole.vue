@@ -777,6 +777,7 @@
     <!-- Modal 1: Schedule Telehealth Session -->
     <div
       v-if="isScheduleSessionModalOpen"
+      ref="scheduleSessionModalRef"
       class="modal-backdrop"
       role="dialog"
       aria-modal="true"
@@ -852,6 +853,7 @@
     <!-- Modal 2: Dispatch DTP Shipment -->
     <div
       v-if="isDispatchDtpModalOpen"
+      ref="dispatchDtpModalRef"
       class="modal-backdrop"
       role="dialog"
       aria-modal="true"
@@ -981,6 +983,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from "vue";
+import { useFocusTrap } from "ui";
 import { interopService } from "../../api/interop";
 import BulkIpKitReconciliationDrawer from "./BulkIpKitReconciliationDrawer.vue";
 
@@ -1092,6 +1095,7 @@ const currentScrollPercent = ref(25);
 const currentClause = ref("procedures");
 
 const isScheduleSessionModalOpen = ref(false);
+const scheduleSessionModalRef = ref(null);
 const newSessionForm = reactive({
   study_id: "STUDY-DCT-001",
   subject_id: "SUBJ-BOSTON-101",
@@ -1100,6 +1104,7 @@ const newSessionForm = reactive({
 });
 
 const isDispatchDtpModalOpen = ref(false);
+const dispatchDtpModalRef = ref(null);
 const newShipmentForm = reactive({
   study_id: "STUDY-DCT-001",
   site_id: "SITE-101",
@@ -1109,6 +1114,18 @@ const newShipmentForm = reactive({
   temperature_zone: "REFRIGERATED",
   kit_serials_input: "KIT-LOT99-001, KIT-LOT99-002",
   tamper_seal_id: "SEAL-RFID-" + Math.floor(Math.random() * 899999 + 100000),
+});
+
+useFocusTrap(scheduleSessionModalRef, isScheduleSessionModalOpen, {
+  onEscape: () => {
+    isScheduleSessionModalOpen.value = false;
+  },
+});
+
+useFocusTrap(dispatchDtpModalRef, isDispatchDtpModalOpen, {
+  onEscape: () => {
+    isDispatchDtpModalOpen.value = false;
+  },
 });
 
 async function refreshData() {
@@ -1499,26 +1516,27 @@ onMounted(() => {
 }
 
 .metric-icon-box {
-  display: flex;
+  display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 44px;
   height: 44px;
-  border-radius: 8px;
+  border-radius: var(--radius-md, 8px);
   font-size: 20px;
 }
 
 .bg-blue {
-  background: #eff6ff;
+  background: var(--status-info-bg, #eff6ff);
 }
 .bg-green {
-  background: #f0fdf4;
+  background: var(--status-success-bg, #f0fdf4);
 }
 .bg-purple {
-  background: #faf5ff;
+  background: var(--status-accent-bg, #faf5ff);
 }
 .bg-red {
-  background: #fef2f2;
+  background: var(--status-danger-bg, #fef2f2);
 }
 
 .metric-content {

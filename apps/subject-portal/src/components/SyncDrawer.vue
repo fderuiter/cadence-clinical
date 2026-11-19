@@ -1,25 +1,25 @@
 <template>
   <!-- Global Floating Sync Drawer -->
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div
     class="global-drawer-overlay"
     :class="{ active: sync.isSyncDrawerOpen }"
-    role="button"
-    tabindex="0"
-    aria-label="Close sync drawer overlay"
+    aria-hidden="true"
+    :inert="!sync.isSyncDrawerOpen || undefined"
     @click="toggleSyncDrawer"
-    @keydown.enter.prevent="toggleSyncDrawer"
-    @keydown.space.prevent="toggleSyncDrawer"
   />
 
-  <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
   <div
     id="global-sync-drawer"
+    ref="drawerRef"
     class="global-drawer"
     :class="{ active: sync.isSyncDrawerOpen }"
     role="dialog"
-    aria-modal="true"
+    :aria-modal="sync.isSyncDrawerOpen ? 'true' : undefined"
+    :aria-hidden="!sync.isSyncDrawerOpen ? 'true' : undefined"
+    :inert="!sync.isSyncDrawerOpen || undefined"
     aria-labelledby="drawer-title"
-    @keydown="handleDrawerKeyDown"
+    tabindex="-1"
   >
     <div class="drawer-header">
       <h3 id="drawer-title">🔄 Submission Sync Status</h3>
@@ -137,6 +137,9 @@
 </template>
 
 <script setup>
+import { ref } from "vue";
+import { useFocusTrap } from "ui";
+
 import {
   COORDINATOR_QUARANTINE_STEPS,
   formatAnswersSummary,
@@ -147,23 +150,24 @@ import { describeQueuedSync } from "../features/sync-status.js";
 import { useSyncStore } from "../stores/sync.js";
 import { useTasksStore } from "../stores/tasks.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
-import { trapTabKey } from "./focus-trap.js";
 import SiteContactLinks from "./SiteContactLinks.vue";
 
+const drawerRef = ref(null);
 const sync = useSyncStore();
 const tasks = useTasksStore();
 const { toggleSyncDrawer } = sync;
 
+useFocusTrap(drawerRef, {
+  isOpen: () => sync.isSyncDrawerOpen,
+  onEscape: () => {
+    if (sync.isSyncDrawerOpen) {
+      toggleSyncDrawer();
+    }
+  },
+});
+
 function triggerManualSync() {
   syncOfflineQueue(true, { autoDisburse: isDemoModeActive() });
-}
-
-function handleDrawerKeyDown(e) {
-  if (e.key === "Escape" && sync.isSyncDrawerOpen) {
-    toggleSyncDrawer();
-    return;
-  }
-  trapTabKey(e, "global-sync-drawer");
 }
 
 function isQuarantinedItem(item) {

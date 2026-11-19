@@ -14,12 +14,12 @@ Everything marked **unverified** has not been compiled or run for this plan.
 
 Extraction (C6) starts only when the four conditions in [MIGRATION_PLAN.md](MIGRATION_PLAN.md) and the [agent execution guide](AGENT_HANDOFF.md) hold.
 
-| Condition | State on `cb28d67` | Remaining work |
-| --- | --- | --- |
-| 1. Complete source and dependency inventory | **Met for the kernel.** Inventory and symbol review merged. | 107 rows are still `needs decision` (92 Execution, 15 other). Those rows must not be used for kernel slices. |
-| 2. Approved architecture decision and ownership matrix | **Partly met.** ADR-2602 is accepted. The ownership matrix amendments in its §5 are approved but not yet applied. Six owner decisions are in draft PR #5688 (not reviewed for this plan). | Apply the matrix amendments. Close ADR-2602 §8 items 1 to 3 in K1. |
-| 3. Executable verification baseline for transaction, authorization, audit and integrity | **Not met.** #5684 makes the `dotnet-tests` job fail when a PostgreSQL test does not run. No run has been recorded against PostgreSQL with zero skips. GitHub Actions minutes are exhausted (#5685), so CI cannot supply that evidence. | Track A (§3). |
-| 4. Acceptance criteria and rollback strategy | **Drafted here.** Not yet approved. | Approval by Fred. Rehearsal of rollback (§6). |
+| Condition                                                                               | State on `cb28d67`                                                                                                                                                                                                                      | Remaining work                                                                                               |
+| --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| 1. Complete source and dependency inventory                                             | **Met for the kernel.** Inventory and symbol review merged.                                                                                                                                                                             | 107 rows are still `needs decision` (92 Execution, 15 other). Those rows must not be used for kernel slices. |
+| 2. Approved architecture decision and ownership matrix                                  | **Partly met.** ADR-2602 is accepted. The ownership matrix amendments in its §5 are approved but not yet applied. Six owner decisions are in draft PR #5688 (not reviewed for this plan).                                               | Apply the matrix amendments. Close ADR-2602 §8 items 1 to 3 in K1.                                           |
+| 3. Executable verification baseline for transaction, authorization, audit and integrity | **Not met.** #5684 makes the `dotnet-tests` job fail when a PostgreSQL test does not run. No run has been recorded against PostgreSQL with zero skips. GitHub Actions minutes are exhausted (#5685), so CI cannot supply that evidence. | Track A (§3).                                                                                                |
+| 4. Acceptance criteria and rollback strategy                                            | **Drafted here.** Not yet approved.                                                                                                                                                                                                     | Approval by Fred. Rehearsal of rollback (§6).                                                                |
 
 ## 2. Dependency facts for the kernel SDK
 
@@ -41,20 +41,21 @@ The coordinator's direction is that Track C is this thread's work. Tracks A and 
 - **Track B, ownership:** the matrix amendments and the owner decisions in PR #5688 are applied, and the `needs decision` rows that K1 uses are resolved.
 - **Track C, preparation (this plan):**
 
-| Step | Deliverable | Acceptance | Verification status |
-| --- | --- | --- | --- |
-| C1 | SDK surface decision record: which namespaces the SDK path exposes, and the `Core.Domain` exclusions | Each excluded namespace is listed with its baseline entries | Not started |
-| C2 | Host-side Npgsql adapter design (name and location) | Only the composition host references Npgsql | Not started |
-| C3 | Public API snapshot tests for `Abstractions` and `Modules` | Snapshots exist and fail on any unreviewed public change | Not started |
-| C4 | **Kernel package-consumer test:** a project that references only the packages and compiles a minimal module (first executable deliverable) | Builds with `dotnet build` against packages only. Architecture test confirms no `Domain`, `Application`, `Persistence`, `Api`, Npgsql or `engine_core` reference | **Unverified.** Not compiled. |
-| C5 | Pinned cross-repo release manifest (see §4) | Manifest lists every package version and contract version; no floating reference | Not started |
-| C6 | Extraction PR | Blocked until Tracks A and B pass and C1 to C5 are accepted | Blocked |
+| Step | Deliverable                                                                                                                                | Acceptance                                                                                                                                                       | Verification status           |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| C1   | SDK surface decision record: which namespaces the SDK path exposes, and the `Core.Domain` exclusions                                       | Each excluded namespace is listed with its baseline entries                                                                                                      | Not started                   |
+| C2   | Host-side Npgsql adapter design (name and location)                                                                                        | Only the composition host references Npgsql                                                                                                                      | Not started                   |
+| C3   | Public API snapshot tests for `Abstractions` and `Modules`                                                                                 | Snapshots exist and fail on any unreviewed public change                                                                                                         | Not started                   |
+| C4   | **Kernel package-consumer test:** a project that references only the packages and compiles a minimal module (first executable deliverable) | Builds with `dotnet build` against packages only. Architecture test confirms no `Domain`, `Application`, `Persistence`, `Api`, Npgsql or `engine_core` reference | **Unverified.** Not compiled. |
+| C5   | Pinned cross-repo release manifest (see §4)                                                                                                | Manifest lists every package version and contract version; no floating reference                                                                                 | Not started                   |
+| C6   | Extraction PR                                                                                                                              | Blocked until Tracks A and B pass and C1 to C5 are accepted                                                                                                      | Blocked                       |
 
 ## 4. Pinned cross-repo release manifest (proposed)
 
 One manifest, owned by `cadence-clinical` (the composition authority, ADR-2601). It is the only place a product repository's version is pinned into the host.
 
 Each entry records:
+
 - package or contract name and exact semver version;
 - source repository and source revision (SHA);
 - public API snapshot hash (from C3);
@@ -62,6 +63,7 @@ Each entry records:
 - status: `verified`, `unverified` or `blocked`.
 
 Rules:
+
 - No entry may reference a branch head.
 - An entry with `unverified` status may not appear in a release candidate.
 - Rolling back means changing a pinned version back to the previous entry. Nothing else changes.
@@ -106,13 +108,13 @@ These restate the shared rubric in [MIGRATION_PLAN.md](MIGRATION_PLAN.md) as che
 
 Everything in this section is **unverified**. No .NET SDK is available in the authoring environment (`dotnet` is missing and the installer download is refused), so nothing below was compiled or run.
 
-| Step | Status | Evidence and notes |
-| --- | --- | --- |
-| C1 SDK surface decision | Draft | Public SDK types come from `Cadence.Kernel` (`TenantId`), `Cadence.Kernel.Commands` (`ICommand`, `CommandResult`, `KernelError`, `Actor`), `Cadence.Kernel.Lineage` and `Cadence.Kernel.References` in `Abstractions`, plus `Cadence.Kernel.Modules`. The `Core.Domain` exclusions wait on ADR-2602 §8 item 2. |
-| C2 Host-side Npgsql adapter | Draft | `Cadence.Kernel.Modules/ModuleCommandServiceCollectionExtensions.cs` imports `Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure` directly. The adapter must take that code out of the SDK. |
-| C3 Public API snapshots | Not started | Snapshot tool not chosen. It needs the C1 surface first. |
-| C4 Package-consumer test | Draft, **unverified** | `packages/kernel/consumer-tests/Cadence.Kernel.ConsumerTests`. Two contract tests reference only `Abstractions` and `Modules`. It is **not in `Cadence.sln`**, and the test-layout rules are not changed. Adding it to the solution is a separate step. |
-| C5 Release manifest | Draft (below) | Every entry is `unverified`, so none may appear in a release candidate. |
+| Step                        | Status                | Evidence and notes                                                                                                                                                                                                                                                                                             |
+| --------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1 SDK surface decision     | Draft                 | Public SDK types come from `Cadence.Kernel` (`TenantId`), `Cadence.Kernel.Commands` (`ICommand`, `CommandResult`, `KernelError`, `Actor`), `Cadence.Kernel.Lineage` and `Cadence.Kernel.References` in `Abstractions`, plus `Cadence.Kernel.Modules`. The `Core.Domain` exclusions wait on ADR-2602 §8 item 2. |
+| C2 Host-side Npgsql adapter | Draft                 | `Cadence.Kernel.Modules/ModuleCommandServiceCollectionExtensions.cs` imports `Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure` directly. The adapter must take that code out of the SDK.                                                                                                                  |
+| C3 Public API snapshots     | Not started           | Snapshot tool not chosen. It needs the C1 surface first.                                                                                                                                                                                                                                                       |
+| C4 Package-consumer test    | Draft, **unverified** | `packages/kernel/consumer-tests/Cadence.Kernel.ConsumerTests`. Two contract tests reference only `Abstractions` and `Modules`. It is **not in `Cadence.sln`**, and the test-layout rules are not changed. Adding it to the solution is a separate step.                                                        |
+| C5 Release manifest         | Draft (below)         | Every entry is `unverified`, so none may appear in a release candidate.                                                                                                                                                                                                                                        |
 
 ### C4 finding that limits the consumer test
 
@@ -120,12 +122,12 @@ Everything in this section is **unverified**. No .NET SDK is available in the au
 
 ### C5 pinned release manifest (proposed entries)
 
-| Package or contract | Source repository | Pinned revision | Version | Status |
-| --- | --- | --- | --- | --- |
-| `Cadence.Kernel.Abstractions` | `cadence-clinical` (`packages/kernel`) | `b43e88c` | not published | unverified |
-| `Cadence.Kernel.Modules` | `cadence-clinical` (`packages/kernel`) | `b43e88c` | not published | unverified |
-| Public API snapshot, `Abstractions` | `cadence-clinical` | not created (C3) | none | blocked |
-| Public API snapshot, `Modules` | `cadence-clinical` | not created (C3) | none | blocked |
-| C4 consumer test run | `cadence-clinical` | `b43e88c` + this change | none | unverified |
+| Package or contract                 | Source repository                      | Pinned revision         | Version       | Status     |
+| ----------------------------------- | -------------------------------------- | ----------------------- | ------------- | ---------- |
+| `Cadence.Kernel.Abstractions`       | `cadence-clinical` (`packages/kernel`) | `b43e88c`               | not published | unverified |
+| `Cadence.Kernel.Modules`            | `cadence-clinical` (`packages/kernel`) | `b43e88c`               | not published | unverified |
+| Public API snapshot, `Abstractions` | `cadence-clinical`                     | not created (C3)        | none          | blocked    |
+| Public API snapshot, `Modules`      | `cadence-clinical`                     | not created (C3)        | none          | blocked    |
+| C4 consumer test run                | `cadence-clinical`                     | `b43e88c` + this change | none          | unverified |
 
 Rules that apply to the manifest, per §4 above: entries use exact versions and SHAs, never branch heads. `unverified` and `blocked` entries stay out of any release candidate.

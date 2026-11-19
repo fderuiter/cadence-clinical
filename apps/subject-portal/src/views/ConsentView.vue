@@ -4,7 +4,7 @@
     class="portal-view"
     :class="{ active: ui.currentView === 'view-consent' }"
     role="tabpanel"
-    aria-labelledby="tab-btn-consent"
+    aria-labelledby="btn-tab-btn-consent"
     tabindex="0"
   >
     <div class="view-header">

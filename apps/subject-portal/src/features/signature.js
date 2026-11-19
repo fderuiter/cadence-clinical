@@ -52,10 +52,11 @@ export function openSignatureModal(actionType = "epro") {
   }
 
   document.getElementById("portal-sign-modal").style.display = "flex";
+  state.signatureModalOpen = true;
 
-  // Focus trap: set focus to the first focusable element inside the modal
+  // Ensure initial focus lands inside the modal even if rendered outside Vue mount
   const modal = document.getElementById("portal-sign-modal");
-  if (modal) {
+  if (modal && !modal.contains(document.activeElement)) {
     const focusableSelectors =
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
     let elements = Array.from(
@@ -70,9 +71,12 @@ export function openSignatureModal(actionType = "epro") {
 }
 
 export function closeSignatureModal() {
-  // Credential hygiene: clear PIN / password from DOM immediately on cancel
-  document.getElementById("sign-password").value = "";
-  document.getElementById("portal-sign-modal").style.display = "none";
+  // Credential hygiene: clear PIN / password from DOM immediately on cancel or Escape
+  const passwordEl = document.getElementById("sign-password");
+  if (passwordEl) passwordEl.value = "";
+  const modalEl = document.getElementById("portal-sign-modal");
+  if (modalEl) modalEl.style.display = "none";
+  state.signatureModalOpen = false;
   if (
     state.initiatingButton &&
     typeof state.initiatingButton.focus === "function"
@@ -347,81 +351,5 @@ export async function verifyAndSubmitSignature() {
 
     // Attempt sync immediately (promotes to COMPLETED only when server confirms)
     await syncOfflineQueue(false, { autoDisburse: isDemoModeActive() });
-  }
-}
-
-// Keeps Tab focus inside the open signature modal (document listener).
-export function installDocumentSignatureFocusTrap() {
-  if (!window.__TAB_LISTENER_REGISTERED__) {
-    window.__TAB_LISTENER_REGISTERED__ = true;
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Tab") {
-        const modal = document.getElementById("portal-sign-modal");
-        if (modal && modal.style.display !== "none") {
-          const focusableSelectors =
-            "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])";
-          const focusableElements = Array.from(
-            modal.querySelectorAll(focusableSelectors)
-          );
-          if (focusableElements.length === 0) return;
-
-          const first = focusableElements[0];
-          const last = focusableElements[focusableElements.length - 1];
-
-          if (e.shiftKey) {
-            if (document.activeElement === first) {
-              last.focus();
-              e.preventDefault();
-            }
-          } else {
-            if (document.activeElement === last) {
-              first.focus();
-              e.preventDefault();
-            }
-          }
-        }
-      }
-    });
-  }
-}
-
-// Keeps Tab focus inside the open signature modal (window listener).
-export function installWindowSignatureFocusTrap() {
-  if (typeof window !== "undefined") {
-    if (!window.__TAB_TRAP_LISTENER_ADDED__) {
-      window.addEventListener("keydown", (e) => {
-        if (e.key === "Tab") {
-          const modal = document.getElementById("portal-sign-modal");
-          if (modal && modal.style.display !== "none") {
-            const focusableSelectors =
-              'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-            let elements = Array.from(
-              modal.querySelectorAll(focusableSelectors)
-            ).filter((el) => !el.disabled);
-            const visible = elements.filter((el) => el.offsetParent !== null);
-            const focusableElements = visible.length > 0 ? visible : elements;
-
-            if (focusableElements.length > 0) {
-              const firstFocusable = focusableElements[0];
-              const lastFocusable =
-                focusableElements[focusableElements.length - 1];
-
-              if (e.shiftKey) {
-                if (document.activeElement === firstFocusable) {
-                  lastFocusable.focus();
-                  e.preventDefault();
-                }
-              } else {
-                if (document.activeElement === lastFocusable) {
-                  firstFocusable.focus();
-                  e.preventDefault();
-                }
-              }
-            }
-          }
-        }
-      });
-      window.__TAB_TRAP_LISTENER_ADDED__ = true;
-    }
   }
 }

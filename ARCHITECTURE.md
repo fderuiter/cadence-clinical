@@ -330,14 +330,14 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
 
 Cadence develops and integrates in one repository under [ADR-2603](docs/adr/2026-11-19-keep-cadence-in-one-repository.md). Follow the [project plan](docs/PROJECT_PLAN.md) for current delivery order, module owners, and acceptance evidence. The [kernel roadmap (spec §15)](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap) describes the longer-term capability phases:
 
-| Phase                          | Outcome                                                                                                        |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| 0. Foundations                 | Kernel projects, `IClock`, `tstzrange`, RLS, command pipeline, architecture baseline                           |
-| 1. EDC on the kernel           | `apps/execution` runs on kernel concepts and proves the reference visit |
-| 2. Knowledge and standards     | Concept Registry, executable protocol, standards registry, rules, lineage                                      |
-| 3. Quality and trust expansion | RBQM, computable consent, specimens, ingestion, AI proposals                                                   |
-| 4. Analysis and submission     | Derivations, ADaM, TLF lineage, Define-XML, submission package                                                 |
-| 5. Lifecycle breadth           | Feasibility, start-up, finance, recruitment, DCT, regulatory, RWE                                              |
+| Phase                          | Outcome                                                                              |
+| ------------------------------ | ------------------------------------------------------------------------------------ |
+| 0. Foundations                 | Kernel projects, `IClock`, `tstzrange`, RLS, command pipeline, architecture baseline |
+| 1. EDC on the kernel           | `apps/execution` runs on kernel concepts and proves the reference visit              |
+| 2. Knowledge and standards     | Concept Registry, executable protocol, standards registry, rules, lineage            |
+| 3. Quality and trust expansion | RBQM, computable consent, specimens, ingestion, AI proposals                         |
+| 4. Analysis and submission     | Derivations, ADaM, TLF lineage, Define-XML, submission package                       |
+| 5. Lifecycle breadth           | Feasibility, start-up, finance, recruitment, DCT, regulatory, RWE                    |
 
 The services reach the kernel by becoming modules of one composition host
 ([ADR-2610](docs/adr/2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md)). The order, from the

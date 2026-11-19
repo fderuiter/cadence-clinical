@@ -124,7 +124,10 @@ const emit = defineEmits<{
 }>();
 
 const dialogRef = ref<HTMLElement | null>(null);
-useFocusTrap(dialogRef);
+useFocusTrap(dialogRef, {
+  onEscape: () => emit("close"),
+  initialFocus: "#canvas-palette-input",
+});
 
 const query = ref("");
 const active = ref(0);

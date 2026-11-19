@@ -1,12 +1,14 @@
 // View switching. `state.currentView` (the ui store) is the source of truth the
-// shell renders from; the router follows it into the URL and back.
+// shell renders from; the router follows it into the URL and back (see
+// src/router/index.js).
 import { isScreenAvailable } from "../router/availability.js";
-import { routeForView } from "../router/routes.js";
+import { activeTabForView, routeForView, tabs } from "../router/routes.js";
 import { state } from "../stores/state.js";
 import { loadConsentDetails } from "./consent.js";
 
 // Activates a view: enforces screen availability outside demo builds, updates
-// `.active` classes and tab `aria-selected`, and loads consent details on open.
+// `.active` classes and single-source tab ARIA attributes, and loads consent
+// details when the consent view opens.
 export function showView(viewId) {
   const matchedRoute = routeForView(viewId);
   let targetViewId = viewId;
@@ -18,42 +20,23 @@ export function showView(viewId) {
 
   state.currentView = targetViewId;
 
-  document.querySelectorAll(".portal-view").forEach((v) => {
-    v.classList.remove("active");
-  });
-  document.querySelectorAll(".nav-item").forEach((item) => {
-    item.classList.remove("active");
-    const btn = item.querySelector("button");
-    if (btn) {
-      btn.setAttribute("aria-selected", "false");
-    }
-  });
+  if (typeof document !== "undefined") {
+    document.querySelectorAll(".portal-view").forEach((v) => {
+      v.classList.toggle("active", v.id === targetViewId);
+    });
 
-  const targetView = document.getElementById(targetViewId);
-  if (targetView) targetView.classList.add("active");
-
-  let activeTabId = null;
-  if (targetViewId === "view-tasks" || targetViewId === "view-questionnaire") {
-    activeTabId = "tab-btn-tasks";
-  } else if (targetViewId === "view-compliance") {
-    activeTabId = "tab-btn-compliance";
-  } else if (targetViewId === "view-inbox") {
-    activeTabId = "tab-btn-inbox";
-  } else if (targetViewId === "view-consent") {
-    activeTabId = "tab-btn-consent";
-  } else if (targetViewId === "view-wallet") {
-    activeTabId = "tab-btn-wallet";
-  } else if (targetViewId === "view-lay-summaries") {
-    activeTabId = "tab-btn-lay-summaries";
-  }
-
-  if (activeTabId) {
-    const tab = document.getElementById(activeTabId);
-    if (tab) {
-      tab.classList.add("active");
-      const btn = tab.querySelector("button");
+    const activeTab = activeTabForView(targetViewId);
+    for (const tab of tabs) {
+      const isSelected = activeTab?.id === tab.id;
+      const item = document.getElementById(tab.itemId);
+      if (item) {
+        item.classList.toggle("active", isSelected);
+      }
+      const btn =
+        document.getElementById(tab.buttonId) || item?.querySelector("button");
       if (btn) {
-        btn.setAttribute("aria-selected", "true");
+        btn.setAttribute("aria-selected", isSelected ? "true" : "false");
+        btn.setAttribute("tabindex", isSelected ? "0" : "-1");
       }
     }
   }

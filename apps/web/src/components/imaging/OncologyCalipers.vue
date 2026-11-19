@@ -327,6 +327,7 @@
     <!-- Part 11 Re-Auth Modal -->
     <div
       v-if="isModalOpen"
+      ref="signoffModalRef"
       class="modal-overlay"
       role="dialog"
       aria-modal="true"
@@ -336,7 +337,7 @@
           <h4 class="modal-title">
             Electronic Signature - Tumor Assessment Sign-off
           </h4>
-          <button type="button" class="btn-close" @click="isModalOpen = false">
+          <button type="button" class="btn-close" @click="closeSignoffModal">
             ✕
           </button>
         </div>
@@ -375,7 +376,7 @@
           <button
             type="button"
             class="btn-secondary"
-            @click="isModalOpen = false"
+            @click="closeSignoffModal"
           >
             Cancel
           </button>
@@ -395,6 +396,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { useFocusTrap } from "ui";
 
 const props = defineProps({
   annotations: {
@@ -429,8 +431,18 @@ const emit = defineEmits([
 
 const currentTool = ref("CALIPER_1D");
 const isModalOpen = ref(false);
+const signoffModalRef = ref(null);
 const signoffReason = ref("Routine Oncologic Caliper Response Evaluation");
 const signaturePin = ref("");
+
+function closeSignoffModal() {
+  signaturePin.value = "";
+  isModalOpen.value = false;
+}
+
+useFocusTrap(signoffModalRef, isModalOpen, {
+  onEscape: closeSignoffModal,
+});
 
 const newLesionForm = ref({
   lesionId: "TL1",

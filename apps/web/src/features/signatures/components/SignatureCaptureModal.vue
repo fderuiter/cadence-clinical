@@ -117,7 +117,6 @@ export const SHARED_SIGNATURE_MODAL_PROPS = {
 import { computed, ref, watch, inject } from "vue";
 import { ModalErrorAlert } from "ui";
 import { useFocusTrap } from "@/composables/useFocusTrap";
-import { useEscapeClose } from "@/composables/useEscapeClose";
 import GxpCredentialsInput from "./GxpCredentialsInput.vue";
 
 const props = defineProps({
@@ -135,8 +134,10 @@ const props = defineProps({
 const emit = defineEmits(["cancel", "success", "error"]);
 
 const modalRef = ref(null);
-useFocusTrap(modalRef);
-useEscapeClose(() => emit("cancel"));
+useFocusTrap(modalRef, {
+  isOpen: () => props.isOpen,
+  onEscape: cancel,
+});
 
 const usernameVal = ref(props.username);
 const signerNameVal = ref(props.signerName || props.username || "");
@@ -417,26 +418,26 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(15, 23, 42, 0.5);
   z-index: 1000;
 }
 
 .modal {
-  background: white;
-  border-radius: 8px;
+  background: var(--surface-bg, #ffffff);
+  border-radius: var(--radius-md, 8px);
   width: 100%;
   max-width: 450px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   overflow: hidden;
-  color: #333;
+  color: var(--text-primary, #333333);
 }
 
 .modal-header {
   padding: 16px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-subtle, #e2e8f0);
   font-weight: 600;
   font-size: 16px;
-  color: white;
+  color: #ffffff;
 }
 
 .modal-body {
@@ -446,7 +447,7 @@ defineExpose({
 .modal-desc {
   margin-bottom: 16px;
   font-size: 13px;
-  color: #334155;
+  color: var(--text-secondary, #334155);
   line-height: 1.4;
 }
 
@@ -463,17 +464,17 @@ label {
   font-weight: 500;
   margin-bottom: 4px;
   font-size: 13px;
-  color: #475569;
+  color: var(--text-muted, #475569);
 }
 
 select {
   box-sizing: border-box;
   width: 100%;
   padding: 8px;
+  border: 1px solid var(--border-input, #cbd5e1);
+  border-radius: var(--radius-sm, 4px);
   font-size: 13px;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
+  background: var(--surface-bg, #ffffff);
 }
 
 .modal-footer {
@@ -481,21 +482,21 @@ select {
   justify-content: flex-end;
   gap: 8px;
   padding: 12px 16px;
-  background: #f8fafc;
-  border-top: 1px solid #e2e8f0;
+  background: var(--surface-muted, #f8fafc);
+  border-top: 1px solid var(--border-subtle, #e2e8f0);
 }
 
 .btn {
   padding: 6px 12px;
   font-size: 13px;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--radius-sm, 4px);
   font-weight: 500;
 }
 
 .btn-cancel {
-  border: 1px solid #cbd5e1;
-  background: white;
+  border: 1px solid var(--border-input, #cbd5e1);
+  background: var(--surface-bg, #ffffff);
 }
 
 .btn-primary {
