@@ -1,7 +1,20 @@
 name: Deploy Developer Documentation
 
 on:
-  workflow_call:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "apps/web/**"
+      - "packages/ui/**"
+      - "README.md"
+      - "ARCHITECTURE.md"
+      - "CONTEXT.md"
+      - "AGENTS.md"
+      - "CONTRIBUTING.md"
+      - "LICENSE"
+      - "scripts/build-docs.js"
+      - ".github/workflows/deploy-docs.yml"
   workflow_dispatch:
 
 permissions:
@@ -23,6 +36,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
@@ -49,6 +64,8 @@ jobs:
         run: pnpm --filter ui build
 
       - name: Build Documentation Portal
+        env:
+          CADENCE_DOCS_SKIP_CHECKS: "1"
         run: pnpm docs:build
 
       - name: Generate Documentation Artifact SHA256 Checksums

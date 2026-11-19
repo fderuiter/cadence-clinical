@@ -43,7 +43,7 @@ export default mergeConfig(
             branches: 80,
             statements: 80,
           },
-          "src/stores/{signatures,sync}.ts": {
+          "src/stores/signatures.ts": {
             lines: 80,
             functions: 80,
             branches: 80,

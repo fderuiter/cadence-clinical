@@ -11,12 +11,12 @@
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.15" />
     <!-- WebApplicationFactory and Aspire require the same Microsoft.Extensions servicing versions. -->
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.15" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="11.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.15" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.15" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.15" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.15" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="11.0.0" />
     <PackageVersion Include="Scalar.AspNetCore" Version="2.0.18" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.19.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.19.0" />
@@ -24,20 +24,20 @@
     <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.19.1-beta.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.19.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.19.0" />
-    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.15" />
 
-    <!-- Aspire AppHost & Orchestration -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="17.0.0" />
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="17.0.0" />
-    <PackageVersion Include="Aspire.Hosting.JavaScript" Version="17.0.0" />
-    <PackageVersion Include="Aspire.Hosting.Testing" Version="17.0.0" />
+    <!-- Aspire AppHost & Orchestration (keep all Aspire.Hosting.* packages aligned with Aspire.AppHost.Sdk in Cadence.AppHost.csproj) -->
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.JavaScript" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.5" />
 
     <!-- Persistence & Database Drivers -->
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.15" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.15" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.15" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.15" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.15" />
 
     <!-- Asynchronous Messaging & Transactional Outbox -->
@@ -53,7 +53,7 @@
     <PackageVersion Include="FluentValidation" Version="12.2.0" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.19.2" />
-    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.19.2" />
+    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.23.0" />
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
 
     <!-- Testing Infrastructure -->
@@ -67,15 +67,15 @@
     <PackageVersion Include="coverlet.collector" Version="10.1.1" />
     <PackageVersion Include="TngTech.ArchUnitNET.xUnit" Version="0.13.4" />
 
-    <!-- AI model port and providers (ADR-2630) -->
+    <!-- AI model port and providers (ADR-2630; keep Microsoft.Extensions.AI.* aligned on 10.x for net10.0) -->
     <PackageVersion Include="Anthropic" Version="13.10.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="10.11.0" />
     <PackageVersion Include="Anthropic.Aws" Version="1.0.1" />
     <PackageVersion Include="Anthropic.Bedrock" Version="1.0.4" />
     <PackageVersion Include="Anthropic.Foundry" Version="1.0.0" />
     <PackageVersion Include="Anthropic.Vertex" Version="1.0.3" />
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.11.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.11.0" />
 
     <!-- Resilience & HTTP Clients -->
     <PackageVersion Include="Polly" Version="8.5.2" />
@@ -91,7 +91,7 @@
     <PackageVersion Include="AWSSDK.S3" Version="4.1.2" />
 
     <!-- Analyzers & Code Quality -->
-    <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="11.0.100" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" />
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.6.0.109712" />
     <!-- #4784 K-TIME-3: bans direct wall-clock reads (see BannedSymbols.txt); referenced solution-wide in root Directory.Build.props. -->
     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />
