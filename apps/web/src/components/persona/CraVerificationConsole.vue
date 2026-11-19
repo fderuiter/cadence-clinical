@@ -404,8 +404,8 @@
             "
           >
             Issue a formal GCP data discrepancy query on
-            <strong>{{ activeModalField?.label }}</strong
-            >. The field visual badge will update to yellow (OPEN).
+            <strong>{{ activeModalField?.label }}</strong>. The field visual
+            badge will update to yellow (OPEN).
           </p>
           <div class="form-group">
             <label for="modal-query-reason"
@@ -932,12 +932,12 @@ function confirmCloseQuery() {
   max-width: 500px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   overflow: hidden;
-  color: #333;
+  color: var(--semantic-color-text-dark);
 }
 
 .modal-header {
   padding: 14px 16px;
-  border-bottom: 1px solid var(--semantic-color-border, #e2e8f0);
+  border-bottom: 1px solid var(--semantic-color-border);
   font-weight: 600;
   font-size: 15px;
   color: white;
@@ -949,10 +949,10 @@ function confirmCloseQuery() {
 
 .modal-footer {
   padding: 12px 16px;
-  background: var(--semantic-color-surface-muted, #f8fafc);
+  background: var(--semantic-color-surface-muted);
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  border-top: 1px solid var(--semantic-color-border, #e2e8f0);
+  border-top: 1px solid var(--semantic-color-border);
 }
 </style>

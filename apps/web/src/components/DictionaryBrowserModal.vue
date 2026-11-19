@@ -515,7 +515,7 @@ function close() {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
 }
 
 .header-titles h3 {
@@ -551,7 +551,7 @@ function close() {
   gap: 12px;
   flex-wrap: wrap;
   align-items: flex-end;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   padding: 16px;
   border-radius: 6px;
   border: 1px solid var(--border);
@@ -618,7 +618,7 @@ function close() {
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
 }
 
 .result-item-card:hover {
@@ -628,7 +628,7 @@ function close() {
 
 .active-result {
   border-color: var(--accent) !important;
-  background-color: #eff6ff !important;
+  background-color: var(--semantic-color-info-bg) !important;
   box-shadow: 0 0 0 2px var(--accent-bg);
 }
 
@@ -652,7 +652,7 @@ function close() {
   background-color: white;
   padding: 2px 6px;
   border-radius: 4px;
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--semantic-color-info-border);
 }
 
 .result-card-meta {
@@ -664,8 +664,8 @@ function close() {
 
 .code-pill {
   font-size: 0.78rem;
-  background-color: #f1f5f9;
-  color: #334155;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -680,8 +680,8 @@ function close() {
 }
 
 .concept-summary-banner {
-  background-color: #f0f9ff;
-  border: 1px solid #bae6fd;
+  background-color: var(--semantic-color-info-bg-soft);
+  border: 1px solid var(--semantic-color-info-border-accent);
   padding: 12px;
   border-radius: 6px;
   margin-bottom: 16px;
@@ -690,12 +690,12 @@ function close() {
 .concept-title {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #0369a1;
+  color: var(--semantic-color-primary);
 }
 
 .concept-code {
   font-size: 0.85rem;
-  color: #0284c7;
+  color: var(--semantic-color-primary);
   margin-top: 2px;
 }
 
@@ -727,13 +727,13 @@ function close() {
   gap: 12px;
   padding: 8px 12px;
   border-radius: 6px;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   border: 1px solid var(--border);
 }
 
 .active-target-node {
-  background-color: #e0f2fe;
-  border-color: #7dd3fc;
+  background-color: var(--semantic-color-primary-light);
+  border-color: var(--semantic-color-divider-accent);
 }
 
 .node-tag {
@@ -781,7 +781,7 @@ function close() {
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   border: 1px solid var(--border);
   border-radius: 6px;
 }
@@ -790,7 +790,7 @@ function close() {
   font-family: var(--font-mono, monospace);
   font-weight: 700;
   font-size: 0.85rem;
-  background-color: #e2e8f0;
+  background-color: var(--semantic-color-surface-header);
   padding: 2px 8px;
   border-radius: 4px;
 }
@@ -807,8 +807,8 @@ function close() {
 }
 
 .ingredient-chip {
-  background-color: #f1f5f9;
-  border: 1px solid #cbd5e1;
+  background-color: var(--semantic-color-surface-header);
+  border: 1px solid var(--semantic-color-border-control);
   padding: 4px 10px;
   border-radius: 16px;
   font-size: 0.8rem;
@@ -826,7 +826,7 @@ function close() {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   border-bottom-left-radius: 8px;
   border-bottom-right-radius: 8px;
 }
@@ -884,12 +884,12 @@ function close() {
 }
 
 .badge-info {
-  background-color: #e0f2fe;
-  color: #0369a1;
+  background-color: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
 }
 
 .badge-neutral {
-  background-color: #f1f5f9;
-  color: #475569;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 </style>

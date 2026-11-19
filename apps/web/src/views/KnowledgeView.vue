@@ -1951,7 +1951,7 @@ export default {
 
 .stat-card-active {
   border-color: var(--accent);
-  background-color: #f0f9ff;
+  background-color: var(--semantic-color-info-bg-soft);
   box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
 }
 
@@ -1990,15 +1990,15 @@ export default {
 }
 
 .text-success {
-  color: #10b981;
+  color: var(--semantic-color-success);
 }
 
 .text-warning {
-  color: #f59e0b;
+  color: var(--semantic-color-warning);
 }
 
 .text-danger {
-  color: #ef4444;
+  color: var(--semantic-color-error);
 }
 
 /* 3-Column Knowledge Workspace */
@@ -2040,13 +2040,13 @@ export default {
 }
 
 .badge-persona-filter {
-  background-color: #e0f2fe;
-  color: #0369a1;
+  background-color: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
   font-size: 0.7rem;
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 4px;
-  border: 1px solid #bae6fd;
+  border: 1px solid var(--semantic-color-info-border-accent);
 }
 
 .category-list {
@@ -2072,14 +2072,14 @@ export default {
 }
 
 .category-item-btn:hover {
-  background-color: #e2e8f0;
-  border-color: #cbd5e1;
+  background-color: var(--semantic-color-surface-header);
+  border-color: var(--semantic-color-border-control);
 }
 
 .category-item-btn.active {
-  background-color: #e0f2fe;
-  border-color: #7dd3fc;
-  color: #0369a1;
+  background-color: var(--semantic-color-primary-light);
+  border-color: var(--semantic-color-divider-accent);
+  color: var(--semantic-color-primary);
   font-weight: 600;
 }
 
@@ -2112,16 +2112,16 @@ export default {
 .category-count {
   font-size: 0.72rem;
   font-weight: 700;
-  background-color: #cbd5e1;
-  color: #334155;
+  background-color: var(--semantic-color-border-muted);
+  color: var(--semantic-color-text-body);
   padding: 2px 6px;
   border-radius: 10px;
   align-self: center;
 }
 
 .category-item-btn.active .category-count {
-  background-color: #0284c7;
-  color: #ffffff;
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-surface);
 }
 
 .sidebar-filter-section {
@@ -2153,7 +2153,7 @@ export default {
 .list-search-bar {
   padding: 12px;
   border-bottom: 1px solid var(--border);
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -2207,24 +2207,24 @@ export default {
 }
 
 .tag-chip {
-  background-color: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface-header);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 12px;
   padding: 2px 8px;
   font-size: 0.7rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .tag-chip:hover {
-  background-color: #e2e8f0;
+  background-color: var(--semantic-color-surface-header);
 }
 
 .tag-chip-active {
-  background-color: #0284c7;
-  border-color: #0284c7;
-  color: #ffffff;
+  background-color: var(--semantic-color-primary);
+  border-color: var(--semantic-color-primary);
+  color: var(--semantic-color-surface);
 }
 
 .articles-stream {
@@ -2238,7 +2238,7 @@ export default {
 }
 
 .article-card {
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 12px;
@@ -2256,7 +2256,7 @@ export default {
 
 .article-card-selected {
   border-color: var(--accent);
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
 }
 
@@ -2290,11 +2290,11 @@ export default {
 
 .mini-tag {
   font-size: 0.65rem;
-  background-color: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface-header);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 4px;
   padding: 1px 5px;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .articles-loading-state,
@@ -2318,7 +2318,7 @@ export default {
 
 /* Column 3: Article Reader Pane */
 .article-reader-pane {
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   display: flex;
@@ -2336,7 +2336,7 @@ export default {
 .reader-header-card {
   padding: 18px 24px;
   border-bottom: 1px solid var(--border);
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -2357,12 +2357,12 @@ export default {
 }
 
 .crumb-separator {
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
 }
 
 .crumb-slug {
   font-family: monospace;
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
   padding: 1px 6px;
   border-radius: 4px;
 }
@@ -2387,7 +2387,7 @@ export default {
   gap: 18px;
   font-size: 0.78rem;
   color: var(--neutral-dark);
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--semantic-color-surface-header);
   padding-top: 8px;
 }
 
@@ -2413,9 +2413,9 @@ export default {
 
 .tag-badge {
   font-size: 0.72rem;
-  background-color: #e0f2fe;
-  color: #0369a1;
-  border: 1px solid #bae6fd;
+  background-color: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
+  border: 1px solid var(--semantic-color-info-border-accent);
   border-radius: 4px;
   padding: 2px 8px;
   font-weight: 500;
@@ -2423,8 +2423,8 @@ export default {
 
 /* Admin Lifecycle Toolbar */
 .admin-lifecycle-toolbar {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   padding: 8px 12px;
   display: flex;
@@ -2437,14 +2437,14 @@ export default {
 .toolbar-label {
   font-size: 0.75rem;
   font-weight: 700;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 /* Reader Tab Navigation */
 .reader-tab-nav {
   display: flex;
   gap: 4px;
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
   border-bottom: 1px solid var(--border);
   padding: 0 16px;
 }
@@ -2468,14 +2468,14 @@ export default {
 .reader-tab-btn.active {
   color: var(--accent);
   border-bottom-color: var(--accent);
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
 }
 
 .reader-body-card {
   padding: 24px;
   flex: 1;
   overflow-y: auto;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
 }
 
 .tab-section-header {
@@ -2499,7 +2499,7 @@ export default {
 .prose-content {
   font-size: 0.92rem;
   line-height: 1.7;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
   max-width: 860px;
 }
 
@@ -2507,7 +2507,7 @@ export default {
 .prose-content h2,
 .prose-content h3,
 .prose-content h4 {
-  color: #0f172a;
+  color: var(--semantic-color-text);
   margin-top: 1.4em;
   margin-bottom: 0.6em;
   font-weight: 700;
@@ -2515,13 +2515,13 @@ export default {
 
 .prose-content h1 {
   font-size: 1.4rem;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--semantic-color-border);
   padding-bottom: 6px;
 }
 
 .prose-content h2 {
   font-size: 1.2rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--semantic-color-surface-header);
   padding-bottom: 4px;
 }
 
@@ -2544,8 +2544,8 @@ export default {
 }
 
 .prose-content code {
-  background-color: #f1f5f9;
-  color: #0f172a;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 0.85em;
@@ -2553,8 +2553,8 @@ export default {
 }
 
 .prose-content pre {
-  background-color: #0f172a;
-  color: #f8fafc;
+  background-color: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse);
   padding: 14px;
   border-radius: 6px;
   overflow-x: auto;
@@ -2564,9 +2564,9 @@ export default {
 
 .markdown-fallback pre {
   white-space: pre-wrap;
-  background-color: #f8fafc;
-  color: #334155;
-  border: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-body);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   padding: 16px;
   font-family: inherit;
@@ -2589,51 +2589,51 @@ export default {
 }
 
 .status-published {
-  background-color: #d1fae5;
-  color: #065f46;
-  border: 1px solid #a7f3d0;
+  background-color: var(--semantic-color-success-border-soft);
+  color: var(--semantic-color-success-dark);
+  border: 1px solid var(--semantic-color-success-border);
 }
 
 .status-review {
-  background-color: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fde68a;
+  background-color: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
+  border: 1px solid var(--semantic-color-warning-border);
 }
 
 .status-approved {
-  background-color: #e0f2fe;
-  color: #0369a1;
-  border: 1px solid #bae6fd;
+  background-color: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
+  border: 1px solid var(--semantic-color-info-border-accent);
 }
 
 .status-draft {
-  background-color: #f1f5f9;
-  color: #475569;
-  border: 1px solid #cbd5e1;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
+  border: 1px solid var(--semantic-color-border-control);
 }
 
 .status-rejected {
-  background-color: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
+  background-color: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-text-dark);
+  border: 1px solid var(--semantic-color-error-border-soft);
 }
 
 .status-superseded {
-  background-color: #ffedd5;
-  color: #9a3412;
-  border: 1px solid #fed7aa;
+  background-color: var(--semantic-color-orange-bg);
+  color: var(--semantic-color-orange-text);
+  border: 1px solid var(--semantic-color-orange-border);
 }
 
 .status-archived {
-  background-color: #f3e8ff;
-  color: #6b21a8;
-  border: 1px solid #e9d5ff;
+  background-color: var(--semantic-color-purple-bg);
+  color: var(--semantic-color-purple-text);
+  border: 1px solid var(--semantic-color-purple-border);
 }
 
 .badge-version {
-  background-color: #f8fafc;
-  color: #334155;
-  border: 1px solid #cbd5e1;
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-body);
+  border: 1px solid var(--semantic-color-border-control);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 0.72rem;
@@ -2647,8 +2647,8 @@ export default {
 }
 
 .badge-neutral {
-  background-color: #f1f5f9;
-  color: #475569;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 
 /* Data Tables (Versions & Audit Log) */
@@ -2660,8 +2660,8 @@ export default {
 }
 
 .data-table th {
-  background-color: #f8fafc;
-  color: #475569;
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-secondary);
   font-weight: 700;
   padding: 10px 12px;
   border-bottom: 2px solid var(--border);
@@ -2674,13 +2674,13 @@ export default {
 }
 
 .data-table tr:hover td {
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
 }
 
 .hash-code {
   font-family: monospace;
   font-size: 0.75rem;
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
   padding: 2px 5px;
   border-radius: 4px;
 }
@@ -2702,7 +2702,7 @@ export default {
 }
 
 .modal-card {
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   border-radius: 8px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   width: 100%;
@@ -2751,7 +2751,7 @@ export default {
 .modal-footer {
   padding: 14px 20px;
   border-top: 1px solid var(--border);
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -2820,7 +2820,7 @@ export default {
   min-height: 200px;
   max-height: 300px;
   overflow-y: auto;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
 }
 
 .persona-checkbox-grid {
@@ -2864,47 +2864,47 @@ export default {
 }
 
 .btn-primary {
-  background-color: #0284c7;
-  color: #ffffff;
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-surface);
 }
 
 .btn-primary:hover {
-  background-color: #0369a1;
+  background-color: var(--semantic-color-primary);
 }
 
 .btn-secondary {
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   color: var(--primary);
   border-color: var(--border);
 }
 
 .btn-secondary:hover {
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
 }
 
 .btn-success {
-  background-color: #10b981;
-  color: #ffffff;
+  background-color: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
 }
 
 .btn-success:hover {
-  background-color: #059669;
+  background-color: var(--semantic-color-success);
 }
 
 .btn-danger {
-  background-color: #ef4444;
-  color: #ffffff;
+  background-color: var(--semantic-color-error);
+  color: var(--semantic-color-surface);
 }
 
 .btn-danger:hover {
-  background-color: #dc2626;
+  background-color: var(--semantic-color-error);
 }
 
 .spinner {
   width: 24px;
   height: 24px;
-  border: 3px solid #e2e8f0;
-  border-top-color: #0284c7;
+  border: 3px solid var(--semantic-color-border);
+  border-top-color: var(--semantic-color-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }

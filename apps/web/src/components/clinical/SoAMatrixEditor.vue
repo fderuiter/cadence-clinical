@@ -734,8 +734,8 @@ onUnmounted(() => {
 
 <style scoped>
 .soa-matrix-editor {
-  background-color: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md, 8px);
   padding: 16px;
   width: 100%;
@@ -759,24 +759,24 @@ onUnmounted(() => {
 }
 
 .stat-badge {
-  background-color: #f1f5f9;
-  border: 1px solid #cbd5e1;
+  background-color: var(--semantic-color-surface-header);
+  border: 1px solid var(--semantic-color-border-control);
   padding: 4px 10px;
   border-radius: 6px;
   font-size: 0.85rem;
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 
 .stat-badge.highlight {
-  background-color: #ecfdf5;
-  border-color: #a7f3d0;
-  color: #065f46;
+  background-color: var(--semantic-color-success-bg-soft);
+  border-color: var(--semantic-color-success-border);
+  color: var(--semantic-color-success-dark);
 }
 
 .stat-badge.range-badge {
-  background-color: #eff6ff;
-  border-color: #bfdbfe;
-  color: #1e40af;
+  background-color: var(--semantic-color-info-bg);
+  border-color: var(--semantic-color-info-border);
+  color: var(--semantic-color-info);
 }
 
 .toolbar-actions {
@@ -789,8 +789,8 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #eff6ff;
-  border: 1px solid #93c5fd;
+  background-color: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-divider-accent);
   border-radius: 6px;
   padding: 8px 14px;
   margin-bottom: 14px;
@@ -801,7 +801,7 @@ onUnmounted(() => {
 .range-banner-title {
   font-size: 0.85rem;
   font-weight: 700;
-  color: #1e40af;
+  color: var(--semantic-color-info);
 }
 
 .range-banner-buttons {
@@ -813,8 +813,8 @@ onUnmounted(() => {
   display: flex;
   align-items: flex-end;
   gap: 12px;
-  background-color: #f8fafc;
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
   padding: 12px;
   border-radius: 6px;
   margin-bottom: 16px;
@@ -822,8 +822,8 @@ onUnmounted(() => {
 }
 
 .clone-group-box {
-  background-color: #f0fdf4;
-  border-color: #86efac;
+  background-color: var(--semantic-color-success-bg-soft);
+  border-color: var(--semantic-color-success-border);
 }
 
 .inline-form-group {
@@ -835,20 +835,20 @@ onUnmounted(() => {
 .inline-form-group label {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 .input-text,
 .input-select {
   padding: 6px 10px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 0.85rem;
 }
 
 .matrix-table-container {
   overflow-x: auto;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border);
   border-radius: 6px;
   touch-action: none;
 }
@@ -864,12 +864,12 @@ onUnmounted(() => {
 .soa-interactive-table th,
 .soa-interactive-table td {
   padding: 10px 12px;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border);
 }
 
 .col-procedure-header {
-  background-color: #f8fafc;
-  color: var(--primary, #0f172a);
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--primary);
   font-weight: 700;
   min-width: 260px;
 }
@@ -887,14 +887,14 @@ onUnmounted(() => {
 }
 
 .col-domain-header {
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   width: 70px;
   text-align: center;
   font-weight: 700;
 }
 
 .col-visit-header {
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   text-align: center;
   min-width: 130px;
 }
@@ -908,17 +908,17 @@ onUnmounted(() => {
 
 .visit-header-title {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .visit-header-meta {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin-top: 2px;
 }
 
 .soa-row:hover {
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
 }
 
 .cell-procedure-name {
@@ -932,8 +932,8 @@ onUnmounted(() => {
 .concept-code-tag {
   display: inline-block;
   font-size: 0.7rem;
-  color: #64748b;
-  background-color: #f1f5f9;
+  color: var(--semantic-color-text-secondary);
+  background-color: var(--semantic-color-surface-header);
   padding: 2px 6px;
   border-radius: 4px;
   margin-top: 2px;
@@ -949,37 +949,37 @@ onUnmounted(() => {
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 700;
-  background-color: #e2e8f0;
-  color: #334155;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
 }
 
 .cdash-vs {
-  background-color: #e0f2fe;
-  color: #0369a1;
+  background-color: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
 }
 .cdash-eg {
-  background-color: #fef3c7;
-  color: #b45309;
+  background-color: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning);
 }
 .cdash-lb {
-  background-color: #f3e8ff;
-  color: #7e22ce;
+  background-color: var(--semantic-color-purple-bg);
+  color: var(--semantic-color-purple-text);
 }
 .cdash-qs {
-  background-color: #dcfce7;
-  color: #15803d;
+  background-color: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
 }
 .cdash-pe {
-  background-color: #fee2e2;
-  color: #b91c1c;
+  background-color: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
 }
 .cdash-ae {
-  background-color: #ffedd5;
-  color: #c2410c;
+  background-color: var(--semantic-color-orange-bg);
+  color: var(--semantic-color-orange-text);
 }
 .cdash-dm {
-  background-color: #f1f5f9;
-  color: #475569;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 
 .cell-toggle {
@@ -993,12 +993,12 @@ onUnmounted(() => {
 }
 
 .cell-toggle.active {
-  background-color: #ecfdf5;
+  background-color: var(--semantic-color-success-bg-soft);
 }
 
 .cell-toggle.in-range {
-  background-color: #dbeafe !important;
-  outline: 2px solid #3b82f6;
+  background-color: var(--semantic-color-info-light) !important;
+  outline: 2px solid var(--semantic-color-interactive-primary);
   outline-offset: -2px;
 }
 
@@ -1008,7 +1008,7 @@ onUnmounted(() => {
   min-width: 24px;
   min-height: 24px;
   cursor: pointer;
-  accent-color: #059669;
+  accent-color: var(--semantic-color-success);
 }
 
 .soa-master-checkbox {
@@ -1017,7 +1017,7 @@ onUnmounted(() => {
   min-width: 24px;
   min-height: 24px;
   cursor: pointer;
-  accent-color: #2563eb;
+  accent-color: var(--semantic-color-interactive-primary);
 }
 
 .soa-matrix-editor .btn {

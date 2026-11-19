@@ -141,7 +141,7 @@ const selectLanguage = (langCode) => {
 }
 
 .tab-item:hover {
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
   border-color: var(--accent);
 }
 
@@ -151,7 +151,7 @@ const selectLanguage = (langCode) => {
 }
 
 .tab-item.active {
-  background-color: #eff6ff;
+  background-color: var(--semantic-color-info-bg);
   border-color: var(--accent);
   color: var(--primary);
   box-shadow: 0 1px 3px rgba(59, 130, 246, 0.1);
@@ -167,11 +167,11 @@ const selectLanguage = (langCode) => {
   background-color: rgba(0, 0, 0, 0.05);
   padding: 1px 4px;
   border-radius: 3px;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .active-lang-banner {
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   border-left: 3px solid var(--accent);
   padding: 10px 12px;
   border-radius: 0 6px 6px 0;
@@ -185,7 +185,7 @@ const selectLanguage = (langCode) => {
 .active-lang-banner p {
   margin: 0;
   font-size: 0.8rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   line-height: 1.4;
   flex: 1;
 }
@@ -196,9 +196,9 @@ const selectLanguage = (langCode) => {
 
 .metric-badge {
   font-size: 0.75rem;
-  background-color: #f0fdf4;
-  color: #166534;
-  border: 1px solid #bbf7d0;
+  background-color: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success-dark);
+  border: 1px solid var(--semantic-color-success-border-soft);
   padding: 2px 8px;
   border-radius: 9999px;
   font-weight: 600;

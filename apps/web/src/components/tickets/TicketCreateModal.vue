@@ -389,7 +389,7 @@ const handleSubmit = async () => {
 }
 
 .text-danger {
-  color: #dc2626;
+  color: var(--semantic-color-error);
 }
 
 .form-group {
@@ -401,22 +401,22 @@ const handleSubmit = async () => {
 .form-label {
   font-size: 0.82rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 
 .form-control {
   padding: 8px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-size: 0.875rem;
-  color: #1e293b;
-  background: #ffffff;
+  color: var(--semantic-color-text-dark);
+  background: var(--semantic-color-surface);
   outline: none;
   transition: border-color 0.15s;
 }
 
 .form-control:focus {
-  border-color: #2563eb;
+  border-color: var(--semantic-color-interactive-primary);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
@@ -425,15 +425,15 @@ const handleSubmit = async () => {
   justify-content: flex-end;
   gap: 12px;
   padding: 16px 24px;
-  background: #f8fafc;
-  border-top: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface-muted);
+  border-top: 1px solid var(--semantic-color-border);
 }
 
 .spinner {
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid #ffffff;
+  border: 2px solid var(--semantic-color-surface);
   border-top-color: transparent;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;

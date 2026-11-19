@@ -43,7 +43,7 @@
           <p
             style="
               font-size: 13px;
-              color: var(--text-muted);
+              color: var(--semantic-color-text-secondary);
               margin-bottom: 12px;
             "
           >
@@ -56,7 +56,7 @@
             style="
               padding: 16px;
               text-align: center;
-              background: var(--bg);
+              background: var(--semantic-color-surface-muted);
               border-radius: 6px;
             "
           >
@@ -82,11 +82,16 @@
             <div style="display: flex; align-items: center; gap: 8px">
               <span style="font-size: 20px">🟢</span>
               <div>
-                <strong style="color: #28a745; font-size: 14px"
+                <strong
+                  style="color: var(--semantic-color-success); font-size: 14px"
                   >INTEGRITY VERIFIED</strong
                 >
                 <p
-                  style="font-size: 12px; margin: 4px 0 0 0; color: var(--text)"
+                  style="
+                    font-size: 12px;
+                    margin: 4px 0 0 0;
+                    color: var(--semantic-color-text);
+                  "
                 >
                   {{
                     integrity.message ||
@@ -113,7 +118,11 @@
                   >INTEGRITY BREACH / TAMPERED</strong
                 >
                 <p
-                  style="font-size: 12px; margin: 4px 0 0 0; color: var(--text)"
+                  style="
+                    font-size: 12px;
+                    margin: 4px 0 0 0;
+                    color: var(--semantic-color-text);
+                  "
                 >
                   {{
                     integrity.message ||
@@ -128,13 +137,18 @@
             v-else
             style="
               padding: 16px;
-              background: var(--bg);
+              background: var(--semantic-color-surface-muted);
               border: 1px dashed var(--border);
               border-radius: 6px;
               text-align: center;
             "
           >
-            <span style="font-size: 13px; color: var(--text-muted)">
+            <span
+              style="
+                font-size: 13px;
+                color: var(--semantic-color-text-secondary);
+              "
+            >
               Ledger integrity status unknown. Click
               <strong>Verify Now</strong> to execute GxP block verification.
             </span>
@@ -151,7 +165,7 @@
           <p
             style="
               font-size: 13px;
-              color: var(--text-muted);
+              color: var(--semantic-color-text-secondary);
               margin-bottom: 12px;
             "
           >
@@ -181,8 +195,8 @@
                   padding: 8px;
                   border-radius: 4px;
                   border: 1px solid var(--border);
-                  background: var(--bg);
-                  color: var(--text);
+                  background: var(--semantic-color-surface-muted);
+                  color: var(--semantic-color-text);
                 "
               />
             </div>
@@ -232,7 +246,7 @@
           <p
             style="
               font-size: 13px;
-              color: var(--text-muted);
+              color: var(--semantic-color-text-secondary);
               margin-bottom: 12px;
             "
           >
@@ -259,8 +273,8 @@
                   padding: 8px;
                   border-radius: 4px;
                   border: 1px solid var(--border);
-                  background: var(--bg);
-                  color: var(--text);
+                  background: var(--semantic-color-surface-muted);
+                  color: var(--semantic-color-text);
                 "
                 @change="handleTmfFileSelect"
               />
@@ -285,8 +299,8 @@
                     padding: 8px;
                     border-radius: 4px;
                     border: 1px solid var(--border);
-                    background: var(--bg);
-                    color: var(--text);
+                    background: var(--semantic-color-surface-muted);
+                    color: var(--semantic-color-text);
                   "
                 >
                   <option value="01. Trial Management">
@@ -321,8 +335,8 @@
                     padding: 8px;
                     border-radius: 4px;
                     border: 1px solid var(--border);
-                    background: var(--bg);
-                    color: var(--text);
+                    background: var(--semantic-color-surface-muted);
+                    color: var(--semantic-color-text);
                   "
                 />
               </div>
@@ -355,7 +369,11 @@
       </div>
 
       <p
-        style="font-size: 13px; color: var(--text-muted); margin: 8px 0 16px 0"
+        style="
+          font-size: 13px;
+          color: var(--semantic-color-text-secondary);
+          margin: 8px 0 16px 0;
+        "
       >
         Review indexed documents within the eTMF. Preview documents inline with
         browser watermarks or download fully audited, watermarked PDF/TXT
@@ -370,7 +388,7 @@
           <thead>
             <tr
               style="
-                background: var(--bg);
+                background: var(--semantic-color-surface-muted);
                 border-bottom: 1px solid var(--border);
                 text-align: left;
               "
@@ -386,12 +404,24 @@
           </thead>
           <tbody>
             <tr v-if="documentsLoading" style="text-align: center">
-              <td colspan="7" style="padding: 20px; color: var(--text-muted)">
+              <td
+                colspan="7"
+                style="
+                  padding: 20px;
+                  color: var(--semantic-color-text-secondary);
+                "
+              >
                 Retrieving active eTMF document registry...
               </td>
             </tr>
             <tr v-else-if="documents.length === 0" style="text-align: center">
-              <td colspan="7" style="padding: 20px; color: var(--text-muted)">
+              <td
+                colspan="7"
+                style="
+                  padding: 20px;
+                  color: var(--semantic-color-text-secondary);
+                "
+              >
                 No documents found in the eTMF registry. Ingest some documents
                 from design or execution views!
               </td>
@@ -489,7 +519,7 @@
         style="
           margin-top: 20px;
           border: 1px solid var(--accent);
-          background: var(--bg);
+          background: var(--semantic-color-surface-muted);
           padding: 0;
         "
       >
@@ -530,7 +560,7 @@
             padding: 24px;
             min-height: 250px;
             background: white;
-            color: #333;
+            color: var(--semantic-color-text-dark);
             font-family: monospace;
             font-size: 13px;
             line-height: 1.5;
@@ -549,7 +579,7 @@
               bottom: 0;
               pointer-events: none;
               z-index: 5;
-              background-image: url(&quot;data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><text x='10' y='90' font-family='Arial' font-size='10' fill='rgba(220,53,69,0.12)' transform='rotate(-30 80 80)' letter-spacing='0.5'>CONFIDENTIAL AUDITOR COPY</text></svg>&quot;);
+              background-image: url(&quot;data: image/svg+xml;utf8,<svg xmlns='http: //www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><text x='10' y='90' font-family='Arial' font-size='10' fill='rgba(220,53,69,0.12)' transform='rotate(-30 80 80)' letter-spacing='0.5'>CONFIDENTIAL AUDITOR COPY</text></svg>&quot;);
               background-repeat: repeat;
             "
           />
@@ -572,7 +602,7 @@
           style="
             padding: 16px;
             border-top: 1px solid var(--border);
-            background: #f8fafc;
+            background: var(--semantic-color-surface-muted);
             font-size: 13px;
           "
         >
@@ -580,7 +610,7 @@
             style="
               font-weight: 600;
               margin-bottom: 8px;
-              color: var(--text);
+              color: var(--semantic-color-text);
               display: flex;
               align-items: center;
               gap: 6px;
@@ -611,7 +641,7 @@
               style="
                 grid-column: span 2;
                 font-size: 11px;
-                color: var(--text-muted);
+                color: var(--semantic-color-text-secondary);
                 word-break: break-all;
               "
             >
@@ -623,7 +653,7 @@
               style="
                 grid-column: span 2;
                 font-size: 11px;
-                color: var(--text-muted);
+                color: var(--semantic-color-text-secondary);
                 word-break: break-all;
               "
             >
@@ -638,10 +668,10 @@
             padding: 10px 16px;
             border-top: 1px solid var(--border);
             font-size: 11px;
-            color: var(--text-muted);
+            color: var(--semantic-color-text-secondary);
             display: flex;
             justify-content: space-between;
-            background: var(--bg);
+            background: var(--semantic-color-surface-muted);
           "
         >
           <span
@@ -672,7 +702,11 @@
       </div>
 
       <p
-        style="font-size: 13px; color: var(--text-muted); margin: 8px 0 16px 0"
+        style="
+          font-size: 13px;
+          color: var(--semantic-color-text-secondary);
+          margin: 8px 0 16px 0;
+        "
       >
         Complete, chronologically ordered Part 11 system log. View read actions
         (VIEW, LIST), ingestion audits, QC status transitions, and binder
@@ -685,7 +719,7 @@
           display: flex;
           flex-wrap: wrap;
           gap: 12px;
-          background: var(--bg);
+          background: var(--semantic-color-surface-muted);
           padding: 12px;
           border-radius: 6px;
           border: 1px solid var(--border);
@@ -718,8 +752,8 @@
               font-size: 12px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--card-bg);
-              color: var(--text);
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
             "
           />
         </div>
@@ -747,8 +781,8 @@
               font-size: 12px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--card-bg);
-              color: var(--text);
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
             "
           >
             <option value="">All Actions</option>
@@ -792,8 +826,8 @@
               font-size: 12px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--card-bg);
-              color: var(--text);
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
             "
           >
             <option value="">All Entities</option>
@@ -829,8 +863,8 @@
               font-size: 12px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--card-bg);
-              color: var(--text);
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
             "
           />
         </div>
@@ -859,8 +893,8 @@
               font-size: 12px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--card-bg);
-              color: var(--text);
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
             "
           />
         </div>
@@ -890,8 +924,8 @@
               font-size: 12px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--card-bg);
-              color: var(--text);
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
             "
           />
         </div>
@@ -931,7 +965,7 @@
           <thead>
             <tr
               style="
-                background: var(--bg);
+                background: var(--semantic-color-surface-muted);
                 border-bottom: 1px solid var(--border);
                 text-align: left;
               "
@@ -948,12 +982,24 @@
           </thead>
           <tbody>
             <tr v-if="auditLoading" style="text-align: center">
-              <td colspan="6" style="padding: 20px; color: var(--text-muted)">
+              <td
+                colspan="6"
+                style="
+                  padding: 20px;
+                  color: var(--semantic-color-text-secondary);
+                "
+              >
                 Retrieving chronological ledger events...
               </td>
             </tr>
             <tr v-else-if="auditLogs.length === 0" style="text-align: center">
-              <td colspan="6" style="padding: 20px; color: var(--text-muted)">
+              <td
+                colspan="6"
+                style="
+                  padding: 20px;
+                  color: var(--semantic-color-text-secondary);
+                "
+              >
                 No audit trail logs match the specified criteria.
               </td>
             </tr>
@@ -974,7 +1020,7 @@
                     font-family: monospace;
                     font-size: 11px;
                     white-space: nowrap;
-                    color: var(--text-muted);
+                    color: var(--semantic-color-text-secondary);
                   "
                 >
                   {{ formatTimestamp(log.timestamp) }}
@@ -985,7 +1031,11 @@
                 <td style="padding: 10px; font-size: 12px">
                   <span
                     class="badge"
-                    style="background: #f1f5f9; color: #475569; font-size: 10px"
+                    style="
+                      background: var(--semantic-color-surface-header);
+                      color: var(--semantic-color-text-secondary);
+                      font-size: 10px;
+                    "
                   >
                     {{ getEntityType(log) }}
                   </span>
@@ -1019,7 +1069,7 @@
                 class="audit-details-row"
                 style="
                   border-bottom: 2px solid var(--border);
-                  background: #f8fafc;
+                  background: var(--semantic-color-surface-muted);
                 "
               >
                 <td colspan="6" style="padding: 16px 20px">
@@ -1047,7 +1097,12 @@
                           log.id
                         }}</code>
                       </div>
-                      <div style="font-size: 11px; color: var(--text-muted)">
+                      <div
+                        style="
+                          font-size: 11px;
+                          color: var(--semantic-color-text-secondary);
+                        "
+                      >
                         Actor Role: <strong>{{ log.user_role }}</strong> |
                         Record:
                         <strong>{{
@@ -1069,7 +1124,12 @@
                       <strong style="color: var(--primary)"
                         >Mandatory GxP Reason for Change:</strong
                       >
-                      <p style="margin: 4px 0 0 0; color: var(--text)">
+                      <p
+                        style="
+                          margin: 4px 0 0 0;
+                          color: var(--semantic-color-text);
+                        "
+                      >
                         {{
                           log.reason_for_change ||
                           log.change_reason ||
@@ -1091,7 +1151,7 @@
                       <div
                         class="old-value-diff"
                         style="
-                          background: #fff;
+                          background: var(--semantic-color-surface);
                           border: 1px solid var(--border);
                           border-radius: 6px;
                           padding: 10px 12px;
@@ -1100,7 +1160,7 @@
                         <div
                           style="
                             font-weight: 600;
-                            color: #dc3545;
+                            color: var(--semantic-color-error);
                             margin-bottom: 6px;
                             display: flex;
                             align-items: center;
@@ -1115,8 +1175,8 @@
                             font-size: 11px;
                             white-space: pre-wrap;
                             word-break: break-all;
-                            color: #555;
-                            background: #fafafa;
+                            color: var(--semantic-color-text-secondary);
+                            background: var(--semantic-color-surface-muted);
                             padding: 8px;
                             border-radius: 4px;
                           "
@@ -1129,7 +1189,7 @@
                       <div
                         class="new-value-diff"
                         style="
-                          background: #fff;
+                          background: var(--semantic-color-surface);
                           border: 1px solid var(--border);
                           border-radius: 6px;
                           padding: 10px 12px;
@@ -1138,7 +1198,7 @@
                         <div
                           style="
                             font-weight: 600;
-                            color: #28a745;
+                            color: var(--semantic-color-success);
                             margin-bottom: 6px;
                             display: flex;
                             align-items: center;
@@ -1153,8 +1213,8 @@
                             font-size: 11px;
                             white-space: pre-wrap;
                             word-break: break-all;
-                            color: #333;
-                            background: #f4faf4;
+                            color: var(--semantic-color-text-dark);
+                            background: var(--semantic-color-success-bg-soft);
                             padding: 8px;
                             border-radius: 4px;
                           "
@@ -1171,7 +1231,7 @@
                         display: flex;
                         align-items: center;
                         justify-content: space-between;
-                        background: #fff;
+                        background: var(--semantic-color-surface);
                         padding: 8px 12px;
                         border-radius: 6px;
                         border: 1px dashed var(--border);
@@ -1219,7 +1279,9 @@
           border-top: 1px solid var(--border);
         "
       >
-        <span style="font-size: 12px; color: var(--text-muted)">
+        <span
+          style="font-size: 12px; color: var(--semantic-color-text-secondary)"
+        >
           Showing records {{ offset + 1 }} to
           {{ Math.min(offset + limit, totalLogs) }} of {{ totalLogs }}
         </span>
@@ -1259,7 +1321,11 @@
       </div>
 
       <p
-        style="font-size: 13px; color: var(--text-muted); margin: 8px 0 16px 0"
+        style="
+          font-size: 13px;
+          color: var(--semantic-color-text-secondary);
+          margin: 8px 0 16px 0;
+        "
       >
         Perform live gap-analysis against the Expected Document List (EDL) to
         verify regulatory compliance of mandatory TMF artifacts for trial
@@ -1272,7 +1338,7 @@
           display: flex;
           flex-wrap: wrap;
           gap: 12px;
-          background: var(--bg);
+          background: var(--semantic-color-surface-muted);
           padding: 12px;
           border-radius: 6px;
           border: 1px solid var(--border);
@@ -1305,8 +1371,8 @@
               font-size: 12px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--card-bg);
-              color: var(--text);
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
             "
           />
         </div>
@@ -1334,8 +1400,8 @@
               font-size: 12px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--card-bg);
-              color: var(--text);
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
             "
           >
             <option value="INITIATION">INITIATION (Study Start)</option>
@@ -1369,8 +1435,8 @@
               font-size: 12px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--card-bg);
-              color: var(--text);
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
             "
           />
         </div>
@@ -1452,8 +1518,8 @@
                 <strong
                   :style="{
                     color: completenessResult.is_complete
-                      ? '#28a745'
-                      : '#b28000',
+                      ? 'var(--semantic-color-success)'
+                      : 'var(--semantic-color-warning)',
                     fontSize: '15px',
                   }"
                 >
@@ -1464,7 +1530,11 @@
                   }}
                 </strong>
                 <p
-                  style="font-size: 12px; margin: 4px 0 0 0; color: var(--text)"
+                  style="
+                    font-size: 12px;
+                    margin: 4px 0 0 0;
+                    color: var(--semantic-color-text);
+                  "
                 >
                   Study: <strong>{{ completenessResult.study_id }}</strong> |
                   Milestone: <strong>{{ completenessResult.milestone }}</strong>
@@ -1504,7 +1574,7 @@
             <thead>
               <tr
                 style="
-                  background: var(--bg);
+                  background: var(--semantic-color-surface-muted);
                   border-bottom: 1px solid var(--border);
                   text-align: left;
                 "
@@ -1567,7 +1637,7 @@
                   <span
                     v-else
                     style="
-                      color: var(--text-muted);
+                      color: var(--semantic-color-text-secondary);
                       font-size: 12px;
                       font-style: italic;
                     "

@@ -250,7 +250,7 @@ watch(() => props.observationRef, load);
 .observation-hint {
   flex-basis: 100%;
   margin: 0;
-  color: #991b1b;
+  color: var(--semantic-color-error-text-dark);
 }
 .observation-outcome {
   padding: 8px 12px;
@@ -258,15 +258,15 @@ watch(() => props.observationRef, load);
   margin-bottom: 16px;
 }
 .observation-outcome--saved {
-  background: #ecfdf5;
-  color: #065f46;
+  background: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success-dark);
 }
 .observation-outcome--stale,
 .observation-outcome--locked,
 .observation-outcome--failed,
 .observation-error {
-  background: #fef2f2;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg-soft);
+  color: var(--semantic-color-error-text-dark);
 }
 table {
   width: 100%;
@@ -277,6 +277,6 @@ th,
 td {
   text-align: left;
   padding: 4px 8px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--semantic-color-border);
 }
 </style>

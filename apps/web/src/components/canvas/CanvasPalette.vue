@@ -325,7 +325,7 @@ function onKeydown(event: KeyboardEvent) {
 
 .palette {
   width: min(640px, 100%);
-  background: var(--semantic-color-surface, #fff);
+  background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 20px 50px rgb(15 23 42 / 25%);

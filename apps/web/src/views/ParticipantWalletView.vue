@@ -1558,7 +1558,7 @@ onMounted(() => {
   max-width: 1600px;
   margin: 0 auto;
   font-family: var(--semantic-font-family, sans-serif);
-  color: var(--semantic-color-text, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .section-header {
@@ -1566,7 +1566,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: var(--semantic-spacing-xl, 24px);
-  border-bottom: 1px solid var(--semantic-color-border, #e2e8f0);
+  border-bottom: 1px solid var(--semantic-color-border);
   padding-bottom: var(--semantic-spacing-md, 16px);
 }
 
@@ -1593,45 +1593,45 @@ onMounted(() => {
 }
 
 .badge-gxp {
-  background-color: var(--semantic-color-success-bg, #dcfce7);
-  color: var(--semantic-color-success, #15803d);
-  border: 1px solid #a7f3d0;
+  background-color: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
+  border: 1px solid var(--semantic-color-success-border);
 }
 
 .badge-regulatory {
-  background-color: var(--semantic-color-primary-light, #e0f2fe);
-  color: var(--semantic-color-primary, #026597);
-  border: 1px solid #bfdbfe;
+  background-color: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
+  border: 1px solid var(--semantic-color-info-border);
 }
 
 .badge-warning {
-  background-color: var(--semantic-color-warning-bg, #fef9c3);
-  color: var(--semantic-color-warning, #854d0e);
-  border: 1px solid #fde047;
+  background-color: var(--semantic-color-warning-bg);
+  color: var(--semantic-color-warning);
+  border: 1px solid var(--semantic-color-warning-border);
 }
 
 .badge-danger {
-  background-color: var(--semantic-color-error-bg, #fee2e2);
-  color: var(--semantic-color-error, #b91c1c);
-  border: 1px solid #fca5a5;
+  background-color: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
+  border: 1px solid var(--semantic-color-error-border);
 }
 
 .badge-standard {
-  background-color: var(--semantic-color-surface-muted, #f8fafc);
-  color: var(--semantic-color-text-muted, #475569);
-  border: 1px solid var(--semantic-color-border, #e2e8f0);
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-muted);
+  border: 1px solid var(--semantic-color-border);
 }
 
 .view-title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--semantic-color-text, #0f172a);
+  color: var(--semantic-color-text);
   margin: 0 0 6px 0;
 }
 
 .view-subtitle {
   font-size: 0.88rem;
-  color: var(--semantic-color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
   margin: 0;
   max-width: 900px;
   line-height: 1.4;
@@ -1644,44 +1644,16 @@ onMounted(() => {
   margin-bottom: var(--semantic-spacing-xl, 24px);
 }
 
-.stat-card {
-  display: flex;
-  align-items: center;
-  gap: var(--semantic-spacing-md, 16px);
-  padding: var(--semantic-spacing-md, 16px);
-  background-color: var(--semantic-color-surface, #ffffff);
-  border: 1px solid var(--semantic-color-border, #e2e8f0);
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.stat-icon {
-  font-size: 1.75rem;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  background-color: var(--semantic-color-surface-muted, #f8fafc);
-}
-
-.stat-value {
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: var(--semantic-color-text, #0f172a);
-}
-
 .stat-label {
   font-size: 0.8rem;
-  color: var(--semantic-color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
   margin-top: 2px;
 }
 
 .tax-threshold-banner {
-  background-color: var(--semantic-color-surface, #ffffff);
-  border: 1px solid var(--semantic-color-border, #e2e8f0);
-  border-left: 4px solid var(--semantic-color-primary, #026597);
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
+  border-left: 4px solid var(--semantic-color-primary);
   border-radius: 8px;
   padding: var(--semantic-spacing-md, 16px);
   margin-bottom: var(--semantic-spacing-xl, 24px);
@@ -1707,7 +1679,7 @@ onMounted(() => {
 .tax-subtext {
   display: block;
   font-size: 0.78rem;
-  color: var(--semantic-color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
 }
 
 .tax-badge-group {
@@ -1718,7 +1690,7 @@ onMounted(() => {
 .progress-bar-track {
   width: 100%;
   height: 10px;
-  background-color: var(--semantic-color-surface-muted, #f1f5f9);
+  background-color: var(--semantic-color-surface-muted);
   border-radius: 6px;
   overflow: hidden;
   margin: var(--semantic-spacing-xs, 8px) 0;
@@ -1730,22 +1702,22 @@ onMounted(() => {
 }
 
 .fill-normal {
-  background-color: var(--semantic-color-success, #15803d);
+  background-color: var(--semantic-color-success);
 }
 
 .fill-approaching {
-  background-color: var(--semantic-color-warning, #854d0e);
+  background-color: var(--semantic-color-warning);
 }
 
 .fill-exceeded {
-  background-color: var(--semantic-color-error, #b91c1c);
+  background-color: var(--semantic-color-error);
 }
 
 .tax-legend {
   display: flex;
   justify-content: space-between;
   font-size: 0.78rem;
-  color: var(--semantic-color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
   margin-bottom: var(--semantic-spacing-xs, 8px);
 }
 
@@ -1753,9 +1725,9 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: var(--semantic-color-error-bg, #fee2e2);
-  border: 1px solid var(--semantic-color-error, #b91c1c);
-  color: var(--semantic-color-error, #b91c1c);
+  background-color: var(--semantic-color-error-bg);
+  border: 1px solid var(--semantic-color-error);
+  color: var(--semantic-color-error);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.82rem;
@@ -1766,9 +1738,9 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: var(--semantic-color-warning-bg, #fef9c3);
-  border: 1px solid var(--semantic-color-warning, #854d0e);
-  color: var(--semantic-color-warning, #854d0e);
+  background-color: var(--semantic-color-warning-bg);
+  border: 1px solid var(--semantic-color-warning);
+  color: var(--semantic-color-warning);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.82rem;
@@ -1778,7 +1750,7 @@ onMounted(() => {
 .view-tabs-bar {
   display: flex;
   gap: var(--semantic-spacing-xs, 8px);
-  border-bottom: 2px solid var(--semantic-color-border, #e2e8f0);
+  border-bottom: 2px solid var(--semantic-color-border);
   margin-bottom: var(--semantic-spacing-lg, 20px);
 }
 
@@ -1789,24 +1761,24 @@ onMounted(() => {
   border-bottom: 2px solid transparent;
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--semantic-color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
   cursor: pointer;
   margin-bottom: -2px;
   transition: all 0.15s ease;
 }
 
 .tab-btn:hover {
-  color: var(--semantic-color-text, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .tab-btn.active {
-  color: var(--semantic-color-primary, #026597);
-  border-bottom-color: var(--semantic-color-primary, #026597);
+  color: var(--semantic-color-primary);
+  border-bottom-color: var(--semantic-color-primary);
 }
 
 .panel-box {
-  background-color: var(--semantic-color-surface, #ffffff);
-  border: 1px solid var(--semantic-color-border, #e2e8f0);
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   margin-bottom: var(--semantic-spacing-lg, 20px);
@@ -1817,8 +1789,8 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 14px 18px;
-  border-bottom: 1px solid var(--semantic-color-border, #e2e8f0);
-  background-color: var(--semantic-color-surface-muted, #f8fafc);
+  border-bottom: 1px solid var(--semantic-color-border);
+  background-color: var(--semantic-color-surface-muted);
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
 }
@@ -1826,13 +1798,13 @@ onMounted(() => {
 .panel-title {
   font-size: 1rem;
   font-weight: 600;
-  color: var(--semantic-color-text, #0f172a);
+  color: var(--semantic-color-text);
   margin: 0;
 }
 
 .panel-tag {
   font-size: 0.75rem;
-  color: var(--semantic-color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
   font-weight: 500;
 }
 
@@ -1853,30 +1825,30 @@ onMounted(() => {
 
 .data-table th {
   padding: 10px 12px;
-  background-color: var(--semantic-color-surface-muted, #f8fafc);
-  color: var(--semantic-color-text-muted, #475569);
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-muted);
   font-weight: 600;
-  border-bottom: 1px solid var(--semantic-color-border, #e2e8f0);
+  border-bottom: 1px solid var(--semantic-color-border);
 }
 
 .data-table td {
   padding: 10px 12px;
-  border-bottom: 1px solid #f1f5f9;
-  color: var(--semantic-color-text, #0f172a);
+  border-bottom: 1px solid var(--semantic-color-surface-header);
+  color: var(--semantic-color-text);
 }
 
 .data-table tr:hover {
-  background-color: var(--semantic-color-surface-muted, #f8fafc);
+  background-color: var(--semantic-color-surface-muted);
 }
 
 .row-highlight {
-  background-color: var(--semantic-color-primary-light, #e0f2fe) !important;
+  background-color: var(--semantic-color-primary-light) !important;
 }
 
 .empty-cell {
   text-align: center;
   padding: 24px;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   font-style: italic;
 }
 
@@ -1895,8 +1867,8 @@ onMounted(() => {
 .selected-wallet-card {
   margin-top: 20px;
   padding: 16px;
-  background-color: var(--semantic-color-surface-muted, #f8fafc);
-  border: 1px solid #cbd5e1;
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 8px;
 }
 
@@ -1921,15 +1893,15 @@ onMounted(() => {
 .card-subheading {
   margin: 0;
   font-size: 0.8rem;
-  color: var(--semantic-color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
 }
 
 .balance-inquiry-box {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 10px;
-  background-color: var(--semantic-color-surface, #ffffff);
-  border: 1px solid var(--semantic-color-border, #e2e8f0);
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   padding: 12px;
   margin-bottom: 16px;
@@ -1942,14 +1914,14 @@ onMounted(() => {
 
 .inquiry-label {
   font-size: 0.72rem;
-  color: var(--semantic-color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
   text-transform: uppercase;
 }
 
 .inquiry-val {
   font-size: 1rem;
   font-weight: 600;
-  color: var(--semantic-color-text, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .credentials-grid {
@@ -1960,16 +1932,20 @@ onMounted(() => {
 }
 
 .virtual-card-preview {
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  color: #ffffff;
+  background: linear-gradient(
+    135deg,
+    var(--semantic-color-surface-elevated) 0%,
+    var(--semantic-color-surface-inverse) 100%
+  );
+  color: var(--semantic-color-text-inverse);
   padding: 16px;
   border-radius: 8px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .ach-preview {
-  background-color: var(--semantic-color-surface, #ffffff);
-  border: 1px solid #cbd5e1;
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border-control);
   padding: 16px;
   border-radius: 8px;
 }
@@ -1979,7 +1955,7 @@ onMounted(() => {
   font-weight: 600;
   letter-spacing: 0.05em;
   margin-bottom: 12px;
-  color: #93c5fd;
+  color: var(--semantic-color-divider-accent);
 }
 
 .card-number {
@@ -1991,7 +1967,7 @@ onMounted(() => {
 
 .card-exp {
   font-size: 0.75rem;
-  color: #cbd5e1;
+  color: var(--semantic-color-text-secondary);
   margin-bottom: 4px;
 }
 
@@ -2004,16 +1980,16 @@ onMounted(() => {
 .ach-row {
   font-size: 0.85rem;
   margin-bottom: 6px;
-  color: var(--semantic-color-text, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .disburse-action-bar {
   display: flex;
   gap: 12px;
   align-items: flex-end;
-  background-color: var(--semantic-color-surface, #ffffff);
+  background-color: var(--semantic-color-surface);
   padding: 14px;
-  border: 1px solid var(--semantic-color-border, #e2e8f0);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
 }
 
@@ -2026,7 +2002,7 @@ onMounted(() => {
 .disburse-input-group label {
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--semantic-color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
 }
 
 .btn {
@@ -2043,40 +2019,40 @@ onMounted(() => {
 }
 
 .btn-primary {
-  background-color: var(--semantic-color-primary, #026597);
-  color: #ffffff;
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-surface);
 }
 
 .btn-primary:hover {
-  background-color: var(--semantic-color-primary-dark, #014d76);
+  background-color: var(--semantic-color-primary-dark);
 }
 
 .btn-secondary {
-  background-color: var(--semantic-color-surface, #ffffff);
-  color: var(--semantic-color-text-muted, #475569);
-  border-color: var(--semantic-color-border, #e2e8f0);
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-muted);
+  border-color: var(--semantic-color-border);
 }
 
 .btn-secondary:hover {
-  background-color: var(--semantic-color-surface-muted, #f8fafc);
+  background-color: var(--semantic-color-surface-muted);
 }
 
 .btn-success {
-  background-color: var(--semantic-color-success, #15803d);
-  color: #ffffff;
+  background-color: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
 }
 
 .btn-success:hover {
-  background-color: #059669;
+  background-color: var(--semantic-color-success);
 }
 
 .btn-danger {
-  background-color: var(--semantic-color-error, #b91c1c);
-  color: #ffffff;
+  background-color: var(--semantic-color-error);
+  color: var(--semantic-color-surface);
 }
 
 .btn-danger:hover {
-  background-color: #dc2626;
+  background-color: var(--semantic-color-error);
 }
 
 .btn-sm {
@@ -2101,7 +2077,7 @@ onMounted(() => {
   display: block;
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--semantic-color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
   margin-bottom: 4px;
 }
 
@@ -2116,11 +2092,11 @@ onMounted(() => {
 .form-select {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid var(--semantic-color-border, #e2e8f0);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   font-size: 0.88rem;
-  color: var(--semantic-color-text, #0f172a);
-  background-color: var(--semantic-color-surface, #ffffff);
+  color: var(--semantic-color-text);
+  background-color: var(--semantic-color-surface);
   box-sizing: border-box;
 }
 
@@ -2131,19 +2107,19 @@ onMounted(() => {
 }
 
 .ocr-dropzone {
-  border: 2px dashed var(--semantic-color-border, #e2e8f0);
+  border: 2px dashed var(--semantic-color-border);
   border-radius: 8px;
   padding: 24px;
   text-align: center;
   cursor: pointer;
-  background-color: var(--semantic-color-surface-muted, #f8fafc);
+  background-color: var(--semantic-color-surface-muted);
   transition: all 0.15s ease;
   margin-bottom: 12px;
 }
 
 .ocr-dropzone:hover {
-  border-color: var(--semantic-color-primary, #026597);
-  background-color: var(--semantic-color-primary-light, #e0f2fe);
+  border-color: var(--semantic-color-primary);
+  background-color: var(--semantic-color-primary-light);
 }
 
 .dropzone-icon {
@@ -2153,13 +2129,13 @@ onMounted(() => {
 
 .dropzone-text strong {
   font-size: 0.95rem;
-  color: var(--semantic-color-text, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .dropzone-text p {
   margin: 4px 0 0 0;
   font-size: 0.75rem;
-  color: var(--semantic-color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
 }
 
 .sample-receipt-presets {
@@ -2173,13 +2149,13 @@ onMounted(() => {
 .preset-label {
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--semantic-color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
 }
 
 .ocr-result-card {
   padding: 14px;
-  background-color: var(--semantic-color-surface-muted, #f8fafc);
-  border: 1px solid var(--semantic-color-border, #e2e8f0);
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
 }
 
@@ -2205,9 +2181,9 @@ onMounted(() => {
 }
 
 .tax-offset-notice {
-  background-color: var(--semantic-color-warning-bg, #fef9c3);
-  border: 1px solid var(--semantic-color-warning, #854d0e);
-  color: var(--semantic-color-warning, #854d0e);
+  background-color: var(--semantic-color-warning-bg);
+  border: 1px solid var(--semantic-color-warning);
+  color: var(--semantic-color-warning);
   padding: 6px 10px;
   border-radius: 4px;
   font-size: 0.78rem;
@@ -2215,25 +2191,25 @@ onMounted(() => {
 }
 
 .ocr-raw {
-  background-color: var(--semantic-color-surface, #ffffff);
+  background-color: var(--semantic-color-surface);
   padding: 8px;
-  border: 1px solid var(--semantic-color-border, #e2e8f0);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 4px;
 }
 
 .ocr-raw pre {
   margin: 4px 0 0 0;
   font-size: 0.75rem;
-  color: var(--semantic-color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
   white-space: pre-wrap;
 }
 
 .alert-success-box {
   margin-top: 12px;
   padding: 10px 14px;
-  background-color: var(--semantic-color-success-bg, #dcfce7);
-  border: 1px solid #a7f3d0;
-  color: var(--semantic-color-success, #15803d);
+  background-color: var(--semantic-color-success-bg);
+  border: 1px solid var(--semantic-color-success-border);
+  color: var(--semantic-color-success);
   border-radius: 6px;
   font-size: 0.85rem;
 }
@@ -2244,16 +2220,16 @@ onMounted(() => {
 }
 
 .text-success {
-  color: var(--semantic-color-success, #15803d);
+  color: var(--semantic-color-success);
 }
 .text-warning {
-  color: var(--semantic-color-warning, #854d0e);
+  color: var(--semantic-color-warning);
 }
 .text-danger {
-  color: var(--semantic-color-error, #b91c1c);
+  color: var(--semantic-color-error);
 }
 .text-muted {
-  color: var(--semantic-color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
 }
 .font-bold {
   font-weight: 700;
@@ -2273,8 +2249,8 @@ onMounted(() => {
 }
 
 .modal-card {
-  background-color: var(--semantic-color-surface, #ffffff);
-  border: 1px solid var(--semantic-color-border, #e2e8f0);
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   width: 100%;
   max-width: 480px;
@@ -2286,7 +2262,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--semantic-color-border, #e2e8f0);
+  border-bottom: 1px solid var(--semantic-color-border);
 }
 
 .modal-header h3 {
@@ -2299,7 +2275,7 @@ onMounted(() => {
   background: none;
   border: none;
   font-size: 1.4rem;
-  color: var(--semantic-color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
   cursor: pointer;
 }
 
@@ -2309,7 +2285,7 @@ onMounted(() => {
 
 .modal-desc {
   font-size: 0.85rem;
-  color: var(--semantic-color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
   margin-bottom: 16px;
   line-height: 1.4;
 }
@@ -2319,7 +2295,7 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 10px;
   padding: 14px 20px;
-  background-color: var(--semantic-color-surface-muted, #f8fafc);
-  border-top: 1px solid var(--semantic-color-border, #e2e8f0);
+  background-color: var(--semantic-color-surface-muted);
+  border-top: 1px solid var(--semantic-color-border);
 }
 </style>

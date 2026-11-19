@@ -58,9 +58,8 @@
               activePersona === "READER_1"
                 ? "Reader 1 (Dr. Sarah Miller)"
                 : "Reader 2 (Dr. James Wilson)"
-            }}</strong
-            >. Subject treatment arm, clinical trial site, and peer reader
-            observations are completely blinded per Charter section 3.1.
+            }}</strong>. Subject treatment arm, clinical trial site, and peer
+            reader observations are completely blinded per Charter section 3.1.
           </div>
         </div>
       </div>
@@ -902,12 +901,12 @@ function executeChairSignoff() {
 .dual-reader-panel {
   display: flex;
   flex-direction: column;
-  background-color: var(--semantic-color-surface-elevated, #0f172a);
-  border: 1px solid var(--semantic-color-border, #334155);
+  background-color: var(--semantic-color-surface-elevated);
+  border: 1px solid var(--semantic-color-border);
   border-radius: var(--semantic-border-radius-md, 8px);
   padding: 16px;
   gap: 16px;
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
 }
 
 .panel-header {
@@ -916,7 +915,7 @@ function executeChairSignoff() {
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  border-bottom: 1px solid #1e293b;
+  border-bottom: 1px solid var(--semantic-color-text-dark);
   padding-bottom: 12px;
 }
 
@@ -929,22 +928,22 @@ function executeChairSignoff() {
 .panel-title {
   font-size: 1.05rem;
   font-weight: 800;
-  color: #ffffff;
+  color: var(--semantic-color-text-inverse);
 }
 
 .role-selector-tabs {
   display: flex;
   gap: 6px;
-  background-color: #090d16;
+  background-color: var(--semantic-color-surface-sunken);
   padding: 4px;
   border-radius: 6px;
-  border: 1px solid #1e293b;
+  border: 1px solid var(--semantic-color-text-dark);
 }
 
 .role-tab-btn {
   background: none;
   border: none;
-  color: #94a3b8;
+  color: var(--semantic-color-text-inverse-muted);
   font-size: 0.78rem;
   font-weight: 700;
   padding: 6px 12px;
@@ -957,13 +956,13 @@ function executeChairSignoff() {
 }
 
 .role-tab-btn:hover {
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
   background-color: rgba(255, 255, 255, 0.05);
 }
 
 .role-tab-btn.active {
-  background-color: #0284c7;
-  color: #ffffff;
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-inverse);
   box-shadow: 0 1px 4px rgba(2, 132, 199, 0.4);
 }
 
@@ -984,20 +983,20 @@ function executeChairSignoff() {
 .alert-title {
   font-size: 0.85rem;
   font-weight: 700;
-  color: #38bdf8;
+  color: var(--semantic-color-accent-inverse);
   margin-bottom: 2px;
 }
 
 .alert-text {
   font-size: 0.75rem;
-  color: #cbd5e1;
+  color: var(--semantic-color-text-inverse-muted);
   line-height: 1.4;
 }
 
 .reader-form-card,
 .chair-decision-card {
-  background-color: #1e293b;
-  border: 1px solid #334155;
+  background-color: var(--semantic-color-surface-elevated);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 8px;
   padding: 16px;
   display: flex;
@@ -1014,7 +1013,7 @@ function executeChairSignoff() {
 .card-subtitle {
   font-size: 0.85rem;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
@@ -1028,13 +1027,13 @@ function executeChairSignoff() {
 
 .status-submitted {
   background-color: rgba(16, 185, 129, 0.2);
-  color: #34d399;
+  color: var(--semantic-color-emerald-inverse-text);
   border: 1px solid rgba(16, 185, 129, 0.4);
 }
 
 .status-pending {
   background-color: rgba(245, 158, 11, 0.2);
-  color: #fbbf24;
+  color: var(--semantic-color-warning);
   border: 1px solid rgba(245, 158, 11, 0.4);
 }
 
@@ -1045,8 +1044,8 @@ function executeChairSignoff() {
 }
 
 .metric-card {
-  background-color: #0f172a;
-  border: 1px solid #334155;
+  background-color: var(--semantic-color-surface-inverse);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 6px;
   padding: 8px 12px;
   display: flex;
@@ -1056,13 +1055,13 @@ function executeChairSignoff() {
 
 .metric-card-label {
   font-size: 0.7rem;
-  color: #94a3b8;
+  color: var(--semantic-color-text-inverse-muted);
 }
 
 .metric-card-val {
   font-size: 1.1rem;
   font-weight: 800;
-  color: #ffffff;
+  color: var(--semantic-color-text-inverse);
 }
 
 .lesion-table-container {
@@ -1076,23 +1075,23 @@ function executeChairSignoff() {
 }
 
 .reader-lesion-table th {
-  background-color: #0f172a;
-  color: #94a3b8;
+  background-color: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse-muted);
   padding: 8px 10px;
   text-align: left;
-  border-bottom: 1px solid #334155;
+  border-bottom: 1px solid var(--semantic-color-border-inverse);
   font-weight: 600;
 }
 
 .reader-lesion-table td {
   padding: 8px 10px;
-  border-bottom: 1px solid #1e293b;
-  color: #f8fafc;
+  border-bottom: 1px solid var(--semantic-color-text-dark);
+  color: var(--semantic-color-text-inverse);
 }
 
 .empty-row {
   text-align: center;
-  color: #64748b;
+  color: var(--semantic-color-text-inverse-muted);
   font-style: italic;
   padding: 16px !important;
 }
@@ -1116,15 +1115,15 @@ function executeChairSignoff() {
 .form-label {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--semantic-color-text-inverse-muted);
 }
 
 .form-select,
 .form-input,
 .form-textarea {
-  background-color: #0f172a;
-  color: #ffffff;
-  border: 1px solid #334155;
+  background-color: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 6px;
   padding: 8px 10px;
   font-size: 0.8rem;
@@ -1134,7 +1133,7 @@ function executeChairSignoff() {
 
 .response-highlight-select {
   font-weight: 700;
-  color: #38bdf8;
+  color: var(--semantic-color-accent-inverse);
 }
 
 .toggle-group {
@@ -1144,9 +1143,9 @@ function executeChairSignoff() {
 
 .toggle-btn {
   flex: 1;
-  background-color: #0f172a;
-  color: #94a3b8;
-  border: 1px solid #334155;
+  background-color: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse-muted);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 4px;
   padding: 6px 10px;
   font-size: 0.75rem;
@@ -1155,15 +1154,15 @@ function executeChairSignoff() {
 }
 
 .toggle-btn.active {
-  background-color: #0284c7;
-  color: #ffffff;
-  border-color: #38bdf8;
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-inverse);
+  border-color: var(--semantic-color-accent-inverse);
 }
 
 .toggle-btn.toggle-danger.active {
-  background-color: #dc2626;
-  color: #ffffff;
-  border-color: #ef4444;
+  background-color: var(--semantic-color-error);
+  color: var(--semantic-color-text-inverse);
+  border-color: var(--semantic-color-error);
 }
 
 .action-footer {
@@ -1173,8 +1172,12 @@ function executeChairSignoff() {
 }
 
 .btn-submit-read {
-  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
-  color: #ffffff;
+  background: linear-gradient(
+    135deg,
+    var(--semantic-color-primary) 0%,
+    var(--semantic-color-interactive-primary) 100%
+  );
+  color: var(--semantic-color-text-inverse);
   border: none;
   border-radius: 6px;
   padding: 10px 18px;
@@ -1188,9 +1191,9 @@ function executeChairSignoff() {
 }
 
 .btn-retract-read {
-  background-color: #334155;
-  color: #f8fafc;
-  border: 1px solid #475569;
+  background-color: var(--semantic-color-border-inverse);
+  color: var(--semantic-color-text-inverse);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 6px;
   padding: 8px 14px;
   font-size: 0.8rem;
@@ -1229,16 +1232,16 @@ function executeChairSignoff() {
 .banner-headline {
   font-size: 0.9rem;
   font-weight: 800;
-  color: #ffffff;
+  color: var(--semantic-color-text-inverse);
 }
 
 .banner-subtext {
   font-size: 0.75rem;
-  color: #cbd5e1;
+  color: var(--semantic-color-text-inverse-muted);
 }
 
 .threshold-tag {
-  color: #ef4444;
+  color: var(--semantic-color-error);
   font-weight: 700;
 }
 
@@ -1249,8 +1252,8 @@ function executeChairSignoff() {
 }
 
 .reader-compare-card {
-  background-color: #1e293b;
-  border: 1px solid #334155;
+  background-color: var(--semantic-color-surface-elevated);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 8px;
   padding: 14px;
   display: flex;
@@ -1259,7 +1262,7 @@ function executeChairSignoff() {
 }
 
 .reader-compare-card.card-highlight {
-  border-color: #38bdf8;
+  border-color: var(--semantic-color-accent-inverse);
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
 }
 
@@ -1267,14 +1270,14 @@ function executeChairSignoff() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #334155;
+  border-bottom: 1px solid var(--semantic-color-border-inverse);
   padding-bottom: 8px;
 }
 
 .reader-label {
   font-size: 0.85rem;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
 }
 
 .compare-body {
@@ -1290,24 +1293,24 @@ function executeChairSignoff() {
 }
 
 .lbl {
-  color: #94a3b8;
+  color: var(--semantic-color-text-inverse-muted);
 }
 
 .val {
   font-weight: 700;
-  color: #ffffff;
+  color: var(--semantic-color-text-inverse);
 }
 
 .compare-notes {
   margin-top: 4px;
-  background-color: #0f172a;
+  background-color: var(--semantic-color-surface-inverse);
   border-radius: 4px;
   padding: 6px 8px;
 }
 
 .notes-txt {
   font-size: 0.72rem;
-  color: #cbd5e1;
+  color: var(--semantic-color-text-inverse-muted);
   font-style: italic;
   margin-top: 2px;
 }
@@ -1320,8 +1323,12 @@ function executeChairSignoff() {
 }
 
 .btn-chair-signoff {
-  background: linear-gradient(135deg, #059669 0%, #0284c7 100%);
-  color: #ffffff;
+  background: linear-gradient(
+    135deg,
+    var(--semantic-color-success) 0%,
+    var(--semantic-color-primary) 100%
+  );
+  color: var(--semantic-color-text-inverse);
   border: none;
   border-radius: 6px;
   padding: 10px 20px;
@@ -1346,9 +1353,9 @@ function executeChairSignoff() {
 
 .btn-export-edc,
 .btn-export-sdtm {
-  background-color: #0f172a;
-  color: #38bdf8;
-  border: 1px solid #0284c7;
+  background-color: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-accent-inverse);
+  border: 1px solid var(--semantic-color-primary);
   border-radius: 6px;
   padding: 8px 14px;
   font-size: 0.8rem;
@@ -1361,8 +1368,8 @@ function executeChairSignoff() {
 
 .btn-export-edc:hover,
 .btn-export-sdtm:hover {
-  background-color: #0284c7;
-  color: #ffffff;
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-inverse);
 }
 
 /* Modals */
@@ -1380,8 +1387,8 @@ function executeChairSignoff() {
 }
 
 .modal-card {
-  background-color: #0f172a;
-  border: 1px solid #334155;
+  background-color: var(--semantic-color-surface-inverse);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 8px;
   width: 90%;
   max-width: 520px;
@@ -1402,13 +1409,13 @@ function executeChairSignoff() {
 .modal-title {
   font-size: 1rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--semantic-color-text-inverse);
 }
 
 .btn-close {
   background: none;
   border: none;
-  color: #94a3b8;
+  color: var(--semantic-color-text-inverse-muted);
   font-size: 1.1rem;
   cursor: pointer;
 }
@@ -1416,7 +1423,7 @@ function executeChairSignoff() {
 .modal-warning-box {
   background-color: rgba(245, 158, 11, 0.15);
   border: 1px solid rgba(245, 158, 11, 0.4);
-  color: #fde68a;
+  color: var(--semantic-color-warning-border);
   padding: 10px;
   border-radius: 6px;
   font-size: 0.75rem;
@@ -1432,8 +1439,8 @@ function executeChairSignoff() {
 }
 
 .btn-secondary {
-  background-color: #334155;
-  color: #f8fafc;
+  background-color: var(--semantic-color-border-inverse);
+  color: var(--semantic-color-text-inverse);
   border: none;
   padding: 8px 14px;
   border-radius: 4px;
@@ -1441,8 +1448,8 @@ function executeChairSignoff() {
 }
 
 .btn-confirm-sign {
-  background-color: #059669;
-  color: #ffffff;
+  background-color: var(--semantic-color-success);
+  color: var(--semantic-color-text-inverse);
   border: none;
   padding: 8px 16px;
   border-radius: 4px;
@@ -1458,8 +1465,8 @@ function executeChairSignoff() {
 .json-preview-container {
   max-height: 350px;
   overflow-y: auto;
-  background-color: #030712;
-  border: 1px solid #1e293b;
+  background-color: var(--semantic-color-surface-sunken);
+  border: 1px solid var(--semantic-color-text-dark);
   border-radius: 6px;
   padding: 12px;
 }
@@ -1467,13 +1474,13 @@ function executeChairSignoff() {
 .json-code {
   font-family: monospace;
   font-size: 0.75rem;
-  color: #38bdf8;
+  color: var(--semantic-color-accent-inverse);
   white-space: pre-wrap;
 }
 
 .badge-target {
   background-color: rgba(52, 211, 153, 0.15);
-  color: #34d399;
+  color: var(--semantic-color-emerald-inverse-text);
   font-size: 0.65rem;
   font-weight: 700;
   padding: 2px 6px;
@@ -1481,8 +1488,8 @@ function executeChairSignoff() {
 }
 
 .resp-pr {
-  background-color: #0284c7;
-  color: #ffffff;
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-inverse);
   padding: 2px 8px;
   border-radius: 999px;
   font-size: 0.72rem;
@@ -1490,8 +1497,8 @@ function executeChairSignoff() {
 }
 
 .resp-pd {
-  background-color: #dc2626;
-  color: #ffffff;
+  background-color: var(--semantic-color-error);
+  color: var(--semantic-color-text-inverse);
   padding: 2px 8px;
   border-radius: 999px;
   font-size: 0.72rem;

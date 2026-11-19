@@ -403,14 +403,14 @@ defineExpose({
 .drawer-subtitle {
   margin: 0;
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .btn-close-drawer {
   background: transparent;
   border: none;
   font-size: 1.2rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
@@ -457,7 +457,7 @@ defineExpose({
   left: 10px;
   font-size: 0.85rem;
   pointer-events: none;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .input-template-search {
@@ -471,7 +471,7 @@ defineExpose({
   right: 8px;
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
   font-size: 0.85rem;
 }
@@ -538,7 +538,7 @@ defineExpose({
 .no-templates-state {
   text-align: center;
   padding: 30px 10px;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -575,7 +575,7 @@ defineExpose({
 
 .template-card.selected {
   border-color: var(--primary);
-  background-color: #f0f9ff;
+  background-color: var(--semantic-color-info-bg-soft);
 }
 
 .template-card-header {
@@ -603,8 +603,8 @@ defineExpose({
   letter-spacing: 0.03em;
   padding: 3px 8px;
   border-radius: 4px;
-  background-color: #e2e8f0;
-  color: #334155;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
 }
 
 .template-question-text {
@@ -626,11 +626,11 @@ defineExpose({
   align-items: center;
   gap: 8px;
   font-size: 0.85rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 .preview-option-item.correct-option {
-  color: #166534;
+  color: var(--semantic-color-success-dark);
   font-weight: 600;
 }
 
@@ -640,7 +640,7 @@ defineExpose({
 
 .correct-tag {
   font-size: 0.75rem;
-  color: #166534;
+  color: var(--semantic-color-success-dark);
   font-style: italic;
   margin-left: 4px;
 }
@@ -648,11 +648,11 @@ defineExpose({
 .template-hint-preview {
   margin-top: 4px;
   padding: 6px 10px;
-  background-color: #fffbe2;
-  border-left: 3px solid #eab308;
+  background-color: var(--semantic-color-warning-bg-soft);
+  border-left: 3px solid var(--semantic-color-warning-border-strong);
   border-radius: 4px;
   font-size: 0.8rem;
-  color: #713f12;
+  color: var(--semantic-color-warning-dark);
   display: flex;
   align-items: center;
   gap: 6px;

@@ -187,21 +187,21 @@ async function confirm(query: FormQueryResponse) {
 .form-query-status {
   padding: 0 8px;
   border-radius: 999px;
-  background: var(--neutral-light, #f1f5f9);
+  background: var(--neutral-light);
   font-size: 0.75rem;
   font-weight: 600;
 }
 .form-query-status[data-status="open"] {
-  background: var(--warning-bg, #fffbeb);
-  color: var(--warning, #92400e);
+  background: var(--warning-bg);
+  color: var(--warning);
 }
 .form-query-target {
-  color: var(--neutral-dark, #475569);
+  color: var(--neutral-dark);
 }
 .form-query-changed {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #1d4ed8;
+  color: var(--semantic-color-interactive-primary);
 }
 .form-query-messages {
   margin: 0;

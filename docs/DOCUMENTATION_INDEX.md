@@ -558,6 +558,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2636: Inference Is Pluggable, Residency-Bound and Sandboxed](adr/2026-10-20-inference-is-pluggable-residency-bound-and-sandboxed.md) | Current | - Status: Accepted |
 | [ADR-2602: Multi-Repository Ownership and Kernel Package Boundaries](adr/2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md) | Current | Kernel boundaries and accepted ownership decisions. Source repository split superseded by ADR-2603. |
 | [ADR-2603: Keep Cadence in One Repository](adr/2026-11-19-keep-cadence-in-one-repository.md) | Current | Single-repository development and integration for the modular monolith |
+| [ADR-2816: Recalibrate Shared Color Tokens and WCAG 2.2 AA Contrast Gates](adr/2026-11-19-recalibrate-shared-color-tokens-and-wcag-22-aa-contrast-gates.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

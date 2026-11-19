@@ -37,42 +37,16 @@
 <script setup>
 import { computed } from "vue";
 import ClinicalFieldLayout from "./ClinicalFieldLayout.vue";
+import { clinicalFieldBaseProps } from "./clinicalFieldProps.js";
 
 const props = defineProps({
-  id: {
-    type: String,
-    required: true,
-  },
-  label: {
-    type: String,
-    required: true,
-  },
+  ...clinicalFieldBaseProps,
   options: {
     type: Array,
     default: () => [],
   },
   modelValue: {
     type: [String, Number],
-    default: "",
-  },
-  query: {
-    type: Object,
-    default: null,
-  },
-  gridSpan: {
-    type: [Number, String],
-    default: 12,
-  },
-  error: {
-    type: String,
-    default: null,
-  },
-  canManageQueries: {
-    type: Boolean,
-    default: false,
-  },
-  queryLabel: {
-    type: String,
     default: "",
   },
 });

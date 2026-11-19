@@ -60,7 +60,7 @@
           display: flex;
           justify-content: space-between;
           align-items: center;
-          border-bottom: 1px solid var(--border-color);
+          border-bottom: 1px solid var(--semantic-color-border);
           padding-bottom: 12px;
           margin-bottom: 12px;
         "

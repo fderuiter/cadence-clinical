@@ -42,13 +42,7 @@
           </button>
         </template>
         <template v-else>
-          <p
-            style="
-              font-size: 0.85rem;
-              color: var(--semantic-color-text-secondary);
-              font-style: italic;
-            "
-          >
+          <p class="query-restriction-note">
             Raising queries is restricted to clinical monitors (CRA) and data
             managers.
           </p>
@@ -137,15 +131,7 @@
             Reopen Query
           </button>
         </div>
-        <div
-          v-else
-          style="
-            margin-top: 12px;
-            font-size: 0.85rem;
-            color: var(--semantic-color-text-secondary);
-            font-style: italic;
-          "
-        >
+        <div v-else class="query-restriction-note" style="margin-top: 12px">
           Query resolution is restricted to clinical monitors (CRA) and data
           managers.
         </div>

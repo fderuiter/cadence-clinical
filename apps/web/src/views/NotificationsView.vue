@@ -101,7 +101,8 @@
       id="notifications-loading"
       style="text-align: center; padding: 48px"
     >
-      <span style="font-size: 1.2rem; color: #64748b"
+      <span
+        style="font-size: 1.2rem; color: var(--semantic-color-text-secondary)"
         >Loading notifications...</span
       >
     </div>
@@ -167,7 +168,7 @@
       style="
         text-align: center;
         padding: 48px;
-        color: #64748b;
+        color: var(--semantic-color-text-secondary);
         font-style: italic;
       "
     >
@@ -219,16 +220,21 @@
             <span
               class="badge delivery-badge"
               style="
-                background-color: #f1f5f9;
-                color: #475569;
-                border-color: #cbd5e1;
+                background-color: var(--semantic-color-surface-header);
+                color: var(--semantic-color-text-secondary);
+                border-color: var(--semantic-color-border-control);
               "
               >{{ notif.delivery_state }}</span
             >
           </div>
-          <span class="timestamp" style="font-size: 0.8rem; color: #94a3b8">{{
-            formatTimestamp(notif.created_at)
-          }}</span>
+          <span
+            class="timestamp"
+            style="
+              font-size: 0.8rem;
+              color: var(--semantic-color-text-secondary);
+            "
+            >{{ formatTimestamp(notif.created_at) }}</span
+          >
         </div>
 
         <div
@@ -246,7 +252,7 @@
         <div
           style="
             font-size: 0.85rem;
-            color: #64748b;
+            color: var(--semantic-color-text-secondary);
             display: flex;
             flex-direction: column;
             gap: 4px;
@@ -265,7 +271,10 @@
             <span
               v-else
               class="global-indicator"
-              style="font-style: italic; color: #94a3b8"
+              style="
+                font-style: italic;
+                color: var(--semantic-color-text-secondary);
+              "
               >Global / Broadcast</span
             >
           </div>
@@ -295,9 +304,9 @@
             style="
               padding: 6px 12px;
               font-size: 0.8rem;
-              background-color: var(--secondary-light, #e2e8f0);
-              border: 1px solid var(--secondary, #cbd5e1);
-              color: var(--primary, #1e293b);
+              background-color: var(--semantic-color-surface-header);
+              border: 1px solid var(--semantic-color-text-secondary);
+              color: var(--primary);
             "
             @click="goToTarget(notif)"
           >
@@ -367,7 +376,13 @@
           21 CFR Part 11 Justification Reason Required
         </div>
         <div class="modal-body" style="padding: 0; margin-bottom: 16px">
-          <p style="font-size: 0.9rem; color: #475569; margin-bottom: 12px">
+          <p
+            style="
+              font-size: 0.9rem;
+              color: var(--semantic-color-text-secondary);
+              margin-bottom: 12px;
+            "
+          >
             To complete this transition, you must provide a justification change
             reason:
           </p>

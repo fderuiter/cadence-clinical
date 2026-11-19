@@ -428,12 +428,12 @@ defineExpose({
   max-width: 450px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   overflow: hidden;
-  color: #333;
+  color: var(--semantic-color-text-dark);
 }
 
 .modal-header {
   padding: 16px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--semantic-color-border);
   font-weight: 600;
   font-size: 16px;
   color: white;
@@ -446,7 +446,7 @@ defineExpose({
 .modal-desc {
   margin-bottom: 16px;
   font-size: 13px;
-  color: #334155;
+  color: var(--semantic-color-text-body);
   line-height: 1.4;
 }
 
@@ -463,7 +463,7 @@ label {
   font-weight: 500;
   margin-bottom: 4px;
   font-size: 13px;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 select {
@@ -471,8 +471,8 @@ select {
   width: 100%;
   padding: 8px;
   font-size: 13px;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
 }
 
@@ -481,8 +481,8 @@ select {
   justify-content: flex-end;
   gap: 8px;
   padding: 12px 16px;
-  background: #f8fafc;
-  border-top: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface-muted);
+  border-top: 1px solid var(--semantic-color-border);
 }
 
 .btn {
@@ -494,7 +494,7 @@ select {
 }
 
 .btn-cancel {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   background: white;
 }
 
@@ -517,7 +517,7 @@ button:focus {
 
 select:focus-visible,
 button:focus-visible {
-  outline: 3px solid var(--accent, #2563eb) !important;
+  outline: 3px solid var(--accent) !important;
   outline-offset: 2px !important;
 }
 

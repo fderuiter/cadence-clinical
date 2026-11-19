@@ -6,7 +6,7 @@
   >
     <div class="section-header" style="text-align: center; margin-bottom: 24px">
       <h2>Sign in</h2>
-      <p style="color: #64748b">
+      <p style="color: var(--semantic-color-text-secondary)">
         Access is governed by 21 CFR Part 11. Sign in with your Cadence account.
       </p>
     </div>
@@ -14,10 +14,10 @@
     <div
       class="card"
       style="
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--semantic-color-border);
         border-radius: 8px;
         box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-        background: #fff;
+        background: var(--semantic-color-surface);
         overflow: hidden;
       "
     >
@@ -27,8 +27,8 @@
           justify-content: center;
           font-size: 1.25rem;
           padding: 16px;
-          border-bottom: 1px solid #e2e8f0;
-          background-color: #f8fafc;
+          border-bottom: 1px solid var(--semantic-color-border);
+          background-color: var(--semantic-color-surface-muted);
           text-align: center;
           font-weight: 600;
         "
@@ -43,14 +43,20 @@
             style="
               font-size: 1.1rem;
               margin-bottom: 8px;
-              color: #16a34a;
+              color: var(--semantic-color-success);
               font-weight: 600;
             "
           >
             You are signed in as
             <strong>{{ authStore.identity?.username }}</strong>
           </p>
-          <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 20px">
+          <p
+            style="
+              font-size: 0.9rem;
+              color: var(--semantic-color-text-secondary);
+              margin-bottom: 20px;
+            "
+          >
             Roles: {{ authStore.normalizedRoles.join(", ") || "none" }}
           </p>
           <div style="display: flex; gap: 12px; justify-content: center">
@@ -78,9 +84,9 @@
             class="login-error"
             role="alert"
             style="
-              color: #b91c1c;
-              background: #fee2e2;
-              border: 1px solid #fca5a5;
+              color: var(--semantic-color-error-dark);
+              background: var(--semantic-color-error-bg);
+              border: 1px solid var(--semantic-color-error-border);
               border-radius: 4px;
               padding: 10px;
               margin-bottom: 16px;

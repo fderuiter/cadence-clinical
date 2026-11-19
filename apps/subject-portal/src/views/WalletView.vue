@@ -25,9 +25,9 @@
         margin-bottom: 16px;
         padding: 12px 16px;
         border-radius: 8px;
-        background: var(--semantic-color-danger-bg-soft);
-        border: 1px solid var(--semantic-color-danger);
-        color: var(--semantic-color-danger);
+        background: var(--semantic-color-error-bg);
+        border: 1px solid var(--semantic-color-error);
+        color: var(--semantic-color-error-text-dark);
         font-size: 14px;
         font-weight: 600;
       "
@@ -65,7 +65,7 @@
           color: var(--semantic-color-surface);
         "
       >
-        <div style="font-size: 14px; font-weight: 600; opacity: 0.9">
+        <div style="font-size: 14px; font-weight: 600">
           Demo Sandbox Wallet Balance
         </div>
         <div
@@ -93,14 +93,14 @@
           class="dropzone-upload"
           tabindex="0"
           role="button"
-          aria-label="Upload receipt image for travel reimbursement"
+          aria-label="Tap to Capture or Upload Receipt Image — OCR extraction will detect merchant, date, and amount"
           style="
-            border: 2px dashed var(--border-color);
+            border: 2px dashed var(--semantic-color-border-control);
             border-radius: 8px;
             padding: 20px;
             text-align: center;
             cursor: pointer;
-            background: var(--bg-muted);
+            background: var(--semantic-color-surface-muted);
             min-height: 120px;
           "
           @click="triggerReceiptUpload"
@@ -132,11 +132,17 @@
             margin-top: 16px;
             text-align: center;
             padding: 12px;
-            background: var(--bg-muted);
+            background: var(--semantic-color-surface-muted);
             border-radius: 6px;
           "
         >
-          <p style="margin: 0; font-weight: 600; color: var(--primary-color)">
+          <p
+            style="
+              margin: 0;
+              font-weight: 600;
+              color: var(--semantic-color-primary);
+            "
+          >
             🔍 Extracting Receipt Metadata via Mobile OCR...
           </p>
         </div>
@@ -148,9 +154,9 @@
           style="
             margin-top: 20px;
             padding: 16px;
-            border: 1px solid var(--border-color);
+            border: 1px solid var(--semantic-color-border);
             border-radius: 8px;
-            background: rgba(255, 255, 255, 0.02);
+            background: var(--semantic-color-surface);
           "
         >
           <div
@@ -220,7 +226,7 @@
             v-if="wallet.expenseForm.category === 'MEAL'"
             class="form-group mb-12"
             style="
-              background: var(--bg-muted);
+              background: var(--semantic-color-surface-muted);
               padding: 10px;
               border-radius: 6px;
             "
@@ -269,7 +275,7 @@
             style="
               padding: 16px;
               border-radius: 8px;
-              background: rgba(16, 185, 129, 0.1);
+              background: var(--semantic-color-success-bg-soft);
               border: 1px solid var(--semantic-color-success);
               color: var(--semantic-color-text-dark);
             "
@@ -309,7 +315,7 @@
             style="
               padding: 16px;
               border-radius: 8px;
-              background: rgba(245, 158, 11, 0.1);
+              background: var(--semantic-color-warning-bg-light);
               border: 1px solid var(--semantic-color-warning-border-strong);
               color: var(--semantic-color-text-dark);
             "

@@ -134,8 +134,8 @@ export function renderConsentUI() {
   clausesContainer.innerHTML = clauseSections
     .map(
       (sec) => `
-    <div class="clause-view-box" style="border: 1px solid var(--border-color); padding: 16px; border-radius: 6px; background: rgba(255,255,255,0.01);">
-      <h4 style="margin-top: 0; color: var(--primary-color); border-bottom: 1px dashed var(--border-color); padding-bottom: 6px;">${sec.title}</h4>
+    <div class="clause-view-box" style="border: 1px solid var(--semantic-color-border); padding: 16px; border-radius: 6px; background: var(--semantic-color-surface);">
+      <h4 style="margin-top: 0; color: var(--semantic-color-primary); border-bottom: 1px dashed var(--semantic-color-border); padding-bottom: 6px;">${sec.title}</h4>
       <p style="margin: 0; font-size: 14px;">${sec.content}</p>
     </div>
   `
@@ -229,9 +229,9 @@ export async function verifyBiometricLiveness(isFallback = false) {
       if (banner) {
         banner.textContent = `Liveness Verification Successful (${isFallback ? "Coordinator Fallback Mode" : "Camera Anti-Spoof Score: " + (response.anti_spoof_score * 100).toFixed(0) + "%"}). Liveness token issued for 15 minutes.`;
         banner.style.display = "block";
-        banner.style.backgroundColor = "#ecfdf5";
-        banner.style.color = "#047857"; // deid: ignore
-        banner.style.border = "1px solid #a7f3d0"; // deid: ignore
+        banner.style.backgroundColor = "var(--semantic-color-success-bg-soft)";
+        banner.style.color = "var(--semantic-color-success-dark)";
+        banner.style.border = "1px solid var(--semantic-color-success)";
       }
     } else {
       state.livenessVerified = false;
@@ -240,9 +240,9 @@ export async function verifyBiometricLiveness(isFallback = false) {
         banner.textContent =
           "Biometric liveness verification failed. Please retry or select Study Coordinator Video Fallback.";
         banner.style.display = "block";
-        banner.style.backgroundColor = "#fef2f2";
-        banner.style.color = "#b91c1c";
-        banner.style.border = "1px solid #fecaca";
+        banner.style.backgroundColor = "var(--semantic-color-error-bg-soft)";
+        banner.style.color = "var(--semantic-color-error-text-dark)";
+        banner.style.border = "1px solid var(--semantic-color-error)";
       }
     }
 
@@ -254,9 +254,9 @@ export async function verifyBiometricLiveness(isFallback = false) {
       banner.textContent =
         "Liveness verification error: " + (err.message || err);
       banner.style.display = "block";
-      banner.style.backgroundColor = "#fef2f2";
-      banner.style.color = "#b91c1c";
-      banner.style.border = "1px solid #fecaca";
+      banner.style.backgroundColor = "var(--semantic-color-error-bg-soft)";
+      banner.style.color = "var(--semantic-color-error-text-dark)";
+      banner.style.border = "1px solid var(--semantic-color-error)";
     }
     renderConsentUI();
   }
@@ -349,13 +349,13 @@ export async function submitConsentAnswers() {
       banner.textContent = decision.message;
       banner.style.display = "block";
       if (decision.canSign) {
-        banner.style.backgroundColor = "#ecfdf5";
-        banner.style.color = "#047857"; // deid: ignore
-        banner.style.border = "1px solid #a7f3d0"; // deid: ignore
+        banner.style.backgroundColor = "var(--semantic-color-success-bg-soft)";
+        banner.style.color = "var(--semantic-color-success-dark)";
+        banner.style.border = "1px solid var(--semantic-color-success)";
       } else {
-        banner.style.backgroundColor = "#fef2f2";
-        banner.style.color = "#b91c1c";
-        banner.style.border = "1px solid #fecaca";
+        banner.style.backgroundColor = "var(--semantic-color-error-bg-soft)";
+        banner.style.color = "var(--semantic-color-error-text-dark)";
+        banner.style.border = "1px solid var(--semantic-color-error)";
       }
     }
 
@@ -367,9 +367,9 @@ export async function submitConsentAnswers() {
     if (banner) {
       banner.textContent = msg;
       banner.style.display = "block";
-      banner.style.backgroundColor = "#fef2f2";
-      banner.style.color = "#b91c1c";
-      banner.style.border = "1px solid #fecaca";
+      banner.style.backgroundColor = "var(--semantic-color-error-bg-soft)";
+      banner.style.color = "var(--semantic-color-error-text-dark)";
+      banner.style.border = "1px solid var(--semantic-color-error)";
     }
     alert(msg);
     renderConsentUI();

@@ -960,11 +960,11 @@ const onTicketSigned = (sigPayload) => {
   );
   max-width: 100vw;
   height: 100vh;
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   display: flex;
   flex-direction: column;
   box-shadow: -10px 0 25px -5px rgba(0, 0, 0, 0.2);
-  border-left: 1px solid #cbd5e1;
+  border-left: 1px solid var(--semantic-color-border-control);
   animation: slideLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   overscroll-behavior: contain;
   touch-action: pan-y;
@@ -981,8 +981,8 @@ const onTicketSigned = (sigPayload) => {
 
 .drawer-header {
   padding: 20px 24px;
-  background: #0f172a;
-  color: #ffffff;
+  background: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse);
   position: relative;
 }
 
@@ -1001,7 +1001,7 @@ const onTicketSigned = (sigPayload) => {
   background: rgba(255, 255, 255, 0.15);
   padding: 3px 8px;
   border-radius: 4px;
-  color: #38bdf8;
+  color: var(--semantic-color-primary);
 }
 
 .badge {
@@ -1013,49 +1013,49 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .badge-sev-critical {
-  background: #dc2626;
-  color: #ffffff;
+  background: var(--semantic-color-error);
+  color: var(--semantic-color-surface);
 }
 
 .badge-sev-major {
-  background: #ea580c;
-  color: #ffffff;
+  background: var(--semantic-color-warning-action);
+  color: var(--semantic-color-surface);
 }
 
 .badge-sev-minor {
-  background: #2563eb;
-  color: #ffffff;
+  background: var(--semantic-color-interactive-primary);
+  color: var(--semantic-color-surface);
 }
 
 .badge-status-open {
-  background: #3b82f6;
-  color: #ffffff;
+  background: var(--semantic-color-interactive-primary);
+  color: var(--semantic-color-surface);
 }
 
 .badge-status-in_progress {
-  background: #8b5cf6;
-  color: #ffffff;
+  background: var(--semantic-color-ai);
+  color: var(--semantic-color-surface);
 }
 
 .badge-status-waiting_on_site,
 .badge-status-waiting_on_sponsor {
-  background: #f59e0b;
-  color: #0f172a;
+  background: var(--semantic-color-warning-action);
+  color: var(--semantic-color-text);
 }
 
 .badge-status-resolved {
-  background: #10b981;
-  color: #ffffff;
+  background: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
 }
 
 .badge-status-closed {
-  background: #64748b;
-  color: #ffffff;
+  background: var(--semantic-color-text-secondary);
+  color: var(--semantic-color-surface);
 }
 
 .badge-signed {
-  background: #059669;
-  color: #ffffff;
+  background: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
 }
 
 .drawer-title {
@@ -1071,7 +1071,7 @@ const onTicketSigned = (sigPayload) => {
   right: 16px;
   background: none;
   border: none;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   font-size: 1.3rem;
   cursor: pointer;
   padding: 4px 8px;
@@ -1085,7 +1085,7 @@ const onTicketSigned = (sigPayload) => {
 
 .drawer-close:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  color: var(--semantic-color-surface);
 }
 
 .sla-banner {
@@ -1137,16 +1137,16 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .fill-normal {
-  background: #38bdf8;
+  background: var(--semantic-color-primary);
 }
 .fill-warning {
-  background: #f59e0b;
+  background: var(--semantic-color-warning-action);
 }
 .fill-breached {
-  background: #ef4444;
+  background: var(--semantic-color-error);
 }
 .fill-paused {
-  background: #94a3b8;
+  background: var(--semantic-color-border-control);
 }
 
 .drawer-actions {
@@ -1154,8 +1154,8 @@ const onTicketSigned = (sigPayload) => {
   justify-content: space-between;
   align-items: center;
   padding: 12px 24px;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface-muted);
+  border-bottom: 1px solid var(--semantic-color-border);
 }
 
 .action-btn-group {
@@ -1165,8 +1165,8 @@ const onTicketSigned = (sigPayload) => {
 
 .drawer-tabs {
   display: flex;
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface);
+  border-bottom: 1px solid var(--semantic-color-border);
   padding: 0 16px;
   overflow-x: auto;
 }
@@ -1178,7 +1178,7 @@ const onTicketSigned = (sigPayload) => {
   border-bottom: 2px solid transparent;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
   white-space: nowrap;
   min-height: 44px;
@@ -1187,15 +1187,15 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .tab-item.active {
-  color: #2563eb;
-  border-bottom-color: #2563eb;
+  color: var(--semantic-color-interactive-primary);
+  border-bottom-color: var(--semantic-color-interactive-primary);
 }
 
 .drawer-body {
   flex: 1;
   overflow-y: auto;
   padding: 20px 24px;
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
   overscroll-behavior: contain;
   touch-action: pan-y;
 }
@@ -1207,22 +1207,22 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .section-card {
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   border-radius: 8px;
   padding: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--semantic-color-border);
 }
 
 .card-title {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--semantic-color-text);
   margin: 0 0 10px 0;
 }
 
 .narrative-text {
   font-size: 0.875rem;
-  color: #334155;
+  color: var(--semantic-color-text-body);
   line-height: 1.5;
   white-space: pre-wrap;
 }
@@ -1241,14 +1241,14 @@ const onTicketSigned = (sigPayload) => {
 
 .meta-label {
   font-size: 0.72rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
   font-weight: 600;
 }
 
 .meta-value {
   font-size: 0.875rem;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
   font-weight: 500;
 }
 
@@ -1259,8 +1259,8 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .entity-type-badge {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
   font-size: 0.75rem;
   font-weight: 700;
   padding: 4px 8px;
@@ -1271,18 +1271,18 @@ const onTicketSigned = (sigPayload) => {
   font-family: monospace;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .rca-card {
-  background: #fffbeb;
-  border-color: #fde68a;
+  background: var(--semantic-color-warning-bg-soft);
+  border-color: var(--semantic-color-warning-border);
 }
 
 .rca-category-pill {
   display: inline-block;
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
   font-size: 0.75rem;
   font-weight: 700;
   padding: 3px 8px;
@@ -1291,8 +1291,8 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .json-viewer {
-  background: #0f172a;
-  color: #38bdf8;
+  background: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-accent-inverse);
   padding: 12px;
   border-radius: 6px;
   font-size: 0.78rem;
@@ -1307,19 +1307,19 @@ const onTicketSigned = (sigPayload) => {
 
 .filter-chip {
   padding: 5px 10px;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 20px;
   font-size: 0.78rem;
   font-weight: 600;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
 }
 
 .filter-chip.active {
-  background: #2563eb;
-  color: #ffffff;
-  border-color: #2563eb;
+  background: var(--semantic-color-interactive-primary);
+  color: var(--semantic-color-surface);
+  border-color: var(--semantic-color-interactive-primary);
 }
 
 .comment-stream {
@@ -1329,16 +1329,16 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .comment-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   padding: 12px 14px;
 }
 
 .comment-card.comment-internal {
-  background: #fffbeb;
-  border-color: #fde68a;
-  border-left: 4px solid #f59e0b;
+  background: var(--semantic-color-warning-bg-soft);
+  border-color: var(--semantic-color-warning-border);
+  border-left: 4px solid var(--semantic-color-warning-border-strong);
 }
 
 .comment-header {
@@ -1351,34 +1351,34 @@ const onTicketSigned = (sigPayload) => {
 .comment-author {
   font-size: 0.82rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .badge-public {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
 }
 
 .badge-internal {
-  background: #fef3c7;
-  color: #b45309;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning);
 }
 
 .comment-time {
   font-size: 0.72rem;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   margin-left: auto;
 }
 
 .comment-body {
   font-size: 0.85rem;
-  color: #334155;
+  color: var(--semantic-color-text-body);
   line-height: 1.45;
 }
 
 .new-comment-box {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 8px;
   padding: 14px;
   display: flex;
@@ -1397,7 +1397,7 @@ const onTicketSigned = (sigPayload) => {
   gap: 6px;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--semantic-color-text-body);
   cursor: pointer;
 }
 
@@ -1408,15 +1408,15 @@ const onTicketSigned = (sigPayload) => {
 
 /* Attachments tab */
 .attachment-upload-box {
-  background: #ffffff;
-  border: 1px dashed #cbd5e1;
+  background: var(--semantic-color-surface);
+  border: 1px dashed var(--semantic-color-border-control);
   border-radius: 8px;
   padding: 16px;
 }
 
 .upload-hint {
   font-size: 0.78rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin-bottom: 12px;
 }
 
@@ -1433,8 +1433,8 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .attachment-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   padding: 12px 14px;
   display: flex;
@@ -1453,29 +1453,29 @@ const onTicketSigned = (sigPayload) => {
 .attachment-filename {
   font-size: 0.85rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .attachment-meta {
   font-size: 0.72rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin: 2px 0;
 }
 
 .sha-hash {
   font-size: 0.7rem;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
 }
 
 .badge-deid {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 
 /* Signatures tab */
 .signature-record-card {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: var(--semantic-color-success-bg-soft);
+  border: 1px solid var(--semantic-color-success-border-soft);
   border-radius: 8px;
   padding: 16px;
 }
@@ -1494,13 +1494,13 @@ const onTicketSigned = (sigPayload) => {
 .sig-card-title {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #166534;
+  color: var(--semantic-color-success-dark);
   margin: 0;
 }
 
 .sig-card-subtitle {
   font-size: 0.75rem;
-  color: #15803d;
+  color: var(--semantic-color-success);
   margin: 2px 0 0 0;
 }
 
@@ -1523,19 +1523,19 @@ const onTicketSigned = (sigPayload) => {
 .sig-label {
   font-size: 0.72rem;
   font-weight: 600;
-  color: #15803d;
+  color: var(--semantic-color-success);
   text-transform: uppercase;
 }
 
 .sig-val {
   font-size: 0.85rem;
-  color: #0f172a;
+  color: var(--semantic-color-text);
   font-weight: 500;
 }
 
 .meaning-val {
   font-style: italic;
-  color: #166534;
+  color: var(--semantic-color-success-dark);
 }
 
 .token-val {
@@ -1545,8 +1545,8 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .empty-sig-box {
-  background: #ffffff;
-  border: 1px dashed #cbd5e1;
+  background: var(--semantic-color-surface);
+  border: 1px dashed var(--semantic-color-border-control);
   border-radius: 8px;
   padding: 32px;
   text-align: center;
@@ -1571,7 +1571,7 @@ const onTicketSigned = (sigPayload) => {
   left: 6px;
   bottom: 10px;
   width: 2px;
-  background: #cbd5e1;
+  background: var(--semantic-color-border-muted);
 }
 
 .audit-row {
@@ -1587,14 +1587,14 @@ const onTicketSigned = (sigPayload) => {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #2563eb;
-  border: 2px solid #ffffff;
-  box-shadow: 0 0 0 1px #cbd5e1;
+  background: var(--semantic-color-interactive-primary);
+  border: 2px solid var(--semantic-color-surface);
+  box-shadow: 0 0 0 1px var(--semantic-color-border-control);
 }
 
 .audit-content {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   padding: 10px 12px;
   width: 100%;
@@ -1610,29 +1610,29 @@ const onTicketSigned = (sigPayload) => {
 .audit-action {
   font-size: 0.8rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .audit-user {
   font-size: 0.75rem;
-  color: #2563eb;
+  color: var(--semantic-color-interactive-primary);
 }
 
 .audit-time {
   font-size: 0.72rem;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   margin-left: auto;
 }
 
 .audit-reason {
   font-size: 0.78rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 .empty-placeholder {
   padding: 24px;
   text-align: center;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   font-size: 0.85rem;
 }
 
@@ -1658,42 +1658,42 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .btn-primary {
-  background: #2563eb;
-  color: #ffffff;
+  background: var(--semantic-color-interactive-primary);
+  color: var(--semantic-color-surface);
 }
 .btn-primary:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: var(--semantic-color-interactive-primary);
 }
 .btn-secondary {
-  background: #ffffff;
-  border-color: #cbd5e1;
-  color: #475569;
+  background: var(--semantic-color-surface);
+  border-color: var(--semantic-color-border-control);
+  color: var(--semantic-color-text-secondary);
 }
 .btn-secondary:hover:not(:disabled) {
-  background: #f1f5f9;
-  color: #0f172a;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text);
 }
 .btn-warning {
-  background: #f59e0b;
-  color: #ffffff;
+  background: var(--semantic-color-warning-action);
+  color: var(--semantic-color-surface);
 }
 .btn-warning:hover:not(:disabled) {
-  background: #d97706;
+  background: var(--semantic-color-warning-action);
 }
 .btn-success {
-  background: #10b981;
-  color: #ffffff;
+  background: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
 }
 .btn-success:hover:not(:disabled) {
-  background: #059669;
+  background: var(--semantic-color-success);
 }
 .btn-sign {
-  background: #059669;
-  color: #ffffff;
+  background: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
   font-weight: 700;
 }
 .btn-sign:hover:not(:disabled) {
-  background: #047857;
+  background: var(--semantic-color-success);
 }
 .btn:disabled {
   opacity: 0.6;
@@ -1702,16 +1702,16 @@ const onTicketSigned = (sigPayload) => {
 
 .form-control {
   padding: 6px 10px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-size: 0.82rem;
-  color: #1e293b;
-  background: #ffffff;
+  color: var(--semantic-color-text-dark);
+  background: var(--semantic-color-surface);
   outline: none;
 }
 
 .form-control:focus {
-  border-color: #2563eb;
+  border-color: var(--semantic-color-interactive-primary);
 }
 
 .flex-1 {
@@ -1720,8 +1720,8 @@ const onTicketSigned = (sigPayload) => {
 
 /* AI RAG Triage Styles */
 .ai-triage-card {
-  border-left: 4px solid #2563eb;
-  background: #f8fafc;
+  border-left: 4px solid var(--semantic-color-interactive-primary);
+  background: var(--semantic-color-surface-muted);
 }
 
 .ai-card-header {
@@ -1745,18 +1745,18 @@ const onTicketSigned = (sigPayload) => {
 
 .ai-title {
   margin-bottom: 0;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .badge-ai-grounded {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
   font-weight: 700;
 }
 
 .badge-ai-failclosed {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
   font-weight: 700;
 }
 
@@ -1769,11 +1769,11 @@ const onTicketSigned = (sigPayload) => {
 .ai-draft-text {
   font-size: 0.85rem;
   line-height: 1.55;
-  color: #1e293b;
-  background: #ffffff;
+  color: var(--semantic-color-text-dark);
+  background: var(--semantic-color-surface);
   padding: 12px;
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--semantic-color-border);
   white-space: pre-wrap;
 }
 
@@ -1788,13 +1788,13 @@ const onTicketSigned = (sigPayload) => {
 .citation-label {
   font-size: 0.78rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .citation-chip-btn {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1d4ed8;
+  background: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-info-border);
+  color: var(--semantic-color-interactive-primary);
   padding: 3px 8px;
   border-radius: 4px;
   font-size: 0.76rem;
@@ -1807,9 +1807,9 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .citation-chip-btn:hover {
-  background: #dbeafe;
-  border-color: #93c5fd;
-  color: #1e40af;
+  background: var(--semantic-color-info-light);
+  border-color: var(--semantic-color-divider-accent);
+  color: var(--semantic-color-info);
 }
 
 .ai-draft-actions {
@@ -1819,21 +1819,21 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .ai-failclosed-box {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border-soft);
   border-radius: 6px;
   padding: 10px 12px;
 }
 
 .ai-failclosed-text {
   font-size: 0.82rem;
-  color: #991b1b;
+  color: var(--semantic-color-error-text-dark);
   margin-bottom: 6px;
 }
 
 .human-routed-badge {
   font-size: 0.78rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 /* Citation Document Viewer Modal */
@@ -1849,7 +1849,7 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .citation-modal-panel {
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   border-radius: 10px;
   width: 90%;
   max-width: 650px;
@@ -1857,14 +1857,14 @@ const onTicketSigned = (sigPayload) => {
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   overflow: hidden;
 }
 
 .citation-modal-header {
   padding: 16px 20px;
-  border-bottom: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border-bottom: 1px solid var(--semantic-color-border);
+  background: var(--semantic-color-surface-muted);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1880,13 +1880,13 @@ const onTicketSigned = (sigPayload) => {
 .citation-modal-title {
   margin: 0;
   font-size: 1.05rem;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .badge-page {
-  background: #f1f5f9;
-  color: #475569;
-  border: 1px solid #cbd5e1;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
+  border: 1px solid var(--semantic-color-border-control);
 }
 
 .citation-modal-body {
@@ -1898,8 +1898,8 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .citation-coordinates-box {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   padding: 10px 14px;
   display: flex;
@@ -1916,22 +1916,22 @@ const onTicketSigned = (sigPayload) => {
 
 .coord-label {
   font-weight: 600;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   min-width: 90px;
 }
 
 .coord-val {
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .text-success {
-  color: #15803d;
+  color: var(--semantic-color-success);
   font-weight: 600;
 }
 
 .citation-excerpt-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   padding: 14px;
 }
@@ -1940,7 +1940,7 @@ const onTicketSigned = (sigPayload) => {
   margin: 0 0 8px 0;
   font-size: 0.85rem;
   font-weight: 700;
-  color: #334155;
+  color: var(--semantic-color-text-body);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -1948,14 +1948,14 @@ const onTicketSigned = (sigPayload) => {
 .excerpt-body {
   font-size: 0.88rem;
   line-height: 1.6;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
   white-space: pre-wrap;
 }
 
 .citation-modal-footer {
   padding: 12px 20px;
-  border-top: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border-top: 1px solid var(--semantic-color-border);
+  background: var(--semantic-color-surface-muted);
   display: flex;
   justify-content: flex-end;
 }

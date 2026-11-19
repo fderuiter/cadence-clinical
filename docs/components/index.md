@@ -6,7 +6,7 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 - **Zero Tailwind Dependency**: Standard Vanilla CSS scoped styling using centralized CSS Custom Properties (`tokens.css`).
 - **Full-Width Authoring Workspaces**: High-density clinical tables and matrices occupy full viewport width.
-- **Accessibility (WCAG 2.1 AA / Section 508)**: ARIA landmarks, keyboard focus management, live regions for terminology lookup feedback, and color contrast compliance.
+- **Accessibility (WCAG 2.2 AA / Section 508)**: ARIA landmarks, keyboard focus management, live regions for terminology lookup feedback, `>= 4.5:1` semantic text/status token contrast across light surfaces, and `>= 3:1` interactive control boundary contrast (`--semantic-color-border-control`).
 - **Multi-Persona Testing**: Built-in Persona Switcher for verifying RBAC roles across clinical workflows.
 
 ---

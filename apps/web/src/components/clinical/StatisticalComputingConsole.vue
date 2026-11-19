@@ -1547,7 +1547,7 @@ onMounted(() => {
   flex-direction: column;
   gap: 20px;
   width: 100%;
-  color: var(--text-primary);
+  color: var(--semantic-color-text);
 }
 
 /* Header */
@@ -1557,7 +1557,7 @@ onMounted(() => {
   align-items: flex-start;
   gap: 24px;
   padding: 24px;
-  background: var(--surface);
+  background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
 }
@@ -1582,47 +1582,47 @@ onMounted(() => {
 }
 
 .badge-gxp {
-  background: #e0e7ff;
-  color: #3730a3;
+  background: var(--semantic-color-indigo-bg);
+  color: var(--semantic-color-indigo-text);
 }
 
 .badge-reproducible {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 
 .badge-sandbox {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
 }
 
 .badge-warn {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .badge-neutral {
-  background: var(--surface-muted);
-  color: var(--text-muted);
+  background: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-secondary);
 }
 
 .badge-active {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 
 .badge-expired {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
 }
 
 .badge-revoked {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .badge-green {
-  color: #16a34a;
+  color: var(--semantic-color-success);
   font-weight: 700;
 }
 
@@ -1630,13 +1630,13 @@ onMounted(() => {
   margin: 0 0 6px;
   font-size: 24px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--semantic-color-text);
 }
 
 .sce-subtitle {
   margin: 0;
   font-size: 13px;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
   line-height: 1.5;
 }
 
@@ -1652,13 +1652,13 @@ onMounted(() => {
   gap: 10px;
   padding: 8px 14px;
   border-radius: var(--radius-md);
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
   border: 1px solid var(--border);
 }
 
 .blinding-status-pill.unblinded-active {
-  background: #ecfdf5;
-  border-color: #a7f3d0;
+  background: var(--semantic-color-success-bg-soft);
+  border-color: var(--semantic-color-success-border);
 }
 
 .status-icon {
@@ -1677,7 +1677,7 @@ onMounted(() => {
 
 .status-sub {
   font-size: 10px;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
 }
 
 /* Nav Tabs */
@@ -1694,7 +1694,7 @@ onMounted(() => {
   font-weight: 600;
   border: none;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
   border-bottom: 3px solid transparent;
   cursor: pointer;
   min-height: 48px;
@@ -1712,7 +1712,7 @@ onMounted(() => {
 
 /* Common Card */
 .card {
-  background: var(--surface);
+  background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
@@ -1735,13 +1735,13 @@ onMounted(() => {
 .card-sub {
   margin: 4px 0 0;
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
 }
 
 .total-badge {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
 }
 
 /* Workspace Grid */
@@ -1762,7 +1762,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 12px 20px;
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
   border-bottom: 1px solid var(--border);
 }
 
@@ -1777,14 +1777,14 @@ onMounted(() => {
   font-weight: 700;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface);
+  background: var(--semantic-color-surface);
   cursor: pointer;
   min-height: 38px;
 }
 
 .lang-btn.active {
   background: var(--primary);
-  color: #fff;
+  color: var(--semantic-color-surface);
   border-color: var(--primary);
 }
 
@@ -1796,7 +1796,7 @@ onMounted(() => {
 
 .template-label {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
 }
 
 .meta-inputs-grid {
@@ -1824,8 +1824,8 @@ onMounted(() => {
   font-size: 13px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text-primary);
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   min-height: 44px;
 }
 
@@ -1839,8 +1839,8 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 8px 16px;
-  background: #1e293b;
-  color: #94a3b8;
+  background: var(--semantic-color-surface-elevated);
+  color: var(--semantic-color-text-inverse-muted);
   font-size: 12px;
   font-family: var(--font-mono);
 }
@@ -1851,8 +1851,8 @@ onMounted(() => {
   font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.6;
-  background: #0f172a;
-  color: #f8fafc;
+  background: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse);
   border: none;
   resize: vertical;
   min-height: 350px;
@@ -1863,7 +1863,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 14px 20px;
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
 }
 
 /* Runner Card */
@@ -1876,22 +1876,22 @@ onMounted(() => {
 
 .field-hint {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
 }
 
 .unblinded-gating-box {
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
 .unblinded-gating-box.gating-active {
-  border-color: #f59e0b;
-  background: #fffbeb;
+  border-color: var(--semantic-color-warning-border-strong);
+  background: var(--semantic-color-warning-bg-soft);
 }
 
 .toggle-row {
@@ -1923,7 +1923,7 @@ onMounted(() => {
 .token-warning {
   margin: 0;
   font-size: 11px;
-  color: #b45309;
+  color: var(--semantic-color-warning);
   line-height: 1.4;
 }
 
@@ -1931,14 +1931,14 @@ onMounted(() => {
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface);
+  background: var(--semantic-color-surface);
 }
 
 .bounds-title {
   margin: 0 0 10px;
   font-size: 12px;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
 }
 
 .bounds-grid {
@@ -1954,7 +1954,7 @@ onMounted(() => {
 }
 
 .bound-name {
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
 }
 
 .bound-val {
@@ -1992,24 +1992,24 @@ onMounted(() => {
 
 .btn-primary {
   background: var(--primary);
-  color: #fff;
+  color: var(--semantic-color-surface);
 }
 
 .btn-secondary {
-  background: var(--surface);
+  background: var(--semantic-color-surface);
   border-color: var(--border);
-  color: var(--text-primary);
+  color: var(--semantic-color-text);
 }
 
 .btn-outline {
   background: transparent;
   border-color: var(--border);
-  color: var(--text-primary);
+  color: var(--semantic-color-text);
 }
 
 .btn-danger {
-  color: #dc2626;
-  border-color: #fca5a5;
+  color: var(--semantic-color-error);
+  border-color: var(--semantic-color-error-border);
 }
 
 .btn-xs {
@@ -2030,21 +2030,21 @@ onMounted(() => {
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
 .latest-run-card.status-completed {
-  border-color: #86efac;
-  background: #f0fdf4;
+  border-color: var(--semantic-color-success-border);
+  background: var(--semantic-color-success-bg-soft);
 }
 
 .latest-run-card.status-failed,
 .latest-run-card.status-rejected {
-  border-color: #fca5a5;
-  background: #fef2f2;
+  border-color: var(--semantic-color-error-border);
+  background: var(--semantic-color-error-bg-soft);
 }
 
 .run-header-row {
@@ -2061,19 +2061,19 @@ onMounted(() => {
 }
 
 .pill-completed {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 
 .pill-failed,
 .pill-rejected {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .pill-timeout {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
 }
 
 .manifest-seal-row {
@@ -2084,7 +2084,7 @@ onMounted(() => {
 
 .seal-label {
   font-size: 10px;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
 }
 
 .seal-code {
@@ -2121,9 +2121,9 @@ onMounted(() => {
 }
 
 .data-table th {
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
   font-size: 11px;
 }
@@ -2142,14 +2142,14 @@ onMounted(() => {
 }
 
 .cell-date {
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
   font-size: 11px;
 }
 
 .digest-pill {
   font-family: var(--font-mono);
   font-size: 11px;
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
   padding: 2px 6px;
   border-radius: var(--radius-sm);
 }
@@ -2162,25 +2162,25 @@ onMounted(() => {
 }
 
 .lang-python {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--semantic-color-info-light);
+  color: var(--semantic-color-info);
 }
 
 .lang-r {
-  background: #ede9fe;
-  color: #5b21b6;
+  background: var(--semantic-color-ai-bg);
+  color: var(--semantic-color-ai-dark);
 }
 
 .version-pill {
   font-size: 11px;
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
   padding: 2px 6px;
   border-radius: var(--radius-sm);
 }
 
 .badge-unblind-tag {
-  background: #ecfdf5;
-  color: #065f46;
+  background: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success-dark);
   font-size: 10px;
   font-weight: 700;
   padding: 2px 6px;
@@ -2188,8 +2188,8 @@ onMounted(() => {
 }
 
 .badge-blinded-tag {
-  background: var(--surface-muted);
-  color: var(--text-muted);
+  background: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-secondary);
   font-size: 10px;
   padding: 2px 6px;
   border-radius: var(--radius-sm);
@@ -2229,7 +2229,7 @@ onMounted(() => {
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -2237,7 +2237,7 @@ onMounted(() => {
 
 .prov-label {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
 }
 
 .prov-card code {
@@ -2249,16 +2249,16 @@ onMounted(() => {
 /* Signature Block Card */
 .sig-block-card {
   padding: 16px;
-  border: 1px solid #93c5fd;
+  border: 1px solid var(--semantic-color-divider-accent);
   border-radius: var(--radius-sm);
-  background: #eff6ff;
+  background: var(--semantic-color-info-bg);
 }
 
 .sig-title {
   margin: 0 0 12px;
   font-size: 13px;
   font-weight: 700;
-  color: #1e40af;
+  color: var(--semantic-color-info);
 }
 
 .sig-grid {
@@ -2279,7 +2279,7 @@ onMounted(() => {
 
 .sig-lbl {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
 }
 
 .sig-val {
@@ -2304,7 +2304,7 @@ onMounted(() => {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 12px;
-  background: var(--surface);
+  background: var(--semantic-color-surface);
 }
 
 .art-header {
@@ -2330,13 +2330,13 @@ onMounted(() => {
 
 .art-sub {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
 }
 
 .art-preview-box {
   margin-top: 8px;
   padding: 8px;
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
   border-radius: var(--radius-sm);
   overflow-x: auto;
 }
@@ -2348,15 +2348,15 @@ onMounted(() => {
 }
 
 .console-box {
-  border: 1px solid #334155;
+  border: 1px solid var(--semantic-color-text-body);
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
 
 .console-header-bar {
   padding: 6px 12px;
-  background: #1e293b;
-  color: #94a3b8;
+  background: var(--semantic-color-surface-elevated);
+  color: var(--semantic-color-text-inverse-muted);
   font-size: 11px;
   font-family: var(--font-mono);
 }
@@ -2364,8 +2364,8 @@ onMounted(() => {
 .console-text {
   margin: 0;
   padding: 14px;
-  background: #0f172a;
-  color: #e2e8f0;
+  background: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-border);
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.5;
@@ -2403,14 +2403,14 @@ onMounted(() => {
 }
 
 .validation-result-box.res-valid {
-  border-color: #86efac;
-  background: #f0fdf4;
+  border-color: var(--semantic-color-success-border);
+  background: var(--semantic-color-success-bg-soft);
 }
 
 .validation-result-box.res-tampered,
 .validation-result-box.res-unqualified_package {
-  border-color: #fca5a5;
-  background: #fef2f2;
+  border-color: var(--semantic-color-error-border);
+  background: var(--semantic-color-error-bg-soft);
 }
 
 .package-list-grid {
@@ -2424,7 +2424,7 @@ onMounted(() => {
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface);
+  background: var(--semantic-color-surface);
 }
 
 .pkg-header {
@@ -2442,12 +2442,12 @@ onMounted(() => {
 }
 
 .qual-yes {
-  color: #16a34a;
+  color: var(--semantic-color-success);
   font-weight: 600;
 }
 
 .qual-no {
-  color: #dc2626;
+  color: var(--semantic-color-error);
   font-weight: 600;
 }
 
@@ -2465,7 +2465,7 @@ onMounted(() => {
 .modal-dialog {
   width: 90%;
   max-width: 580px;
-  background: var(--surface);
+  background: var(--semantic-color-surface);
 }
 
 .modal-header {
@@ -2495,6 +2495,6 @@ onMounted(() => {
   gap: 10px;
   padding: 16px 20px;
   border-top: 1px solid var(--border);
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
 }
 </style>

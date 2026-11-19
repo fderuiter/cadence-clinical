@@ -628,7 +628,7 @@ function formatRelativeTime(isoString) {
   width: 100%;
   max-width: 580px;
   height: 100%;
-  background: var(--surface, #ffffff);
+  background: var(--semantic-color-surface);
   box-shadow: -8px 0 32px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
@@ -657,8 +657,8 @@ function formatRelativeTime(isoString) {
 /* Header */
 .drawer-header {
   padding: 1.25rem 1.5rem;
-  background: var(--surface-secondary, #f8fafc);
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  background: var(--semantic-color-surface-header);
+  border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -673,14 +673,14 @@ function formatRelativeTime(isoString) {
 
 .activity-header-icon {
   font-size: 1.75rem;
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
   width: 44px;
   height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-md, 8px);
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border);
   flex-shrink: 0;
 }
 
@@ -688,13 +688,13 @@ function formatRelativeTime(isoString) {
   margin: 0;
   font-size: 1.15rem;
   font-weight: 700;
-  color: var(--text-main, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .drawer-subtitle {
   margin: 0.2rem 0 0 0;
   font-size: 0.825rem;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -706,8 +706,8 @@ function formatRelativeTime(isoString) {
 
 .version-tag {
   display: inline-block;
-  background: #e2e8f0;
-  color: #334155;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
   font-size: 0.725rem;
   font-weight: 700;
   padding: 0.1rem 0.4rem;
@@ -717,7 +717,7 @@ function formatRelativeTime(isoString) {
 .close-drawer-btn {
   background: transparent;
   border: 1px solid transparent;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   font-size: 1.1rem;
   cursor: pointer;
   padding: 0.4rem 0.6rem;
@@ -726,15 +726,15 @@ function formatRelativeTime(isoString) {
 }
 
 .close-drawer-btn:hover {
-  background: #e2e8f0;
-  color: var(--text-main, #0f172a);
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text);
 }
 
 /* Filter Ribbon */
 .filter-ribbon {
   padding: 0.75rem 1.5rem;
-  background: #ffffff;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  background: var(--semantic-color-surface);
+  border-bottom: 1px solid var(--border);
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
@@ -750,23 +750,23 @@ function formatRelativeTime(isoString) {
 .filter-label {
   font-size: 0.775rem;
   font-weight: 600;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 
 .filter-select,
 .filter-date {
   padding: 0.35rem 0.6rem;
   font-size: 0.8rem;
-  border: 1px solid var(--border, #cbd5e1);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm, 6px);
-  background: #ffffff;
-  color: var(--text-main, #0f172a);
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   outline: none;
 }
 
 .filter-select:focus,
 .filter-date:focus {
-  border-color: var(--primary, #2563eb);
+  border-color: var(--primary);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
@@ -774,24 +774,24 @@ function formatRelativeTime(isoString) {
   padding: 0.35rem 0.65rem;
   font-size: 0.775rem;
   font-weight: 600;
-  background: #f1f5f9;
-  border: 1px solid var(--border, #cbd5e1);
+  background: var(--semantic-color-surface-header);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm, 6px);
-  color: var(--text-muted, #475569);
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .reset-filters-btn:hover {
-  background: #e2e8f0;
-  color: var(--text-main, #0f172a);
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text);
 }
 
 /* Compliance Badge */
 .gxp-badge-strip {
   padding: 0.5rem 1.5rem;
-  background: #f0fdf4;
-  border-bottom: 1px solid #bbf7d0;
+  background: var(--semantic-color-success-bg-soft);
+  border-bottom: 1px solid var(--semantic-color-success-border-soft);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -804,7 +804,7 @@ function formatRelativeTime(isoString) {
 .gxp-text {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #166534;
+  color: var(--semantic-color-success-dark);
 }
 
 /* Drawer Body */
@@ -812,7 +812,7 @@ function formatRelativeTime(isoString) {
   flex: 1;
   overflow-y: auto;
   padding: 1.5rem;
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
 }
 
 /* Loading, Error, Empty */
@@ -825,14 +825,14 @@ function formatRelativeTime(isoString) {
   justify-content: center;
   padding: 3rem 1.5rem;
   text-align: center;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 
 .spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid #e2e8f0;
-  border-top-color: var(--primary, #2563eb);
+  border: 3px solid var(--semantic-color-border);
+  border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   margin-bottom: 1rem;
@@ -853,8 +853,8 @@ function formatRelativeTime(isoString) {
 .retry-btn {
   margin-top: 1rem;
   padding: 0.45rem 1rem;
-  background: var(--primary, #2563eb);
-  color: #ffffff;
+  background: var(--primary);
+  color: var(--semantic-color-surface);
   border: none;
   border-radius: var(--radius-sm, 6px);
   cursor: pointer;
@@ -884,8 +884,8 @@ function formatRelativeTime(isoString) {
 .marker-icon {
   width: 32px;
   height: 32px;
-  background: #ffffff;
-  border: 1px solid var(--border, #cbd5e1);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -898,15 +898,15 @@ function formatRelativeTime(isoString) {
 .timeline-connector {
   width: 2px;
   flex: 1;
-  background: var(--border, #cbd5e1);
+  background: var(--border);
   margin-top: 4px;
   margin-bottom: -12px;
 }
 
 .timeline-card {
   flex: 1;
-  background: #ffffff;
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md, 8px);
   padding: 0.875rem 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -935,42 +935,42 @@ function formatRelativeTime(isoString) {
 }
 
 .badge-success {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
 }
 
 .badge-danger {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
 }
 
 .badge-warning {
-  background: #fef3c7;
-  color: #b45309;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning);
 }
 
 .badge-info {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
 }
 
 .badge-neutral {
-  background: #f1f5f9;
-  color: #334155;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
 }
 
 .event-actor {
   font-size: 0.825rem;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 
 .event-actor strong {
-  color: var(--text-main, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .event-time {
   font-size: 0.75rem;
-  color: var(--text-muted, #94a3b8);
+  color: var(--semantic-color-text-secondary);
   white-space: nowrap;
 }
 
@@ -978,14 +978,14 @@ function formatRelativeTime(isoString) {
 .card-detail-section {
   margin-top: 0.75rem;
   padding-top: 0.5rem;
-  border-top: 1px dashed var(--border, #e2e8f0);
+  border-top: 1px dashed var(--border);
 }
 
 .detail-toggle-btn {
   background: transparent;
   border: none;
   font-size: 0.775rem;
-  color: var(--primary, #2563eb);
+  color: var(--primary);
   cursor: pointer;
   padding: 0;
   font-weight: 600;
@@ -998,8 +998,8 @@ function formatRelativeTime(isoString) {
 .detail-content {
   margin-top: 0.5rem;
   padding: 0.6rem 0.75rem;
-  background: #f8fafc;
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm, 6px);
   font-size: 0.8rem;
 }
@@ -1013,19 +1013,19 @@ function formatRelativeTime(isoString) {
 
 .detail-label {
   font-weight: 600;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 
 .detail-value {
-  color: var(--text-main, #0f172a);
+  color: var(--semantic-color-text);
   text-align: right;
   word-break: break-word;
 }
 
 .signature-box {
   flex-direction: column;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: var(--semantic-color-success-bg-soft);
+  border: 1px solid var(--semantic-color-success-border-soft);
   border-radius: 4px;
   padding: 0.5rem;
   margin-top: 0.25rem;
@@ -1033,7 +1033,7 @@ function formatRelativeTime(isoString) {
 
 .sig-details {
   font-size: 0.75rem;
-  color: #166534;
+  color: var(--semantic-color-success-dark);
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
@@ -1044,7 +1044,7 @@ function formatRelativeTime(isoString) {
 }
 
 .text-danger {
-  color: #b91c1c;
+  color: var(--semantic-color-error);
 }
 
 .text-xs {
@@ -1061,10 +1061,10 @@ function formatRelativeTime(isoString) {
   padding: 0.5rem 1.25rem;
   font-size: 0.825rem;
   font-weight: 600;
-  background: #ffffff;
-  border: 1px solid var(--border, #cbd5e1);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md, 8px);
-  color: var(--primary, #2563eb);
+  color: var(--primary);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1074,8 +1074,8 @@ function formatRelativeTime(isoString) {
 }
 
 .load-more-btn:hover:not(:disabled) {
-  background: #f8fafc;
-  border-color: var(--primary, #2563eb);
+  background: var(--semantic-color-surface-muted);
+  border-color: var(--primary);
 }
 
 .load-more-btn:disabled {
@@ -1086,8 +1086,8 @@ function formatRelativeTime(isoString) {
 .btn-spinner {
   width: 14px;
   height: 14px;
-  border: 2px solid #cbd5e1;
-  border-top-color: var(--primary, #2563eb);
+  border: 2px solid var(--semantic-color-border-control);
+  border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }

@@ -8,8 +8,9 @@
     <h3 id="ai-assist-title">Assist</h3>
     <p class="assist-scope">
       About
-      <code v-if="nodeRef">{{ nodeRef }}</code
-      ><template v-else>{{ studyCode }}</template
+      <code v-if="nodeRef">{{ nodeRef }}</code><template v-else>{{
+        studyCode
+      }}</template
       >. An agent reads and proposes; a person decides, and nothing changes
       until they do.
     </p>
@@ -194,9 +195,9 @@ watch(() => props.studyCode, load, { immediate: true });
   flex-direction: column;
   gap: 8px;
   padding: 10px;
-  border: 1px solid var(--semantic-color-ai-border, #c4b5fd);
+  border: 1px solid var(--semantic-color-ai-border);
   border-radius: 6px;
-  background: var(--semantic-color-ai-bg, #f5f3ff);
+  background: var(--semantic-color-ai-bg);
 }
 
 .assist h3,

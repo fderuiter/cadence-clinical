@@ -23,17 +23,32 @@ export default defineConfig({
     },
     {
       name: "chromium",
+      testIgnore: /web-accessibility\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         storageState: "playwright/.auth/user.json",
       },
       dependencies: ["setup"],
     },
+    {
+      name: "accessibility",
+      testMatch: /web-accessibility\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: "http://localhost:3100/cadence-clinical/",
+      },
+    },
   ],
   webServer: [
     {
       command: "pnpm --filter web dev",
       url: "http://localhost:3000/cadence-clinical/",
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+    },
+    {
+      command: "pnpm --filter web exec vite --mode demo --port 3100",
+      url: "http://localhost:3100/cadence-clinical/",
       reuseExistingServer: !process.env.CI,
       timeout: 120000,
     },

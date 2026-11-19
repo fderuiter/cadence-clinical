@@ -13,7 +13,10 @@
       <div
         id="conflict-modal-title"
         class="modal-header"
-        style="background-color: #f59e0b; color: white"
+        style="
+          background-color: var(--semantic-color-warning-action);
+          color: white;
+        "
       >
         ⚠️ Conflict Detected during Synchronization
       </div>
@@ -21,7 +24,7 @@
         <p style="margin-bottom: 16px; font-weight: 500">
           The system detected a conflict while synchronizing your offline
           changes for entity
-          <strong style="color: #d97706"
+          <strong style="color: var(--semantic-color-warning)"
             >{{ conflict?.conflictItem?.entityType || "Form Item" }} (ID:
             {{ conflict?.conflictItem?.entityId || "N/A" }})</strong
           >. Please review the side-by-side comparison and choose a resolution
@@ -36,17 +39,17 @@
           <!-- Client Offline Edit -->
           <div
             style="
-              border: 1px solid #cbd5e1;
+              border: 1px solid var(--semantic-color-border-control);
               border-radius: 6px;
               padding: 12px;
-              background-color: #eff6ff;
+              background-color: var(--semantic-color-info-bg);
             "
           >
             <h4
               style="
                 margin: 0 0 8px 0;
-                color: #1d4ed8;
-                border-bottom: 1px solid #bfdbfe;
+                color: var(--semantic-color-interactive-primary);
+                border-bottom: 1px solid var(--semantic-color-info-border);
                 padding-bottom: 4px;
               "
             >
@@ -65,17 +68,17 @@
           <!-- Server Record -->
           <div
             style="
-              border: 1px solid #cbd5e1;
+              border: 1px solid var(--semantic-color-border-control);
               border-radius: 6px;
               padding: 12px;
-              background-color: #fef3c7;
+              background-color: var(--semantic-color-warning-bg-badge);
             "
           >
             <h4
               style="
                 margin: 0 0 8px 0;
-                color: #b45309;
-                border-bottom: 1px solid #fde68a;
+                color: var(--semantic-color-warning);
+                border-bottom: 1px solid var(--semantic-color-warning-border);
                 padding-bottom: 4px;
               "
             >
@@ -107,9 +110,9 @@
                 gap: 8px;
                 cursor: pointer;
                 padding: 8px;
-                border: 1px solid #e2e8f0;
+                border: 1px solid var(--semantic-color-border);
                 border-radius: 4px;
-                background-color: #f8fafc;
+                background-color: var(--semantic-color-surface-muted);
               "
             >
               <input
@@ -121,7 +124,13 @@
               />
               <div>
                 <strong>SERVER_WIN (Default / Overwrite Local)</strong>
-                <span style="display: block; font-size: 12px; color: #64748b">
+                <span
+                  style="
+                    display: block;
+                    font-size: 12px;
+                    color: var(--semantic-color-text-secondary);
+                  "
+                >
                   Discard your offline changes and overwrite with the latest
                   server record. Correct default for locked forms.
                 </span>
@@ -136,9 +145,9 @@
                 gap: 8px;
                 cursor: pointer;
                 padding: 8px;
-                border: 1px solid #e2e8f0;
+                border: 1px solid var(--semantic-color-border);
                 border-radius: 4px;
-                background-color: #f8fafc;
+                background-color: var(--semantic-color-surface-muted);
               "
             >
               <input
@@ -150,7 +159,13 @@
               />
               <div>
                 <strong>CLIENT_WIN (Force Client Overwrite)</strong>
-                <span style="display: block; font-size: 12px; color: #64748b">
+                <span
+                  style="
+                    display: block;
+                    font-size: 12px;
+                    color: var(--semantic-color-text-secondary);
+                  "
+                >
                   Force your offline changes onto the server. Requires explicit
                   clinical justification below.
                 </span>
@@ -165,9 +180,9 @@
                 gap: 8px;
                 cursor: pointer;
                 padding: 8px;
-                border: 1px solid #e2e8f0;
+                border: 1px solid var(--semantic-color-border);
                 border-radius: 4px;
-                background-color: #f8fafc;
+                background-color: var(--semantic-color-surface-muted);
               "
             >
               <input
@@ -179,7 +194,13 @@
               />
               <div>
                 <strong>MANUAL_REVIEW (Freeze & Query)</strong>
-                <span style="display: block; font-size: 12px; color: #64748b">
+                <span
+                  style="
+                    display: block;
+                    font-size: 12px;
+                    color: var(--semantic-color-text-secondary);
+                  "
+                >
                   Freeze this form row and flag it for Data Manager review
                   inside the queries panel.
                 </span>
@@ -205,7 +226,7 @@
               width: 100%;
               min-height: 80px;
               padding: 8px;
-              border: 1px solid #cbd5e1;
+              border: 1px solid var(--semantic-color-border-control);
               border-radius: 4px;
             "
             @input="clearError"
@@ -217,7 +238,11 @@
           v-if="validationError"
           id="conflict-error"
           class="validation-error-msg"
-          style="color: #ef4444; font-weight: 600; margin-top: 8px"
+          style="
+            color: var(--semantic-color-error);
+            font-weight: 600;
+            margin-top: 8px;
+          "
           role="status"
           aria-live="polite"
         >
@@ -238,7 +263,10 @@
           id="btn-cancel-conflict"
           class="btn touch-target-interactive"
           type="button"
-          style="background-color: #e2e8f0; color: #334155"
+          style="
+            background-color: var(--semantic-color-surface-header);
+            color: var(--semantic-color-text-body);
+          "
           @click="onCancel"
         >
           Cancel
@@ -247,7 +275,11 @@
           id="btn-confirm-conflict"
           class="btn btn-primary touch-target-interactive"
           type="button"
-          style="background-color: #f59e0b; border-color: #d97706; color: white"
+          style="
+            background-color: var(--semantic-color-warning-action);
+            border-color: var(--semantic-color-warning-border-strong);
+            color: white;
+          "
           @click="onConfirm"
         >
           Save Resolution

@@ -260,9 +260,9 @@ defineExpose({
 }
 
 .reauth-modal-card {
-  background: var(--surface, #ffffff);
+  background: var(--semantic-color-surface);
   border-radius: var(--radius-lg, 12px);
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border);
   box-shadow:
     0 20px 25px -5px rgba(0, 0, 0, 0.15),
     0 10px 10px -5px rgba(0, 0, 0, 0.08);
@@ -278,15 +278,15 @@ defineExpose({
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border, #e2e8f0);
-  background: var(--surface-subtle, #f8fafc);
+  border-bottom: 1px solid var(--border);
+  background: var(--semantic-color-surface-muted);
 }
 
 .modal-header h3 {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--text-primary, #0f172a);
+  color: var(--semantic-color-text);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -297,15 +297,15 @@ defineExpose({
   border: none;
   font-size: 1.5rem;
   line-height: 1;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
 }
 
 .close-btn:hover:not(:disabled) {
-  color: var(--text-primary, #0f172a);
-  background: var(--border, #e2e8f0);
+  color: var(--semantic-color-text);
+  background: var(--border);
 }
 
 .modal-body {
@@ -318,14 +318,14 @@ defineExpose({
 .modal-instructions {
   margin: 0;
   font-size: 0.875rem;
-  color: var(--text-secondary, #475569);
+  color: var(--semantic-color-text-secondary);
   line-height: 1.45;
 }
 
 .document-context-card {
   padding: 10px 12px;
-  background: var(--surface-subtle, #f8fafc);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm, 6px);
   display: flex;
   flex-direction: column;
@@ -336,13 +336,13 @@ defineExpose({
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   font-weight: 600;
 }
 
 .context-value {
   font-size: 0.875rem;
-  color: var(--text-primary, #0f172a);
+  color: var(--semantic-color-text);
   word-break: break-all;
 }
 
@@ -355,20 +355,20 @@ defineExpose({
 .form-group label {
   font-size: 0.85rem;
   font-weight: 500;
-  color: var(--text-primary, #1e293b);
+  color: var(--semantic-color-text);
 }
 
 .required-star {
-  color: var(--danger, #ef4444);
+  color: var(--semantic-color-error);
 }
 
 .form-control {
   padding: 9px 12px;
   font-size: 0.9rem;
-  border: 1px solid var(--border, #cbd5e1);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
-  background: var(--surface, #ffffff);
-  color: var(--text-primary, #0f172a);
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
@@ -376,13 +376,13 @@ defineExpose({
 
 .form-control:focus {
   outline: none;
-  border-color: var(--primary, #2563eb);
+  border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .form-control:disabled {
-  background: var(--surface-subtle, #f1f5f9);
-  color: var(--text-muted, #94a3b8);
+  background: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-secondary);
   cursor: not-allowed;
 }
 
@@ -397,9 +397,9 @@ defineExpose({
 }
 
 .error-box {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border-soft);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .modal-footer {
@@ -408,8 +408,8 @@ defineExpose({
   justify-content: flex-end;
   gap: 12px;
   padding: 14px 20px;
-  border-top: 1px solid var(--border, #e2e8f0);
-  background: var(--surface-subtle, #f8fafc);
+  border-top: 1px solid var(--border);
+  background: var(--semantic-color-surface-muted);
 }
 
 .btn {
@@ -432,23 +432,23 @@ defineExpose({
 }
 
 .btn-secondary {
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #cbd5e1);
-  color: var(--text-primary, #334155);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--border);
+  color: var(--semantic-color-text);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: var(--surface-hover, #f8fafc);
-  border-color: #94a3b8;
+  background: var(--semantic-color-surface-header);
+  border-color: var(--semantic-color-border-control);
 }
 
 .btn-primary {
-  background: var(--primary, #2563eb);
-  border: 1px solid var(--primary, #2563eb);
-  color: #ffffff;
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  color: var(--semantic-color-surface);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--primary-hover, #1d4ed8);
+  background: var(--semantic-color-interactive-primary-hover);
 }
 </style>

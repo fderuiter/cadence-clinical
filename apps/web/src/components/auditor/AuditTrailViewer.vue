@@ -33,8 +33,8 @@
               padding: 8px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--bg);
-              color: var(--text);
+              background: var(--semantic-color-surface-muted);
+              color: var(--semantic-color-text);
             "
             @input="onFilterChange"
           />
@@ -63,8 +63,8 @@
               padding: 8px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--bg);
-              color: var(--text);
+              background: var(--semantic-color-surface-muted);
+              color: var(--semantic-color-text);
             "
             @change="onFilterChange"
           >
@@ -101,8 +101,8 @@
               padding: 8px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--bg);
-              color: var(--text);
+              background: var(--semantic-color-surface-muted);
+              color: var(--semantic-color-text);
             "
             @change="onDateChange"
           />
@@ -132,8 +132,8 @@
               padding: 8px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--bg);
-              color: var(--text);
+              background: var(--semantic-color-surface-muted);
+              color: var(--semantic-color-text);
             "
             @change="onDateChange"
           />
@@ -150,7 +150,7 @@
         <thead>
           <tr
             style="
-              background: var(--bg);
+              background: var(--semantic-color-surface-muted);
               border-bottom: 1px solid var(--border);
               text-align: left;
             "
@@ -171,7 +171,7 @@
               style="
                 padding: 24px;
                 text-align: center;
-                color: var(--text-muted);
+                color: var(--semantic-color-text-secondary);
                 font-style: italic;
               "
             >
@@ -189,7 +189,7 @@
                 padding: 12px 16px;
                 font-family: monospace;
                 font-size: 12px;
-                color: var(--text-muted);
+                color: var(--semantic-color-text-secondary);
               "
             >
               {{ formatTimestamp(event.timestamp) }}
@@ -220,7 +220,7 @@
                   border-radius: 2px;
                   font-size: 11px;
                   margin-bottom: 6px;
-                  color: var(--text);
+                  color: var(--semantic-color-text);
                 "
               >
                 <strong>Reason:</strong>

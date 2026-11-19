@@ -797,7 +797,7 @@ watch(dirty, (value) => emit("dirty-change", value));
 }
 .ecrf-form-hint {
   font-size: 0.85rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 .ecrf-form-row {
   display: flex;
@@ -838,18 +838,18 @@ watch(dirty, (value) => emit("dirty-change", value));
   vertical-align: top;
 }
 .ecrf-required {
-  color: #b91c1c;
+  color: var(--semantic-color-error);
   text-decoration: none;
   margin-left: 2px;
 }
 .ecrf-item-concept,
 .ecrf-item-revision {
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-size: 0.75rem;
 }
 .ecrf-item-unit {
   margin-left: 4px;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 .ecrf-item-queries {
   display: flex;
@@ -860,33 +860,33 @@ watch(dirty, (value) => emit("dirty-change", value));
 .ecrf-query-badge {
   padding: 0 8px;
   border-radius: 999px;
-  background-color: #fffbeb;
-  color: #92400e;
+  background-color: var(--semantic-color-warning-bg-soft);
+  color: var(--semantic-color-warning-dark);
   font-size: 0.75rem;
   font-weight: 600;
 }
 .ecrf-query-changed {
-  color: #1d4ed8;
+  color: var(--semantic-color-interactive-primary);
   font-size: 0.75rem;
   font-weight: 600;
 }
 .ecrf-item-edited {
-  background-color: #fffbeb;
+  background-color: var(--semantic-color-warning-bg-soft);
 }
 .ecrf-form-error {
-  color: #b91c1c;
+  color: var(--semantic-color-error);
   font-size: 0.8rem;
   margin: 2px 0 0;
 }
 .ecrf-form-complete {
-  color: #166534;
+  color: var(--semantic-color-success-dark);
   font-weight: 600;
 }
 .ecrf-form-incomplete {
-  color: #92400e;
+  color: var(--semantic-color-warning-dark);
 }
 .ecrf-form-locks {
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px 12px;
@@ -924,21 +924,21 @@ watch(dirty, (value) => emit("dirty-change", value));
   padding: 8px 12px;
 }
 .ecrf-signature--superseded {
-  background-color: #f8fafc;
-  color: #475569;
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-secondary);
 }
 .ecrf-signature-state {
   margin-left: 8px;
   padding: 0 8px;
   border-radius: 999px;
-  background-color: #f0fdf4;
-  color: #166534;
+  background-color: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success-dark);
   font-size: 0.75rem;
   font-weight: 600;
 }
 .ecrf-signature-state--superseded {
-  background-color: #fffbeb;
-  color: #92400e;
+  background-color: var(--semantic-color-warning-bg-soft);
+  color: var(--semantic-color-warning-dark);
 }
 .ecrf-signed-values {
   margin-top: 6px;
@@ -957,17 +957,17 @@ watch(dirty, (value) => emit("dirty-change", value));
   text-align: left;
 }
 .ecrf-signed-changed {
-  background-color: #fffbeb;
+  background-color: var(--semantic-color-warning-bg-soft);
 }
 .ecrf-form-outcome--saved {
-  background-color: #f0fdf4;
-  color: #166534;
+  background-color: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success-dark);
 }
 .ecrf-form-outcome--stale,
 .ecrf-form-outcome--invalid,
 .ecrf-form-outcome--locked,
 .ecrf-form-outcome--failed {
-  background-color: #fef2f2;
-  color: #991b1b;
+  background-color: var(--semantic-color-error-bg-soft);
+  color: var(--semantic-color-error-text-dark);
 }
 </style>

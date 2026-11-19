@@ -38,9 +38,9 @@
           style="
             padding: 6px 12px;
             border-radius: 4px;
-            border: 1px solid var(--border-color);
-            background: var(--bg-color);
-            color: var(--text-color);
+            border: 1px solid var(--semantic-color-border-control);
+            background: var(--semantic-color-surface);
+            color: var(--semantic-color-text);
           "
         >
           <option value="en">English (en)</option>
@@ -88,7 +88,7 @@
       <div class="card" style="margin-bottom: 24px">
         <h3
           id="consent-template-title"
-          style="margin-top: 0; color: var(--primary-color)"
+          style="margin-top: 0; color: var(--semantic-color-primary)"
         >
           Informed Consent Form
         </h3>
@@ -97,7 +97,7 @@
           style="
             font-size: 12px;
             color: var(--text-muted);
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--semantic-color-border);
             padding-bottom: 12px;
             margin-bottom: 16px;
           "
@@ -200,11 +200,11 @@
         <div
           id="liveness-camera-simulator"
           style="
-            border: 2px dashed var(--border-color);
+            border: 2px dashed var(--semantic-color-border-control);
             border-radius: 8px;
             padding: 24px;
             text-align: center;
-            background: rgba(0, 0, 0, 0.02);
+            background: var(--semantic-color-surface-muted);
             margin-bottom: 16px;
           "
         >
@@ -237,8 +237,8 @@
             type="button"
             class="btn btn-secondary"
             style="
-              border: 1px solid var(--border-color);
-              background: transparent;
+              border: 1px solid var(--semantic-color-border-control);
+              background: var(--semantic-color-surface);
             "
           >
             Study Coordinator Video Fallback

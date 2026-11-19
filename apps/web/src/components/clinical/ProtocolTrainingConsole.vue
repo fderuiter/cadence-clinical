@@ -373,10 +373,9 @@
             <p class="cert-lead">
               This certifies that
               <strong>{{ activeAssignment?.user_name }}</strong> (ID:
-              <code>{{ activeAssignment?.user_id }}</code
-              >), acting in the capacity of
-              <strong>{{ activeAssignment?.user_role }}</strong
-              >, has successfully fulfilled all mandatory protocol curriculum
+              <code>{{ activeAssignment?.user_id }}</code>), acting in the
+              capacity of <strong>{{ activeAssignment?.user_role }}</strong>,
+              has successfully fulfilled all mandatory protocol curriculum
               requirements and demonstrated mastery under:
             </p>
 
@@ -392,8 +391,7 @@
                   <td>Study &amp; Site:</td>
                   <td>
                     Study <code>{{ activeAssignment?.study_id }}</code> (Site:
-                    <code>{{ activeAssignment?.site_id }}</code
-                    >)
+                    <code>{{ activeAssignment?.site_id }}</code>)
                   </td>
                 </tr>
                 <tr>
@@ -657,18 +655,19 @@
                     />
                   </td>
                   <td>
-                    <strong>{{ del.staff_name }}</strong
-                    ><br /><small class="text-muted">{{
-                      del.staff_user_id
-                    }}</small>
+                    <strong>{{ del.staff_name }}</strong><br /><small
+                      class="text-muted"
+                      >{{ del.staff_user_id }}</small
+                    >
                   </td>
                   <td>
                     <span class="badge badge-role">{{ del.role }}</span>
                   </td>
                   <td>{{ del.site_id }}</td>
                   <td>
-                    <strong>{{ del.task_code }}</strong
-                    ><br /><small>{{ del.duties }}</small>
+                    <strong>{{ del.task_code }}</strong><br /><small>{{
+                      del.duties
+                    }}</small>
                   </td>
                   <td>
                     <span
@@ -1335,8 +1334,8 @@ onUnmounted(() => {
 <style scoped>
 .training-console-card {
   padding: var(--spacing-lg, 24px);
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md, 8px);
   display: flex;
   flex-direction: column;
@@ -1348,7 +1347,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--border);
   padding-bottom: var(--spacing-md, 16px);
 }
 
@@ -1360,39 +1359,39 @@ onUnmounted(() => {
 }
 
 .badge-gxp {
-  background: #f1f5f9;
-  color: #334155;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
   font-weight: 700;
 }
 
 .badge-regulatory {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
   font-weight: 600;
 }
 
 .badge-locked {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-text-dark);
   font-weight: 700;
 }
 
 .badge-unlocked {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
   font-weight: 700;
 }
 
 .console-title {
   font-size: 1.35rem;
   font-weight: 700;
-  color: var(--text-primary, #0f172a);
+  color: var(--semantic-color-text);
   margin: 0 0 4px 0;
 }
 
 .console-subtitle {
   font-size: 0.9rem;
-  color: var(--text-secondary, #64748b);
+  color: var(--semantic-color-text-secondary);
   margin: 0;
 }
 
@@ -1401,18 +1400,18 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  background: var(--surface-secondary, #f8fafc);
+  background: var(--semantic-color-surface-header);
   padding: 12px 16px;
   border-radius: var(--radius-sm, 6px);
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border);
   flex-wrap: wrap;
 }
 
 .select-input {
   padding: 8px 12px;
-  border: 1px solid var(--border, #cbd5e1);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm, 4px);
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   font-size: 0.9rem;
   min-width: 320px;
 }
@@ -1425,15 +1424,15 @@ onUnmounted(() => {
 .summary-chip {
   display: flex;
   flex-direction: column;
-  background: #ffffff;
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   padding: 4px 10px;
   border-radius: 4px;
 }
 
 .chip-label {
   font-size: 0.75rem;
-  color: var(--text-secondary, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 
 .chip-value {
@@ -1442,25 +1441,25 @@ onUnmounted(() => {
 }
 
 .status-completed {
-  color: #15803d;
+  color: var(--semantic-color-success);
 }
 
 .status-in_progress {
-  color: #0369a1;
+  color: var(--semantic-color-primary);
 }
 
 .status-pending {
-  color: #b45309;
+  color: var(--semantic-color-warning);
 }
 
 .status-failed {
-  color: #b91c1c;
+  color: var(--semantic-color-error);
 }
 
 .tab-bar {
   display: flex;
   gap: 8px;
-  border-bottom: 2px solid var(--border, #e2e8f0);
+  border-bottom: 2px solid var(--border);
   margin-bottom: 16px;
 }
 
@@ -1471,14 +1470,14 @@ onUnmounted(() => {
   border-bottom: 2px solid transparent;
   font-weight: 600;
   font-size: 0.95rem;
-  color: var(--text-secondary, #64748b);
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
   margin-bottom: -2px;
 }
 
 .tab-btn.active {
-  color: var(--primary, #2563eb);
-  border-bottom-color: var(--primary, #2563eb);
+  color: var(--primary);
+  border-bottom-color: var(--primary);
 }
 
 .modules-layout {
@@ -1488,14 +1487,14 @@ onUnmounted(() => {
 }
 
 .module-sidebar {
-  border-right: 1px solid var(--border, #e2e8f0);
+  border-right: 1px solid var(--border);
   padding-right: 16px;
 }
 
 .sidebar-heading {
   font-size: 0.9rem;
   text-transform: uppercase;
-  color: var(--text-secondary, #64748b);
+  color: var(--semantic-color-text-secondary);
   margin-top: 0;
   margin-bottom: 10px;
 }
@@ -1521,17 +1520,17 @@ onUnmounted(() => {
 }
 
 .module-item:hover {
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
 }
 
 .module-item.active {
-  background: #eff6ff;
-  border-color: #bfdbfe;
+  background: var(--semantic-color-info-bg);
+  border-color: var(--semantic-color-info-border);
 }
 
 .module-num {
   font-weight: 700;
-  color: var(--primary, #2563eb);
+  color: var(--primary);
 }
 
 .module-meta {
@@ -1551,13 +1550,13 @@ onUnmounted(() => {
 }
 
 .badge-mod-procedure_delta {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
 }
 
 .badge-mod-protocol_overview {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
 }
 
 .module-reader {
@@ -1569,7 +1568,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--border);
   padding-bottom: 12px;
   margin-bottom: 16px;
 }
@@ -1584,10 +1583,10 @@ onUnmounted(() => {
   font-family: inherit;
   font-size: 0.95rem;
   line-height: 1.6;
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   padding: 16px;
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--semantic-color-border);
 }
 
 .reader-footer {
@@ -1601,8 +1600,8 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   padding: 16px;
   border-radius: 6px;
   margin-bottom: 20px;
@@ -1615,15 +1614,15 @@ onUnmounted(() => {
 }
 
 .score-passed {
-  background: #dcfce7;
-  color: #166534;
-  border: 1px solid #86efac;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
+  border: 1px solid var(--semantic-color-success-border);
 }
 
 .score-failed {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fca5a5;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-text-dark);
+  border: 1px solid var(--semantic-color-error-border);
 }
 
 .score-number {
@@ -1637,8 +1636,8 @@ onUnmounted(() => {
 }
 
 .quiz-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   padding: 16px;
   margin-bottom: 16px;
@@ -1661,34 +1660,34 @@ onUnmounted(() => {
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .option-item.selected {
-  background: #eff6ff;
-  border-color: #3b82f6;
+  background: var(--semantic-color-info-bg);
+  border-color: var(--semantic-color-interactive-primary);
 }
 
 .option-item.correct {
-  background: #dcfce7;
-  border-color: #22c55e;
+  background: var(--semantic-color-success-bg);
+  border-color: var(--semantic-color-success);
 }
 
 .option-item.incorrect {
-  background: #fee2e2;
-  border-color: #ef4444;
+  background: var(--semantic-color-error-bg);
+  border-color: var(--semantic-color-error);
 }
 
 .rationale-box {
   margin-top: 10px;
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   padding: 8px 12px;
   border-radius: 4px;
   font-size: 0.85rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 .quiz-actions-bar {
@@ -1700,8 +1699,8 @@ onUnmounted(() => {
 
 /* Certificate Styles */
 .certificate-paper {
-  background: #ffffff;
-  border: 2px solid #94a3b8;
+  background: var(--semantic-color-surface);
+  border: 2px solid var(--semantic-color-border-control);
   padding: 32px;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -1709,7 +1708,7 @@ onUnmounted(() => {
 
 .cert-header {
   text-align: center;
-  border-bottom: 2px solid #0f172a;
+  border-bottom: 2px solid var(--semantic-color-text);
   padding-bottom: 16px;
   margin-bottom: 24px;
 }
@@ -1718,19 +1717,19 @@ onUnmounted(() => {
   font-size: 0.85rem;
   font-weight: 700;
   letter-spacing: 1px;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .cert-title {
   font-size: 1.6rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--semantic-color-text);
   margin: 6px 0;
 }
 
 .cert-subtitle {
   font-size: 0.85rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 .cert-lead {
@@ -1746,13 +1745,13 @@ onUnmounted(() => {
 
 .cert-table td {
   padding: 8px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   font-size: 0.9rem;
 }
 
 .cert-signature-manifest {
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
+  background: var(--semantic-color-surface-header);
+  border: 1px solid var(--semantic-color-border-control);
   padding: 14px;
   border-radius: 6px;
   margin-top: 20px;
@@ -1782,8 +1781,8 @@ onUnmounted(() => {
   font-weight: 600;
   padding: 6px 12px;
   border-radius: 4px;
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border-control);
 }
 
 /* Modal */
@@ -1801,7 +1800,7 @@ onUnmounted(() => {
 }
 
 .modal-card {
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   width: 520px;
   max-width: 90vw;
   border-radius: 8px;
@@ -1825,7 +1824,7 @@ onUnmounted(() => {
 
 .modal-description {
   font-size: 0.85rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   line-height: 1.4;
   margin-bottom: 16px;
 }
@@ -1833,20 +1832,20 @@ onUnmounted(() => {
 .text-input {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   margin-top: 4px;
   font-size: 0.9rem;
 }
 
 .statement-box {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   padding: 10px 12px;
   border-radius: 4px;
   font-style: italic;
   font-size: 0.85rem;
-  color: #334155;
+  color: var(--semantic-color-text-body);
   margin-top: 4px;
 }
 
@@ -1862,9 +1861,9 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: #fef2f2;
-  border: 1px solid #fca5a5;
-  color: #991b1b;
+  background-color: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border);
+  color: var(--semantic-color-error-text-dark);
   padding: 12px 16px;
   border-radius: var(--radius-sm, 6px);
   gap: 12px;
@@ -1894,12 +1893,12 @@ onUnmounted(() => {
 
 .banner-message {
   font-size: 0.85rem;
-  color: #7f1d1d;
+  color: var(--semantic-color-error-text-deep);
 }
 
 .btn-retry {
-  background-color: #dc2626;
-  color: #ffffff;
+  background-color: var(--semantic-color-error);
+  color: var(--semantic-color-surface);
   border: none;
   padding: 6px 14px;
   border-radius: 4px;
@@ -1909,7 +1908,7 @@ onUnmounted(() => {
 }
 
 .btn-retry:hover:not(:disabled) {
-  background-color: #b91c1c;
+  background-color: var(--semantic-color-error);
 }
 
 .btn-retry:disabled {
@@ -1928,8 +1927,8 @@ onUnmounted(() => {
 .batch-card,
 .delegations-card {
   padding: 20px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -1938,7 +1937,7 @@ onUnmounted(() => {
 
 .section-desc {
   font-size: 0.9rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin-top: 4px;
 }
 
@@ -1946,16 +1945,16 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   padding: 16px;
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--semantic-color-border);
 }
 
 .filter-title {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
   margin-bottom: 8px;
   display: block;
 }
@@ -1971,7 +1970,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 0.85rem;
-  color: #334155;
+  color: var(--semantic-color-text-body);
   cursor: pointer;
 }
 
@@ -1979,8 +1978,8 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-info-border);
   padding: 12px 16px;
   border-radius: 6px;
 }
@@ -1990,13 +1989,13 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   font-size: 0.9rem;
-  color: #1e3a8a;
+  color: var(--semantic-color-info);
 }
 
 .badge-error {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fca5a5;
+  background: var(--semantic-color-error-bg-soft);
+  color: var(--semantic-color-error-text-dark);
+  border: 1px solid var(--semantic-color-error-border);
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -2004,8 +2003,8 @@ onUnmounted(() => {
 }
 
 .batch-result-card {
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border-control);
   padding: 16px;
   border-radius: 6px;
 }
@@ -2031,16 +2030,16 @@ onUnmounted(() => {
 }
 
 .success-pill {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 .warning-pill {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
 }
 .info-pill {
-  background: #e0f2fe;
-  color: #075985;
+  background: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary-dark);
 }
 
 .skipped-table-wrapper {
@@ -2058,14 +2057,14 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--semantic-color-border);
 }
 
 .seal-hash {
-  background: #f1f5f9;
-  color: #0284c7;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-primary);
   padding: 2px 6px;
   border-radius: 4px;
   font-family: monospace;
@@ -2073,8 +2072,8 @@ onUnmounted(() => {
 }
 
 .badge-role {
-  background: #f1f5f9;
-  color: #334155;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
   font-size: 0.75rem;
 }
 </style>

@@ -57,7 +57,7 @@
           :style="
             activeTab === 'rules'
               ? 'background-color: var(--primary); color: white;'
-              : 'background-color: rgba(226, 232, 240, 1); color: #475569;'
+              : 'background-color: rgba(226, 232, 240, 1); color: var(--semantic-color-text-secondary);'
           "
           @click="activeTab = 'rules'"
         >
@@ -68,7 +68,7 @@
           :style="
             activeTab === 'queries'
               ? 'background-color: var(--primary); color: white;'
-              : 'background-color: rgba(226, 232, 240, 1); color: #475569;'
+              : 'background-color: rgba(226, 232, 240, 1); color: var(--semantic-color-text-secondary);'
           "
           @click="activeTab = 'queries'"
         >
@@ -95,7 +95,11 @@
             <span>Study Active Ruleset</span>
             <span
               v-if="loadingRules"
-              style="font-size: 0.85rem; color: #64748b; font-weight: normal"
+              style="
+                font-size: 0.85rem;
+                color: var(--semantic-color-text-secondary);
+                font-weight: normal;
+              "
               >Loading...</span
             >
           </div>
@@ -129,7 +133,7 @@
             <div
               v-if="activeRules.length === 0"
               style="
-                color: #64748b;
+                color: var(--semantic-color-text-secondary);
                 font-style: italic;
                 padding: 12px 0;
                 text-align: center;
@@ -229,7 +233,7 @@
                   style="
                     font-family: monospace;
                     font-size: 0.75rem;
-                    color: #0284c7;
+                    color: var(--semantic-color-primary);
                     background-color: rgb(240, 249, 255);
                     padding: 6px 10px;
                     border-radius: 4px;
@@ -327,7 +331,7 @@
                 </div>
                 <div
                   style="
-                    color: #0369a1;
+                    color: var(--semantic-color-primary);
                     margin-bottom: 12px;
                     word-break: break-all;
                     min-height: 1.5em;
@@ -438,7 +442,13 @@
             </button>
           </div>
         </div>
-        <p style="font-size: 0.85rem; color: #475569; margin-bottom: 16px">
+        <p
+          style="
+            font-size: 0.85rem;
+            color: var(--semantic-color-text-secondary);
+            margin-bottom: 16px;
+          "
+        >
           Review, manage, and audit clinical query states (OPEN, ANSWERED,
           REOPENED, CLOSED) across all trial subjects.
         </p>
@@ -446,7 +456,7 @@
         <!-- Coding Dictionary Lookup Area -->
         <div
           style="
-            background-color: #f8fafc;
+            background-color: var(--semantic-color-surface-muted);
             border: 1px solid var(--border);
             border-radius: 8px;
             padding: 16px;
@@ -485,7 +495,13 @@
               Search Dictionary
             </button>
           </div>
-          <div v-if="dictSearching || codingStore.isSearching" style="font-size: 0.8rem; color: #64748b">
+          <div
+            v-if="dictSearching || codingStore.isSearching"
+            style="
+              font-size: 0.8rem;
+              color: var(--semantic-color-text-secondary);
+            "
+          >
             Querying dictionaries...
           </div>
           <div
@@ -496,7 +512,7 @@
               background-color: var(--error-bg);
               border-left: 4px solid var(--error);
               border-radius: 4px;
-              color: var(--error-text, #991b1b);
+              color: var(--semantic-color-error);
               font-size: 0.85rem;
               margin-bottom: 8px;
             "
@@ -635,7 +651,7 @@
                   "
                   style="
                     font-size: 0.65rem;
-                    color: #8b5cf6;
+                    color: var(--semantic-color-ai);
                     font-weight: bold;
                     margin-top: 2px;
                   "
@@ -654,15 +670,25 @@
                 <div><strong>Query:</strong> {{ q.message }}</div>
                 <div
                   v-if="q.explanation && q.explanation !== q.message"
-                  style="font-size: 0.8rem; color: #64748b; margin-top: 2px"
+                  style="
+                    font-size: 0.8rem;
+                    color: var(--semantic-color-text-secondary);
+                    margin-top: 2px;
+                  "
                 >
                   <em>Details:</em> {{ q.explanation }}
                 </div>
-                <div v-if="q.response" style="color: #0369a1; margin-top: 4px">
+                <div
+                  v-if="q.response"
+                  style="color: var(--semantic-color-primary); margin-top: 4px"
+                >
                   <strong>Response:</strong> "{{ q.response }}" (Responded by:
                   {{ q.respondedBy }} on {{ q.respondedAt }})
                 </div>
-                <div v-if="q.closedBy" style="color: #15803d; margin-top: 4px">
+                <div
+                  v-if="q.closedBy"
+                  style="color: var(--semantic-color-success); margin-top: 4px"
+                >
                   <strong>Closed:</strong> by {{ q.closedBy }} on
                   {{ q.closedAt }}
                 </div>

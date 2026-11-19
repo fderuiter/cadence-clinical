@@ -15,7 +15,7 @@
         align-items: center;
         flex-wrap: wrap;
         gap: var(--spacing-sm);
-        background-color: #f8fafc;
+        background-color: var(--semantic-color-surface-muted);
         border: 1px solid var(--border);
         border-radius: 8px;
         padding: 12px 16px;
@@ -172,7 +172,13 @@
         >
           <div>
             <div class="card-title">{{ $t("ecrf.cdashTitle") }}</div>
-            <p style="font-size: 0.85rem; color: #475569; margin-bottom: 8px">
+            <p
+              style="
+                font-size: 0.85rem;
+                color: var(--semantic-color-text-secondary);
+                margin-bottom: 8px;
+              "
+            >
               {{ $t("ecrf.cdashDesc") }}
             </p>
           </div>
@@ -182,7 +188,7 @@
               border: 1px solid var(--border);
               border-radius: 8px;
               padding: 12px;
-              background-color: #f8fafc;
+              background-color: var(--semantic-color-surface-muted);
             "
           >
             <h3
@@ -199,7 +205,7 @@
               style="
                 font-size: 0.8rem;
                 padding-left: 20px;
-                color: #475569;
+                color: var(--semantic-color-text-secondary);
                 display: flex;
                 flex-direction: column;
                 gap: 6px;
@@ -225,7 +231,7 @@
               border: 1px solid var(--border);
               border-radius: 8px;
               padding: 12px;
-              background-color: #f8fafc;
+              background-color: var(--semantic-color-surface-muted);
             "
           >
             <h3
@@ -238,7 +244,13 @@
             >
               {{ $t("ecrf.queryManagementTitle") }}
             </h3>
-            <p style="font-size: 0.8rem; color: #475569; line-height: 1.4">
+            <p
+              style="
+                font-size: 0.8rem;
+                color: var(--semantic-color-text-secondary);
+                line-height: 1.4;
+              "
+            >
               {{ $t("ecrf.queryManagementDesc") }}
             </p>
           </div>

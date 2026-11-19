@@ -321,8 +321,8 @@ onMounted(() => {
     var(--drawer-width-sm, min(100vw, 440px))
   );
   max-width: 100vw;
-  background-color: var(--surface, #ffffff);
-  border-left: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface);
+  border-left: 1px solid var(--border);
   box-shadow: -4px 0 16px rgba(0, 0, 0, 0.08);
   z-index: 1000;
   display: flex;
@@ -340,8 +340,8 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  background-color: var(--surface-subtle, #f8fafc);
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface-muted);
+  border-bottom: 1px solid var(--border);
 }
 
 .drawer-title {
@@ -353,7 +353,7 @@ onMounted(() => {
 .drawer-title h3 {
   margin: 0;
   font-size: 1.05rem;
-  color: var(--text-primary, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .btn-close {
@@ -361,14 +361,14 @@ onMounted(() => {
   border: none;
   font-size: 1.2rem;
   cursor: pointer;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   border-radius: 4px;
   padding: 4px 8px;
 }
 
 .btn-close:hover {
-  background-color: var(--surface-hover, #f1f5f9);
-  color: var(--text-primary, #0f172a);
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text);
 }
 
 .drawer-body {
@@ -387,8 +387,8 @@ onMounted(() => {
 }
 
 .metric-card {
-  background-color: var(--surface-subtle, #f8fafc);
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md, 8px);
   padding: 12px;
   display: flex;
@@ -400,7 +400,7 @@ onMounted(() => {
   font-size: 0.75rem;
   text-transform: uppercase;
   font-weight: 600;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 
 .metric-value-row {
@@ -412,12 +412,12 @@ onMounted(() => {
 .metric-value {
   font-size: 1.4rem;
   font-weight: 700;
-  color: var(--text-primary, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .metric-sub {
   font-size: 0.75rem;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 
 .badge {
@@ -428,18 +428,18 @@ onMounted(() => {
 }
 
 .badge-success {
-  background-color: var(--success-bg, #dcfce7);
-  color: var(--success, #15803d);
+  background-color: var(--success-bg);
+  color: var(--success);
 }
 
 .badge-warning {
-  background-color: var(--warning-bg, #fef9c3);
-  color: var(--warning, #a16207);
+  background-color: var(--warning-bg);
+  color: var(--warning);
 }
 
 .badge-info {
-  background-color: var(--accent-bg, #e0f2fe);
-  color: var(--accent, #0369a1);
+  background-color: var(--accent-bg);
+  color: var(--accent);
 }
 
 .action-bar {
@@ -458,22 +458,22 @@ onMounted(() => {
 }
 
 .btn-secondary {
-  background-color: var(--surface-subtle, #f8fafc);
-  border-color: var(--border, #cbd5e1);
-  color: var(--text-primary, #334155);
+  background-color: var(--semantic-color-surface-muted);
+  border-color: var(--border);
+  color: var(--semantic-color-text);
 }
 
 .btn-secondary:hover {
-  background-color: var(--surface-hover, #f1f5f9);
+  background-color: var(--semantic-color-surface-header);
 }
 
 .btn-primary {
-  background-color: var(--primary, #2563eb);
-  color: #ffffff;
+  background-color: var(--primary);
+  color: var(--semantic-color-surface);
 }
 
 .btn-primary:hover {
-  background-color: var(--primary-dark, #1d4ed8);
+  background-color: var(--semantic-color-primary-dark);
 }
 
 .suggestions-section {
@@ -491,12 +491,12 @@ onMounted(() => {
 .section-title-row h4 {
   margin: 0;
   font-size: 0.9rem;
-  color: var(--text-primary, #1e293b);
+  color: var(--semantic-color-text);
 }
 
 .count-badge {
-  background-color: var(--primary-subtle, #eff6ff);
-  color: var(--primary, #2563eb);
+  background-color: var(--semantic-color-info-bg);
+  color: var(--primary);
   font-size: 0.75rem;
   padding: 2px 8px;
   border-radius: 10px;
@@ -506,11 +506,11 @@ onMounted(() => {
 .empty-state {
   padding: 24px;
   text-align: center;
-  background-color: var(--surface-subtle, #f8fafc);
-  border: 1px dashed var(--border, #cbd5e1);
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px dashed var(--border);
   border-radius: 8px;
   font-size: 0.85rem;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 
 .substitutions-list {
@@ -520,8 +520,8 @@ onMounted(() => {
 }
 
 .substitution-card {
-  background-color: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md, 8px);
   padding: 12px;
   display: flex;
@@ -536,21 +536,21 @@ onMounted(() => {
 }
 
 .category-tag {
-  background-color: var(--surface-subtle, #f1f5f9);
+  background-color: var(--semantic-color-surface-muted);
   padding: 2px 6px;
   border-radius: 4px;
-  color: var(--text-muted, #475569);
+  color: var(--semantic-color-text-secondary);
 }
 
 .confidence-tag {
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 
 .diff-view {
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: var(--surface-subtle, #f8fafc);
+  background-color: var(--semantic-color-surface-muted);
   padding: 8px;
   border-radius: 6px;
 }
@@ -570,41 +570,41 @@ onMounted(() => {
 }
 
 .diff-tag.del {
-  color: var(--error, #dc2626);
+  color: var(--error);
 }
 
 .diff-tag.ins {
-  color: var(--success, #16a34a);
+  color: var(--success);
 }
 
 .diff-text.del-text {
   font-size: 0.85rem;
   text-decoration: line-through;
-  color: var(--error, #dc2626);
+  color: var(--error);
 }
 
 .diff-text.ins-text {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--success, #16a34a);
+  color: var(--success);
 }
 
 .arrow {
-  color: var(--text-muted, #94a3b8);
+  color: var(--semantic-color-text-secondary);
   font-size: 0.9rem;
 }
 
 .rationale-text {
   font-size: 0.8rem;
-  color: var(--text-secondary, #475569);
+  color: var(--semantic-color-text-secondary);
   margin: 0;
   line-height: 1.4;
 }
 
 .btn-apply-single {
   background-color: transparent;
-  border: 1px solid var(--primary, #2563eb);
-  color: var(--primary, #2563eb);
+  border: 1px solid var(--primary);
+  color: var(--primary);
   padding: 4px 10px;
   border-radius: 4px;
   font-size: 0.8rem;
@@ -614,13 +614,13 @@ onMounted(() => {
 }
 
 .btn-apply-single:hover {
-  background-color: var(--primary, #2563eb);
-  color: #ffffff;
+  background-color: var(--primary);
+  color: var(--semantic-color-surface);
 }
 
 .btn-success {
-  background-color: var(--success, #16a34a);
-  color: #ffffff;
+  background-color: var(--success);
+  color: var(--semantic-color-surface);
   padding: 10px;
   font-weight: 600;
   border-radius: 6px;
@@ -629,7 +629,7 @@ onMounted(() => {
 }
 
 .btn-success:hover {
-  background-color: #15803d;
+  background-color: var(--semantic-color-success);
 }
 
 .btn-block {
@@ -637,7 +637,7 @@ onMounted(() => {
 }
 
 .audit-link-section {
-  border-top: 1px solid var(--border, #e2e8f0);
+  border-top: 1px solid var(--border);
   padding-top: 16px;
   display: flex;
   flex-direction: column;
@@ -647,7 +647,7 @@ onMounted(() => {
 .audit-link-section h4 {
   margin: 0;
   font-size: 0.85rem;
-  color: var(--text-primary, #334155);
+  color: var(--semantic-color-text);
 }
 
 .form-group {
@@ -658,17 +658,17 @@ onMounted(() => {
 
 .form-group label {
   font-size: 0.75rem;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   font-weight: 500;
 }
 
 .form-control {
-  border: 1px solid var(--border, #cbd5e1);
+  border: 1px solid var(--border);
   border-radius: 4px;
   padding: 6px 10px;
   font-size: 0.85rem;
-  background-color: var(--surface, #ffffff);
-  color: var(--text-primary, #0f172a);
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   max-width: 100%;
 }
 

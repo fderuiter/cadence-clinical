@@ -24,10 +24,18 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
-    command: "pnpm --filter subject-portal dev",
-    url: "http://localhost:5174/subject-portal/",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-  },
+  webServer: [
+    {
+      command: "pnpm --filter subject-portal dev",
+      url: "http://localhost:5174/subject-portal/",
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+    },
+    {
+      command: "pnpm --filter subject-portal exec vite --mode demo --port 5175",
+      url: "http://localhost:5175/subject-portal/",
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+    },
+  ],
 });

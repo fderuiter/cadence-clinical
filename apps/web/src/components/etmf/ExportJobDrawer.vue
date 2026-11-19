@@ -216,7 +216,7 @@ function formatDate(dt) {
   width: 480px;
   max-width: 90vw;
   height: 100%;
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
@@ -225,8 +225,8 @@ function formatDate(dt) {
 
 .drawer-header {
   padding: 16px 20px;
-  background: var(--bg-surface, #f8fafc);
-  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  background: var(--semantic-color-surface);
+  border-bottom: 1px solid var(--semantic-color-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -246,28 +246,28 @@ function formatDate(dt) {
   margin: 0;
   font-size: 16px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .drawer-subtitle {
   margin: 2px 0 0 0;
   font-size: 11px;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .btn-close-drawer {
   background: transparent;
   border: none;
   font-size: 18px;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
 }
 
 .btn-close-drawer:hover {
-  background: #e2e8f0;
-  color: #0f172a;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text);
 }
 
 .drawer-body {
@@ -280,8 +280,8 @@ function formatDate(dt) {
 }
 
 .active-job-card {
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 8px;
   padding: 16px;
 }
@@ -296,15 +296,15 @@ function formatDate(dt) {
   font-family: monospace;
   font-weight: 700;
   font-size: 13px;
-  background: #e2e8f0;
+  background: var(--semantic-color-surface-header);
   padding: 2px 6px;
   border-radius: 4px;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .study-id-text {
   font-size: 12px;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin-left: 8px;
 }
 
@@ -326,28 +326,28 @@ function formatDate(dt) {
 }
 
 .badge-completed {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
 }
 
 .badge-processing {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--semantic-color-info-light);
+  color: var(--semantic-color-interactive-primary);
 }
 
 .badge-queued {
-  background: #fef3c7;
-  color: #b45309;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning);
 }
 
 .badge-failed {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
 }
 
 .badge-default {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 
 .progress-info {
@@ -356,24 +356,29 @@ function formatDate(dt) {
   font-size: 12px;
   font-weight: 600;
   margin-bottom: 6px;
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 
 .progress-bar-track {
   height: 10px;
-  background: #e2e8f0;
+  background: var(--semantic-color-surface-header);
   border-radius: 5px;
   overflow: hidden;
 }
 
 .progress-bar-fill {
   height: 100%;
-  background: #2563eb;
+  background: var(--semantic-color-interactive-primary);
   transition: width 0.3s ease;
 }
 
 .progress-bar-fill.is-animated {
-  background: linear-gradient(90deg, #2563eb, #3b82f6, #2563eb);
+  background: linear-gradient(
+    90deg,
+    var(--semantic-color-interactive-primary),
+    var(--semantic-color-interactive-primary),
+    var(--semantic-color-interactive-primary)
+  );
   background-size: 200% 100%;
   animation: progressPulse 1.5s infinite linear;
 }
@@ -391,14 +396,14 @@ function formatDate(dt) {
   display: flex;
   justify-content: space-between;
   font-size: 11px;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin-top: 6px;
 }
 
 .completion-box {
   margin-top: 16px;
   padding-top: 14px;
-  border-top: 1px dashed #cbd5e1;
+  border-top: 1px dashed var(--semantic-color-border-control);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -406,19 +411,19 @@ function formatDate(dt) {
 
 .completion-message {
   font-size: 12px;
-  color: #166534;
-  background: #f0fdf4;
+  color: var(--semantic-color-success-dark);
+  background: var(--semantic-color-success-bg-soft);
   padding: 8px 12px;
   border-radius: 6px;
-  border: 1px solid #bbf7d0;
+  border: 1px solid var(--semantic-color-success-border-soft);
 }
 
 .btn-download {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #16a34a;
-  color: #ffffff;
+  background: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
   font-weight: 600;
   font-size: 13px;
   padding: 10px 16px;
@@ -428,22 +433,22 @@ function formatDate(dt) {
 }
 
 .btn-download:hover {
-  background: #15803d;
+  background: var(--semantic-color-success);
 }
 
 .expiration-notice {
   margin: 0;
   font-size: 11px;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-style: italic;
 }
 
 .error-box {
   margin-top: 14px;
   padding: 10px 12px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border-soft);
+  color: var(--semantic-color-error-text-dark);
   font-size: 12px;
   border-radius: 6px;
 }
@@ -451,15 +456,15 @@ function formatDate(dt) {
 .empty-active-job {
   padding: 20px;
   text-align: center;
-  background: #f8fafc;
-  border: 1px dashed #cbd5e1;
+  background: var(--semantic-color-surface-muted);
+  border: 1px dashed var(--semantic-color-border-control);
   border-radius: 8px;
   font-size: 13px;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .history-section {
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--semantic-color-border);
   padding-top: 16px;
 }
 
@@ -467,7 +472,7 @@ function formatDate(dt) {
   margin: 0 0 12px 0;
   font-size: 14px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .history-list {
@@ -478,15 +483,15 @@ function formatDate(dt) {
 
 .history-item {
   padding: 10px 12px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   font-size: 12px;
 }
 
 .history-item.is-active {
-  border-color: #2563eb;
-  background: #eff6ff;
+  border-color: var(--semantic-color-interactive-primary);
+  background: var(--semantic-color-info-bg);
 }
 
 .history-item-header {
@@ -499,13 +504,13 @@ function formatDate(dt) {
 .history-job-id {
   font-family: monospace;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .history-item-meta {
   display: flex;
   justify-content: space-between;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-size: 11px;
 }
 
@@ -515,7 +520,7 @@ function formatDate(dt) {
 }
 
 .history-download-link {
-  color: #2563eb;
+  color: var(--semantic-color-interactive-primary);
   font-weight: 600;
   text-decoration: none;
   font-size: 11px;
@@ -527,7 +532,7 @@ function formatDate(dt) {
 
 .empty-history-text {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   font-style: italic;
 }
 </style>

@@ -186,8 +186,12 @@ function fieldHasWarning(field) {
   return !!getFieldWarningMessage(field);
 }
 
+const itemsRevision = ref(0);
 const items = computed({
-  get: () => props.section.items || [],
+  get: () => {
+    void itemsRevision.value;
+    return props.section.items || [];
+  },
   set: (val) => {
     const updatedSection = { ...props.section, items: val };
     emit("update-section", updatedSection);
@@ -200,6 +204,7 @@ const items = computed({
         designerStore.activeForm.sections[idx].items = val;
       }
     }
+    itemsRevision.value++;
   },
 });
 

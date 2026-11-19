@@ -59,9 +59,9 @@ defineEmits(["action"]);
   justify-content: center;
   text-align: center;
   padding: 32px 24px;
-  background: #f8fafc;
-  border: 1px dashed #cbd5e1;
-  border-radius: 8px;
+  background: var(--semantic-color-surface-muted);
+  border: 1px dashed var(--semantic-color-border-control);
+  border-radius: var(--radius-md);
   margin: 16px 0;
   width: 100%;
 }
@@ -75,13 +75,13 @@ defineEmits(["action"]);
 .empty-state-title {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
   margin: 0 0 6px 0;
 }
 
 .empty-state-message {
   font-size: 0.875rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   max-width: 480px;
   margin: 0 0 16px 0;
   line-height: 1.5;

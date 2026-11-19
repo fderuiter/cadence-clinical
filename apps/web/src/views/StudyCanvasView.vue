@@ -690,7 +690,7 @@ onUnmounted(() => document.removeEventListener("keydown", onGlobalKeydown));
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: var(--semantic-color-surface-muted, #f8fafc);
+  background: var(--semantic-color-surface-muted);
   color: var(--primary);
   font-family: var(--font);
 }
@@ -716,7 +716,7 @@ onUnmounted(() => document.removeEventListener("keydown", onGlobalKeydown));
   gap: 16px;
   padding: 8px 16px;
   border-bottom: 1px solid var(--border);
-  background: var(--semantic-color-surface, #fff);
+  background: var(--semantic-color-surface);
 }
 
 .zoom-path {
@@ -770,9 +770,9 @@ onUnmounted(() => document.removeEventListener("keydown", onGlobalKeydown));
 }
 
 .ai-toggle[aria-pressed="true"] {
-  border-color: var(--semantic-color-ai-border, #c4b5fd);
-  background: var(--semantic-color-ai-bg, #f5f3ff);
-  color: var(--semantic-color-ai, #6d28d9);
+  border-color: var(--semantic-color-ai-border);
+  background: var(--semantic-color-ai-bg);
+  color: var(--semantic-color-ai);
 }
 
 .sr-only {
@@ -803,7 +803,7 @@ onUnmounted(() => document.removeEventListener("keydown", onGlobalKeydown));
   gap: 8px 24px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
-  background: var(--semantic-color-surface, #fff);
+  background: var(--semantic-color-surface);
 }
 
 .study-header h1 {
@@ -847,7 +847,7 @@ onUnmounted(() => document.removeEventListener("keydown", onGlobalKeydown));
 .navigator {
   padding: 12px;
   border-right: 1px solid var(--border);
-  background: var(--semantic-color-surface, #fff);
+  background: var(--semantic-color-surface);
 }
 
 .nav-group-title {
@@ -891,7 +891,7 @@ onUnmounted(() => document.removeEventListener("keydown", onGlobalKeydown));
 
 .canvas :deep(#canvas-inspector) {
   border-left: 1px solid var(--border);
-  background: var(--semantic-color-surface, #fff);
+  background: var(--semantic-color-surface);
 }
 
 .stage-overview h2 {

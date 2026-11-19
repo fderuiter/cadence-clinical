@@ -1217,8 +1217,8 @@ export default {
 }
 
 .badge-gxp {
-  background-color: #0284c7;
-  color: #ffffff;
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-surface);
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -1226,8 +1226,8 @@ export default {
 }
 
 .badge-regulatory {
-  background-color: #0f172a;
-  color: #38bdf8;
+  background-color: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-accent-inverse);
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -1235,8 +1235,8 @@ export default {
 }
 
 .badge-standard {
-  background-color: #e2e8f0;
-  color: #334155;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -1245,12 +1245,12 @@ export default {
 .view-title {
   font-size: 1.5rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--semantic-color-text);
   margin: 0 0 4px 0;
 }
 
 .view-subtitle {
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-size: 0.9rem;
   max-width: 900px;
   line-height: 1.4;
@@ -1266,7 +1266,7 @@ export default {
 }
 
 .stat-card {
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
@@ -1284,19 +1284,19 @@ export default {
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
 }
 
 .stat-value {
   font-size: 1.5rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--semantic-color-text);
   line-height: 1.2;
 }
 
 .stat-label {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-weight: 500;
 }
 
@@ -1309,7 +1309,7 @@ export default {
 }
 
 .card {
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -1322,13 +1322,13 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
 }
 
 .card-title {
   font-size: 1.05rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--semantic-color-text);
   margin: 0;
   display: flex;
   align-items: center;
@@ -1347,7 +1347,7 @@ export default {
 
 .tree-children {
   padding-left: 20px;
-  border-left: 1px dashed #cbd5e1;
+  border-left: 1px dashed var(--semantic-color-border-control);
   margin-left: 10px;
   margin-top: 4px;
 }
@@ -1363,12 +1363,12 @@ export default {
 }
 
 .node-row:hover {
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
 }
 
 .node-row.selected {
-  background-color: #e0f2fe;
-  border-left: 3px solid #0284c7;
+  background-color: var(--semantic-color-primary-light);
+  border-left: 3px solid var(--semantic-color-primary);
 }
 
 .expand-btn {
@@ -1376,7 +1376,7 @@ export default {
   border: none;
   cursor: pointer;
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   width: 18px;
   height: 18px;
   display: flex;
@@ -1387,7 +1387,7 @@ export default {
 .node-name {
   font-size: 0.88rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -1403,18 +1403,18 @@ export default {
 }
 
 .badge-locked {
-  background-color: #fee2e2;
-  color: #991b1b;
+  background-color: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .badge-frozen {
-  background-color: #e0f2fe;
-  color: #0369a1;
+  background-color: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
 }
 
 .badge-unlocked {
-  background-color: #dcfce7;
-  color: #166534;
+  background-color: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 
 .node-actions {
@@ -1429,7 +1429,7 @@ export default {
   cursor: pointer;
   font-size: 0.8rem;
   padding: 2px 6px;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   transition: transform 0.1s;
 }
 
@@ -1449,7 +1449,7 @@ export default {
   justify-content: center;
   padding: 60px 24px;
   text-align: center;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .empty-icon {
@@ -1473,18 +1473,18 @@ export default {
 
 .scope-summary-banner.locked,
 .scope-summary-banner.hard_lock {
-  background-color: #fef2f2;
-  border-color: #fca5a5;
+  background-color: var(--semantic-color-error-bg-soft);
+  border-color: var(--semantic-color-error-border);
 }
 
 .scope-summary-banner.frozen {
-  background-color: #f0f9ff;
-  border-color: #bae6fd;
+  background-color: var(--semantic-color-info-bg-soft);
+  border-color: var(--semantic-color-info-border-accent);
 }
 
 .scope-summary-banner.unlocked {
-  background-color: #f0fdf4;
-  border-color: #bbf7d0;
+  background-color: var(--semantic-color-success-bg-soft);
+  border-color: var(--semantic-color-success-border-soft);
 }
 
 .banner-status-icon {
@@ -1494,19 +1494,19 @@ export default {
 .banner-text h4 {
   margin: 0 0 4px 0;
   font-size: 1.15rem;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .node-id-sub {
   margin: 0 0 4px 0;
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .node-status-text {
   margin: 0;
   font-size: 0.9rem;
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 
 .info-group {
@@ -1517,7 +1517,7 @@ export default {
   font-size: 0.85rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   letter-spacing: 0.04em;
   margin-bottom: 8px;
 }
@@ -1527,7 +1527,7 @@ export default {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   padding: 10px 14px;
   border-radius: 6px;
   border: 1px solid var(--border);
@@ -1535,7 +1535,7 @@ export default {
 }
 
 .crumb-arrow {
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
 }
 
 .action-btn-row {
@@ -1558,7 +1558,7 @@ export default {
 }
 
 .modal-card {
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   border-radius: 10px;
   width: 90%;
   max-width: 580px;
@@ -1568,8 +1568,8 @@ export default {
 
 .modal-header {
   padding: 16px 20px;
-  background: #0f172a;
-  color: #ffffff;
+  background: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1583,7 +1583,7 @@ export default {
 .modal-close-btn {
   background: none;
   border: none;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   font-size: 1.5rem;
   cursor: pointer;
 }
@@ -1595,9 +1595,9 @@ export default {
 .alert-warning-banner {
   display: flex;
   gap: 12px;
-  background-color: #fffbeb;
-  border: 1px solid #fde68a;
-  color: #92400e;
+  background-color: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-border);
+  color: var(--semantic-color-warning-dark);
   padding: 12px;
   border-radius: 6px;
   margin-bottom: 16px;
@@ -1606,7 +1606,7 @@ export default {
 
 .modal-footer {
   padding: 16px 20px;
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   border-top: 1px solid var(--border);
   display: flex;
   justify-content: flex-end;
@@ -1621,7 +1621,7 @@ export default {
   display: block;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--semantic-color-text-body);
   margin-bottom: 6px;
 }
 
@@ -1641,13 +1641,13 @@ export default {
 }
 
 .input-valid {
-  border-color: #22c55e;
-  background-color: #f0fdf4;
+  border-color: var(--semantic-color-success);
+  background-color: var(--semantic-color-success-bg-soft);
 }
 
 .input-invalid {
-  border-color: #ef4444;
-  background-color: #fef2f2;
+  border-color: var(--semantic-color-error);
+  background-color: var(--semantic-color-error-bg-soft);
 }
 
 .char-counter-row {
@@ -1658,21 +1658,21 @@ export default {
 }
 
 .counter-met {
-  color: #16a34a;
+  color: var(--semantic-color-success);
   font-weight: 700;
 }
 
 .counter-unmet {
-  color: #dc2626;
+  color: var(--semantic-color-error);
   font-weight: 700;
 }
 
 .counter-status.valid {
-  color: #16a34a;
+  color: var(--semantic-color-success);
 }
 
 .counter-status.invalid {
-  color: #dc2626;
+  color: var(--semantic-color-error);
 }
 
 .radio-row {
@@ -1699,30 +1699,30 @@ export default {
 }
 
 .btn-primary {
-  background-color: #0284c7;
-  color: #ffffff;
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-surface);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: #0369a1;
+  background-color: var(--semantic-color-primary);
 }
 
 .btn-secondary {
-  background-color: #e2e8f0;
-  color: #1e293b;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-dark);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background-color: #cbd5e1;
+  background-color: var(--semantic-color-border-muted);
 }
 
 .btn-danger {
-  background-color: #dc2626;
-  color: #ffffff;
+  background-color: var(--semantic-color-error);
+  color: var(--semantic-color-surface);
 }
 
 .btn-danger:hover:not(:disabled) {
-  background-color: #b91c1c;
+  background-color: var(--semantic-color-error);
 }
 
 .btn:disabled {
@@ -1744,9 +1744,9 @@ export default {
 }
 
 .table th {
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   font-weight: 600;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 .text-truncate-cell {

@@ -214,23 +214,23 @@ const handleSign = async () => {
 }
 
 .compliance-alert {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-left: 4px solid #2563eb;
+  background: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-info-border);
+  border-left: 4px solid var(--semantic-color-interactive-primary);
   padding: 12px 14px;
   border-radius: 6px;
   font-size: 0.82rem;
-  color: #1e3a8a;
+  color: var(--semantic-color-info);
   line-height: 1.45;
 }
 
 .text-danger {
-  color: #dc2626;
+  color: var(--semantic-color-error);
 }
 
 .form-control:disabled {
-  background: #f1f5f9;
-  color: #64748b;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
   cursor: not-allowed;
 }
 
@@ -238,7 +238,7 @@ const handleSign = async () => {
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid #ffffff;
+  border: 2px solid var(--semantic-color-surface);
   border-top-color: transparent;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
