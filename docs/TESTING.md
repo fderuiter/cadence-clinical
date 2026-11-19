@@ -155,10 +155,6 @@ in the same change, and never lower it. A few files keep their own 80 percent th
 helpers `packages/ui/signing.js` and `packages/ui/econsent.js`. ADR-2530 §7 sets the milestones the `apps/web` floor
 has to reach.
 
-These three scripts regenerate `apps/web/src/types/usdm.ts` from `docs/openapi/legacy` before they run.
-If that leaves the file modified, restore it with `git checkout apps/web/src/types/usdm.ts` rather than
-committing the regenerated copy.
-
 Rules for web tests:
 
 - **Never reach the network.** Stub `fetch` in every test that calls an API client. When the module under
