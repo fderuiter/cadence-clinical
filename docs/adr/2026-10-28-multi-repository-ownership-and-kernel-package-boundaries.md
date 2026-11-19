@@ -1,6 +1,6 @@
 # ADR-2602: Multi-Repository Ownership and Kernel Package Boundaries
 
-- **Status:** Accepted (approved by @fderuiter on 2026-10-28 as the recommendations in this draft)
+- **Status:** Partially superseded by [ADR-2603](2026-11-19-keep-cadence-in-one-repository.md)
 - **Date:** 2026-10-28
 - **Authors:** @fderuiter, Claude Code
 - **Deciders:** @fderuiter
@@ -12,10 +12,7 @@
 - **Shared inventory:** [`SOURCE_INVENTORY.md`](../architecture/repository-migration/SOURCE_INVENTORY.md) (task 1), merged to `main` in #5681 and carrying the symbol-level review merged in #5683 (`eab3c1e`).
 
 > [!NOTE]
-> This ADR is **accepted** as of 2026-10-28. Acceptance settles the direction only. It does not start extraction, which
-> stays gated on the migration plan's remaining conditions. Previously, it recorded options and a recommended direction for review. It did not finalize the
-> ownership matrix, the package graph or the repository layout. Items marked *needs inventory* wait for the shared
-> file-level inventory (task 1) before anyone decides them. No code, package or repository has moved.
+> [ADR-2603](2026-11-19-keep-cadence-in-one-repository.md) supersedes the source repository split, cross-repository publishing plan, and extraction sequence. The kernel SDK boundaries, module ownership decisions, and single-host transaction model carry forward. See the [project plan](../PROJECT_PLAN.md) for current work. The remaining text records the decision accepted on 2026-10-28.
 
 ---
 
@@ -66,24 +63,24 @@ or Domain file references them. Excluding those namespaces from the SDK path wou
 
 ### 3.1 Runtime shape of a product repository
 
-| Option | Summary | Verdict |
-| --- | --- | --- |
-| A. Product repository is its own runtime service with its own database | Each repository deploys its own host | **Rejected.** Contradicts ADR-2610 and ADR-2601. Splits the transaction that ADR-2600 requires. |
-| B. Product repository produces module packages; the composition host composes them over one shared database | Each module keeps its own schema and `DbContext`, and writes through the kernel command path | **Proposed.** Keeps ADR-2600 Option A and ADR-2601 unchanged. |
-| C. Per-product databases | Each product gets its own database | **Deferred.** ADR-2600 consequence: a later boundary decision, and it needs a separate ADR. |
+| Option                                                                                                      | Summary                                                                                      | Verdict                                                                                         |
+| ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| A. Product repository is its own runtime service with its own database                                      | Each repository deploys its own host                                                         | **Rejected.** Contradicts ADR-2610 and ADR-2601. Splits the transaction that ADR-2600 requires. |
+| B. Product repository produces module packages; the composition host composes them over one shared database | Each module keeps its own schema and `DbContext`, and writes through the kernel command path | **Proposed.** Keeps ADR-2600 Option A and ADR-2601 unchanged.                                   |
+| C. Per-product databases                                                                                    | Each product gets its own database                                                           | **Deferred.** ADR-2600 consequence: a later boundary decision, and it needs a separate ADR.     |
 
 ### 3.2 Dependency shape of the public SDK (answers kernel plan §2.1 and §2.2)
 
-| Option | Summary | Verdict |
-| --- | --- | --- |
-| 1. Keep EF Core, Npgsql and `Cadence.Core.Domain` in `Cadence.Kernel.Modules` | Simplest. Every product inherits every dependency. | **Rejected.** Makes the public SDK carry persistence and a non-kernel dependency. This is the most likely source of a later breaking change. |
-| 2. Split the SDK | `Abstractions` holds contracts with no EF, Npgsql or `engine_core`. `Modules` keeps the EF Core base types module authors must use. Npgsql moves to a host-side adapter. `AggregateRootBase` and `IGxPAuditable` move or are redefined in kernel-owned code. The K-XS-1 members in `Core.Domain` move first. | **Proposed, pending inventory.** |
-| 3. Publish `engine_core` as a shared kernel dependency | Keeps the reference and publishes it. | **Not preferred.** `engine_core` is not kernel-owned (matrix: "shared domain utilities"). |
+| Option                                                                        | Summary                                                                                                                                                                                                                                                                                                      | Verdict                                                                                                                                      |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Keep EF Core, Npgsql and `Cadence.Core.Domain` in `Cadence.Kernel.Modules` | Simplest. Every product inherits every dependency.                                                                                                                                                                                                                                                           | **Rejected.** Makes the public SDK carry persistence and a non-kernel dependency. This is the most likely source of a later breaking change. |
+| 2. Split the SDK                                                              | `Abstractions` holds contracts with no EF, Npgsql or `engine_core`. `Modules` keeps the EF Core base types module authors must use. Npgsql moves to a host-side adapter. `AggregateRootBase` and `IGxPAuditable` move or are redefined in kernel-owned code. The K-XS-1 members in `Core.Domain` move first. | **Proposed, pending inventory.**                                                                                                             |
+| 3. Publish `engine_core` as a shared kernel dependency                        | Keeps the reference and publishes it.                                                                                                                                                                                                                                                                        | **Not preferred.** `engine_core` is not kernel-owned (matrix: "shared domain utilities").                                                    |
 
 Recommended shape under option 2, to be confirmed by K1:
 
 - `Cadence.Kernel.Abstractions`: typed IDs, command and event contracts, `IClock`, and `CommandResult<TResult>`, which
-  already lives here. No EF Core, Npgsql or `engine_core` reference. *Needs inventory:* the dependency closure
+  already lives here. No EF Core, Npgsql or `engine_core` reference. _Needs inventory:_ the dependency closure
   of that result type.
 - `Cadence.Kernel.Modules`: `ICommandHandler`, `ICommandContext`, `IKernelUnitOfWork`, `AddCommandHandler`,
   `ModuleDbContext` and the migrations helper. It references EF Core Relational as a **pinned, explicit** SDK dependency,
@@ -150,14 +147,14 @@ No check in this list has been run for this ADR. A green build is not validation
 
 These are implementation details inside the accepted direction. None of them reopens §4.
 
-| # | Item | Owner of the answer |
-| --- | --- | --- |
-| 1 | Move or redefine `AggregateRootBase` and `IGxPAuditable` out of `Core.Domain` before the SDK is published (K1) | Kernel prep thread (task 3) |
-| 2 | Exclude the 16 `Core.Domain` baseline namespaces from the SDK path, so the baseline entries clear without moving `Core.Domain` (K1) | Kernel prep thread, with the inventory's symbol review |
-| 3 | Name and location of the host-side Npgsql adapter (K1) | Kernel prep thread, under §4 |
-| 4 | Home of `Cadence.Rules` and `Cadence.Standards`. Still needs inventory review; not covered by this acceptance | Inventory thread, then decision |
-| 5 | **Six owner choices decided in §8.1. The other 101 suggestions stand as given.** Per-class dispositions for the 107 `needs decision` inventory rows, from the symbol-level review merged in #5683. The review is read-only and not line-by-line verified, and its owners are suggestions. Each slice must confirm its file list before moving code | Inventory thread, then the slice owner (K3 and later) |
-| 6 | Whether a later per-product database (option C) needs its own ADR | Deciders, after K3 |
+| #   | Item                                                                                                                                                                                                                                                                                                                                               | Owner of the answer                                    |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| 1   | Move or redefine `AggregateRootBase` and `IGxPAuditable` out of `Core.Domain` before the SDK is published (K1)                                                                                                                                                                                                                                     | Kernel prep thread (task 3)                            |
+| 2   | Exclude the 16 `Core.Domain` baseline namespaces from the SDK path, so the baseline entries clear without moving `Core.Domain` (K1)                                                                                                                                                                                                                | Kernel prep thread, with the inventory's symbol review |
+| 3   | Name and location of the host-side Npgsql adapter (K1)                                                                                                                                                                                                                                                                                             | Kernel prep thread, under §4                           |
+| 4   | Home of `Cadence.Rules` and `Cadence.Standards`. Still needs inventory review; not covered by this acceptance                                                                                                                                                                                                                                      | Inventory thread, then decision                        |
+| 5   | **Six owner choices decided in §8.1. The other 101 suggestions stand as given.** Per-class dispositions for the 107 `needs decision` inventory rows, from the symbol-level review merged in #5683. The review is read-only and not line-by-line verified, and its owners are suggestions. Each slice must confirm its file list before moving code | Inventory thread, then the slice owner (K3 and later)  |
+| 6   | Whether a later per-product database (option C) needs its own ADR                                                                                                                                                                                                                                                                                  | Deciders, after K3                                     |
 
 #### 6.1.1 Owner decisions (accepted 2026-10-28)
 
@@ -165,14 +162,14 @@ These are implementation details inside the accepted direction. None of them reo
 other suggestions in that review stand as given. Each decision takes effect in the matrix at the slice that moves the
 code, not now.
 
-| # | Area | Decision | Owner |
-| --- | --- | --- | --- |
-| 1 | Execution DbContext | Split by owner schema, one context per module, under ADR-2600. The migration plan follows the split. | platform-shell (composition) |
-| 2 | Subject and consent | Participants own the workflow. Kernel keeps participant identity and `ConsentStatus`. Retire the duplicate `/consents` route and the second `SubjectConsent` in econsent. | participants |
-| 3 | CGT custody | Interventions own the workflow. Custody events become kernel provenance. | interventions |
-| 4 | CEC and signatures | Safety owns the CEC. Signatures bind to kernel Attestation. Confirm the consumer of `Grade3ToxicityDetected` before extraction. | safety |
-| 5 | Lab reference ranges and bulk import | Evidence owns the ranges. Capture only reads them. | evidence |
-| 6 | Identity and crypto helpers | Platform-shell for now. Move to kernel IdentityVault later under K006. Retire the dormant `DemographicsNormalizationService`. | platform-shell now, kernel IdentityVault later |
+| #   | Area                                 | Decision                                                                                                                                                                  | Owner                                          |
+| --- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| 1   | Execution DbContext                  | Split by owner schema, one context per module, under ADR-2600. The migration plan follows the split.                                                                      | platform-shell (composition)                   |
+| 2   | Subject and consent                  | Participants own the workflow. Kernel keeps participant identity and `ConsentStatus`. Retire the duplicate `/consents` route and the second `SubjectConsent` in econsent. | participants                                   |
+| 3   | CGT custody                          | Interventions own the workflow. Custody events become kernel provenance.                                                                                                  | interventions                                  |
+| 4   | CEC and signatures                   | Safety owns the CEC. Signatures bind to kernel Attestation. Confirm the consumer of `Grade3ToxicityDetected` before extraction.                                           | safety                                         |
+| 5   | Lab reference ranges and bulk import | Evidence owns the ranges. Capture only reads them.                                                                                                                        | evidence                                       |
+| 6   | Identity and crypto helpers          | Platform-shell for now. Move to kernel IdentityVault later under K006. Retire the dormant `DemographicsNormalizationService`.                                             | platform-shell now, kernel IdentityVault later |
 
 These decisions do not start extraction. The synchronization conditions in the migration plan still apply.
 

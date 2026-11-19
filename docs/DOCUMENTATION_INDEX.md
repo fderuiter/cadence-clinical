@@ -7,7 +7,7 @@ The single map of Cadence documentation. Every document is listed once, with its
 - **Generated:** produced by a command; never edit by hand.
 - **Baseline:** written for the pre-kernel, per-service design. Kept for requirement IDs and
   traceability; a banner at the top says what supersedes it.
-- **Historical:** records of completed work (the Python-to-.NET port).
+- **Historical:** records of earlier decisions and completed or retired work.
 
 When you add a document, add it here. When a change makes a document wrong, fix it in the same PR
 ([CONTRIBUTING.md §5](../CONTRIBUTING.md#5-documentation-is-part-of-the-change)).
@@ -24,6 +24,8 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [CONTEXT.md](../CONTEXT.md) | Current | Domain glossary: kernel vocabulary and application terms |
 | [AGENTS.md](../AGENTS.md) | Current | Coding rules for humans and AI agents |
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Current | Setup, workflow, local checks, documentation rules |
+| [Project plan](PROJECT_PLAN.md) | Current | Single-repository delivery scope, module ownership, milestones, and engineering practices |
+| [Goals and priorities](GOALS_AND_PRIORITIES.md) | Current | Code-level objectives and measurable outcomes, in priority order |
 
 ## Kernel and roadmap
 
@@ -33,8 +35,6 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [Roadmap (spec §15)](kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap) | Normative | Phases 0–5, tracked in epic [#4719](https://github.com/fderuiter/cadence-clinical/issues/4719) |
 | [Kernel decisions K001–K032](adr/index.md) | Current | Kernel decisions and their ADRs; [ARCHITECTURE §2](../ARCHITECTURE.md#2-key-decisions) summarises them with the platform decisions |
 | [Kernel package guide](https://github.com/fderuiter/cadence-clinical/blob/main/packages/kernel/README.md) | Current | How the kernel projects are built and used: command pipeline, tenancy, NodeRef, explanations, authorization dry runs, search, protocol versions, Concept and Standards Registries, rule packs, validation findings, activity stream, expected schedule, IdentityVault, grants and qualifications |
-| [Source inventory](architecture/repository-migration/SOURCE_INVENTORY.md) | Current | Single source inventory and ownership review for the migration; replaces the retired execution migration inventory |
-| [Kernel extraction plan](architecture/repository-migration/KERNEL_EXTRACTION_PLAN.md) | Proposed | Gating status, tracks C1 to C6, pinned release manifest, acceptance criteria and rollback for the kernel SDK extraction (ADR-2602) |
 | [Rule packs](kernel/RULE_PACKS.md) | Current | Writing, releasing and benchmarking rule packs (spec §10.1, ADR-2461) |
 | [Indicators](kernel/INDICATORS.md) | Current | Writing, releasing and evaluating Study Pulse indicators, KRIs and QTLs (spec §10.4, ADR-2488) |
 | [Mapping specifications](kernel/MAPPING_SPECIFICATIONS.md) | Current | Writing, pinning and applying mapping specifications; K-STD-1 (spec §6.3, ADR-2463) |
@@ -43,10 +43,17 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [AI agents](ai/AI_AGENTS.md) | Current | The AI agent catalogue by lifecycle stage, research-type packs, the autonomy ladder and the regulatory map (ADR-2630) |
 | [Agent tools, grounding and the MCP server](ai/AGENT_TOOLS.md) | Current | The read tools agents call as their requester, tool allow-lists, the citation verifier, the Proposal writer and the MCP endpoint (ADR-2633) |
 | [Evaluating AI task configurations](ai/EVALUATION.md) | Current | Evaluation sets, deterministic checks, the calibrated judge, run records for qualification and production signals (ADR-2634) |
-| [Multi-repository agent execution guide](architecture/repository-migration/AGENT_HANDOFF.md) | Current | This is a planning/orchestration contract, not permission to reorganize or delete application code automatically. |
-| [Capability ownership matrix](architecture/repository-migration/CAPABILITY_OWNERSHIP_MATRIX.md) | Current | Status: target mapping for a file-by-file migration inventory. This is *not* a statement that source paths have moved... |
-| [Cadence: 10-repository controlled migration program](architecture/repository-migration/MIGRATION_PLAN.md) | Current | Status: kickoff plan only — no source implementation migrated. All ten repositories are private; new destinations con... |
-| [Cadence: repository registry and ownership source of truth](architecture/repository-migration/REPOSITORY_REGISTRY.md) | Normative | Status: planning and bootstrap committed 2026-10-28. No clinical implementation has yet been extracted into the nine ... |
+
+## Former repository migration program
+
+| Document | Status | What it is |
+| --- | --- | --- |
+| [Controlled migration plan](architecture/repository-migration/MIGRATION_PLAN.md) | Historical | Former ten-repository program and proposed extraction phases |
+| [Repository registry](architecture/repository-migration/REPOSITORY_REGISTRY.md) | Historical | Former destination repository and product mapping |
+| [Capability ownership matrix](architecture/repository-migration/CAPABILITY_OWNERSHIP_MATRIX.md) | Historical | Prior mapping and analysis of overlapping module responsibilities |
+| [Source inventory](architecture/repository-migration/SOURCE_INVENTORY.md) | Historical | Dated dependency and ownership inventory used in the migration review |
+| [Kernel extraction plan](architecture/repository-migration/KERNEL_EXTRACTION_PLAN.md) | Historical | Prior SDK extraction preparation and verification analysis |
+| [Multi-repository handoff](architecture/repository-migration/AGENT_HANDOFF.md) | Historical | Former migration workflow and synchronization conditions |
 
 ## Architecture decision records
 
@@ -547,7 +554,8 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2464: ICSR Render Emits ICH E2B(R3) Validated Against the ICH Schema](adr/2026-10-20-icsr-render-emits-ich-e2br3-validated-against-the-ich-schema.md) | Current | - Status: Accepted |
 | [ADR-2635: AI in the Canvas Is Labelled, Scoped to the Selection and Ends in a Proposal](adr/2026-10-20-ai-in-the-canvas-is-labelled-scoped-and-ends-in-a-proposal.md) | Current | - Status: Accepted |
 | [ADR-2636: Inference Is Pluggable, Residency-Bound and Sandboxed](adr/2026-10-20-inference-is-pluggable-residency-bound-and-sandboxed.md) | Current | - Status: Accepted |
-| [ADR-2602: Multi-Repository Ownership and Kernel Package Boundaries](adr/2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md) | Current | - Status: Accepted (approved by @fderuiter on 2026-10-28 as the recommendations in this draft) |
+| [ADR-2602: Multi-Repository Ownership and Kernel Package Boundaries](adr/2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md) | Current | Kernel boundaries and accepted ownership decisions. Source repository split superseded by ADR-2603. |
+| [ADR-2603: Keep Cadence in One Repository](adr/2026-11-19-keep-cadence-in-one-repository.md) | Current | Single-repository development and integration for the modular monolith |
 | [ADR-2544: Shared Reactive Focus Containment and Global Reduced-Motion Tokens](adr/2026-11-19-shared-reactive-focus-containment-and-reduced-motion-tokens.md) | Current | - Status: Accepted |
 
 ## Developing and running

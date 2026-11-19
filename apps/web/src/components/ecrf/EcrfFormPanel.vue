@@ -280,7 +280,7 @@
             class="btn btn-secondary"
             type="button"
             :disabled="saving"
-            @click="close"
+            @click="closeForm"
           >
             Close form
           </button>
@@ -299,6 +299,19 @@
           version {{ outcome.version }}.
         </template>
         <template v-else>{{ outcome.message }}</template>
+        <div
+          v-if="outcome.kind === 'locked' && outcome.unsaved.length > 0"
+          class="ecrf-locked-unsaved"
+          data-testid="ecrf-locked-unsaved"
+        >
+          <span>Unsaved values not recorded:</span>
+          <ul>
+            <li v-for="entry in outcome.unsaved" :key="entry.item_id">
+              <strong>{{ entry.item_id }}:</strong>
+              {{ formatUnsavedEntry(entry) }}
+            </li>
+          </ul>
+        </div>
         <button
           v-if="outcome.kind === 'stale'"
           id="ecrf-form-reload"
@@ -521,6 +534,7 @@ import { computed, onMounted, reactive, ref, watch } from "vue";
 import {
   formatObservationValue,
   MISSING_REASONS,
+  type KernelObservationValue,
 } from "../../api/observationValue";
 import {
   FORM_SIGN_SEMANTIC_ACTION,
@@ -529,7 +543,10 @@ import {
   type EcrfFormSignedValue,
   type EcrfSignatureMeaning,
 } from "../../api/ecrfFormsApi";
-import { useEcrfForm } from "../../composables/useEcrfForm";
+import {
+  useEcrfForm,
+  type EcrfUnsavedItem,
+} from "../../composables/useEcrfForm";
 import { isLiveQuery, useFormQueries } from "../../composables/useFormQueries";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import FormQueryList from "./FormQueryList.vue";
@@ -564,6 +581,7 @@ const {
   dirty,
   editedItems,
   isEdited,
+  clearDraft,
   load,
   reload,
   open,
@@ -705,6 +723,33 @@ async function submit() {
   if (outcome.value?.kind === "saved") reason.value = "";
 }
 
+function closeForm() {
+  if (
+    dirty.value &&
+    !window.confirm(
+      "You have unsaved changes on this form. Discard them and close?"
+    )
+  ) {
+    return;
+  }
+  clearDraft();
+  close();
+}
+
+function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
+  if (entry.missing) {
+    return formatObservationValue({
+      type: "missing",
+      reason: entry.missing as Extract<
+        KernelObservationValue,
+        { type?: "missing" }
+      >["reason"],
+    });
+  }
+  const typed = entry.text.trim();
+  return entry.unit ? `${typed} ${entry.unit}` : typed;
+}
+
 onMounted(() => {
   if (props.formId) void load(props.formId);
 });
@@ -827,6 +872,14 @@ watch(dirty, (value) => emit("dirty-change", value));
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+}
+.ecrf-locked-unsaved {
+  flex-basis: 100%;
+  margin-top: 4px;
+}
+.ecrf-locked-unsaved ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
 }
 .ecrf-signatures {
   list-style: none;

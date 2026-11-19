@@ -13,8 +13,14 @@ const DATA_COLLECTION_ROLES = [
 
 const SITE_READINESS_SPONSOR_ROLES = ["cra", "monitor", "sponsor_admin"];
 const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
+const NON_ONBOARDING_ROUTES = new Set([
+  "landing",
+  "login",
+  "forbidden",
+  "unavailable",
+]);
 
-function holdsAnyNormalizedRole(userRoles, requiredRoles) {
+export function hasRequiredRole(userRoles, requiredRoles) {
   if (!requiredRoles || requiredRoles.length === 0) return true;
   return (userRoles || []).some((uRole) => {
     if (requiredRoles.includes(uRole)) return true;
@@ -36,50 +42,90 @@ function effectiveRolesForStore(personaKey) {
   return preset ? [...preset.requires] : ["sponsor_admin"];
 }
 
+function normalizeTaskRouteName(task) {
+  if (task?.routeName) return task.routeName;
+  const rawRoute = typeof task?.route === "string" ? task.route.trim() : "";
+  if (!rawRoute) return null;
+  if (rawRoute === "/studies" || rawRoute.startsWith("/studies/")) {
+    return "study";
+  }
+  if (rawRoute === "/overview") return "overview";
+  if (rawRoute === "/ecrf") return "ecrf";
+  if (rawRoute === "/ctms") return "ctms";
+  if (rawRoute === "/ssu") return "ssu";
+  return rawRoute.startsWith("/") ? rawRoute.slice(1) : rawRoute;
+}
+
 export function resolveAuthorizedTaskRoute(task, userRoles) {
   if (!task) return null;
-  if (task.routeName === "study") {
+  const routeName = normalizeTaskRouteName(task);
+  if (!routeName || NON_ONBOARDING_ROUTES.has(routeName)) return null;
+
+  if (routeName === "study") {
     return isScreenAvailable("study") ? "/studies" : null;
   }
-  if (task.routeName === "overview") {
+  if (routeName === "overview") {
     return isScreenAvailable("overview") ? "/overview" : null;
   }
-  if (task.routeName === "ecrf") {
+  if (routeName === "ecrf") {
     return isScreenAvailable("ecrf") &&
-      holdsAnyNormalizedRole(userRoles, DATA_COLLECTION_ROLES)
+      hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
       ? "/ecrf"
       : null;
   }
-  if (task.routeName === "site-readiness") {
+  if (routeName === "site-readiness") {
     if (
       isScreenAvailable("ctms") &&
-      holdsAnyNormalizedRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
+      hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
     ) {
       return "/ctms";
     }
     if (
       isScreenAvailable("ssu") &&
-      holdsAnyNormalizedRole(userRoles, SITE_READINESS_SITE_ROLES)
+      hasRequiredRole(userRoles, SITE_READINESS_SITE_ROLES)
     ) {
       return "/ssu";
     }
     return null;
   }
-  return task.route || null;
+  if (routeName === "ctms") {
+    return isScreenAvailable("ctms") &&
+      hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
+      ? "/ctms"
+      : null;
+  }
+  if (routeName === "ssu") {
+    return isScreenAvailable("ssu") &&
+      hasRequiredRole(userRoles, [
+        ...SITE_READINESS_SPONSOR_ROLES,
+        ...SITE_READINESS_SITE_ROLES,
+      ])
+      ? "/ssu"
+      : null;
+  }
+  return null;
 }
 
 export function isTourRouteAuthorized(routeName, userRoles) {
   if (!routeName) return true;
+  if (NON_ONBOARDING_ROUTES.has(routeName)) return false;
   if (!isScreenAvailable(routeName)) return false;
   if (routeName === "study" || routeName === "overview") return true;
-  if (routeName === "ecrf" || routeName === "observation") {
-    return holdsAnyNormalizedRole(userRoles, DATA_COLLECTION_ROLES);
+  if (routeName === "ecrf") {
+    return hasRequiredRole(userRoles, DATA_COLLECTION_ROLES);
+  }
+  if (routeName === "observation") {
+    return hasRequiredRole(userRoles, [
+      "site_investigator",
+      "crc",
+      "data_manager",
+    ]);
   }
   if (routeName === "ctms") {
-    return holdsAnyNormalizedRole(userRoles, SITE_READINESS_SPONSOR_ROLES);
+    return hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES);
   }
   if (routeName === "ssu") {
-    return holdsAnyNormalizedRole(userRoles, [
+    return hasRequiredRole(userRoles, [
       ...SITE_READINESS_SPONSOR_ROLES,
       ...SITE_READINESS_SITE_ROLES,
     ]);
@@ -675,6 +721,43 @@ export const ROLE_STEP_SEQUENCES = {
   ],
 };
 
+function buildOverviewFallbackSteps(baseSequence) {
+  const firstStep = baseSequence?.[0];
+  const lastStep = baseSequence?.[baseSequence.length - 1];
+  return [
+    {
+      step: 1,
+      routeName: "overview",
+      targetSelector: null,
+      title: firstStep?.title || "Welcome to Workspace Orientation",
+      description:
+        firstStep?.description ||
+        "Review role-tailored orientation guidance and workspace preferences.",
+      prompt:
+        firstStep?.prompt ||
+        "Explore your workspace orientation and contextual SOP resources.",
+    },
+    {
+      step: 2,
+      routeName: "overview",
+      targetSelector: "#btn-contextual-help-trigger",
+      title: lastStep?.title || "Tour Complete!",
+      description:
+        lastStep?.description ||
+        "Your workspace orientation is complete. Open Help anytime for standard operating procedure guidance.",
+      prompt:
+        lastStep?.prompt ||
+        "Use Search (⌘K) and Help from the persistent top bar anytime.",
+    },
+  ];
+}
+
+function clampStepToTotal(step, totalSteps) {
+  const maxStep = Math.max(1, totalSteps || 1);
+  const parsed = Number.isFinite(step) && step > 0 ? step : 1;
+  return Math.min(parsed, maxStep);
+}
+
 function getSequenceForPersona(personaKey) {
   let authStore = null;
   try {
@@ -735,27 +818,30 @@ function getSequenceForPersona(personaKey) {
       ROLE_STEP_SEQUENCES.sponsor_designer;
   }
 
-  // If authenticated with explicit realm roles, filter to authorized & available steps.
-  if (authStore?.rawRoles?.length > 0) {
-    const filtered = baseSequence
-      .filter((step) => isTourRouteAuthorized(step.routeName, roles))
-      .map((step, idx) => ({ ...step, step: idx + 1 }));
-    if (filtered.length > 0) {
-      return filtered;
-    }
+  const effectiveRoles =
+    authStore?.rawRoles?.length > 0
+      ? roles
+      : effectiveRolesForStore(personaKey);
+  const filtered = baseSequence
+    .filter((step) => isTourRouteAuthorized(step.routeName, effectiveRoles))
+    .map((step, idx) => ({ ...step, step: idx + 1 }));
+
+  if (filtered.length > 0) {
+    return filtered;
   }
 
-  return baseSequence;
+  return buildOverviewFallbackSteps(baseSequence);
 }
 
 export const useOnboardingStore = defineStore("onboarding", {
   state: () => {
     const activePersona = getActivePersona();
     const initial = readStorageForPersona(activePersona);
+    const initialSteps = getSequenceForPersona(activePersona);
 
     return {
       currentPersona: activePersona,
-      currentStep: initial.currentStep,
+      currentStep: clampStepToTotal(initial.currentStep, initialSteps.length),
       isActive: initial.isActive,
       disabled: initial.disabled,
       bypassOverview: initial.bypassOverview,
@@ -797,12 +883,13 @@ export const useOnboardingStore = defineStore("onboarding", {
     },
     currentStepConfig(state) {
       const steps = getSequenceForPersona(state.currentPersona);
-      const stepIdx = Math.max(0, state.currentStep - 1);
+      const clampedStep = clampStepToTotal(state.currentStep, steps.length);
+      const stepIdx = Math.max(0, clampedStep - 1);
       return steps[stepIdx] || steps[0] || null;
     },
     totalSteps(state) {
       const steps = getSequenceForPersona(state.currentPersona);
-      return steps.length || 5;
+      return steps.length || 1;
     },
   },
   actions: {
@@ -810,13 +897,18 @@ export const useOnboardingStore = defineStore("onboarding", {
       const targetPersona = personaKey || getActivePersona();
       this.currentPersona = targetPersona;
       const loaded = readStorageForPersona(targetPersona);
-      this.currentStep = loaded.currentStep;
+      const steps = getSequenceForPersona(targetPersona);
+      const clampedStep = clampStepToTotal(loaded.currentStep, steps.length);
+      this.currentStep = clampedStep;
       this.isActive = loaded.isActive;
       this.disabled = loaded.disabled;
       this.bypassOverview = loaded.bypassOverview;
       this.completedTasks = loaded.completedTasks;
       this.events = loaded.events;
       this.tasks = loaded.tasks;
+      if (clampedStep !== loaded.currentStep) {
+        this.persist();
+      }
     },
     persist() {
       if (typeof window !== "undefined" && window.localStorage) {
@@ -1002,6 +1094,7 @@ export const useOnboardingStore = defineStore("onboarding", {
       this.persist();
     },
     resumeTour() {
+      this.currentStep = clampStepToTotal(this.currentStep, this.totalSteps);
       this.isActive = true;
       this.disabled = false;
       this.addEvent(

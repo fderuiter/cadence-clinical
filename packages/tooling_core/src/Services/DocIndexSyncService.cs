@@ -26,6 +26,15 @@ public static partial class DocIndexSyncService
         "DOCUMENTATION_INDEX.md"
     };
 
+    // VitePress stages these copies from root documents when serving or building the site.
+    private static readonly HashSet<string> StagedSitePages = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "AGENTS.md",
+        "ARCHITECTURE.md",
+        "LICENSE.md",
+        "index.md"
+    };
+
     [GeneratedRegex(@"\]\(([^)\r\n]+)\)")]
     private static partial Regex MarkdownLinkRegex();
 
@@ -137,7 +146,8 @@ public static partial class DocIndexSyncService
         foreach (var file in Directory.GetFiles(currentDir, "*.md"))
         {
             string fileName = Path.GetFileName(file);
-            if (ExcludedFiles.Contains(fileName))
+            string relPath = Path.GetRelativePath(docsDir, file).Replace('\\', '/');
+            if (ExcludedFiles.Contains(fileName) || StagedSitePages.Contains(relPath))
             {
                 continue;
             }
@@ -148,7 +158,6 @@ public static partial class DocIndexSyncService
                 continue;
             }
 
-            string relPath = Path.GetRelativePath(docsDir, file).Replace('\\', '/');
             result.Add(new MarkdownDocInfo(relPath, file));
         }
 
@@ -202,6 +211,7 @@ public static partial class DocIndexSyncService
 
     public static string DetermineCategory(string relPath)
     {
+        if (relPath.StartsWith("architecture/repository-migration/", StringComparison.OrdinalIgnoreCase)) return "## Former repository migration program";
         if (relPath.StartsWith("kernel/", StringComparison.OrdinalIgnoreCase) ||
             relPath.StartsWith("architecture/", StringComparison.OrdinalIgnoreCase)) return "## Kernel and roadmap";
         if (relPath.StartsWith("adr/", StringComparison.OrdinalIgnoreCase)) return "## Architecture decision records";
@@ -224,9 +234,9 @@ public static partial class DocIndexSyncService
 
     public static string DetermineStatus(string relPath, string fileContent)
     {
-        if (relPath.Equals("architecture/repository-migration/REPOSITORY_REGISTRY.md", StringComparison.OrdinalIgnoreCase)) return "Normative";
         if (relPath.StartsWith("adr/", StringComparison.OrdinalIgnoreCase)) return "Current";
-        if (relPath.StartsWith("migration/", StringComparison.OrdinalIgnoreCase)) return "Historical";
+        if (relPath.StartsWith("migration/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.StartsWith("architecture/repository-migration/", StringComparison.OrdinalIgnoreCase)) return "Historical";
         if (relPath.StartsWith("api/", StringComparison.OrdinalIgnoreCase) || relPath.StartsWith("schema/", StringComparison.OrdinalIgnoreCase)) return "Generated";
         if (relPath.StartsWith("SDLC/", StringComparison.OrdinalIgnoreCase))
         {

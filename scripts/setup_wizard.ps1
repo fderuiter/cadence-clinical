@@ -100,7 +100,7 @@ else {
         }
     }
     else {
-        Write-Blocking "pnpm not found even after 'corepack enable'; enable corepack (Node 22+) so pnpm follows the packageManager pin."
+        Write-Blocking "pnpm not found. Install Corepack if needed ('npm install --global corepack'), then run 'corepack enable'."
     }
 }
 

@@ -168,13 +168,20 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useFocusTrap } from "../composables/useFocusTrap";
-import { useOnboardingStore } from "../stores/onboarding";
+import {
+  resolveAuthorizedTaskRoute,
+  useOnboardingStore,
+} from "../stores/onboarding";
+import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
+import { isScreenAvailable } from "../router/availability";
+import { hasRequiredRole } from "../router";
 
 const drawerRef = ref(null);
 const onboardingStore = useOnboardingStore();
+const authStore = useAuthStore();
 const router = useRouter();
 
 useFocusTrap(drawerRef, {
@@ -182,16 +189,57 @@ useFocusTrap(drawerRef, {
   onEscape: () => onboardingStore.closeDrawer(),
 });
 
+const effectiveRoles = computed(() => {
+  if (authStore.rawRoles?.length > 0) {
+    return authStore.normalizedRoles || [];
+  }
+  const personaKey =
+    authStore.currentPersona || onboardingStore.currentPersona || "super_admin";
+  const preset = PERSONA_PRESETS.find((p) => p.key === personaKey);
+  return preset ? [...preset.requires] : ["sponsor_admin"];
+});
+
+function canPushResolvedPath(targetPath) {
+  if (!targetPath || !router) return false;
+  if (typeof router.resolve === "function") {
+    const resolved = router.resolve(targetPath);
+    if (!resolved?.name || !isScreenAvailable(String(resolved.name))) {
+      return false;
+    }
+    const matchedRoles = (resolved.matched || []).flatMap(
+      (record) => record.meta?.requiresRole || []
+    );
+    const requiredRoles =
+      matchedRoles.length > 0
+        ? matchedRoles
+        : resolved.meta?.requiresRole || [];
+    if (
+      requiredRoles.length > 0 &&
+      !hasRequiredRole(effectiveRoles.value, requiredRoles)
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function navigateToTask(task) {
-  if (task && task.route) {
-    router.push(task.route);
+  if (!task) return;
+  const authorizedRoute = resolveAuthorizedTaskRoute(
+    task,
+    effectiveRoles.value
+  );
+  if (authorizedRoute && canPushResolvedPath(authorizedRoute)) {
+    router.push(authorizedRoute);
     onboardingStore.closeDrawer();
   }
 }
 
 function openOrientationHub() {
-  router.push("/overview");
-  onboardingStore.closeDrawer();
+  if (isScreenAvailable("overview") && canPushResolvedPath("/overview")) {
+    router.push("/overview");
+    onboardingStore.closeDrawer();
+  }
 }
 
 function startGuidedTour() {

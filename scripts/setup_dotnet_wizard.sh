@@ -81,7 +81,7 @@ stage "Clinical Datastores" "Probing PostgreSQL (5432)..."
 if nc -z 127.0.0.1 5432 2>/dev/null; then
   printf '  %s[SUCCESS] PostgreSQL running on port 5432.%s\n' "$GREEN" "$RESET"
 else
-  printf '  %s[INFO] PostgreSQL not reachable. Start via: docker compose up -d postgres%s\n' "$YELLOW" "$RESET"
+  printf '  %s[INFO] PostgreSQL not reachable. Start via: docker compose -f docker/docker-compose.yml up -d postgres%s\n' "$YELLOW" "$RESET"
 fi
 
 

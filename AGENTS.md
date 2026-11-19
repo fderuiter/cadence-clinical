@@ -10,6 +10,7 @@ Read first:
 2. [ARCHITECTURE.md](ARCHITECTURE.md): target architecture and the running services today.
 3. [CONTEXT.md](CONTEXT.md): domain vocabulary.
 4. [CONTRIBUTING.md](CONTRIBUTING.md): workflow, local checks and pull requests.
+5. [Project plan](docs/PROJECT_PLAN.md) and [goals and priorities](docs/GOALS_AND_PRIORITIES.md): active delivery scope, module ownership, and verification outcomes.
 
 ---
 

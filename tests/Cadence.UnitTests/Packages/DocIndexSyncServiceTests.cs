@@ -60,19 +60,28 @@ public sealed class DocIndexSyncServiceTests : IDisposable
 
         File.WriteAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"), "# Index\n");
         File.WriteAllText(Path.Combine(docsDir, "empty.md"), ""); // Empty file
+        foreach (string stagedPage in new[] { "AGENTS.md", "ARCHITECTURE.md", "LICENSE.md", "index.md" })
+        {
+            File.WriteAllText(Path.Combine(docsDir, stagedPage), "# Staged VitePress page\n");
+        }
+
+        string migrationDir = Path.Combine(docsDir, "migration");
+        Directory.CreateDirectory(migrationDir);
+        File.WriteAllText(Path.Combine(migrationDir, "index.md"), "# Authored migration page\n");
 
         var files = DocIndexSyncService.ScanMarkdownFiles(docsDir);
 
-        files.Should().HaveCount(2);
+        files.Should().HaveCount(3);
         files.Should().Contain(f => f.RelativePath == "VALID1.md");
         files.Should().Contain(f => f.RelativePath == "adr/2026-01-01-test.md");
+        files.Should().Contain(f => f.RelativePath == "migration/index.md");
     }
 
     [Fact]
     public void DetermineCategory_CategorizesPathsCorrectly()
     {
         DocIndexSyncService.DetermineCategory("kernel/SPEC.md").Should().Be("## Kernel and roadmap");
-        DocIndexSyncService.DetermineCategory("architecture/repository-migration/MIGRATION_PLAN.md").Should().Be("## Kernel and roadmap");
+        DocIndexSyncService.DetermineCategory("architecture/repository-migration/MIGRATION_PLAN.md").Should().Be("## Former repository migration program");
         DocIndexSyncService.DetermineCategory("adr/001.md").Should().Be("## Architecture decision records");
         DocIndexSyncService.DetermineCategory("SDLC/01_PRD.md").Should().Be("## Requirements, validation and GxP");
         DocIndexSyncService.DetermineCategory("migration/PHASE0.md").Should().Be("## Python-to-.NET port (completed)");
@@ -87,8 +96,8 @@ public sealed class DocIndexSyncServiceTests : IDisposable
     [Fact]
     public void DetermineStatus_AssignsStatusCorrectly()
     {
-        DocIndexSyncService.DetermineStatus("architecture/repository-migration/REPOSITORY_REGISTRY.md", "").Should().Be("Normative");
-        DocIndexSyncService.DetermineStatus("architecture/repository-migration/MIGRATION_PLAN.md", "").Should().Be("Current");
+        DocIndexSyncService.DetermineStatus("architecture/repository-migration/REPOSITORY_REGISTRY.md", "").Should().Be("Historical");
+        DocIndexSyncService.DetermineStatus("architecture/repository-migration/MIGRATION_PLAN.md", "").Should().Be("Historical");
         DocIndexSyncService.DetermineStatus("strategy/PRODUCT_CATALOG.md", "").Should().Be("Current");
         DocIndexSyncService.DetermineStatus("adr/2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md", "").Should().Be("Current");
         DocIndexSyncService.DetermineStatus("migration/01-old.md", "").Should().Be("Historical");

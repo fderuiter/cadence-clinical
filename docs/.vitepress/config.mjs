@@ -208,6 +208,13 @@ const config = defineConfig({
         ],
       },
       {
+        text: "Project",
+        items: [
+          { text: "Project Plan", link: "/PROJECT_PLAN" },
+          { text: "Goals and Priorities", link: "/GOALS_AND_PRIORITIES" },
+        ],
+      },
+      {
         text: "Clinical Kernel",
         items: [
           {

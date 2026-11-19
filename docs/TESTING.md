@@ -9,14 +9,15 @@ requirement as qualified.
 | Project                                                            | What it holds                                                                                                                                    | Run it with                                                                    |
 | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
 | `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 | Unit and component tests for services and packages, on in-memory fakes, SQLite or the EF Core in-memory provider. Needs no database.             | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
-| `tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj`   | Tests against a real PostgreSQL database (see below). Every test in it carries `Category=Integration`.                                           | `dotnet cadence test --integration`                                            |
+| `tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj`   | Tests against a real PostgreSQL database (see below). Every test in it carries `Category=Integration`.                                           | `pnpm cadence test --integration`                                              |
 | `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` | Layer and boundary rules (ArchUnitNET), the kernel baselines, suppression and test-layout policies, and the architecture sentinels.              | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
 | `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   | Black-box HTTP tests against the execution service, and the cross-module clinical journeys through the single host, via `WebApplicationFactory`. | `dotnet test tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   |
 | `packages/ui/tests/`                                               | Vitest suite for the shared JavaScript signing and UI helpers.                                                                                   | `pnpm --filter ui test`                                                        |
 | `apps/web/tests/`                                                  | Vitest suite for the web app's API clients, stores and views (jsdom). Playwright specs under `tests/e2e/` and `tests/browser/` are excluded.     | `pnpm --filter web test`                                                       |
 
-`dotnet test Cadence.sln` runs all four .NET test projects. `dotnet cadence test --fast` is the quick loop (every
-project, `Category!=Integration`), and `make verify` runs the quality gates plus every suite before you open a PR.
+`dotnet test Cadence.sln` runs all four .NET test projects. `pnpm cadence test --fast` applies
+`Category!=Integration` across the solution. `make verify` runs the quality gates and the .NET suites.
+Use `pnpm -r test` for frontend unit tests and see [local CI](CI.md#workflows) for the full workflow.
 
 Each project owns its folder under `tests/` and compiles nothing outside it, so every test runs exactly once.
 Fakes and fixtures that both the unit and integration projects need live in `tests/Cadence.TestSupport`, a class

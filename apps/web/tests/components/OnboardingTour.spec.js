@@ -1,10 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { mount } from "@vue/test-utils";
+import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import OnboardingTour from "../../src/components/OnboardingTour.vue";
 import AppShell from "../../src/components/AppShell.vue";
 import { useOnboardingStore } from "../../src/stores/onboarding";
 import { useAuthStore } from "../../src/stores/auth";
+import {
+  AVAILABLE_SCREENS,
+  isScreenAvailable,
+} from "../../src/router/availability";
+import { hasRequiredRole } from "../../src/router";
 import { signInAs } from "../helpers/signIn.js";
 import { createRouter, createWebHistory } from "vue-router";
 
@@ -12,20 +17,121 @@ const DummyView = { template: "<div>Dummy</div>" };
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: "/", name: "home", component: DummyView },
-    { path: "/overview", name: "overview", component: DummyView },
-    { path: "/studies/:studyCode?", name: "study", component: DummyView },
-    { path: "/ecrf", name: "ecrf", component: DummyView },
-    { path: "/ctms", name: "ctms", component: DummyView },
-    { path: "/ssu", name: "ssu", component: DummyView },
+    { path: "/", name: "landing", redirect: "/overview" },
+    {
+      path: "/overview",
+      name: "overview",
+      component: DummyView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/login",
+      name: "login",
+      component: DummyView,
+      meta: { requiresAuth: false },
+    },
+    {
+      path: "/forbidden",
+      name: "forbidden",
+      component: DummyView,
+      meta: { requiresAuth: false },
+    },
+    {
+      path: "/unavailable",
+      name: "unavailable",
+      component: DummyView,
+      meta: { requiresAuth: false },
+    },
+    {
+      path: "/studies/:studyCode?",
+      name: "study",
+      component: DummyView,
+      meta: { requiresAuth: true, layout: "canvas" },
+    },
+    {
+      path: "/ecrf",
+      name: "ecrf",
+      component: DummyView,
+      meta: {
+        requiresAuth: true,
+        requiresRole: [
+          "site_investigator",
+          "crc",
+          "data_manager",
+          "sponsor_admin",
+          "cra",
+          "monitor",
+        ],
+      },
+    },
+    {
+      path: "/ctms",
+      name: "ctms",
+      component: DummyView,
+      meta: {
+        requiresAuth: true,
+        requiresRole: ["cra", "monitor", "sponsor_admin"],
+      },
+    },
+    {
+      path: "/ssu",
+      name: "ssu",
+      component: DummyView,
+      meta: {
+        requiresAuth: true,
+        requiresRole: [
+          "cra",
+          "monitor",
+          "sponsor_admin",
+          "site_investigator",
+          "crc",
+        ],
+      },
+    },
+    {
+      path: "/mdr",
+      name: "mdr",
+      component: DummyView,
+      meta: {
+        requiresAuth: true,
+        requiresRole: ["sponsor_designer", "data_manager", "sponsor_admin"],
+      },
+    },
+    {
+      path: "/audit",
+      name: "audit",
+      component: DummyView,
+      meta: {
+        requiresAuth: true,
+        requiresRole: ["auditor", "tmf_auditor", "sponsor_admin"],
+      },
+    },
   ],
 });
 
+router.beforeEach((to) => {
+  const authStore = useAuthStore();
+  const requiredRoles = to.meta?.requiresRole;
+  if (
+    requiredRoles?.length > 0 &&
+    authStore.rawRoles?.length > 0 &&
+    !hasRequiredRole(authStore.normalizedRoles, requiredRoles)
+  ) {
+    return { path: "/forbidden" };
+  }
+  if (to.name && !isScreenAvailable(String(to.name))) {
+    return { name: "unavailable", query: { screen: String(to.name) } };
+  }
+});
+
 describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    vi.restoreAllMocks();
     const pinia = createPinia();
     setActivePinia(pinia);
     window.localStorage.clear();
+    await router.push("/overview");
+    await router.isReady();
   });
 
   describe("useOnboardingStore", () => {
@@ -499,6 +605,119 @@ describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
       expect(pushSpy).not.toHaveBeenCalledWith(
         expect.objectContaining({ name: "ctms" })
       );
+      wrapper.unmount();
+    });
+
+    it("routes site_crc Step 4 to ssu instead of forbidden ctms", async () => {
+      await router.push("/overview");
+      await flushPromises();
+      const store = useOnboardingStore();
+      signInAs(useAuthStore(), ["CRC"]);
+      store.loadPersonaState("site_crc");
+      store.startTour();
+
+      const wrapper = mount(OnboardingTour, {
+        global: { plugins: [router] },
+      });
+      await flushPromises();
+
+      expect(store.personaSteps[3].routeName).toBe("ssu");
+
+      // Step 1 -> 2 -> 3 -> 4
+      await wrapper.find(".btn-tour-next").trigger("click");
+      await flushPromises();
+      await wrapper.find(".btn-tour-next").trigger("click");
+      await flushPromises();
+      await wrapper.find(".btn-tour-next").trigger("click");
+      await flushPromises();
+
+      expect(store.currentStep).toBe(4);
+      expect(store.currentStepConfig.routeName).toBe("ssu");
+      expect(router.currentRoute.value.path).toBe("/ssu");
+      wrapper.unmount();
+    });
+
+    it("keeps the tour popover on /overview without opening study when AVAILABLE_SCREENS excludes every target screen", async () => {
+      const saved = [...AVAILABLE_SCREENS];
+      AVAILABLE_SCREENS.clear();
+      try {
+        await router.push("/overview");
+        await flushPromises();
+        const store = useOnboardingStore();
+        const authStore = signInAs(useAuthStore(), ["Auditor"]);
+        store.loadPersonaState("auditor");
+        store.startTour();
+
+        const pushSpy = vi.spyOn(router, "push");
+        pushSpy.mockClear();
+        const wrapper = mount(OnboardingTour, {
+          global: { plugins: [router] },
+        });
+        await flushPromises();
+
+        expect(
+          store.personaSteps.every((s) => s.routeName === "overview")
+        ).toBe(true);
+        expect(router.currentRoute.value.path).toBe("/overview");
+        expect(pushSpy).not.toHaveBeenCalled();
+        wrapper.unmount();
+
+        // Persona with zero native overview steps returns fallback steps on overview
+        signInAs(authStore, ["Data Manager"]);
+        store.loadPersonaState("data_manager");
+        store.startTour();
+        expect(store.personaSteps.length).toBeGreaterThan(0);
+        expect(
+          store.personaSteps.every((s) => s.routeName === "overview")
+        ).toBe(true);
+        pushSpy.mockRestore();
+      } finally {
+        saved.forEach((s) => AVAILABLE_SCREENS.add(s));
+      }
+    });
+
+    it("clamps stored currentStep to totalSteps after a persona switch with fewer filtered steps", () => {
+      window.localStorage.setItem("onboarding_cra_monitor_current_step", "5");
+      const store = useOnboardingStore();
+      const authStore = signInAs(useAuthStore(), ["Auditor"]);
+
+      authStore.switchPersona("cra_monitor");
+      store.loadPersonaState("cra_monitor");
+
+      expect(store.totalSteps).toBe(1);
+      expect(store.currentStep).toBe(1);
+      expect(
+        window.localStorage.getItem("onboarding_cra_monitor_current_step")
+      ).toBe("1");
+    });
+
+    it("keeps the popover on /overview instead of calling router.push when syncStepRoute encounters an unavailable or non-shell route", async () => {
+      await router.push("/overview");
+      await flushPromises();
+
+      const store = useOnboardingStore();
+      signInAs(useAuthStore(), ["Sponsor Admin"]);
+      store.startTour();
+
+      vi.spyOn(store, "currentStepConfig", "get").mockReturnValue({
+        step: 1,
+        routeName: "mdr",
+        targetSelector: null,
+        title: "Unavailable Step",
+        description: "Targets hidden MDR screen",
+      });
+
+      const pushSpy = vi.spyOn(router, "push");
+      pushSpy.mockClear();
+
+      const wrapper = mount(OnboardingTour, {
+        global: { plugins: [router] },
+      });
+      await flushPromises();
+
+      expect(wrapper.find(".onboarding-popover-card").exists()).toBe(true);
+      expect(router.currentRoute.value.path).toBe("/overview");
+      expect(pushSpy).not.toHaveBeenCalled();
       wrapper.unmount();
     });
   });

@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Share feedback or a feature idea
+    url: https://github.com/fderuiter/cadence-clinical/discussions
+    about: Start or join a discussion about clinical workflows and potential improvements.
   - name: Report a security vulnerability
     url: https://github.com/fderuiter/cadence-clinical/security/advisories/new
     about: Report vulnerabilities privately. Don't open a public issue (see SECURITY.md).

@@ -239,6 +239,10 @@ _Avoid_: names or e-mails on kernel tables, reading identities without a reveal 
 
 ## Part 2: Platform and application glossary
 
+### Modular monolith
+
+Cadence is developed in one source repository. Product modules converge on one composition host and use supported kernel contracts. Modules own their workflows and local records, and the kernel owns the canonical clinical state and command transaction. See [ADR-2603](docs/adr/2026-11-19-keep-cadence-in-one-repository.md) and the [project plan](docs/PROJECT_PLAN.md#module-ownership). <!-- deid-ignore: ADR filename date -->
+
 ### Clinical Research OS (Engines and Kernel)
 
 The platform's organising model (`docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md` v0.2): six engines (Knowledge, Execution, Evidence, Trust, Quality, Intelligence) over one kernel, with EDC, CTMS, eTMF, conformance validation, eConsent, RTSM, Safety and the rest as applications built on them. Founding invariant K-TRUTH-1: no product owns clinical truth, and no representation (SDTM, ADaM, FHIR, the protocol PDF) is clinical truth. A concept belongs in the kernel when it explains the provenance, authority, meaning or lifecycle of clinical evidence across more than one application.

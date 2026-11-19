@@ -173,9 +173,10 @@
 <script setup>
 import { computed } from "vue";
 import { useRouter } from "vue-router";
-import { PERSONA_PRESETS, ROLE_ALIASES, useAuthStore } from "../stores/auth";
+import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding";
 import { isScreenAvailable } from "../router/availability";
+import { hasRequiredRole } from "../router";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -200,15 +201,6 @@ const effectiveRoles = computed(() => {
   return preset ? [...preset.requires] : ["sponsor_admin"];
 });
 
-function hasAnyRole(requiredRoles) {
-  if (!requiredRoles || requiredRoles.length === 0) return true;
-  return effectiveRoles.value.some((uRole) => {
-    if (requiredRoles.includes(uRole)) return true;
-    const aliases = ROLE_ALIASES[uRole] || [];
-    return aliases.some((alias) => requiredRoles.includes(alias));
-  });
-}
-
 function resolveAuthorizedRoute(routeSpec) {
   if (!routeSpec) return null;
   if (routeSpec === "study" || routeSpec === "/studies") {
@@ -216,7 +208,7 @@ function resolveAuthorizedRoute(routeSpec) {
   }
   if (routeSpec === "ecrf" || routeSpec === "/ecrf") {
     return isScreenAvailable("ecrf") &&
-      hasAnyRole([
+      hasRequiredRole(effectiveRoles.value, [
         "site_investigator",
         "crc",
         "data_manager",
@@ -230,20 +222,34 @@ function resolveAuthorizedRoute(routeSpec) {
   if (
     routeSpec === "site-readiness" ||
     routeSpec === "ctms" ||
-    routeSpec === "/ctms" ||
-    routeSpec === "ssu" ||
-    routeSpec === "/ssu"
+    routeSpec === "/ctms"
   ) {
     if (
       isScreenAvailable("ctms") &&
-      hasAnyRole(["cra", "monitor", "sponsor_admin"])
+      hasRequiredRole(effectiveRoles.value, ["cra", "monitor", "sponsor_admin"])
     ) {
       return "/ctms";
     }
-    if (isScreenAvailable("ssu") && hasAnyRole(["site_investigator", "crc"])) {
+    if (
+      routeSpec === "site-readiness" &&
+      isScreenAvailable("ssu") &&
+      hasRequiredRole(effectiveRoles.value, ["site_investigator", "crc"])
+    ) {
       return "/ssu";
     }
     return null;
+  }
+  if (routeSpec === "ssu" || routeSpec === "/ssu") {
+    return isScreenAvailable("ssu") &&
+      hasRequiredRole(effectiveRoles.value, [
+        "cra",
+        "monitor",
+        "sponsor_admin",
+        "site_investigator",
+        "crc",
+      ])
+      ? "/ssu"
+      : null;
   }
   return null;
 }
@@ -512,13 +518,26 @@ function handleBypassToggle(event) {
 }
 
 function navigateToRoute(routePathOrName) {
-  const resolved = resolveAuthorizedRoute(routePathOrName) || routePathOrName;
-  if (!resolved) return;
-  if (resolved.startsWith("/")) {
-    router.push(resolved);
-  } else {
-    router.push({ name: resolved });
+  const resolved = resolveAuthorizedRoute(routePathOrName);
+  if (!resolved || !router) return;
+  if (typeof router.resolve === "function") {
+    const target = router.resolve(resolved);
+    if (!target?.name || !isScreenAvailable(String(target.name))) {
+      return;
+    }
+    const matchedRoles = (target.matched || []).flatMap(
+      (record) => record.meta?.requiresRole || []
+    );
+    const requiredRoles =
+      matchedRoles.length > 0 ? matchedRoles : target.meta?.requiresRole || [];
+    if (
+      requiredRoles.length > 0 &&
+      !hasRequiredRole(effectiveRoles.value, requiredRoles)
+    ) {
+      return;
+    }
   }
+  router.push(resolved);
 }
 
 function startGuidedTour() {
