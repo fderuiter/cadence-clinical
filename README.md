@@ -127,6 +127,8 @@ The full, generated command reference is [docs/cli.md](docs/cli.md).
 
 ## Contributing
 
+The [issue workflow](docs/ISSUE_MANAGEMENT.md) defines backlog scope, priorities, readiness, and triage.
+
 Development is maintainer-led for now. Please hold off on opening code pull requests.
 
 Feedback, feature ideas, and suggestions for improving clinical workflows are welcome in

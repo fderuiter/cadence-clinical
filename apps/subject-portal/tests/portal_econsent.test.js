@@ -310,4 +310,117 @@ describe("eConsent Patient Portal - Workflow and Gating Integration Tests", () =
     expect(compBanner.getAttribute("role")).toBe("status");
     expect(compBanner.getAttribute("aria-live")).toBe("polite");
   });
+
+  it("posts ADR-2259 step-up verification and CaptureConsentRequest fields when authenticated, and focuses #sign-password on error", async () => {
+    const portal = await import("../src/index.js");
+    await portal.initializeApp();
+
+    portal.state.session.userId = "subject_001";
+    portal.state.session.token = "live-session-jwt"; // pragma: allowlist secret
+    portal.state.session.isOfflineMode = false;
+    portal.state.session.isDemoMode = false;
+    portal.state.consentPassed = true;
+    portal.state.livenessVerified = true;
+    portal.state.consentLivenessToken = "live-liveness-token-001";
+    portal.state.consentContent = {
+      template_id: "template-icf",
+      template_name: "Main Informed Consent Form",
+      study_id: "study_01",
+      site_id: "site_alpha",
+      protocol_version: "v1.0",
+      language_code: "en",
+      version_index: 1,
+      clauses: [],
+    };
+    portal.renderConsentUI();
+
+    const calls = [];
+    let failStepUp = true;
+    globalThis.fetch = vi.fn().mockImplementation(async (url, opts) => {
+      calls.push({ url: String(url), opts });
+      if (String(url).includes("/api/v1/auth/signature-verification")) {
+        if (failStepUp) {
+          return {
+            ok: false,
+            status: 401,
+            json: async () => ({ detail: "INVALID_CREDENTIALS" }),
+          };
+        }
+        return {
+          ok: true,
+          json: async () => ({ sig_token: "sig-token-live-1", expires_in: 60 }),
+        };
+      }
+      if (
+        String(url).includes(
+          "/api/v1/econsent/templates/template-icf/versions/1/capture-consent"
+        )
+      ) {
+        return {
+          ok: true,
+          json: async () => ({
+            id: "consent-1",
+            status: "ACTIVE",
+          }),
+        };
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
+    document.getElementById("btn-trigger-consent-sign").click();
+    const usernameInput = document.getElementById("sign-username");
+    const passwordInput = document.getElementById("sign-password");
+    usernameInput.value = "subject_001";
+    passwordInput.value = "wrong-pin"; // pragma: allowlist secret
+
+    // Failed step-up wipes password, keeps modal open, displays error, and focuses #sign-password
+    await portal.verifyAndSubmitSignature();
+    expect(passwordInput.value).toBe("");
+    expect(portal.state.consentSigned).toBe(false);
+    expect(document.activeElement?.id).toBe("sign-password");
+    expect(document.getElementById("modal-error-banner").textContent).toContain(
+      "Signature Verification Rejected"
+    );
+
+    // Retry with valid credentials sends full CaptureConsentRequest to /capture-consent
+    failStepUp = false;
+    calls.length = 0;
+    passwordInput.value = "correct-pin"; // pragma: allowlist secret
+    await portal.verifyAndSubmitSignature();
+
+    const stepUpCall = calls.find((c) =>
+      c.url.includes("/api/v1/auth/signature-verification")
+    );
+    expect(stepUpCall).toBeDefined();
+    expect(JSON.parse(stepUpCall.opts.body)).toEqual({
+      username: "subject_001",
+      password: "correct-pin", // pragma: allowlist secret
+      action:
+        "/api/v1/econsent/templates/template-icf/versions/1/capture-consent",
+      semantic_action: "econsent.consent.capture",
+    });
+
+    const captureCall = calls.find((c) =>
+      c.url.includes(
+        "/api/v1/econsent/templates/template-icf/versions/1/capture-consent"
+      )
+    );
+    expect(captureCall).toBeDefined();
+    expect(captureCall.opts.headers["X-Sig-Token"]).toBe("sig-token-live-1");
+    const captureBody = JSON.parse(captureCall.opts.body);
+    expect(captureBody).toMatchObject({
+      subject_pseudonym: "subject_001",
+      study_id: "study_01",
+      site_id: "site_alpha",
+      signer_name: "subject_001",
+      signer_role: "Subject",
+      meaning: "Enrollment Confirmation and Consent",
+      signing_reason: "Enrollment Confirmation and Consent",
+      protocol_version: "v1.0",
+      signature_data: "subject_001",
+      liveness_token: "live-liveness-token-001",
+    });
+    expect(captureBody.digest_sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(portal.state.consentSigned).toBe(true);
+  });
 });

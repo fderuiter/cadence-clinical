@@ -8,7 +8,7 @@
 # ------------------------------------------------------------------------------
 # Base images are pinned to an exact version and digest so every build uses the same bits.
 # Dependabot (.github/dependabot.yml) proposes updates; bump the SDK and runtime together.
-FROM mcr.microsoft.com/dotnet/sdk:10.0.403@sha256:212fe4cb74627d5adf9817a4088906ae3edff1bd853bb27565d4b46731efe61e AS dev
+FROM mcr.microsoft.com/dotnet/sdk:10.0.404@sha256:bef136a371963aaa46ec97882845ef6f54dec15728bb4b128b1c2a400ffbc9b4 AS dev
 
 # Install curl, ffmpeg, libreoffice, git, procps for developer introspection
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -61,7 +61,7 @@ RUN dotnet publish ${PROJECT_PATH} -c Release -o /app/publish /p:UseAppHost=fals
 # ------------------------------------------------------------------------------
 # 3. Production Runtime Stage
 # ------------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.14@sha256:1a48394b6f29d3a32c79d9edecd4abda0ecbe8776d567dbfc4590ed6979c740c AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.15@sha256:12b1135f5f8b3c0a214f2a680ff2033dff4f684f445d6c697d9524ceeb303586 AS runtime
 
 # Install curl, ffmpeg, libreoffice for container health check parity and background workers
 RUN apt-get update && apt-get install -y --no-install-recommends \

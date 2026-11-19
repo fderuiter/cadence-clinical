@@ -51,11 +51,10 @@ To run the services locally, see [README: Running the services](README.md#runnin
 
 ## 2. Workflow
 
-1. Pick or open an issue. The backlog is organised in epics: kernel
-   ([#4719](https://github.com/fderuiter/cadence-clinical/issues/4719)), security and GxP defects
-   ([#4759](https://github.com/fderuiter/cadence-clinical/issues/4759)) and hygiene
-   ([#4760](https://github.com/fderuiter/cadence-clinical/issues/4760)). Kernel work follows the
-   [spec roadmap](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap).
+1. Pick agreed work using the [issue workflow](docs/ISSUE_MANAGEMENT.md). It defines the vision,
+   canonical labels, horizon caps, native relationships, and Definition of Ready. Promote a bounded
+   outcome from an existing owner before creating another ticket. Feedback and uncommitted ideas
+   start in [Discussions](https://github.com/fderuiter/cadence-clinical/discussions).
 2. Branch from `main` (`feature/<issue>-<slug>`, `fix/<issue>-<slug>`, `docs/<slug>`, `chore/<slug>`).
 3. Make the change, with tests and the documentation it affects (see section 5).
 4. Run the local checks (section 3). Commit with a

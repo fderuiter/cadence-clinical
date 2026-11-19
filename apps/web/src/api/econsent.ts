@@ -14,6 +14,15 @@ export type TranslationCreateBody =
 export type TranslationUpdateBody =
   paths["/api/v1/econsent/translations/{translation_id}"]["put"]["requestBody"]["content"]["application/json"];
 
+export const ECONSENT_CAPTURE_SEMANTIC_ACTION = "econsent.consent.capture";
+
+export function econsentCaptureAction(
+  templateId: string,
+  versionIndex = 1
+): string {
+  return `/api/v1/econsent/templates/${encodeURIComponent(templateId)}/versions/${versionIndex}/capture-consent`;
+}
+
 export const econsentService = {
   // --- Clauses ---
   createClause(body: ClauseCreateBody, options: Record<string, unknown> = {}) {

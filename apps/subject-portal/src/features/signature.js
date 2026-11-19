@@ -1,4 +1,5 @@
 // 21 CFR Part 11 electronic signature modal for ePRO and eConsent.
+import { sha256 } from "ui";
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
 import {
@@ -111,6 +112,15 @@ export async function verifyAndSubmitSignature() {
     } else {
       alert("Please enter both User ID and Security PIN/Password to sign.");
     }
+    if (
+      !username &&
+      usernameInput &&
+      typeof usernameInput.focus === "function"
+    ) {
+      usernameInput.focus();
+    } else if (passwordInput && typeof passwordInput.focus === "function") {
+      passwordInput.focus();
+    }
     return;
   }
 
@@ -130,11 +140,14 @@ export async function verifyAndSubmitSignature() {
 
   if (actionType === "consent") {
     // eConsent GxP/Part 11 Step-up signature flow
+    const tpl = state.consentContent;
+    const templateId = tpl?.template_id || "template-icf";
+    const versionIndex = tpl?.version_index ?? 1;
+    const captureActionPath = `/api/v1/econsent/templates/${encodeURIComponent(templateId)}/versions/${versionIndex}/capture-consent`;
+
     if (isAuthenticatedSession()) {
       try {
         // Step 1: obtain short-lived sig_token bound to exact gateway action & semantic_action
-        const signActionPath =
-          "/api/v1/econsent/templates/template-icf/versions/1/sign";
         const tokenResponse = await dispatchApi(
           "api/v1/auth/signature-verification",
           {
@@ -142,8 +155,8 @@ export async function verifyAndSubmitSignature() {
             body: JSON.stringify({
               username: cleanUsername,
               password: cleanPassword,
-              action: signActionPath,
-              semantic_action: "econsent.icf.sign",
+              action: captureActionPath,
+              semantic_action: "econsent.consent.capture",
             }),
           }
         );
@@ -155,22 +168,42 @@ export async function verifyAndSubmitSignature() {
           );
         }
 
-        // Step 2: Sign consent document
-        const signResponse = await dispatchApi(
-          "api/v1/econsent/templates/template-icf/versions/1/sign",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              subject_pseudonym: state.session.userId,
-              signature_data: cleanUsername,
-              reason_for_change: finalReason,
-              liveness_token: state.consentLivenessToken,
-            }),
-            headers: {
-              "X-Sig-Token": sigToken,
-            },
-          }
-        );
+        const subjectPseudonym = state.session.userId || cleanUsername;
+        const studyId = tpl?.study_id || state.session.studyId || "study_01";
+        const siteId = tpl?.site_id || state.session.siteId || "site_01";
+        const protocolVersion = tpl?.protocol_version || "v1.0";
+        const digestSha256 =
+          tpl?.digest_sha256 ||
+          (await sha256(
+            JSON.stringify(
+              tpl || {
+                template_id: templateId,
+                version_index: versionIndex,
+              }
+            )
+          ));
+
+        // Step 2: Capture signed consent document per EconsentEndpoints CaptureConsentRequest
+        const signResponse = await dispatchApi(captureActionPath, {
+          method: "POST",
+          body: JSON.stringify({
+            subject_pseudonym: subjectPseudonym,
+            study_id: studyId,
+            site_id: siteId,
+            signer_name: cleanUsername,
+            signer_role: "Subject",
+            meaning: finalReason,
+            signing_reason: finalReason,
+            protocol_version: protocolVersion,
+            digest_sha256: digestSha256,
+            signature_data: cleanUsername,
+            liveness_token: state.consentLivenessToken,
+            device_timestamp: new Date().toISOString(),
+          }),
+          headers: {
+            "X-Sig-Token": sigToken,
+          },
+        });
 
         if (
           !signResponse ||
@@ -190,9 +223,9 @@ export async function verifyAndSubmitSignature() {
         await logAuditRecord(
           "SIGN_CONSENT",
           {
-            template_id: "template-icf",
-            version_index: 1,
-            subject_pseudonym: state.session.userId,
+            template_id: templateId,
+            version_index: versionIndex,
+            subject_pseudonym: subjectPseudonym,
           },
           `Informed Consent Signed and Verified: "${cleanUsername}" with declaration: "${finalReason}"`
         );
@@ -201,12 +234,15 @@ export async function verifyAndSubmitSignature() {
         alert("Informed Consent successfully signed and archived!");
         loadConsentDetails();
       } catch (err) {
-        // Show in accessible error status banner and preserve credential hygiene
+        // Show in accessible error status banner, focus #sign-password for retry, and preserve credential hygiene
         if (errorBanner) {
           errorBanner.textContent = `Signature Verification Rejected: ${err.message}`;
           errorBanner.style.display = "block";
         } else {
           alert(`Signature Verification Rejected: ${err.message}`);
+        }
+        if (passwordInput && typeof passwordInput.focus === "function") {
+          passwordInput.focus();
         }
       }
     } else if (allowUnbackedAction("Electronic consent signature")) {
@@ -216,8 +252,8 @@ export async function verifyAndSubmitSignature() {
       await logAuditRecord(
         "SIGN_CONSENT",
         {
-          template_id: "template-icf",
-          version_index: 1,
+          template_id: templateId,
+          version_index: versionIndex,
           subject_pseudonym: state.session.userId,
         },
         `Informed Consent Signed and Verified (Demo Mode): "${cleanUsername}" with declaration: "${finalReason}"`
@@ -234,6 +270,9 @@ export async function verifyAndSubmitSignature() {
         errorBanner.style.display = "block";
       } else {
         alert(refusalMsg);
+      }
+      if (passwordInput && typeof passwordInput.focus === "function") {
+        passwordInput.focus();
       }
     }
   } else {

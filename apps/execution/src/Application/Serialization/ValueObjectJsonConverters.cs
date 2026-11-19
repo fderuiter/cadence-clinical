@@ -97,20 +97,6 @@ public sealed class SiteCodeJsonConverter : JsonConverter<SiteCode>
         writer.WriteStringValue(value.Value);
 }
 
-public sealed class DomainCodeJsonConverter : JsonConverter<DomainCode>
-{
-    public override DomainCode Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        string? raw = reader.GetString();
-        return raw is null
-            ? throw new JsonException("Expected a non-null JSON string for DomainCode.")
-            : new DomainCode(raw);
-    }
-
-    public override void Write(Utf8JsonWriter writer, DomainCode value, JsonSerializerOptions options) =>
-        writer.WriteStringValue(value.Value);
-}
-
 public sealed class TestCodeJsonConverter : JsonConverter<TestCode>
 {
     public override TestCode Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

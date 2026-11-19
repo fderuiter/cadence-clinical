@@ -53,4 +53,4 @@ Modal dialogs, slide-over drawers, and tab bars across the clinician workspace (
 ## 6. Implementation & Verification
 
 - **Affected Repositories / Services:** `packages/ui`, `apps/subject-portal`, `apps/web`, `docs/components/modal.md`.
-- **Verification Plan:** Verified via Vitest unit/component suites (`packages/ui/tests/useFocusTrap.test.js`, `apps/subject-portal/tests/accessibility-focus-tabs.test.js`, `apps/web/tests/accessibility.test.js`), Playwright + axe-core WCAG 2.1 AA E2E tests (`apps/subject-portal/tests/e2e/portal-accessibility.spec.js`), and `pnpm cadence check`.
+- **Verification Plan:** Verified via Vitest unit/component suites (`packages/ui/tests/useFocusTrap.test.js`, `apps/subject-portal/tests/accessibility-focus-tabs.test.js`, `apps/web/tests/accessibility.test.js`, `apps/web/tests/components/ModalErrorAlertRetry.spec.ts`), Playwright + axe-core WCAG 2.1 AA E2E tests (`apps/subject-portal/tests/e2e/portal-accessibility.spec.js`), and `pnpm cadence check`.
