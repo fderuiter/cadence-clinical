@@ -28,7 +28,6 @@ public sealed class ExecutionWireTypesOpenApiTransformer : IOpenApiSchemaTransfo
         typeof(StudyCode),
         typeof(SiteCode),
         typeof(ObservationId),
-        typeof(DomainCode),
         typeof(TestCode),
     ];
 
