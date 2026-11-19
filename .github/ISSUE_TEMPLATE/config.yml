@@ -9,3 +9,6 @@ contact_links:
   - name: Kernel specification
     url: https://github.com/fderuiter/cadence-clinical/blob/main/docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md
     about: Check the kernel spec and its roadmap (§15) before proposing a new domain concept.
+  - name: Maintainer issue workflow
+    url: https://github.com/fderuiter/cadence-clinical/blob/main/docs/ISSUE_MANAGEMENT.md
+    about: Use the project vision, horizon caps, and Definition of Ready for agreed work.

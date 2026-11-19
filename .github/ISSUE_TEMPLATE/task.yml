@@ -1,0 +1,59 @@
+name: Maintenance, documentation, or evidence task
+description: Scope internal work with an explicit verification outcome.
+labels:
+  - type:chore
+  - status:needs-triage
+body:
+  - type: markdown
+    attributes:
+      value:
+        Use synthetic data only. Never include credentials, PHI, or real participant data. Report vulnerabilities
+        privately through SECURITY.md.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Primary area
+      options:
+        - Kernel and trust (packages/kernel, gateway, security)
+        - Capture and Clinical Canvas (execution, apps/web)
+        - Study design and Blueprint (designer, USDM, DDF)
+        - Clinical operations and evidence (consent, safety, quality, interop)
+        - Engineering (CLI, CI, tests, documentation)
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Context and purpose
+      description: What current problem, debt, or evidence gap needs attention? Link its owner or source.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and non-goals
+      description: Define a bounded outcome and exclusions.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: State binary completion conditions.
+      value: "- [ ] The scoped outcome is implemented or recorded and verified."
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification plan
+      description: Which existing tests, commands, or document checks establish the outcome?
+    validations:
+      required: true
+  - type: textarea
+    id: pointers
+    attributes:
+      label: Codebase pointers and dependencies
+      description: Add verified paths and prerequisite issues when known.
+    validations:
+      required: false

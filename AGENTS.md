@@ -14,6 +14,15 @@ Read first:
 
 ---
 
+## Issue workflow
+
+Follow [docs/ISSUE_MANAGEMENT.md](docs/ISSUE_MANAGEMENT.md) when filing or working issues.
+Check current code, recent PRs, and the project plan before proposing work or closure.
+Use its canonical taxonomy and horizon caps; Now work must meet its Definition of Ready.
+Prefer an existing owner, native sub-issues, and native dependencies over duplicate tickets.
+Preserve original context and salvage unique source and comment evidence before consolidation.
+Keep raw ideas in Discussions and preserve unmet dependency gates until replacements are verified.
+
 ## Product mission
 
 Cadence is an **operating system for clinical research**: one kernel holding a single body of
