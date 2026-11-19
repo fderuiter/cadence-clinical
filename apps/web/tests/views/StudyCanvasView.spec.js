@@ -3,6 +3,7 @@ import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { executionApi } from "../../src/api/executionApi";
+import { useAuthStore } from "../../src/stores/auth";
 import { useToastStore } from "../../src/stores/toasts.js";
 import { isScreenAvailable } from "../../src/router/availability";
 import { router as appRouter } from "../../src/router";
@@ -115,11 +116,15 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
     return wrapper;
   }
 
-  it("replaces the product sidebar shell rather than sitting inside it (UX-1)", async () => {
+  it("wraps the study canvas and workflow views in one unified shell without a product sidebar (UX-1)", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+
     router.addRoute({
       path: "/ecrf-shell",
       name: "shell",
-      component: { template: "<p>screen</p>" },
+      component: { template: "<p id='workflow-screen'>screen</p>" },
     });
     await router.push("/studies/CAD-101");
     await router.isReady();
@@ -128,13 +133,25 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
 
     expect(wrapper.find("#study-canvas").exists()).toBe(true);
     expect(wrapper.find(".app-sidebar").exists()).toBe(false);
+    expect(wrapper.find("#nav-studies").attributes("href")).toBe(
+      "/studies/CAD-101"
+    );
+    expect(wrapper.find("#btn-open-palette").exists()).toBe(true);
+    expect(wrapper.find("#persona-select").exists()).toBe(true);
+    expect(wrapper.find("#btn-onboarding-checklist-trigger").exists()).toBe(
+      true
+    );
+    expect(wrapper.find("#btn-contextual-help-trigger").exists()).toBe(true);
 
     await router.push("/ecrf-shell");
     await flushPromises();
-    expect(wrapper.find(".app-sidebar").exists()).toBe(true);
-    expect(wrapper.find("#btn-open-study-canvas").attributes("href")).toBe(
-      "/studies"
+    expect(wrapper.find("#workflow-screen").exists()).toBe(true);
+    expect(wrapper.find(".app-sidebar").exists()).toBe(false);
+    expect(wrapper.find("#nav-studies").attributes("href")).toBe(
+      "/studies/CAD-101"
     );
+    expect(wrapper.find("#btn-open-palette").exists()).toBe(true);
+    expect(wrapper.find("#persona-select").exists()).toBe(true);
   });
 
   it("is an available screen", () => {

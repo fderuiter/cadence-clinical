@@ -81,7 +81,7 @@
     }
   },
   "ecrf": {
-    "title": "eCRF-Laufzeit-Renderer",
+    "title": "Datenerfassung",
     "description": "Dynamisches Dateneingabeformular, das aus CDASH-Metadaten mit clientseitiger Feldvalidierung und Echtzeit-Diskrepanzmanagement befüllt wird.",
     "activeRole": "Aktive Rolle:",
     "ehrReconciliation": "EHR-Quellenabgleich",
@@ -107,7 +107,7 @@
       "visitWeek2": "Woche 2 Behandlung",
       "visitWeek4": "Woche 4 Behandlung",
       "noSubjects": "Keine Probanden gelistet",
-      "trainingGatedTitle": "Obligatorisches Protokolltraining unvollständig — EDC-Schreibzugriff gesperrt",
+      "trainingGatedTitle": "Obligatorisches Protokolltraining unvollständig — Dateneingabe gesperrt",
       "trainingGatedDesc": "Gemäß ICH GCP E6(R2) §4 & PRD-TRN-002 muss das Studienpersonal das obligatorische Protokoll-Amendment-Training absolvieren, bevor eCRF-Einträge gespeichert oder signiert werden können.",
       "completeTrainingNow": "Training jetzt absolvieren ➡️",
       "reconsentGatedTitle": "Protokoll-Amendment aktiv (v2.0.0) — Erneute Einwilligung erforderlich",

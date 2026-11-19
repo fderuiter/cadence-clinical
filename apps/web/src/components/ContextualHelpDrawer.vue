@@ -298,8 +298,7 @@
             <p>
               There is currently no published SOP mapped specifically to
               <code>{{ knowledgeStore.currentRoute }}</code> for persona
-              <strong>{{ activePersonaLabel }}</strong
-              >.
+              <strong>{{ activePersonaLabel }}</strong>.
             </p>
             <div class="empty-actions">
               <button class="btn btn-secondary" @click="openSearchWithFallback">
@@ -347,6 +346,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
+import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import TicketCreateModal from "./tickets/TicketCreateModal.vue";
 
 const knowledgeStore = useKnowledgeStore();
@@ -414,6 +414,9 @@ function handleEscalate() {
 }
 
 function handleTicketCreated(_payload) {
+  if (!allowUnbackedAction("Support ticket escalation")) {
+    return;
+  }
   knowledgeStore.cancelEscalation();
   knowledgeStore.closeDrawer();
 }

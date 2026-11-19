@@ -173,8 +173,9 @@
 <script setup>
 import { computed } from "vue";
 import { useRouter } from "vue-router";
-import { useAuthStore } from "../stores/auth";
+import { PERSONA_PRESETS, ROLE_ALIASES, useAuthStore } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding";
+import { isScreenAvailable } from "../router/availability";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -191,48 +192,104 @@ const currentPersonaKey = computed(
   () => authStore.currentPersona || "super_admin"
 );
 
+const effectiveRoles = computed(() => {
+  if (authStore.rawRoles?.length > 0) {
+    return authStore.normalizedRoles || [];
+  }
+  const preset = PERSONA_PRESETS.find((p) => p.key === currentPersonaKey.value);
+  return preset ? [...preset.requires] : ["sponsor_admin"];
+});
+
+function hasAnyRole(requiredRoles) {
+  if (!requiredRoles || requiredRoles.length === 0) return true;
+  return effectiveRoles.value.some((uRole) => {
+    if (requiredRoles.includes(uRole)) return true;
+    const aliases = ROLE_ALIASES[uRole] || [];
+    return aliases.some((alias) => requiredRoles.includes(alias));
+  });
+}
+
+function resolveAuthorizedRoute(routeSpec) {
+  if (!routeSpec) return null;
+  if (routeSpec === "study" || routeSpec === "/studies") {
+    return isScreenAvailable("study") ? "/studies" : null;
+  }
+  if (routeSpec === "ecrf" || routeSpec === "/ecrf") {
+    return isScreenAvailable("ecrf") &&
+      hasAnyRole([
+        "site_investigator",
+        "crc",
+        "data_manager",
+        "sponsor_admin",
+        "cra",
+        "monitor",
+      ])
+      ? "/ecrf"
+      : null;
+  }
+  if (
+    routeSpec === "site-readiness" ||
+    routeSpec === "ctms" ||
+    routeSpec === "/ctms" ||
+    routeSpec === "ssu" ||
+    routeSpec === "/ssu"
+  ) {
+    if (
+      isScreenAvailable("ctms") &&
+      hasAnyRole(["cra", "monitor", "sponsor_admin"])
+    ) {
+      return "/ctms";
+    }
+    if (isScreenAvailable("ssu") && hasAnyRole(["site_investigator", "crc"])) {
+      return "/ssu";
+    }
+    return null;
+  }
+  return null;
+}
+
 const PERSONA_DETAILS = {
   super_admin: {
     icon: "👑",
     title: "Super Admin Workspace",
     roleName: "Super Admin",
     description:
-      "Full oversight across protocol authoring, eCRF capture, CTMS monitoring, and GxP regulatory audit trails.",
+      "Full oversight across study workspaces, clinical data collection, site readiness, and regulatory governance.",
   },
   sponsor_designer: {
     icon: "📋",
-    title: "Sponsor Protocol & SoA Design Hub",
+    title: "Sponsor Protocol & Design Workspace",
     roleName: "Sponsor Protocol Designer",
     description:
-      "Digitize USDM protocols, structure Schedule of Activities (SoA), and author eCRF form templates.",
+      "Structure study lifecycle stages, inspect recorded protocol versions, and review clinical schedules.",
   },
   data_manager: {
     icon: "⚙️",
-    title: "Clinical Data Management Cockpit",
+    title: "Clinical Data Management Workspace",
     roleName: "Clinical Data Manager",
     description:
-      "Configure study validation rules, review MedDRA/WHODrug coding discrepancies, and manage data locks.",
+      "Review clinical case report forms, field validation rules, and discrepancy query resolution.",
   },
   site_crc: {
     icon: "🩺",
-    title: "Site Investigator & CRC Workspace",
+    title: "Site Investigator & Coordinator Workspace",
     roleName: "Site Coordinator / CRC",
     description:
-      "Capture participant eCRF data, verify eConsent signatures, and upload central DICOM imaging.",
+      "Manage participant enrollment, record clinical visit observations, and track site operational readiness.",
   },
   cra_monitor: {
     icon: "📊",
-    title: "CRA Clinical Monitoring Operations",
+    title: "Clinical Monitoring & Site Readiness",
     roleName: "CRA / Clinical Monitor",
     description:
-      "Perform Source Data Verification (SDV), track site activation greenlights, and audit eTMF binders.",
+      "Perform source data verification, track site activation readiness, and monitor study conduct.",
   },
   auditor: {
     icon: "🔒",
-    title: "GxP & Part 11 Regulatory Vault",
+    title: "GxP & Part 11 Regulatory Workspace",
     roleName: "GxP Auditor",
     description:
-      "Inspect Part 11 immutable audit ledgers, cryptographic signature chains, and regulatory compliance matrices.",
+      "Inspect immutable study activity, protocol version provenance, and 21 CFR Part 11 governance decisions.",
   },
 };
 
@@ -246,131 +303,149 @@ const CHECKLISTS = {
   super_admin: [
     {
       id: "sa-1",
-      title: "Verify System Genesis Ledger",
+      title: "Open a Study Workspace",
       description:
-        "Confirm cryptographic ledger initialization and Part 11 audit status.",
-      targetRoute: "ecrf",
+        "Open a study by code to inspect lifecycle stages, participants, and activity.",
+      targetRoute: "/studies",
     },
     {
       id: "sa-2",
-      title: "Review Operational Tools",
+      title: "Review Site Readiness",
       description:
-        "Explore eCRF data capture, CTMS monitoring, and audit log suites.",
-      targetRoute: "ctms",
+        "Check site activation checklists, startup progress, and readiness status.",
+      targetRoute: "site-readiness",
     },
     {
       id: "sa-3",
       title: "Customize Landing Preferences",
       description:
-        "Set your default landing behavior or bypass option for future logins.",
+        "Set your default landing behavior or bypass option for future sign-ins.",
       targetRoute: null,
     },
   ],
   sponsor_designer: [
     {
       id: "sd-1",
-      title: "Protocol AI Ingestion",
-      description: "Upload protocol specification for USDM v3/v4 digitization.",
-      targetRoute: "ecrf",
+      title: "Open Study Design Stage",
+      description:
+        "Open a study workspace to inspect its Design stage and recorded protocol versions.",
+      targetRoute: "/studies",
     },
     {
       id: "sd-2",
-      title: "Schedule of Activities (SoA)",
-      description: "Define visit structure and procedure matrix.",
-      targetRoute: "ecrf",
+      title: "Navigate Study Lifecycle",
+      description:
+        "Verify lifecycle progression across Design, Start, Conduct, Data, Analyze, and Submit.",
+      targetRoute: "/studies",
     },
     {
       id: "sd-3",
-      title: "Author eConsent & ICF",
-      description: "Build informed consent forms and comprehension quizzes.",
-      targetRoute: "ecrf",
+      title: "Review Protocol Governance",
+      description:
+        "Inspect open proposals and protocol amendment provenance in the study workspace.",
+      targetRoute: "/studies",
     },
   ],
   data_manager: [
     {
       id: "dm-1",
       title: "Validation Rules & Queries",
-      description: "Set automated edit checks and query triggers.",
-      targetRoute: "ecrf",
+      description:
+        "Inspect real-time field checks and discrepancy notes in Data collection.",
+      targetRoute: "/ecrf",
     },
     {
       id: "dm-2",
-      title: "Medical Coding Review",
-      description: "Review verbatim terms with MedDRA / WHODrug dictionaries.",
-      targetRoute: "ecrf",
+      title: "Study Conduct & Participant Status",
+      description:
+        "Review participant counts and open governance proposals in the study workspace.",
+      targetRoute: "/studies",
     },
     {
       id: "dm-3",
-      title: "Data Lock Preparation",
+      title: "Case Report Form Completeness",
       description:
-        "Verify subject form completeness prior to locking database.",
-      targetRoute: "ecrf",
+        "Verify participant visit entries and discrepancy resolution status.",
+      targetRoute: "/ecrf",
     },
   ],
   site_crc: [
     {
       id: "crc-1",
       title: "Site Readiness Check",
-      description: "Verify site activation greenlight and delegation log.",
-      targetRoute: "ecrf",
+      description:
+        "Verify site activation readiness and startup requirements for your site.",
+      targetRoute: "site-readiness",
     },
     {
       id: "crc-2",
-      title: "Participant Enrollment & eCRF",
-      description: "Register subject and complete visit eCRF forms.",
-      targetRoute: "ecrf",
+      title: "Participant Enrollment & Data Collection",
+      description:
+        "Register participants and complete clinical visit case report forms.",
+      targetRoute: "/ecrf",
     },
     {
       id: "crc-3",
-      title: "Central DICOM Upload",
-      description: "Upload medical imaging files for dual-reader adjudication.",
-      targetRoute: "ecrf",
+      title: "Study Participant Overview",
+      description:
+        "Inspect participant statuses and conduct activity in the study workspace.",
+      targetRoute: "/studies",
     },
   ],
   cra_monitor: [
     {
       id: "cra-1",
-      title: "Site Greenlight Review",
-      description: "Track CTMS site onboarding milestones and approval state.",
-      targetRoute: "ctms",
+      title: "Site Readiness & Activation Review",
+      description:
+        "Track site onboarding milestones and operational activation state.",
+      targetRoute: "site-readiness",
     },
     {
       id: "cra-2",
       title: "Source Data Verification (SDV)",
-      description: "Review and verify eCRF data points at participant level.",
-      targetRoute: "ecrf",
+      description:
+        "Review and verify clinical form entries at the participant level.",
+      targetRoute: "/ecrf",
     },
     {
       id: "cra-3",
-      title: "eTMF Document Vault Audit",
-      description: "Confirm essential document completeness and signatures.",
-      targetRoute: "ctms",
+      title: "Monitor Study Conduct",
+      description:
+        "Inspect study-wide participant counts and site status in the study workspace.",
+      targetRoute: "/studies",
     },
   ],
   auditor: [
     {
       id: "aud-1",
-      title: "Part 11 Audit Trail Verification",
-      description: "Inspect tamper-evident cryptographic block hashes.",
-      targetRoute: "ecrf",
+      title: "Study Activity Trail Verification",
+      description:
+        "Open a study workspace to inspect chronological activity and provenance.",
+      targetRoute: "/studies",
     },
     {
       id: "aud-2",
-      title: "eTMF Binder Compliance",
-      description: "Verify regulatory filing compliance and signature logs.",
-      targetRoute: "ctms",
+      title: "Protocol Version Provenance",
+      description:
+        "Verify recorded protocol versions and effective lifecycle dates.",
+      targetRoute: "/studies",
     },
     {
       id: "aud-3",
-      title: "Export GxP Certificate",
-      description: "Generate regulatory compliance verification report.",
-      targetRoute: "ctms",
+      title: "Governance & Decision Review",
+      description:
+        "Inspect proposal review records and 21 CFR Part 11 accountability.",
+      targetRoute: "/studies",
     },
   ],
 };
 
 const currentChecklist = computed(() => {
-  return CHECKLISTS[currentPersonaKey.value] || CHECKLISTS.super_admin;
+  const raw = CHECKLISTS[currentPersonaKey.value] || CHECKLISTS.super_admin;
+  return raw.map((item) => ({
+    ...item,
+    targetRoute: resolveAuthorizedRoute(item.targetRoute),
+  }));
 });
 
 function isTaskCompleted(taskId) {
@@ -390,112 +465,45 @@ const progressPercent = computed(() => {
 
 const ALL_LAUNCHERS = [
   {
-    id: "ecrf",
-    title: "eCRF Data Capture",
+    id: "study",
+    title: "Studies",
+    icon: "📐",
+    description:
+      "Open a study workspace to navigate lifecycle stages, participant status, protocol versions, and activity.",
+    routeSpec: "study",
+    badgeText: "Live Workspace",
+    badgeClass: "badge-active",
+    featured: true,
+  },
+  {
+    id: "data-collection",
+    title: "Data collection",
     icon: "🩺",
     description:
-      "Capture clinical study observations, view subject records, and perform SDV.",
-    route: "/ecrf",
-    badgeText: "Active .NET",
+      "Capture clinical visit observations, validate case report forms, and perform source data verification.",
+    routeSpec: "ecrf",
+    badgeText: "Live Workflow",
     badgeClass: "badge-active",
     featured: true,
-    roles: [
-      "site_investigator",
-      "crc",
-      "data_manager",
-      "sponsor_admin",
-      "cra",
-      "monitor",
-    ],
   },
   {
-    id: "ctms",
-    title: "CTMS Operations",
+    id: "site-readiness",
+    title: "Site readiness",
     icon: "📊",
     description:
-      "Manage site onboarding, greenlight readiness, and eTMF compliance status.",
-    route: "/ctms",
-    badgeText: "Active .NET",
+      "Track site activation requirements, startup milestones, and operational site readiness.",
+    routeSpec: "site-readiness",
+    badgeText: "Live Workflow",
     badgeClass: "badge-active",
     featured: true,
-    roles: ["cra", "monitor", "sponsor_admin", "site_investigator", "crc"],
-  },
-  {
-    id: "study",
-    title: "Clinical Canvas Workspace",
-    icon: "🎨",
-    description:
-      "Study-centric lifecycle workspace holding participant counts and site status.",
-    route: "/studies",
-    badgeText: "Active .NET",
-    badgeClass: "badge-active",
-    featured: false,
-    roles: [],
-  },
-  {
-    id: "digitization",
-    title: "Protocol AI Digitizer",
-    icon: "⚡",
-    description:
-      "Digitize protocol documents into CDISC USDM v3/v4 structured specifications.",
-    route: "/digitization",
-    badgeText: "Protocol Suite",
-    badgeClass: "badge-neutral",
-    featured: false,
-    roles: ["sponsor_designer", "data_manager", "sponsor_admin"],
-  },
-  {
-    id: "mdr",
-    title: "Protocol & SoA Designer",
-    icon: "📋",
-    description:
-      "Author Schedule of Activities (SoA) matrices and standardized study metadata.",
-    route: "/mdr",
-    badgeText: "Designer",
-    badgeClass: "badge-neutral",
-    featured: false,
-    roles: ["sponsor_designer", "data_manager", "sponsor_admin"],
-  },
-  {
-    id: "icf-builder",
-    title: "eConsent & ICF Builder",
-    icon: "📝",
-    description:
-      "Design informed consent forms, comprehension quizzes, and translation tabs.",
-    route: "/icf-builder",
-    badgeText: "Consent",
-    badgeClass: "badge-neutral",
-    featured: false,
-    roles: ["sponsor_designer", "data_manager", "sponsor_admin"],
-  },
-  {
-    id: "rules",
-    title: "Study Rules & Queries",
-    icon: "⚙️",
-    description:
-      "Configure automated edit checks, validation rules, and discrepancy query rules.",
-    route: "/rules",
-    badgeText: "Validation",
-    badgeClass: "badge-neutral",
-    featured: false,
-    roles: ["sponsor_designer", "data_manager", "sponsor_admin"],
-  },
-  {
-    id: "audit",
-    title: "Part 11 Audit Ledger",
-    icon: "🔒",
-    description:
-      "Review GxP 21 CFR Part 11 audit trails, signature records, and hash chains.",
-    route: "/audit",
-    badgeText: "Compliance",
-    badgeClass: "badge-neutral",
-    featured: false,
-    roles: ["auditor", "tmf_auditor", "sponsor_admin"],
   },
 ];
 
 const personaLaunchers = computed(() => {
-  return ALL_LAUNCHERS;
+  return ALL_LAUNCHERS.map((launcher) => {
+    const resolvedRoute = resolveAuthorizedRoute(launcher.routeSpec);
+    return resolvedRoute ? { ...launcher, route: resolvedRoute } : null;
+  }).filter(Boolean);
 });
 
 function handleBypassToggle(event) {
@@ -504,11 +512,12 @@ function handleBypassToggle(event) {
 }
 
 function navigateToRoute(routePathOrName) {
-  if (!routePathOrName) return;
-  if (routePathOrName.startsWith("/")) {
-    router.push(routePathOrName);
+  const resolved = resolveAuthorizedRoute(routePathOrName) || routePathOrName;
+  if (!resolved) return;
+  if (resolved.startsWith("/")) {
+    router.push(resolved);
   } else {
-    router.push({ name: routePathOrName });
+    router.push({ name: resolved });
   }
 }
 
