@@ -16,6 +16,7 @@ Generated from `docs/openapi/payments_openapi.json` by `pnpm cadence generate-ap
 | `GET` | `/api/v1/payments/invoices/{id}/remittance-advice/pdf` | DownloadRemittancePdf | Downloads cryptographic PDF remittance statement. |
 | `POST` | `/api/v1/payments/invoices/{id}/remittance-advice/sign` | SignRemittanceAdvice | Applies 21 CFR Part 11 electronic signature to cryptographic remittance advice. |
 | `GET` | `/api/v1/payments/participant/disbursements` | ListDisbursements | List digital disbursement dispatches. |
+| `POST` | `/api/v1/payments/participant/disbursements/{id}/settle` | SettleDisbursement | Marks a dispatched digital disbursement as settled upon confirmation. |
 | `POST` | `/api/v1/payments/participant/events/visit-verified` | IngestVisitVerifiedEvent | Receives verified eCRF visit completion event and evaluates automated stipend disbursement rules. |
 | `GET` | `/api/v1/payments/participant/expenses` | ListExpenseClaims | List travel and meal expense reimbursement claims. |
 | `POST` | `/api/v1/payments/participant/expenses` | SubmitExpenseClaim | Submit travel/meal expense claim for coordinator review. |
