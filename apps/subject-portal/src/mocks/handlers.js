@@ -1,7 +1,9 @@
 import { http, HttpResponse, passthrough } from "msw";
-import { isGatewayApiCall, validateGatewayRequest } from "ui/testing";
+import { evaluateDemoBoundaryRequest } from "ui/testing";
+import { isDemoBuild } from "../utils/demoMode.js";
+import { createPortalDemoHandlers } from "./demoHandlers.js";
 
-export const gatewayHandlers = [
+const sharedPortalActionHandlers = [
   http.post("*/api/v1/ai/biometrics/verify-liveness", async ({ request }) => {
     const body = await request.json().catch(() => ({}));
     const subject = body.subject_pseudonym || "subj-001";
@@ -175,28 +177,35 @@ export const gatewayHandlers = [
       });
     }
   ),
+];
 
-  // Intercept all HTTP methods matching API gateway host or API paths
-  http.all("*", async ({ request }) => {
-    const url = new URL(request.url);
+export function buildPortalGatewayHandlers(options = {}) {
+  const demoActive =
+    options.forceDemo !== undefined
+      ? Boolean(options.forceDemo)
+      : isDemoBuild();
 
-    // Only intercept API / service calls targeting gateway or non-asset paths
-    const isApiCall = isGatewayApiCall(url);
+  const demoHandlers = demoActive
+    ? createPortalDemoHandlers(options.store)
+    : [];
 
-    if (!isApiCall) {
+  const boundaryHandler = http.all("*", async ({ request }) => {
+    const result = await evaluateDemoBoundaryRequest(request, {
+      demoActive,
+      appLabel: "portal demo",
+    });
+
+    if (result.passthrough) {
       return passthrough();
     }
 
-    const validation = await validateGatewayRequest(request);
+    return HttpResponse.json(result.body, {
+      status: result.status,
+      headers: result.headers,
+    });
+  });
 
-    if (!validation.valid) {
-      return HttpResponse.json(validation.body, {
-        status: validation.status,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+  return [...sharedPortalActionHandlers, ...demoHandlers, boundaryHandler];
+}
 
-    // Default passthrough for valid gateway requests in live dev/mock mode
-    return passthrough();
-  }),
-];
+export const gatewayHandlers = buildPortalGatewayHandlers();

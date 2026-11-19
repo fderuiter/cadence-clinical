@@ -23,7 +23,7 @@
         :error="error"
         :error-id="`validation-error-${id}`"
         :has-error="showError"
-      ></slot>
+      />
 
       <!-- Query Flag -->
       <ClinicalQueryFlag
@@ -35,7 +35,7 @@
     </div>
 
     <!-- Additional markup like lookup status indicators -->
-    <slot name="after-input"></slot>
+    <slot name="after-input" />
 
     <!-- Validation Error -->
     <div
@@ -70,46 +70,16 @@ import ClinicalQueryFlag from "./ClinicalQueryFlag.vue";
 import ClinicalQueryPanel from "./ClinicalQueryPanel.vue";
 
 const props = defineProps({
-  id: {
-    type: String,
-    required: true,
-  },
-  label: {
-    type: String,
-    required: true,
-  },
-  query: {
-    type: Object,
-    default: null,
-  },
-  gridSpan: {
-    type: [Number, String],
-    default: 12,
-  },
-  error: {
-    type: String,
-    default: null,
-  },
-  attributes: {
-    type: Object,
-    default: () => ({}),
-  },
-  tag: {
-    type: String,
-    default: "div",
-  },
-  extraClass: {
-    type: String,
-    default: "",
-  },
-  canManageQueries: {
-    type: Boolean,
-    default: false,
-  },
-  queryLabel: {
-    type: String,
-    default: "",
-  },
+  id: { type: String, required: true },
+  label: { type: String, required: true },
+  query: { type: Object, default: null },
+  gridSpan: { type: [Number, String], default: 12 },
+  error: { type: String, default: null },
+  attributes: { type: Object, default: () => ({}) },
+  tag: { type: String, default: "div" },
+  extraClass: { type: String, default: "" },
+  canManageQueries: { type: Boolean, default: false },
+  queryLabel: { type: String, default: "" },
 });
 
 defineEmits(["create-query", "respond-query", "close-query", "reopen-query"]);

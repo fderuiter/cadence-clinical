@@ -14,7 +14,7 @@ public static class DuplicationDetectorService
 {
     private static readonly string[] IgnoredPathKeywords =
     [
-        "node_modules", "tests", ".venv", "__pycache__", "dist", "build", "bin", "obj", "Migrations", "migrations", ".git"
+        "node_modules", "tests", ".venv", "__pycache__", "dist", "build", "bin", "obj", "Migrations", "migrations", ".git", "mockServiceWorker.js"
     ];
 
     // The service hosts share their startup wiring by design until they merge into the kernel host (ADR-2244).
