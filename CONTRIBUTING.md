@@ -1,7 +1,8 @@
 # Contributing to Cadence
 
-This guide covers setup, the development workflow, local checks and pull requests. Coding rules live
-in [AGENTS.md](AGENTS.md) and apply to everyone, human or AI agent.
+This guide covers the maintainer workflow for setup, development, local checks, and pull requests.
+For feedback and feature ideas, see the [README’s contribution guidance](README.md#contributing).
+Coding rules live in [AGENTS.md](AGENTS.md) and apply to everyone, human or AI agent.
 Use the [project plan](docs/PROJECT_PLAN.md) to find the module owner and the [goals and priorities](docs/GOALS_AND_PRIORITIES.md) to find the active work and its verification outcome.
 
 ## Quick reference

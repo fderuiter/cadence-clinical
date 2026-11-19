@@ -126,9 +126,15 @@ The full, generated command reference is [docs/cli.md](docs/cli.md).
 
 ## Contributing
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow, and [AGENTS.md](AGENTS.md) for coding
-rules (they apply to humans and AI agents alike). Pull requests target `main`. Every PR that changes
-behaviour updates the docs it affects in the same PR.
+Development is maintainer-led for now. Please hold off on opening code pull requests.
+
+Feedback, feature ideas, and suggestions for improving clinical workflows are welcome in
+[GitHub Discussions](https://github.com/fderuiter/cadence-clinical/discussions). Join an existing thread
+or start a new one. Tell me what you’re trying to do, where you get stuck, and what would help.
+
+Use synthetic examples and keep patient data and confidential study details out of public posts.
+For security concerns, follow the [security policy](SECURITY.md). The maintainer workflow is in
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Documentation
 
