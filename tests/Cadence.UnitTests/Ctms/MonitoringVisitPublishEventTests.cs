@@ -60,7 +60,7 @@ public sealed class MonitoringVisitPublishEventTests
     [GxPRequirement("PRD-CTMS-001")]
     public async Task SignOffVisit_PublishesClinicalVisitCompletedEvent()
     {
-        var visit = new CtmsMonitoringVisit
+        var visit = new CtmsMonitoringVisit(Guid.NewGuid().ToString(), CtmsMonitoringVisitStatus.Completed)
         {
             StudyId = StudyId,
             SiteId = SiteId,
@@ -68,7 +68,6 @@ public sealed class MonitoringVisitPublishEventTests
             VisitType = "IMV",
             ScheduledDate = _clock.UtcNow.AddDays(-2),
             ActualDate = _clock.UtcNow.AddDays(-1),
-            Status = "COMPLETED",
             CreatedAt = _clock.UtcNow.UtcDateTime,
             CreatedBy = "setup",
             ReasonForChange = "Completed"
@@ -90,7 +89,7 @@ public sealed class MonitoringVisitPublishEventTests
 
         // Verify visit updated
         var updated = await _db.CtmsMonitoringVisits.FindAsync([visit.Id], TestContext.Current.CancellationToken);
-        updated!.Status.Should().Be("SIGNED_OFF");
+        updated!.Status.Should().Be(CtmsMonitoringVisitStatus.Signed_Off);
 
         // Verify publish was invoked with ClinicalVisitCompleted
         await publishEndpoint.Received(1).Publish(

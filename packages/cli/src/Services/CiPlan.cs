@@ -178,7 +178,6 @@ public static class CiPlan
         ["classify"] = "labels the pull request through the GitHub API",
         ["automerge"] = "approves and merges the pull request through the GitHub API",
         ["release-and-archive"] = "calls the production pipeline on a push to main",
-        ["deploy-docs"] = "deploys the documentation site on a push to main",
     };
 
     /// <summary>The jobs, in the order <c>cadence ci</c> runs them.</summary>
@@ -191,9 +190,13 @@ public static class CiPlan
         CiText = string.Join(' ', args.Prepend("pnpm")),
     };
 
-    /// <summary><c>dotnet run [--no-build] --project packages/cli/... -- args</c>, as the CI steps call the CLI.</summary>
+    /// <summary><c>dotnet run [--no-build] --project packages/cli/... -- args</c>, matching <c>node scripts/run-cli.js</c> when CI builds on demand.</summary>
     private static CiCommand CadenceCli(bool noBuild, params string[] args) =>
-        Dotnet([.. new[] { "run" }, .. noBuild ? new[] { "--no-build" } : [], "--project", Cli, "--", .. args]);
+        Dotnet([.. new[] { "run" }, .. noBuild ? new[] { "--no-build" } : [], "--project", Cli, "--", .. args])
+        with
+        {
+            CiText = noBuild ? null : string.Join(' ', args.Prepend("node scripts/run-cli.js")),
+        };
 
     private static List<CiJob> BuildJobs()
     {
@@ -346,6 +349,17 @@ public static class CiPlan
                         with { CiText = "dotnet test Cadence.sln --configuration Release --no-build" },
                 ],
             },
+            new("dotnet-tests", "Fail the run when a PostgreSQL test did not execute")
+            {
+                // 'Execute .NET 10 xUnit Test Suites' checks TestResults/gxp via RejectSkippedDatabaseTests right after it passes.
+                CoveredBy = "dotnet-tests/Execute .NET 10 xUnit Test Suites",
+                RequiredTool = "bash",
+                ToolHint = "install bash (Git for Windows includes it)",
+                Commands = [new CiCommand("bash", ["scripts/test-check-database-test-results.sh"])],
+                InProcess = repoRoot => DatabaseTestEvidence.FindSkipped(Path.Combine(repoRoot, RtmGeneratorService.DefaultResultsDir)).Count == 0 ? 0 : 1,
+                InProcessDisplay = $"verify no PostgreSQL test in {RtmGeneratorService.DefaultResultsDir} was skipped",
+                InProcessCiText = "bash scripts/check-database-test-results.sh",
+            },
         ]);
 
         var e2e = new CiJob(E2eJob, "Parallel E2E Accessibility Testing",
@@ -386,7 +400,7 @@ public static class CiPlan
                 },
                 InProcessDisplay = $"generate the RTM and IQ/OQ/PQ report from {RtmGeneratorService.DefaultResultsDir} into {GxpSnapshotPolicy.PreviewDir} " +
                     $"(docs/SDLC with {GxpSnapshotPolicy.SnapshotEnvironmentVariable}=1) and validate tags and results; nothing is staged",
-                InProcessCiText = $"dotnet run --project {Cli} -- gxp sync",
+                InProcessCiText = "node scripts/run-cli.js gxp sync --results-dir TestResults/gxp",
             },
             new("compliance", "Check GxP Snapshot Policy")
             {
@@ -394,7 +408,7 @@ public static class CiPlan
                 // with the snapshot instead, ignoring the evidence block, and a match is put back to the staged copy.
                 InProcess = repoRoot => GxpSnapshotGuardService.Check(repoRoot, preCommit: false),
                 InProcessDisplay = $"refuse branch changes to the generated GxP snapshot ({GxpSnapshotPolicy.SnapshotEnvironmentVariable}=1: compare the regenerated documents with it)",
-                InProcessCiText = $"dotnet run --project {Cli} -- check gxp-snapshot",
+                InProcessCiText = "node scripts/run-cli.js check gxp-snapshot",
             },
         ])
         {
