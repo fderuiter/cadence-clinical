@@ -28,8 +28,8 @@ importers:
         specifier: ^5.0.5
         version: 5.0.5(vitest@5.1.0)
       axe-core:
-        specifier: ^4.14.0
-        version: 4.14.0
+        specifier: ^4.14.1
+        version: 4.14.1
       concurrently:
         specifier: ^10.0.6
         version: 10.0.6
@@ -195,8 +195,8 @@ importers:
   packages/ui:
     dependencies:
       axe-core:
-        specifier: ^4.14.0
-        version: 4.14.0
+        specifier: ^4.14.1
+        version: 4.14.1
     devDependencies:
       '@vitejs/plugin-vue':
         specifier: ^6.0.11
@@ -1580,6 +1580,10 @@ packages:
 
   axe-core@4.14.0:
     resolution: {integrity: sha512-9WTZxEjsZ7b13TH8JPmbV2z8CHbl80/2hm3XPEG4JgNdQLK81IBRXmSxHfMAOkSqQeRxT/0dwNDz2GOm3zzpcQ==}
+    engines: {node: '>=4'}
+
+  axe-core@4.14.1:
+    resolution: {integrity: sha512-FHfa+lmNjQZfJz1q8wKqIDwC6DExcHt/pkjNQb09a3NPjCKg2rhu5qb2S4r76ASyFNNtuFooJpZe37OgudVGtQ==}
     engines: {node: '>=4'}
 
   balanced-match@1.0.2:
@@ -4563,6 +4567,8 @@ snapshots:
       ast-kit: 3.0.1
 
   axe-core@4.14.0: {}
+
+  axe-core@4.14.1: {}
 
   balanced-match@1.0.2: {}
 

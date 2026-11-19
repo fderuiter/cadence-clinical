@@ -54,7 +54,7 @@
     "@typescript-eslint/eslint-plugin": "^8.72.1",
     "@typescript-eslint/parser": "^8.72.2",
     "@vitest/coverage-v8": "^5.0.5",
-    "axe-core": "^4.14.0",
+    "axe-core": "^4.14.1",
     "concurrently": "^10.0.6",
     "eslint": "^10.14.0",
     "eslint-plugin-vue": "^10.12.0",

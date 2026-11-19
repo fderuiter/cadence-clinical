@@ -22,7 +22,7 @@
   "license": "UNLICENSED",
   "type": "module",
   "dependencies": {
-    "axe-core": "^4.14.0"
+    "axe-core": "^4.14.1"
   },
   "peerDependencies": {
     "vue": "^3.5.45"
