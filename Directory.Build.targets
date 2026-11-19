@@ -6,4 +6,18 @@
   <PropertyGroup Condition="'$(CadenceRequireXmlDocs)' == 'true'">
     <NoWarn>$([System.String]::Copy(';$(NoWarn);').Replace(';CS1591;', ';').Trim(';'))</NoWarn>
   </PropertyGroup>
+
+  <!-- Older .NET 10 SDK builds (e.g. 10.0.113) bundle Native AOT pack metadata at 10.0.13, which triggers NU1903
+       (GHSA-p3jp-9v83-76w9) against the NuGet v3 vulnerability feed. Floor the Native AOT compiler and runtime packs
+       at 10.0.15 before ProcessFrameworkReferences without downgrading newer SDKs. -->
+  <Target Name="FloorNativeAotPacks" BeforeTargets="ProcessFrameworkReferences">
+    <ItemGroup>
+      <KnownILCompilerPack Update="@(KnownILCompilerPack)"
+                           Condition="'%(KnownILCompilerPack.TargetFramework)' == 'net10.0' and ('%(KnownILCompilerPack.ILCompilerPackVersion)' == '10.0.13' or '%(KnownILCompilerPack.ILCompilerPackVersion)' == '10.0.14')"
+                           ILCompilerPackVersion="10.0.15" />
+      <KnownRuntimePack Update="@(KnownRuntimePack)"
+                        Condition="'%(KnownRuntimePack.TargetFramework)' == 'net10.0' and '%(KnownRuntimePack.RuntimePackLabels)' == 'NativeAOT' and ('%(KnownRuntimePack.LatestRuntimeFrameworkVersion)' == '10.0.13' or '%(KnownRuntimePack.LatestRuntimeFrameworkVersion)' == '10.0.14')"
+                        LatestRuntimeFrameworkVersion="10.0.15" />
+    </ItemGroup>
+  </Target>
 </Project>
