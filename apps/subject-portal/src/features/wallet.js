@@ -1,30 +1,40 @@
 // My Wallet: receipt OCR extraction and travel expense claims.
 import { dispatchApi } from "../api/client.js";
 import { state } from "../stores/state.js";
+import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { logAuditRecord } from "./audit.js";
 
 export async function extractReceiptOcr(fileOrText) {
-  state.expenseOcr.loading = true;
+  state.expenseError = null;
   state.expenseOcr.error = null;
 
-  let rawText =
-    "METRO TRANSIT AUTHORITY\nRoute: Clinical Trial Express\nDate: 2026-08-23\nFare Paid: $28.50"; // deid-ignore
-  let categoryHint = "TRANSIT";
+  if (!allowUnbackedAction("Mobile receipt OCR extraction")) {
+    const msg =
+      "Participant receipt OCR extraction and travel reimbursements are not available in this environment.";
+    state.expenseOcr.loading = false;
+    state.expenseOcr.error = msg;
+    state.expenseError = msg;
+    throw new Error(msg);
+  }
+
+  state.expenseOcr.loading = true;
+
+  let rawText = "";
+  let fileName = "";
 
   if (typeof fileOrText === "string") {
     rawText = fileOrText;
-  } else if (fileOrText && fileOrText.name) {
-    state.expenseForm.receiptImageName = fileOrText.name;
-    if (fileOrText.name.toLowerCase().includes("meal")) {
-      rawText =
-        "CITY BISTRO RESTAURANT\nDate: 2026-08-23\nMeal Charge: $125.00"; // deid-ignore
-      categoryHint = "MEAL";
-    } else if (
-      fileOrText.name.toLowerCase().includes("fuel") ||
-      fileOrText.name.toLowerCase().includes("gas")
-    ) {
-      rawText = "SHELL OIL\nDate: 2026-08-23\nFuel: $45.00"; // deid-ignore
-      categoryHint = "MILEAGE";
+  } else if (fileOrText && typeof fileOrText === "object") {
+    if (fileOrText.name) {
+      fileName = fileOrText.name;
+      state.expenseForm.receiptImageName = fileOrText.name;
+    }
+    if (typeof fileOrText.text === "function") {
+      try {
+        rawText = await fileOrText.text();
+      } catch {
+        rawText = "";
+      }
     }
   }
 
@@ -35,19 +45,20 @@ export async function extractReceiptOcr(fileOrText) {
         method: "POST",
         body: JSON.stringify({
           raw_text: rawText,
-          category_hint: categoryHint,
+          file_name: fileName,
         }),
         change_reason: "Mobile receipt OCR extraction",
       }
     );
 
     state.expenseOcr.data = ocrRes;
-    state.expenseForm.merchantName =
-      ocrRes.merchant_name || "Metro Transit Authority";
-    state.expenseForm.expenseDate = ocrRes.expense_date || "2026-08-23"; // deid-ignore
-    state.expenseForm.grossAmount = ocrRes.gross_amount || 28.5;
-    state.expenseForm.category = ocrRes.category || categoryHint;
-    state.expenseForm.ocrConfidence = ocrRes.confidence_score || 0.98;
+    state.expenseForm.merchantName = ocrRes.merchant_name || "";
+    state.expenseForm.expenseDate = ocrRes.expense_date || "";
+    state.expenseForm.grossAmount =
+      typeof ocrRes.gross_amount === "number" ? ocrRes.gross_amount : 0;
+    state.expenseForm.category = ocrRes.category || "TRANSIT";
+    state.expenseForm.ocrConfidence =
+      typeof ocrRes.confidence_score === "number" ? ocrRes.confidence_score : 0;
     state.expenseForm.isMealAllowance = ocrRes.category === "MEAL";
 
     await logAuditRecord(
@@ -58,27 +69,39 @@ export async function extractReceiptOcr(fileOrText) {
     state.expenseOcr.loading = false;
     return ocrRes;
   } catch (err) {
-    state.expenseOcr.error = err.message || err;
+    const msg = err?.message || String(err);
+    state.expenseOcr.error = msg;
+    state.expenseError = msg;
     state.expenseOcr.loading = false;
     throw err;
   }
 }
 
 export async function submitExpenseClaim(customFormData = null) {
+  state.expenseError = null;
+
+  if (!allowUnbackedAction("Participant travel expense claim")) {
+    const msg =
+      "Participant travel expense submission is not available in this environment.";
+    state.expenseError = msg;
+    throw new Error(msg);
+  }
+
   const form = customFormData || state.expenseForm;
 
   const payload = {
-    subject_id: form.subjectId || "subject_001",
-    study_id: form.studyId || "study_001",
-    site_id: form.siteId || "site_001",
+    subject_id: form.subjectId || state.session.userId || "",
+    study_id: form.studyId || "",
+    site_id: form.siteId || "",
     category: form.category || "TRANSIT",
-    merchant_name: form.merchantName || "Metro Transit Authority",
+    merchant_name: form.merchantName || "",
     gross_amount: Number(form.grossAmount) || 0,
     is_meal_allowance: Boolean(form.isMealAllowance),
     per_diem_cap: form.perDiemCap ? Number(form.perDiemCap) : 75.0,
-    expense_date: form.expenseDate || "2026-08-23", // deid-ignore
-    receipt_image_name: form.receiptImageName || "receipt.png",
-    ocr_confidence: form.ocrConfidence ? Number(form.ocrConfidence) : 0.98,
+    expense_date: form.expenseDate || "",
+    receipt_image_name: form.receiptImageName || "",
+    ocr_confidence:
+      typeof form.ocrConfidence === "number" ? Number(form.ocrConfidence) : 0,
     receipt_ocr_data: state.expenseOcr.data || null,
   };
 
@@ -124,7 +147,8 @@ export async function submitExpenseClaim(customFormData = null) {
 
     return res;
   } catch (err) {
-    console.error("Failed to submit expense claim:", err);
+    const msg = err?.message || String(err);
+    state.expenseError = msg;
     throw err;
   }
 }

@@ -18,13 +18,14 @@ import {
 } from "../features/signature.js";
 import { syncOfflineQueue } from "../features/sync.js";
 import { retryTasks } from "../features/tasks.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
 
 export function bindPortalControls() {
   // Attach "Sync Now" button listener
   const btnSyncNow = document.getElementById("btn-sync-now");
   if (btnSyncNow) {
     btnSyncNow.addEventListener("click", () => {
-      syncOfflineQueue(true, { autoDisburse: true });
+      syncOfflineQueue(true, { autoDisburse: isDemoModeActive() });
     });
   }
 

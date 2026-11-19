@@ -3,7 +3,8 @@ import { defineStore } from "pinia";
 
 export const useWalletStore = defineStore("wallet", {
   state: () => ({
-    walletBalance: 325.0,
+    walletBalance: null,
+    expenseError: null,
     expenseOcr: {
       loading: false,
       error: null,
@@ -11,7 +12,7 @@ export const useWalletStore = defineStore("wallet", {
       previewUrl: null,
     },
     expenseForm: {
-      subjectId: "subject_001",
+      subjectId: null,
       studyId: "study_001",
       siteId: "site_001",
       category: "TRANSIT",

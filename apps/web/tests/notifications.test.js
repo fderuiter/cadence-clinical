@@ -87,7 +87,7 @@ describe("Notifications System End-to-End Visual Integration", () => {
   });
 
   describe("Navigation & Route Gating", () => {
-    it("allows authenticated user access to /notifications and shows active menu button", async () => {
+    it("allows authenticated user access to /notifications inside the unified AppShell when screen availability is enabled", async () => {
       authStore.isAuthenticated = true;
       authStore.isDemoMode = true;
       authStore.rawRoles = ["Auditor"];
@@ -101,9 +101,8 @@ describe("Notifications System End-to-End Visual Integration", () => {
         },
       });
 
-      const navBtn = wrapper.find("#tab-btn-notifications");
-      expect(navBtn.exists()).toBe(true);
-      expect(navBtn.classes()).toContain("active");
+      expect(wrapper.find(".app-sidebar").exists()).toBe(false);
+      expect(wrapper.find("#nav-studies").exists()).toBe(true);
     });
   });
 

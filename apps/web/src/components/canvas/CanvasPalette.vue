@@ -23,8 +23,8 @@
         autocomplete="off"
         :placeholder="
           studyCode
-            ? 'Stage, section, participant or study code'
-            : 'Study code, e.g. CAD-101'
+            ? 'Stage, section, participant, workflow or study code'
+            : 'Study code or workflow, e.g. CAD-101'
         "
         aria-label="Search"
         @keydown="onKeydown"
@@ -59,8 +59,8 @@
       <p v-else id="canvas-palette-empty" class="palette-empty" role="status">
         {{
           query.trim()
-            ? "Nothing matches. Participants are found among those loaded in this study."
-            : "Type a study code to open a study."
+            ? "Nothing matches across studies, lifecycle stages, or authorized workflows."
+            : "Type a study code or choose a workflow destination."
         }}
       </p>
       <p
@@ -85,15 +85,18 @@ import { useFocusTrap } from "../../composables/useFocusTrap";
 import { kernelApi, type KernelSearchHit } from "../../api/kernelApi";
 import { STAGES, participantStateLabel } from "../../canvas/lifecycle";
 import type { SubjectSummary } from "../../api/executionApi";
-import type { PaletteTarget } from "../../canvas/palette";
+import type {
+  PaletteTarget,
+  WorkspacePaletteOption,
+} from "../../canvas/palette";
 import { useAiAssistance } from "../../ai/aiAssistance";
 
 /**
- * The Clinical Canvas ⌘K palette (docs/ux/CLINICAL_CANVAS.md §2.5): navigation to stages, sections and the
- * participants the canvas has loaded, studies found by kernel search (ADR-2484, ADR-2540), and opening a study by
- * code. Kernel search leaves out what the reader may not see. The palette offers no action a service cannot run;
- * a participant's commands are under Act in the inspector. With AI assistance on, a sentence of three or more words
- * is offered as a question for Assist (ADR-2635), which can only read or propose.
+ * The unified global ⌘K command palette (docs/ux/CLINICAL_CANVAS.md §2.5):
+ * combines kernel study search (ADR-2484, ADR-2540), opening a study by code,
+ * lifecycle navigation (study home, stages, sections, loaded participants, and
+ * Assist Ask when AI assistance is enabled), and authorized UX-1 workflow
+ * destinations and workspace controls.
  */
 interface PaletteItem {
   key: string;
@@ -103,10 +106,18 @@ interface PaletteItem {
   target: PaletteTarget;
 }
 
-const props = defineProps<{
-  studyCode: string;
-  participants: SubjectSummary[];
-}>();
+const props = withDefaults(
+  defineProps<{
+    studyCode?: string;
+    participants?: SubjectSummary[];
+    workspaceItems?: WorkspacePaletteOption[];
+  }>(),
+  {
+    studyCode: "",
+    participants: () => [],
+    workspaceItems: () => [],
+  }
+);
 const emit = defineEmits<{
   close: [];
   go: [target: PaletteTarget];
@@ -123,7 +134,7 @@ const active = ref(0);
 
 // Execution accepts any non-blank study code up to 255 characters, compared exactly.
 const MAX_STUDY_CODE = 255;
-const MAX_RESULTS = 12;
+const MAX_RESULTS = 20;
 const MAX_KERNEL_HITS = 5;
 const MIN_SEARCH_LENGTH = 2;
 const SEARCH_DELAY_MS = 250;
@@ -182,52 +193,55 @@ const studyHits = computed<PaletteItem[]>(() =>
 );
 
 const items = computed<PaletteItem[]>(() => {
+  const list: PaletteItem[] = [];
   const study = props.studyCode;
-  if (!study) return [];
-  const list: PaletteItem[] = [
-    {
+  if (study) {
+    list.push({
       key: "home",
       group: "Study",
       label: `${study} home`,
       target: { studyCode: study },
-    },
-  ];
-  for (const stage of STAGES) {
-    list.push({
-      key: `stage:${stage.id}`,
-      group: "Stage",
-      label: stage.label,
-      detail: stage.scope,
-      target: { studyCode: study, stage: stage.id },
     });
-    for (const section of stage.sections) {
+    for (const stage of STAGES) {
       list.push({
-        key: `section:${section.id}`,
-        group: stage.label,
-        label: section.label,
-        detail: section.description,
-        target: { studyCode: study, stage: stage.id, section: section.id },
+        key: `stage:${stage.id}`,
+        group: "Stage",
+        label: stage.label,
+        detail: stage.scope,
+        target: { studyCode: study, stage: stage.id },
+      });
+      for (const section of stage.sections) {
+        list.push({
+          key: `section:${section.id}`,
+          group: stage.label,
+          label: section.label,
+          detail: section.description,
+          target: { studyCode: study, stage: stage.id, section: section.id },
+        });
+      }
+    }
+    for (const participant of props.participants) {
+      list.push({
+        key: `participant:${participant.id}`,
+        group: "Participant",
+        label: participant.subject_id,
+        detail: [
+          participantStateLabel(participant.status),
+          participant.site_id ? `Site ${participant.site_id}` : "",
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        target: {
+          studyCode: study,
+          stage: "conduct",
+          section: "participants",
+          participant,
+        },
       });
     }
   }
-  for (const participant of props.participants) {
-    list.push({
-      key: `participant:${participant.id}`,
-      group: "Participant",
-      label: participant.subject_id,
-      detail: [
-        participantStateLabel(participant.status),
-        participant.site_id ? `Site ${participant.site_id}` : "",
-      ]
-        .filter(Boolean)
-        .join(" · "),
-      target: {
-        studyCode: study,
-        stage: "conduct",
-        section: "participants",
-        participant,
-      },
-    });
+  for (const wsItem of props.workspaceItems) {
+    list.push(wsItem);
   }
   return list;
 });
@@ -259,6 +273,7 @@ const results = computed<PaletteItem[]>(() => {
   }
   if (
     text &&
+    !/\s/.test(text) &&
     text.length <= MAX_STUDY_CODE &&
     text !== props.studyCode &&
     !studyHits.value.some((item) => item.target.studyCode === text)

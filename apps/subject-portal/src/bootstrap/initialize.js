@@ -21,6 +21,8 @@ import {
   renderTasks,
 } from "../features/tasks.js";
 import { state } from "../stores/state.js";
+import { getAssignmentsFromDB, getInstrumentsFromDB } from "../sync-queue.js";
+import { isDemoBuild, isDemoModeActive } from "../utils/demoMode.js";
 import { bindPortalControls } from "./controls.js";
 import { mountPortal } from "./mount.js";
 
@@ -28,12 +30,10 @@ import { mountPortal } from "./mount.js";
 export async function initializeApp() {
   await restoreSession();
 
-  // Initialize MSW Mock Gateway Worker in development / offline browser mode
+  // Initialize MSW Mock Gateway Worker only in explicit demo builds or opt-in MSW runs
   if (
     typeof window !== "undefined" &&
-    (import.meta.env?.DEV ||
-      import.meta.env?.MODE === "demo" ||
-      import.meta.env?.VITE_ENABLE_MSW === "true")
+    (isDemoBuild() || import.meta.env?.VITE_ENABLE_MSW === "true")
   ) {
     import("../mocks/browser.js")
       .then(({ startMswWorker }) => startMswWorker())
@@ -56,7 +56,9 @@ export async function initializeApp() {
 
   // Set participant visual name
   const nameEl = document.getElementById("session-subject-id");
-  if (nameEl) nameEl.textContent = state.session.userId;
+  if (nameEl) {
+    nameEl.textContent = state.session.userId || "Not signed in";
+  }
 
   // Initialize genesis compliance ledger
   await logAuditRecord(
@@ -76,11 +78,32 @@ export async function initializeApp() {
     await loadAssignedInstruments(userId);
     await loadCompliance(userId);
     await loadNotifications(userId);
-  } else {
-    // Sandbox branch (non-authenticated path)
+  } else if (isDemoModeActive()) {
+    // Explicit demo build: seed synthetic study data
     state.assignments = JSON.parse(JSON.stringify(MOCK_ASSIGNMENTS));
     state.notifications = JSON.parse(JSON.stringify(MOCK_NOTIFICATIONS));
     state.instruments = JSON.parse(JSON.stringify(MOCK_INSTRUMENTS));
+  } else if (state.session.isOfflineMode && state.session.userId) {
+    // Offline recovery for a previously authenticated participant: use cached IndexedDB records only
+    const cachedAssignments = await getAssignmentsFromDB();
+    const cachedInstruments = await getInstrumentsFromDB();
+    state.assignments = Array.isArray(cachedAssignments)
+      ? cachedAssignments
+      : [];
+    state.instruments = {};
+    if (Array.isArray(cachedInstruments)) {
+      cachedInstruments.forEach((inst) => {
+        state.instruments[inst.id] = inst;
+      });
+    }
+    state.notifications = [];
+    state.compliance = null;
+  } else {
+    // Unauthenticated production session: zero synthetic tasks or overdue alerts
+    state.assignments = [];
+    state.notifications = [];
+    state.instruments = {};
+    state.compliance = null;
   }
 
   // Draw Initial Views
@@ -88,8 +111,10 @@ export async function initializeApp() {
   renderCompliance();
   renderInbox();
 
-  // Check for pending active re-consent
-  await checkPendingReconsent();
+  // Check for pending active re-consent only when signed in or in demo mode
+  if (isAuthenticatedSession() || isDemoModeActive()) {
+    await checkPendingReconsent();
+  }
 
   // Graceful Service Worker Registration
   if (
@@ -109,21 +134,21 @@ export async function initializeApp() {
     });
   }
 
-  // Initial sync & sync queue rendering
-  await syncOfflineQueue(false, { autoDisburse: true });
+  // Initial sync & sync queue rendering (stipend auto-disbursement runs only in demo builds)
+  await syncOfflineQueue(false, { autoDisburse: isDemoModeActive() });
 
   // Attach online/offline listener
   if (typeof window !== "undefined") {
     window.addEventListener("online", () => {
       console.log("[App] Network online detected. Triggering sync...");
-      syncOfflineQueue(false, { autoDisburse: true });
+      syncOfflineQueue(false, { autoDisburse: isDemoModeActive() });
     });
   }
 
   // Sync Now, questionnaire, signature modal, eConsent and retry buttons
   bindPortalControls();
 
-  // Automatically re-derive the AES-GCM encryption key as soon as the active user identifier changes
+  // Switch database context and prompt PIN unlock/setup when active user identity changes
   watchUserIdentity();
 
   await checkPINWrapper();
@@ -131,7 +156,7 @@ export async function initializeApp() {
   if (typeof window !== "undefined") {
     window.addEventListener("offline", async () => {
       console.log(
-        "[App] Network offline detected. Preserving session key for offline operation..."
+        "[App] Network offline detected. Enforcing PIN wrapper for offline operation..."
       );
       state.session.isOfflineMode = true;
       await checkPINWrapper();

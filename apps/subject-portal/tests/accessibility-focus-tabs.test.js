@@ -204,8 +204,32 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
     expect(document.activeElement).toBe(trigger);
   });
 
-  it("drives all 6 participant portal tabs from a single state source with bidirectional ARIA links and keyboard navigation", async () => {
+  it("drives participant portal tabs from a single state source in both 4-tab production mode and 6-tab demo mode", async () => {
     expect(tabs).toHaveLength(6);
+
+    // 1. Default non-demo mode renders the 4 backed tabs and wraps keyboard navigation cleanly
+    state.session.isDemoMode = false;
+    await settle();
+    expect(document.querySelectorAll('.nav-tabs [role="tab"]')).toHaveLength(4);
+
+    const tasksTab = document.getElementById("btn-tab-btn-tasks");
+    const consentTab = document.getElementById("btn-tab-btn-consent");
+    tasksTab.focus();
+    tasksTab.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "End",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await settle();
+    expect(state.currentView).toBe("view-consent");
+    expect(document.activeElement).toBe(consentTab);
+
+    // 2. Demo mode renders all 6 tabs with bidirectional ARIA links and roving tabindex navigation
+    state.session.isDemoMode = true;
+    await settle();
+
     const tabButtons = Array.from(
       document.querySelectorAll('.nav-tabs [role="tab"]')
     );
@@ -286,5 +310,7 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
     await settle();
     expect(state.currentView).toBe("view-tasks");
     expect(document.activeElement).toBe(firstTab);
+
+    state.session.isDemoMode = false;
   });
 });

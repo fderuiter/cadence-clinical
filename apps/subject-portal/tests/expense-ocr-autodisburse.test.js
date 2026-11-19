@@ -8,6 +8,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createApp, nextTick } from "vue";
 import App from "../src/App.vue";
 import { state, extractReceiptOcr, submitExpenseClaim } from "../src/index.js";
+import { pinia } from "../src/stores/pinia.js";
 import {
   initSessionKey,
   clearSessionKey,
@@ -23,7 +24,9 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
     state.session.roles = "Subject";
     state.session.token = "test_ocr_token";
     state.session.isOfflineMode = false;
+    state.session.isDemoMode = true;
     state.walletBalance = 325.0;
+    state.expenseError = null;
     state.ledgerBlocks = [];
     state.expenseResult = null;
     state.expenseOcr = {
@@ -207,6 +210,7 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
 
   it("mounts App.vue and renders interactive OCR reimbursement workflow in My Wallet view", async () => {
     activeApp = createApp(App);
+    activeApp.use(pinia);
     activeApp.mount("#app");
     await nextTick();
 
@@ -266,5 +270,36 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
     // Wallet balance display updated
     const balanceEl = document.getElementById("wallet-balance-amount");
     expect(balanceEl.textContent).toContain("$353.50 USD");
+  });
+
+  it("refuses simulated OCR and expense submission outside demo mode and shows user-visible error banner", async () => {
+    state.session.isDemoMode = false;
+    state.walletBalance = null;
+
+    activeApp = createApp(App);
+    activeApp.use(pinia);
+    activeApp.mount("#app");
+    await nextTick();
+
+    state.currentView = "view-wallet";
+    await nextTick();
+
+    expect(document.getElementById("wallet-unavailable-card")).not.toBeNull();
+    expect(document.getElementById("receipt-upload-dropzone")).toBeNull();
+
+    await expect(extractReceiptOcr("METRO TRANSIT")).rejects.toThrow(
+      /not available in this environment/i
+    );
+    await nextTick();
+
+    const errorBanner = document.getElementById("wallet-error-banner");
+    expect(errorBanner).not.toBeNull();
+    expect(errorBanner.textContent).toContain(
+      "not available in this environment"
+    );
+
+    await expect(submitExpenseClaim()).rejects.toThrow(
+      /not available in this environment/i
+    );
   });
 });

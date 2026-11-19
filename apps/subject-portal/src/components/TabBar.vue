@@ -1,7 +1,7 @@
 <template>
   <ul ref="tablistRef" class="nav-tabs" role="tablist">
     <li
-      v-for="tab in tabs"
+      v-for="tab in visibleTabs"
       :id="tab.itemId"
       :key="tab.id"
       class="nav-item"
@@ -39,12 +39,16 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 
 import { showView } from "../features/navigation.js";
+import { AVAILABLE_SCREENS } from "../router/availability.js";
 import { activeTabForView, tabs } from "../router/routes.js";
 import { useInboxStore } from "../stores/inbox.js";
+import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
 
 const ui = useUiStore();
 const inbox = useInboxStore();
+const sessionStore = useSessionStore();
 
 const tablistRef = ref(null);
 const tabRefs = {};
@@ -58,33 +62,44 @@ onBeforeUnmount(() => {
   tablistRef.value?.removeEventListener("keydown", handleTabKeyDown);
 });
 
+const visibleTabs = computed(() => {
+  void sessionStore.session?.isDemoMode;
+  if (isDemoModeActive()) {
+    return tabs;
+  }
+  return tabs.filter((tab) => AVAILABLE_SCREENS.has(tab.id));
+});
+
 function handleTabKeyDown(event) {
+  const list = visibleTabs.value;
+  if (list.length === 0) return;
+
   const activeElement =
     typeof document !== "undefined" ? document.activeElement : null;
-  let currentIndex = tabs.findIndex((t) => tabRefs[t.id] === activeElement);
+  let currentIndex = list.findIndex((t) => tabRefs[t.id] === activeElement);
   if (currentIndex === -1) {
-    currentIndex = tabs.findIndex((t) => t.id === activeTab.value?.id);
+    currentIndex = list.findIndex((t) => t.id === activeTab.value?.id);
   }
   if (currentIndex === -1) return;
 
   let nextIndex;
   if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-    nextIndex = (currentIndex + 1) % tabs.length;
+    nextIndex = (currentIndex + 1) % list.length;
     event.preventDefault();
   } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-    nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    nextIndex = (currentIndex - 1 + list.length) % list.length;
     event.preventDefault();
   } else if (event.key === "Home") {
     nextIndex = 0;
     event.preventDefault();
   } else if (event.key === "End") {
-    nextIndex = tabs.length - 1;
+    nextIndex = list.length - 1;
     event.preventDefault();
   } else {
     return;
   }
 
-  const nextTab = tabs[nextIndex];
+  const nextTab = list[nextIndex];
   selectView(nextTab.viewId);
 
   const btn =

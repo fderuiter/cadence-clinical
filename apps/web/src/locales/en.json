@@ -81,7 +81,7 @@
     }
   },
   "ecrf": {
-    "title": "eCRF Runtime Renderer",
+    "title": "Data collection",
     "description": "Live, dynamic data entry form populated from CDASH metadata with client-side field validation and real-time query management.",
     "activeRole": "Active Role:",
     "ehrReconciliation": "EHR Source Reconciliation",
@@ -107,7 +107,7 @@
       "visitWeek2": "Week 2 Treatment",
       "visitWeek4": "Week 4 Treatment",
       "noSubjects": "No subjects listed",
-      "trainingGatedTitle": "Mandatory Protocol Training Incomplete — EDC Write Gated",
+      "trainingGatedTitle": "Mandatory Protocol Training Incomplete — Data Entry Gated",
       "trainingGatedDesc": "Under ICH GCP E6(R2) §4 & PRD-TRN-002, site staff must complete mandatory protocol amendment training before saving or signing eCRF entries.",
       "completeTrainingNow": "Complete Training Now ➡️",
       "reconsentGatedTitle": "Protocol Amendment Active (v2.0.0) — Re-Consent Required",

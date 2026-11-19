@@ -1,39 +1,52 @@
-// Local security PIN that wraps the offline database master key.
+// Local security PIN that wraps the offline database master key in memory (ADR-2360).
 import { decryptAESGCM, deriveKeyFromPIN, encryptAESGCM } from "ui";
 import { nextTick } from "vue";
 
 import { isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
 import {
+  clearLockedOfflineData,
   getInMemorySessionKey,
   getWrappedMasterKeyConfig,
   saveWrappedMasterKeyConfig,
   setInMemorySessionKey,
 } from "../sync-queue.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
+import { logAuditRecord } from "./audit.js";
+import { syncOfflineQueue } from "./sync.js";
+import {
+  checkOnline,
+  refreshSubmissionsState,
+  renderSyncQueueList,
+} from "./sync-status.js";
 
 export async function checkPINWrapper() {
   if (getInMemorySessionKey()) {
     state.pinUnlock.isOpen = false;
+    state.pinUnlock.confirmingReset = false;
     state.pinSetup.isOpen = false;
     return;
   }
+
   const config = await getWrappedMasterKeyConfig();
   if (config.wrappedKey) {
-    if (!getInMemorySessionKey()) {
-      state.pinUnlock.isOpen = true;
-      nextTick(() => {
-        const el = document.getElementById("unlock-pin");
-        if (el) el.focus();
-      });
-    }
-  } else {
-    if (isAuthenticatedSession()) {
-      state.pinSetup.isOpen = true;
-      nextTick(() => {
-        const el = document.getElementById("setup-pin");
-        if (el) el.focus();
-      });
-    }
+    state.pinSetup.isOpen = false;
+    state.pinUnlock.confirmingReset = false;
+    state.pinUnlock.isOpen = true;
+    nextTick(() => {
+      const el = document.getElementById("unlock-pin");
+      if (el) el.focus();
+    });
+  } else if (
+    isAuthenticatedSession() ||
+    (!isDemoModeActive() && Boolean(state.session.userId))
+  ) {
+    state.pinUnlock.isOpen = false;
+    state.pinSetup.isOpen = true;
+    nextTick(() => {
+      const el = document.getElementById("setup-pin");
+      if (el) el.focus();
+    });
   }
 }
 
@@ -68,6 +81,8 @@ export async function handlePINSetupSubmit() {
     setInMemorySessionKey(masterKey);
     state.pinSetup.isOpen = false;
     state.pinSetup.error = "";
+    await refreshSubmissionsState();
+    await renderSyncQueueList();
   } catch (err) {
     state.pinSetup.error = `Error setting up PIN: ${err.message}`;
   } finally {
@@ -98,7 +113,14 @@ export async function handlePINUnlockSubmit() {
     const masterKey = new Uint8Array(decrypted.masterKey);
     setInMemorySessionKey(masterKey);
     state.pinUnlock.isOpen = false;
+    state.pinUnlock.confirmingReset = false;
     state.pinUnlock.error = "";
+
+    await refreshSubmissionsState();
+    await renderSyncQueueList();
+    if (checkOnline()) {
+      await syncOfflineQueue(false, { autoDisburse: isDemoModeActive() });
+    }
   } catch {
     state.pinUnlock.error = "Incorrect security PIN. Access denied.";
   } finally {
@@ -106,4 +128,50 @@ export async function handlePINUnlockSubmit() {
     const el = document.getElementById("unlock-pin");
     if (el) el.value = "";
   }
+}
+
+export function requestPINReset() {
+  state.pinUnlock.error = "";
+  state.pinUnlock.confirmingReset = true;
+  nextTick(() => {
+    const cancelBtn = document.getElementById("btn-pin-reset-cancel");
+    if (cancelBtn) cancelBtn.focus();
+  });
+}
+
+export function cancelPINReset() {
+  state.pinUnlock.confirmingReset = false;
+  state.pinUnlock.error = "";
+  nextTick(() => {
+    const el = document.getElementById("unlock-pin");
+    if (el) el.focus();
+  });
+}
+
+export async function confirmPINReset() {
+  const userId = state.session.userId;
+  await clearLockedOfflineData(userId);
+  state.submissions = [];
+  state.pinUnlock.pin = "";
+  state.pinUnlock.error = "";
+  state.pinUnlock.confirmingReset = false;
+  state.pinUnlock.isOpen = false;
+
+  await logAuditRecord(
+    "PIN_WRAPPER_RESET",
+    { subject_id: userId || "unauthenticated" },
+    "Participant confirmed security PIN reset and cleared locked local offline entries."
+  );
+
+  await refreshSubmissionsState();
+  await renderSyncQueueList();
+
+  state.pinSetup.error = "";
+  state.pinSetup.pin = "";
+  state.pinSetup.confirmPin = "";
+  state.pinSetup.isOpen = true;
+  nextTick(() => {
+    const setupInput = document.getElementById("setup-pin");
+    if (setupInput) setupInput.focus();
+  });
 }

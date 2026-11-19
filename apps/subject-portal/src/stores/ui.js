@@ -7,6 +7,7 @@ export const useUiStore = defineStore("ui", {
   state: () => ({
     currentView: "view-tasks",
     signatureModalOpen: false,
+    unavailableScreen: null,
     pendingSignableAction: null,
     modalError: "",
     previouslyFocusedElement: null,

@@ -2,7 +2,6 @@
   <div>
     <!-- Contextual Help Slide-Out Drawer -->
     <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       v-if="knowledgeStore.isOpen"
       id="contextual-help-drawer-overlay"
@@ -348,6 +347,7 @@ import { useRoute } from "vue-router";
 import { useFocusTrap } from "../composables/useFocusTrap.js";
 import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
+import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import TicketCreateModal from "./tickets/TicketCreateModal.vue";
 
 const drawerRef = ref(null);
@@ -421,6 +421,9 @@ function handleEscalate() {
 }
 
 function handleTicketCreated(_payload) {
+  if (!allowUnbackedAction("Support ticket escalation")) {
+    return;
+  }
   knowledgeStore.cancelEscalation();
   knowledgeStore.closeDrawer();
 }

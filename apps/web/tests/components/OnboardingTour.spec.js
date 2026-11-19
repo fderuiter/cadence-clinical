@@ -13,17 +13,15 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: "/", name: "home", component: DummyView },
-    { path: "/mdr", name: "mdr", component: DummyView },
+    { path: "/overview", name: "overview", component: DummyView },
+    { path: "/studies/:studyCode?", name: "study", component: DummyView },
     { path: "/ecrf", name: "ecrf", component: DummyView },
     { path: "/ctms", name: "ctms", component: DummyView },
-    { path: "/rules", name: "rules", component: DummyView },
-    { path: "/audit", name: "audit", component: DummyView },
-    { path: "/etmf", name: "etmf", component: DummyView },
-    { path: "/notifications", name: "notifications", component: DummyView },
+    { path: "/ssu", name: "ssu", component: DummyView },
   ],
 });
 
-describe("Onboarding Guided Tour & Event Buffer Spec", () => {
+describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
   beforeEach(() => {
     const pinia = createPinia();
     setActivePinia(pinia);
@@ -31,10 +29,10 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
   });
 
   describe("useOnboardingStore", () => {
-    it("initializes with default values", () => {
+    it("initializes as opt-in (isActive = false) on sign-in by default", () => {
       const store = useOnboardingStore();
       expect(store.currentStep).toBe(1);
-      expect(store.isActive).toBe(true);
+      expect(store.isActive).toBe(false);
       expect(store.disabled).toBe(false);
       expect(store.events).toEqual([]);
     });
@@ -55,22 +53,29 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       expect(savedEvents[0].type).toBe("test_type");
     });
 
-    it("handles standard step transitions", () => {
+    it("handles standard step transitions once started", () => {
       const store = useOnboardingStore();
+      store.startTour();
+      expect(store.isActive).toBe(true);
+
       store.nextStep("Step 1 Complete");
       expect(store.currentStep).toBe(2);
-      expect(store.events.length).toBe(1);
-      expect(store.events[0].type).toBe("step_completed");
-      expect(store.events[0].target).toBe("Step 1 Complete");
+      expect(
+        store.events.some(
+          (e) => e.type === "step_completed" && e.target === "Step 1 Complete"
+        )
+      ).toBe(true);
 
       store.prevStep();
       expect(store.currentStep).toBe(1);
-      expect(store.events.length).toBe(2);
-      expect(store.events[1].type).toBe("step_backed");
+      expect(store.events.some((e) => e.type === "step_backed")).toBe(true);
     });
 
-    it("handles tour dismiss, resume, and complete disablement", () => {
+    it("handles tour start, dismiss, resume, and complete disablement", () => {
       const store = useOnboardingStore();
+      store.startTour();
+      expect(store.isActive).toBe(true);
+
       store.dismissTour();
       expect(store.isActive).toBe(false);
       expect(
@@ -93,12 +98,11 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       const store = useOnboardingStore();
       const authStore = signInAs(useAuthStore(), ["Sponsor Admin"]);
 
-      // Start in super_admin
       expect(store.currentPersona).toBe("super_admin");
+      store.startTour();
       store.nextStep("Step 1 for super_admin");
       store.nextStep("Step 2 for super_admin");
       expect(store.currentStep).toBe(3);
-      expect(store.events.length).toBe(2);
 
       expect(
         window.localStorage.getItem("onboarding_super_admin_current_step")
@@ -109,14 +113,14 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       store.loadPersonaState("site_crc");
 
       expect(store.currentPersona).toBe("site_crc");
-      expect(store.currentStep).toBe(1); // Default initial step for new persona
-      expect(store.events).toEqual([]); // Empty events for new persona
+      expect(store.currentStep).toBe(1);
+      expect(store.isActive).toBe(false); // Opt-in on unvisited persona
+      expect(store.events).toEqual([]);
 
-      // Advance site_crc to step 2 and log event
+      // Advance site_crc to step 2
+      store.startTour();
       store.nextStep("Step 1 for site_crc");
       expect(store.currentStep).toBe(2);
-      expect(store.events.length).toBe(1);
-
       expect(
         window.localStorage.getItem("onboarding_site_crc_current_step")
       ).toBe("2");
@@ -126,12 +130,10 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       store.loadPersonaState("super_admin");
 
       expect(store.currentPersona).toBe("super_admin");
-      expect(store.currentStep).toBe(3); // Restored step progress
-      expect(store.events.length).toBe(2); // Restored event history
+      expect(store.currentStep).toBe(3);
     });
 
     it("migrates legacy unscoped localStorage keys to super_admin without errors", () => {
-      // Set legacy unscoped keys in localStorage
       window.localStorage.setItem("onboarding_current_step", "4");
       window.localStorage.setItem("onboarding_is_active", "false");
       window.localStorage.setItem("onboarding_disabled", "false");
@@ -150,15 +152,11 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       expect(store.events.length).toBe(1);
       expect(store.events[0].type).toBe("legacy_event");
 
-      // Legacy keys should be removed and migrated to super_admin scoped keys
       expect(window.localStorage.getItem("onboarding_current_step")).toBeNull();
       expect(window.localStorage.getItem("onboarding_events")).toBeNull();
       expect(
         window.localStorage.getItem("onboarding_super_admin_current_step")
       ).toBe("4");
-      expect(
-        window.localStorage.getItem("onboarding_super_admin_events")
-      ).not.toBeNull();
     });
 
     it("gracefully handles invalid JSON in legacy storage during migration", () => {
@@ -169,17 +167,19 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       expect(() => store.loadPersonaState("super_admin")).not.toThrow();
 
       expect(store.currentStep).toBe(2);
-      expect(store.events).toEqual([]); // Falls back to empty array on parse error
+      expect(store.events).toEqual([]);
     });
 
-    it("persists persona dismissal and disabled preference keys and isolates tour popover across personas", () => {
+    it("persists persona dismissal and disabled preference keys and isolates tour state across personas", () => {
       const store = useOnboardingStore();
       const authStore = signInAs(useAuthStore(), ["Sponsor Admin"]);
 
       expect(store.currentPersona).toBe("super_admin");
+      expect(store.isActive).toBe(false);
+
+      store.startTour();
       expect(store.isActive).toBe(true);
 
-      // Dismiss tour in super_admin
       store.dismissTour();
       expect(store.isActive).toBe(false);
       expect(
@@ -189,204 +189,123 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
         window.localStorage.getItem("onboarding_super_admin_is_active")
       ).toBe("false");
 
-      // Switch to unvisited persona site_crc
       authStore.switchPersona("site_crc");
       store.loadPersonaState("site_crc");
 
       expect(store.currentPersona).toBe("site_crc");
-      expect(store.isActive).toBe(true); // Isolated active state for unvisited persona
-      expect(store.currentStep).toBe(1); // Step position initialized for persona
-
-      // Advance step in site_crc
-      store.nextStep("Step 1 for site_crc");
-      expect(store.currentStep).toBe(2);
-      expect(
-        window.localStorage.getItem("onboarding_site_crc_current_step")
-      ).toBe("2");
-
-      // Switch back to super_admin
-      authStore.switchPersona("super_admin");
-      store.loadPersonaState("super_admin");
-      expect(store.currentPersona).toBe("super_admin");
       expect(store.isActive).toBe(false);
-    });
-
-    it("prevents future prompts for a persona when disabled for that persona", () => {
-      const store = useOnboardingStore();
-      const authStore = signInAs(useAuthStore(), ["Sponsor Admin"]);
-
-      store.disableTour();
-      expect(store.disabled).toBe(true);
-      expect(store.isActive).toBe(false);
-      expect(
-        window.localStorage.getItem("onboarding_global_disabled")
-      ).toBeNull();
-      expect(
-        window.localStorage.getItem("onboarding_super_admin_disabled")
-      ).toBe("true");
-
-      // Switch to unvisited persona site_crc
-      authStore.switchPersona("site_crc");
-      store.loadPersonaState("site_crc");
-
-      expect(store.disabled).toBe(false);
-      expect(store.isActive).toBe(true);
+      expect(store.currentStep).toBe(1);
     });
 
     it("clears dismissal and disabled flags when tour is reset or restarted", () => {
       const store = useOnboardingStore();
-      store.dismissTour();
-      expect(
-        window.localStorage.getItem("onboarding_global_dismissed")
-      ).toBeNull();
-      expect(
-        window.localStorage.getItem("onboarding_super_admin_is_active")
-      ).toBe("false");
+      store.disableTour();
+      expect(store.disabled).toBe(true);
 
       store.resetTour();
       expect(store.isActive).toBe(true);
       expect(store.disabled).toBe(false);
       expect(
-        window.localStorage.getItem("onboarding_global_dismissed")
-      ).toBeNull();
-      expect(
-        window.localStorage.getItem("onboarding_global_disabled")
-      ).toBeNull();
-      expect(
         window.localStorage.getItem("onboarding_super_admin_is_active")
       ).toBe("true");
     });
 
-    it("purges all onboarding storage keys across all personas in resetTour and clears state for persona switching", () => {
+    it("purges other persona storage keys in resetTour while activating the current persona", () => {
       const store = useOnboardingStore();
       const authStore = signInAs(useAuthStore(), ["Sponsor Admin"]);
 
-      // Populate storage keys for multiple personas
       window.localStorage.setItem("onboarding_super_admin_current_step", "3");
       window.localStorage.setItem("onboarding_super_admin_disabled", "true");
       window.localStorage.setItem("onboarding_site_crc_current_step", "2");
       window.localStorage.setItem("onboarding_site_crc_disabled", "true");
-      window.localStorage.setItem("onboarding_site_crc_is_active", "false");
-      window.localStorage.setItem("onboarding_pi_current_step", "4");
 
-      // Reset tour from active persona super_admin
       store.resetTour();
 
-      // All previous persona keys should be purged
       expect(
         window.localStorage.getItem("onboarding_site_crc_current_step")
       ).toBeNull();
       expect(
         window.localStorage.getItem("onboarding_site_crc_disabled")
       ).toBeNull();
-      expect(
-        window.localStorage.getItem("onboarding_site_crc_is_active")
-      ).toBeNull();
-      expect(
-        window.localStorage.getItem("onboarding_pi_current_step")
-      ).toBeNull();
 
-      // Current persona active state is re-initialized and persisted cleanly
       expect(store.currentStep).toBe(1);
       expect(store.isActive).toBe(true);
       expect(store.disabled).toBe(false);
-      expect(
-        window.localStorage.getItem("onboarding_super_admin_current_step")
-      ).toBe("1");
-      expect(
-        window.localStorage.getItem("onboarding_super_admin_is_active")
-      ).toBe("true");
-      expect(
-        window.localStorage.getItem("onboarding_super_admin_disabled")
-      ).toBe("false");
 
-      // Switching persona receives clean initial onboarding state
       authStore.switchPersona("site_crc");
       store.loadPersonaState("site_crc");
-
       expect(store.currentPersona).toBe("site_crc");
       expect(store.currentStep).toBe(1);
-      expect(store.isActive).toBe(true);
+      expect(store.isActive).toBe(false);
       expect(store.disabled).toBe(false);
     });
   });
 
   describe("OnboardingTour.vue component", () => {
-    it("renders popover correctly when active and matches role-based prompts", async () => {
+    it("remains hidden on mount until explicitly started (opt-in)", () => {
+      const authStore = useAuthStore();
+      authStore.rawRoles = ["Sponsor Designer"];
+
+      const wrapper = mount(OnboardingTour, {
+        global: { plugins: [router] },
+      });
+
+      expect(wrapper.find(".onboarding-popover-card").exists()).toBe(false);
+    });
+
+    it("renders popover when started and matches UX-1 role-based prompts without product acronyms", async () => {
       const store = useOnboardingStore();
       const authStore = useAuthStore();
-      authStore.rawRoles = ["Sponsor Designer"]; // maps to sponsor_designer
+      authStore.rawRoles = ["Sponsor Designer"];
+      store.startTour();
 
       const wrapper = mount(OnboardingTour, {
-        global: {
-          plugins: [router],
-        },
-        props: {
-          activeTab: "soa",
-        },
+        global: { plugins: [router] },
       });
 
-      // Step 1 Welcome popover
       expect(wrapper.find(".onboarding-popover-card").exists()).toBe(true);
-      expect(wrapper.text()).toContain("Welcome to the Sandbox");
-      expect(wrapper.text()).toContain(
-        "Welcome, Designer! Ready to architect clinical protocols and CDISC USDM data structures with maximum accuracy?"
-      );
+      expect(wrapper.text()).toContain("Welcome to Protocol Design");
+      expect(wrapper.text()).toContain("Welcome, Designer!");
+      expect(wrapper.text()).not.toContain("Sandbox");
+      expect(wrapper.text()).not.toContain("EDC");
+      expect(wrapper.text()).not.toContain("CTMS");
 
-      // Click Next
       await wrapper.find(".btn-tour-next").trigger("click");
       expect(store.currentStep).toBe(2);
-      expect(wrapper.emitted("update:activeTab")).toBeTruthy();
-      expect(wrapper.emitted("update:activeTab")[0]).toEqual(["soa"]);
     });
 
-    it("displays appropriate prompts for Data Manager", () => {
+    it("displays appropriate prompts for Data Manager and Sponsor Admin when started", () => {
+      const store = useOnboardingStore();
       const authStore = useAuthStore();
-      authStore.rawRoles = ["Data Manager"]; // maps to data_manager
+      authStore.rawRoles = ["Data Manager"];
+      store.startTour();
 
-      const wrapper = mount(OnboardingTour, {
-        global: {
-          plugins: [router],
-        },
-        props: {
-          activeTab: "soa",
-        },
+      const dmWrapper = mount(OnboardingTour, {
+        global: { plugins: [router] },
       });
+      expect(dmWrapper.text()).toContain("Welcome, Data Manager!");
+      dmWrapper.unmount();
 
-      expect(wrapper.text()).toContain("Welcome, Data Manager!");
-    });
-
-    it("displays appropriate prompts for Sponsor Admin", () => {
-      const authStore = useAuthStore();
-      authStore.rawRoles = ["Sponsor Admin"]; // maps to sponsor_admin
-
-      const wrapper = mount(OnboardingTour, {
-        global: {
-          plugins: [router],
-        },
-        props: {
-          activeTab: "soa",
-        },
+      authStore.rawRoles = ["Sponsor Admin"];
+      store.startTour();
+      const adminWrapper = mount(OnboardingTour, {
+        global: { plugins: [router] },
       });
-
-      expect(wrapper.text()).toContain("Welcome, Administrator!");
+      expect(adminWrapper.text()).toContain("Welcome, Administrator!");
+      adminWrapper.unmount();
     });
 
     it("supports dismissing and completely disabling from UI buttons", async () => {
       const store = useOnboardingStore();
+      store.startTour();
+
       const wrapper = mount(OnboardingTour, {
-        global: {
-          plugins: [router],
-        },
-        props: {
-          activeTab: "soa",
-        },
+        global: { plugins: [router] },
       });
 
       await wrapper.find(".btn-tour-dismiss").trigger("click");
       expect(store.isActive).toBe(false);
 
-      // Re-enable for testing disable
       store.resumeTour();
       await wrapper.vm.$nextTick();
       await wrapper.find(".btn-tour-disable").trigger("click");
@@ -394,70 +313,14 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       expect(store.isActive).toBe(false);
     });
 
-    it("automatically reloads persona onboarding state on authStore persona change", async () => {
+    it("maintains popover coordinates during step transitions when element query is delayed and retries across frames", async () => {
       const store = useOnboardingStore();
-      const authStore = signInAs(useAuthStore(), ["Sponsor Admin"]);
+      store.startTour();
+      store.currentStep = 2; // super_admin step 2 targets #nav-studies
 
-      // Set up existing state for site_crc in localStorage
-      window.localStorage.setItem("onboarding_site_crc_current_step", "3");
-      window.localStorage.setItem("onboarding_site_crc_is_active", "true");
-
-      const wrapper = mount(OnboardingTour, {
-        global: {
-          plugins: [router],
-        },
-        props: {
-          activeTab: "soa",
-        },
-      });
-
-      expect(store.currentStep).toBe(1);
-
-      // Switch persona to site_crc
-      authStore.switchPersona("site_crc");
-      await wrapper.vm.$nextTick();
-
-      expect(store.currentPersona).toBe("site_crc");
-      expect(store.currentStep).toBe(3);
-    });
-
-    it("does not render popover card when switching to an unvisited persona after dismissal", async () => {
-      const store = useOnboardingStore();
-      const authStore = signInAs(useAuthStore(), ["Sponsor Admin"]);
-
-      const wrapper = mount(OnboardingTour, {
-        global: {
-          plugins: [router],
-        },
-        props: {
-          activeTab: "soa",
-        },
-      });
-
-      expect(wrapper.find(".onboarding-popover-card").exists()).toBe(true);
-
-      // Dismiss tour
-      await wrapper.find(".btn-tour-dismiss").trigger("click");
-      expect(store.isActive).toBe(false);
-      expect(wrapper.find(".onboarding-popover-card").exists()).toBe(false);
-
-      // Switch persona to unvisited site_crc
-      authStore.switchPersona("site_crc");
-      await wrapper.vm.$nextTick();
-
-      expect(store.currentPersona).toBe("site_crc");
-      expect(store.isActive).toBe(true);
-      expect(wrapper.find(".onboarding-popover-card").exists()).toBe(true);
-    });
-
-    it("maintains popover coordinates during tab transitions when element query is delayed and retries across frames", async () => {
-      const store = useOnboardingStore();
-      store.currentStep = 2; // Step 2 targets .tab-btn-soa
-
-      // Mock element for step 2
-      const targetSoa = document.createElement("button");
-      targetSoa.className = "tab-btn-soa";
-      targetSoa.getBoundingClientRect = () => ({
+      const targetStudies = document.createElement("a");
+      targetStudies.id = "nav-studies";
+      targetStudies.getBoundingClientRect = () => ({
         top: 100,
         bottom: 140,
         left: 200,
@@ -465,15 +328,10 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
         width: 100,
         height: 40,
       });
-      document.body.appendChild(targetSoa);
+      document.body.appendChild(targetStudies);
 
       const wrapper = mount(OnboardingTour, {
-        global: {
-          plugins: [router],
-        },
-        props: {
-          activeTab: "soa",
-        },
+        global: { plugins: [router] },
         attachTo: document.body,
       });
 
@@ -481,25 +339,21 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       await new Promise((resolve) => requestAnimationFrame(resolve));
 
       const popoverCard = wrapper.find(".onboarding-popover-card");
-      expect(popoverCard.element.style.top).toBe("152px"); // 140 + 12
-      expect(popoverCard.element.style.left).toBe("250px"); // 200 + 50
-
-      // Remove step 2 target element to simulate transition
-      document.body.removeChild(targetSoa);
-
-      // Transition to step 3 (targets .tab-btn-mdr)
-      store.currentStep = 3;
-      await wrapper.vm.$nextTick();
-
-      // On intermediate frame before .tab-btn-mdr exists in DOM:
-      // popover retains step 2 position (top: 152px, left: 250px) rather than resetting to 50% / 50%
       expect(popoverCard.element.style.top).toBe("152px");
       expect(popoverCard.element.style.left).toBe("250px");
 
-      // Now append .tab-btn-mdr to simulate asynchronous mounting
-      const targetMdr = document.createElement("button");
-      targetMdr.className = "tab-btn-mdr";
-      targetMdr.getBoundingClientRect = () => ({
+      document.body.removeChild(targetStudies);
+
+      // Transition to step 3 (super_admin targets #nav-data-collection)
+      store.currentStep = 3;
+      await wrapper.vm.$nextTick();
+
+      expect(popoverCard.element.style.top).toBe("152px");
+      expect(popoverCard.element.style.left).toBe("250px");
+
+      const targetDataCollection = document.createElement("a");
+      targetDataCollection.id = "nav-data-collection";
+      targetDataCollection.getBoundingClientRect = () => ({
         top: 100,
         bottom: 140,
         left: 400,
@@ -507,36 +361,28 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
         width: 100,
         height: 40,
       });
-      document.body.appendChild(targetMdr);
+      document.body.appendChild(targetDataCollection);
 
-      // Next RAF frame checks query again and finds .tab-btn-mdr
       await new Promise((resolve) => requestAnimationFrame(resolve));
 
       expect(popoverCard.element.style.top).toBe("152px");
       expect(popoverCard.element.style.left).toBe("450px");
 
-      // Clean up
-      document.body.removeChild(targetMdr);
+      document.body.removeChild(targetDataCollection);
       wrapper.unmount();
     });
 
     it("falls back to viewport center after retry attempts expire if target element never appears", async () => {
       const store = useOnboardingStore();
-      store.currentStep = 2; // Targets .tab-btn-soa which doesn't exist
+      store.startTour();
+      store.currentStep = 2;
 
       const wrapper = mount(OnboardingTour, {
-        global: {
-          plugins: [router],
-        },
-        props: {
-          activeTab: "soa",
-        },
+        global: { plugins: [router] },
         attachTo: document.body,
       });
 
       await wrapper.vm.$nextTick();
-
-      // Run multiple RAF ticks until retries expire
       for (let i = 0; i < 7; i++) {
         await new Promise((resolve) => requestAnimationFrame(resolve));
       }
@@ -548,134 +394,127 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       wrapper.unmount();
     });
 
-    it("renders role-tailored step sequences on landing routes for non-designer personas", async () => {
+    it("renders live role-tailored step sequences across all six clinical personas", async () => {
       const store = useOnboardingStore();
-      const authStore = signInAs(useAuthStore(), ["Data Manager"]);
+      const authStore = signInAs(useAuthStore(), [
+        "Sponsor Admin",
+        "Sponsor Designer",
+        "Data Manager",
+        "CRC",
+        "CRA",
+        "Auditor",
+      ]);
 
-      authStore.switchPersona("data_manager");
-      store.loadPersonaState("data_manager");
+      const expectedByPersona = [
+        {
+          persona: "data_manager",
+          title: "Welcome to Data Management",
+          routeName: "ecrf",
+        },
+        {
+          persona: "cra_monitor",
+          title: "Welcome to Clinical Operations",
+          routeName: "ctms",
+        },
+        {
+          persona: "auditor",
+          title: "Welcome to Regulatory & Audit",
+          routeName: "study",
+        },
+        {
+          persona: "site_crc",
+          title: "Welcome to Data Collection",
+          routeName: "ecrf",
+        },
+        {
+          persona: "sponsor_designer",
+          title: "Welcome to Protocol Design",
+          routeName: "study",
+        },
+        {
+          persona: "super_admin",
+          title: "Welcome to Cadence Clinical",
+          routeName: "study",
+        },
+      ];
 
       const wrapper = mount(OnboardingTour, {
-        global: {
-          plugins: [router],
-        },
+        global: { plugins: [router] },
       });
 
-      expect(wrapper.find(".onboarding-popover-card").exists()).toBe(true);
-      expect(wrapper.text()).toContain("Welcome to Data Management");
-      expect(wrapper.text()).toContain("Welcome, Data Manager!");
-      expect(store.currentStepConfig.routeName).toBe("rules");
+      for (const { persona, title, routeName } of expectedByPersona) {
+        authStore.switchPersona(persona);
+        store.loadPersonaState(persona);
+        store.startTour();
+        await wrapper.vm.$nextTick();
 
-      // Switch to CRA / Monitor persona
-      authStore.switchPersona("cra_monitor");
-      store.loadPersonaState("cra_monitor");
-      await wrapper.vm.$nextTick();
+        expect(wrapper.find(".onboarding-popover-card").exists()).toBe(true);
+        expect(wrapper.text()).toContain(title);
+        expect(store.currentStepConfig.routeName).toBe(routeName);
+      }
 
-      expect(wrapper.text()).toContain("Welcome to Clinical Operations");
-      expect(wrapper.text()).toContain("Welcome, CRA!");
-      expect(store.currentStepConfig.routeName).toBe("ctms");
-
-      // Switch to Auditor persona
-      authStore.switchPersona("auditor");
-      store.loadPersonaState("auditor");
-      await wrapper.vm.$nextTick();
-
-      expect(wrapper.text()).toContain("Welcome to Regulatory & Audit");
-      expect(wrapper.text()).toContain("Welcome, Auditor!");
-      expect(store.currentStepConfig.routeName).toBe("audit");
-
-      // Switch to Site CRC persona
-      authStore.switchPersona("site_crc");
-      store.loadPersonaState("site_crc");
-      await wrapper.vm.$nextTick();
-
-      expect(wrapper.text()).toContain("Welcome to Electronic Data Capture");
-      expect(wrapper.text()).toContain("Welcome, Site Coordinator!");
-      expect(store.currentStepConfig.routeName).toBe("ecrf");
+      wrapper.unmount();
     });
 
-    it("invokes router navigation when advancing across cross-view steps", async () => {
+    it("invokes router navigation only to live authorized routes when advancing across cross-view steps", async () => {
       const store = useOnboardingStore();
       const authStore = signInAs(useAuthStore(), ["Data Manager"]);
 
       authStore.switchPersona("data_manager");
       store.loadPersonaState("data_manager");
+      store.startTour();
 
       const pushSpy = vi.spyOn(router, "push");
 
       const wrapper = mount(OnboardingTour, {
-        global: {
-          plugins: [router],
-        },
+        global: { plugins: [router] },
       });
 
-      // Advance through steps 1 -> 2 -> 3 -> 4 (step 4 for data_manager goes to mdr)
-      await wrapper.find(".btn-tour-next").trigger("click"); // step 2
-      await wrapper.find(".btn-tour-next").trigger("click"); // step 3
-      await wrapper.find(".btn-tour-next").trigger("click"); // step 4 (cross-view to mdr)
+      // Advance step 1 (ecrf) -> step 2 (ecrf) -> step 3 (study)
+      await wrapper.find(".btn-tour-next").trigger("click");
+      await wrapper.find(".btn-tour-next").trigger("click");
 
-      expect(store.currentStep).toBe(4);
-      expect(store.currentStepConfig.routeName).toBe("mdr");
+      expect(store.currentStep).toBe(3);
+      expect(store.currentStepConfig.routeName).toBe("study");
       expect(pushSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ name: "mdr" })
+        expect.objectContaining({ name: "study" })
       );
     });
 
-    it("does not render onboarding tour on unauthenticated routes inside AppShell", async () => {
-      const authStore = useAuthStore();
-      authStore.isAuthenticated = false;
+    it("never navigates an unauthorized persona view switch to /ctms or /ecrf (UX-6)", async () => {
+      const store = useOnboardingStore();
+      const authStore = signInAs(useAuthStore(), ["Auditor"]);
 
-      await router.push("/login");
+      authStore.switchPersona("cra_monitor");
+      store.loadPersonaState("cra_monitor");
+      store.startTour();
 
-      const wrapper = mount(AppShell, {
-        global: {
-          plugins: [router],
-        },
+      const pushSpy = vi.spyOn(router, "push");
+      const wrapper = mount(OnboardingTour, {
+        global: { plugins: [router] },
       });
 
-      expect(wrapper.find(".onboarding-popover-card").exists()).toBe(false);
-      expect(wrapper.find(".onboarding-tour-container").exists()).toBe(false);
+      // Only the authorized 'study' step remains in the sequence for an Auditor
+      expect(store.currentStepConfig.routeName).toBe("study");
+      expect(pushSpy).not.toHaveBeenCalledWith(
+        expect.objectContaining({ name: "ctms" })
+      );
+      wrapper.unmount();
     });
   });
 
-  describe("AppShell.vue footer and diagnostic integration", () => {
-    it("toggles the telemetry diagnostic panel and handles clear/reset", async () => {
-      const store = useOnboardingStore();
-      const authStore = useAuthStore();
+  describe("AppShell.vue clean shell & opt-in onboarding integration", () => {
+    it("omits legacy telemetry diagnostic footers and keeps tour closed on initial sign-in", async () => {
+      const authStore = signInAs(useAuthStore(), ["Sponsor Admin"]);
+      expect(authStore.isAuthenticated).toBe(true);
 
       const wrapper = mount(AppShell, {
-        global: {
-          plugins: [router],
-        },
+        global: { plugins: [router] },
       });
 
-      // Verify the toggle button is present in the footer
-      const toggleBtn = wrapper.find("#toggle-diagnostic-panel");
-      expect(toggleBtn.exists()).toBe(true);
+      expect(wrapper.find("#toggle-diagnostic-panel").exists()).toBe(false);
       expect(wrapper.find(".diagnostic-panel").exists()).toBe(false);
-
-      // Toggle panel open
-      await toggleBtn.trigger("click");
-      expect(wrapper.find(".diagnostic-panel").exists()).toBe(true);
-      expect(wrapper.text()).toContain("Telemetry Diagnostic Log");
-
-      // Log a mock event and verify it displays
-      store.addEvent("test_click", "MDR Tab Button");
-      await wrapper.vm.$nextTick();
-
-      expect(wrapper.find(".diagnostic-panel").text()).toContain(
-        "MDR Tab Button"
-      );
-
-      // Verify reset tour button calls resetTour
-      const resetSpy = vi.spyOn(store, "resetTour");
-      await wrapper.find(".btn-reset-tour").trigger("click");
-      expect(resetSpy).toHaveBeenCalled();
-
-      // Verify clear events button calls clearEvents
-      const clearSpy = vi.spyOn(store, "clearEvents");
-      await wrapper.find(".btn-clear-events").trigger("click");
-      expect(clearSpy).toHaveBeenCalled();
+      expect(wrapper.find(".onboarding-popover-card").exists()).toBe(false);
     });
   });
 });

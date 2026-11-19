@@ -81,7 +81,7 @@
     }
   },
   "ecrf": {
-    "title": "Renderizador eCRF en tiempo de ejecución",
+    "title": "Recopilación de datos",
     "description": "Formulario de entrada de datos dinámico en vivo poblado desde metadatos CDASH con validación de campos del lado del cliente y gestión de consultas en tiempo real.",
     "activeRole": "Rol activo:",
     "ehrReconciliation": "Reconciliación de fuente EHR",
@@ -107,7 +107,7 @@
       "visitWeek2": "Tratamiento semana 2",
       "visitWeek4": "Tratamiento semana 4",
       "noSubjects": "No hay sujetos listados",
-      "trainingGatedTitle": "Capacitación obligatoria sobre el protocolo incompleta — Escritura EDC bloqueada",
+      "trainingGatedTitle": "Capacitación obligatoria sobre el protocolo incompleta — Entrada de datos bloqueada",
       "trainingGatedDesc": "Según ICH GCP E6(R2) §4 y PRD-TRN-002, el personal del sitio debe completar la capacitación obligatoria sobre enmiendas al protocolo antes de guardar o firmar entradas eCRF.",
       "completeTrainingNow": "Completar capacitación ahora ➡️",
       "reconsentGatedTitle": "Enmienda de protocolo activa (v2.0.0) — Re-consentimiento requerido",

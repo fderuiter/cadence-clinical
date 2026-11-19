@@ -59,7 +59,23 @@
             />
           </div>
         </div>
-        <div class="modal-footer">
+        <div
+          class="modal-footer"
+          style="
+            display: flex;
+            gap: 8px;
+            justify-content: space-between;
+            flex-wrap: wrap;
+          "
+        >
+          <button
+            id="btn-pin-setup-signout"
+            type="button"
+            class="btn btn-secondary"
+            @click="handleSignOut"
+          >
+            Sign Out
+          </button>
           <button
             id="btn-pin-setup-confirm"
             type="submit"
@@ -77,6 +93,7 @@
 import { ref } from "vue";
 import { useFocusTrap } from "ui";
 
+import { logout } from "../features/auth.js";
 import { handlePINSetupSubmit } from "../features/pin.js";
 import { useSessionStore } from "../stores/session.js";
 
@@ -88,4 +105,8 @@ useFocusTrap(modalRef, {
   escapeDeactivates: false,
   initialFocus: "#setup-pin",
 });
+
+function handleSignOut() {
+  logout();
+}
 </script>

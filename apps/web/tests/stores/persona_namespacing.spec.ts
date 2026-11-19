@@ -104,7 +104,14 @@ describe("Strict Persona-Scoped Namespacing & Lifecycle Rehydration", () => {
       const onboardingStore = useOnboardingStore();
       onboardingStore.loadPersonaState("site_crc");
 
-      // Coordinator disables tour
+      // Pre-start tour in monitor persona so we can verify Coordinator disabling does not touch it
+      authStore.switchPersona("cra_monitor");
+      expect(onboardingStore.isActive).toBe(false); // Opt-in on initial visit
+      onboardingStore.startTour();
+      expect(onboardingStore.isActive).toBe(true);
+
+      // Switch back to Coordinator and disable tour
+      authStore.switchPersona("site_crc");
       onboardingStore.disableTour();
 
       // Verify no global keys were written

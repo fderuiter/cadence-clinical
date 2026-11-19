@@ -653,7 +653,8 @@ describe("Knowledge Hub Browser View (Issue #4331)", () => {
   });
 
   describe("7. Global AppShell Integration & Route Navigation", () => {
-    it("renders Knowledge & SOP Hub in AppShell sidebar navigation", async () => {
+    it("exposes SOP & knowledge guidance from the unified AppShell header without a legacy sidebar", async () => {
+      authStore.isAuthenticated = true;
       const shellWrapper = mount(AppShell, {
         global: {
           plugins: [pinia, router],
@@ -661,9 +662,10 @@ describe("Knowledge Hub Browser View (Issue #4331)", () => {
       });
       await flushPromises();
 
-      const navBtn = shellWrapper.find("#tab-btn-knowledge");
-      expect(navBtn.exists()).toBe(true);
-      expect(navBtn.text()).toContain("Knowledge & SOP Hub");
+      expect(shellWrapper.find(".app-sidebar").exists()).toBe(false);
+      const helpBtn = shellWrapper.find("#btn-contextual-help-trigger");
+      expect(helpBtn.exists()).toBe(true);
+      expect(helpBtn.text()).toContain("Help & SOPs");
     });
 
     it("verifies router configuration includes /knowledge route", () => {

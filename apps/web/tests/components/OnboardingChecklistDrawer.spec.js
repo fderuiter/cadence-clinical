@@ -21,10 +21,11 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: "/", name: "home", component: DummyView },
-    { path: "/digitization", name: "digitization", component: DummyView },
-    { path: "/mdr", name: "mdr", component: DummyView },
-    { path: "/rules", name: "rules", component: DummyView },
-    { path: "/exports", name: "exports", component: DummyView },
+    { path: "/overview", name: "overview", component: DummyView },
+    { path: "/studies/:studyCode?", name: "study", component: DummyView },
+    { path: "/ecrf", name: "ecrf", component: DummyView },
+    { path: "/ctms", name: "ctms", component: DummyView },
+    { path: "/ssu", name: "ssu", component: DummyView },
   ],
 });
 
@@ -36,6 +37,10 @@ describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
   });
 
   it("renders setup progress badge in AppShell header and opens drawer on click", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+
     const wrapper = mount(AppShell, {
       global: {
         plugins: [router],
@@ -44,8 +49,8 @@ describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
 
     const setupBadge = wrapper.find("#btn-onboarding-checklist-trigger");
     expect(setupBadge.exists()).toBe(true);
-    expect(setupBadge.text()).toContain("Setup 0/5");
-    expect(setupBadge.text()).toContain("0%");
+    expect(setupBadge.text()).toContain("Orientation");
+    expect(setupBadge.text()).toContain("0/5");
 
     // Drawer should initially be closed
     expect(wrapper.find("#onboarding-checklist-drawer").exists()).toBe(false);
@@ -59,6 +64,10 @@ describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
   });
 
   it("allows interactive task completion toggling and updates progress percentage", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+
     const onboardingStore = useOnboardingStore();
     onboardingStore.openDrawer();
 
@@ -93,6 +102,8 @@ describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
   });
 
   it("auto-completes setup tasks when matching telemetry events are logged", async () => {
+    const authStore = useAuthStore();
+    authStore.rawRoles = ["Sponsor Admin"];
     const onboardingStore = useOnboardingStore();
     expect(onboardingStore.completedTasksCount).toBe(0);
 
@@ -119,7 +130,11 @@ describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
     expect(onboardingStore.completedTasksCount).toBe(2);
   });
 
-  it("navigates to task route when 'Go to Task' button is clicked", async () => {
+  it("navigates to live task route when 'Go to Task' button is clicked", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+
     const pushSpy = vi.spyOn(router, "push");
     const onboardingStore = useOnboardingStore();
     onboardingStore.openDrawer();
@@ -134,11 +149,13 @@ describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
     expect(navBtn.exists()).toBe(true);
 
     await navBtn.trigger("click");
-    expect(pushSpy).toHaveBeenCalledWith("/digitization");
+    expect(pushSpy).toHaveBeenCalledWith("/studies");
     expect(onboardingStore.isDrawerOpen).toBe(false);
   });
 
   it("resets checklist progress when 'Reset Progress' button is clicked", async () => {
+    const authStore = useAuthStore();
+    authStore.rawRoles = ["Sponsor Admin"];
     const onboardingStore = useOnboardingStore();
     onboardingStore.openDrawer();
     onboardingStore.completeTask("task_protocol");
@@ -161,6 +178,7 @@ describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
 
   it("isolates onboarding checklist task completion per user persona in localStorage", async () => {
     const authStore = useAuthStore();
+    authStore.rawRoles = ["Sponsor Admin"];
     const onboardingStore = useOnboardingStore();
 
     // 1. As super_admin complete task_protocol
@@ -174,8 +192,8 @@ describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
     onboardingStore.loadPersonaState("data_manager");
     expect(onboardingStore.completedTasksCount).toBe(0);
 
-    // Complete task_rules for data_manager
-    onboardingStore.completeTask("task_rules");
+    // Complete task_crf for data_manager
+    onboardingStore.completeTask("task_crf");
     expect(onboardingStore.completedTasksCount).toBe(1);
 
     // 3. Switch back to super_admin
@@ -186,7 +204,7 @@ describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
       onboardingStore.tasks.find((t) => t.id === "task_protocol").completed
     ).toBe(true);
     expect(
-      onboardingStore.tasks.find((t) => t.id === "task_rules").completed
+      onboardingStore.tasks.find((t) => t.id === "task_crf").completed
     ).toBe(false);
   });
 

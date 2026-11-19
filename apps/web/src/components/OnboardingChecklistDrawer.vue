@@ -79,7 +79,7 @@
         <div class="drawer-body">
           <div class="task-list-container">
             <div
-              v-for="task in onboardingStore.tasks"
+              v-for="task in onboardingStore.visibleTasks"
               :key="task.id"
               class="task-card"
               :class="{ completed: task.completed }"
@@ -130,12 +130,21 @@
         <div class="drawer-footer">
           <div class="footer-actions">
             <button
-              v-if="!onboardingStore.isActive && !onboardingStore.disabled"
+              id="btn-open-orientation-hub"
               type="button"
               class="btn btn-sm btn-secondary"
-              @click="resumeGuidedTour"
+              @click="openOrientationHub"
             >
-              Resume Tour
+              Orientation Hub
+            </button>
+            <button
+              v-if="!onboardingStore.isActive"
+              id="btn-drawer-start-tour"
+              type="button"
+              class="btn btn-sm btn-secondary"
+              @click="startGuidedTour"
+            >
+              Start Tour
             </button>
             <button
               type="button"
@@ -180,8 +189,13 @@ function navigateToTask(task) {
   }
 }
 
-function resumeGuidedTour() {
-  onboardingStore.resumeTour();
+function openOrientationHub() {
+  router.push("/overview");
+  onboardingStore.closeDrawer();
+}
+
+function startGuidedTour() {
+  onboardingStore.startTour();
   onboardingStore.closeDrawer();
 }
 </script>

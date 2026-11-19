@@ -1,7 +1,13 @@
 // 21 CFR Part 11 electronic signature modal for ePRO and eConsent.
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
-import { deleteDraft, queueSubmission } from "../sync-queue.js";
+import {
+  deleteDraft,
+  queueSubmission,
+  saveAssignmentsToDB,
+} from "../sync-queue.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
+import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { logAuditRecord } from "./audit.js";
 import { renderCompliance } from "./compliance.js";
 import { loadConsentDetails } from "./consent.js";
@@ -15,7 +21,7 @@ export function openSignatureModal(actionType = "epro") {
   if (typeof document !== "undefined") {
     state.previouslyFocusedElement = document.activeElement;
   }
-  document.getElementById("sign-username").value = state.session.userId;
+  document.getElementById("sign-username").value = state.session.userId || "";
   document.getElementById("sign-password").value = "";
 
   const reasonSelect = document.getElementById("sign-reason");
@@ -126,7 +132,9 @@ export async function verifyAndSubmitSignature() {
     // eConsent GxP/Part 11 Step-up signature flow
     if (isAuthenticatedSession()) {
       try {
-        // Step 1: obtain short-lived sig_token
+        // Step 1: obtain short-lived sig_token bound to exact gateway action & semantic_action
+        const signActionPath =
+          "/api/v1/econsent/templates/template-icf/versions/1/sign";
         const tokenResponse = await dispatchApi(
           "api/v1/auth/signature-verification",
           {
@@ -134,15 +142,21 @@ export async function verifyAndSubmitSignature() {
             body: JSON.stringify({
               username: cleanUsername,
               password: cleanPassword,
-              action: "SIGN_CONSENT",
+              action: signActionPath,
+              semantic_action: "econsent.icf.sign",
             }),
           }
         );
 
-        const sigToken = tokenResponse.sig_token;
+        const sigToken = tokenResponse?.sig_token;
+        if (!sigToken || typeof sigToken !== "string") {
+          throw new Error(
+            "Signature verification service is unavailable or did not issue a signature token. Nothing was saved."
+          );
+        }
 
         // Step 2: Sign consent document
-        await dispatchApi(
+        const signResponse = await dispatchApi(
           "api/v1/econsent/templates/template-icf/versions/1/sign",
           {
             method: "POST",
@@ -158,7 +172,18 @@ export async function verifyAndSubmitSignature() {
           }
         );
 
-        // Set local signed state
+        if (
+          !signResponse ||
+          typeof signResponse !== "object" ||
+          signResponse.error ||
+          signResponse.persisted === false
+        ) {
+          throw new Error(
+            "Electronic consent persistence service is unavailable. Nothing was saved."
+          );
+        }
+
+        // Set local signed state ONLY after verified server persistence
         state.consentSigned = true;
 
         // Write audit ledger record
@@ -184,11 +209,10 @@ export async function verifyAndSubmitSignature() {
           alert(`Signature Verification Rejected: ${err.message}`);
         }
       }
-    } else {
-      // Sandbox fallback mode
+    } else if (allowUnbackedAction("Electronic consent signature")) {
+      // Explicit demo mode only
       state.consentSigned = true;
 
-      // Write audit ledger record
       await logAuditRecord(
         "SIGN_CONSENT",
         {
@@ -196,12 +220,21 @@ export async function verifyAndSubmitSignature() {
           version_index: 1,
           subject_pseudonym: state.session.userId,
         },
-        `Informed Consent Signed and Verified: "${cleanUsername}" with declaration: "${finalReason}"`
+        `Informed Consent Signed and Verified (Demo Mode): "${cleanUsername}" with declaration: "${finalReason}"`
       );
 
       closeSignatureModal();
-      alert("Informed Consent successfully signed and archived (Sandbox VM)!");
+      alert("Informed Consent signed in Demo Mode (synthetic preview only).");
       loadConsentDetails();
+    } else {
+      const refusalMsg =
+        "Electronic consent cannot be signed while unauthenticated or when signature verification services are unavailable. Nothing was saved.";
+      if (errorBanner) {
+        errorBanner.textContent = refusalMsg;
+        errorBanner.style.display = "block";
+      } else {
+        alert(refusalMsg);
+      }
     }
   } else {
     // Default ePRO questionnaire submission
@@ -247,24 +280,31 @@ export async function verifyAndSubmitSignature() {
       `Verified Electronic Signature: "${cleanUsername}" with statement "${finalReason}"`
     );
 
-    // Mark assignment complete
+    // Keep assignment in PENDING_SYNC until server sync confirms persistence
     const foundAssign = state.assignments.find(
       (a) => a.id === active.assignment.id
     );
     if (foundAssign) {
-      foundAssign.status = "COMPLETED";
-      foundAssign.submitted_at = queuedItem.device_timestamp;
+      foundAssign.status = "PENDING_SYNC";
+      foundAssign.queued_at = queuedItem.device_timestamp;
+      try {
+        await saveAssignmentsToDB(state.assignments);
+      } catch (dbErr) {
+        console.warn("Could not persist pending assignment status:", dbErr);
+      }
     }
 
     state.activeQuestionnaire = null;
-    alert("Diary/Questionnaire successfully signed and submitted!");
+    alert(
+      "Diary signed and queued locally — pending server confirmation before completion."
+    );
 
     // Recalculate and update views
     renderTasks();
     renderCompliance();
     showView("view-tasks");
 
-    // Attempt sync immediately
-    await syncOfflineQueue();
+    // Attempt sync immediately (promotes to COMPLETED only when server confirms)
+    await syncOfflineQueue(false, { autoDisburse: isDemoModeActive() });
   }
 }

@@ -11,14 +11,24 @@
           See which screens are waiting and on what
         </a>
       </p>
-      <button
-        v-if="hasHome"
-        type="button"
-        class="btn btn-primary"
-        @click="router.push('/')"
-      >
-        Go to an available screen
-      </button>
+      <div class="unavailable-actions">
+        <button
+          id="btn-unavailable-study"
+          type="button"
+          class="btn btn-primary"
+          @click="router.push('/studies')"
+        >
+          Open study workspace
+        </button>
+        <button
+          id="btn-unavailable-home"
+          type="button"
+          class="btn btn-secondary"
+          @click="router.push('/')"
+        >
+          Go to an available screen
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -34,12 +44,8 @@ const router = useRouter();
 const heading = computed(() =>
   route.query.screen
     ? `${screenTitle(route.query.screen)} isn't available yet`
-    : "No screen is available for your role yet"
+    : "This screen isn't available yet"
 );
-
-// Without a screen, "/" sent the user here because they can open no
-// available screen, so going "home" would land here again.
-const hasHome = computed(() => Boolean(route.query.screen));
 </script>
 
 <style scoped>
@@ -59,5 +65,12 @@ const hasHome = computed(() => Boolean(route.query.screen));
 
 .unavailable-card p {
   margin-bottom: 16px;
+}
+
+.unavailable-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
 }
 </style>

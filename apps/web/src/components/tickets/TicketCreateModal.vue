@@ -1,6 +1,5 @@
 <template>
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div v-if="isOpen" class="modal-backdrop" @click.self="close">
     <div
       ref="modalRef"
@@ -212,7 +211,12 @@
           />
         </div>
 
-        <div v-if="errorMessage" class="error-banner">
+        <div
+          v-if="errorMessage"
+          id="ticket-escalation-refusal"
+          class="error-banner"
+          role="alert"
+        >
           ⚠️ {{ errorMessage }}
         </div>
       </div>
@@ -227,6 +231,7 @@
           Cancel
         </button>
         <button
+          id="btn-submit-ticket"
           type="button"
           class="btn btn-primary"
           :disabled="loading || !isFormValid"
@@ -243,6 +248,7 @@
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
 import { useFocusTrap } from "ui";
+import { allowUnbackedAction } from "../../utils/unbackedActions.js";
 
 const props = defineProps({
   isOpen: {
@@ -333,6 +339,11 @@ const handleSubmit = async () => {
     errorMessage.value = "Please complete all required fields.";
     return;
   }
+  if (!allowUnbackedAction("Support ticket escalation")) {
+    errorMessage.value =
+      "Support ticket escalation isn't available yet. No Cadence service records tickets yet, so nothing was submitted and your entry is preserved.";
+    return;
+  }
   loading.value = true;
   errorMessage.value = "";
   try {
@@ -360,6 +371,10 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
+.modal-backdrop {
+  z-index: 1100;
+}
+
 .modal-body {
   padding: 20px 24px;
   display: flex;

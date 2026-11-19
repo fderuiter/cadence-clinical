@@ -211,7 +211,10 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { useOnboardingStore } from "../stores/onboarding";
+import {
+  isTourRouteAuthorized,
+  useOnboardingStore,
+} from "../stores/onboarding";
 import { useAuthStore } from "../stores/auth";
 
 const props = defineProps({
@@ -268,8 +271,19 @@ async function syncStepRoute() {
   const config = currentStepConfig.value;
   if (!config) return;
 
+  if (
+    authStore.rawRoles?.length > 0 &&
+    !isTourRouteAuthorized(config.routeName, authStore.normalizedRoles || [])
+  ) {
+    return;
+  }
+
   if (router && route) {
-    if (config.routeName && route.name !== config.routeName) {
+    const hasNamedRoute =
+      typeof router.hasRoute === "function" && config.routeName
+        ? router.hasRoute(config.routeName)
+        : Boolean(config.routeName);
+    if (config.routeName && hasNamedRoute && route.name !== config.routeName) {
       const query = config.query
         ? { ...route.query, ...config.query }
         : { ...route.query };
@@ -283,7 +297,7 @@ async function syncStepRoute() {
           needsUpdate = true;
         }
       }
-      if (needsUpdate) {
+      if (needsUpdate && (hasNamedRoute || route.name)) {
         await router.push({
           name: config.routeName || route.name,
           query: newQuery,

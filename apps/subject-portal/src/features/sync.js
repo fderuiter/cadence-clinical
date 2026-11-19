@@ -7,15 +7,25 @@ import { state } from "../stores/state.js";
 import {
   bulkUpdateSubmissionStatuses,
   getQueuedSubmissions,
+  saveAssignmentsToDB,
   updateSubmissionStatus,
 } from "../sync-queue.js";
 import { logAuditRecord } from "./audit.js";
+import { renderCompliance } from "./compliance.js";
 import {
   checkOnline,
   emitSyncLifecycleEvent,
   refreshSubmissionsState,
   renderSyncQueueList,
 } from "./sync-status.js";
+import { renderTasks } from "./tasks.js";
+
+const CONFIRMED_SYNC_STATUSES = new Set([
+  "CREATED",
+  "UPDATED_CLIENT_WINS",
+  "MERGED",
+  "SYNCED",
+]);
 
 export async function syncOfflineQueue(isManual = false, options = {}) {
   const statusTextEl = document.getElementById("sync-queue-status-text");
@@ -187,6 +197,39 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
 
       if (updates.length > 0) {
         await bulkUpdateSubmissionStatuses(updates);
+      }
+
+      // Promote matching assignments from PENDING_SYNC to COMPLETED only after server confirmation
+      let assignmentsPromoted = false;
+      for (const upd of updates) {
+        if (CONFIRMED_SYNC_STATUSES.has(upd.status)) {
+          const syncedSub = validSubmissions.find(
+            (s) => s.sequence_number === upd.sequence_number
+          );
+          if (syncedSub && syncedSub.assignment_id) {
+            const assign = state.assignments.find(
+              (a) => a.id === syncedSub.assignment_id
+            );
+            if (assign && assign.status !== "COMPLETED") {
+              assign.status = "COMPLETED";
+              assign.submitted_at =
+                syncedSub.device_timestamp || new Date().toISOString();
+              assignmentsPromoted = true;
+            }
+          }
+        }
+      }
+      if (assignmentsPromoted) {
+        try {
+          await saveAssignmentsToDB(state.assignments);
+        } catch (dbErr) {
+          console.warn(
+            "Could not persist synced assignment status to IndexedDB:",
+            dbErr
+          );
+        }
+        renderTasks();
+        renderCompliance();
       }
 
       // Automatic Stipend Wallet Disbursement upon successful ePRO sync

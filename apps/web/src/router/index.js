@@ -52,8 +52,8 @@ const routes = [
         return { name: preferred };
       }
       // The preferred screen has no .NET backend yet: land on the first
-      // screen that does and that the user may open. The Clinical Canvas is
-      // opened from the header until it holds each role's work (#4833).
+      // role-authorized workflow screen that does, or open the study workspace
+      // so every authenticated persona lands on a live screen.
       const fallback = routes.find(
         (route) =>
           route.name !== "study" &&
@@ -62,7 +62,12 @@ const routes = [
           (!route.meta?.requiresRole?.length ||
             hasRequiredRole(roles, route.meta.requiresRole))
       );
-      return fallback ? { name: fallback.name } : { name: "unavailable" };
+      if (fallback) {
+        return { name: fallback.name };
+      }
+      return isScreenAvailable("study")
+        ? { name: "study" }
+        : { name: "unavailable" };
     },
   },
   {
