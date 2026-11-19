@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { reactive, ref, nextTick } from "vue";
 import { createPinia, setActivePinia } from "pinia";
 import { useEcrfDrafts } from "../src/composables/useEcrfDrafts.js";
+import { useEcrfForm } from "../src/composables/useEcrfForm";
+import { ecrfFormsApi } from "../src/api/ecrfFormsApi";
 import { useAuthStore } from "../src/stores/auth.js";
 import { getStorageKey, useClinicalStore } from "../src/stores/clinical";
 import {
@@ -63,15 +65,58 @@ async function typeAndAutosave(form, fieldId, value) {
   vi.advanceTimersByTime(600);
 }
 
+const BACKED_FORM_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000f099";
+
+function backedFormFixture() {
+  return {
+    form_id: BACKED_FORM_ID,
+    enrollment_id: "e",
+    participant_id: "p",
+    study_id: "s",
+    study_site_id: "ss",
+    protocol_version_id: "pv",
+    collection_spec_id: "VS",
+    planned_activity_id: "WEEK2",
+    collected_at: "2027-03-14T09:00:00Z",
+    opened_by: "crc1",
+    opened_at: "2027-03-14T09:00:00Z",
+    version: 1,
+    complete: false,
+    missing_required: ["SYSBP"],
+    items: [
+      {
+        item_id: "SYSBP",
+        concept: null,
+        unit: "mm[Hg]",
+        value_kind: "Quantity",
+        required: true,
+        value: { type: "quantity", value: 120, unit: "mm[Hg]" },
+        observation_id: "obs-1",
+        revision: 2,
+        recorded_by: "crc1",
+        recorded_at: "2027-03-14T09:00:00Z",
+      },
+    ],
+    locks: [],
+    assertions: [],
+    signatures: [],
+    content_hash: "sha256:form-v1",
+  };
+}
+
 describe("eCRF draft isolation (#5369)", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     localStorage.clear();
     setActivePinia(createPinia());
+    vi.spyOn(ecrfFormsApi, "getForm").mockImplementation(async () =>
+      structuredClone(backedFormFixture())
+    );
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
     localStorage.clear();
   });
 
@@ -111,6 +156,37 @@ describe("eCRF draft isolation (#5369)", () => {
 
     expect(again.restoreDraft()).toBe(true);
     expect(again.formValues.vssbp).toBe("141");
+  });
+
+  it("isolates backed ecrf_form_draft entries per account, restores for the same user, and purges another user's draft on sign-in", async () => {
+    signIn("user-a", "tenant-1");
+    const formA = useEcrfForm();
+    await formA.load(BACKED_FORM_ID);
+    formA.entries.SYSBP.text = "138";
+    await nextTick();
+    vi.advanceTimersByTime(550);
+
+    const userAKey = scopedKey(
+      { tenantId: "tenant-1", userId: "user-a" },
+      "ecrf_form_draft",
+      BACKED_FORM_ID
+    );
+    expect(localStorage.getItem(userAKey)).toContain("138");
+
+    // Re-signing in as the same account restores the draft when revision matches.
+    signIn("user-a", "tenant-1");
+    const sameUser = useEcrfForm();
+    await sameUser.load(BACKED_FORM_ID);
+    expect(sameUser.entries.SYSBP.text).toBe("138");
+    expect(sameUser.dirty.value).toBe(true);
+
+    // Signing in as user-b purges user-a's backed form draft and restores nothing.
+    signIn("user-b", "tenant-1");
+    expect(localStorage.getItem(userAKey)).toBeNull();
+    const otherUser = useEcrfForm();
+    await otherUser.load(BACKED_FORM_ID);
+    expect(otherUser.entries.SYSBP.text).toBe("120");
+    expect(otherUser.dirty.value).toBe(false);
   });
 
   it("separates the same user id in two tenants", () => {
@@ -193,6 +269,14 @@ describe("eCRF draft isolation (#5369)", () => {
   it("purges every account's drafts and the in-memory form on sign-out", async () => {
     const auth = signIn("user-a", "tenant-1");
     await typeAndAutosave(openForm(), "vssbp", "141");
+    const backed = useEcrfForm();
+    await backed.load(BACKED_FORM_ID);
+    backed.entries.SYSBP.text = "144";
+    await nextTick();
+    vi.advanceTimersByTime(600);
+    expect(
+      localStorage.getItem(backed.getDraftStorageKey(BACKED_FORM_ID))
+    ).not.toBeNull();
     const clinical = useClinicalStore();
     clinical.formValues.vssbp = "141";
     localStorage.setItem(
@@ -200,6 +284,10 @@ describe("eCRF draft isolation (#5369)", () => {
       JSON.stringify({ vssbp: "141" })
     );
     localStorage.setItem("cadence_user:tenant-9:user-z:ecrf_draft:S:P:V", "{}");
+    localStorage.setItem(
+      `cadence_user:tenant-9:user-z:ecrf_form_draft:${BACKED_FORM_ID}`,
+      "{}"
+    );
     localStorage.setItem("user_locale", "en");
 
     await auth.logout();
@@ -213,6 +301,9 @@ describe("eCRF draft isolation (#5369)", () => {
     signIn("user-a", "tenant-1");
     const form = openForm();
     form.formValues.vssbp = "141";
+    const backed = useEcrfForm();
+    await backed.load(BACKED_FORM_ID);
+    backed.entries.SYSBP.text = "144";
     await nextTick();
 
     // The debounce has not fired yet when B signs in.
