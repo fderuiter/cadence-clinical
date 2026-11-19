@@ -76,11 +76,32 @@ export async function dispatchApi(endpoint, options = {}) {
       let errBody = "";
       try {
         const parsed = await res.json();
-        errBody = parsed.detail || parsed.message || "";
+        if (Array.isArray(parsed.detail)) {
+          errBody = parsed.detail
+            .map((entry) => {
+              if (!entry || typeof entry !== "object") return String(entry);
+              const loc = Array.isArray(entry.loc)
+                ? entry.loc.filter((p) => p !== "body").join(".")
+                : "";
+              const msg = entry.msg || "Invalid value";
+              return loc ? `${loc}: ${msg}` : msg;
+            })
+            .join("; ");
+        } else if (parsed.detail && typeof parsed.detail === "object") {
+          errBody =
+            parsed.detail.message ||
+            parsed.detail.reason ||
+            `Validation error (${res.status})`;
+        } else {
+          errBody = parsed.detail || parsed.message || "";
+        }
       } catch {
         // ignored
       }
-      throw new Error(errBody || `HTTP Error ${res.status}`);
+      const apiErr = new Error(errBody || `HTTP Error ${res.status}`);
+      apiErr.status = res.status;
+      apiErr.isValidationError = res.status === 400 || res.status === 422;
+      throw apiErr;
     }
     return await res.json();
   } catch (err) {

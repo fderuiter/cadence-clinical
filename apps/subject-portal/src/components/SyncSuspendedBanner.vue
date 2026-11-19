@@ -1,22 +1,14 @@
 <template>
   <div
     v-if="sync.autoSyncSuspended"
-    class="card error-state"
-    style="
-      border: 1px solid var(--danger);
-      background-color: var(--semantic-color-error-bg);
-      color: var(--semantic-color-error);
-      padding: 16px;
-      margin-bottom: 24px;
-      text-align: center;
-    "
+    id="sync-suspended-banner"
+    class="card error-state sync-suspended-card"
+    role="alert"
   >
-    <p style="font-weight: bold; font-size: 16px; margin: 0 0 8px 0">
-      ⚠️ Outdated Form Structure Detected
-    </p>
-    <p style="font-size: 14px; margin: 0 0 12px 0">
-      The questionnaire version index does not match the active server
-      structure. Automatic sync is suspended. Please perform a manual refresh.
+    <p class="sync-suspended-title">⚠️ Outdated Form Structure Detected</p>
+    <p class="sync-suspended-desc">
+      A study survey definition was updated on the clinical server. Automatic
+      background sync is paused until you refresh active survey structures.
     </p>
     <button
       id="btn-alert-sync-now"
@@ -32,10 +24,11 @@
 <script setup>
 import { syncOfflineQueue } from "../features/sync.js";
 import { useSyncStore } from "../stores/sync.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
 
 const sync = useSyncStore();
 
 function triggerManualSync() {
-  syncOfflineQueue();
+  syncOfflineQueue(true, { autoDisburse: isDemoModeActive() });
 }
 </script>

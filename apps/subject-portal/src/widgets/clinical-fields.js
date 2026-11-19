@@ -12,8 +12,10 @@ export function createClinicalSlider(
   const minVal = attributes.min !== undefined ? attributes.min : 0;
   const maxVal = attributes.max !== undefined ? attributes.max : 100;
   const stepVal = attributes.step !== undefined ? attributes.step : 1;
-  const initialValue =
-    value !== "" && value !== null && value !== undefined ? value : minVal;
+  const hasExplicitValue =
+    value !== "" && value !== null && value !== undefined;
+  const initialValue = hasExplicitValue ? value : minVal;
+  const initialTouched = hasExplicitValue ? "true" : "false";
   const minLabel = attributes.min_label || attributes.minLabel || `${minVal}`;
   const maxLabel = attributes.max_label || attributes.maxLabel || `${maxVal}`;
 
@@ -42,9 +44,10 @@ export function createClinicalSlider(
         max="${maxVal}"
         step="${stepVal}"
         value="${initialValue}"
+        data-touched="${initialTouched}"
         class="vas-slider-input"
         style="width: 100%; cursor: pointer; accent-color: #2563eb; height: 8px;"
-        oninput="const disp = document.getElementById('${id}_display'); if (disp) disp.textContent = 'Value: ' + this.value;"
+        oninput="this.setAttribute('data-touched', 'true'); const disp = document.getElementById('${id}_display'); if (disp) disp.textContent = 'Value: ' + this.value;"
       />
       ${queryFlagHTML}
     </div>

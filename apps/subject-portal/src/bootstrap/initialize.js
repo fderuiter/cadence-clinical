@@ -15,11 +15,17 @@ import { loadNotifications, renderInbox } from "../features/inbox.js";
 import { checkPINWrapper } from "../features/pin.js";
 import { checkPendingReconsent } from "../features/reconsent.js";
 import {
+  hydrateSiteSupportContact,
+  maskParticipantIdentifier,
+} from "../features/site-support.js";
+import {
   installDocumentSignatureFocusTrap,
   installWindowSignatureFocusTrap,
 } from "../features/signature.js";
 import { syncOfflineQueue } from "../features/sync.js";
+import { resetSyncRetryInfo } from "../features/sync-status.js";
 import {
+  hydrateDraftPresence,
   loadAssignedInstruments,
   loadAssignedTasks,
   renderTasks,
@@ -32,6 +38,8 @@ import { mountPortal } from "./mount.js";
 
 // Bootstrap Initialization
 export async function initializeApp() {
+  resetSyncRetryInfo();
+  hydrateSiteSupportContact();
   await restoreSession();
 
   // Initialize MSW Mock Gateway Worker only in explicit demo builds or opt-in MSW runs
@@ -61,10 +69,11 @@ export async function initializeApp() {
   // Graceful OIDC Keycloak setup
   await signIn();
 
-  // Set participant visual name
+  // Set participant visual name (masked if email/PII)
   const nameEl = document.getElementById("session-subject-id");
   if (nameEl) {
-    nameEl.textContent = state.session.userId || "Not signed in";
+    nameEl.textContent =
+      maskParticipantIdentifier(state.session.userId) || "Not signed in";
   }
 
   // Initialize genesis compliance ledger
@@ -112,6 +121,8 @@ export async function initializeApp() {
     state.instruments = {};
     state.compliance = null;
   }
+
+  await hydrateDraftPresence(state.session.userId);
 
   // Draw Initial Views
   renderTasks();
