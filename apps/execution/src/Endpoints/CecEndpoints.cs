@@ -61,9 +61,16 @@ public static class CecEndpoints
         string id,
         ChairAdjudicateRequest request,
         ICecApplicationService cecService,
+        ICecRepository repository,
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
+        var existing = await repository.GetDossierByIdAsync(id, cancellationToken).ConfigureAwait(false);
+        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(httpContext, existing?.StudyId ?? "STUDY-001", existing?.SiteId) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
         var caller = httpContext.User.ToAuthenticatedCaller();
         var result = await cecService.ChairAdjudicateAsync(id, request, caller, cancellationToken);
         return result.IsSuccess
@@ -73,12 +80,27 @@ public static class CecEndpoints
 
     private static async Task<IResult> GetDossierByIdAsync(
         string id,
+        HttpContext httpContext,
         ICecRepository repository,
         CancellationToken cancellationToken)
     {
+        if ((ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
+             ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } callerDenied)
+        {
+            return callerDenied;
+        }
+
         var dossier = await repository.GetDossierByIdAsync(id, cancellationToken);
-        return dossier is not null
-            ? TypedResults.Ok(dossier)
-            : TypedResults.NotFound(new { code = "NOT_FOUND", message = $"CEC Dossier '{id}' not found." });
+        if (dossier is null)
+        {
+            return TypedResults.NotFound(new { code = "NOT_FOUND", message = $"CEC Dossier '{id}' not found." });
+        }
+
+        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(httpContext, dossier.StudyId, dossier.SiteId) is { } recordDenied)
+        {
+            return recordDenied;
+        }
+
+        return TypedResults.Ok(dossier);
     }
 }

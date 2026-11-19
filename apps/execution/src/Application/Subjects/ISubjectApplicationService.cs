@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
 
 namespace Cadence.Apps.Execution.Application.Subjects;
@@ -45,7 +47,11 @@ public interface ISubjectApplicationService
     /// <paramref name="studyId"/> is required; <paramref name="limit"/> defaults to 50 and is capped at 200.
     /// </summary>
     Task<Result<SubjectListResponse>> ListAsync(string? studyId, string? siteId, string? status, int? limit, int? offset,
-        CancellationToken ct);
+        CancellationToken ct, IReadOnlyCollection<string>? allowedSiteIds = null);
+
+    /// <summary>Resolves a participant's study and site codes without mutating state or decrypting data.</summary>
+    Task<(StudyCode StudyId, SiteCode? SiteId)?> GetSubjectScopeAsync(string subjectIdOrCode, CancellationToken ct = default) =>
+        Task.FromResult<(StudyCode StudyId, SiteCode? SiteId)?>(null);
 
     /// <summary>Evaluates screening eligibility and transitions to <c>ScreenFailed</c>/<c>Enrolled</c>
     /// (SCN-005/SCN-007). Implemented by MIG-SUBJ-019.</summary>

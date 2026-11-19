@@ -71,12 +71,20 @@ public static class LabToxicityEndpoints
         [FromQuery(Name = "study_id")] string? studyId,
         [FromQuery(Name = "site_id")] string? siteId,
         [FromQuery(Name = "review_status")] string? reviewStatus,
+        HttpContext httpContext,
         ILabToxicityGovernanceService svc,
         CancellationToken ct)
     {
+        if (ExecutionScopeGuard.ResolveStudyAndSiteFilters(httpContext, studyId, siteId, out var studyFilter, out var siteFilter, out var effectiveSiteId) is { } denied)
+        {
+            return denied;
+        }
+
         string status = string.IsNullOrWhiteSpace(reviewStatus) ? "STAGED_FOR_INVESTIGATOR_REVIEW" : reviewStatus;
-        var result = await svc.ListQueueAsync(studyId, siteId, status, ct).ConfigureAwait(false);
-        return result.Match(Results.Ok, e => e.ToProblemResult());
+        var result = await svc.ListQueueAsync(studyId, effectiveSiteId, status, ct).ConfigureAwait(false);
+        return result.Match(
+            items => Results.Ok(ExecutionScopeGuard.ApplyFilters(items, studyFilter, r => r.StudyId, siteFilter, r => r.SiteId)),
+            e => e.ToProblemResult());
     }
 
     public static async Task<IResult> ExecuteReviewActionAsync(
@@ -86,15 +94,35 @@ public static class LabToxicityEndpoints
         ILabToxicityGovernanceService svc,
         CancellationToken ct)
     {
+        var existing = await svc.GetReviewByIdAsync(reviewId, ct).ConfigureAwait(false);
+        IResult? scopeDenied = existing is not null
+            ? ExecutionScopeGuard.RequireStudyAndOptionalSite(
+                httpContext,
+                existing.StudyId,
+                existing.SiteId,
+                allowUnassignedSiteForScopedCaller: true)
+            : (ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
+                ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _));
+        if (scopeDenied is not null)
+        {
+            return scopeDenied;
+        }
+
         var result = await svc.ExecuteActionAsync(reviewId, request, httpContext.User.ToAuthenticatedCaller(), ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 
     public static async Task<IResult> EvaluateToxicityAsync(
         LabToxicityEvaluateRequest request,
+        HttpContext httpContext,
         ILabToxicityGovernanceService svc,
         CancellationToken ct)
     {
+        if (ExecutionScopeGuard.RequireAnyStudyScope(httpContext) is { } denied)
+        {
+            return denied;
+        }
+
         var result = await svc.EvaluateAsync(request, ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }

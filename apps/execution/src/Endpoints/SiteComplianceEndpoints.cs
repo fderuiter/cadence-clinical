@@ -86,8 +86,18 @@ public static class SiteComplianceEndpoints
     /// correctly here without this handler needing a second look.
     /// </summary>
     public static async Task<IResult> ApplyEtmfWebhookAsync(
-        EtmfCompletenessWebhookPayload payload, ISiteComplianceApplicationService svc, CancellationToken ct)
+        EtmfCompletenessWebhookPayload payload,
+        ISiteComplianceApplicationService svc,
+        CancellationToken ct,
+        HttpContext? http = null)
     {
+        ct.ThrowIfCancellationRequested();
+
+        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(http, payload.StudyId, payload.SiteId) is { } denied)
+        {
+            return denied;
+        }
+
         var result = await svc.ApplyEtmfWebhookAsync(payload, ct).ConfigureAwait(false);
         return result.Match(
             onSuccess: _ => Results.Ok(new OperationEnvelopeResponse("success", "Compliance cache updated successfully.")),
@@ -102,8 +112,19 @@ public static class SiteComplianceEndpoints
     /// <see cref="SubjectErrors.BlockedActivation"/>'s <c>400</c> mapping (this ticket's own AC #3).
     /// </summary>
     public static async Task<IResult> ActivateSiteAsync(
-        string siteId, SiteActivationRequest request, ISiteComplianceApplicationService svc, CancellationToken ct)
+        string siteId,
+        SiteActivationRequest request,
+        ISiteComplianceApplicationService svc,
+        CancellationToken ct,
+        HttpContext? http = null)
     {
+        ct.ThrowIfCancellationRequested();
+
+        if (ExecutionScopeGuard.RequireStudyAndSite(http, request.StudyId, siteId) is { } denied)
+        {
+            return denied;
+        }
+
         var result = await svc.ActivateSiteAsync(siteId, request, ct).ConfigureAwait(false);
         return result.Match(
             onSuccess: _ => Results.Ok(new OperationEnvelopeResponse("success", $"Site {siteId} activated successfully.")),
@@ -126,8 +147,16 @@ public static class SiteComplianceEndpoints
         [FromQuery(Name = "study_id")] string studyId,
         [FromQuery(Name = "milestone")] string? milestone,
         ISiteComplianceApplicationService svc,
-        CancellationToken ct)
+        CancellationToken ct,
+        HttpContext? http = null)
     {
+        ct.ThrowIfCancellationRequested();
+
+        if (ExecutionScopeGuard.RequireStudyAndSite(http, studyId, siteId) is { } denied)
+        {
+            return denied;
+        }
+
         var response = await svc.GetComplianceStatusAsync(siteId, studyId, milestone ?? "SITE_ACTIVATION", ct).ConfigureAwait(false);
         return Results.Ok(response);
     }

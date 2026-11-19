@@ -38,7 +38,7 @@ public sealed class ExecutionAuditAttributionTests(ExecutionPostgresApiFactory f
     public async Task SubjectWrites_AreEachAuditedAgainstTheCaller()
     {
         factory.SkipIfUnavailable();
-        var coordinator = Caller("coordinator", "crc");
+        var coordinator = Caller("coordinator", "crc") with { SiteIds = [$"SITE-{_run}"] };
         string subject = $"SUBJ-{_run}";
 
         await AuditedAsync(coordinator, c => c.PostAsJsonAsync(

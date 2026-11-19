@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -13,6 +14,7 @@ using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
+using Cadence.Security.Rbac;
 using Cadence.Testing;
 using Cadence.Testing.Security;
 using Cadence.TestSupport.Execution;
@@ -244,7 +246,11 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     private GatewayIdentity Caller(string name, string role) =>
-        TestSecurityContext.Identity($"{name.Replace(' ', '-')}-{_run}", role) with { ChangeReason = Reason };
+        TestSecurityContext.Identity($"{name.Replace(' ', '-')}-{_run}", role) with
+        {
+            SiteIds = RoleNormalization.GetNormalizedRoles([role]).Any(SiteAccessEvaluator.SITE_SCOPED_ROLES.Contains) ? ["SITE-01"] : [],
+            ChangeReason = Reason,
+        };
 
     /// <summary>Seeds a subject in <paramref name="state"/>, walking the transition graph.</summary>
     private async Task<string> SeedAsync(SubjectState state)

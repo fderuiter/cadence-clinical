@@ -170,6 +170,14 @@ public sealed class LabToxicityGovernanceService(
         return Task.FromResult(Result<LabToxicityEvaluateResponse>.Success(response));
     }
 
+    public async Task<StagedAdverseEventReviewResponse?> GetReviewByIdAsync(
+        string reviewId,
+        CancellationToken cancellationToken = default)
+    {
+        var review = await stagedReviewRepository.GetByIdAsync(reviewId, cancellationToken).ConfigureAwait(false);
+        return review is null ? null : MapToResponse(review);
+    }
+
     private static StagedAdverseEventReviewResponse MapToResponse(StagedAdverseEventReview r) =>
         new(
             Id: r.Id,
