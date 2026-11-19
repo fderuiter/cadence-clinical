@@ -191,9 +191,14 @@ public static class CiPlan
         CiText = string.Join(' ', args.Prepend("pnpm")),
     };
 
-    /// <summary><c>dotnet run [--no-build] --project packages/cli/... -- args</c>, as the CI steps call the CLI.</summary>
+    /// <summary>
+    /// <c>dotnet run --no-build --project packages/cli/... -- args</c> when already built, otherwise
+    /// <c>node scripts/run-cli.js args</c> as the CI workflow steps invoke the CLI.
+    /// </summary>
     private static CiCommand CadenceCli(bool noBuild, params string[] args) =>
-        Dotnet([.. new[] { "run" }, .. noBuild ? new[] { "--no-build" } : [], "--project", Cli, "--", .. args]);
+        noBuild
+            ? Dotnet(["run", "--no-build", "--project", Cli, "--", .. args])
+            : new("node", ["scripts/run-cli.js", .. args]);
 
     private static List<CiJob> BuildJobs()
     {
@@ -289,7 +294,12 @@ public static class CiPlan
             new("security", "Build container image for security scan") { NotRunLocally = $"{PushOnly}, and it needs Docker" },
             new("security", "Run container vulnerability scan") { NotRunLocally = $"{PushOnly}, and it needs Docker and Trivy" },
             new("security", "Upload Trivy scan results to GitHub Security tab") { NotRunLocally = $"{PushOnly}, and it needs GitHub SARIF upload" },
-            new("security", "Run dependency audit") { Always = true, CoveredBy = QualitySentinels, Commands = [CadenceCli(false, "check", "vulnerabilities")] },
+            new("security", "Run dependency audit")
+            {
+                Always = true,
+                CoveredBy = QualitySentinels,
+                Commands = [Dotnet("restore", "Cadence.sln"), CadenceCli(false, "check", "vulnerabilities")],
+            },
             new("security", "Run secret detection")
             {
                 Always = true,
@@ -346,6 +356,13 @@ public static class CiPlan
                         with { CiText = "dotnet test Cadence.sln --configuration Release --no-build" },
                 ],
             },
+            new("dotnet-tests", "Fail the run when a PostgreSQL test did not execute")
+            {
+                // The test step above already checks its TRX files, and this step runs the shell self-test for CI.
+                RequiredTool = "bash",
+                ToolHint = "install bash (Git for Windows includes it)",
+                Commands = [new CiCommand("bash", ["scripts/test-check-database-test-results.sh"])],
+            },
         ]);
 
         var e2e = new CiJob(E2eJob, "Parallel E2E Accessibility Testing",
@@ -386,7 +403,7 @@ public static class CiPlan
                 },
                 InProcessDisplay = $"generate the RTM and IQ/OQ/PQ report from {RtmGeneratorService.DefaultResultsDir} into {GxpSnapshotPolicy.PreviewDir} " +
                     $"(docs/SDLC with {GxpSnapshotPolicy.SnapshotEnvironmentVariable}=1) and validate tags and results; nothing is staged",
-                InProcessCiText = $"dotnet run --project {Cli} -- gxp sync",
+                InProcessCiText = "node scripts/run-cli.js gxp sync",
             },
             new("compliance", "Check GxP Snapshot Policy")
             {
@@ -394,7 +411,7 @@ public static class CiPlan
                 // with the snapshot instead, ignoring the evidence block, and a match is put back to the staged copy.
                 InProcess = repoRoot => GxpSnapshotGuardService.Check(repoRoot, preCommit: false),
                 InProcessDisplay = $"refuse branch changes to the generated GxP snapshot ({GxpSnapshotPolicy.SnapshotEnvironmentVariable}=1: compare the regenerated documents with it)",
-                InProcessCiText = $"dotnet run --project {Cli} -- check gxp-snapshot",
+                InProcessCiText = "node scripts/run-cli.js check gxp-snapshot",
             },
         ])
         {

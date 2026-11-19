@@ -354,7 +354,10 @@ jobs:
         id: run_audit
         if: always()
         run: |
-          python3 -m pip install --quiet --upgrade pip pip-audit==2.10.1 || true
+          dotnet restore Cadence.sln
+          python3 -m venv "$RUNNER_TEMP/pip-audit-venv"
+          "$RUNNER_TEMP/pip-audit-venv/bin/python" -m pip install --quiet --upgrade pip pip-audit==2.10.1
+          export PATH="$RUNNER_TEMP/pip-audit-venv/bin:$PATH"
           node scripts/run-cli.js check vulnerabilities
 
       - name: Run secret detection

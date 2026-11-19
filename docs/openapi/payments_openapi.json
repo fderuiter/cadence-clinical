@@ -585,6 +585,30 @@
         }
       }
     },
+    "/api/v1/payments/participant/disbursements/{id}/settle": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Marks a dispatched digital disbursement as settled upon confirmation.",
+        "operationId": "SettleDisbursement",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/payments/audit-logs": {
       "get": {
         "tags": [
