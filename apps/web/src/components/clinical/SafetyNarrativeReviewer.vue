@@ -185,13 +185,18 @@
     <!-- Part 11 Electronic Signature Modal -->
     <div
       v-if="showSignatureModal"
+      ref="signatureModalRef"
       class="modal-backdrop"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="narrative-sig-modal-title"
+      tabindex="-1"
     >
       <div class="modal-dialog">
         <header class="modal-header">
-          <h3>21 CFR Part 11 Electronic Signature</h3>
+          <h3 id="narrative-sig-modal-title">
+            21 CFR Part 11 Electronic Signature
+          </h3>
           <button type="button" class="btn-close" @click="closeSignatureModal">
             ✕
           </button>
@@ -252,6 +257,7 @@
 
 <script setup>
 import { ref, reactive } from "vue";
+import { useFocusTrap } from "ui";
 
 const props = defineProps({
   narrative: {
@@ -276,6 +282,7 @@ const emit = defineEmits(["sign", "export-e2b"]);
 const highlightedEventIds = ref([]);
 const activeClaimId = ref(null);
 const showSignatureModal = ref(false);
+const signatureModalRef = ref(null);
 const isSubmitting = ref(false);
 const isExporting = ref(false);
 const signError = ref("");
@@ -309,8 +316,15 @@ function openSignatureModal() {
 }
 
 function closeSignatureModal() {
+  signForm.secret = "";
+  signError.value = "";
   showSignatureModal.value = false;
 }
+
+useFocusTrap(signatureModalRef, {
+  isOpen: showSignatureModal,
+  onEscape: closeSignatureModal,
+});
 
 async function submitSignature() {
   if (!signForm.reason.trim()) {

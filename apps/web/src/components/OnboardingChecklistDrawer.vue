@@ -11,6 +11,7 @@
       <!-- Sliding Drawer Panel -->
       <div
         id="onboarding-checklist-drawer"
+        ref="drawerRef"
         class="drawer-panel"
         role="dialog"
         aria-modal="true"
@@ -158,12 +159,19 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from "vue";
+import { ref } from "vue";
 import { useRouter } from "vue-router";
+import { useFocusTrap } from "../composables/useFocusTrap";
 import { useOnboardingStore } from "../stores/onboarding";
 
+const drawerRef = ref(null);
 const onboardingStore = useOnboardingStore();
 const router = useRouter();
+
+useFocusTrap(drawerRef, {
+  isOpen: () => onboardingStore.isDrawerOpen,
+  onEscape: () => onboardingStore.closeDrawer(),
+});
 
 function navigateToTask(task) {
   if (task && task.route) {
@@ -176,20 +184,6 @@ function resumeGuidedTour() {
   onboardingStore.resumeTour();
   onboardingStore.closeDrawer();
 }
-
-function handleKeydown(e) {
-  if (e.key === "Escape" && onboardingStore.isDrawerOpen) {
-    onboardingStore.closeDrawer();
-  }
-}
-
-onMounted(() => {
-  window.addEventListener("keydown", handleKeydown);
-});
-
-onUnmounted(() => {
-  window.removeEventListener("keydown", handleKeydown);
-});
 </script>
 
 <style scoped>

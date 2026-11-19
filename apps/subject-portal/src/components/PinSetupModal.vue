@@ -1,14 +1,13 @@
 <template>
-  <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
   <div
     v-if="sessionStore.pinSetup.isOpen"
     id="portal-pin-setup-modal"
+    ref="modalRef"
     class="modal-overlay"
     role="dialog"
     aria-modal="true"
     aria-labelledby="pin-setup-title"
     tabindex="-1"
-    @keydown="handleSetupModalKeyDown"
   >
     <div class="modal">
       <form id="pin-setup-form" @submit.prevent="handlePINSetupSubmit">
@@ -75,13 +74,18 @@
 </template>
 
 <script setup>
+import { ref } from "vue";
+import { useFocusTrap } from "ui";
+
 import { handlePINSetupSubmit } from "../features/pin.js";
 import { useSessionStore } from "../stores/session.js";
-import { trapTabKey } from "./focus-trap.js";
 
+const modalRef = ref(null);
 const sessionStore = useSessionStore();
 
-function handleSetupModalKeyDown(e) {
-  trapTabKey(e, "portal-pin-setup-modal", ["input", "button"]);
-}
+useFocusTrap(modalRef, {
+  isOpen: () => sessionStore.pinSetup.isOpen,
+  escapeDeactivates: false,
+  initialFocus: "#setup-pin",
+});
 </script>

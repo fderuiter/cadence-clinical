@@ -116,10 +116,9 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from "vue";
+import { ref, computed, watch } from "vue";
 import { ModalErrorAlert } from "ui";
 import { useFocusTrap } from "@/composables/useFocusTrap";
-import { useEscapeClose } from "@/composables/useEscapeClose";
 
 const props = defineProps({
   isOpen: {
@@ -169,12 +168,15 @@ const emit = defineEmits(["close", "cancel", "confirm"]);
 const modalRef = ref(null);
 const credentialInputRef = ref(null);
 
-useFocusTrap(modalRef);
-useEscapeClose(() => handleCancel());
-
 const credentialVal = ref("");
 const signingReasonVal = ref(props.defaultReason || "APPROVAL");
 const localError = ref("");
+
+useFocusTrap(modalRef, {
+  isOpen: () => props.isOpen,
+  onEscape: handleCancel,
+  initialFocus: credentialInputRef,
+});
 
 const availableReasons = computed(() => {
   return props.reasons && props.reasons.length > 0
@@ -188,15 +190,11 @@ const effectiveError = computed(() => {
 
 watch(
   () => props.isOpen,
-  async (open) => {
+  (open) => {
     if (open) {
       credentialVal.value = "";
       signingReasonVal.value = props.defaultReason || "APPROVAL";
       localError.value = "";
-      await nextTick();
-      if (credentialInputRef.value) {
-        credentialInputRef.value.focus();
-      }
     } else {
       // Clear sensitive credentials immediately on modal close
       credentialVal.value = "";

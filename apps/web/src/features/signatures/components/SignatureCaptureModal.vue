@@ -105,38 +105,16 @@
 import { ref, watch, inject } from "vue";
 import { ModalErrorAlert } from "ui";
 import { useFocusTrap } from "@/composables/useFocusTrap";
-import { useEscapeClose } from "@/composables/useEscapeClose";
 import GxpCredentialsInput from "./GxpCredentialsInput.vue";
 
 const props = defineProps({
-  isOpen: {
-    type: Boolean,
-    required: true,
-  },
-  username: {
-    type: String,
-    default: "",
-  },
-  signerName: {
-    type: String,
-    default: "",
-  },
-  signerRole: {
-    type: String,
-    default: "",
-  },
-  role: {
-    type: String,
-    default: "Subject",
-  },
-  actionUrl: {
-    type: String,
-    required: true,
-  },
-  semanticAction: {
-    type: String,
-    default: "",
-  },
+  isOpen: { type: Boolean, required: true },
+  username: { type: String, default: "" },
+  signerName: { type: String, default: "" },
+  signerRole: { type: String, default: "" },
+  role: { type: String, default: "Subject" },
+  actionUrl: { type: String, required: true },
+  semanticAction: { type: String, default: "" },
   // async callback to handle the final sign request using sigToken and signingReason
   // e.g., (sigToken, signingReason, metadata) => Promise<any>
   onSign: {
@@ -148,8 +126,10 @@ const props = defineProps({
 const emit = defineEmits(["cancel", "success", "error"]);
 
 const modalRef = ref(null);
-useFocusTrap(modalRef);
-useEscapeClose(() => emit("cancel"));
+useFocusTrap(modalRef, {
+  isOpen: () => props.isOpen,
+  onEscape: cancel,
+});
 
 const usernameVal = ref(props.username);
 const signerNameVal = ref(props.signerName || props.username || "");
@@ -364,32 +344,29 @@ defineExpose({
 .modal-overlay {
   display: flex;
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
   align-items: center;
   justify-content: center;
   z-index: 1000;
 }
 
 .modal {
-  background: white;
-  border-radius: 8px;
+  background: var(--surface-bg, #ffffff);
+  border-radius: var(--radius-md, 8px);
   width: 100%;
   max-width: 450px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   overflow: hidden;
-  color: #333;
+  color: var(--text-primary, #333333);
 }
 
 .modal-header {
   padding: 16px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-subtle, #e2e8f0);
   font-weight: 600;
   font-size: 16px;
-  color: white;
+  color: #ffffff;
 }
 
 .modal-body {
@@ -399,7 +376,7 @@ defineExpose({
 .modal-desc {
   margin-bottom: 16px;
   font-size: 13px;
-  color: #334155;
+  color: var(--text-secondary, #334155);
   line-height: 1.4;
 }
 
@@ -416,46 +393,46 @@ label {
   font-weight: 500;
   margin-bottom: 4px;
   font-size: 13px;
-  color: #475569;
+  color: var(--text-muted, #475569);
 }
 
 select {
   width: 100%;
   padding: 8px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
+  border: 1px solid var(--border-input, #cbd5e1);
+  border-radius: var(--radius-sm, 4px);
   font-size: 13px;
-  background: white;
+  background: var(--surface-bg, #ffffff);
   box-sizing: border-box;
 }
 
 .error-msg {
   margin-top: 8px;
-  color: #ef4444;
+  color: var(--danger, #ef4444);
   font-size: 13px;
   font-weight: 500;
 }
 
 .modal-footer {
   padding: 12px 16px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--border-subtle, #e2e8f0);
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  background: #f8fafc;
+  background: var(--surface-muted, #f8fafc);
 }
 
 .btn {
   padding: 6px 12px;
   font-size: 13px;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--radius-sm, 4px);
   font-weight: 500;
 }
 
 .btn-cancel {
-  border: 1px solid #cbd5e1;
-  background: white;
+  border: 1px solid var(--border-input, #cbd5e1);
+  background: var(--surface-bg, #ffffff);
 }
 
 .btn-primary {

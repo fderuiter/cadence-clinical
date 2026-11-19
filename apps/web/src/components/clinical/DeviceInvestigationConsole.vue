@@ -1044,6 +1044,7 @@
     <!-- MODAL: Dispense Device -->
     <div
       v-if="showDispenseModal"
+      ref="dispenseModalRef"
       class="modal-overlay"
       role="dialog"
       aria-modal="true"
@@ -1102,6 +1103,7 @@
     <!-- MODAL: Manual Quarantine -->
     <div
       v-if="showQuarantineModal"
+      ref="quarantineModalRef"
       class="modal-overlay"
       role="dialog"
       aria-modal="true"
@@ -1165,6 +1167,7 @@
     <!-- MODAL: Quarantine Release -->
     <div
       v-if="showReleaseModal"
+      ref="releaseModalRef"
       class="modal-overlay"
       role="dialog"
       aria-modal="true"
@@ -1204,7 +1207,7 @@
         </div>
 
         <div class="modal-actions">
-          <button class="btn btn-secondary" @click="showReleaseModal = false">
+          <button class="btn btn-secondary" @click="closeReleaseModal">
             Cancel
           </button>
           <button
@@ -1225,6 +1228,7 @@
     <!-- MODAL: Safety Physician Adjudication -->
     <div
       v-if="showAdjudicateModal"
+      ref="adjudicateModalRef"
       class="modal-overlay"
       role="dialog"
       aria-modal="true"
@@ -1315,10 +1319,7 @@
         </div>
 
         <div class="modal-actions">
-          <button
-            class="btn btn-secondary"
-            @click="showAdjudicateModal = false"
-          >
+          <button class="btn btn-secondary" @click="closeAdjudicateModal">
             Cancel
           </button>
           <button
@@ -1336,6 +1337,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
+import { useFocusTrap } from "ui";
 
 // State
 const studyId = ref("STUDY-DEV-101");
@@ -1393,6 +1395,7 @@ const deficForm = ref({
 
 // Modal state
 const showDispenseModal = ref(false);
+const dispenseModalRef = ref(null);
 const activeModalDevice = ref(null);
 const dispenseForm = ref({
   subject_id: "",
@@ -1401,13 +1404,16 @@ const dispenseForm = ref({
 const dispenseError = ref("");
 
 const showQuarantineModal = ref(false);
+const quarantineModalRef = ref(null);
 const quarForm = ref({ scope: "DEVICE_SERIAL", reason: "" });
 
 const showReleaseModal = ref(false);
+const releaseModalRef = ref(null);
 const activeModalQuarantine = ref(null);
 const releaseForm = ref({ justification: "", signature_token: "" });
 
 const showAdjudicateModal = ref(false);
+const adjudicateModalRef = ref(null);
 const activeModalCase = ref(null);
 const adjudicateForm = ref({
   classification: "SADE",
@@ -1416,6 +1422,36 @@ const adjudicateForm = ref({
   capa_required: false,
   fsca_required: false,
   signature_token: "",
+});
+
+function closeReleaseModal() {
+  releaseForm.value.signature_token = "";
+  showReleaseModal.value = false;
+}
+
+function closeAdjudicateModal() {
+  adjudicateForm.value.signature_token = "";
+  showAdjudicateModal.value = false;
+}
+
+useFocusTrap(dispenseModalRef, showDispenseModal, {
+  onEscape: () => {
+    showDispenseModal.value = false;
+  },
+});
+
+useFocusTrap(quarantineModalRef, showQuarantineModal, {
+  onEscape: () => {
+    showQuarantineModal.value = false;
+  },
+});
+
+useFocusTrap(releaseModalRef, showReleaseModal, {
+  onEscape: closeReleaseModal,
+});
+
+useFocusTrap(adjudicateModalRef, showAdjudicateModal, {
+  onEscape: closeAdjudicateModal,
 });
 
 // Previews

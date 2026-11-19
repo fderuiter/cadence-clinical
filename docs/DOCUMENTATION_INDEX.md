@@ -548,6 +548,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2635: AI in the Canvas Is Labelled, Scoped to the Selection and Ends in a Proposal](adr/2026-10-20-ai-in-the-canvas-is-labelled-scoped-and-ends-in-a-proposal.md) | Current | - Status: Accepted |
 | [ADR-2636: Inference Is Pluggable, Residency-Bound and Sandboxed](adr/2026-10-20-inference-is-pluggable-residency-bound-and-sandboxed.md) | Current | - Status: Accepted |
 | [ADR-2602: Multi-Repository Ownership and Kernel Package Boundaries](adr/2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md) | Current | - Status: Accepted (approved by @fderuiter on 2026-10-28 as the recommendations in this draft) |
+| [ADR-2544: Shared Reactive Focus Containment and Global Reduced-Motion Tokens](adr/2026-11-19-shared-reactive-focus-containment-and-reduced-motion-tokens.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

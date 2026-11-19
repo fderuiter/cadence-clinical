@@ -84,7 +84,6 @@ import { useOnboardingStore } from "../stores/onboarding";
 import { hasRequiredRole } from "../router";
 import { isScreenAvailable } from "../router/availability";
 import { useFocusTrap } from "../composables/useFocusTrap";
-import { useEscapeClose } from "../composables/useEscapeClose";
 import { useWebCopilot } from "../composables/useWebCopilot";
 
 const props = defineProps({
@@ -108,9 +107,12 @@ const selectedIndex = ref(0);
 const modalRef = ref(null);
 const inputRef = ref(null);
 
-// Apply focus trap and escape close composables when mounted
-useFocusTrap(modalRef);
-useEscapeClose(close);
+// Apply reactive focus trap and Escape close when open
+useFocusTrap(modalRef, {
+  isOpen: () => props.isOpen,
+  onEscape: () => emit("close"),
+  initialFocus: inputRef,
+});
 
 const staticRoutes = [
   {

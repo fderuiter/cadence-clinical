@@ -110,7 +110,6 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { useFocusTrap } from "@/composables/useFocusTrap";
-import { useEscapeClose } from "@/composables/useEscapeClose";
 
 const props = defineProps({
   isOpen: {
@@ -130,13 +129,22 @@ const props = defineProps({
 const emit = defineEmits(["cancel", "approve"]);
 
 const modalRef = ref(null);
-useFocusTrap(modalRef);
-useEscapeClose(() => emit("cancel"));
 
 const selectedRole = ref("");
 const password = ref("");
 const reason = ref("");
 const error = ref("");
+
+const cancel = () => {
+  password.value = "";
+  error.value = "";
+  emit("cancel");
+};
+
+useFocusTrap(modalRef, {
+  isOpen: () => props.isOpen,
+  onEscape: cancel,
+});
 
 const hasZeroUnresolved = computed(() => props.unresolvedCount === 0);
 const isChecklistComplete = computed(
@@ -151,13 +159,11 @@ watch(
       password.value = "";
       reason.value = "";
       error.value = "";
+    } else {
+      password.value = "";
     }
   }
 );
-
-const cancel = () => {
-  emit("cancel");
-};
 
 const confirm = () => {
   if (!isChecklistComplete.value) {
@@ -295,37 +301,37 @@ label {
 
 input,
 select {
+  box-sizing: border-box;
   width: 100%;
   padding: 8px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
+  border: 1px solid var(--border-strong, #cbd5e1);
+  border-radius: var(--radius-sm, 4px);
   font-size: 13px;
-  background: white;
-  box-sizing: border-box;
+  background: var(--surface, #ffffff);
 }
 
 .error-msg {
   margin-top: 8px;
-  color: #ef4444;
+  color: var(--status-danger, #ef4444);
   font-size: 13px;
   font-weight: 500;
 }
 
 .modal-footer {
-  padding: 12px 16px;
-  border-top: 1px solid #e2e8f0;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  background: #f8fafc;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border, #e2e8f0);
+  background: var(--surface-alt, #f8fafc);
 }
 
 .btn {
   padding: 6px 12px;
+  border-radius: var(--radius-sm, 4px);
   font-size: 13px;
-  cursor: pointer;
-  border-radius: 4px;
   font-weight: 500;
+  cursor: pointer;
 }
 
 .btn-cancel {

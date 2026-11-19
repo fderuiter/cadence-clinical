@@ -308,7 +308,6 @@
 import { ref, computed } from "vue";
 import { useAuthStore } from "../../stores/auth";
 import { useFocusTrap } from "@/composables/useFocusTrap";
-import { useEscapeClose } from "@/composables/useEscapeClose";
 
 const props = defineProps({
   document: {
@@ -320,8 +319,9 @@ const props = defineProps({
 const emit = defineEmits(["close"]);
 
 const modalRef = ref(null);
-useFocusTrap(modalRef);
-useEscapeClose(() => emit("close"));
+useFocusTrap(modalRef, {
+  onEscape: () => emit("close"),
+});
 
 const authStore = useAuthStore();
 
@@ -453,78 +453,78 @@ function formatDate(dateStr) {
 
 /* Status colors */
 .text-muted {
-  color: #64748b;
+  color: var(--text-muted, #64748b);
 }
 .text-warning {
-  color: #d97706;
+  color: var(--warning, #d97706);
 }
 .text-success {
-  color: #16a34a;
+  color: var(--success, #16a34a);
 }
 .text-danger {
-  color: #dc2626;
+  color: var(--danger, #dc2626);
 }
 
 .change-reason-block h5,
 .checksum-block h5 {
-  margin: 0 0 6px 0;
+  margin: 0 0 6px;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #475569;
+  color: var(--text-secondary, #475569);
 }
 
 .reason-text {
-  font-size: 0.8rem;
-  color: #1e293b;
-  background-color: #f8fafc;
-  padding: 8px;
-  border-radius: 4px;
   margin: 0;
+  padding: 8px;
+  font-size: 0.8rem;
   line-height: 1.4;
-  border: 1px solid #e2e8f0;
+  color: var(--text-main, #1e293b);
+  background-color: var(--surface-muted, #f8fafc);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: var(--radius-sm, 4px);
 }
 
 .checksum-text {
   display: block;
-  font-family: monospace;
-  font-size: 0.75rem;
-  background-color: #f1f5f9;
-  color: #0f172a;
   padding: 6px;
-  border-radius: 4px;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  background-color: var(--surface-code, #f1f5f9);
+  color: var(--text-primary, #0f172a);
+  border-radius: var(--radius-sm, 4px);
   overflow-x: auto;
   word-break: break-all;
 }
 
 /* Signature Cards */
 .manifest-card {
-  border-radius: 6px;
   padding: 12px;
+  border-radius: var(--radius-md, 6px);
   font-size: 0.8rem;
 }
 
 .manifest-card.signed {
-  background-color: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #166534;
+  background-color: var(--status-success-bg, #f0fdf4);
+  border: 1px solid var(--status-success-border, #bbf7d0);
+  color: var(--status-success-text, #166534);
 }
 
 .manifest-card.unsigned {
-  background-color: #fffbeb;
-  border: 1px solid #fef3c7;
-  color: #92400e;
+  background-color: var(--status-warning-bg, #fffbeb);
+  border: 1px solid var(--status-warning-border, #fef3c7);
+  color: var(--status-warning-text, #92400e);
 }
 
 .sign-status {
-  font-weight: 700;
-  margin: 0 0 6px 0;
   display: flex;
   align-items: center;
   gap: 4px;
+  margin: 0 0 6px;
+  font-weight: 700;
 }
 
 .signer-meta {
-  margin: 0 0 4px 0;
+  margin: 0 0 4px;
 }
 
 .unsigned-warning {
@@ -534,35 +534,32 @@ function formatDate(dateStr) {
 
 /* Document Frame Canvas */
 .viewer-workspace {
+  position: relative;
   flex: 1;
   display: flex;
   justify-content: center;
   padding: 24px;
   overflow-y: auto;
-  position: relative;
 }
 
 .pdf-document-canvas {
-  width: 100%;
-  max-width: 650px;
-  background-color: #ffffff;
-  box-shadow:
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  border-radius: 4px;
   position: relative;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: 650px;
   min-height: 800px;
+  background-color: var(--surface-bg, #ffffff);
+  border-radius: var(--radius-sm, 4px);
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 /* CSS Watermarking overlay rotates 35deg diagonally across the page content background */
 .watermark-overlay-container {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   z-index: 100;
   pointer-events: none;
   overflow: hidden;
@@ -574,16 +571,16 @@ function formatDate(dateStr) {
 }
 
 .diagonal-watermark-row {
-  transform: rotate(-30deg);
   white-space: nowrap;
+  transform: rotate(-30deg);
 }
 
 .watermark-text {
-  font-family: Arial, sans-serif;
+  font-family: var(--font-sans, Arial, sans-serif);
   font-size: 1rem;
   font-weight: 900;
-  color: #ef4444;
   letter-spacing: 0.1em;
+  color: var(--danger, #ef4444);
 }
 
 /* Page content Mock-up sheet */

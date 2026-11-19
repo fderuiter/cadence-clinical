@@ -30,6 +30,11 @@ export function openReconsentModal() {
 }
 
 export function closeReconsentModal() {
+  state.reconsentForm.password = "";
+  if (typeof document !== "undefined") {
+    const pwdInput = document.getElementById("reconsent-sign-password");
+    if (pwdInput) pwdInput.value = "";
+  }
   state.reconsentModalOpen = false;
   state.reconsentModalError = "";
 }

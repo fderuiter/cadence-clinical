@@ -4,7 +4,7 @@
     class="portal-view"
     :class="{ active: ui.currentView === 'view-inbox' }"
     role="tabpanel"
-    aria-labelledby="tab-btn-inbox"
+    aria-labelledby="btn-tab-btn-inbox"
     tabindex="0"
   >
     <div class="view-header">

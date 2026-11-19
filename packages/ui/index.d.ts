@@ -177,6 +177,47 @@ export const ModalErrorAlert: DefineComponent<
   any
 >;
 
+export const ClinicalModal: DefineComponent<
+  {
+    modelValue?: boolean;
+    title?: string;
+    size?: "sm" | "md" | "lg" | "xl" | string;
+    role?: "dialog" | "alertdialog" | string;
+  },
+  {},
+  any
+>;
+
+export interface FocusTrapOptions {
+  isOpen?: import("vue").Ref<boolean> | (() => boolean) | boolean;
+  onEscape?: (event: KeyboardEvent) => void;
+  escapeDeactivates?: import("vue").Ref<boolean> | (() => boolean) | boolean;
+  initialFocus?:
+    import("vue").Ref<HTMLElement | null> | (() => HTMLElement | null) | string;
+  restoreFocus?: boolean | (() => HTMLElement | null);
+}
+
+export function useFocusTrap(
+  targetRef: import("vue").Ref<HTMLElement | null> | (() => HTMLElement | null),
+  optionsOrIsOpen?:
+    FocusTrapOptions | import("vue").Ref<boolean> | (() => boolean) | boolean,
+  options?: Omit<FocusTrapOptions, "isOpen">
+): {
+  activate: () => void;
+  deactivate: () => void;
+};
+
+export function getFocusableElements(
+  container: HTMLElement | null | undefined
+): HTMLElement[];
+
+export function useEscapeClose(
+  onCloseCallback: (event: KeyboardEvent) => void,
+  options?: {
+    isOpen?: import("vue").Ref<boolean> | (() => boolean) | boolean;
+  }
+): void;
+
 export function useAsyncRetry<T extends (...args: any[]) => any>(
   asyncFn?: T
 ): {

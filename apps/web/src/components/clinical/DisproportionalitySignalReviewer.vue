@@ -406,16 +406,19 @@
     <!-- Part 11 Electronic Signature Modal for Signal Review Alert -->
     <div
       v-if="selectedAlertForSigning"
+      ref="signModalRef"
       class="modal-backdrop"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="signal-sign-modal-title"
+      tabindex="-1"
     >
       <div class="modal-box">
         <header class="modal-header">
-          <h3>21 CFR Part 11 Signal Review Disposition Signature</h3>
-          <button class="close-btn" @click="selectedAlertForSigning = null">
-            ✕
-          </button>
+          <h3 id="signal-sign-modal-title">
+            21 CFR Part 11 Signal Review Disposition Signature
+          </h3>
+          <button class="close-btn" @click="closeAlertSignModal">✕</button>
         </header>
 
         <div class="modal-body">
@@ -477,10 +480,7 @@
         </div>
 
         <footer class="modal-footer">
-          <button
-            class="btn btn-secondary"
-            @click="selectedAlertForSigning = null"
-          >
+          <button class="btn btn-secondary" @click="closeAlertSignModal">
             Cancel
           </button>
           <button
@@ -498,6 +498,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { useFocusTrap } from "ui";
 
 interface DisproportionalityMetric {
   drug_name: string;
@@ -748,11 +749,22 @@ const filteredMetrics = computed(() => {
   });
 });
 
+const signModalRef = ref<HTMLElement | null>(null);
 const selectedAlertForSigning = ref<SafetyAlert | null>(null);
 const signForm = ref({
   decision: "CONFIRM_SIGNAL",
   justification: "",
   signature_secret: "",
+});
+
+function closeAlertSignModal() {
+  signForm.value.signature_secret = "";
+  selectedAlertForSigning.value = null;
+}
+
+useFocusTrap(signModalRef, {
+  isOpen: () => Boolean(selectedAlertForSigning.value),
+  onEscape: closeAlertSignModal,
 });
 
 function executeScan() {

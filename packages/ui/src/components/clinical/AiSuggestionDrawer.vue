@@ -1,6 +1,7 @@
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import ConfidenceBadge from "./ConfidenceBadge.vue";
+import { useFocusTrap } from "../../composables/useFocusTrap.js";
 
 const props = defineProps({
   modelValue: {
@@ -77,7 +78,6 @@ const drawerOpen = computed({
 });
 
 const drawerRef = ref(null);
-const previousActiveElement = ref(null);
 const isEditing = ref(false);
 const reasonForChange = ref("");
 const validationError = ref("");
@@ -113,32 +113,14 @@ const closeDrawer = () => {
 };
 
 const handleKeyDown = (e) => {
-  if (e.key === "Escape" && drawerOpen.value) {
+  if (!e || e.key === "Escape") {
     closeDrawer();
   }
 };
 
-watch(
-  () => drawerOpen.value,
-  async (open) => {
-    if (open) {
-      previousActiveElement.value = document.activeElement;
-      await nextTick();
-      if (drawerRef.value) {
-        drawerRef.value.focus();
-      }
-    } else if (previousActiveElement.value) {
-      previousActiveElement.value.focus();
-    }
-  }
-);
-
-onMounted(() => {
-  window.addEventListener("keydown", handleKeyDown);
-});
-
-onUnmounted(() => {
-  window.removeEventListener("keydown", handleKeyDown);
+useFocusTrap(drawerRef, {
+  isOpen: drawerOpen,
+  onEscape: handleKeyDown,
 });
 
 const getParsedFinalValue = () => {

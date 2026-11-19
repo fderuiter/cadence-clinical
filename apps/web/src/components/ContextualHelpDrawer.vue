@@ -11,6 +11,7 @@
     >
       <div
         id="contextual-help-drawer"
+        ref="drawerRef"
         class="drawer-panel"
         role="dialog"
         aria-modal="true"
@@ -298,8 +299,7 @@
             <p>
               There is currently no published SOP mapped specifically to
               <code>{{ knowledgeStore.currentRoute }}</code> for persona
-              <strong>{{ activePersonaLabel }}</strong
-              >.
+              <strong>{{ activePersonaLabel }}</strong>.
             </p>
             <div class="empty-actions">
               <button class="btn btn-secondary" @click="openSearchWithFallback">
@@ -345,13 +345,20 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
+import { useFocusTrap } from "../composables/useFocusTrap.js";
 import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
 import TicketCreateModal from "./tickets/TicketCreateModal.vue";
 
+const drawerRef = ref(null);
 const knowledgeStore = useKnowledgeStore();
 const authStore = useAuthStore();
 const route = useRoute();
+
+useFocusTrap(drawerRef, {
+  isOpen: () => knowledgeStore.isOpen,
+  onEscape: () => knowledgeStore.closeDrawer(),
+});
 
 const isSearchOpen = ref(false);
 const searchInput = ref("");
@@ -445,11 +452,9 @@ watch(
   }
 );
 
-// Keyboard accessibility: Escape to close drawer, F1 / '?' to toggle
+// Keyboard accessibility: F1 / '?' to toggle contextual help; Escape is handled by useFocusTrap
 function handleKeydown(e) {
-  if (e.key === "Escape" && knowledgeStore.isOpen) {
-    knowledgeStore.closeDrawer();
-  } else if (
+  if (
     e.key === "F1" ||
     (e.key === "?" && !["INPUT", "TEXTAREA"].includes(e.target?.tagName))
   ) {

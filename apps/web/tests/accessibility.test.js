@@ -298,4 +298,133 @@ describe("Accessibility Composables & Query Panel Integration", () => {
       expect(wrapper.classes()).not.toContain("has-error");
     });
   });
+
+  describe("Reactive Overlay Focus Containment & 21 CFR Part 11 Escape Credential Wiping", () => {
+    it("marks ReadabilityDrawer inert and aria-hidden when closed, and traps/restores focus when opened", async () => {
+      const { default: ReadabilityDrawer } =
+        await import("../src/components/econsent/ReadabilityDrawer.vue");
+      const triggerBtn = document.createElement("button");
+      triggerBtn.id = "readability-trigger";
+      container.appendChild(triggerBtn);
+      triggerBtn.focus();
+
+      const wrapper = mount(ReadabilityDrawer, {
+        props: {
+          isOpen: false,
+          text: "",
+        },
+        attachTo: container,
+      });
+      await nextTick();
+
+      const drawer = wrapper.find("aside.readability-drawer");
+      expect(drawer.attributes("inert")).toBeDefined();
+      expect(drawer.attributes("aria-hidden")).toBe("true");
+      expect(drawer.attributes("aria-modal")).toBeUndefined();
+
+      await wrapper.setProps({ isOpen: true });
+      await nextTick();
+      await nextTick();
+
+      expect(drawer.attributes("inert")).toBeUndefined();
+      expect(drawer.attributes("aria-hidden")).toBeUndefined();
+      expect(drawer.attributes("aria-modal")).toBe("true");
+      expect(drawer.element.contains(document.activeElement)).toBe(true);
+
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Escape",
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+      await nextTick();
+      expect(wrapper.emitted("close")).toBeTruthy();
+
+      await wrapper.setProps({ isOpen: false });
+      await nextTick();
+      expect(document.activeElement).toBe(triggerBtn);
+      wrapper.unmount();
+    });
+
+    it("clears typed password immediately when ApprovalHandoffModal is dismissed via Escape", async () => {
+      const { default: ApprovalHandoffModal } =
+        await import("../src/components/crf/ApprovalHandoffModal.vue");
+      const triggerBtn = document.createElement("button");
+      container.appendChild(triggerBtn);
+      triggerBtn.focus();
+
+      const wrapper = mount(ApprovalHandoffModal, {
+        props: {
+          isOpen: true,
+          unresolvedCount: 0,
+          editChecksVerified: true,
+        },
+        attachTo: container,
+      });
+      await nextTick();
+      await nextTick();
+
+      const pwInput = wrapper.find("#approval-password");
+      await pwInput.setValue("Part11SecretPassword!");
+      expect(pwInput.element.value).toBe("Part11SecretPassword!");
+
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Escape",
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+      await nextTick();
+
+      expect(wrapper.emitted("cancel")).toBeTruthy();
+      expect(pwInput.element.value).toBe("");
+
+      await wrapper.setProps({ isOpen: false });
+      await nextTick();
+      expect(document.activeElement).toBe(triggerBtn);
+      wrapper.unmount();
+    });
+
+    it("clears typed password and TOTP immediately when SignatureCaptureModal is dismissed via Escape", async () => {
+      const { default: SignatureCaptureModal } =
+        await import("../src/features/signatures/components/SignatureCaptureModal.vue");
+      const triggerBtn = document.createElement("button");
+      container.appendChild(triggerBtn);
+      triggerBtn.focus();
+
+      const wrapper = mount(SignatureCaptureModal, {
+        props: {
+          isOpen: true,
+          username: "investigator.01",
+          actionUrl: "/api/v1/sign",
+        },
+        attachTo: container,
+      });
+      await nextTick();
+      await nextTick();
+
+      const pwInput = wrapper.find("#sig-password");
+      await pwInput.setValue("InvestigatorSecret99!");
+      expect(pwInput.element.value).toBe("InvestigatorSecret99!");
+
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Escape",
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+      await nextTick();
+
+      expect(wrapper.emitted("cancel")).toBeTruthy();
+      expect(pwInput.element.value).toBe("");
+
+      await wrapper.setProps({ isOpen: false });
+      await nextTick();
+      expect(document.activeElement).toBe(triggerBtn);
+      wrapper.unmount();
+    });
+  });
 });

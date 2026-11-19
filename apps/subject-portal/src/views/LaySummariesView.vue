@@ -4,7 +4,7 @@
     class="portal-view"
     :class="{ active: ui.currentView === 'view-lay-summaries' }"
     role="tabpanel"
-    aria-labelledby="tab-btn-lay-summaries"
+    aria-labelledby="btn-tab-btn-lay-summaries"
     tabindex="0"
   >
     <div class="view-header">

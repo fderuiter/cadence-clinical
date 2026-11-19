@@ -761,6 +761,11 @@ import ConfidenceBadge from "./src/components/clinical/ConfidenceBadge.vue";
 import FileUploadModal from "./src/components/FileUploadModal.vue";
 import ModalErrorAlert from "./src/components/ModalErrorAlert.vue";
 import { useAsyncRetry } from "./src/composables/useAsyncRetry.js";
+import {
+  useFocusTrap,
+  getFocusableElements,
+} from "./src/composables/useFocusTrap.js";
+import { useEscapeClose } from "./src/composables/useEscapeClose.js";
 
 export {
   AiActionButton,
@@ -776,6 +781,9 @@ export {
   FileUploadModal,
   ModalErrorAlert,
   useAsyncRetry,
+  useFocusTrap,
+  getFocusableElements,
+  useEscapeClose,
 };
 
 // Dynamic Hover Pointer Capability Detection

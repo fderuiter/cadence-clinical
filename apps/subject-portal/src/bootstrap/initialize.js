@@ -14,10 +14,6 @@ import { loadCompliance, renderCompliance } from "../features/compliance.js";
 import { loadNotifications, renderInbox } from "../features/inbox.js";
 import { checkPINWrapper } from "../features/pin.js";
 import { checkPendingReconsent } from "../features/reconsent.js";
-import {
-  installDocumentSignatureFocusTrap,
-  installWindowSignatureFocusTrap,
-} from "../features/signature.js";
 import { syncOfflineQueue } from "../features/sync.js";
 import {
   loadAssignedInstruments,
@@ -25,7 +21,7 @@ import {
   renderTasks,
 } from "../features/tasks.js";
 import { state } from "../stores/state.js";
-import { bindPortalControls, setupTabListAria } from "./controls.js";
+import { bindPortalControls } from "./controls.js";
 import { mountPortal } from "./mount.js";
 
 // Bootstrap Initialization
@@ -53,9 +49,6 @@ export async function initializeApp() {
 
     // Dynamic Hover Pointer Capability Detection
     initHoverDetection();
-
-    // Set up global focus trapping for the signature modal dialog
-    installDocumentSignatureFocusTrap();
   }
 
   // Graceful OIDC Keycloak setup
@@ -127,13 +120,8 @@ export async function initializeApp() {
     });
   }
 
-  // Sync Now, navigation, questionnaire, signature modal, eConsent and retry
-  // buttons, then the tab list's ARIA roles and keyboard navigation
+  // Sync Now, questionnaire, signature modal, eConsent and retry buttons
   bindPortalControls();
-  setupTabListAria();
-
-  // Focus trap for the signature modal (prevents escaping focus)
-  installWindowSignatureFocusTrap();
 
   // Automatically re-derive the AES-GCM encryption key as soon as the active user identifier changes
   watchUserIdentity();

@@ -1,22 +1,24 @@
 <template>
   <!-- Global Floating Sync Drawer -->
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div
     class="global-drawer-overlay"
     :class="{ active: sync.isSyncDrawerOpen }"
-    role="button"
-    tabindex="0"
-    aria-label="Close sync drawer overlay"
+    aria-hidden="true"
+    :inert="!sync.isSyncDrawerOpen || undefined"
     @click="toggleSyncDrawer"
-    @keydown.enter.prevent="toggleSyncDrawer"
-    @keydown.space.prevent="toggleSyncDrawer"
   />
 
   <div
+    ref="drawerRef"
     class="global-drawer"
     :class="{ active: sync.isSyncDrawerOpen }"
     role="dialog"
-    aria-modal="true"
+    :aria-modal="sync.isSyncDrawerOpen ? 'true' : undefined"
+    :aria-hidden="!sync.isSyncDrawerOpen ? 'true' : undefined"
+    :inert="!sync.isSyncDrawerOpen || undefined"
     aria-labelledby="drawer-title"
+    tabindex="-1"
   >
     <div class="drawer-header">
       <h3 id="drawer-title">🔄 Submission Sync Status</h3>
@@ -102,14 +104,27 @@
 </template>
 
 <script setup>
+import { ref } from "vue";
+import { useFocusTrap } from "ui";
+
 import { syncOfflineQueue } from "../features/sync.js";
 import { describeQueuedSync } from "../features/sync-status.js";
 import { useSyncStore } from "../stores/sync.js";
 import { useTasksStore } from "../stores/tasks.js";
 
+const drawerRef = ref(null);
 const sync = useSyncStore();
 const tasks = useTasksStore();
 const { toggleSyncDrawer } = sync;
+
+useFocusTrap(drawerRef, {
+  isOpen: () => sync.isSyncDrawerOpen,
+  onEscape: () => {
+    if (sync.isSyncDrawerOpen) {
+      toggleSyncDrawer();
+    }
+  },
+});
 
 function triggerManualSync() {
   syncOfflineQueue();
