@@ -61,7 +61,7 @@ RUN dotnet publish ${PROJECT_PATH} -c Release -o /app/publish /p:UseAppHost=fals
 # ------------------------------------------------------------------------------
 # 3. Production Runtime Stage
 # ------------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.14@sha256:1a48394b6f29d3a32c79d9edecd4abda0ecbe8776d567dbfc4590ed6979c740c AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.15@sha256:12b1135f5f8b3c0a214f2a680ff2033dff4f684f445d6c697d9524ceeb303586 AS runtime
 
 # Install curl, ffmpeg, libreoffice for container health check parity and background workers
 RUN apt-get update && apt-get install -y --no-install-recommends \
