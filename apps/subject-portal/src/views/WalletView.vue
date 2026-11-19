@@ -4,7 +4,7 @@
     class="portal-view"
     :class="{ active: ui.currentView === 'view-wallet' }"
     role="tabpanel"
-    aria-labelledby="tab-btn-wallet"
+    aria-labelledby="btn-tab-btn-wallet"
     tabindex="0"
   >
     <div class="view-header">
@@ -93,7 +93,8 @@
           class="dropzone-upload"
           tabindex="0"
           role="button"
-          aria-label="Tap to Capture or Upload Receipt Image — OCR extraction will detect merchant, date, and amount"
+          aria-label="Upload receipt image for travel reimbursement"
+          aria-describedby="receipt-upload-hint"
           style="
             border: 2px dashed var(--semantic-color-border-control);
             border-radius: 8px;
@@ -107,14 +108,22 @@
           @keydown.enter.prevent="triggerReceiptUpload"
           @keydown.space.prevent="triggerReceiptUpload"
         >
-          <span style="font-size: 24px">📷</span>
+          <span aria-hidden="true" style="font-size: 24px">📷</span>
           <p style="margin: 6px 0 0 0; font-size: 14px; font-weight: 600">
-            Tap to Capture or Upload Receipt Image
+            Upload receipt image for travel reimbursement
           </p>
-          <small style="color: var(--text-muted)"
-            >OCR extraction will detect merchant, date, and amount</small
-          >
         </div>
+        <small
+          id="receipt-upload-hint"
+          style="
+            display: block;
+            margin-top: 6px;
+            text-align: center;
+            color: var(--text-muted);
+          "
+          >Tap to capture or upload; OCR extraction will automatically detect
+          merchant, date, and amount</small
+        >
         <input
           id="receipt-file-input"
           type="file"

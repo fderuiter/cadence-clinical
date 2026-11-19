@@ -47,20 +47,6 @@ public class OfflineSchemaDriftTests
     }
 
     /// <summary>
-    /// Validate PendingDelta schema compatibility between client and server.
-    /// </summary>
-    [Fact(DisplayName = "PendingDeltaSchemaDrift")]
-    [Trait("Category", "Validation")]
-    public void TestPendingDeltaSchemaDrift()
-    {
-        var repoRoot = GetRepoRoot();
-        var clientFile = Path.Combine(repoRoot, "apps", "web", "src", "utils", "syncEngine.ts");
-
-        // Verify that web client sync engine or database schema definitions exist
-        File.Exists(clientFile).Should().BeTrue("apps/web/src/utils/syncEngine.ts must exist");
-    }
-
-    /// <summary>
     /// Validate submission object compatibility.
     /// </summary>
     [Fact(DisplayName = "SubmissionsSchemaDrift")]

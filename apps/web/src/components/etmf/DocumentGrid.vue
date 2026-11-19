@@ -349,6 +349,7 @@
       role="dialog"
       aria-modal="true"
       aria-label="Document Ingestion Modal"
+      tabindex="-1"
     >
       <div class="modal-card upload-modal">
         <div class="modal-header">
@@ -516,7 +517,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, onUnmounted } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
+import { useFocusTrap } from "ui";
 import { useEtmfStore } from "../../stores/etmf";
 import { etmfService } from "../../api/etmf";
 import { use2DGrid } from "../../composables/use2DGrid";
@@ -769,83 +771,9 @@ const artifactCode = ref("");
 const artifactType = ref("");
 const reasonForChange = ref("");
 
-let previousActiveElement = null;
-
-const handleUploadModalKeyDown = (e) => {
-  if (e.key === "Escape") {
-    closeUploadModal();
-    return;
-  }
-  if (e.key !== "Tab") return;
-  if (!uploadModalRef.value) return;
-
-  const focusableElements = Array.from(
-    uploadModalRef.value.querySelectorAll(
-      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    )
-  ).filter((el) => {
-    const style = window.getComputedStyle(el);
-    return (
-      style.display !== "none" &&
-      style.visibility !== "hidden" &&
-      (el.offsetWidth > 0 || el.offsetHeight > 0)
-    );
-  });
-
-  if (focusableElements.length === 0) {
-    e.preventDefault();
-    return;
-  }
-
-  const firstEl = focusableElements[0];
-  const lastEl = focusableElements[focusableElements.length - 1];
-
-  if (e.shiftKey) {
-    if (
-      document.activeElement === firstEl ||
-      !uploadModalRef.value.contains(document.activeElement)
-    ) {
-      e.preventDefault();
-      lastEl.focus();
-    }
-  } else {
-    if (
-      document.activeElement === lastEl ||
-      !uploadModalRef.value.contains(document.activeElement)
-    ) {
-      e.preventDefault();
-      firstEl.focus();
-    }
-  }
-};
-
-watch(showUploadModal, async (newVal) => {
-  if (newVal) {
-    previousActiveElement = document.activeElement;
-    await nextTick();
-    document.addEventListener("keydown", handleUploadModalKeyDown);
-    if (uploadModalRef.value) {
-      const focusable = uploadModalRef.value.querySelectorAll(
-        "button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])"
-      );
-      if (focusable && focusable.length > 0) {
-        focusable[0].focus();
-      }
-    }
-  } else {
-    document.removeEventListener("keydown", handleUploadModalKeyDown);
-    if (
-      previousActiveElement &&
-      document.body.contains(previousActiveElement) &&
-      typeof previousActiveElement.focus === "function"
-    ) {
-      previousActiveElement.focus();
-    }
-  }
-});
-
-onUnmounted(() => {
-  document.removeEventListener("keydown", handleUploadModalKeyDown);
+useFocusTrap(uploadModalRef, {
+  isOpen: showUploadModal,
+  onEscape: closeUploadModal,
 });
 
 // Local pagination state

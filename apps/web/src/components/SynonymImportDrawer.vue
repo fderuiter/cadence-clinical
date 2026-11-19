@@ -4,10 +4,14 @@
     class="synonym-drawer-overlay fixed inset-0 z-50 flex justify-end bg-slate-900/60 backdrop-blur-xs transition-opacity"
     role="presentation"
     @click.self="close"
-    @keydown.esc="close"
   >
     <div
+      ref="drawerRef"
       class="synonym-drawer-panel flex h-full w-full max-w-2xl flex-col bg-white shadow-2xl dark:bg-slate-900"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="synonym-drawer-title"
+      tabindex="-1"
     >
       <!-- Header -->
       <div
@@ -15,6 +19,7 @@
       >
         <div>
           <h2
+            id="synonym-drawer-title"
             class="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2"
           >
             <span>📥</span> Bulk Synonym Dictionary Import
@@ -662,11 +667,13 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { useFocusTrap } from "ui";
 import { useCodingStore } from "../stores/coding.js";
 import { useAuthStore } from "../stores/auth.js";
 
 const codingStore = useCodingStore();
 const authStore = useAuthStore();
+const drawerRef = ref(null);
 
 const activeTab = ref("import"); // 'import' | 'history' | 'rules'
 const scope = ref("STUDY");
@@ -690,6 +697,11 @@ const report = computed(() => codingStore.synonymPreflightReport);
 function close() {
   codingStore.closeSynonymDrawer();
 }
+
+useFocusTrap(drawerRef, {
+  isOpen: () => codingStore.isSynonymDrawerOpen,
+  onEscape: close,
+});
 
 function triggerFileInput() {
   if (!isAuthorized.value || codingStore.synonymImportLoading) return;

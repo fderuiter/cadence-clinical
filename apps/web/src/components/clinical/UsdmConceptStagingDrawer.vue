@@ -2,10 +2,12 @@
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -- backdrop click is a mouse shortcut; the dialog's own close control is the keyboard path -->
   <div v-if="isOpen" class="drawer-backdrop" @click.self="closeDrawer">
     <div
+      ref="drawerRef"
       class="usdm-concept-staging-drawer card"
       role="dialog"
       aria-modal="true"
       aria-labelledby="drawer-title"
+      tabindex="-1"
     >
       <!-- Drawer Header -->
       <div class="drawer-header">
@@ -279,6 +281,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+import { useFocusTrap } from "ui";
 
 const props = defineProps({
   isOpen: {
@@ -306,6 +309,7 @@ const props = defineProps({
 
 const emit = defineEmits(["update:isOpen", "close", "confirm-mappings"]);
 
+const drawerRef = ref(null);
 const searchQuery = ref("");
 const signerUsername = ref("");
 const changeReason = ref("USDM Concept Staging & Mapping Resolution");
@@ -418,6 +422,11 @@ const closeDrawer = () => {
   emit("update:isOpen", false);
   emit("close");
 };
+
+useFocusTrap(drawerRef, {
+  isOpen: () => props.isOpen,
+  onEscape: closeDrawer,
+});
 
 const confirmAndApply = () => {
   if (!canConfirm.value) return;

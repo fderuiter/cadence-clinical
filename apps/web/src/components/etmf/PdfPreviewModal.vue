@@ -1,6 +1,5 @@
 <template>
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div
     ref="modalRef"
     class="modal-backdrop"
@@ -308,7 +307,6 @@
 import { ref, computed } from "vue";
 import { useAuthStore } from "../../stores/auth";
 import { useFocusTrap } from "@/composables/useFocusTrap";
-import { useEscapeClose } from "@/composables/useEscapeClose";
 
 const props = defineProps({
   document: {
@@ -320,8 +318,9 @@ const props = defineProps({
 const emit = defineEmits(["close"]);
 
 const modalRef = ref(null);
-useFocusTrap(modalRef);
-useEscapeClose(() => emit("close"));
+useFocusTrap(modalRef, {
+  onEscape: () => emit("close"),
+});
 
 const authStore = useAuthStore();
 
@@ -459,7 +458,7 @@ function formatDate(dateStr) {
 
 .change-reason-block h5,
 .checksum-block h5 {
-  margin: 0 0 6px 0;
+  margin: 0 0 6px;
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
@@ -469,29 +468,29 @@ function formatDate(dateStr) {
   font-size: 0.8rem;
   color: var(--semantic-color-text-dark);
   background-color: var(--semantic-color-surface-muted);
-  padding: 8px;
-  border-radius: 4px;
   margin: 0;
+  padding: 8px;
   line-height: 1.4;
   border: 1px solid var(--semantic-color-border);
+  border-radius: var(--radius-xs);
 }
 
 .checksum-text {
   display: block;
-  font-family: monospace;
+  padding: 6px;
+  font-family: var(--font-mono, monospace);
   font-size: 0.75rem;
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text);
-  padding: 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   overflow-x: auto;
   word-break: break-all;
 }
 
 /* Signature Cards */
 .manifest-card {
-  border-radius: 6px;
   padding: 12px;
+  border-radius: var(--radius-md, 6px);
   font-size: 0.8rem;
 }
 
@@ -508,15 +507,15 @@ function formatDate(dateStr) {
 }
 
 .sign-status {
-  font-weight: 700;
-  margin: 0 0 6px 0;
   display: flex;
   align-items: center;
   gap: 4px;
+  margin: 0 0 6px;
+  font-weight: 700;
 }
 
 .signer-meta {
-  margin: 0 0 4px 0;
+  margin: 0 0 4px;
 }
 
 .unsigned-warning {
@@ -526,31 +525,31 @@ function formatDate(dateStr) {
 
 /* Document Frame Canvas */
 .viewer-workspace {
+  position: relative;
   flex: 1;
   display: flex;
   justify-content: center;
   padding: 24px;
   overflow-y: auto;
-  position: relative;
 }
 
 .pdf-document-canvas {
-  width: 100%;
-  max-width: 650px;
-  background-color: var(--semantic-color-surface);
-  box-shadow:
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  border-radius: 4px;
   position: relative;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: 650px;
   min-height: 800px;
+  background-color: var(--semantic-color-surface);
+  border-radius: var(--radius-sm, 4px);
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 /* CSS Watermarking overlay rotates 35deg diagonally across the page content background */
 .watermark-text {
-  font-family: Arial, sans-serif;
+  font-family: var(--font-sans, Arial, sans-serif);
   font-size: 1rem;
   font-weight: 900;
   color: var(--semantic-color-error);

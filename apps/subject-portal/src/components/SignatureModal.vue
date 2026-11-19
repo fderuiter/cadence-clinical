@@ -1,14 +1,13 @@
 <template>
-  <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
   <div
     id="portal-sign-modal"
+    ref="modalRef"
     class="modal-overlay"
     style="display: none"
     role="dialog"
     aria-modal="true"
     aria-labelledby="portal-modal-title"
     tabindex="-1"
-    @keydown="handleModalKeyDown"
   >
     <div class="modal">
       <form id="sign-modal-form" @submit.prevent>
@@ -99,9 +98,19 @@
 </template>
 
 <script setup>
-import { trapTabKey } from "./focus-trap.js";
+import { ref } from "vue";
+import { useFocusTrap } from "ui";
 
-function handleModalKeyDown(e) {
-  trapTabKey(e, "portal-sign-modal", ["input", "select", "textarea", "button"]);
-}
+import { closeSignatureModal } from "../features/signature.js";
+import { state } from "../stores/state.js";
+import { useUiStore } from "../stores/ui.js";
+
+const modalRef = ref(null);
+const ui = useUiStore();
+
+useFocusTrap(modalRef, {
+  isOpen: () => ui.signatureModalOpen,
+  onEscape: closeSignatureModal,
+  restoreFocus: () => state.initiatingButton || state.previouslyFocusedElement,
+});
 </script>

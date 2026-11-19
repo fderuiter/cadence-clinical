@@ -2,11 +2,13 @@
   <!-- eslint-disable vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div v-if="isOpen" class="drawer-backdrop" @click.self="$emit('close')">
     <aside
+      ref="drawerRef"
       class="quiz-template-drawer"
       :class="{ open: isOpen }"
       role="dialog"
       aria-modal="true"
       aria-label="Regulatory Quiz Template Library"
+      tabindex="-1"
     >
       <!-- Header -->
       <div class="drawer-header">
@@ -219,6 +221,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+import { useFocusTrap } from "ui";
 import {
   REGULATORY_DOMAINS,
   QUIZ_TEMPLATE_CATALOG,
@@ -233,6 +236,7 @@ const props = defineProps({
 
 const emit = defineEmits(["close", "import"]);
 
+const drawerRef = ref(null);
 const domains = REGULATORY_DOMAINS;
 const catalog = QUIZ_TEMPLATE_CATALOG;
 
@@ -329,6 +333,11 @@ watch(
     }
   }
 );
+
+useFocusTrap(drawerRef, {
+  isOpen: () => props.isOpen,
+  onEscape: () => emit("close"),
+});
 
 defineExpose({
   selectedDomain,

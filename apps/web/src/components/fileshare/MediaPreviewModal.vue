@@ -520,7 +520,6 @@ import Hls from "hls.js";
 import { fileshareService } from "../../api/fileshare";
 import { useAuthStore } from "../../stores/auth";
 import { useFocusTrap } from "@/composables/useFocusTrap";
-import { useEscapeClose } from "@/composables/useEscapeClose";
 import ReAuthModal from "../shared/ReAuthModal.vue";
 
 const props = defineProps({
@@ -547,8 +546,9 @@ const emit = defineEmits(["close", "download", "approved"]);
 const modalRef = ref(null);
 const videoPlayerRef = ref(null);
 
-useFocusTrap(modalRef);
-useEscapeClose(() => emit("close"));
+useFocusTrap(modalRef, {
+  onEscape: () => emit("close"),
+});
 
 const authStore = useAuthStore();
 

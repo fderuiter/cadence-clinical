@@ -506,6 +506,61 @@ public sealed class RtmGeneratorServiceTests : IDisposable
         File.Exists(Path.Combine(_dir, "docs", "SDLC", "Requirements_Traceability_Matrix.md")).Should().BeFalse();
     }
 
+    [Fact]
+    public void SyncCompliance_WithResultsDir_ReusesDownloadedTrxAndDatabaseEvidenceWithoutRunningTests()
+    {
+        WriteMinimalRepository();
+        string baselineStamp = GxPSigner.StampGxpMarkdown("# Baseline\n\n"
+            + new RtmEvidenceContext("`0123abc` (clean working tree)", "2026-10-20 00:00:00", "PostgreSQL 18", "test").Render());
+        string committedRtm = Path.Combine(_dir, "docs", "SDLC", "Requirements_Traceability_Matrix.md");
+        string committedIq = Path.Combine(_dir, "docs", "SDLC", "IQ_OQ_PQ_Execution_Report.md");
+        File.WriteAllText(committedRtm, baselineStamp);
+        File.WriteAllText(committedIq, baselineStamp);
+
+        string artifactTrxDir = Path.Combine(_dir, "TestResults", "gxp", "tests", "Cadence.IntegrationTests", "TestResults");
+        Directory.CreateDirectory(artifactTrxDir);
+        WriteDatabaseTrx(
+            Path.Combine(artifactTrxDir, "report_dotnet.trx"),
+            ("Sample.FirstTests", "First", "Cadence.IntegrationTests.dll", "Passed"));
+        File.WriteAllText(
+            Path.Combine(_dir, "TestResults", "gxp", "kernel.database.txt"),
+            string.Join("\n",
+                "fixture=kernel",
+                "server_version=18.1",
+                "source=CADENCE_TEST_POSTGRES",
+                "extensions=pgcrypto",
+                "latest_migration=20261001_Initial",
+                "app_role=cadence"));
+
+        int exitCode = Cadence.ToolingCore.Services.SyncGxPService.SyncCompliance(repoRoot: _dir, resultsDir: "TestResults/gxp");
+
+        exitCode.Should().Be(0);
+        File.ReadAllText(committedRtm).Should().Be(baselineStamp, "branch sync never overwrites docs/SDLC");
+        string previewRtm = File.ReadAllText(Path.Combine(_dir, "TestResults", "gxp", "preview", "Requirements_Traceability_Matrix.md"));
+        previewRtm.Should().Contain("kernel fixture: PostgreSQL 18.1 from CADENCE_TEST_POSTGRES");
+    }
+
+    [Fact]
+    public void SyncCompliance_WithResultsDir_FailsWhenDownloadedTrxHasSkippedDatabaseTests()
+    {
+        WriteMinimalRepository();
+        string baselineStamp = GxPSigner.StampGxpMarkdown("# Baseline\n\n"
+            + new RtmEvidenceContext("`0123abc` (clean working tree)", "2026-10-20 00:00:00", "PostgreSQL 18", "test").Render());
+        File.WriteAllText(Path.Combine(_dir, "docs", "SDLC", "Requirements_Traceability_Matrix.md"), baselineStamp);
+        File.WriteAllText(Path.Combine(_dir, "docs", "SDLC", "IQ_OQ_PQ_Execution_Report.md"), baselineStamp);
+
+        string artifactTrxDir = Path.Combine(_dir, "TestResults", "gxp", "tests", "Cadence.IntegrationTests", "TestResults");
+        Directory.CreateDirectory(artifactTrxDir);
+        WriteDatabaseTrx(
+            Path.Combine(artifactTrxDir, "report_dotnet.trx"),
+            ("Sample.FirstTests", "First", "Cadence.UnitTests.dll", "Passed"),
+            ("Cadence.IntegrationTests.Kernel.RlsTests", "IsolatesTenants", "Cadence.IntegrationTests.dll", "NotExecuted"));
+
+        int exitCode = Cadence.ToolingCore.Services.SyncGxPService.SyncCompliance(repoRoot: _dir, resultsDir: "TestResults/gxp");
+
+        exitCode.Should().Be(1);
+    }
+
     /// <summary>
     /// Regression for #5324 and #5328: an alias (SRS or Trace ID) used to inherit its parent's tests and show
     /// "Verified via Parent". A parent's evidence no longer qualifies a child with its own acceptance criteria, and a
@@ -829,5 +884,28 @@ public sealed class RtmGeneratorServiceTests : IDisposable
         }
 
         new XDocument(new XElement(ns + "TestRun", definitions, outcomes)).Save(Path.Combine(_dir, fileName));
+    }
+
+    private static void WriteDatabaseTrx(string fullPath, params (string ClassName, string Method, string Assembly, string Outcome)[] results)
+    {
+        XNamespace ns = "http://microsoft.com/schemas/VisualStudio/TeamTest/2010"; // deid-ignore: XML namespace, not PHI
+        var definitions = new XElement(ns + "TestDefinitions");
+        var outcomes = new XElement(ns + "Results");
+        foreach (var (className, method, assembly, outcome) in results)
+        {
+            string id = Guid.NewGuid().ToString();
+            definitions.Add(new XElement(ns + "UnitTest",
+                new XAttribute("id", id),
+                new XElement(ns + "TestMethod",
+                    new XAttribute("codeBase", assembly),
+                    new XAttribute("className", className),
+                    new XAttribute("name", method))));
+            outcomes.Add(new XElement(ns + "UnitTestResult",
+                new XAttribute("testId", id),
+                new XAttribute("outcome", outcome),
+                new XAttribute("duration", "00:00:00.01")));
+        }
+
+        new XDocument(new XElement(ns + "TestRun", definitions, outcomes)).Save(fullPath);
     }
 }

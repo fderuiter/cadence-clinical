@@ -3,6 +3,7 @@
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div v-if="isOpen" class="drawer-backdrop" @click.self="closeDrawer">
     <aside
+      ref="drawerRef"
       class="ehr-reconciliation-drawer"
       role="dialog"
       aria-modal="true"
@@ -453,8 +454,10 @@
         @click.self="closeRejectModal"
       >
         <div
+          ref="rejectModalRef"
           class="modal-card"
           role="dialog"
+          aria-modal="true"
           aria-labelledby="reject-modal-title"
         >
           <div class="modal-header">
@@ -517,8 +520,10 @@
         @click.self="closeQueryModal"
       >
         <div
+          ref="queryModalRef"
           class="modal-card"
           role="dialog"
+          aria-modal="true"
           aria-labelledby="query-modal-title"
         >
           <div class="modal-header">
@@ -583,8 +588,10 @@
         @click.self="closeProvenanceModal"
       >
         <div
+          ref="provenanceModalRef"
           class="modal-card modal-lg"
           role="dialog"
+          aria-modal="true"
           aria-labelledby="prov-modal-title"
         >
           <div class="modal-header">
@@ -655,8 +662,10 @@
         @click.self="closeBatchRejectModal"
       >
         <div
+          ref="batchRejectModalRef"
           class="modal-card"
           role="dialog"
+          aria-modal="true"
           aria-labelledby="batch-reject-modal-title"
         >
           <div class="modal-header">
@@ -720,6 +729,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
+import { useFocusTrap } from "ui";
 import { interopService } from "../../api/interop";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 import EmptyState from "../common/EmptyState.vue";
@@ -796,6 +806,11 @@ function resetFilters() {
 }
 
 const activeItem = ref<EhrCandidate | null>(null);
+const drawerRef = ref<HTMLElement | null>(null);
+const rejectModalRef = ref<HTMLElement | null>(null);
+const batchRejectModalRef = ref<HTMLElement | null>(null);
+const queryModalRef = ref<HTMLElement | null>(null);
+const provenanceModalRef = ref<HTMLElement | null>(null);
 const showRejectModal = ref(false);
 const rejectReasonInput = ref("");
 const showBatchRejectModal = ref(false);
@@ -803,6 +818,30 @@ const batchRejectReasonInput = ref("");
 const showQueryModal = ref(false);
 const queryExplanationInput = ref("");
 const showProvenanceModal = ref(false);
+
+useFocusTrap(
+  drawerRef,
+  computed(() => props.isOpen),
+  {
+    onEscape: () => closeDrawer(),
+  }
+);
+
+useFocusTrap(rejectModalRef, showRejectModal, {
+  onEscape: () => closeRejectModal(),
+});
+
+useFocusTrap(queryModalRef, showQueryModal, {
+  onEscape: () => closeQueryModal(),
+});
+
+useFocusTrap(provenanceModalRef, showProvenanceModal, {
+  onEscape: () => closeProvenanceModal(),
+});
+
+useFocusTrap(batchRejectModalRef, showBatchRejectModal, {
+  onEscape: () => closeBatchRejectModal(),
+});
 
 const isAllPendingSelected = computed(() => {
   const pendingFiltered = filteredCandidates.value.filter(

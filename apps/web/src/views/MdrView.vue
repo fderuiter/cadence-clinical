@@ -1621,6 +1621,7 @@
     <div
       v-if="showUsdmModal"
       id="usdm-ingestion-modal"
+      ref="usdmModalRef"
       class="modal-overlay"
       style="display: flex"
       role="dialog"
@@ -1993,7 +1994,7 @@ import { useToastStore } from "../stores/toasts.js";
 import ClinicalSoAMatrix from "../components/clinical/ClinicalSoAMatrix.vue";
 import ClinicalGanttVisualizer from "../components/clinical/ClinicalGanttVisualizer.vue";
 import { terminologyClient } from "../api/terminologyClient.js";
-import { debounce } from "ui";
+import { debounce, useFocusTrap } from "ui";
 import ReasonModal from "../components/ReasonModal.vue";
 import CrfAuthoringCanvas from "../components/crf/CrfAuthoringCanvas.vue";
 import { useDesignerStore } from "../stores/designer.js";
@@ -2754,7 +2755,12 @@ function handleToggleApplicability(isApplicable) {
 import { USDMStudySchema } from "usdm-schemas";
 
 const showUsdmModal = ref(false);
+const usdmModalRef = ref(null);
 const rawUsdmInput = ref("");
+
+useFocusTrap(usdmModalRef, showUsdmModal, {
+  onEscape: () => closeUsdmModal(),
+});
 const isDragging = ref(false);
 const fileInputRef = ref(null);
 const isSynthesizing = ref(false);

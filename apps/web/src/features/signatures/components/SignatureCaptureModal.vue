@@ -117,7 +117,6 @@ export const SHARED_SIGNATURE_MODAL_PROPS = {
 import { computed, ref, watch, inject } from "vue";
 import { ModalErrorAlert } from "ui";
 import { useFocusTrap } from "@/composables/useFocusTrap";
-import { useEscapeClose } from "@/composables/useEscapeClose";
 import GxpCredentialsInput from "./GxpCredentialsInput.vue";
 
 const props = defineProps({
@@ -135,8 +134,10 @@ const props = defineProps({
 const emit = defineEmits(["cancel", "success", "error"]);
 
 const modalRef = ref(null);
-useFocusTrap(modalRef);
-useEscapeClose(() => emit("cancel"));
+useFocusTrap(modalRef, {
+  isOpen: () => props.isOpen,
+  onEscape: cancel,
+});
 
 const usernameVal = ref(props.username);
 const signerNameVal = ref(props.signerName || props.username || "");
@@ -417,13 +418,13 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(15, 23, 42, 0.5);
   z-index: 1000;
 }
 
 .modal {
-  background: white;
-  border-radius: 8px;
+  background: var(--semantic-color-surface);
+  border-radius: var(--radius-md, 8px);
   width: 100%;
   max-width: 450px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -473,7 +474,7 @@ select {
   font-size: 13px;
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border-control);
-  border-radius: 4px;
+  border-radius: var(--radius-sm, 4px);
 }
 
 .modal-footer {
@@ -489,13 +490,13 @@ select {
   padding: 6px 12px;
   font-size: 13px;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--radius-sm, 4px);
   font-weight: 500;
 }
 
 .btn-cancel {
   border: 1px solid var(--semantic-color-border-control);
-  background: white;
+  background: var(--semantic-color-surface);
 }
 
 .btn-primary {

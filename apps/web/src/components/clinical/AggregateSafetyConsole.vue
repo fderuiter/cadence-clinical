@@ -1122,6 +1122,7 @@
     <!-- QPPV Electronic Signature Modal (21 CFR Part 11) -->
     <div
       v-if="isQppvModalOpen"
+      ref="qppvModalRef"
       class="modal-backdrop"
       role="dialog"
       aria-modal="true"
@@ -1129,9 +1130,7 @@
       <div class="modal-dialog">
         <div class="modal-header">
           <h3>Executive QPPV 21 CFR Part 11 Electronic Signature</h3>
-          <button class="close-btn" @click="isQppvModalOpen = false">
-            &times;
-          </button>
+          <button class="close-btn" @click="closeQppvModal">&times;</button>
         </div>
         <div class="modal-body">
           <div class="alert-info-box">
@@ -1205,7 +1204,7 @@
         </div>
 
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="isQppvModalOpen = false">
+          <button class="btn btn-secondary" @click="closeQppvModal">
             Cancel
           </button>
           <button
@@ -1226,6 +1225,7 @@
     <!-- Safety Physician Electronic Signature Modal (21 CFR Part 11) -->
     <div
       v-if="isPhysicianSignModalOpen"
+      ref="physicianSignModalRef"
       class="modal-backdrop"
       role="dialog"
       aria-modal="true"
@@ -1233,7 +1233,7 @@
       <div class="modal-dialog">
         <div class="modal-header">
           <h3>Safety Physician 21 CFR Part 11 Electronic Signature</h3>
-          <button class="close-btn" @click="isPhysicianSignModalOpen = false">
+          <button class="close-btn" @click="closePhysicianSignModal">
             &times;
           </button>
         </div>
@@ -1317,10 +1317,7 @@
         </div>
 
         <div class="modal-footer">
-          <button
-            class="btn btn-secondary"
-            @click="isPhysicianSignModalOpen = false"
-          >
+          <button class="btn btn-secondary" @click="closePhysicianSignModal">
             Cancel
           </button>
           <button
@@ -1340,6 +1337,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { useFocusTrap } from "ui";
 
 import { useToastStore } from "../../stores/toasts.js";
 import { ensureOk } from "../../utils/apiErrors.js";
@@ -1382,6 +1380,8 @@ const isCalculatingExposure = ref(false);
 const isVerifyingSnapshot = ref(false);
 const isSigning = ref(false);
 const isQppvModalOpen = ref(false);
+const qppvModalRef = ref<HTMLElement | null>(null);
+const physicianSignModalRef = ref<HTMLElement | null>(null);
 
 // QPPV Signature Modal Form
 const qppvUserId = ref("qppv.officer");
@@ -1985,6 +1985,24 @@ async function runTriageSimulation() {
     isSimulating.value = false;
   }
 }
+
+function closeQppvModal() {
+  qppvSecret.value = "";
+  isQppvModalOpen.value = false;
+}
+
+function closePhysicianSignModal() {
+  physicianSecret.value = "";
+  isPhysicianSignModalOpen.value = false;
+}
+
+useFocusTrap(qppvModalRef, isQppvModalOpen, {
+  onEscape: closeQppvModal,
+});
+
+useFocusTrap(physicianSignModalRef, isPhysicianSignModalOpen, {
+  onEscape: closePhysicianSignModal,
+});
 
 function openPhysicianSignModal(clk: any) {
   selectedClockForSign.value = clk;

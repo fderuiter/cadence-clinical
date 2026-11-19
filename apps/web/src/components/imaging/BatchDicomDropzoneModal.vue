@@ -3,11 +3,12 @@
     <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -- Esc closes the dialog; role="dialog" is the correct role for the container -->
     <div
       v-if="isOpen"
+      ref="modalRef"
       class="modal-backdrop"
       role="dialog"
       aria-modal="true"
       aria-labelledby="batch-modal-title"
-      @keydown.esc="handleClose"
+      tabindex="-1"
     >
       <div class="modal-card">
         <!-- Header -->
@@ -341,6 +342,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+import { useFocusTrap } from "ui";
 
 const props = defineProps({
   isOpen: { type: Boolean, default: false },
@@ -352,6 +354,7 @@ const props = defineProps({
 
 const emit = defineEmits(["close", "ingested"]);
 
+const modalRef = ref(null);
 const folderInputRef = ref(null);
 const fileInputRef = ref(null);
 
@@ -555,6 +558,11 @@ function handleClose() {
   resetState();
   emit("close");
 }
+
+useFocusTrap(modalRef, {
+  isOpen: () => props.isOpen,
+  onEscape: handleClose,
+});
 
 function completeAndClose() {
   if (ingestionResult.value) {

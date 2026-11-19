@@ -8,6 +8,7 @@
       role="dialog"
       aria-modal="true"
       aria-label="Share Management Drawer"
+      tabindex="-1"
     >
       <!-- Drawer Header -->
       <div class="drawer-header">
@@ -414,8 +415,8 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { useFocusTrap } from "ui";
 import { useFileshareStore } from "../../stores/fileshare";
-import { useEscapeClose } from "@/composables/useEscapeClose";
 
 const props = defineProps({
   isOpen: {
@@ -438,7 +439,10 @@ const emit = defineEmits([
 const fileshareStore = useFileshareStore();
 const drawerRef = ref(null);
 
-useEscapeClose(() => emit("close"));
+useFocusTrap(drawerRef, {
+  isOpen: () => props.isOpen,
+  onEscape: () => emit("close"),
+});
 
 const activeTab = ref("internal");
 const isSubmitting = ref(false);

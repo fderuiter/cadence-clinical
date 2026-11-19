@@ -689,6 +689,7 @@
       @click.self="isCreateArticleModalOpen = false"
     >
       <div
+        ref="createArticleModalRef"
         class="modal-card modal-lg"
         role="dialog"
         aria-modal="true"
@@ -826,6 +827,7 @@
       @click.self="isEditDraftModalOpen = false"
     >
       <div
+        ref="editDraftModalRef"
         class="modal-card modal-lg"
         role="dialog"
         aria-modal="true"
@@ -952,6 +954,7 @@
       @click.self="isReasonModalOpen = false"
     >
       <div
+        ref="reasonModalRef"
         class="modal-card"
         role="dialog"
         aria-modal="true"
@@ -1030,6 +1033,7 @@
       @click.self="isCreateCategoryModalOpen = false"
     >
       <div
+        ref="createCategoryModalRef"
         class="modal-card"
         role="dialog"
         aria-modal="true"
@@ -1126,6 +1130,7 @@
 
 <script>
 import { computed, onMounted, ref, watch } from "vue";
+import { useFocusTrap } from "ui";
 import {
   knowledgeService,
   DEFAULT_CATEGORIES,
@@ -1166,7 +1171,35 @@ export default {
     const isEditDraftModalOpen = ref(false);
     const isReasonModalOpen = ref(false);
     const isCreateCategoryModalOpen = ref(false);
+    const createArticleModalRef = ref(null);
+    const editDraftModalRef = ref(null);
+    const reasonModalRef = ref(null);
+    const createCategoryModalRef = ref(null);
     const isPreviewMode = ref(false);
+
+    useFocusTrap(createArticleModalRef, isCreateArticleModalOpen, {
+      onEscape: () => {
+        isCreateArticleModalOpen.value = false;
+      },
+    });
+
+    useFocusTrap(editDraftModalRef, isEditDraftModalOpen, {
+      onEscape: () => {
+        isEditDraftModalOpen.value = false;
+      },
+    });
+
+    useFocusTrap(reasonModalRef, isReasonModalOpen, {
+      onEscape: () => {
+        isReasonModalOpen.value = false;
+      },
+    });
+
+    useFocusTrap(createCategoryModalRef, isCreateCategoryModalOpen, {
+      onEscape: () => {
+        isCreateCategoryModalOpen.value = false;
+      },
+    });
 
     // Forms
     const newArticleForm = ref({
@@ -1802,6 +1835,10 @@ export default {
       isEditDraftModalOpen,
       isReasonModalOpen,
       isCreateCategoryModalOpen,
+      createArticleModalRef,
+      editDraftModalRef,
+      reasonModalRef,
+      createCategoryModalRef,
       isPreviewMode,
       newArticleForm,
       editDraftForm,

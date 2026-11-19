@@ -1,8 +1,14 @@
 <template>
   <aside
+    ref="drawerRef"
     class="readability-drawer"
     :class="{ open: isOpen }"
+    role="dialog"
+    :aria-modal="isOpen ? 'true' : undefined"
+    :aria-hidden="!isOpen ? 'true' : undefined"
+    :inert="!isOpen || undefined"
     aria-label="Readability Harmonization Assistant"
+    tabindex="-1"
   >
     <div class="drawer-header">
       <div class="drawer-title">
@@ -13,6 +19,7 @@
         type="button"
         class="btn-close"
         title="Close Assistant"
+        aria-label="Close Assistant"
         @click="$emit('close')"
       >
         ✕
@@ -191,6 +198,7 @@
 
 <script setup>
 import { ref, watch, onMounted } from "vue";
+import { useFocusTrap } from "../../composables/useFocusTrap.js";
 import { econsentService } from "../../api/econsent.js";
 
 const props = defineProps({
@@ -219,7 +227,17 @@ const emit = defineEmits([
   "update-metrics",
 ]);
 
+const drawerRef = ref(null);
 const loading = ref(false);
+
+useFocusTrap(drawerRef, {
+  isOpen: () => props.isOpen,
+  onEscape: () => {
+    if (props.isOpen) {
+      emit("close");
+    }
+  },
+});
 const metrics = ref(null);
 const substitutions = ref([]);
 const protocolVersion = ref("v2.0");
@@ -327,12 +345,20 @@ onMounted(() => {
   z-index: 1000;
   display: flex;
   flex-direction: column;
+  visibility: hidden;
+  outline: none;
   transform: translateX(100%);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s linear 0.3s;
 }
 
 .readability-drawer.open {
+  visibility: visible;
   transform: translateX(0);
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s linear 0s;
 }
 
 .drawer-header {

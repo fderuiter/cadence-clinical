@@ -463,6 +463,7 @@
     <!-- ========================================================================= -->
     <div
       v-if="isSignoffModalOpen"
+      ref="signoffModalRef"
       class="modal-overlay"
       role="dialog"
       aria-modal="true"
@@ -472,11 +473,7 @@
           <h4 class="modal-title">
             21 CFR Part 11 Adjudication Chair Sign-off
           </h4>
-          <button
-            type="button"
-            class="btn-close"
-            @click="isSignoffModalOpen = false"
-          >
+          <button type="button" class="btn-close" @click="closeSignoffModal">
             ✕
           </button>
         </div>
@@ -528,7 +525,7 @@
           <button
             type="button"
             class="btn-secondary"
-            @click="isSignoffModalOpen = false"
+            @click="closeSignoffModal"
           >
             Cancel
           </button>
@@ -549,6 +546,7 @@
     <!-- ========================================================================= -->
     <div
       v-if="isEdcModalOpen"
+      ref="edcModalRef"
       class="modal-overlay"
       role="dialog"
       aria-modal="true"
@@ -590,6 +588,7 @@
     <!-- ========================================================================= -->
     <div
       v-if="isSdtmModalOpen"
+      ref="sdtmModalRef"
       class="modal-overlay"
       role="dialog"
       aria-modal="true"
@@ -628,6 +627,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { useFocusTrap } from "ui";
 
 const props = defineProps({
   subjectId: {
@@ -701,7 +701,31 @@ const adjudicationRationale = ref(
 const isSignoffModalOpen = ref(false);
 const isEdcModalOpen = ref(false);
 const isSdtmModalOpen = ref(false);
+const signoffModalRef = ref(null);
+const edcModalRef = ref(null);
+const sdtmModalRef = ref(null);
 const chairPassword = ref("");
+
+function closeSignoffModal() {
+  chairPassword.value = "";
+  isSignoffModalOpen.value = false;
+}
+
+useFocusTrap(signoffModalRef, isSignoffModalOpen, {
+  onEscape: closeSignoffModal,
+});
+
+useFocusTrap(edcModalRef, isEdcModalOpen, {
+  onEscape: () => {
+    isEdcModalOpen.value = false;
+  },
+});
+
+useFocusTrap(sdtmModalRef, isSdtmModalOpen, {
+  onEscape: () => {
+    isSdtmModalOpen.value = false;
+  },
+});
 
 // Computed properties
 const currentReaderStatus = computed(() => {

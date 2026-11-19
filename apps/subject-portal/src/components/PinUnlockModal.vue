@@ -1,14 +1,13 @@
 <template>
-  <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
   <div
     v-if="sessionStore.pinUnlock.isOpen"
     id="portal-pin-unlock-modal"
+    ref="modalRef"
     class="modal-overlay"
     role="dialog"
     aria-modal="true"
     aria-labelledby="pin-unlock-title"
     tabindex="-1"
-    @keydown="handleUnlockModalKeyDown"
   >
     <div class="modal">
       <div
@@ -182,7 +181,8 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, ref } from "vue";
+import { useFocusTrap } from "ui";
 
 import { logout } from "../features/auth.js";
 import {
@@ -195,10 +195,16 @@ import {
   requestPINReset,
 } from "../features/pin.js";
 import { useSessionStore } from "../stores/session.js";
-import { trapTabKey } from "./focus-trap.js";
 import SiteContactLinks from "./SiteContactLinks.vue";
 
+const modalRef = ref(null);
 const sessionStore = useSessionStore();
+
+useFocusTrap(modalRef, {
+  isOpen: () => sessionStore.pinUnlock.isOpen,
+  escapeDeactivates: false,
+  initialFocus: "#unlock-pin",
+});
 
 const maxAttempts = computed(
   () => sessionStore.pinUnlock.maxAttempts || MAX_PIN_UNLOCK_ATTEMPTS
@@ -227,10 +233,6 @@ const requiresIdentitySignIn = computed(() => {
     !hasVerifiedParticipantIdentity()
   );
 });
-
-function handleUnlockModalKeyDown(e) {
-  trapTabKey(e, "portal-pin-unlock-modal");
-}
 
 function handleSignOut() {
   logout();

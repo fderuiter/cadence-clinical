@@ -6,11 +6,18 @@
     class="modal-overlay"
     @click.self="close"
   >
-    <div class="modal dictionary-browser-modal">
+    <div
+      ref="modalRef"
+      class="modal dictionary-browser-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="dictionary-browser-modal-title"
+      tabindex="-1"
+    >
       <!-- Modal Header -->
       <div class="modal-header">
         <div class="header-titles">
-          <h3>
+          <h3 id="dictionary-browser-modal-title">
             {{
               selectedDictType === "MEDDRA"
                 ? "MedDRA Hierarchy Browser"
@@ -361,9 +368,11 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+import { useFocusTrap } from "ui";
 import { useCodingStore } from "../stores/coding";
 
 const codingStore = useCodingStore();
+const modalRef = ref(null);
 
 const searchTerm = ref("");
 const selectedDictType = ref("MEDDRA");
@@ -482,6 +491,11 @@ async function applySelectedCode() {
 function close() {
   codingStore.closeBrowser();
 }
+
+useFocusTrap(modalRef, {
+  isOpen: () => codingStore.browserModal.isOpen,
+  onEscape: close,
+});
 </script>
 
 <style scoped>

@@ -3,10 +3,12 @@
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div v-if="isOpen" class="export-drawer-overlay" @click.self="handleClose">
     <div
+      ref="drawerRef"
       class="export-drawer"
       role="dialog"
       aria-modal="true"
       aria-label="Study binder export progress"
+      tabindex="-1"
     >
       <div class="drawer-header">
         <div class="header-title-group">
@@ -158,10 +160,12 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, ref } from "vue";
+import { useFocusTrap } from "ui";
 import { useEtmfStore } from "../../stores/etmf.js";
 
 const store = useEtmfStore();
+const drawerRef = ref(null);
 
 const isOpen = computed(() => store.isExportDrawerOpen);
 const activeJob = computed(() => store.activeExportJob);
@@ -170,6 +174,11 @@ const exportJobs = computed(() => store.exportJobs);
 function handleClose() {
   store.toggleExportDrawer(false);
 }
+
+useFocusTrap(drawerRef, {
+  isOpen,
+  onEscape: handleClose,
+});
 
 function getStatusBadgeClass(status) {
   switch (status) {

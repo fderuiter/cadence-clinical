@@ -11,6 +11,7 @@
       <!-- Sliding Drawer Panel -->
       <div
         id="onboarding-checklist-drawer"
+        ref="drawerRef"
         class="drawer-panel"
         role="dialog"
         aria-modal="true"
@@ -167,8 +168,9 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted } from "vue";
+import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
+import { useFocusTrap } from "../composables/useFocusTrap";
 import {
   resolveAuthorizedTaskRoute,
   useOnboardingStore,
@@ -177,9 +179,15 @@ import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
 
+const drawerRef = ref(null);
 const onboardingStore = useOnboardingStore();
 const authStore = useAuthStore();
 const router = useRouter();
+
+useFocusTrap(drawerRef, {
+  isOpen: () => onboardingStore.isDrawerOpen,
+  onEscape: () => onboardingStore.closeDrawer(),
+});
 
 const effectiveRoles = computed(() => {
   if (authStore.rawRoles?.length > 0) {
@@ -238,20 +246,6 @@ function startGuidedTour() {
   onboardingStore.startTour();
   onboardingStore.closeDrawer();
 }
-
-function handleKeydown(e) {
-  if (e.key === "Escape" && onboardingStore.isDrawerOpen) {
-    onboardingStore.closeDrawer();
-  }
-}
-
-onMounted(() => {
-  window.addEventListener("keydown", handleKeydown);
-});
-
-onUnmounted(() => {
-  window.removeEventListener("keydown", handleKeydown);
-});
 </script>
 
 <style scoped>

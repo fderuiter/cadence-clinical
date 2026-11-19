@@ -6,11 +6,20 @@
     class="drawer-overlay"
     @click.self="close"
   >
-    <div class="drawer-panel">
+    <div
+      ref="drawerRef"
+      class="drawer-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="upversioning-impact-title"
+      tabindex="-1"
+    >
       <!-- Drawer Header -->
       <div class="drawer-header">
         <div class="header-titles">
-          <h3>Dictionary Up-Versioning Impact Analysis</h3>
+          <h3 id="upversioning-impact-title">
+            Dictionary Up-Versioning Impact Analysis
+          </h3>
           <p>
             Evaluate downstream recoding impact and structural changes before
             migrating active study dictionary versions.
@@ -231,10 +240,11 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { ModalErrorAlert } from "ui";
+import { ModalErrorAlert, useFocusTrap } from "ui";
 import { useCodingStore } from "../stores/coding";
 
 const codingStore = useCodingStore();
+const drawerRef = ref(null);
 
 const dictType = ref("MEDDRA");
 const targetVersion = ref("27.0");
@@ -286,6 +296,11 @@ async function runAnalysis() {
 function close() {
   codingStore.closeImpactDrawer();
 }
+
+useFocusTrap(drawerRef, {
+  isOpen: () => codingStore.impactAnalysis.isOpen,
+  onEscape: close,
+});
 </script>
 
 <style scoped>

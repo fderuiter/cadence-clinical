@@ -1,12 +1,13 @@
 <template>
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div v-if="isOpen" class="modal-backdrop" @click.self="close">
     <div
+      ref="modalRef"
       class="modal-dialog ticket-create-modal"
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-modal-title"
+      tabindex="-1"
     >
       <div class="modal-header">
         <div class="modal-header-icon">🎫</div>
@@ -246,6 +247,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
+import { useFocusTrap } from "ui";
 import { allowUnbackedAction } from "../../utils/unbackedActions.js";
 
 const props = defineProps({
@@ -269,6 +271,7 @@ const props = defineProps({
 
 const emit = defineEmits(["close", "created"]);
 
+const modalRef = ref(null);
 const loading = ref(false);
 const errorMessage = ref("");
 
@@ -325,6 +328,11 @@ const close = () => {
   errorMessage.value = "";
   emit("close");
 };
+
+useFocusTrap(modalRef, {
+  isOpen: () => props.isOpen,
+  onEscape: close,
+});
 
 const handleSubmit = async () => {
   if (!isFormValid.value) {

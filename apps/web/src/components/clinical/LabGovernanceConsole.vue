@@ -1187,6 +1187,7 @@
     <!-- MODAL: Ingest Laboratory Batch -->
     <div
       v-if="showIngestModal"
+      ref="ingestModalRef"
       class="modal-backdrop"
       role="dialog"
       aria-modal="true"
@@ -1295,6 +1296,7 @@
     <!-- MODAL: Investigator Sign-Off Action -->
     <div
       v-if="showActionModal && selectedReview"
+      ref="actionModalRef"
       class="modal-backdrop"
       role="dialog"
       aria-modal="true"
@@ -1394,6 +1396,7 @@
     <!-- MODAL: Bulk Laboratory Reference Range Import -->
     <div
       v-if="showBulkImportModal"
+      ref="bulkImportModalRef"
       class="modal-backdrop"
       role="dialog"
       aria-modal="true"
@@ -1612,6 +1615,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
+import { useFocusTrap } from "ui";
 
 // Active Tab State
 const activeTab = ref("ranges");
@@ -1653,6 +1657,29 @@ const ingestForm = ref({
 
 // Bulk Reference Range Import State
 const showBulkImportModal = ref(false);
+const ingestModalRef = ref(null);
+const actionModalRef = ref(null);
+const bulkImportModalRef = ref(null);
+
+useFocusTrap(ingestModalRef, showIngestModal, {
+  onEscape: () => {
+    showIngestModal.value = false;
+  },
+});
+
+useFocusTrap(
+  actionModalRef,
+  computed(() => Boolean(showActionModal.value && selectedReview.value)),
+  {
+    onEscape: () => {
+      showActionModal.value = false;
+    },
+  }
+);
+
+useFocusTrap(bulkImportModalRef, showBulkImportModal, {
+  onEscape: () => closeBulkImportModal(),
+});
 const isDryRunning = ref(false);
 const isCommitting = ref(false);
 const dryRunResult = ref(null);

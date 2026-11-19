@@ -1306,9 +1306,18 @@
 
     <!-- Forensics Dossier Modal -->
     <div v-if="showDossierModal" class="modal-backdrop">
-      <div class="dossier-modal" role="dialog">
+      <div
+        ref="dossierModalRef"
+        class="dossier-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dossier-modal-title"
+        tabindex="-1"
+      >
         <div class="modal-header">
-          <h3>21 CFR Part 11 Centralized Monitoring Inspection Snapshot</h3>
+          <h3 id="dossier-modal-title">
+            21 CFR Part 11 Centralized Monitoring Inspection Snapshot
+          </h3>
           <button class="close-btn" @click="showDossierModal = false">
             &times;
           </button>
@@ -1366,6 +1375,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
+import { useFocusTrap } from "ui";
 
 const availableStudies = ref([
   "STUDY-ONC-2026",
@@ -1377,6 +1387,13 @@ const activeSubTab = ref("overview");
 const isLoading = ref(false);
 const showOnlyOutliers = ref(false);
 const showDossierModal = ref(false);
+const dossierModalRef = ref(null);
+useFocusTrap(dossierModalRef, {
+  isOpen: showDossierModal,
+  onEscape: () => {
+    showDossierModal.value = false;
+  },
+});
 const selectedDrilldownSiteId = ref("");
 
 const activeRun = ref(null);

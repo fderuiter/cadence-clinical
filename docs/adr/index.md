@@ -430,6 +430,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2154: Dynamic Hover Pointer Capability Detection & Touch-Safe Glossary Fallbacks](2026-08-28-dynamic-hover-detection-and-touch-safe-glossary-fallbacks.md) (2026-08-28)
 - [ADR-2424: Vue SPA Foundation and Tooling Setup](2026-08-30-vue-spa-foundation-tooling.md) (2026-08-30)
 - [ADR-328: Preservation of CDASH Type Definition Pristine State](2026-09-11-preservation-of-cdash-type-definition-pristine-state.md) (2026-09-11)
+- [ADR-2544: Shared Reactive Focus Containment and Global Reduced-Motion Tokens](2026-11-19-shared-reactive-focus-containment-and-reduced-motion-tokens.md) (2026-11-19)
 
 ### 7. DevOps, Tooling & CI/CD
 

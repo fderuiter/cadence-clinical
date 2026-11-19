@@ -3,10 +3,12 @@
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div v-if="isOpen" class="modal-backdrop" @click.self="close">
     <div
+      ref="modalRef"
       class="modal-dialog ticket-sign-modal"
       role="dialog"
       aria-modal="true"
       aria-labelledby="sign-modal-title"
+      tabindex="-1"
     >
       <div class="modal-header">
         <div class="modal-header-icon">✍️</div>
@@ -109,7 +111,7 @@
           />
         </div>
 
-        <div v-if="errorMessage" class="error-banner">
+        <div v-if="errorMessage" class="error-banner" role="alert">
           ⚠️ {{ errorMessage }}
         </div>
       </div>
@@ -129,7 +131,7 @@
           :disabled="loading || !password.trim()"
           @click="handleSign"
         >
-          <span v-if="loading" class="spinner" />
+          <span v-if="loading" class="spinner" aria-hidden="true" />
           <span v-else>✍️ Sign &amp; Authorize</span>
         </button>
       </div>
@@ -139,6 +141,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { useFocusTrap } from "ui";
 import { useAuthStore } from "../../stores/auth";
 import { allowUnbackedAction } from "../../utils/unbackedActions.js";
 
@@ -156,6 +159,7 @@ const props = defineProps({
 const emit = defineEmits(["close", "signed"]);
 
 const authStore = useAuthStore();
+const modalRef = ref(null);
 const meaning = ref(
   "I approve the clinical assessment and corrective medical action."
 );
@@ -176,6 +180,11 @@ const close = () => {
   errorMessage.value = "";
   emit("close");
 };
+
+useFocusTrap(modalRef, {
+  isOpen: () => props.isOpen,
+  onEscape: close,
+});
 
 const handleSign = async () => {
   if (!password.value.trim()) {

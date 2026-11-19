@@ -202,13 +202,13 @@
 import { ref } from "vue";
 import { useAuditorStore } from "../../stores/auditor";
 import { useFocusTrap } from "@/composables/useFocusTrap";
-import { useEscapeClose } from "@/composables/useEscapeClose";
 
 const emit = defineEmits(["close"]);
 
 const modalRef = ref(null);
-useFocusTrap(modalRef);
-useEscapeClose(() => emit("close"));
+useFocusTrap(modalRef, {
+  onEscape: () => emit("close"),
+});
 
 const auditorStore = useAuditorStore();
 
