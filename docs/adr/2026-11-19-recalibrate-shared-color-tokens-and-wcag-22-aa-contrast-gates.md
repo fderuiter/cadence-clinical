@@ -1,4 +1,4 @@
-# ADR-2816: Recalibrate Shared Color Tokens and WCAG 2.2 AA Contrast Gates
+# ADR-2817: Recalibrate Shared Color Tokens and WCAG 2.2 AA Contrast Gates
 
 - **Status:** Accepted
 - **Date:** 2026-11-19

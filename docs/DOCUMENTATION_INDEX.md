@@ -559,7 +559,8 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2602: Multi-Repository Ownership and Kernel Package Boundaries](adr/2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md) | Current | Kernel boundaries and accepted ownership decisions. Source repository split superseded by ADR-2603. |
 | [ADR-2603: Keep Cadence in One Repository](adr/2026-11-19-keep-cadence-in-one-repository.md) | Current | Single-repository development and integration for the modular monolith |
 | [ADR-2544: Shared Reactive Focus Containment and Global Reduced-Motion Tokens](adr/2026-11-19-shared-reactive-focus-containment-and-reduced-motion-tokens.md) | Current | - Status: Accepted |
-| [ADR-2816: Recalibrate Shared Color Tokens and WCAG 2.2 AA Contrast Gates](adr/2026-11-19-recalibrate-shared-color-tokens-and-wcag-22-aa-contrast-gates.md) | Current | - Status: Accepted |
+| [ADR-2816: Retire Orphaned Legacy Web Type Schemas](adr/2026-11-19-retire-orphaned-legacy-web-type-schemas.md) | Current | - Status: Accepted |
+| [ADR-2817: Recalibrate Shared Color Tokens and WCAG 2.2 AA Contrast Gates](adr/2026-11-19-recalibrate-shared-color-tokens-and-wcag-22-aa-contrast-gates.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
