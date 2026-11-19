@@ -6,11 +6,11 @@ namespace Cadence.Cli.Services;
 
 public static class GxPComplianceService
 {
-    /// <summary><c>gxp sync</c>: runs the tests and validates tags and results on a feature branch; writes only a preview (ADR-2532).</summary>
-    public static int SyncCompliance(bool dryRun = false)
+    /// <summary><c>gxp sync</c>: runs the tests (or reuses <paramref name="resultsDir"/>) and validates tags and results on a feature branch; writes only a preview (ADR-2532).</summary>
+    public static int SyncCompliance(bool dryRun = false, string? resultsDir = null)
     {
         AnsiConsole.MarkupLine("[cyan]Validating GxP traceability on this branch (PRD-SYS-053)...[/]\n");
-        return Report(SyncGxPService.SyncCompliance(dryRun: dryRun));
+        return Report(SyncGxPService.SyncCompliance(dryRun: dryRun, resultsDir: resultsDir));
     }
 
     /// <summary><c>gxp snapshot</c>: the integration owner's command that writes and stages the RTM and IQ/OQ/PQ report.</summary>

@@ -517,6 +517,7 @@ jobs:
           --health-retries 10
     env:
       CADENCE_TEST_POSTGRES: Host=localhost;Port=5432;Database=cadence;Username=cadence
+      CADENCE_TEST_EVIDENCE_DIR: ${{ github.workspace }}/TestResults/gxp
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -549,7 +550,9 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: trx-report-dotnet
-          path: tests/**/TestResults/*.trx
+          path: |
+            tests/**/TestResults/*.trx
+            TestResults/gxp/*.database.txt
 
       # A database test that did not execute is skipped, not passed: the fixtures report it as NotExecuted when
       # CADENCE_TEST_POSTGRES is missing (#5325). test_outcome above waits on this step, so the compliance job is
@@ -658,10 +661,16 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Download .NET Test Evidence
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: trx-report-dotnet
+          path: TestResults/gxp
+
       - name: Generate Compliance Reports
         # A feature branch validates its requirement tags and results and writes a preview; it never changes the
         # committed snapshot (ADR-2532). Snapshot PRs from the integration owner set CADENCE_GXP_SNAPSHOT=1.
-        run: node scripts/run-cli.js gxp sync
+        run: node scripts/run-cli.js gxp sync --results-dir TestResults/gxp
 
       - name: Check GxP Snapshot Policy
         run: node scripts/run-cli.js check gxp-snapshot
@@ -776,13 +785,3 @@ jobs:
     needs: [dotnet-quality, security, container-security, compliance]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/production-pipeline.yml
-
-  deploy-docs:
-    name: Call Deploy Docs
-    needs: [release-and-archive]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    uses: ./.github/workflows/deploy-docs.yml

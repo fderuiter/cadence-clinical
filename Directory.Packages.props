@@ -24,13 +24,13 @@
     <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.19.1-beta.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.19.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.19.0" />
-    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.15" />
 
     <!-- Aspire AppHost & Orchestration -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="17.0.0" />
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="17.0.0" />
-    <PackageVersion Include="Aspire.Hosting.JavaScript" Version="17.0.0" />
-    <PackageVersion Include="Aspire.Hosting.Testing" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.JavaScript" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.5" />
 
     <!-- Persistence & Database Drivers -->
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
@@ -69,13 +69,13 @@
 
     <!-- AI model port and providers (ADR-2630) -->
     <PackageVersion Include="Anthropic" Version="13.10.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="10.11.0" />
     <PackageVersion Include="Anthropic.Aws" Version="1.0.1" />
     <PackageVersion Include="Anthropic.Bedrock" Version="1.0.4" />
     <PackageVersion Include="Anthropic.Foundry" Version="1.0.0" />
     <PackageVersion Include="Anthropic.Vertex" Version="1.0.3" />
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.11.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.11.0" />
 
     <!-- Resilience & HTTP Clients -->
     <PackageVersion Include="Polly" Version="8.5.2" />
@@ -91,7 +91,7 @@
     <PackageVersion Include="AWSSDK.S3" Version="4.1.2" />
 
     <!-- Analyzers & Code Quality -->
-    <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="11.0.100" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" />
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.6.0.109712" />
     <!-- #4784 K-TIME-3: bans direct wall-clock reads (see BannedSymbols.txt); referenced solution-wide in root Directory.Build.props. -->
     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />
