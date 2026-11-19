@@ -64,7 +64,7 @@
             :disabled="busy"
           >
             <option value="" disabled>-- Select Meaning / Reason --</option>
-            <option v-for="r in reasons" :key="r" :value="r">
+            <option v-for="r in availableReasons" :key="r" :value="r">
               {{ r }}
             </option>
           </select>
@@ -75,7 +75,7 @@
           :error="error"
           retry-label="Retry"
           dismiss-label="Dismiss"
-          @retry="confirm"
+          @retry="handleRetry"
           @dismiss="error = ''"
         />
       </div>
@@ -101,47 +101,34 @@
   </div>
 </template>
 
+<script>
+export const SHARED_SIGNATURE_MODAL_PROPS = {
+  username: { type: String, default: "" },
+  signerName: { type: String, default: "" },
+  signerRole: { type: String, default: "" },
+  role: { type: String, default: "Subject" },
+  semanticAction: { type: String, default: "" },
+  onSign: { type: Function, default: null },
+  reasons: { type: Array, default: null },
+};
+</script>
+
 <script setup>
-import { ref, watch, inject } from "vue";
+import { computed, ref, watch, inject } from "vue";
 import { ModalErrorAlert } from "ui";
 import { useFocusTrap } from "@/composables/useFocusTrap";
 import { useEscapeClose } from "@/composables/useEscapeClose";
 import GxpCredentialsInput from "./GxpCredentialsInput.vue";
 
 const props = defineProps({
+  ...SHARED_SIGNATURE_MODAL_PROPS,
   isOpen: {
     type: Boolean,
     required: true,
   },
-  username: {
-    type: String,
-    default: "",
-  },
-  signerName: {
-    type: String,
-    default: "",
-  },
-  signerRole: {
-    type: String,
-    default: "",
-  },
-  role: {
-    type: String,
-    default: "Subject",
-  },
   actionUrl: {
     type: String,
     required: true,
-  },
-  semanticAction: {
-    type: String,
-    default: "",
-  },
-  // async callback to handle the final sign request using sigToken and signingReason
-  // e.g., (sigToken, signingReason, metadata) => Promise<any>
-  onSign: {
-    type: Function,
-    default: null,
   },
 });
 
@@ -163,7 +150,7 @@ const error = ref("");
 // Inject dynamic decoupled signature service
 const signatureService = inject("signatureService", null);
 
-const reasons = [
+const DEFAULT_REASONS = [
   "I agree to participate",
   "Investigator Certification",
   "I have read, understood, and agree to participate in this research study",
@@ -177,6 +164,18 @@ const reasons = [
   "DATA_LOCK",
   "SYSTEM_SEAL",
 ];
+
+const availableReasons = computed(() =>
+  Array.isArray(props.reasons) && props.reasons.length > 0
+    ? props.reasons
+    : DEFAULT_REASONS
+);
+
+watch(availableReasons, (nextReasons) => {
+  if (signingReason.value && !nextReasons.includes(signingReason.value)) {
+    signingReason.value = "";
+  }
+});
 
 watch(
   () => props.isOpen,
@@ -224,6 +223,49 @@ function cancel() {
   error.value = "";
   busy.value = false;
   emit("cancel");
+}
+
+function focusModalField(selector) {
+  const el =
+    modalRef.value?.querySelector(selector) ||
+    (typeof document !== "undefined" ? document.querySelector(selector) : null);
+  if (el && typeof el.focus === "function") {
+    el.focus();
+  }
+}
+
+async function handleRetry() {
+  if (!usernameVal.value) {
+    focusModalField("#sig-username");
+    return;
+  }
+  if (!password.value) {
+    focusModalField("#sig-password");
+    return;
+  }
+  await confirm();
+}
+
+function isFailedSignoffOutcome(result) {
+  if (result === false) return true;
+  if (!result || typeof result !== "object") return false;
+  if (result.error || result.persisted === false) return true;
+  if (
+    typeof result.kind === "string" &&
+    result.kind !== "signed" &&
+    result.kind !== "saved"
+  ) {
+    return true;
+  }
+  if (
+    typeof result.status === "string" &&
+    ["FAILED", "ERROR", "REJECTED", "DENIED"].includes(
+      result.status.toUpperCase()
+    )
+  ) {
+    return true;
+  }
+  return false;
 }
 
 async function confirm() {
@@ -285,6 +327,14 @@ async function confirm() {
 
     if (props.onSign) {
       signoffResult = await props.onSign(sigToken, r, metadata);
+      if (isFailedSignoffOutcome(signoffResult)) {
+        const failureMsg =
+          (signoffResult &&
+            typeof signoffResult === "object" &&
+            (signoffResult.message || signoffResult.error)) ||
+          "Signature action could not be completed.";
+        throw new Error(String(failureMsg));
+      }
     } else {
       // Extract document ID from actionUrl if possible, or assume it's handled by caller
       const docIdMatch = props.actionUrl.match(
@@ -362,15 +412,12 @@ defineExpose({
 
 <style scoped>
 .modal-overlay {
-  display: flex;
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
   z-index: 1000;
 }
 
@@ -420,29 +467,22 @@ label {
 }
 
 select {
+  box-sizing: border-box;
   width: 100%;
   padding: 8px;
+  font-size: 13px;
+  background: #ffffff;
   border: 1px solid #cbd5e1;
   border-radius: 4px;
-  font-size: 13px;
-  background: white;
-  box-sizing: border-box;
-}
-
-.error-msg {
-  margin-top: 8px;
-  color: #ef4444;
-  font-size: 13px;
-  font-weight: 500;
 }
 
 .modal-footer {
-  padding: 12px 16px;
-  border-top: 1px solid #e2e8f0;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+  padding: 12px 16px;
   background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
 }
 
 .btn {

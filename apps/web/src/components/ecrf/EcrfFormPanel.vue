@@ -518,7 +518,10 @@
       <SignatureCaptureModal
         v-if="showSignModal"
         :is-open="showSignModal"
+        :username="signerUsername"
+        :signer-name="signerFullName"
         signer-role="Investigator"
+        :reasons="ECRF_INVESTIGATOR_REASONS"
         :action-url="formSignatureAction(form.form_id)"
         :semantic-action="FORM_SIGN_SEMANTIC_ACTION"
         :on-sign="signWithToken"
@@ -548,6 +551,7 @@ import {
   type EcrfUnsavedItem,
 } from "../../composables/useEcrfForm";
 import { isLiveQuery, useFormQueries } from "../../composables/useFormQueries";
+import { useAuthStore } from "../../stores/auth.js";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import FormQueryList from "./FormQueryList.vue";
 
@@ -681,6 +685,26 @@ async function reloadAfterStale() {
 // this form's signing URL, and the signature binds the form's content hash as it was read.
 const signMeaning = ref<EcrfSignatureMeaning>("approved");
 const showSignModal = ref(false);
+const authStore = useAuthStore();
+
+const ECRF_INVESTIGATOR_REASONS = [
+  "Investigator Certification",
+  "INVESTIGATOR_SIGNATURE",
+  "APPROVAL",
+  "CLINICAL_QC",
+  "REVIEW",
+];
+
+const signerUsername = computed(() => authStore.identity?.username ?? "");
+const signerFullName = computed(() => {
+  const identity = authStore.identity;
+  if (!identity) return "";
+  const fullName = [identity.firstName, identity.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return fullName || identity.username || "";
+});
 
 const MEANING_LABELS: Record<string, string> = {
   approved: "Approved",
@@ -715,7 +739,11 @@ function changedSince(signed: EcrfFormSignedValue): boolean {
 
 /** The signature dialog's callback: it has the step-up token and the signing reason the user chose. */
 async function signWithToken(sigToken: string, signingReason: string) {
-  return sign(signMeaning.value, sigToken, signingReason);
+  const result = await sign(signMeaning.value, sigToken, signingReason);
+  if (!result || result.kind !== "signed") {
+    throw new Error(result?.message ?? "The form could not be signed.");
+  }
+  return result;
 }
 
 async function submit() {

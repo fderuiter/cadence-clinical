@@ -937,6 +937,13 @@ describe("EcrfFormPanel: signing a form (#5463)", () => {
       `/api/v1/execution/forms/${FORM_ID}/signatures`
     );
     expect(modal.props("semanticAction")).toBe("execution.form.sign");
+    expect(modal.props("reasons")).toEqual([
+      "Investigator Certification",
+      "INVESTIGATOR_SIGNATURE",
+      "APPROVAL",
+      "CLINICAL_QC",
+      "REVIEW",
+    ]);
     const [formId, request, sigToken, reason, key] = vi.mocked(
       ecrfFormsApi.signForm
     ).mock.calls[0];
@@ -988,7 +995,18 @@ describe("EcrfFormPanel: signing a form (#5463)", () => {
     );
     const view = await mountWith();
 
-    await signThroughDialog(view);
+    const { modal, result } = await signThroughDialog(view);
+    expect(await result).toBeInstanceOf(Error);
+    expect(String(await result)).toContain(
+      "This form changed after you opened it"
+    );
+
+    // Dismissing the modal leaves the reload banner visible on the form panel.
+    modal.vm.$emit("cancel");
+    await nextTick();
+    expect(view.findComponent({ name: "SignatureCaptureModal" }).exists()).toBe(
+      false
+    );
 
     const outcome = view.find('[data-testid="ecrf-sign-outcome"]');
     expect(outcome.attributes("role")).toBe("alert");
@@ -1000,7 +1018,7 @@ describe("EcrfFormPanel: signing a form (#5463)", () => {
     expect(view.find('[data-testid="ecrf-sign-outcome"]').exists()).toBe(false);
   });
 
-  it("says the user may not sign (403)", async () => {
+  it("says the user may not sign (403) and rejects signWithToken so the modal does not close on error", async () => {
     vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
     vi.mocked(ecrfFormsApi.signForm).mockRejectedValue(
       new ApiError("Forbidden", 403, "Forbidden", {
@@ -1009,12 +1027,56 @@ describe("EcrfFormPanel: signing a form (#5463)", () => {
     );
     const view = await mountWith();
 
-    await signThroughDialog(view);
+    const { result } = await signThroughDialog(view);
 
+    expect(await result).toBeInstanceOf(Error);
+    expect(String(await result)).toContain(
+      "You are not authorised to sign this form"
+    );
     expect(view.find('[data-testid="ecrf-sign-outcome"]').text()).toContain(
       "You are not authorised to sign this form"
     );
     expect(view.find("#ecrf-sign-reload").exists()).toBe(false);
+  });
+
+  it("prefills signer identity from auth store and surfaces 500 errors inline in SignatureCaptureModal", async () => {
+    const auth = useAuthStore();
+    auth.setAuth({
+      authenticated: true,
+      token: "token-pi-1", // pragma: allowlist secret
+      tokenParsed: {
+        sub: "pi-1",
+        preferred_username: "pi.investigator",
+        given_name: "Alex", // deid-ignore
+        family_name: "Investigator", // deid-ignore
+        tenant_id: "tenant-1",
+        realm_access: { roles: ["Site Investigator"] },
+      },
+    });
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
+    vi.mocked(ecrfFormsApi.signForm).mockRejectedValue(
+      new ApiError("Kernel storage unavailable", 500, "Internal Server Error")
+    );
+
+    const view = await mountWith();
+    await view.find("#ecrf-form-sign").trigger("click");
+
+    const modal = view.findComponent({ name: "SignatureCaptureModal" });
+    expect(modal.exists()).toBe(true);
+    expect(modal.props("username")).toBe("pi.investigator");
+    expect(modal.props("signerName")).toBe("Alex Investigator"); // deid-ignore
+    expect(modal.props("reasons")).not.toContain("I agree to participate");
+
+    const onSign = modal.props("onSign") as (
+      token: string,
+      reason: string
+    ) => Promise<unknown>;
+    await expect(
+      onSign("sig-token-500", "Investigator Certification")
+    ).rejects.toThrow("Kernel storage unavailable");
+    expect(view.find('[data-testid="ecrf-sign-outcome"]').text()).toContain(
+      "Kernel storage unavailable"
+    );
   });
 
   it("hands a refused step-up token (401) back to the signature dialog", async () => {
