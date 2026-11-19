@@ -81,7 +81,7 @@
     }
   },
   "ecrf": {
-    "title": "Rendu eCRF en temps d'exécution",
+    "title": "Collecte de données",
     "description": "Formulaire de saisie de données dynamique en direct rempli à partir des métadonnées CDASH avec validation des champs côté client et gestion des demandes en temps réel.",
     "activeRole": "Rôle actif :",
     "ehrReconciliation": "Rapprochement des sources EHR",
@@ -107,7 +107,7 @@
       "visitWeek2": "Traitement Semaine 2",
       "visitWeek4": "Traitement Semaine 4",
       "noSubjects": "Aucun sujet répertorié",
-      "trainingGatedTitle": "Formation obligatoire sur le protocole incomplète — Écriture EDC bloquée",
+      "trainingGatedTitle": "Formation obligatoire sur le protocole incomplète — Saisie des données bloquée",
       "trainingGatedDesc": "Selon ICH GCP E6(R2) §4 & PRD-TRN-002, le personnel du site doit suivre la formation obligatoire sur l'amendement du protocole avant d'enregistrer ou de signer des entrées eCRF.",
       "completeTrainingNow": "Suivre la formation maintenant ➡️",
       "reconsentGatedTitle": "Amendement de protocole actif (v2.0.0) — Re-consentement requis",

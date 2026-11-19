@@ -34,6 +34,7 @@ describe("Vue SPA Smoke Tests", () => {
   it("mounts the root App.vue component with router and pinia", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
+    signInAs(useAuthStore(), ["Sponsor Admin"]);
 
     const wrapper = mount(App, {
       global: {
@@ -42,7 +43,9 @@ describe("Vue SPA Smoke Tests", () => {
     });
 
     expect(wrapper.text()).toContain("Cadence");
-    expect(wrapper.text()).toContain("Execution & EDC");
+    expect(wrapper.text()).toContain("Studies");
+    expect(wrapper.text()).toContain("Data collection");
+    expect(wrapper.text()).not.toContain("Execution & EDC");
     // No design screen has a .NET backend yet (#4829).
     expect(wrapper.text()).not.toContain("Design & Metadata");
   });
@@ -71,7 +74,7 @@ describe("Vue SPA Smoke Tests", () => {
       },
     });
 
-    expect(wrapper.html()).toContain("eCRF Runtime Renderer");
+    expect(wrapper.html()).toContain("Data collection");
     expect(wrapper.html()).toContain("Subject eCRF Data Entry Form");
   });
 
@@ -86,7 +89,7 @@ describe("Vue SPA Smoke Tests", () => {
       },
     });
 
-    expect(wrapper.html()).toContain("Clinical Trial Management System (CTMS)");
+    expect(wrapper.html()).toContain("Site readiness");
     expect(wrapper.html()).toContain("Site Operational Milestones");
   });
 

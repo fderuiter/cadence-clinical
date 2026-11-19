@@ -476,4 +476,72 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       // default 5s timeout on a loaded machine.
     }, 20000);
   });
+
+  describe("5. Ticket Escalation Refusal Outside Demo Mode", () => {
+    it("blocks unbacked support ticket escalation outside demo mode with an explicit alert while preserving user input", async () => {
+      vi.stubEnv("VITE_DEMO_MODE", "false");
+      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
+        mockResolvedSop
+      );
+
+      await knowledgeStore.fetchContextualHelp("/ecrf", "site_crc");
+      knowledgeStore.openDrawer();
+
+      const wrapper = mount(ContextualHelpDrawer, {
+        global: {
+          plugins: [pinia, router],
+        },
+      });
+
+      await wrapper.find(".btn-escalate").trigger("click");
+      expect(knowledgeStore.isEscalating).toBe(true);
+
+      const titleInput = wrapper.find("#ticket-title");
+      const descInput = wrapper.find("#ticket-desc");
+      await titleInput.setValue("Site 102 blood pressure field locked");
+      await descInput.setValue("Coordinator cannot enter systolic value.");
+
+      await wrapper.find("#btn-submit-ticket").trigger("click");
+      await wrapper.vm.$nextTick();
+
+      const refusalBanner = wrapper.find("#ticket-escalation-refusal");
+      expect(refusalBanner.exists()).toBe(true);
+      expect(refusalBanner.attributes("role")).toBe("alert");
+      expect(refusalBanner.text()).toContain(
+        "Support ticket escalation isn't available yet"
+      );
+      expect(knowledgeStore.isEscalating).toBe(true);
+      expect(wrapper.find("#ticket-title").element.value).toBe(
+        "Site 102 blood pressure field locked"
+      );
+      expect(wrapper.find("#ticket-desc").element.value).toBe(
+        "Coordinator cannot enter systolic value."
+      );
+    });
+
+    it("allows demo-mode support ticket escalation simulation without error banner", async () => {
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
+        mockResolvedSop
+      );
+
+      await knowledgeStore.fetchContextualHelp("/ecrf", "site_crc");
+      knowledgeStore.openDrawer();
+
+      const wrapper = mount(ContextualHelpDrawer, {
+        global: {
+          plugins: [pinia, router],
+        },
+      });
+
+      await wrapper.find(".btn-escalate").trigger("click");
+      await wrapper.find("#ticket-title").setValue("Demo ticket");
+      await wrapper.find("#ticket-desc").setValue("Demo description");
+      await wrapper.find("#btn-submit-ticket").trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find("#ticket-escalation-refusal").exists()).toBe(false);
+      expect(knowledgeStore.isEscalating).toBe(false);
+    });
+  });
 });

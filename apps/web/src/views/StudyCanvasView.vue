@@ -1,8 +1,19 @@
 <template>
-  <div id="study-canvas" class="canvas">
-    <a class="skip-link" href="#canvas-workspace">Skip to workspace</a>
+  <div
+    id="study-canvas"
+    class="canvas"
+    :class="{ 'canvas-in-shell': inAppShell }"
+  >
+    <a v-if="!inAppShell" class="skip-link" href="#canvas-workspace"
+      >Skip to workspace</a
+    >
 
-    <header class="topbar">
+    <component
+      :is="inAppShell ? 'div' : 'header'"
+      class="topbar"
+      :role="inAppShell ? 'region' : undefined"
+      :aria-label="inAppShell ? 'Study context' : undefined"
+    >
       <nav class="zoom-path" aria-label="Zoom path">
         <ol>
           <li>
@@ -53,6 +64,7 @@
       </nav>
 
       <button
+        v-if="!inAppShell"
         id="btn-open-palette"
         type="button"
         class="palette-trigger"
@@ -78,7 +90,7 @@
         already made still wait for a decision in Needs attention.
       </span>
 
-      <div class="user">
+      <div v-if="!inAppShell" class="user">
         <span id="canvas-user">{{
           authStore.identity?.username || "Signed in"
         }}</span>
@@ -91,7 +103,7 @@
           Sign out
         </button>
       </div>
-    </header>
+    </component>
 
     <template v-if="studyCode">
       <div class="study-header">
@@ -151,9 +163,11 @@
           </div>
         </nav>
 
-        <main
+        <component
+          :is="inAppShell ? 'div' : 'main'"
           id="canvas-workspace"
           class="workspace"
+          :role="inAppShell ? 'region' : undefined"
           tabindex="-1"
           :aria-label="workspaceLabel"
         >
@@ -253,7 +267,7 @@
               >.
             </p>
           </section>
-        </main>
+        </component>
 
         <CanvasInspector
           :study-code="studyCode"
@@ -273,7 +287,15 @@
       </div>
     </template>
 
-    <main v-else id="canvas-workspace" class="open-study" tabindex="-1">
+    <component
+      :is="inAppShell ? 'div' : 'main'"
+      v-else
+      id="canvas-workspace"
+      class="open-study"
+      :role="inAppShell ? 'region' : undefined"
+      :aria-label="inAppShell ? 'Open a study' : undefined"
+      tabindex="-1"
+    >
       <h1 id="canvas-study-title">Open a study</h1>
       <form
         id="open-study-form"
@@ -301,10 +323,10 @@
       <p class="open-study-note">
         No service lists studies yet, so a study is opened by its code.
       </p>
-    </main>
+    </component>
 
     <CanvasPalette
-      v-if="paletteOpen"
+      v-if="!inAppShell && paletteOpen"
       :study-code="studyCode"
       :participants="canvas.participants"
       @close="paletteOpen = false"
@@ -314,7 +336,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import {
+  computed,
+  inject,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch,
+} from "vue";
 import { useRoute, useRouter, type LocationQueryRaw } from "vue-router";
 import type { SubjectSummary } from "../api/executionApi";
 import { kernelApi, type KernelProtocolVersion } from "../api/kernelApi";
@@ -373,6 +403,7 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const canvas = useStudyCanvasStore();
+const inAppShell = inject<boolean>("inAppShell", false);
 
 const { enabled: aiEnabled, setEnabled: setAiEnabled } = useAiAssistance();
 
@@ -639,13 +670,18 @@ watch(
 );
 
 function onGlobalKeydown(event: KeyboardEvent) {
+  if (inAppShell) return;
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
     paletteOpen.value = !paletteOpen.value;
   }
 }
 
-onMounted(() => document.addEventListener("keydown", onGlobalKeydown));
+onMounted(() => {
+  if (!inAppShell) {
+    document.addEventListener("keydown", onGlobalKeydown);
+  }
+});
 onUnmounted(() => document.removeEventListener("keydown", onGlobalKeydown));
 </script>
 
@@ -657,6 +693,10 @@ onUnmounted(() => document.removeEventListener("keydown", onGlobalKeydown));
   background: var(--semantic-color-surface-muted, #f8fafc);
   color: var(--primary);
   font-family: var(--font);
+}
+
+.canvas.canvas-in-shell {
+  min-height: calc(100vh - 57px);
 }
 
 .skip-link {

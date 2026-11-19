@@ -2,10 +2,10 @@
   <div id="section-ctms" class="dashboard-section active">
     <!-- Header Section -->
     <div class="section-header">
-      <h2>Clinical Trial Management System (CTMS)</h2>
+      <h2>Site readiness</h2>
       <p>
         Monitor operational site status, track site lifecycle milestones,
-        recruitment metrics, and coordinate CRA workloads.
+        recruitment metrics, and coordinate site readiness workflows.
       </p>
     </div>
 
@@ -3434,24 +3434,21 @@ async function approveAdjustment(adj) {
 .modal-overlay {
   display: flex;
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
   align-items: center;
   justify-content: center;
   z-index: 1000;
 }
 
 .modal {
-  background: white;
+  background: #ffffff;
   border-radius: 8px;
   width: 100%;
   max-width: 500px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
   overflow: hidden;
-  color: #333;
+  color: #1e293b;
 }
 
 .modal-header {
@@ -3499,9 +3496,9 @@ textarea {
 }
 
 .error-msg {
-  margin-top: 8px;
-  color: #ef4444;
-  font-size: 13px;
+  margin: 8px 0 0;
+  color: #dc2626;
+  font-size: 0.82rem;
   font-weight: 500;
 }
 
@@ -3511,14 +3508,14 @@ textarea {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted, #f8fafc);
 }
 
 .btn {
   padding: 6px 12px;
-  font-size: 13px;
+  font-size: 0.82rem;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 6px;
   font-weight: 500;
 }
 

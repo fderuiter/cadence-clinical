@@ -175,7 +175,7 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       expect(router.currentRoute.value.path).toBe("/ecrf");
     });
 
-    it("should land TMF Auditor on /unavailable when bypass preference is set while no auditor screen has a .NET backend", async () => {
+    it("should land TMF Auditor on /studies when bypass preference is set", async () => {
       const authStore = useAuthStore();
       const onboardingStore = useOnboardingStore();
       authStore.isAuthenticated = true;
@@ -183,11 +183,10 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       onboardingStore.setBypassOverview(true);
 
       await router.push("/");
-      expect(router.currentRoute.value.path).toBe("/unavailable");
-      expect(router.currentRoute.value.query.screen).toBeUndefined();
+      expect(router.currentRoute.value.path).toBe("/studies");
     });
 
-    it("should land Study Designer on /unavailable when bypass preference is set while no designer screen has a .NET backend", async () => {
+    it("should land Study Designer on /studies when bypass preference is set", async () => {
       const authStore = useAuthStore();
       const onboardingStore = useOnboardingStore();
       authStore.isAuthenticated = true;
@@ -195,7 +194,39 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       onboardingStore.setBypassOverview(true);
 
       await router.push("/");
-      expect(router.currentRoute.value.path).toBe("/unavailable");
+      expect(router.currentRoute.value.path).toBe("/studies");
+    });
+
+    it("routes all six clinical personas from / to live authorized workspaces without hitting /unavailable or /forbidden", async () => {
+      const cases = [
+        { role: "Sponsor Admin", expectedBypassPath: "/ecrf" },
+        { role: "Study Designer", expectedBypassPath: "/studies" },
+        { role: "Data Manager", expectedBypassPath: "/ecrf" },
+        { role: "CRC", expectedBypassPath: "/ecrf" },
+        { role: "CRA", expectedBypassPath: "/ctms" },
+        { role: "Auditor", expectedBypassPath: "/studies" },
+      ];
+
+      for (const { role, expectedBypassPath } of cases) {
+        const authStore = useAuthStore();
+        const onboardingStore = useOnboardingStore();
+        authStore.isAuthenticated = true;
+        authStore.rawRoles = [role];
+
+        onboardingStore.setBypassOverview(false);
+        await router.push("/login");
+        await router.push("/");
+        expect(router.currentRoute.value.path, `${role} default`).toBe(
+          "/overview"
+        );
+
+        onboardingStore.setBypassOverview(true);
+        await router.push("/login");
+        await router.push("/");
+        expect(router.currentRoute.value.path, `${role} bypass`).toBe(
+          expectedBypassPath
+        );
+      }
     });
   });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { mount } from "@vue/test-utils";
+import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { router } from "../src/router";
 import { useAuthStore } from "../src/stores/auth";
@@ -54,7 +54,7 @@ describe("Screen availability", () => {
     }
   });
 
-  it("shows only available screens in the sidebar, even for an admin", () => {
+  it("shows only live UX-1 workflow destinations in primary navigation, without a legacy sidebar", () => {
     signInAsSuperAdmin();
     const notificationsStore = useNotificationsStore();
     const fetchNotifications = vi
@@ -63,20 +63,23 @@ describe("Screen availability", () => {
 
     const wrapper = mount(AppShell, { global: { plugins: [router] } });
 
+    expect(wrapper.find(".app-sidebar").exists()).toBe(false);
     const navIds = wrapper
-      .findAll(".app-sidebar li[id^='tab-btn-']")
-      .map((li) => li.attributes("id"));
+      .findAll("#primary-navigation a")
+      .map((a) => a.attributes("id"));
     expect(navIds).toEqual([
-      "tab-btn-overview",
-      "tab-btn-ecrf",
-      "tab-btn-ctms",
+      "nav-studies",
+      "nav-data-collection",
+      "nav-site-readiness",
     ]);
     expect(wrapper.text()).not.toContain("Design & Metadata");
+    expect(wrapper.text()).not.toContain("EDC");
+    expect(wrapper.text()).not.toContain("CTMS");
     // No .NET service serves the user's notifications yet.
     expect(fetchNotifications).not.toHaveBeenCalled();
   });
 
-  it("offers only available screens in the command palette", () => {
+  it("offers only available UX-1 screens in the global command palette", () => {
     signInAsSuperAdmin();
 
     const wrapper = mount(CommandPaletteOverlay, {
@@ -84,13 +87,17 @@ describe("Screen availability", () => {
       global: { plugins: [router] },
     });
 
-    expect(wrapper.text()).toContain("eCRF Form Engine");
-    expect(wrapper.text()).toContain("CTMS Dashboard");
+    expect(wrapper.text()).toContain("Studies");
+    expect(wrapper.text()).toContain("Data collection");
+    expect(wrapper.text()).toContain("Site readiness");
+    expect(wrapper.text()).toContain("Orientation");
     expect(wrapper.text()).not.toContain("MDR Protocol Designer");
     expect(wrapper.text()).not.toContain("Notifications");
+    expect(wrapper.text()).not.toContain("CTMS Dashboard");
+    expect(wrapper.text()).not.toContain("eCRF Form Engine");
   });
 
-  it("explains a hidden screen and links to the tracking issue", async () => {
+  it("explains a hidden screen, links to the tracking issue, and offers study workspace recovery", async () => {
     signInAsSuperAdmin();
     await router.push("/etmf");
 
@@ -103,21 +110,27 @@ describe("Screen availability", () => {
     expect(wrapper.find("a").attributes("href")).toBe(
       UNAVAILABLE_SCREENS_ISSUE
     );
-    expect(wrapper.find("button").exists()).toBe(true);
+    expect(wrapper.find("#btn-unavailable-study").exists()).toBe(true);
+    expect(wrapper.find("#btn-unavailable-home").exists()).toBe(true);
   });
 
-  it("offers no way home when the user can open no available screen", async () => {
+  it("always offers study workspace recovery on /unavailable for every authenticated role", async () => {
     const authStore = useAuthStore();
     authStore.isAuthenticated = true;
     authStore.isDemoMode = true;
     authStore.rawRoles = ["Auditor"];
-    await router.push("/");
+    await router.push("/unavailable");
 
     const wrapper = mount(UnavailableView, { global: { plugins: [router] } });
 
-    expect(wrapper.find("h2").text()).toBe(
-      "No screen is available for your role yet"
+    expect(wrapper.find("h2").text()).toBe("This screen isn't available yet");
+    expect(wrapper.find("#btn-unavailable-study").text()).toBe(
+      "Open study workspace"
     );
-    expect(wrapper.find("button").exists()).toBe(false);
+    const pushSpy = vi.spyOn(router, "push");
+    await wrapper.find("#btn-unavailable-study").trigger("click");
+    await pushSpy.mock.results[0].value;
+    expect(router.currentRoute.value.path).toBe("/studies");
+    pushSpy.mockRestore();
   });
 });
