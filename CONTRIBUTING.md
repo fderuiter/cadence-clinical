@@ -41,7 +41,8 @@ points Git at the repository hooks (`git config core.hooksPath .githooks`), crea
 `.env.example`, and runs `cadence doctor`. Use `--dev` (or `-y`) to skip prompts and `--minimal` to
 skip the Playwright browser download.
 
-Already have the SDK? `dotnet restore Cadence.sln && pnpm install` is enough.
+With the [prerequisites installed](docs/LOCAL_DEV_ENVIRONMENT.md#1-prerequisites), restore the workspaces
+with `dotnet restore Cadence.sln && pnpm install --frozen-lockfile`.
 
 NuGet restores from the v3 feed configured in [`NuGet.Config`](NuGet.Config).
 
@@ -90,8 +91,7 @@ CADENCE_TEST_POSTGRES="Host=localhost;Username=postgres;Password=postgres;Databa
 Without a terminal (an AI agent, a script, a pipe, a git hook) the CLI prints plain text without colours, so its
 output can be redirected to a file as it is.
 
-**PostgreSQL integration tests** are skipped unless you provide a database:
-`CADENCE_TEST_POSTGRES=<Npgsql connection string>` or `CADENCE_TEST_DOCKER=1` (Testcontainers).
+For **PostgreSQL integration tests**, see the [database setup and test commands](docs/TESTING.md#tests-that-need-postgresql).
 
 **Warnings are errors.** Fix a warning rather than suppressing it. When a suppression is the right call
 (a generated EF migration, an established acronym, an analyzer false positive), scope it to the member

@@ -122,7 +122,7 @@ if ($pgSuccess -and $pgSocket.Connected) {
     $pgSocket.Close()
 } else {
     Write-Host "  [INFO] PostgreSQL not responding on port 5432." -ForegroundColor DarkYellow
-    Write-Host "         Run 'docker compose up -d postgres' to launch local database." -ForegroundColor Gray
+    Write-Host "         Run 'docker compose -f docker/docker-compose.yml up -d postgres' to launch local database." -ForegroundColor Gray
 }
 
 

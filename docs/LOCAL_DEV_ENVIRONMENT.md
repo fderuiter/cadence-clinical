@@ -11,18 +11,19 @@ requests see [CONTRIBUTING.md](../CONTRIBUTING.md); for every setting see
 | Tool                  | Version                                                                                                                       | Notes                                                    |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | .NET SDK              | 10.0 (pinned in [`global.json`](../global.json))                                                                              | `dotnet --version`                                       |
-| Node.js + pnpm        | Node 22.13+ (`engines`), pnpm from the `packageManager` pin via `corepack enable` (ADR-2508); `pnpm cadence doctor` checks it | Frontend workspace and the `pnpm cadence` shortcut       |
+| Node.js + pnpm        | Node 22.13+ on the 22.x line or Node 24+ as specified in [`package.json`](../package.json). Enable Corepack to use the `packageManager` pin. | Frontend workspace and the `pnpm cadence` shortcut |
 | Docker                | Recent Docker Engine or Desktop                                                                                               | Compose stack and Testcontainers                         |
 | PowerShell (optional) | 7+                                                                                                                            | `scripts/manage_migrations.ps1` (a `.sh` variant exists) |
 
-The fastest way to install and check all of these is the setup wizard:
+If Corepack is missing from your Node.js installation, install it with `npm install --global corepack`,
+then run `corepack enable`. Use the setup wizard to prepare the workspace:
 
 ```bash
 make wizard                                  # bash scripts/setup_wizard.sh; Windows: scripts/setup_wizard.ps1
 bash scripts/setup_wizard.sh --dev --minimal # no prompts, no Playwright browser download
 ```
 
-It installs or validates the SDK and HTTPS dev certificate, runs `pnpm install`, sets
+It installs or validates the SDK and HTTPS dev certificate, runs `pnpm install --frozen-lockfile`, sets
 `git config core.hooksPath .githooks`, creates `.env` from `.env.example`, and finishes with
 `cadence doctor`.
 
@@ -33,18 +34,19 @@ dotnet restore Cadence.sln
 dotnet build Cadence.sln                          # warnings are errors
 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj
 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
-pnpm install
+pnpm install --frozen-lockfile
 ```
 
-PostgreSQL integration tests are skipped unless you provide a server:
+The [PostgreSQL integration suite](TESTING.md#tests-that-need-postgresql) uses PostgreSQL 18 through
+an existing server or Testcontainers:
 
 ```bash
 # an existing server
 CADENCE_TEST_POSTGRES="Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=cadence_test" \
-  dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "Category=Integration"
+  pnpm cadence test --integration
 
 # or a throwaway container
-CADENCE_TEST_DOCKER=1 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "Category=Integration"
+CADENCE_TEST_DOCKER=1 pnpm cadence test --integration
 ```
 
 ## 3. Run the platform
@@ -190,5 +192,5 @@ pnpm docs:dev                    # VitePress dev server over docs/
 pnpm docs:build                  # full build: gates, generated API/schema docs, RTM draft, static site
 ```
 
-The build copies the root `README.md`, `ARCHITECTURE.md` and `AGENTS.md` into `docs/` temporarily;
-those copies are not committed.
+VitePress stages the root `README.md`, `ARCHITECTURE.md`, `AGENTS.md`, and `LICENSE` as site pages in
+`docs/`. The documentation index tracks the authored pages.

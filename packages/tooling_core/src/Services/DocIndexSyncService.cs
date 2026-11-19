@@ -26,6 +26,15 @@ public static partial class DocIndexSyncService
         "DOCUMENTATION_INDEX.md"
     };
 
+    // VitePress stages these copies from root documents when serving or building the site.
+    private static readonly HashSet<string> StagedSitePages = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "AGENTS.md",
+        "ARCHITECTURE.md",
+        "LICENSE.md",
+        "index.md"
+    };
+
     [GeneratedRegex(@"\]\(([^)\r\n]+)\)")]
     private static partial Regex MarkdownLinkRegex();
 
@@ -137,7 +146,8 @@ public static partial class DocIndexSyncService
         foreach (var file in Directory.GetFiles(currentDir, "*.md"))
         {
             string fileName = Path.GetFileName(file);
-            if (ExcludedFiles.Contains(fileName))
+            string relPath = Path.GetRelativePath(docsDir, file).Replace('\\', '/');
+            if (ExcludedFiles.Contains(fileName) || StagedSitePages.Contains(relPath))
             {
                 continue;
             }
@@ -148,7 +158,6 @@ public static partial class DocIndexSyncService
                 continue;
             }
 
-            string relPath = Path.GetRelativePath(docsDir, file).Replace('\\', '/');
             result.Add(new MarkdownDocInfo(relPath, file));
         }
 

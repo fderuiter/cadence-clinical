@@ -18,7 +18,7 @@ pnpm cadence check duplication
 pnpm cadence gxp sync --dry-run
 ```
 
-Some commands also have a `make` target. The Makefile publishes the CLI to `./bin/cadence` the first time and reuses that binary afterwards. Delete `./bin` to pick up CLI changes.
+Some commands also have a `make` target. Those targets use `pnpm cadence` and share its on-demand CLI build.
 
 | `make` target                            | Runs                                          |
 | ---------------------------------------- | --------------------------------------------- |

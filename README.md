@@ -64,8 +64,9 @@ re-founded on the kernel. Both of these are true at once:
 
 ## Quickstart
 
-**Prerequisites:** .NET 10 SDK (pinned in [`global.json`](global.json)), Node.js 22.13+ with corepack enabled (`corepack enable`; pnpm comes from the `packageManager` pin in `package.json`), Docker.
-A new machine can run `make wizard` (or `bash scripts/setup_wizard.sh`) to install and check all of these.
+See the [local development guide](docs/LOCAL_DEV_ENVIRONMENT.md#1-prerequisites) for the .NET SDK,
+Node.js, pinned pnpm, and Docker requirements. On a new machine, follow the setup wizard instructions
+in that guide.
 
 ```bash
 git clone https://github.com/fderuiter/cadence-clinical.git
@@ -74,7 +75,7 @@ cd cadence-clinical
 dotnet build Cadence.sln                        # warnings are errors
 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj      # unit tests
 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
-pnpm install                                    # frontend workspace
+pnpm install --frozen-lockfile                  # frontend workspace
 ```
 
 ### Running the services

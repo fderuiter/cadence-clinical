@@ -60,12 +60,21 @@ public sealed class DocIndexSyncServiceTests : IDisposable
 
         File.WriteAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"), "# Index\n");
         File.WriteAllText(Path.Combine(docsDir, "empty.md"), ""); // Empty file
+        foreach (string stagedPage in new[] { "AGENTS.md", "ARCHITECTURE.md", "LICENSE.md", "index.md" })
+        {
+            File.WriteAllText(Path.Combine(docsDir, stagedPage), "# Staged VitePress page\n");
+        }
+
+        string migrationDir = Path.Combine(docsDir, "migration");
+        Directory.CreateDirectory(migrationDir);
+        File.WriteAllText(Path.Combine(migrationDir, "index.md"), "# Authored migration page\n");
 
         var files = DocIndexSyncService.ScanMarkdownFiles(docsDir);
 
-        files.Should().HaveCount(2);
+        files.Should().HaveCount(3);
         files.Should().Contain(f => f.RelativePath == "VALID1.md");
         files.Should().Contain(f => f.RelativePath == "adr/2026-01-01-test.md");
+        files.Should().Contain(f => f.RelativePath == "migration/index.md");
     }
 
     [Fact]
