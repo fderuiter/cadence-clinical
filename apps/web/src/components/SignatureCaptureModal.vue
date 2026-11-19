@@ -10,41 +10,20 @@
 
 <script setup>
 import { ref, computed, provide } from "vue";
-import SignatureCaptureModal from "../features/signatures/components/SignatureCaptureModal.vue";
+import SignatureCaptureModal, {
+  SHARED_SIGNATURE_MODAL_PROPS,
+} from "../features/signatures/components/SignatureCaptureModal.vue";
 import { etmfService } from "../api/etmf";
 
 const props = defineProps({
+  ...SHARED_SIGNATURE_MODAL_PROPS,
   isOpen: {
     type: Boolean,
     default: false,
   },
-  username: {
-    type: String,
-    default: "",
-  },
-  signerName: {
-    type: String,
-    default: "",
-  },
-  signerRole: {
-    type: String,
-    default: "",
-  },
-  role: {
-    type: String,
-    default: "Subject",
-  },
   actionUrl: {
     type: String,
     default: "",
-  },
-  semanticAction: {
-    type: String,
-    default: "",
-  },
-  onSign: {
-    type: Function,
-    default: null,
   },
 });
 
