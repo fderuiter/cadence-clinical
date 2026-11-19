@@ -179,7 +179,6 @@ public static class CiPlan
         ["classify"] = "labels the pull request through the GitHub API",
         ["automerge"] = "approves and merges the pull request through the GitHub API",
         ["release-and-archive"] = "calls the production pipeline on a push to main",
-        ["deploy-docs"] = "deploys the documentation site on a push to main",
     };
 
     /// <summary>The jobs, in the order <c>cadence ci</c> runs them.</summary>
@@ -401,7 +400,7 @@ public static class CiPlan
                 },
                 InProcessDisplay = $"generate the RTM and IQ/OQ/PQ report from {RtmGeneratorService.DefaultResultsDir} into {GxpSnapshotPolicy.PreviewDir} " +
                     $"(docs/SDLC with {GxpSnapshotPolicy.SnapshotEnvironmentVariable}=1) and validate tags and results; nothing is staged",
-                InProcessCiText = "node scripts/run-cli.js gxp sync",
+                InProcessCiText = "node scripts/run-cli.js gxp sync --results-dir TestResults/gxp",
             },
             new("compliance", "Check GxP Snapshot Policy")
             {
