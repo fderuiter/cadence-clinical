@@ -24,18 +24,18 @@ However, because real asymmetric signatures and public keys are long base64-enco
 ### Option 1: Retain Simple Substring Check
 
 - **Overview:** Keep `"mock" in string.lower()` checks.
-- ***Pros:***
+- _**Pros:**_
   - Simple to implement.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Continues to produce false-positive validation failures for valid base64 signatures/keys that randomly contain the substring `"mock"`.
 
 ### Option 2: Introduce Context-Aware Mock Detection (Selected)
 
 - **Overview:** If the signature or public key is a short string (less than 64/100 characters respectively), a simple `"mock"` substring check is used. If it is longer, the string is base64-decoded first. The check for `"mock"` is only applied to the successfully decoded bytes.
-- ***Pros:***
+- _**Pros:**_
   - ✅ 100% accurate; eliminates false-positive base64 collisions.
   - ✅ Maintains robust security by continuing to reject explicitly mocked short strings or base64-encoded mock payloads.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires slightly more complex string checking logic.
 
 ## 4. Decision Outcome

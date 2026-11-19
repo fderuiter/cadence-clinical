@@ -24,25 +24,24 @@ To align with modern monorepo best practices and preserve microservice decouplin
 ### Option 1: **Decentralized Workspace Tests (Selected)**: Move test modules into `apps/<service>/tests/`, `packages/<package>/tests/`, and `tests/`, while preserving shared test fixtures and qualification suites in `/tests/`.
 
 - **Overview:** **Decentralized Workspace Tests (Selected)**: Move test modules into `apps/<service>/tests/`, `packages/<package>/tests/`, and `tests/`, while preserving shared test fixtures and qualification suites in `/tests/`.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Centralized Root Monolith Tests (Status Quo)**: Retain all `test_*.py` files in root `/tests/`.
 
 - **Overview:** **Centralized Root Monolith Tests (Status Quo)**: Retain all `test_*.py` files in root `/tests/`.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 
 - **Chosen Option:** **Option 1 (Decentralized Workspace Tests)**.
 - **Justification:** Selected as primary architectural approach.
-All microservice tests, package tests, and tooling tests have been migrated into their respective workspace directories. `pyproject.toml` updated `testpaths = ["apps", "packages", "scripts", "tests"]`, and root `conftest.py` provides workspace-wide fixture initialization.
+  All microservice tests, package tests, and tooling tests have been migrated into their respective workspace directories. `pyproject.toml` updated `testpaths = ["apps", "packages", "scripts", "tests"]`, and root `conftest.py` provides workspace-wide fixture initialization.
 
 ## 5. Consequences & Trade-offs
 

@@ -24,14 +24,14 @@ This decision implements requirements under PRD-SYS-001.
 ### Option 1: Maintain broad scanner bypasses
 
 - **Overview:** Keep broad exclusions in security scripts.
-- ***Pros:*** Less configuration effort.
-- ***Cons:*** Security vulnerability (hardcoded fallbacks slip through).
+- _**Pros:**_ Less configuration effort.
+- _**Cons:**_ Security vulnerability (hardcoded fallbacks slip through).
 
 ### Option 2: Full Scanner Tightening & Strict Initialization Assertions (Selected)
 
 - **Overview:** Remove broad exclusions, scan for hardcoded environment lookups, permit explicit annotations (e.g., `# pragma: allowlist secret`), and assert `GATEWAY_SECRET` presence on API Gateway boot.
-- ***Pros:*** Absolute security, fail-closed design, and no runtime fallback vulnerabilities.
-- ***Cons:*** Requires explicit configuration in all targets and test files.
+- _**Pros:**_ Absolute security, fail-closed design, and no runtime fallback vulnerabilities.
+- _**Cons:**_ Requires explicit configuration in all targets and test files.
 
 ## 4. Decision Outcome
 

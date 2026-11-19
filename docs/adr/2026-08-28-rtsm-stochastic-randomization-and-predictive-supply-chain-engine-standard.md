@@ -4,6 +4,7 @@
 - **Date:** 2026-08-28
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter
+
 * **Requirements:** `PRD-SYS-001`, `PRD-RTSM-001`, `PRD-RTSM-002`, `PRD-SCM-001`, `PRD-SCM-002`, `PRD-SYS-050`, `GMP Annex 13`
 
 ---
@@ -16,37 +17,37 @@ Historically, randomization algorithms and inventory threshold evaluations were 
 
 ## 2. Decision Drivers & Constraints
 
-* **Algorithmic Reproducibility & Cryptographic Sealing (21 CFR Part 11 § 11.10(e))**: All stochastic allocation procedures must support deterministic seed reproduction. Randomization list generation must produce immutable SHA-256 configuration checksums.
-* **Modern Phase I/II Adaptive Dose Escalation**: In addition to classical fixed blocks and dynamic minimization, oncology trials require Bayesian Optimal Interval (BOIN) design support with mathematical dose-limiting toxicity (DLT) escalation/de-escalation boundaries ($\lambda_e, \lambda_d$) and safety stopping rules ($\Pr(p_j > \phi | \text{data}) > 0.95$).
-* **Multi-Echelon Predictive Supply Forecasting**: Inventory replenishment must not rely on simplistic static thresholds ($on\_hand \le threshold$). The engine must simulate subject accrual via Poisson arrival rates, track expiration curves, factor in multi-echelon lead times (Primary $\to$ Central $\to$ Regional $\to$ Site), and support Direct-to-Patient (DTP) temperature-gated logistics.
-* **Zero-I/O Functional Engine Boundary**: Runtimes in `packages/engine_core/` must ingest pure Pydantic v2 domain schemas and return deterministic allocation decisions or supply projections without database or network side effects.
+- **Algorithmic Reproducibility & Cryptographic Sealing (21 CFR Part 11 § 11.10(e))**: All stochastic allocation procedures must support deterministic seed reproduction. Randomization list generation must produce immutable SHA-256 configuration checksums.
+- **Modern Phase I/II Adaptive Dose Escalation**: In addition to classical fixed blocks and dynamic minimization, oncology trials require Bayesian Optimal Interval (BOIN) design support with mathematical dose-limiting toxicity (DLT) escalation/de-escalation boundaries ($\lambda_e, \lambda_d$) and safety stopping rules ($\Pr(p_j > \phi | \text{data}) > 0.95$).
+- **Multi-Echelon Predictive Supply Forecasting**: Inventory replenishment must not rely on simplistic static thresholds ($on\_hand \le threshold$). The engine must simulate subject accrual via Poisson arrival rates, track expiration curves, factor in multi-echelon lead times (Primary $\to$ Central $\to$ Regional $\to$ Site), and support Direct-to-Patient (DTP) temperature-gated logistics.
+- **Zero-I/O Functional Engine Boundary**: Runtimes in `packages/engine_core/` must ingest pure Pydantic v2 domain schemas and return deterministic allocation decisions or supply projections without database or network side effects.
 
 ## 3. Options Considered
 
 ### Option 1: **Option A (Selected) - Pure Functional Engines in `packages/engine_core/` with Clean Hexagonal Adapters**:
 
 - **Overview:** - Establish `packages/engine_core/randomization/` (Stratified Block, Pocock-Simon Minimization, BOIN, 3+3) and `packages/engine_core/supply/` (Multi-echelon hierarchy, Poisson demand simulator, DTP logistics, emergency unblinding).
-   - Integrate with `apps/execution/` via thin repository adapters and REST endpoints.
-- ***Pros:***
+  - Integrate with `apps/execution/` via thin repository adapters and REST endpoints.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B - Status Quo In-Service Algorithm Embedding in `apps/execution/`**:
 
 - **Overview:** - Retain procedural logic inside `apps/execution/randomization.py` and `apps/execution/rtsm_supply.py`.
-   - *Rejected*: Violates zero-I/O separation, impairs isolated benchmarking, and prevents cross-service engine reuse.
-- ***Pros:***
+  - _Rejected_: Violates zero-I/O separation, impairs isolated benchmarking, and prevents cross-service engine reuse.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 
 **Chosen Option:** **Option A**.
 
 The RTSM & Supply Chain Engines family delivers:
+
 1. **Stochastic Randomization Engine** (`packages/engine_core/randomization/`):
    - **Stratified Permuted Block Randomization**: Variable block size selection, stratum key generation, and target arm ratio enforcement.
    - **Pocock-Simon Covariate Adaptive Minimization**: Range, Variance, and Standard Deviation marginal distance metrics with factor weighting and biased coin allocation ($p_{preferred} \in [0.5, 1.0]$).
@@ -59,18 +60,18 @@ The RTSM & Supply Chain Engines family delivers:
 
 ## 5. Consequences & Trade-offs
 
-* **Positive**:
+- **Positive**:
   - Sub-millisecond allocation and simulation performance with zero database contention during calculation.
   - Complete mathematical test coverage and property-based seed verification.
   - Full compliance with FDA 21 CFR Part 11, ICH GCP E6(R2), and GMP Annex 13.
-* **Negative**:
+- **Negative**:
   - Requires maintaining dedicated adapters to bridge SQLModel database persistence with engine payloads in `apps/execution/`.
 
 ## 6. Implementation & Verification
 
-* **Core Packages**:
+- **Core Packages**:
   - `packages/engine_core/randomization/` (`models.py`, `engine.py`, `boin.py`, `minimization.py`, `blocks.py`)
   - `packages/engine_core/supply/` (`models.py`, `engine.py`, `forecasting.py`, `hierarchy.py`, `dtp.py`)
-* **Verification**:
+- **Verification**:
   - Unit tests in `packages/engine_core/tests/test_randomization_engine.py` and `packages/engine_core/tests/test_supply_engine.py`.
   - Full monorepo qualification via `uv run cadence check --parallel` and `uv run python scripts/sync_gxp.py`.

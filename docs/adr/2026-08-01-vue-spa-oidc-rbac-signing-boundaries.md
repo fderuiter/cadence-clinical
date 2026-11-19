@@ -28,10 +28,10 @@ This decision implements requirements under Trace-8.
 
 Use React and Next.js as the frontend framework, configured either as a server-side rendered (SSR) application or statically exported.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Extremely large ecosystem and robust server-side data fetching capabilities.
   - ✅ Solid OIDC integration support via NextAuth or similar libraries.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Higher complexity and bundle size compared to lightweight options.
   - ❌ Static HTML export removes key dynamic routing benefits, whereas full SSR introduces complex backend hosting requirements that are incompatible with simple GitHub Pages hosting.
 
@@ -39,13 +39,13 @@ Use React and Next.js as the frontend framework, configured either as a server-s
 
 Replace `apps/web` with a Vue 3 SPA leveraging Vue Router for client-side routing, Pinia for lightweight state management, and the official `keycloak-js` adapter for OIDC authentication.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Outstanding performance, excellent developer velocity, and extremely low bundle size.
   - ✅ Vue Router provides simple, declarative metadata support perfect for role-based route guards.
   - ✅ Pinia offers high-performance, type-safe global state store integration with Vue 3's composition API.
   - ✅ `keycloak-js` is the standard OIDC integration tool for Keycloak, enabling standard Authorization Code Flow with Proof Key for Code Exchange (PKCE) natively in the browser.
   - ✅ Highly compatible with static builds deployed to GitHub Pages.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Client-side routing on GitHub Pages requires standard workaround scripts (like `spa-github-pages` or custom 404 fallbacks) to prevent 404 errors on direct sub-page navigation.
 
 ## 4. Decision Outcome

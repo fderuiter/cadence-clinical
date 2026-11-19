@@ -31,19 +31,18 @@ This requires a robust, flexible, and GxP-compliant database schema and applicat
 ### Option 1: **Option A (Selected):** Centralize TSDV configuration and level-agnostic SDV audit records in relational tables (`tsdv_configs` and `sdv_sign_offs`) in the core Postgres schema, with field-level boolean flags and metadata inline on `clinical_observations` for rapid querying.
 
 - **Overview:** **Option A (Selected):** Centralize TSDV configuration and level-agnostic SDV audit records in relational tables (`tsdv_configs` and `sdv_sign_offs`) in the core Postgres schema, with field-level boolean flags and metadata inline on `clinical_observations` for rapid querying.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B:** Fully rely on an external audit service or separate microservice, importing and verifying data objects over HTTP/REST on-the-fly.
 
 - **Overview:** **Option B:** Fully rely on an external audit service or separate microservice, importing and verifying data objects over HTTP/REST on-the-fly.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

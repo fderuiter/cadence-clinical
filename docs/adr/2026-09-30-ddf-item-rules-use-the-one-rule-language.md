@@ -66,6 +66,7 @@ implements it (ADR-2461).
   - an item still has the old raw `constraint` string.
 
   The Designer compile route answers `422` with the problems.
+
 - **XPath mapping:**
   - Null becomes the empty string of an OpenRosa field (`x == null` becomes `string-length(x) = 0`).
   - `is_empty` becomes `normalize-space(x) = ''`.

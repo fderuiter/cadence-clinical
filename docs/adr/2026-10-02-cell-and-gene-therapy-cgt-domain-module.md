@@ -22,11 +22,13 @@ Cell and Gene Therapies (CGT), such as CAR-T cell treatments and autologous gene
 ## 3. Options Considered
 
 ### Option 1: Legacy RTSM/IRT Extension
+
 - **Overview:** Extending generic RTSM kit allocation tables with unstructured JSON metadata for CGT tracking.
 - **Pros:** Minimal new database tables.
 - **Cons:** Lack of strong typing, schema constraints, or auditability for dual verification and cryptographic seals.
 
 ### Option 2: Dedicated CGT Domain Module in Execution Engine (Selected)
+
 - **Overview:** Implement core algorithms (`Isbt128Engine`, `TemperatureZoneClassifier`, `CgtBarcodeEngine`) in `packages/engine_core` and dedicated persistence models (`CgtChainOfCustody`, `CgtMilestoneEvent`, `CgtBedsideVerification`, `CgtDestructionCertificate`, `CgtVialReturnReconciliation`) in `apps/execution`.
 - **Pros:**
   - ✅ Strong GxP audit trail support via EF Core interceptor.

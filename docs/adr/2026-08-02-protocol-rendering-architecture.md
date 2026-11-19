@@ -36,10 +36,10 @@ This decision implements requirements under Trace-24.
 
 Compile the presentation views on the client-side SPA and utilize browser printing features or JavaScript libraries (e.g., `jsPDF`, `docx.js`) to generate exports.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Offloads computing overhead to client devices.
   - ✅ Highly responsive interface with zero server-side rendering latency.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Lacks strict version control and deterministic layouts (output varies drastically depending on the browser version, installed system fonts, and OS).
   - ❌ Violates 21 CFR Part 11 integrity: the server cannot cryptographically sign or record audit trail records for client-generated files before they are outputted.
   - ❌ Poor CSS Paged Media support, making running headers/footers and dynamic page numbering extremely fragile.
@@ -48,9 +48,9 @@ Compile the presentation views on the client-side SPA and utilize browser printi
 
 Use low-level canvas painting libraries like ReportLab to construct PDFs programmatically line-by-line, table-by-table.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ High execution speed and native Python library with no external system/C dependencies.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Extremely high developer overhead. Programmatic canvas drawings make formatting tweaks (padding, page breaks, font styling) highly complex.
   - ❌ Violates separation of concerns by coupling document styling directly to Python code instead of standard CSS/HTML templates.
 
@@ -58,12 +58,12 @@ Use low-level canvas painting libraries like ReportLab to construct PDFs program
 
 Generate structured HTML from presentation models using Jinja2, compile PDFs using WeasyPrint (a Python-based visual layout engine with excellent support for CSS Paged Media), and compile DOCX files programmatically using `python-docx` or HTML conversion.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Separates document layout/style (HTML/CSS) from data compilation (Python).
   - ✅ Outstanding support for advanced CSS Paged Media standards (running page numbers, footers, page-break margins, landscape sections for wide tables).
   - ✅ Server-controlled generation ensures deterministic, pixel-perfect, reproducible documents that can be safely logged, versioned, and sealed.
   - ✅ Reuses python-docx for native-grade Microsoft Word files.
-- ***Cons:***
+- _**Cons:**_
   - ❌ WeasyPrint depends on native C shared libraries (such as Pango, Cairo, and GObject), which must be installed on the host OS/Docker container.
   - ❌ CPU-bound execution can block FastAPI's event loop if not handled correctly.
 

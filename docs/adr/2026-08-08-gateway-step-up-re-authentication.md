@@ -30,11 +30,11 @@ This decision implements requirements under **Trace-15**, **Trace-13**, and **PR
 ### Option 1: JWT Signature Token with unique `jti` and `batch_id`
 
 - **Overview:** Issue an HS256 JWT `sig_token` containing `sub`, `username`, `action`, `roles`, `iat`, `exp` (60s), a unique UUID `jti`, and an optional `batch_id`. Maintain in-memory or distributed replay caches to verify `jti` single-use tracking at the gateway and downstream levels.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Full compliance with 21 CFR Part 11.
   - ✅ Robust single-use replay prevention.
   - ✅ Zero credential leak to downstream services.
-- ***Cons:***
+- _**Cons:**_
   - ❌ In-memory caches must be kept clean (automatically pruned on expiry).
 
 ---

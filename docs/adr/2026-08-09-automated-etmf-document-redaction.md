@@ -26,20 +26,20 @@ This decision implements requirements under Trace-12.
 ### Option 1: Client-Side Redaction Only
 
 - **Overview:** Rely on the frontend or external clients to redact text and send the redacted text directly to the eTMF backend.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Offloads compute overhead from the backend.
-- ***Cons:***
+- _**Cons:**_
   - ❌ No central verification or standard automated detection rules.
   - ❌ Susceptible to data leakage if client rules differ.
 
 ### Option 2: Server-Side Automated Redaction Endpoint (Selected)
 
 - **Overview:** Implement a dedicated, authenticated `/auto-redact` endpoint under the eTMF API that loads the requested source version, executes the shared `DeidDetector` package, applies configured transforms, persists the redacted successor as a new version, and logs a tamper-evident signed manifest.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Guarantees consistent compliance logic across all clients.
   - ✅ Symmetrically signs the manifest, verifying integrity.
   - ✅ Supports easy policy changes (HIPAA vs. EU_CTR).
-- ***Cons:***
+- _**Cons:**_
   - ❌ Higher server-side CPU utilization for pattern matching on large documents.
 
 ## 4. Decision Outcome

@@ -26,20 +26,20 @@ This decision implements requirements under Trace-7.
 ### Option 1: Decentralized authorization in each service
 
 - **Overview:** Keep role checks locally in eTMF, CTMS, and Quality routers.
-- ***Pros:***
+- _**Pros:**_
   - ✅ High isolation between services.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Severe duplication of RBAC tables.
   - ❌ Risk of authorization drifts between components.
 
 ### Option 2: Centralized RBAC using dynamic permission-based mappings (Selected)
 
 - **Overview:** Standardize on a unified role-permission schema inside `packages/security/rbac.py` and implement dynamic mappings (such as matching sponsor admin variations or mapping specific transition permissions to actions).
-- ***Pros:***
+- _**Pros:**_
   - ✅ Single source of truth for all role permissions.
   - ✅ Simplifies access verification down to `has_permission(principal, permission)`.
   - ✅ Facilitates GxP compliance and audit log tracing.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Centralized changes can impact multiple downstream services if improperly coordinated.
 
 ## 4. Decision Outcome

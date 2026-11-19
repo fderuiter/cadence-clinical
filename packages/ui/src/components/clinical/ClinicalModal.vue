@@ -1,6 +1,10 @@
 <script setup>
-import { ref } from "vue";
+import { computed, ref, useAttrs, useId } from "vue";
 import { useFocusTrap } from "../../composables/useFocusTrap.js";
+
+defineOptions({
+  inheritAttrs: false,
+});
 
 const props = defineProps({
   modelValue: {
@@ -19,46 +23,107 @@ const props = defineProps({
     type: String,
     default: "dialog",
   },
+  dismissible: {
+    type: Boolean,
+    default: true,
+  },
+  closeOnBackdrop: {
+    type: Boolean,
+    default: true,
+  },
+  initialFocus: {
+    type: [String, Object, Function],
+    default: null,
+  },
+  restoreFocus: {
+    type: [Boolean, Function],
+    default: true,
+  },
+  teleport: {
+    type: [Boolean, String],
+    default: "body",
+  },
+  id: {
+    type: String,
+    default: undefined,
+  },
+  dialogClass: {
+    type: [String, Array, Object],
+    default: "",
+  },
+  backdropClass: {
+    type: [String, Array, Object],
+    default: "",
+  },
+  closeLabel: {
+    type: String,
+    default: "Close dialog",
+  },
 });
 
 const emit = defineEmits(["update:modelValue", "close", "confirm"]);
 
+const attrs = useAttrs();
 const dialogRef = ref(null);
+const instanceId = useId();
+const titleId = `clinical-modal-title-${instanceId}`;
+
+const teleportTarget = computed(() =>
+  typeof props.teleport === "string" ? props.teleport : "body"
+);
 
 const closeModal = () => {
+  if (!props.dismissible) return;
   emit("update:modelValue", false);
   emit("close");
 };
 
+const onBackdropClick = () => {
+  if (!props.dismissible || !props.closeOnBackdrop) return;
+  closeModal();
+};
+
 useFocusTrap(dialogRef, {
   isOpen: () => props.modelValue,
+  escapeDeactivates: () => props.dismissible,
+  initialFocus: () => props.initialFocus,
+  restoreFocus: props.restoreFocus,
   onEscape: closeModal,
 });
 </script>
 
 <template>
-  <Teleport to="body">
+  <Teleport :to="teleportTarget" :disabled="!teleport">
     <div
       v-if="modelValue"
-      class="clinical-modal-backdrop"
+      :class="['clinical-modal-backdrop', backdropClass]"
       role="presentation"
-      @click.self="closeModal"
+      @click.self="onBackdropClick"
     >
       <div
+        :id="id"
         ref="dialogRef"
-        :class="['clinical-modal-dialog', `size-${size}`]"
+        v-bind="attrs"
+        :class="['clinical-modal-dialog', `size-${size}`, dialogClass]"
         :role="role"
         aria-modal="true"
-        :aria-label="title"
+        :aria-labelledby="attrs['aria-label'] ? undefined : titleId"
+        :aria-label="
+          attrs['aria-label'] ? String(attrs['aria-label']) : undefined
+        "
         tabindex="-1"
       >
         <div class="modal-header">
-          <h2 class="modal-title">
-            {{ title }}
-          </h2>
+          <slot name="header" :title-id="titleId" :close="closeModal">
+            <h2 :id="titleId" class="modal-title">
+              {{ title }}
+            </h2>
+          </slot>
           <button
+            type="button"
             class="modal-close-btn"
-            aria-label="Close dialog"
+            :aria-label="closeLabel"
+            :disabled="!dismissible"
             @click="closeModal"
           >
             ✕
@@ -71,10 +136,19 @@ useFocusTrap(dialogRef, {
 
         <div class="modal-footer">
           <slot name="footer">
-            <button class="btn btn-secondary" @click="closeModal">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              :disabled="!dismissible"
+              @click="closeModal"
+            >
               Cancel
             </button>
-            <button class="btn btn-primary" @click="emit('confirm')">
+            <button
+              type="button"
+              class="btn btn-primary"
+              @click="emit('confirm')"
+            >
               Confirm
             </button>
           </slot>

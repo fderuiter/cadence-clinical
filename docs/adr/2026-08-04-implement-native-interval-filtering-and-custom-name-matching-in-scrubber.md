@@ -25,20 +25,20 @@ To comply with HIPAA 18 Protected Health Information (PHI) identifier regulation
 ### Option 1: Basic Regex Matching with First-Match-Wins Strategy
 
 - **Overview:** Loop over regex patterns and redact matches as they are found.
-- ***Pros:***
+- _**Pros:**_
   - Simple to implement with low computational overhead.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Cannot handle overlapping or nested matched intervals.
   - ❌ Modifying text mid-loop shifts subsequent match indices, leading to corrupted text slices.
 
 ### Option 2: Deterministic Interval Overlap Resolution with Reverse Substitution (Selected)
 
 - **Overview:** Match all standard and custom terms to generate candidate entity lists. Sort candidate intervals ascending by start index, descending by end index (widest interval takes priority), then alphabetically by entity type, and descending by match length. Discard any candidate nested inside or partially overlapping with an accepted, higher-priority interval. Finally, perform substitution from right to left (backwards) to safely preserve match indices.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Cleanly and deterministically resolves nested and overlapping intervals.
   - ✅ High reliability and robust compliance with PRD-SYS-001.
   - ✅ Backwards reverse slice substitution completely prevents text index shifting issues.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Slightly higher processing complexity due to the sorting and filtering pass.
 
 ## 4. Decision Outcome

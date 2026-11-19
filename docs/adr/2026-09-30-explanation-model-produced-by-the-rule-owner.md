@@ -95,7 +95,7 @@ Explanation{ subject: NodeRef?, claim, producer,
   existing callers are unchanged. `Explain(action, subject)` turns a decision into an `Explanation`.
 - A denied command returns `K.auth.denied` (403) with the explanation on `KernelError.Explanation`.
 - The `DecisionDenied` event payload and the denial's audit entry gain `conditions[{code, description, met,
-  evidence}]` alongside the existing `reason` (additive, K-EVT-1; schema version unchanged). An auditor sees what
+evidence}]` alongside the existing `reason` (additive, K-EVT-1; schema version unchanged). An auditor sees what
   the denial rested on, not only its message (K-AUTH-2).
 - The evaluator that fills these conditions from Grants, Delegations and Qualifications is #4781. Until then the
   kernel's authorizer returns the conditions its policy supplies.

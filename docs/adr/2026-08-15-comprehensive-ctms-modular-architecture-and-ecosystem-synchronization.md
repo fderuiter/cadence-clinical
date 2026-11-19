@@ -36,19 +36,18 @@ Applicable System Requirements:
 ### Option 1: **Modular Hexagonal Sub-domain Architecture (Selected)**: Partition CTMS into 7 decoupled sub-domain packages (`site_startup`, `monitoring`, `deviations_issues`, `rbqm`, `financials`, `ip_accountability`, `doa`) with decoupled application services, repository ports, SQL persistence adapters, and dedicated REST routers.
 
 - **Overview:** **Modular Hexagonal Sub-domain Architecture (Selected)**: Partition CTMS into 7 decoupled sub-domain packages (`site_startup`, `monitoring`, `deviations_issues`, `rbqm`, `financials`, `ip_accountability`, `doa`) with decoupled application services, repository ports, SQL persistence adapters, and dedicated REST routers.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Monolithic Central Router Extension**: Keep all models and endpoints within legacy monolithic files rather than decoupled sub-packages.
 
 - **Overview:** **Monolithic Central Router Extension**: Keep all models and endpoints within legacy monolithic files rather than decoupled sub-packages.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

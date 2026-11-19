@@ -28,31 +28,30 @@ Reference: `PRD-TCK-001` (see `docs/SDLC/01_Product_Requirements_Document_PRD.md
 ### Option 1: **Option 1: Decentralized In-App Ticketing (Status Quo)**
 
 - **Overview:** - Maintain separate discrepancy/issue queues inside EDC, CTMS, Safety, and eTMF.
-   - *Rejected:* Prevents unified operational oversight, breaks cross-study reporting, duplicates SLA logic, and creates audit fragmentation during regulatory inspections.
-- ***Pros:***
+  - _Rejected:_ Prevents unified operational oversight, breaks cross-study reporting, duplicates SLA logic, and creates audit fragmentation during regulatory inspections.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option 2: Third-Party External Ticketing Integration (Jira/ServiceNow)**
 
 - **Overview:** - Proxy all clinical operations tickets to Jira or ServiceNow APIs.
-   - *Rejected:* Third-party SaaS tools lack native CDISC entity models, GxP Part 11 electronic signature workflows, protocol-amendment locks, and sub-100ms internal microservice SLA guarantees.
-- ***Pros:***
+  - _Rejected:_ Third-party SaaS tools lack native CDISC entity models, GxP Part 11 electronic signature workflows, protocol-amendment locks, and sub-100ms internal microservice SLA guarantees.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 3: **Option 3 (Selected): Unified Clinical Issue & Operations Hub Microservice**
 
 - **Overview:** - Standalone `apps/tickets` service with REST API-first contracts, hexagonal architecture, and strict boundary isolation.
-   - Event-driven cross-app ingestion via internal Gateway HMAC authentication.
-   - Integrated SLA engine, 5-Whys RCA, Part 11 eSignatures, and multi-channel notification dispatch.
-- ***Pros:***
+  - Event-driven cross-app ingestion via internal Gateway HMAC authentication.
+  - Integrated SLA engine, 5-Whys RCA, Part 11 eSignatures, and multi-channel notification dispatch.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 
