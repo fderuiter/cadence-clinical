@@ -3,6 +3,9 @@
     <!-- Accessible Skip to Content Link -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
+    <!-- Persistent Demo Mode Synthetic Data Banner -->
+    <DemoBanner />
+
     <!-- Portal Header with the persistent sync status button -->
     <PortalHeader />
 
@@ -37,6 +40,7 @@
           v-for="route in viewRoutes"
           :key="route.name"
         />
+        <UnavailableView />
       </main>
     </div>
 
@@ -52,6 +56,7 @@
 </template>
 
 <script setup>
+import DemoBanner from "./components/DemoBanner.vue";
 import LedgerFooter from "./components/LedgerFooter.vue";
 import ParticipantCard from "./components/ParticipantCard.vue";
 import PinSetupModal from "./components/PinSetupModal.vue";
@@ -65,6 +70,7 @@ import SyncSuspendedBanner from "./components/SyncSuspendedBanner.vue";
 import TabBar from "./components/TabBar.vue";
 import { viewRoutes } from "./router/routes.js";
 import { useSyncStore } from "./stores/sync.js";
+import UnavailableView from "./views/UnavailableView.vue";
 
 const sync = useSyncStore();
 </script>

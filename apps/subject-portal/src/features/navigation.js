@@ -1,14 +1,22 @@
 // View switching. `state.currentView` (the ui store) is the source of truth the
-// shell renders from; the router follows it into the URL and back (see
-// src/router/index.js).
+// shell renders from; the router follows it into the URL and back.
+import { isScreenAvailable } from "../router/availability.js";
+import { routeForView } from "../router/routes.js";
 import { state } from "../stores/state.js";
 import { loadConsentDetails } from "./consent.js";
 
-// Activates a view: state (which the router follows into the URL), the
-// `.active` classes, the tab bar's aria-selected, and loading the consent form
-// when the consent view opens.
+// Activates a view: enforces screen availability outside demo builds, updates
+// `.active` classes and tab `aria-selected`, and loads consent details on open.
 export function showView(viewId) {
-  state.currentView = viewId;
+  const matchedRoute = routeForView(viewId);
+  let targetViewId = viewId;
+
+  if (matchedRoute && !isScreenAvailable(matchedRoute.name)) {
+    state.unavailableScreen = String(matchedRoute.name);
+    targetViewId = "view-unavailable";
+  }
+
+  state.currentView = targetViewId;
 
   document.querySelectorAll(".portal-view").forEach((v) => {
     v.classList.remove("active");
@@ -21,19 +29,22 @@ export function showView(viewId) {
     }
   });
 
-  const targetView = document.getElementById(viewId);
+  const targetView = document.getElementById(targetViewId);
   if (targetView) targetView.classList.add("active");
 
-  // Highlight matching sidebar/navbar tab
   let activeTabId = null;
-  if (viewId === "view-tasks" || viewId === "view-questionnaire") {
+  if (targetViewId === "view-tasks" || targetViewId === "view-questionnaire") {
     activeTabId = "tab-btn-tasks";
-  } else if (viewId === "view-compliance") {
+  } else if (targetViewId === "view-compliance") {
     activeTabId = "tab-btn-compliance";
-  } else if (viewId === "view-inbox") {
+  } else if (targetViewId === "view-inbox") {
     activeTabId = "tab-btn-inbox";
-  } else if (viewId === "view-consent") {
+  } else if (targetViewId === "view-consent") {
     activeTabId = "tab-btn-consent";
+  } else if (targetViewId === "view-wallet") {
+    activeTabId = "tab-btn-wallet";
+  } else if (targetViewId === "view-lay-summaries") {
+    activeTabId = "tab-btn-lay-summaries";
   }
 
   if (activeTabId) {
@@ -47,7 +58,10 @@ export function showView(viewId) {
     }
   }
 
-  if (viewId === "view-consent" && typeof loadConsentDetails === "function") {
+  if (
+    targetViewId === "view-consent" &&
+    typeof loadConsentDetails === "function"
+  ) {
     loadConsentDetails();
   }
 }

@@ -21,7 +21,7 @@ import {
   fetchNotifications,
   isAuthenticatedSession,
 } from "./api/client.js";
-import { logout } from "./features/auth.js";
+import { login, logout } from "./features/auth.js";
 import { renderCompliance } from "./features/compliance.js";
 import {
   loadConsentDetails,
@@ -32,9 +32,12 @@ import {
 import { acknowledgeNotification, renderInbox } from "./features/inbox.js";
 import { showView } from "./features/navigation.js";
 import {
+  cancelPINReset,
   checkPINWrapper,
+  confirmPINReset,
   handlePINSetupSubmit,
   handlePINUnlockSubmit,
+  requestPINReset,
 } from "./features/pin.js";
 import {
   startQuestionnaire,
@@ -62,8 +65,10 @@ import {
 } from "./features/sync-status.js";
 import { renderTasks } from "./features/tasks.js";
 import { extractReceiptOcr, submitExpenseClaim } from "./features/wallet.js";
+import { isScreenAvailable } from "./router/availability.js";
 import { state } from "./stores/state.js";
 import { clearAllSubmissions } from "./sync-queue.js";
+import { isDemoBuild, isDemoModeActive } from "./utils/demoMode.js";
 import { markFieldInvalid } from "./widgets/field-errors.js";
 
 // Auto-run on load in DOM environments
@@ -100,11 +105,15 @@ export {
   openSignatureModal,
   closeSignatureModal,
   markFieldInvalid,
+  login,
   logout,
   refreshSubmissionsState,
   checkPINWrapper,
   handlePINSetupSubmit,
   handlePINUnlockSubmit,
+  requestPINReset,
+  cancelPINReset,
+  confirmPINReset,
   openReconsentModal,
   closeReconsentModal,
   checkPendingReconsent,
@@ -115,4 +124,7 @@ export {
   describeQueuedSync,
   extractReceiptOcr,
   submitExpenseClaim,
+  isDemoBuild,
+  isDemoModeActive,
+  isScreenAvailable,
 };

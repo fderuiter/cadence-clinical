@@ -128,6 +128,7 @@ beforeEach(async () => {
   portal.state.session.userId = "subject_001";
   portal.state.session.token = null;
   portal.state.session.isOfflineMode = true;
+  portal.state.session.isDemoMode = true;
   portal.state.consentLanguage = "en";
   portal.state.consentPassed = false;
   portal.state.consentSigned = false;

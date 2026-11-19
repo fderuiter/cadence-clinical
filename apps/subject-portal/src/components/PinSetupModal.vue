@@ -60,7 +60,23 @@
             />
           </div>
         </div>
-        <div class="modal-footer">
+        <div
+          class="modal-footer"
+          style="
+            display: flex;
+            gap: 8px;
+            justify-content: space-between;
+            flex-wrap: wrap;
+          "
+        >
+          <button
+            id="btn-pin-setup-signout"
+            type="button"
+            class="btn btn-secondary"
+            @click="handleSignOut"
+          >
+            Sign Out
+          </button>
           <button
             id="btn-pin-setup-confirm"
             type="submit"
@@ -75,6 +91,7 @@
 </template>
 
 <script setup>
+import { logout } from "../features/auth.js";
 import { handlePINSetupSubmit } from "../features/pin.js";
 import { useSessionStore } from "../stores/session.js";
 import { trapTabKey } from "./focus-trap.js";
@@ -83,5 +100,9 @@ const sessionStore = useSessionStore();
 
 function handleSetupModalKeyDown(e) {
   trapTabKey(e, "portal-pin-setup-modal", ["input", "button"]);
+}
+
+function handleSignOut() {
+  logout();
 }
 </script>

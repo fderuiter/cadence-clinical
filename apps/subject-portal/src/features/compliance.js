@@ -1,6 +1,7 @@
 // 3. My Compliance: rate, counts and survey history.
 import { fetchCompliance, isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
 
 // 3. My Compliance
 export function renderCompliance() {
@@ -26,6 +27,22 @@ export function renderCompliance() {
     return;
   }
 
+  if (
+    !isAuthenticatedSession() &&
+    !isDemoModeActive() &&
+    !state.session.userId &&
+    state.assignments.length === 0
+  ) {
+    if (failureEl) {
+      failureEl.style.display = "block";
+      if (errorMsgEl) {
+        errorMsgEl.textContent =
+          "Sign in to view your study compliance and submission history.";
+      }
+    }
+    return;
+  }
+
   if (gridLayoutEl) {
     gridLayoutEl.style.display = "grid";
   }
@@ -36,54 +53,64 @@ export function renderCompliance() {
   let overdue;
   let historyList;
 
-  if (isAuthenticatedSession()) {
-    if (!state.compliance) {
-      if (failureEl) {
-        failureEl.style.display = "block";
-        if (gridLayoutEl) gridLayoutEl.style.display = "none";
-        if (errorMsgEl) errorMsgEl.textContent = "No compliance data loaded.";
-      }
-      return;
-    }
+  if (isAuthenticatedSession() && state.compliance) {
     rate = Math.round(state.compliance.compliance_rate);
     completed = state.compliance.completed_count;
     pending = state.compliance.pending_count;
     overdue = state.compliance.overdue_count;
     historyList = state.compliance.assignments || [];
+  } else if (isAuthenticatedSession() && !state.compliance) {
+    if (failureEl) {
+      failureEl.style.display = "block";
+      if (gridLayoutEl) gridLayoutEl.style.display = "none";
+      if (errorMsgEl) errorMsgEl.textContent = "No compliance data loaded.";
+    }
+    return;
   } else {
-    // Sandbox mode: compute from state.assignments
+    // Offline cached or explicit demo mode: compute from state.assignments
     const total = state.assignments.length;
     completed = state.assignments.filter((a) => {
       return a.status === "COMPLETED" || a.version_index > 1;
     }).length;
+    const pendingSyncCount = state.assignments.filter((a) => {
+      return a.status === "PENDING_SYNC";
+    }).length;
     overdue = state.assignments.filter((a) => {
       const isCompleted = a.status === "COMPLETED" || a.version_index > 1;
+      const isPendingSync = a.status === "PENDING_SYNC";
       return (
         !isCompleted &&
+        !isPendingSync &&
         (a.status === "OVERDUE" ||
           (a.due_at && new Date(a.due_at) < new Date()))
       );
     }).length;
-    pending = total - completed - overdue;
-    rate = total > 0 ? Math.round((completed / total) * 100) : 100;
+    pending = Math.max(0, total - completed - overdue);
+    rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+    void pendingSyncCount;
 
     historyList = state.assignments.map((item) => {
       const isCompleted = item.status === "COMPLETED" || item.version_index > 1;
+      const isPendingSync = item.status === "PENDING_SYNC";
       const isOverdue =
         !isCompleted &&
+        !isPendingSync &&
         (item.status === "OVERDUE" ||
           (item.due_at && new Date(item.due_at) < new Date()));
       const status = isCompleted
         ? "COMPLETED"
-        : isOverdue
-          ? "OVERDUE"
-          : "PENDING";
+        : isPendingSync
+          ? "PENDING_SYNC"
+          : isOverdue
+            ? "OVERDUE"
+            : "PENDING";
       return {
         instrument_id: item.instrument_id,
         instrument_name: item.instrument_name,
         due_at: item.due_at,
         end_date: item.end_date,
         submitted_at: item.submitted_at,
+        queued_at: item.queued_at,
         status: status,
       };
     });
@@ -121,13 +148,18 @@ export function renderCompliance() {
         : "—";
       const submittedText = item.submitted_at
         ? new Date(item.submitted_at).toLocaleString()
-        : "—";
+        : item.queued_at
+          ? `${new Date(item.queued_at).toLocaleString()} (Queued)`
+          : "—";
 
       let pillClass = "pending";
       let statusLabel = "Pending";
       if (item.status === "COMPLETED") {
         pillClass = "completed";
         statusLabel = "Completed";
+      } else if (item.status === "PENDING_SYNC") {
+        pillClass = "pending";
+        statusLabel = "Pending Sync";
       } else if (
         item.status === "OVERDUE" ||
         (item.due_at && new Date(item.due_at) < new Date())

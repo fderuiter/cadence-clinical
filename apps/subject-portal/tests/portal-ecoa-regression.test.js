@@ -298,10 +298,39 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     document.getElementById("vshr").value = "72";
     document.getElementById("has_symptoms_option_1").checked = true;
 
-    // Verify and submit via electronic signature
+    // Verify and submit via electronic signature while offline: stays Pending Sync (33%)
     document.getElementById("sign-username").value = "subject_001";
     document.getElementById("sign-password").value = "pass123";
     await portal.verifyAndSubmitSignature();
+
+    expect(document.getElementById("compliance-rate-pct").textContent).toBe(
+      "33%"
+    );
+    expect(
+      document.getElementById("compliance-completed-count").textContent
+    ).toBe("1");
+    expect(
+      document.getElementById("compliance-pending-count").textContent
+    ).toBe("1");
+
+    // Server confirms sync -> promotes assignment to COMPLETED (2/3 = 67%)
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          status: "success",
+          results: [
+            {
+              status: "CREATED",
+              id: "sub_confirmed_reg_01",
+              diary_id: "inst_daily_diary",
+              answers: { vssbp: "120" },
+            },
+          ],
+        }),
+    });
+    portal.state.session.isOfflineMode = false;
+    await portal.syncOfflineQueue();
 
     // Compliance changes to 2/3 (67%)
     expect(document.getElementById("compliance-rate-pct").textContent).toBe(
