@@ -69,7 +69,7 @@
 
     <!-- AI model port and providers (ADR-2630) -->
     <PackageVersion Include="Anthropic" Version="13.10.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI" Version="10.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="11.0.0" />
     <PackageVersion Include="Anthropic.Aws" Version="1.0.1" />
     <PackageVersion Include="Anthropic.Bedrock" Version="1.0.4" />
     <PackageVersion Include="Anthropic.Foundry" Version="1.0.0" />
