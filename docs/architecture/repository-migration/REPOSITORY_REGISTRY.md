@@ -1,21 +1,24 @@
 # Cadence: repository registry and ownership source of truth
 
+> [!NOTE]
+> Historical reference for the former repository migration program. See the [project plan](../../PROJECT_PLAN.md) for current delivery and [ADR-2603](../../adr/2026-11-19-keep-cadence-in-one-repository.md) for the source layout decision.
+
 **Status:** planning and bootstrap committed 2026-10-28. **No clinical implementation has yet been extracted** into the nine new product/foundation repositories. This registry is the designated inventory of target source ownership, not an assertion that runtime services have been moved.
 
 ## Repositories (10 total)
 
 | GitHub source repository | Provisional product/foundation | Target bounded context | Initial state |
 | --- | --- | --- | --- |
-| [`cadence-clinical`](https://github.com/fderuiter/cadence-clinical) | Workspace / Complete | Platform composition, gateway, shared client shell, CLI, release integration | existing source; integration authority |
-| [`cadence-kernel`](https://github.com/fderuiter/cadence-kernel) | Core (not a paid SKU) | Canonical clinical identity, temporal record, permissions, audit, command SDK | documentation initialized; implementation remains in source |
-| [`cadence-study-design`](https://github.com/fderuiter/cadence-study-design) | Blueprint | USDM/protocol authoring, study build, study standards authoring | documentation initialized |
-| [`cadence-clinical-data`](https://github.com/fderuiter/cadence-clinical-data) | Capture | EDC, eCRF, eSource, CDMS, clinical coding and queries | documentation initialized |
-| [`cadence-trial-operations`](https://github.com/fderuiter/cadence-trial-operations) | Orbit | CTMS, startup, eTMF/eISF, monitoring, site finance, operational workflows | documentation initialized |
-| [`cadence-participants`](https://github.com/fderuiter/cadence-participants) | Engage | Recruitment, eConsent, eCOA/ePRO, participant portal/DCT | documentation initialized |
-| [`cadence-interventions`](https://github.com/fderuiter/cadence-interventions) | Allocate | RTSM, approved randomization, supply, device accountability | documentation initialized |
-| [`cadence-safety`](https://github.com/fderuiter/cadence-safety) | Vigil | Safety case, SAE reconciliation, PV, E2B(R3), signal detection | documentation initialized |
-| [`cadence-evidence`](https://github.com/fderuiter/cadence-evidence) | Lens | Labs, imaging, DHT, statistical analysis, standardized datasets and RWE | documentation initialized |
-| [`cadence-quality-regulatory`](https://github.com/fderuiter/cadence-quality-regulatory) | Assure | QMS, CAPA, inspection, RIM, submissions and transparency | documentation initialized |
+| `cadence-clinical` | Workspace / Complete | Platform composition, gateway, shared client shell, CLI, release integration | existing source; integration authority |
+| `cadence-kernel` | Core (not a paid SKU) | Canonical clinical identity, temporal record, permissions, audit, command SDK | documentation initialized; implementation remains in source |
+| `cadence-study-design` | Blueprint | USDM/protocol authoring, study build, study standards authoring | documentation initialized |
+| `cadence-clinical-data` | Capture | EDC, eCRF, eSource, CDMS, clinical coding and queries | documentation initialized |
+| `cadence-trial-operations` | Orbit | CTMS, startup, eTMF/eISF, monitoring, site finance, operational workflows | documentation initialized |
+| `cadence-participants` | Engage | Recruitment, eConsent, eCOA/ePRO, participant portal/DCT | documentation initialized |
+| `cadence-interventions` | Allocate | RTSM, approved randomization, supply, device accountability | documentation initialized |
+| `cadence-safety` | Vigil | Safety case, SAE reconciliation, PV, E2B(R3), signal detection | documentation initialized |
+| `cadence-evidence` | Lens | Labs, imaging, DHT, statistical analysis, standardized datasets and RWE | documentation initialized |
+| `cadence-quality-regulatory` | Assure | QMS, CAPA, inspection, RIM, submissions and transparency | documentation initialized |
 
 ## Principles
 - Repository != bounded-context runtime service != purchasable application. The first governs source ownership; a product may license several application modules from one repository.

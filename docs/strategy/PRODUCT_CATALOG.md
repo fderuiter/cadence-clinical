@@ -1,6 +1,6 @@
 # Cadence: proposed product packaging and licensing
 
-**Status: commercial design proposal; not products available for purchase.** Marketing names, suite name and trademarks are provisional and require clearance. The existing development system is pre-release and not validated for live clinical studies.
+**Status: commercial design proposal.** Marketing names, suite name and trademarks are provisional and require clearance. The existing development system is pre-release and not validated for live clinical studies. Implementation and verification are organized in [one repository](../adr/2026-11-19-keep-cadence-in-one-repository.md).
 
 ## Brand architecture
 - **Master brand:** Cadence Clinical (provisional).
@@ -9,18 +9,18 @@
 - **Shared foundation:** Cadence Core (kernel infrastructure, not a paid customer prerequisite).
 - **Product families:** eight; one family may contain several separately sold applications.
 
-| Product family | Candidate standalone applications | Engineering repository |
+| Product family | Candidate standalone applications | Product responsibility |
 | --- | --- | --- |
-| Blueprint | Protocol Designer; Study Builder; Standards Workbench; Feasibility | [`cadence-study-design`](https://github.com/fderuiter/cadence-study-design) |
-| Capture | EDC; Clinical Data Management | [`cadence-clinical-data`](https://github.com/fderuiter/cadence-clinical-data) |
-| Orbit | CTMS; eTMF; Site/eISF; Payments | [`cadence-trial-operations`](https://github.com/fderuiter/cadence-trial-operations) |
-| Engage | Consent; Outcomes/eCOA; Recruitment | [`cadence-participants`](https://github.com/fderuiter/cadence-participants) |
-| Allocate | RTSM; Clinical Supplies; Device Accountability | [`cadence-interventions`](https://github.com/fderuiter/cadence-interventions) |
-| Vigil | Safety; Signal Management | [`cadence-safety`](https://github.com/fderuiter/cadence-safety) |
-| Lens | Imaging; Laboratory; Statistical Analysis; Real-World Evidence | [`cadence-evidence`](https://github.com/fderuiter/cadence-evidence) |
-| Assure | Quality Management; Regulatory Management | [`cadence-quality-regulatory`](https://github.com/fderuiter/cadence-quality-regulatory) |
+| Blueprint | Protocol Designer, Study Builder, Standards Workbench, Feasibility | Protocol and study design |
+| Capture | EDC, Clinical Data Management | Clinical collection and discrepancy workflows |
+| Orbit | CTMS, eTMF, Site/eISF, Payments | Trial operations and site readiness |
+| Engage | Consent, Outcomes/eCOA, Recruitment | Participant workflows |
+| Allocate | RTSM, Clinical Supplies, Device Accountability | Intervention assignment and accountability |
+| Vigil | Safety, Signal Management | Safety and pharmacovigilance |
+| Lens | Imaging, Laboratory, Statistical Analysis, Real-World Evidence | Scientific evidence |
+| Assure | Quality Management, Regulatory Management | Quality and regulatory workflows |
 
-24 **candidate** applications are listed across these eight families. These are possible SKUs, not 24 production-ready systems or 24 deployment processes.
+The 24 candidate applications are possible SKUs. The [project plan](../PROJECT_PLAN.md) identifies which clinical workflows are in the current delivery scope and where they live in the codebase.
 
 ## Packaging
 - **Individual:** customer licenses one complete application.
@@ -38,7 +38,7 @@ Separate `customer organization`, `subscription`, `product entitlement`, `activa
 - Pricing metrics and numbers are **not set**.
 
 ## Initial release hypothesis
-Prioritize **Blueprint + Capture** for a synthetic medical-device study: structured protocol → approved study-build specification → validated eCRF and edit checks → data correction, review and lock → traceable standard dataset/analysis export. Demonstrate separately usable products first, then integrated advantages.
+Prioritize **Blueprint + Capture** for a synthetic medical-device study: structured protocol → approved study-build specification → eCRF and edit checks → data correction, review and lock → traceable clinical export. Demonstrate the integrated study journey and use the product boundaries to guide packaging hypotheses.
 - No commercial launch without fit-for-intended-use verification, validation/support obligations and security assessment.
 - Validate demand with interviews/design partners, not feature counts alone.
-- See [market hypotheses](MARKET_HYPOTHESES.md) and [migration plan](../architecture/repository-migration/MIGRATION_PLAN.md).
+- See [market hypotheses](MARKET_HYPOTHESES.md) and the [project plan](../PROJECT_PLAN.md).

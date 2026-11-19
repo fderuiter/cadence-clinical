@@ -72,7 +72,7 @@ public sealed class DocIndexSyncServiceTests : IDisposable
     public void DetermineCategory_CategorizesPathsCorrectly()
     {
         DocIndexSyncService.DetermineCategory("kernel/SPEC.md").Should().Be("## Kernel and roadmap");
-        DocIndexSyncService.DetermineCategory("architecture/repository-migration/MIGRATION_PLAN.md").Should().Be("## Kernel and roadmap");
+        DocIndexSyncService.DetermineCategory("architecture/repository-migration/MIGRATION_PLAN.md").Should().Be("## Former repository migration program");
         DocIndexSyncService.DetermineCategory("adr/001.md").Should().Be("## Architecture decision records");
         DocIndexSyncService.DetermineCategory("SDLC/01_PRD.md").Should().Be("## Requirements, validation and GxP");
         DocIndexSyncService.DetermineCategory("migration/PHASE0.md").Should().Be("## Python-to-.NET port (completed)");
@@ -87,8 +87,8 @@ public sealed class DocIndexSyncServiceTests : IDisposable
     [Fact]
     public void DetermineStatus_AssignsStatusCorrectly()
     {
-        DocIndexSyncService.DetermineStatus("architecture/repository-migration/REPOSITORY_REGISTRY.md", "").Should().Be("Normative");
-        DocIndexSyncService.DetermineStatus("architecture/repository-migration/MIGRATION_PLAN.md", "").Should().Be("Current");
+        DocIndexSyncService.DetermineStatus("architecture/repository-migration/REPOSITORY_REGISTRY.md", "").Should().Be("Historical");
+        DocIndexSyncService.DetermineStatus("architecture/repository-migration/MIGRATION_PLAN.md", "").Should().Be("Historical");
         DocIndexSyncService.DetermineStatus("strategy/PRODUCT_CATALOG.md", "").Should().Be("Current");
         DocIndexSyncService.DetermineStatus("adr/2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md", "").Should().Be("Current");
         DocIndexSyncService.DetermineStatus("migration/01-old.md", "").Should().Be("Historical");

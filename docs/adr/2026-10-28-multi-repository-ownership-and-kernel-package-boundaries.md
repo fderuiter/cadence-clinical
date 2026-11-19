@@ -1,6 +1,6 @@
 # ADR-2602: Multi-Repository Ownership and Kernel Package Boundaries
 
-- **Status:** Accepted (approved by @fderuiter on 2026-10-28 as the recommendations in this draft)
+- **Status:** Partially superseded by [ADR-2603](2026-11-19-keep-cadence-in-one-repository.md)
 - **Date:** 2026-10-28
 - **Authors:** @fderuiter, Claude Code
 - **Deciders:** @fderuiter
@@ -12,10 +12,7 @@
 - **Shared inventory:** [`SOURCE_INVENTORY.md`](../architecture/repository-migration/SOURCE_INVENTORY.md) (task 1), merged to `main` in #5681 and carrying the symbol-level review merged in #5683 (`eab3c1e`).
 
 > [!NOTE]
-> This ADR is **accepted** as of 2026-10-28. Acceptance settles the direction only. It does not start extraction, which
-> stays gated on the migration plan's remaining conditions. Previously, it recorded options and a recommended direction for review. It did not finalize the
-> ownership matrix, the package graph or the repository layout. Items marked *needs inventory* wait for the shared
-> file-level inventory (task 1) before anyone decides them. No code, package or repository has moved.
+> [ADR-2603](2026-11-19-keep-cadence-in-one-repository.md) supersedes the source repository split, cross-repository publishing plan, and extraction sequence. The kernel SDK boundaries, module ownership decisions, and single-host transaction model carry forward. See the [project plan](../PROJECT_PLAN.md) for current work. The remaining text records the decision accepted on 2026-10-28.
 
 ---
 

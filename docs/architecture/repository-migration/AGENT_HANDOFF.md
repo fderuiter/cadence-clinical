@@ -1,5 +1,8 @@
 # Multi-repository agent execution guide
 
+> [!NOTE]
+> Historical reference for the former repository migration program. See the [project plan](../../PROJECT_PLAN.md) for current delivery and [ADR-2603](../../adr/2026-11-19-keep-cadence-in-one-repository.md) for the source layout decision.
+
 **This is a planning/orchestration contract, not permission to reorganize or delete application code automatically.**
 
 ## Begin every task

@@ -1,5 +1,8 @@
 # Capability ownership matrix
 
+> [!NOTE]
+> Historical reference for the former repository migration program. See the [project plan](../../PROJECT_PLAN.md) for current delivery and [ADR-2603](../../adr/2026-11-19-keep-cadence-in-one-repository.md) for the source layout decision.
+
 **Status:** target mapping for a file-by-file migration inventory. This is *not* a statement that source paths have moved or that every capability is operational.
 
 Canonical destination names omit the `cadence-` prefix; `clinical` means the original `cadence-clinical` integration repository.

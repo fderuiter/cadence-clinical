@@ -328,12 +328,12 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
 
 ## 7. Migration path
 
-The [kernel roadmap (spec §15)](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap) is the plan:
+Cadence develops and integrates in one repository under [ADR-2603](docs/adr/2026-11-19-keep-cadence-in-one-repository.md). Follow the [project plan](docs/PROJECT_PLAN.md) for current delivery order, module owners, and acceptance evidence. The [kernel roadmap (spec §15)](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap) describes the longer-term capability phases:
 
 | Phase                          | Outcome                                                                                                        |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------- |
 | 0. Foundations                 | Kernel projects, `IClock`, `tstzrange`, RLS, command pipeline, architecture baseline                           |
-| 1. EDC on the kernel           | `apps/execution` runs on kernel concepts ([source inventory](docs/architecture/repository-migration/SOURCE_INVENTORY.md)) |
+| 1. EDC on the kernel           | `apps/execution` runs on kernel concepts and proves the reference visit |
 | 2. Knowledge and standards     | Concept Registry, executable protocol, standards registry, rules, lineage                                      |
 | 3. Quality and trust expansion | RBQM, computable consent, specimens, ingestion, AI proposals                                                   |
 | 4. Analysis and submission     | Derivations, ADaM, TLF lineage, Define-XML, submission package                                                 |
@@ -343,8 +343,8 @@ The services reach the kernel by becoming modules of one composition host
 ([ADR-2610](docs/adr/2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md)). The order, from the
 architecture audit epic [#5310](https://github.com/fderuiter/cadence-clinical/issues/5310), is: honest test evidence
 and contained failures; one composition host and one kernel command path (#5315, #5366); the eCRF end to end on it
-(#5365); concurrency, durable jobs and recovery (#5362, #5364); then the other modules (#5367, #5371–#5378), Execution
-first and Quality second. Each module conversion follows the fold-in rules: one owner per authoritative fact, query and
+(#5365); concurrency, durable jobs and recovery (#5362, #5364); then the other modules (#5367, #5371–#5378). Each
+module conversion follows the fold-in rules: one owner per authoritative fact, query and
 command contracts and durable events between modules, and no competing authoritative copies.
 
 Work is tracked in epic [#4719](https://github.com/fderuiter/cadence-clinical/issues/4719). The
