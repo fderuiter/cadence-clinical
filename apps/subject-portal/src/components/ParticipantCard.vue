@@ -9,22 +9,13 @@
     </div>
     <div class="info-row">
       <span class="info-lbl">Status:</span>
-      <span
-        id="session-auth-status"
-        class="info-val"
-        :class="statusClass"
-        style="font-weight: 600"
-      >
+      <span id="session-auth-status" class="info-val" :class="statusClass">
         {{ statusLabel }}
       </span>
     </div>
     <div v-if="isDemo" class="info-row">
       <span class="info-lbl">Demo Wallet:</span>
-      <span
-        id="session-wallet-balance"
-        class="info-val"
-        style="font-weight: bold"
-      >
+      <span id="session-wallet-balance" class="info-val">
         ${{
           typeof wallet.walletBalance === "number"
             ? wallet.walletBalance.toFixed(2)
@@ -35,23 +26,17 @@
     <div
       v-if="sessionStore.authError"
       id="session-auth-error"
+      class="participant-auth-error"
       role="alert"
-      style="
-        margin-top: 8px;
-        font-size: 12px;
-        color: var(--semantic-color-error);
-        font-weight: 600;
-      "
     >
       {{ sessionStore.authError }}
     </div>
-    <div class="info-row" style="margin-top: 12px">
+    <div class="info-row participant-session-actions">
       <button
         v-if="isSignedInOrDemo"
         id="btn-logout"
         type="button"
-        class="btn btn-secondary"
-        style="width: 100%; padding: 4px 8px; font-size: 12px"
+        class="btn btn-secondary participant-action-btn"
         @click="handleLogout"
       >
         {{ isDemo ? "Reset Demo Session" : "Logout" }}
@@ -60,13 +45,18 @@
         v-else
         id="btn-login"
         type="button"
-        class="btn btn-primary"
-        style="width: 100%; padding: 6px 8px; font-size: 12px"
+        class="btn btn-primary participant-action-btn"
         @click="handleLogin"
       >
         Sign In
       </button>
     </div>
+    <SiteContactLinks
+      id="participant-site-contacts"
+      compact
+      heading="Site Support"
+      region-label="Participant card study site coordinator contacts"
+    />
   </div>
 </template>
 
@@ -74,9 +64,11 @@
 import { computed } from "vue";
 
 import { login, logout } from "../features/auth.js";
+import { maskParticipantIdentifier } from "../features/site-support.js";
 import { useSessionStore } from "../stores/session.js";
 import { useWalletStore } from "../stores/wallet.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
+import SiteContactLinks from "./SiteContactLinks.vue";
 
 const sessionStore = useSessionStore();
 const wallet = useWalletStore();
@@ -103,10 +95,10 @@ const isSignedInOrDemo = computed(
 );
 
 const displaySubjectId = computed(() => {
-  if (isDemo.value) {
-    return sessionStore.session.userId || "subject_001";
-  }
-  return sessionStore.session.userId || "Not signed in";
+  const raw = isDemo.value
+    ? sessionStore.session.userId || "subject_001"
+    : sessionStore.session.userId;
+  return maskParticipantIdentifier(raw) || "Not signed in";
 });
 
 const statusLabel = computed(() => {

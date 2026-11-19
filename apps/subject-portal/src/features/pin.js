@@ -1,11 +1,12 @@
-// Local security PIN that wraps the offline database master key in memory (ADR-2360).
+// Local security PIN that wraps the offline database master key in memory (ADR-2360),
+// with 5-attempt consecutive lockout cap and identity-verified OIDC reset.
 import { decryptAESGCM, deriveKeyFromPIN, encryptAESGCM } from "ui";
 import { nextTick } from "vue";
 
 import { isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
 import {
-  clearLockedOfflineData,
+  flagLockedEntriesForPinReset,
   getInMemorySessionKey,
   getWrappedMasterKeyConfig,
   saveWrappedMasterKeyConfig,
@@ -13,6 +14,8 @@ import {
 } from "../sync-queue.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 import { logAuditRecord } from "./audit.js";
+import { login } from "./auth.js";
+import { maskParticipantIdentifier } from "./site-support.js";
 import { syncOfflineQueue } from "./sync.js";
 import {
   checkOnline,
@@ -20,7 +23,68 @@ import {
   renderSyncQueueList,
 } from "./sync-status.js";
 
+export const MAX_PIN_UNLOCK_ATTEMPTS = 5;
+export const PENDING_OIDC_PIN_RESET_KEY = "oidc_pending_pin_reset";
+
+let pendingResetMasterKey = null;
+
+export function hasVerifiedParticipantIdentity() {
+  if (isAuthenticatedSession() || isDemoModeActive()) {
+    return true;
+  }
+  if (state.session.isOfflineMode || !state.session.userId) {
+    return false;
+  }
+  try {
+    const storedToken =
+      (typeof sessionStorage !== "undefined" &&
+        sessionStorage.getItem("mock_token")) ||
+      (typeof localStorage !== "undefined" &&
+        localStorage.getItem("mock_token"));
+    return Boolean(storedToken);
+  } catch {
+    return false;
+  }
+}
+
+function ensurePinUnlockState() {
+  if (typeof state.pinUnlock.failedAttempts !== "number") {
+    state.pinUnlock.failedAttempts = 0;
+  }
+  if (typeof state.pinUnlock.maxAttempts !== "number") {
+    state.pinUnlock.maxAttempts = MAX_PIN_UNLOCK_ATTEMPTS;
+  }
+  if (typeof state.pinUnlock.isLockedOut !== "boolean") {
+    state.pinUnlock.isLockedOut = false;
+  }
+  if (typeof state.pinUnlock.requiresReauth !== "boolean") {
+    state.pinUnlock.requiresReauth = false;
+  }
+}
+
+function consumePendingOidcResetFlag() {
+  try {
+    if (
+      typeof sessionStorage !== "undefined" &&
+      sessionStorage.getItem(PENDING_OIDC_PIN_RESET_KEY) === "true"
+    ) {
+      sessionStorage.removeItem(PENDING_OIDC_PIN_RESET_KEY);
+      return true;
+    }
+  } catch {
+    // Ignore sessionStorage restrictions
+  }
+  return false;
+}
+
 export async function checkPINWrapper() {
+  ensurePinUnlockState();
+
+  if (hasVerifiedParticipantIdentity() && consumePendingOidcResetFlag()) {
+    await confirmPINReset();
+    return;
+  }
+
   if (getInMemorySessionKey()) {
     state.pinUnlock.isOpen = false;
     state.pinUnlock.confirmingReset = false;
@@ -34,7 +98,10 @@ export async function checkPINWrapper() {
     state.pinUnlock.confirmingReset = false;
     state.pinUnlock.isOpen = true;
     nextTick(() => {
-      const el = document.getElementById("unlock-pin");
+      const targetId = state.pinUnlock.isLockedOut
+        ? "btn-pin-unlock-reset"
+        : "unlock-pin";
+      const el = document.getElementById(targetId);
       if (el) el.focus();
     });
   } else if (
@@ -70,7 +137,9 @@ export async function handlePINSetupSubmit() {
   }
 
   try {
-    const masterKey = globalThis.crypto.getRandomValues(new Uint8Array(32));
+    const masterKey =
+      pendingResetMasterKey ||
+      globalThis.crypto.getRandomValues(new Uint8Array(32));
     const salt = globalThis.crypto.getRandomValues(new Uint8Array(16));
     const kwk = await deriveKeyFromPIN(pin, salt);
     const wrappedKeyStr = await encryptAESGCM(
@@ -78,9 +147,14 @@ export async function handlePINSetupSubmit() {
       kwk
     );
     await saveWrappedMasterKeyConfig(wrappedKeyStr, salt);
+    pendingResetMasterKey = null;
     setInMemorySessionKey(masterKey);
     state.pinSetup.isOpen = false;
     state.pinSetup.error = "";
+    ensurePinUnlockState();
+    state.pinUnlock.failedAttempts = 0;
+    state.pinUnlock.isLockedOut = false;
+    state.pinUnlock.requiresReauth = false;
     await refreshSubmissionsState();
     await renderSyncQueueList();
   } catch (err) {
@@ -96,6 +170,24 @@ export async function handlePINSetupSubmit() {
 }
 
 export async function handlePINUnlockSubmit() {
+  ensurePinUnlockState();
+
+  const maxAttempts = state.pinUnlock.maxAttempts || MAX_PIN_UNLOCK_ATTEMPTS;
+  if (
+    state.pinUnlock.isLockedOut ||
+    state.pinUnlock.failedAttempts >= maxAttempts
+  ) {
+    state.pinUnlock.isLockedOut = true;
+    state.pinUnlock.pin = "";
+    state.pinUnlock.error =
+      "Too many failed PIN attempts (5 of 5). PIN unlock is paused — please sign in to reset your PIN, sign out, or contact your study site.";
+    nextTick(() => {
+      const resetBtn = document.getElementById("btn-pin-unlock-reset");
+      if (resetBtn) resetBtn.focus();
+    });
+    return;
+  }
+
   const pin = state.pinUnlock.pin;
   if (!pin) {
     state.pinUnlock.error = "Please enter your security PIN.";
@@ -112,6 +204,9 @@ export async function handlePINUnlockSubmit() {
     const decrypted = await decryptAESGCM(config.wrappedKey, kwk);
     const masterKey = new Uint8Array(decrypted.masterKey);
     setInMemorySessionKey(masterKey);
+    state.pinUnlock.failedAttempts = 0;
+    state.pinUnlock.isLockedOut = false;
+    state.pinUnlock.requiresReauth = false;
     state.pinUnlock.isOpen = false;
     state.pinUnlock.confirmingReset = false;
     state.pinUnlock.error = "";
@@ -122,7 +217,18 @@ export async function handlePINUnlockSubmit() {
       await syncOfflineQueue(false, { autoDisburse: isDemoModeActive() });
     }
   } catch {
-    state.pinUnlock.error = "Incorrect security PIN. Access denied.";
+    state.pinUnlock.failedAttempts += 1;
+    if (state.pinUnlock.failedAttempts >= maxAttempts) {
+      state.pinUnlock.isLockedOut = true;
+      state.pinUnlock.error =
+        "Too many failed PIN attempts (5 of 5). PIN unlock is paused — please sign in to reset your PIN, sign out, or contact your study site.";
+      nextTick(() => {
+        const resetBtn = document.getElementById("btn-pin-unlock-reset");
+        if (resetBtn) resetBtn.focus();
+      });
+    } else {
+      state.pinUnlock.error = "Incorrect security PIN. Access denied.";
+    }
   } finally {
     state.pinUnlock.pin = "";
     const el = document.getElementById("unlock-pin");
@@ -131,36 +237,91 @@ export async function handlePINUnlockSubmit() {
 }
 
 export function requestPINReset() {
+  ensurePinUnlockState();
   state.pinUnlock.error = "";
   state.pinUnlock.confirmingReset = true;
+  state.pinUnlock.requiresReauth = !hasVerifiedParticipantIdentity();
   nextTick(() => {
-    const cancelBtn = document.getElementById("btn-pin-reset-cancel");
-    if (cancelBtn) cancelBtn.focus();
+    const primaryId = state.pinUnlock.requiresReauth
+      ? "btn-pin-reauth-oidc"
+      : "btn-pin-reset-confirm";
+    const targetBtn =
+      document.getElementById(primaryId) ||
+      document.getElementById("btn-pin-reset-cancel");
+    if (targetBtn) targetBtn.focus();
   });
 }
 
 export function cancelPINReset() {
+  ensurePinUnlockState();
   state.pinUnlock.confirmingReset = false;
   state.pinUnlock.error = "";
   nextTick(() => {
-    const el = document.getElementById("unlock-pin");
+    const targetId = state.pinUnlock.isLockedOut
+      ? "btn-pin-unlock-reset"
+      : "unlock-pin";
+    const el = document.getElementById(targetId);
     if (el) el.focus();
   });
 }
 
+export async function reauthenticateForPINReset() {
+  ensurePinUnlockState();
+  try {
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.setItem(PENDING_OIDC_PIN_RESET_KEY, "true");
+    }
+  } catch {
+    // Ignore storage errors
+  }
+
+  await login();
+
+  if (hasVerifiedParticipantIdentity()) {
+    consumePendingOidcResetFlag();
+    await confirmPINReset();
+  }
+}
+
 export async function confirmPINReset() {
+  ensurePinUnlockState();
+
+  if (!hasVerifiedParticipantIdentity()) {
+    state.pinUnlock.requiresReauth = true;
+    state.pinUnlock.error =
+      "Identity verification required. Please sign in with your participant account to reset your security PIN.";
+    await reauthenticateForPINReset();
+    return;
+  }
+
+  consumePendingOidcResetFlag();
+
   const userId = state.session.userId;
-  await clearLockedOfflineData(userId);
-  state.submissions = [];
+  // Generate a fresh 256-bit local master key for the upcoming PIN setup
+  pendingResetMasterKey = globalThis.crypto.getRandomValues(new Uint8Array(32));
+
+  const { flaggedCount } = await flagLockedEntriesForPinReset(userId);
+
   state.pinUnlock.pin = "";
   state.pinUnlock.error = "";
   state.pinUnlock.confirmingReset = false;
+  state.pinUnlock.failedAttempts = 0;
+  state.pinUnlock.isLockedOut = false;
+  state.pinUnlock.requiresReauth = false;
   state.pinUnlock.isOpen = false;
+  state.draftPresence = {};
+  for (const assign of state.assignments || []) {
+    if (assign) assign.has_draft = false;
+  }
 
   await logAuditRecord(
     "PIN_WRAPPER_RESET",
-    { subject_id: userId || "unauthenticated" },
-    "Participant confirmed security PIN reset and cleared locked local offline entries."
+    {
+      subject_id: maskParticipantIdentifier(userId) || "authenticated",
+      flagged_entries: flaggedCount,
+      new_key_generated: true,
+    },
+    "Participant verified identity, generated a new local master key, and flagged locked offline entries without clinical PII."
   );
 
   await refreshSubmissionsState();

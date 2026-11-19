@@ -11,5 +11,8 @@ export const useUiStore = defineStore("ui", {
     modalError: "",
     previouslyFocusedElement: null,
     initiatingButton: null,
+    draftPresence: {},
+    questionnaireCancelConfirmOpen: false,
+    siteSupportContact: null,
   }),
 });
