@@ -75,7 +75,7 @@
     <PackageVersion Include="Anthropic.Foundry" Version="1.0.0" />
     <PackageVersion Include="Anthropic.Vertex" Version="1.0.3" />
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.11.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="11.0.0" />
 
     <!-- Resilience & HTTP Clients -->
     <PackageVersion Include="Polly" Version="8.5.2" />
