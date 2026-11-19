@@ -1,5 +1,8 @@
 # Kernel extraction preparation plan
 
+> [!NOTE]
+> Historical reference for the former repository migration program. See the [project plan](../../PROJECT_PLAN.md) for current delivery and [ADR-2603](../../adr/2026-11-19-keep-cadence-in-one-repository.md) for the source layout decision.
+
 **Status:** plan only, for review. No source moved, deleted or changed. Tracks C1 to C5 may proceed on preparation branches. C6, the actual extraction, is blocked until Tracks A and B pass.
 **Source revision:** `cadence-clinical` `main` at `cb28d67` (ADR-2602 accepted, inventory merged in #5681, symbol review in #5683, PostgreSQL failure detection in #5684).
 **Decision record:** [ADR-2602](../../adr/2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md). It is accepted and governs the SDK shape in this plan. This plan does not reopen it.

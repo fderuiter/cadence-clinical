@@ -202,6 +202,7 @@ public static partial class DocIndexSyncService
 
     public static string DetermineCategory(string relPath)
     {
+        if (relPath.StartsWith("architecture/repository-migration/", StringComparison.OrdinalIgnoreCase)) return "## Former repository migration program";
         if (relPath.StartsWith("kernel/", StringComparison.OrdinalIgnoreCase) ||
             relPath.StartsWith("architecture/", StringComparison.OrdinalIgnoreCase)) return "## Kernel and roadmap";
         if (relPath.StartsWith("adr/", StringComparison.OrdinalIgnoreCase)) return "## Architecture decision records";
@@ -224,9 +225,9 @@ public static partial class DocIndexSyncService
 
     public static string DetermineStatus(string relPath, string fileContent)
     {
-        if (relPath.Equals("architecture/repository-migration/REPOSITORY_REGISTRY.md", StringComparison.OrdinalIgnoreCase)) return "Normative";
         if (relPath.StartsWith("adr/", StringComparison.OrdinalIgnoreCase)) return "Current";
-        if (relPath.StartsWith("migration/", StringComparison.OrdinalIgnoreCase)) return "Historical";
+        if (relPath.StartsWith("migration/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.StartsWith("architecture/repository-migration/", StringComparison.OrdinalIgnoreCase)) return "Historical";
         if (relPath.StartsWith("api/", StringComparison.OrdinalIgnoreCase) || relPath.StartsWith("schema/", StringComparison.OrdinalIgnoreCase)) return "Generated";
         if (relPath.StartsWith("SDLC/", StringComparison.OrdinalIgnoreCase))
         {

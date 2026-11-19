@@ -1,5 +1,8 @@
 # Source inventory and dependency graph (Phase 0, task 1)
 
+> [!NOTE]
+> Historical reference for the former repository migration program. See the [project plan](../../PROJECT_PLAN.md) for current delivery and [ADR-2603](../../adr/2026-11-19-keep-cadence-in-one-repository.md) for the source layout decision.
+
 **Status:** read-only inventory. No source has moved, been deleted or been changed. Every destination is a *proposal* until the gates in [MIGRATION_PLAN.md](MIGRATION_PLAN.md) and the ADR in task 2 clear. Ownership marked `needs decision` is not assigned and must not be inferred from folder names.
 
 This document is the shared source for the ADR draft (task 2) and kernel extraction preparation (task 3). Both must reference it instead of repeating the analysis.

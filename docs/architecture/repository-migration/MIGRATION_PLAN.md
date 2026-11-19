@@ -1,5 +1,8 @@
 # Cadence: 10-repository controlled migration program
 
+> [!NOTE]
+> Historical reference for the former repository migration program. See the [project plan](../../PROJECT_PLAN.md) for current delivery and [ADR-2603](../../adr/2026-11-19-keep-cadence-in-one-repository.md) for the source layout decision.
+
 **Status: kickoff plan only — no source implementation migrated.** All ten repositories are private; new destinations contain documentation charters. The current runtime and historical issues remain in [cadence-clinical](https://github.com/fderuiter/cadence-clinical).
 
 ## Scope and guardrails
