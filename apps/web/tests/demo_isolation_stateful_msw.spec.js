@@ -546,6 +546,251 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
       );
       expect(chemSummary?.complete).toBe(false);
     });
+
+    it("serves stateful kernel entitlements and in-place tier upgrades without hitting 501 boundary", async () => {
+      const initialRes = await fetch(`${origin}/api/v1/kernel/entitlements`, {
+        headers: DEMO_HEADERS,
+      });
+      expect(initialRes.status).toBe(200);
+      const initialEntitlements = await initialRes.json();
+      expect(initialEntitlements.tier).toBe("Complete");
+
+      const upgradeRes = await fetch(
+        `${origin}/api/v1/kernel/entitlements/tier`,
+        {
+          method: "POST",
+          headers: {
+            ...DEMO_HEADERS,
+            "Idempotency-Key": "demo-tier-select-1",
+            "X-Change-Reason": "Evaluate Select tier in demo",
+          },
+          body: JSON.stringify({ tier: "Select" }),
+        }
+      );
+      expect(upgradeRes.status).toBe(200);
+      const upgraded = await upgradeRes.json();
+      expect(upgraded.tier).toBe("Select");
+      expect(upgraded.product_families).toEqual([
+        "Blueprint",
+        "Capture",
+        "Orbit",
+        "Engage",
+        "Allocate",
+      ]);
+
+      const subsequentRes = await fetch(
+        `${origin}/api/v1/kernel/entitlements`,
+        { headers: DEMO_HEADERS }
+      );
+      const subsequent = await subsequentRes.json();
+      expect(subsequent.tier).toBe("Select");
+    });
+
+    it("enforces RTSM scheme separation of duties, consent and kit gates, blinded subject detail, and emergency unblinding", async () => {
+      const sampleIso = new Date(Date.UTC(2027, 5, 14)).toISOString();
+
+      // 1. Draft v2 scheme as stat.author and verify separation-of-duties blocks self-approval
+      const draftRes = await fetch(
+        `${origin}/api/v1/execution/randomization/schemes`,
+        {
+          method: "POST",
+          headers: {
+            ...DEMO_HEADERS,
+            "X-User-Id": "stat.author",
+            "X-Change-Reason": "Draft v2 permuted block schedule",
+          },
+          body: JSON.stringify({
+            study_id: "DEMO-01",
+            method: "permuted_block",
+            arms: { ACTIVE: 1, PLACEBO: 1 },
+            stratification_factors: { AGE_GROUP: ["ADULT", "SENIOR"] },
+            requires_kit: true,
+          }),
+        }
+      );
+      expect(draftRes.status).toBe(201);
+      const drafted = await draftRes.json();
+      expect(drafted.status).toBe("DRAFT");
+      expect(drafted.version).toBe(2);
+
+      const selfApproveRes = await fetch(
+        `${origin}/api/v1/execution/randomization/schemes/${drafted.id}/approve`,
+        {
+          method: "POST",
+          headers: {
+            ...DEMO_HEADERS,
+            "X-User-Id": "stat.author",
+            "X-Sig-Token": "demo_sig_tok_1",
+            "X-Change-Reason": "Attempt self-approval",
+          },
+        }
+      );
+      expect(selfApproveRes.status).toBe(403);
+
+      const secondApproveRes = await fetch(
+        `${origin}/api/v1/execution/randomization/schemes/${drafted.id}/approve`,
+        {
+          method: "POST",
+          headers: {
+            ...DEMO_HEADERS,
+            "X-User-Id": "stat.approver",
+            "X-Sig-Token": "demo_sig_tok_2",
+            "X-Change-Reason": "Independent SAP verification",
+          },
+        }
+      );
+      expect(secondApproveRes.status).toBe(200);
+      const approved = await secondApproveRes.json();
+      expect(approved.status).toBe("APPROVED");
+
+      // 2. Seed site kits and verify blind-safe inventory omits _treatment_arm
+      const seedRes = await fetch(
+        `${origin}/api/v1/execution/rtsm/kits/seed-inventory`,
+        {
+          method: "POST",
+          headers: {
+            ...DEMO_HEADERS,
+            "X-Change-Reason": "Seed depot shipment for SITE-101",
+          },
+          body: JSON.stringify({
+            study_id: "DEMO-01",
+            site_id: "SITE-101",
+            kits: [
+              {
+                kit_number: "KIT-2001",
+                treatment_arm: "ACTIVE",
+                lot_number: "LOT-DEMO-2",
+                expiration_date: sampleIso,
+              },
+            ],
+          }),
+        }
+      );
+      expect(seedRes.status).toBe(200);
+
+      const invRes = await fetch(
+        `${origin}/api/v1/execution/rtsm/kits/inventory/DEMO-01/SITE-101`,
+        { headers: DEMO_HEADERS }
+      );
+      expect(invRes.status).toBe(200);
+      const inventory = await invRes.json();
+      const seededKit = inventory.find((k) => k.kit_number === "KIT-2001");
+      expect(seededKit).toBeTruthy();
+      expect(seededKit._treatment_arm).toBeUndefined();
+      expect(seededKit.treatment_arm).toBeUndefined();
+
+      // 3. Direct PATCH to RANDOMIZED is rejected with 409 RANDOMIZATION_REQUIRES_ALLOCATION
+      const enrollmentUuid = "00000000-0000-0000-0000-000000001001"; // deid-ignore
+      const directPatchRes = await fetch(
+        `${origin}/api/v1/execution/subjects/${enrollmentUuid}/state`,
+        {
+          method: "PATCH",
+          headers: {
+            ...DEMO_HEADERS,
+            "X-Change-Reason": "Attempt direct RANDOMIZED state change",
+          },
+          body: JSON.stringify({ status: "RANDOMIZED" }),
+        }
+      );
+      expect(directPatchRes.status).toBe(409);
+      const directPatchBody = await directPatchRes.json();
+      expect(directPatchBody.code).toBe("RANDOMIZATION_REQUIRES_ALLOCATION");
+
+      // 4. Record explicit-date consent and randomize SUBJ-1001 via step-up signature
+      const consentRes = await fetch(
+        `${origin}/api/v1/execution/subjects/${enrollmentUuid}/consent`,
+        {
+          method: "POST",
+          headers: {
+            ...DEMO_HEADERS,
+            "X-Change-Reason": "Signed ICF verified",
+          },
+          body: JSON.stringify({
+            protocol_version: {
+              study_id: "DEMO-01",
+              version_tag: "2.0",
+              version_index: 2,
+            },
+            icf_signed: true,
+            icf_signed_date: sampleIso,
+          }),
+        }
+      );
+      expect(consentRes.status).toBe(200);
+
+      const randRes = await fetch(
+        `${origin}/api/v1/execution/subjects/${enrollmentUuid}/randomize`,
+        {
+          method: "POST",
+          headers: {
+            ...DEMO_HEADERS,
+            "X-Sig-Token": "demo_sig_tok_rand",
+            "X-Change-Reason": "Eligible for allocation",
+          },
+          body: JSON.stringify({
+            stratification_factors: { AGE_GROUP: "SENIOR" },
+          }),
+        }
+      );
+      expect(randRes.status).toBe(200);
+      const allocation = await randRes.json();
+      expect(allocation.status).toBe("RANDOMIZED");
+      expect(allocation.kit_number).toBeTruthy();
+      expect(allocation.treatment_group).toBeUndefined();
+
+      // 5. Blinded GET masks treatment_group; X-Unblinded-Access reveals it
+      const blindedDetailRes = await fetch(
+        `${origin}/api/v1/execution/subjects/SUBJ-1001`,
+        { headers: DEMO_HEADERS }
+      );
+      const blindedDetail = await blindedDetailRes.json();
+      expect(blindedDetail.status).toBe("RANDOMIZED");
+      expect(blindedDetail.treatment_group).toBeNull();
+      expect(blindedDetail.investigational_product_id).toBeNull();
+
+      const unblindedDetailRes = await fetch(
+        `${origin}/api/v1/execution/subjects/SUBJ-1001`,
+        {
+          headers: {
+            ...DEMO_HEADERS,
+            "X-Unblinded-Access": "true",
+          },
+        }
+      );
+      const unblindedDetail = await unblindedDetailRes.json();
+      expect(unblindedDetail.treatment_group).toBe("ACTIVE");
+      expect(unblindedDetail.investigational_product_id).toBe(
+        allocation.kit_number
+      );
+
+      // 6. Emergency unblinding enforces >= 50-character clinical justification
+      const shortUnblindRes = await fetch(
+        `${origin}/api/v1/execution/subjects/${enrollmentUuid}/state`,
+        {
+          method: "PATCH",
+          headers: {
+            ...DEMO_HEADERS,
+            "X-Change-Reason": "Too short reason",
+          },
+          body: JSON.stringify({ status: "UNBLINDED" }),
+        }
+      );
+      expect(shortUnblindRes.status).toBe(400);
+
+      const validUnblindRes = await fetch(
+        `${origin}/api/v1/execution/subjects/${enrollmentUuid}/state`,
+        {
+          method: "PATCH",
+          headers: {
+            ...DEMO_HEADERS,
+            "X-Change-Reason":
+              "Suspected severe anaphylactic reaction requiring immediate antidote selection in ER.",
+          },
+          body: JSON.stringify({ status: "UNBLINDED" }),
+        }
+      );
+      expect(validUnblindRes.status).toBe(200);
+    });
   });
 
   describe("Demo route availability & router guard behavior", () => {

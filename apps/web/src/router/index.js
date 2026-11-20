@@ -42,6 +42,9 @@ const routes = [
       if (!authStore.isAuthenticated) {
         return "/login";
       }
+      if (authStore.needsTrialOnboarding) {
+        return { name: "trial-onboarding" };
+      }
       const onboardingStore = useOnboardingStore();
       if (!onboardingStore.bypassOverview) {
         return { name: "overview" };
@@ -74,6 +77,18 @@ const routes = [
     path: "/overview",
     name: "overview",
     component: () => import("../views/OverviewView.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/plans",
+    name: "plans",
+    component: () => import("../views/PlansView.vue"),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: "/onboarding/trial",
+    name: "trial-onboarding",
+    component: () => import("../views/TrialSetupView.vue"),
     meta: { requiresAuth: true },
   },
   {
@@ -575,6 +590,10 @@ router.beforeEach(async (to) => {
 
     if (!authStore.isAuthenticated) {
       return { path: "/login", query: { redirect: to.fullPath } };
+    }
+
+    if (authStore.needsTrialOnboarding && to.name !== "trial-onboarding") {
+      return { name: "trial-onboarding" };
     }
 
     // Role-based authorization guard

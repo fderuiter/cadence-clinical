@@ -49,6 +49,29 @@ export function createWebDemoHandlers(store = webDemoStore) {
     }),
 
     // Kernel Search, Nodes, Zoom Path, Children, Commands, Authorization
+    http.get("*/api/v1/kernel/entitlements", () =>
+      HttpResponse.json(store.getEntitlements())
+    ),
+    http.post("*/api/v1/kernel/entitlements/tier", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const updated = store.upgradeSubscriptionTier(body?.tier);
+      if (!updated) {
+        return HttpResponse.json(
+          {
+            type: "https://cadence.clinical/errors/K.Commercial.TierInvalid",
+            title: "Invalid commercial tier",
+            status: 400,
+            code: "K.Commercial.TierInvalid",
+          },
+          { status: 400 }
+        );
+      }
+      return HttpResponse.json(updated);
+    }),
+    http.post("*/api/v1/kernel/onboarding/trial", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return HttpResponse.json(store.bootstrapTrial(body));
+    }),
     http.get("*/api/v1/kernel/search", ({ request }) => {
       const url = new URL(request.url);
       const q = url.searchParams.get("q") || "";
@@ -289,21 +312,72 @@ export function createWebDemoHandlers(store = webDemoStore) {
       const body = await readJsonBody(request);
       return HttpResponse.json(store.createSubject(body), { status: 201 });
     }),
-    http.get("*/api/v1/execution/subjects/:subjectId", ({ params }) =>
-      HttpResponse.json(
-        store.getSubjectDetail(decodeURIComponent(String(params.subjectId)))
-      )
+    http.get(
+      "*/api/v1/execution/subjects/:subjectId",
+      ({ params, request }) => {
+        const unblinded =
+          String(
+            request.headers.get("X-Unblinded-Access") ||
+              request.headers.get("x-unblinded-access") ||
+              ""
+          ).toLowerCase() === "true";
+        return HttpResponse.json(
+          store.getSubjectDetail(decodeURIComponent(String(params.subjectId)), {
+            unblinded,
+          })
+        );
+      }
     ),
     http.patch(
       "*/api/v1/execution/subjects/:subjectId/state",
       async ({ params, request }) => {
         const body = await readJsonBody(request);
-        return HttpResponse.json(
-          store.updateSubjectState(
-            decodeURIComponent(String(params.subjectId)),
-            body
-          )
+        const result = store.updateSubjectState(
+          decodeURIComponent(String(params.subjectId)),
+          body,
+          decodeReasonHeader(request)
         );
+        if (result.error) {
+          return HttpResponse.json(result.problem, { status: result.status });
+        }
+        return HttpResponse.json(result.data);
+      }
+    ),
+    http.post(
+      "*/api/v1/execution/subjects/:subjectId/consent",
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        const result = store.recordSubjectConsent(
+          decodeURIComponent(String(params.subjectId)),
+          body,
+          decodeReasonHeader(request)
+        );
+        if (result.error) {
+          return HttpResponse.json(result.problem, { status: result.status });
+        }
+        return HttpResponse.json(result.data);
+      }
+    ),
+    http.post(
+      "*/api/v1/execution/subjects/:subjectId/randomize",
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        const sigToken =
+          request.headers.get("X-Sig-Token") ||
+          request.headers.get("x-sig-token") ||
+          "";
+        const result = store.randomizeSubject(
+          decodeURIComponent(String(params.subjectId)),
+          body,
+          {
+            reason: decodeReasonHeader(request),
+            sigToken,
+          }
+        );
+        if (result.error) {
+          return HttpResponse.json(result.problem, { status: result.status });
+        }
+        return HttpResponse.json(result.data);
       }
     ),
     http.get(
@@ -439,13 +513,119 @@ export function createWebDemoHandlers(store = webDemoStore) {
       }
     ),
 
-    // RTSM & Data Locks
+    // RTSM, Randomization Schemes, IP Kits & Data Locks
+    http.get("*/api/v1/execution/randomization/schemes", ({ request }) => {
+      const url = new URL(request.url);
+      return HttpResponse.json(
+        store.listRandomizationSchemes(
+          url.searchParams.get("study_id") || "DEMO-01"
+        )
+      );
+    }),
+    http.post(
+      "*/api/v1/execution/randomization/schemes",
+      async ({ request }) => {
+        const body = await readJsonBody(request);
+        const actorId =
+          request.headers.get("X-User-Id") ||
+          request.headers.get("x-user-id") ||
+          "stat.author";
+        return HttpResponse.json(
+          store.draftRandomizationScheme(
+            body,
+            decodeReasonHeader(request),
+            actorId
+          ),
+          { status: 201 }
+        );
+      }
+    ),
+    http.post(
+      "*/api/v1/execution/randomization/schemes/:schemeId/approve",
+      ({ params, request }) => {
+        const sigToken =
+          request.headers.get("X-Sig-Token") ||
+          request.headers.get("x-sig-token") ||
+          "";
+        const actorId =
+          request.headers.get("X-User-Id") ||
+          request.headers.get("x-user-id") ||
+          "stat.approver";
+        const result = store.approveRandomizationScheme(
+          decodeURIComponent(String(params.schemeId)),
+          {
+            reason: decodeReasonHeader(request),
+            sigToken,
+            actorId,
+          }
+        );
+        if (result.error) {
+          return HttpResponse.json(result.problem, { status: result.status });
+        }
+        return HttpResponse.json(result.data);
+      }
+    ),
     http.get("*/api/v1/execution/rtsm/sites/:siteId/inventory", ({ params }) =>
       HttpResponse.json(
-        store.state.ipKits.filter(
-          (k) => k.site_id === params.siteId || params.siteId === "SITE-101"
+        store.getSiteIpKitInventory(
+          "",
+          decodeURIComponent(String(params.siteId))
         )
       )
+    ),
+    http.get(
+      "*/api/v1/execution/rtsm/kits/inventory/:studyId/:siteId",
+      ({ params }) =>
+        HttpResponse.json(
+          store.getSiteIpKitInventory(
+            decodeURIComponent(String(params.studyId)),
+            decodeURIComponent(String(params.siteId))
+          )
+        )
+    ),
+    http.post(
+      "*/api/v1/execution/rtsm/kits/seed-inventory",
+      async ({ request }) => {
+        const body = await readJsonBody(request);
+        return HttpResponse.json(
+          store.seedIpKitInventory(body, decodeReasonHeader(request))
+        );
+      }
+    ),
+    http.post(
+      "*/api/v1/execution/rtsm/kits/validate-scan",
+      async ({ request }) => {
+        const body = await readJsonBody(request);
+        return HttpResponse.json(store.validateIpKitScan(body));
+      }
+    ),
+    http.post(
+      "*/api/v1/execution/rtsm/kits/reconcile-batch",
+      async ({ request }) => {
+        const body = await readJsonBody(request);
+        return HttpResponse.json(
+          store.reconcileIpKitBatch(body, decodeReasonHeader(request))
+        );
+      }
+    ),
+    http.get(
+      "*/api/v1/execution/rtsm/kits/certificates/:certificateId",
+      ({ params }) => {
+        const cert = store.getIpKitCertificate(
+          decodeURIComponent(String(params.certificateId))
+        );
+        if (!cert) {
+          return HttpResponse.json(
+            {
+              title: "Certificate not found",
+              status: 404,
+              detail: "Reconciliation certificate not found.",
+            },
+            { status: 404 }
+          );
+        }
+        return HttpResponse.json(cert);
+      }
     ),
     http.get("*/api/v1/execution/locks", () =>
       HttpResponse.json(store.state.locks)

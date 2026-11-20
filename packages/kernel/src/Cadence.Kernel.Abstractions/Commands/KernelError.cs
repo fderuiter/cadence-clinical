@@ -60,6 +60,9 @@ public static class KernelErrors
     public static readonly KernelError AuthorizationDenied =
         new("K.Authorization.Denied", 403, "The actor is not authorized to perform this command.");
 
+    public static readonly KernelError SubscriptionExpired =
+        new("K.Subscription.Expired", 403, "The workspace trial subscription has expired; regulated reads, exports, electronic signatures, and audit trails remain available.");
+
     public static readonly KernelError ConcurrencyConflict =
         new("K.Aggregate.ConcurrencyConflict", 409, "The aggregate was changed by another command; reload and retry.");
 
@@ -71,9 +74,9 @@ public static class KernelErrors
 
     /// <summary>
     /// The errors the command pipeline itself can return for any command, before or after its handler runs: a missing
-    /// tenant, idempotency key or reason for change, an unresolved actor, a failed validation, a denied authorization, a
-    /// reused idempotency key and a commit-time concurrency conflict. A command's declared errors
-    /// (<see cref="RaisesKernelErrorsAttribute"/>) add to these.
+    /// tenant, idempotency key or reason for change, an unresolved actor, a failed validation, a denied authorization,
+    /// an expired trial subscription, a reused idempotency key and a commit-time concurrency conflict. A command's
+    /// declared errors (<see cref="RaisesKernelErrorsAttribute"/>) add to these.
     /// </summary>
     public static IReadOnlyList<KernelError> CommandPipeline { get; } =
     [
@@ -83,6 +86,7 @@ public static class KernelErrors
         ActorUnresolved,
         CommandInvalid,
         AuthorizationDenied,
+        SubscriptionExpired,
         IdempotencyConflict,
         ConcurrencyConflict,
     ];

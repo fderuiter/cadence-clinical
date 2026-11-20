@@ -72,11 +72,13 @@ export function getAuthMiddleware(): Middleware {
   };
 }
 
-const INITIAL_BASE_URL = getBaseUrl();
-
-function dispatchOpenApiFetch(input: RequestInfo | URL, init?: RequestInit) {
+function dispatchOpenApiFetch(
+  initialBaseUrl: string,
+  input: RequestInfo | URL,
+  init?: RequestInit
+) {
   const currentBase = getBaseUrl().replace(/\/+$/, "");
-  const initialBase = INITIAL_BASE_URL.replace(/\/+$/, "");
+  const initialBase = initialBaseUrl.replace(/\/+$/, "");
   if (
     currentBase !== initialBase &&
     input instanceof Request &&
@@ -88,24 +90,22 @@ function dispatchOpenApiFetch(input: RequestInfo | URL, init?: RequestInit) {
   return globalThis.fetch(input, init);
 }
 
-export const openApiClient = createClient<paths>({
-  baseUrl: INITIAL_BASE_URL,
-  fetch: dispatchOpenApiFetch,
-});
-
-openApiClient.use(getAuthMiddleware());
-
-export function createOpenApiClient<T extends {} = paths>(
-  baseUrl: string = getBaseUrl()
-) {
-  // Resolve fetch per call, as openApiClient does, so tests and the MSW worker see the current global.
+export function createOpenApiClient<T extends {} = paths>(baseUrl?: string) {
+  // Resolve fetch and dynamic demo/configured baseUrl per call so tests and the MSW worker see the current global.
+  const resolvedInitialBase = baseUrl ?? getBaseUrl();
   const client = createClient<T>({
-    baseUrl,
-    fetch: (...args) => globalThis.fetch(...args),
+    baseUrl: resolvedInitialBase,
+    fetch:
+      baseUrl === undefined
+        ? (input: RequestInfo | URL, init?: RequestInit) =>
+            dispatchOpenApiFetch(resolvedInitialBase, input, init)
+        : (...args) => globalThis.fetch(...args),
   });
   client.use(getAuthMiddleware());
   return client;
 }
+
+export const openApiClient = createOpenApiClient<paths>();
 
 export async function unwrapResponse<T>(
   promise: Promise<{ data?: T; error?: unknown; response: Response }>

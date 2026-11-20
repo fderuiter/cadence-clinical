@@ -37,6 +37,19 @@ export type RandomizationResult = Schemas["Execution_RandomizationResponse"];
 export type IpKitSeedItem = Schemas["Execution_IpKitSeedItem"];
 export type SeedInventoryRequest = Schemas["Execution_SeedInventoryRequest"];
 
+export interface IpKitInventoryItem {
+  id?: string;
+  study_id: string;
+  site_id: string;
+  kit_number: string;
+  lot_number: string;
+  expiration_date: string;
+  status: string;
+  residual_volume_ml?: number | null;
+  residual_volume_percentage?: number | null;
+  reconciliation_count?: number;
+}
+
 export {
   APPROVE_SCHEME_SEMANTIC_ACTION,
   RANDOMIZE_SUBJECT_SEMANTIC_ACTION,
@@ -371,15 +384,20 @@ export const executionApi = {
     return res.json();
   },
 
-  /** Retrieves site IP kit inventory catalog (GET /api/v1/execution/rtsm/kits/inventory/{studyId}/{siteId}). */
-  async getSiteIpKitInventory(studyId: string, siteId: string): Promise<any[]> {
-    const res = await fetch(
-      `/api/v1/execution/rtsm/kits/inventory/${studyId}/${siteId}`
+  /** Retrieves blind-safe site IP kit inventory catalog (GET /api/v1/execution/rtsm/kits/inventory/{studyId}/{siteId}). */
+  getSiteIpKitInventory(
+    studyId: string,
+    siteId: string
+  ): Promise<IpKitInventoryItem[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/execution/rtsm/kits/inventory/{studyId}/{siteId}", {
+        params: { path: { studyId, siteId } },
+      }) as unknown as Promise<{
+        data?: IpKitInventoryItem[];
+        error?: unknown;
+        response: Response;
+      }>
     );
-    if (!res.ok) {
-      throw new Error("Failed to load site IP kit inventory");
-    }
-    return res.json();
   },
 
   /** Validates scanned barcode against site inventory (POST /api/v1/execution/rtsm/kits/validate-scan). */

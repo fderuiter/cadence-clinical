@@ -421,7 +421,23 @@ describe("executionApi: RTSM, consent, subject detail, and step-up signature", (
     fetchSpy
       .mockResolvedValueOnce(jsonResponse(200, consentResp))
       .mockResolvedValueOnce(jsonResponse(200, detailResp))
-      .mockResolvedValueOnce(jsonResponse(200, []));
+      .mockResolvedValueOnce(jsonResponse(200, []))
+      .mockResolvedValueOnce(
+        jsonResponse(200, [
+          {
+            id: "kit-1",
+            study_id: "CAD-101",
+            site_id: "017",
+            kit_number: "KIT-0101",
+            lot_number: "LOT-A1",
+            expiration_date: isoSample,
+            status: "AVAILABLE",
+            residual_volume_ml: 100,
+            residual_volume_percentage: 100,
+            reconciliation_count: 0,
+          },
+        ])
+      );
 
     await executionApi.recordSubjectConsent(
       "s-uuid-1",
@@ -472,5 +488,17 @@ describe("executionApi: RTSM, consent, subject detail, and step-up signature", (
       "/api/v1/execution/rtsm/kits/seed-inventory"
     );
     expect(seedReq.headers.get("X-Change-Reason")).toBe("Initial site stock");
+
+    const inventory = await executionApi.getSiteIpKitInventory(
+      "CAD-101",
+      "017"
+    );
+    expect(inventory).toHaveLength(1);
+    expect(inventory[0].kit_number).toBe("KIT-0101");
+    const invReq = fetchSpy.mock.calls[3][0];
+    expect(invReq.method).toBe("GET");
+    expect(new URL(invReq.url).pathname).toBe(
+      "/api/v1/execution/rtsm/kits/inventory/CAD-101/017"
+    );
   });
 });

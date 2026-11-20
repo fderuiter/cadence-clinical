@@ -41,7 +41,12 @@ const DATA_COLLECTION_ROLES = [
   "monitor",
 ];
 
-const SITE_READINESS_SPONSOR_ROLES = ["cra", "monitor", "sponsor_admin"];
+const SITE_READINESS_SPONSOR_ROLES = [
+  "cra",
+  "monitor",
+  "sponsor_admin",
+  "pharmacist",
+];
 const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
 
 export function resolveSiteReadinessPath(

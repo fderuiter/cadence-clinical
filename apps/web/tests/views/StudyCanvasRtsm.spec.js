@@ -11,6 +11,7 @@ import {
   findKernelEnrollmentRef,
   findStudyScheduleOptions,
 } from "../../src/canvas/kernelStudy";
+import { resolveSiteReadinessPath } from "../../src/canvas/palette";
 import { useConsentGating } from "../../src/composables/useConsentGating";
 import { useAuthStore } from "../../src/stores/auth";
 import { useClinicalStore } from "../../src/stores/clinical";
@@ -744,5 +745,51 @@ describe("Clinical Canvas RTSM, consent, blinding, and emergency unblinding", ()
     await expect(
       wrapper.find("#ctms-kit-reconciliation-panel").element
     ).toBeAccessible();
+  });
+
+  it("integrates specialist RTSM roles with trial onboarding guards, site readiness routing, and the collapsible inspector rail", async () => {
+    const auth = useAuthStore();
+    auth.isAuthenticated = true;
+    auth.isDemoMode = false;
+    auth.accessToken = "oidc-access-token";
+    auth.user = { id: "u-self", username: "new.founder", tenantId: null };
+    auth.rawRoles = [];
+    expect(auth.needsTrialOnboarding).toBe(true);
+
+    for (const specialistRole of [
+      "unblinded_statistician",
+      "pharmacist",
+      "Principal Investigator",
+      "Authorized ER Physician",
+    ]) {
+      auth.rawRoles = [specialistRole];
+      expect(auth.needsTrialOnboarding).toBe(false);
+    }
+    expect(resolveSiteReadinessPath(["pharmacist"], "CAD-101")).toBe("/ctms");
+
+    participants = [makeParticipant({ status: "RANDOMIZED" })];
+    signIn({ roles: ["crc"], username: "crc.site101", unblindedAccess: false });
+    await open("/studies/CAD-101?section=participants");
+
+    // Inspector starts collapsed when no object is selected; selecting a participant auto-expands it with RTSM allocation.
+    expect(wrapper.find("#canvas-inspector").attributes("data-collapsed")).toBe(
+      "true"
+    );
+    expect(
+      wrapper.find("#btn-toggle-inspector").attributes("aria-expanded")
+    ).toBe("false");
+
+    await wrapper.find("#participant-017-0001").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find("#canvas-inspector").attributes("data-collapsed")).toBe(
+      "false"
+    );
+    expect(
+      wrapper.find("#btn-toggle-inspector").attributes("aria-expanded")
+    ).toBe("true");
+    expect(wrapper.find("#inspector-allocation").text()).toBe(
+      "Randomized, arm masked"
+    );
   });
 });

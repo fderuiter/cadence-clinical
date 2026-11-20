@@ -1,5 +1,7 @@
 import { defineStore } from "pinia";
 import { getKeycloakClient } from "../auth/keycloak.js";
+import { kernelApi } from "../api/kernelApi";
+import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { useNotificationsStore } from "./notifications.js";
 import { useClinicalStore } from "./clinical.ts";
@@ -220,6 +222,40 @@ export function personasForRoles(rawRoles) {
   return PERSONA_PRESETS.filter((p) => holdsAnyRole(rawRoles, p.requires));
 }
 
+const ASSIGNED_CLINICAL_ROLES = [
+  "sponsor_admin",
+  "sponsor_designer",
+  "data_manager",
+  "sponsor_dm",
+  "site_investigator",
+  "investigator",
+  "principal_investigator",
+  "authorized_er_physician",
+  "crc",
+  "coordinator",
+  "cra",
+  "monitor",
+  "auditor",
+  "tmf_auditor",
+  "unblinded_statistician",
+  "sponsor_statistician",
+  "pharmacist",
+  "idmc",
+  "grants_manager",
+  "quality_manager",
+  "qa_lead",
+  "quality_oversight",
+  "subject",
+  "sysadmin",
+];
+
+function hasAssignedClinicalRole(rawRoles) {
+  return (
+    personasForRoles(rawRoles).length > 0 ||
+    holdsAnyRole(rawRoles, ASSIGNED_CLINICAL_ROLES)
+  );
+}
+
 /**
  * @typedef {object} AuthUser
  * @property {string} username - `preferred_username` claim
@@ -247,6 +283,9 @@ function emptyAuthState() {
     currentPersona: null,
     /** @type {string | null} */
     authError: null,
+    /** @type {import("../api/kernelApi").KernelEntitlements | null} */
+    entitlements: null,
+    entitlementsLoaded: false,
     /** True only in a demo build; nothing at run time can turn it on (#4523). */
     isDemoMode: isDemoBuild(),
   };
@@ -278,6 +317,63 @@ export const useAuthStore = defineStore("auth", {
     isCrc: (state) =>
       holdsAnyRole(state.rawRoles, ["crc", "site_investigator"]),
     availablePersonas: (state) => personasForRoles(state.rawRoles),
+    /**
+     * True for newly self-registered OIDC sessions that have no kernel `tenant_id`
+     * claim and no assigned clinical realm roles yet, prompting trial setup.
+     */
+    needsTrialOnboarding: (state) =>
+      Boolean(
+        state.isAuthenticated &&
+        !state.isDemoMode &&
+        state.accessToken &&
+        !state.user?.tenantId &&
+        !hasAssignedClinicalRole(state.rawRoles)
+      ),
+    activeTier: (state) =>
+      state.entitlements?.tier ||
+      (state.isDemoMode ? "Complete" : "Individual"),
+    subscriptionStatus: (state) =>
+      state.entitlements?.status || (state.isDemoMode ? "Active" : null),
+    isTrialExpired: (state) =>
+      Boolean(
+        state.entitlements?.is_read_only ||
+        state.entitlements?.status === "Expired"
+      ),
+    entitledFamilies: (state) =>
+      state.entitlements?.product_families ||
+      (state.isDemoMode
+        ? [
+            "Blueprint",
+            "Capture",
+            "Orbit",
+            "Engage",
+            "Allocate",
+            "Vigil",
+            "Lens",
+            "Assure",
+          ]
+        : ["Blueprint", "Capture"]),
+    activePlanBadge: (state) => {
+      if (!state.isAuthenticated) return null;
+      if (state.isDemoMode && !state.entitlements) {
+        return "Demo · Pre-release";
+      }
+      const tier = state.entitlements?.tier || "Individual";
+      const status = state.entitlements?.status;
+      if (state.entitlements?.is_read_only || status === "Expired") {
+        return `${tier} · Trial Expired (Read & Export)`;
+      }
+      if (status === "Trialing") {
+        return `${tier} · Trial`;
+      }
+      if (state.entitlements?.tier) {
+        return `${tier} Plan`;
+      }
+      if (!state.user?.tenantId && !hasAssignedClinicalRole(state.rawRoles)) {
+        return "Trial Setup Pending";
+      }
+      return `${tier} Plan`;
+    },
   },
   actions: {
     /**
@@ -361,6 +457,78 @@ export const useAuthStore = defineStore("auth", {
         );
       }
       await keycloak.login(options);
+    },
+    /** Starts the Keycloak authorization code + PKCE S256 self-registration redirect. */
+    async register(options = {}) {
+      if (isDemoBuild()) {
+        this.startDemoSession();
+        return;
+      }
+      const keycloak = getKeycloakClient();
+      if (!keycloak) {
+        throw new Error(
+          "Keycloak registration is unavailable. The identity provider could not be initialised."
+        );
+      }
+      const registerOptions = { pkceMethod: "S256", ...options };
+      if (typeof keycloak.register === "function") {
+        await keycloak.register(registerOptions);
+        return;
+      }
+      await keycloak.login({ ...registerOptions, action: "register" });
+    },
+    /** Loads commercial subscription and product-family entitlements for the active kernel tenant. */
+    async loadEntitlements({ force = false } = {}) {
+      if (!this.isAuthenticated || this.needsTrialOnboarding) {
+        return null;
+      }
+      if (this.entitlementsLoaded && !force && this.entitlements) {
+        return this.entitlements;
+      }
+      if (this.isDemoMode) {
+        this.entitlements = {
+          tenant_ref: "tenant:00000000-0000-0000-0000-000000000000",
+          tenant_id: "00000000-0000-0000-0000-000000000000",
+          subscription_ref: null,
+          tier: "Complete",
+          status: "Active",
+          started_at: null,
+          trial_ends_at: null,
+          is_read_only: false,
+          product_families: [
+            "Blueprint",
+            "Capture",
+            "Orbit",
+            "Engage",
+            "Allocate",
+            "Vigil",
+            "Lens",
+            "Assure",
+          ],
+          baseline_capabilities: [
+            "audit_trail",
+            "electronic_signatures",
+            "authorization",
+            "record_export",
+          ],
+          environment_notice: PRE_RELEASE_ENVIRONMENT_NOTICE,
+        };
+        this.entitlementsLoaded = true;
+        return this.entitlements;
+      }
+      if (!this.accessToken || this.accessToken === "test-access-token") {
+        if (!force) {
+          return this.entitlements;
+        }
+      }
+      try {
+        const snapshot = await kernelApi.entitlements();
+        this.entitlements = snapshot;
+        this.entitlementsLoaded = true;
+        return snapshot;
+      } catch {
+        return this.entitlements;
+      }
     },
     /**
      * Clears the local session, every account's browser drafts and the

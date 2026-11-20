@@ -24,7 +24,7 @@ public static class LocalCiCommand
         };
         var allowSkip = new Option<bool>("--allow-skip")
         {
-            Description = "Run the .NET tests without PostgreSQL, so the database tests report as skipped instead of failing the run",
+            Description = "Skip steps whose required tool is missing on PATH and allow .NET tests to run without PostgreSQL",
         };
         var baseRef = new Option<string>("--base")
         {
@@ -44,7 +44,7 @@ public static class LocalCiCommand
             result.GetValue(list)));
     }
 
-    private static int Execute(string[] jobKeys, bool allowSkip, string baseRef, bool list)
+    public static int Execute(string[] jobKeys, bool allowSkip, string baseRef, bool list, LocalCiEnvironment? environment = null)
     {
         IReadOnlyList<CiJob> jobs;
         try
@@ -63,8 +63,7 @@ public static class LocalCiCommand
             return 0;
         }
 
-        string repoRoot = QualityGateOrchestrator.FindRepoRoot();
-        var environment = LocalCiEnvironment.Create(repoRoot, (step, commands) =>
+        environment ??= LocalCiEnvironment.Create(QualityGateOrchestrator.FindRepoRoot(), (step, commands) =>
         {
             AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine($"[bold cyan]==> {Markup.Escape(step.Job)} / {Markup.Escape(step.Name)}[/]");
@@ -106,7 +105,7 @@ public static class LocalCiCommand
         var parts = step.Commands.Select(c => c.Display).ToList();
         if (step.InProcessDisplay is not null) parts.Add(step.InProcessDisplay);
         if (step.Files != CiFileSource.None) parts.Add($"(with {step.Files} files)");
-        if (step.RequiredTool is not null) parts.Add($"(when {step.RequiredTool} is on PATH)");
+        if (step.RequiredTool is not null) parts.Add($"(requires {step.RequiredTool} on PATH; skipped with --allow-skip)");
         if (step.CoveredBy is not null) parts.Add($"(covered when '{step.CoveredBy}' passed)");
         parts.AddRange(step.Environment.Select(e => $"(with {e.Key}={e.Value})"));
         parts.AddRange(step.EnvironmentIfPassed.Select(e => $"(with {e.Name}={e.Value} when '{e.StepKey}' passed)"));
