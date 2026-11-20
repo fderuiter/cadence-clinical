@@ -59,6 +59,11 @@ public sealed class ExecutionFormModuleTests
         var complete = FormResponse.From(Record([Item("dbp", required: true)], Value("dbp", new MissingValue(NullFlavor.NotDone))), null);
         complete.Complete.Should().BeTrue();
         complete.MissingRequired.Should().BeEmpty();
+
+        var unasked = FormResponse.From(Record([Item("dbp", required: true)], Value("dbp", new MissingValue(NullFlavor.NotAsked))), null);
+        unasked.Complete.Should().BeFalse();
+        unasked.MissingRequired.Should().Equal("dbp");
+        unasked.Items.Single().Revision.Should().Be(1);
     }
 
     /// <summary>

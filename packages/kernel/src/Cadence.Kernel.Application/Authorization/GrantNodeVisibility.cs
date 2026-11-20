@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 
@@ -24,7 +25,7 @@ namespace Cadence.Kernel.Application.Authorization;
 /// <item>an object above a held scope on the scope path: the organization, study and country of a study-site grant,
 /// so a site's staff see their study and its protocol versions but not another site's objects;</item>
 /// <item>a participant or site through the study sites it reaches (its enrollments, its study links);</item>
-/// <item>tenant reference data, roles and the tenant's people, when it holds any grant in the tenant.</item>
+/// <item>tenant reference data, roles and the tenant's people, when it holds any grant in effect in the tenant.</item>
 /// </list>
 /// Everything else is masked <see cref="MaskReason.NotPermitted"/>, and a reader with no grant in effect sees nothing.
 /// An object the kernel places on no scope path is visible only through a tenant-wide grant. An automation agent sees an
@@ -60,19 +61,129 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
 
         // An automation agent sees only what both it and the person it acts for may see; acting for nobody, nothing (K-AI-6).
         var agent = reader.Kind == ActorKind.AutomationAgent;
-        var held = agent && reader.RequestedBy is null ? [] : await HeldAsync(tenant, reader.AsIdentity(), cancellationToken).ConfigureAwait(false);
-        var requester = agent && reader.RequestedBy is { } person ? await HeldAsync(tenant, person, cancellationToken).ConfigureAwait(false) : null;
-        var masked = new Dictionary<NodeRef, MaskReason>();
-        foreach (var node in distinct)
+        if (agent && reader.RequestedBy is null)
         {
-            if (!await VisibleAsync(tenant, node, held, cancellationToken).ConfigureAwait(false)
-                || (requester is not null && !await VisibleAsync(tenant, node, requester, cancellationToken).ConfigureAwait(false)))
+            return MaskAll(distinct);
+        }
+
+        var now = clock.UtcNow;
+        var readerHeld = await store.GrantsHeldAsync(tenant, reader.AsIdentity(), cancellationToken).ConfigureAwait(false);
+        var readerCandidates = readerHeld.Where(g => g.IsInEffect(now, now)).ToList();
+        if (readerCandidates.Count == 0)
+        {
+            return MaskAll(distinct);
+        }
+
+        List<Grant>? requesterCandidates = null;
+        if (agent && reader.RequestedBy is { } person)
+        {
+            var requesterHeld = await store.GrantsHeldAsync(tenant, person, cancellationToken).ConfigureAwait(false);
+            requesterCandidates = requesterHeld.Where(g => g.IsInEffect(now, now)).ToList();
+            if (requesterCandidates.Count == 0)
             {
-                masked[node] = MaskReason.NotPermitted;
+                return MaskAll(distinct);
             }
         }
 
-        return masked;
+        IReadOnlyList<Grant> chainCandidates = requesterCandidates is null
+            ? readerCandidates
+            : [.. readerCandidates, .. requesterCandidates];
+        var inEffect = await GrantChain.FilterInEffectAsync(store, tenant, chainCandidates, now, now, cancellationToken).ConfigureAwait(false);
+
+        var readerGrants = readerCandidates.Where(g => inEffect.Contains(g.Id)).DistinctBy(g => g.Scope).ToList();
+        if (readerGrants.Count == 0)
+        {
+            return MaskAll(distinct);
+        }
+
+        var requesterGrants = requesterCandidates?.Where(g => inEffect.Contains(g.Id)).DistinctBy(g => g.Scope).ToList();
+        if (requesterGrants is { Count: 0 })
+        {
+            return MaskAll(distinct);
+        }
+
+        var readerHasTenant = readerGrants.Exists(g => g.Scope.Level == ScopeLevel.Tenant);
+        var requesterHasTenant = requesterGrants is null || requesterGrants.Exists(g => g.Scope.Level == ScopeLevel.Tenant);
+        if (readerHasTenant && requesterHasTenant)
+        {
+            return new Dictionary<NodeRef, MaskReason>();
+        }
+
+        var candidates = distinct
+            .Select(n => n.Unversioned())
+            .Where(n => !TenantMemberKinds.Contains(n.Kind))
+            .Distinct()
+            .ToList();
+        if (candidates.Count == 0)
+        {
+            return new Dictionary<NodeRef, MaskReason>();
+        }
+
+        var pathBatch = new HashSet<NodeRef>(candidates);
+        if (!readerHasTenant)
+        {
+            foreach (var grant in readerGrants)
+            {
+                pathBatch.Add(NodeRef.For(grant.Id));
+            }
+        }
+
+        if (requesterGrants is not null && !requesterHasTenant)
+        {
+            foreach (var grant in requesterGrants)
+            {
+                pathBatch.Add(NodeRef.For(grant.Id));
+            }
+        }
+
+        var paths = await store.PathsOfAsync(tenant, pathBatch, cancellationToken).ConfigureAwait(false);
+        var held = readerHasTenant ? null : BuildHeldScopes(readerGrants, paths);
+        var requester = requesterGrants is null || requesterHasTenant ? null : BuildHeldScopes(requesterGrants, paths);
+
+        var maskedObjects = new HashSet<NodeRef>();
+        var uncoveredReachable = new List<NodeRef>();
+        foreach (var node in candidates)
+        {
+            var path = paths.GetValueOrDefault(node, ScopePath.TenantWide);
+            if (CoversPath(held, path) && CoversPath(requester, path))
+            {
+                continue;
+            }
+
+            if (node.Kind is NodeKinds.Participant or NodeKinds.Site)
+            {
+                uncoveredReachable.Add(node);
+            }
+            else
+            {
+                maskedObjects.Add(node);
+            }
+        }
+
+        if (uncoveredReachable.Count > 0)
+        {
+            var reachedByNode = await store.StudySitePathsAsync(tenant, uncoveredReachable, cancellationToken).ConfigureAwait(false);
+            foreach (var node in uncoveredReachable)
+            {
+                var path = paths.GetValueOrDefault(node, ScopePath.TenantWide);
+                var reached = reachedByNode.GetValueOrDefault(node, []);
+                var visibleToReader = CoversPath(held, path) || CoversReached(held, reached);
+                var visibleToRequester = CoversPath(requester, path) || CoversReached(requester, reached);
+                if (!visibleToReader || !visibleToRequester)
+                {
+                    maskedObjects.Add(node);
+                }
+            }
+        }
+
+        if (maskedObjects.Count == 0)
+        {
+            return new Dictionary<NodeRef, MaskReason>();
+        }
+
+        return distinct
+            .Where(node => maskedObjects.Contains(node.Unversioned()))
+            .ToDictionary(node => node, _ => MaskReason.NotPermitted);
     }
 
     /// <summary>True when <paramref name="path"/> is on the way from the tenant down to <paramref name="below"/>, or is it.</summary>
@@ -87,48 +198,17 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
             && (path.StudySite is null || path.StudySite == below.StudySite);
     }
 
-    private async Task<bool> VisibleAsync(TenantId tenant, NodeRef node, IReadOnlyList<HeldScope> held, CancellationToken cancellationToken)
-    {
-        if (held.Count == 0)
-        {
-            return false;
-        }
+    private static Dictionary<NodeRef, MaskReason> MaskAll(List<NodeRef> distinct) =>
+        distinct.ToDictionary(n => n, _ => MaskReason.NotPermitted);
 
-        if (held.Any(h => h.Scope.Level == ScopeLevel.Tenant) || TenantMemberKinds.Contains(node.Kind))
-        {
-            return true;
-        }
+    private static List<HeldScope> BuildHeldScopes(List<Grant> grants, IReadOnlyDictionary<NodeRef, ScopePath> paths) =>
+        [.. grants.Select(g => new HeldScope(g.Scope, paths.GetValueOrDefault(NodeRef.For(g.Id), ScopePath.TenantWide)))];
 
-        var path = await store.PathOfAsync(tenant, node, cancellationToken).ConfigureAwait(false);
-        if (held.Any(h => h.Scope.Covers(path) || IsAtOrAbove(path, h.Path)))
-        {
-            return true;
-        }
+    private static bool CoversPath(IReadOnlyList<HeldScope>? held, ScopePath path) =>
+        held is null || held.Any(h => h.Scope.Covers(path) || IsAtOrAbove(path, h.Path));
 
-        var reached = await store.StudySitePathsAsync(tenant, node, cancellationToken).ConfigureAwait(false);
-        return reached.Any(p => held.Any(h => h.Scope.Covers(p)));
-    }
-
-    private async Task<IReadOnlyList<HeldScope>> HeldAsync(TenantId tenant, Actor reader, CancellationToken cancellationToken)
-    {
-        var now = clock.UtcNow;
-        var grants = await store.GrantsHeldAsync(tenant, reader, cancellationToken).ConfigureAwait(false);
-        var held = new List<HeldScope>(grants.Count);
-        foreach (var grant in grants)
-        {
-            if (held.Any(h => h.Scope == grant.Scope)
-                || !await GrantChain.InEffectAsync(store, tenant, grant, now, now, cancellationToken).ConfigureAwait(false))
-            {
-                continue;
-            }
-
-            // The grant's own path is where its scope sits: its organization, study, country and study site.
-            var path = await store.PathOfAsync(tenant, NodeRef.For(grant.Id), cancellationToken).ConfigureAwait(false);
-            held.Add(new HeldScope(grant.Scope, path));
-        }
-
-        return held;
-    }
+    private static bool CoversReached(IReadOnlyList<HeldScope>? held, IReadOnlyList<ScopePath> reached) =>
+        held is null || reached.Any(p => held.Any(h => h.Scope.Covers(p)));
 
     private sealed record HeldScope(AuthorityScope Scope, ScopePath Path);
 }

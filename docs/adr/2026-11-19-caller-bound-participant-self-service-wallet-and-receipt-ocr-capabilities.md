@@ -1,4 +1,4 @@
-# ADR-2816: Caller-Bound Participant Self-Service Wallet and Receipt OCR Capabilities
+# ADR-2817: Caller-Bound Participant Self-Service Wallet and Receipt OCR Capabilities
 
 - **Status:** Accepted
 - **Date:** 2026-11-19

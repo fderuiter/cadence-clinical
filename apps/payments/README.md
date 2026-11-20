@@ -79,7 +79,7 @@ roles (#5361). `finance_officer` is the finance role; the local realm's "Grants 
   `svc:payments` on the demonstration stipend rules the service seeds on first read, and `svc:system_auto_approval` on
   the rows the expense auto-approval policy writes (its details name the submitting caller). `SubjectId` on a wallet,
   claim or transaction is the participant the row belongs to, not the actor.
-- **Caller-bound participant self-service ([ADR-2816](../../docs/adr/2026-11-19-caller-bound-participant-self-service-wallet-and-receipt-ocr-capabilities.md)).**
+- **Caller-bound participant self-service ([ADR-2817](../../docs/adr/2026-11-19-caller-bound-participant-self-service-wallet-and-receipt-ocr-capabilities.md)).**
   The `subject` role holds only the five `payments_self_*` capabilities mapped to `/api/v1/payments/participant/me/*`
   and never reaches staff directory, card-issuance, W-9 verification, claim-review, or invoice routes (`403` with zero
   database mutations). Every `/participant/me/*` handler resolves the wallet through `ResolveOwnWalletAsync` bound to

@@ -134,9 +134,18 @@ function canonical(value: KernelObservationValue): string {
   return JSON.stringify(fields);
 }
 
-/** The reasons a user can record a value as missing (ADR-2623 null flavors; Masked is the kernel's), with how each reads. */
+/** True when an item has no user-recorded value yet (either null or the kernel's NotAsked placeholder). */
+export function isUnrecordedValue(
+  value: KernelObservationValue | null | undefined
+): boolean {
+  return (
+    !value || (value.type === "missing" && String(value.reason) === "NotAsked")
+  );
+}
+
+/** The reasons a user can record a value as missing (ADR-2623 null flavors; Masked and NotAsked are the kernel's), with how each reads. */
 export const MISSING_REASONS = Object.entries(NULL_FLAVOR_TEXT)
-  .filter(([reason]) => reason !== "Masked")
+  .filter(([reason]) => reason !== "Masked" && reason !== "NotAsked")
   .map(([reason, text]) => ({ reason, text }));
 
 /** What a form item says about the value it takes (Kernel_FormItemResponse). */

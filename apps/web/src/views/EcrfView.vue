@@ -113,7 +113,17 @@
           :enrollment-id="routeQuery('enrollmentId')"
           :collection-spec-id="routeQuery('collectionSpecId')"
           :planned-activity-id="routeQuery('plannedActivityId')"
-          :can-manage-queries="canManageQueries(authStore)"
+          :highlight-item-id="routeQuery('itemId')"
+          :can-manage-queries="
+            authStore.isAuthenticated
+              ? canManageQueries(authStore)
+              : activeUserRole === 'cra'
+          "
+          :can-verify-source="
+            authStore.isAuthenticated
+              ? canVerifySource(authStore)
+              : activeUserRole === 'cra'
+          "
           @dirty-change="formPanelDirty = $event"
         />
 
@@ -284,14 +294,6 @@
       @cancel="cancelChange"
     />
 
-    <!-- Conflict Resolution Modal Dialog -->
-    <ConflictResolutionModal
-      :show="showConflictModal"
-      :conflict="activeConflict"
-      @confirm="handleResolveConflict"
-      @cancel="handleCancelConflict"
-    />
-
     <!-- eSource EHR Source Data Reconciliation Drawer -->
     <EhrReconciliationDrawer
       :is-open="showEhrReconciliationDrawer"
@@ -312,9 +314,6 @@ import { validateField, debounce } from "ui";
 import { evaluateAST } from "../evaluator.js";
 import { terminologyClient } from "../api/terminologyClient";
 import ReasonModal from "../components/ReasonModal.vue";
-import ConflictResolutionModal from "../components/ConflictResolutionModal.vue";
-import { useSyncStore } from "../stores/sync";
-import { ClientSyncEngine } from "../utils/syncEngine";
 
 // Import Persona Sub-Components
 import CrcFormRenderer from "../components/persona/CrcFormRenderer.vue";
@@ -331,7 +330,7 @@ import { useSchemaIngestion } from "../composables/useSchemaIngestion";
 import { useEcrfDrafts } from "../composables/useEcrfDrafts";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { isDemoBuild } from "../utils/demoMode.js";
-import { canManageQueries } from "../canvas/authority";
+import { canManageQueries, canVerifySource } from "../canvas/authority";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
@@ -465,35 +464,6 @@ const ecrfReasonOptions = [
 ];
 const showReasonModal = ref(false);
 const pendingValueChange = ref(null);
-
-// Sync Store & Conflict Resolution
-const syncStore = useSyncStore();
-const syncEngine = new ClientSyncEngine();
-
-if (typeof window !== "undefined") {
-  window.syncStore = syncStore;
-  window.syncEngine = syncEngine;
-}
-
-const showConflictModal = computed(
-  () => syncStore.status === "CONFLICT_DETECTED"
-);
-const activeConflict = computed(() => syncStore.conflict);
-
-async function handleResolveConflict({ strategy, reason }) {
-  if (activeConflict.value && activeConflict.value.conflictItem) {
-    await syncEngine.resolveConflict(
-      activeConflict.value.conflictItem.deltaId,
-      strategy,
-      reason
-    );
-  }
-}
-
-function handleCancelConflict() {
-  syncStore.setStatus("IDLE");
-  syncStore.clearConflict();
-}
 
 // Consolidated lookup validation and state management
 const lookupStatuses = ref({});

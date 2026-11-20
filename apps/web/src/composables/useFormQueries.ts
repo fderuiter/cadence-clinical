@@ -7,10 +7,14 @@ import {
   queryErrorCode,
   type FormQueryAction,
   type FormQueryResponse,
+  type StudyQueryFilters,
 } from "../api/ecrfQueriesApi";
 
-/** Where a list of queries comes from: one form, or every form of an enrollment. */
-export type FormQueryScope = { formId: string } | { enrollmentId: string };
+/** Where a list of queries comes from: one form, every form of an enrollment, or visible enrollments in a study. */
+export type FormQueryScope =
+  | { formId: string }
+  | { enrollmentId: string }
+  | { studyId: string; filters?: StudyQueryFilters };
 
 /** What the screen tells the user after a query write. */
 export type FormQueryOutcome =
@@ -18,12 +22,22 @@ export type FormQueryOutcome =
   | { kind: "stale"; message: string }
   | { kind: "failed"; message: string };
 
-/** The value a query is raised on, as the form read returned it. */
+/** Per-query completion or error feedback from a multi-query workflow. */
+export interface FormQueryBatchItemResult {
+  queryId: string;
+  formId: string;
+  itemId: string;
+  subjectCode: string | null;
+  ok: boolean;
+  message: string;
+}
+
+/** The value or unasked blank item a query is raised on, as the form read returned it. */
 export interface QueryTarget {
   formId: string;
   itemId: string;
-  observationId: string;
-  revision: number;
+  observationId?: string | null;
+  revision?: number | null;
 }
 
 const DONE: Record<FormQueryAction, string> = {
@@ -61,10 +75,9 @@ function newKey(): string {
 }
 
 /**
- * The queries of one form or one enrollment (#5461): read them, raise one on a value, and answer, reopen, close or
- * cancel one. Each write carries its text as the reason for change and an idempotency key; a request that never
- * reached the server is retried with the same key (and, for a raise, the same query id), so it is committed at most
- * once. The list shows only what the module returned.
+ * The queries of one form, one enrollment, or a study (#5461): read them, raise one on a value or blank item, and
+ * answer, reopen, close or cancel one or several. Each write carries its text as the reason for change and an
+ * idempotency key; multi-query actions dispatch one independent command per query rather than an atomic batch.
  */
 export function useFormQueries() {
   const queries = ref<FormQueryResponse[]>([]);
@@ -91,10 +104,14 @@ export function useFormQueries() {
     loading.value = true;
     loadError.value = null;
     try {
-      const list =
-        "formId" in next
-          ? await ecrfQueriesApi.listForForm(next.formId)
-          : await ecrfQueriesApi.listForEnrollment(next.enrollmentId);
+      let list: FormQueryResponse[];
+      if ("formId" in next) {
+        list = await ecrfQueriesApi.listForForm(next.formId);
+      } else if ("enrollmentId" in next) {
+        list = await ecrfQueriesApi.listForEnrollment(next.enrollmentId);
+      } else {
+        list = await ecrfQueriesApi.listForStudy(next.studyId, next.filters);
+      }
       if (request !== loadRequest) return;
       queries.value = list;
     } catch (error) {
@@ -165,15 +182,16 @@ export function useFormQueries() {
     }
   }
 
-  /** Raises a query on a value at the revision the form read returned. */
+  /** Raises a query on a value at the revision the form read returned, or on an unasked blank item. */
   function raise(target: QueryTarget, text: string): Promise<boolean> {
     return write(
       { raise: target, text },
       ({ key, queryId }) =>
         ecrfQueriesApi.raise({
           formId: target.formId,
-          observationId: target.observationId,
-          revision: target.revision,
+          observationId: target.observationId ?? null,
+          revision: target.revision ?? null,
+          itemId: target.observationId ? undefined : target.itemId,
           text,
           queryId,
           reason: text,
@@ -203,6 +221,68 @@ export function useFormQueries() {
     );
   }
 
+  /**
+   * Dispatches one independent transition command per selected query using a shared reason note, updating each
+   * succeeded query in place and reporting per-query completion or error results.
+   */
+  async function actMany(
+    targets: FormQueryResponse[],
+    action: FormQueryAction,
+    text: string
+  ): Promise<FormQueryBatchItemResult[]> {
+    if (busy.value || targets.length === 0) return [];
+    busy.value = true;
+    outcome.value = null;
+    const results: FormQueryBatchItemResult[] = [];
+    try {
+      for (const target of targets) {
+        try {
+          const updated = await ecrfQueriesApi.transition(action, {
+            formId: target.form_id,
+            queryId: target.query_id,
+            text,
+            reason: text,
+            idempotencyKey: newKey(),
+          });
+          put(updated);
+          results.push({
+            queryId: target.query_id,
+            formId: target.form_id,
+            itemId: target.item_id,
+            subjectCode: target.subject_code ?? null,
+            ok: true,
+            message: DONE[action],
+          });
+        } catch (error) {
+          results.push({
+            queryId: target.query_id,
+            formId: target.form_id,
+            itemId: target.item_id,
+            subjectCode: target.subject_code ?? null,
+            ok: false,
+            message: describeQueryError(error),
+          });
+        }
+      }
+      const succeeded = results.filter((r) => r.ok).length;
+      const failed = results.length - succeeded;
+      if (failed === 0) {
+        outcome.value = {
+          kind: "done",
+          message: `Completed ${succeeded} of ${results.length} ${results.length === 1 ? "query" : "queries"}.`,
+        };
+      } else {
+        outcome.value = {
+          kind: "failed",
+          message: `Completed ${succeeded} of ${results.length} queries; ${failed} could not be updated.`,
+        };
+      }
+      return results;
+    } finally {
+      busy.value = false;
+    }
+  }
+
   return {
     queries,
     loading,
@@ -216,5 +296,6 @@ export function useFormQueries() {
     clear,
     raise,
     act,
+    actMany,
   };
 }
