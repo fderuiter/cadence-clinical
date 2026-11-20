@@ -529,8 +529,7 @@
                 signature to batch-certify greenlight activation for
                 <strong>{{ selectedSiteIds.size }} compliant site(s)</strong> in
                 <strong>{{ activeCountry }}</strong> for study
-                <strong>{{ activeStudyId }}</strong
-                >.
+                <strong>{{ activeStudyId }}</strong>.
               </div>
             </div>
 
@@ -942,8 +941,7 @@
             <p>
               You are certifying regulatory greenlight activation for site
               <strong>{{ activeSiteId }}</strong> in
-              <strong>{{ activeCountry }}</strong
-              >.
+              <strong>{{ activeCountry }}</strong>.
             </p>
             <div class="form-group">
               <label for="ssu-sig-name">Signer Name:</label>
@@ -2302,5 +2300,11 @@ onMounted(() => {
 .gauge-text {
   font-size: 0.875rem;
   font-weight: 700;
+}
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
 }
 </style>

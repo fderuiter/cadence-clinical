@@ -1,12 +1,18 @@
 <script setup>
 import { computed, ref, useAttrs, useId } from "vue";
 import { useFocusTrap } from "../../composables/useFocusTrap.js";
+import { clinicalOverlayProps } from "./sharedProps.js";
 
 defineOptions({
   inheritAttrs: false,
 });
 
 const props = defineProps({
+  ...clinicalOverlayProps,
+  role: {
+    type: String,
+    default: "dialog",
+  },
   modelValue: {
     type: Boolean,
     default: false,
@@ -14,34 +20,6 @@ const props = defineProps({
   title: {
     type: String,
     default: "Clinical Action Dialog",
-  },
-  size: {
-    type: String,
-    default: "md", // sm, md, lg, xl
-  },
-  role: {
-    type: String,
-    default: "dialog",
-  },
-  dismissible: {
-    type: Boolean,
-    default: true,
-  },
-  closeOnBackdrop: {
-    type: Boolean,
-    default: true,
-  },
-  initialFocus: {
-    type: [String, Object, Function],
-    default: null,
-  },
-  restoreFocus: {
-    type: [Boolean, Function],
-    default: true,
-  },
-  teleport: {
-    type: [Boolean, String],
-    default: "body",
   },
   id: {
     type: String,

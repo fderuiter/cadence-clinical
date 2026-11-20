@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
-import EmptyState from "../../src/components/common/EmptyState.vue";
+import { EmptyState } from "ui";
 
 describe("EmptyState Component", () => {
   it("renders with title and message props", () => {

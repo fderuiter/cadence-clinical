@@ -2979,4 +2979,10 @@ onMounted(() => {
 .text-critical {
   color: #dc2626 !important;
 }
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
+}
 </style>

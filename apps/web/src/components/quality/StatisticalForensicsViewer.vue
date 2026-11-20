@@ -3308,4 +3308,10 @@ onMounted(() => {
   font-weight: 800;
   color: #64748b;
 }
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
+}
 </style>

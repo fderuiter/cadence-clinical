@@ -117,8 +117,8 @@
           <button
             type="button"
             class="btn btn-sm btn-outline-primary btn-select-high-confidence"
-            @click="selectHighConfidence"
             title="Select all pending items with confidence score >= 90%"
+            @click="selectHighConfidence"
           >
             ⚡ Select High Confidence (≥90%)
           </button>
@@ -252,10 +252,10 @@
             <div class="card-header">
               <div class="card-selection-check">
                 <input
-                  type="checkbox"
                   :id="`select-cand-${item.id}`"
-                  :value="item.id"
                   v-model="selectedCandidateIds"
+                  type="checkbox"
+                  :value="item.id"
                   :disabled="item.status !== 'PENDING_REVIEW'"
                   class="candidate-checkbox"
                   :aria-label="`Select candidate ${item.target_variable}`"
@@ -744,10 +744,9 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { EmptyState, useFocusTrap } from "ui";
 import { interopService } from "../../api/interop";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
-import EmptyState from "../common/EmptyState.vue";
 
 export interface EhrCandidate {
   id: string;

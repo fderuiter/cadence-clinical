@@ -355,4 +355,10 @@ const addCriterion = () => {
   background-color: #f1f5f9;
   color: #64748b;
 }
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
+}
 </style>

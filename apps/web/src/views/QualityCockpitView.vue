@@ -2249,4 +2249,10 @@ function downloadDossierJson() {
   background: #f1f5f9;
   color: #475569;
 }
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
+}
 </style>

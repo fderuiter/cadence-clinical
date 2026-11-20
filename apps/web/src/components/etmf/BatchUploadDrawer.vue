@@ -711,7 +711,7 @@ useFocusTrap(inspectionCardRef, {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--semantic-color-text);
 }
 
 .browse-link {
@@ -766,6 +766,7 @@ useFocusTrap(inspectionCardRef, {
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .queue-table th,

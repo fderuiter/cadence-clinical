@@ -25,7 +25,7 @@
     <div
       class="quick-export-card"
       style="
-        background: var(--bg);
+        background: var(--semantic-color-surface-muted);
         border: 1px solid var(--border);
         border-radius: 8px;
         padding: 16px 20px;
@@ -74,7 +74,7 @@
             class="btn-group-toggle"
             style="
               display: flex;
-              background: var(--card-bg);
+              background: var(--semantic-color-surface);
               border: 1px solid var(--border);
               border-radius: 6px;
               overflow: hidden;
@@ -93,7 +93,10 @@
               :style="{
                 background:
                   recordLockFilter === 'all' ? 'var(--primary)' : 'transparent',
-                color: recordLockFilter === 'all' ? '#fff' : 'var(--text)',
+                color:
+                  recordLockFilter === 'all'
+                    ? '#fff'
+                    : 'var(--semantic-color-text)',
               }"
               @click="recordLockFilter = 'all'"
             >
@@ -115,7 +118,9 @@
                     ? 'var(--primary)'
                     : 'transparent',
                 color:
-                  recordLockFilter === 'locked_only' ? '#fff' : 'var(--text)',
+                  recordLockFilter === 'locked_only'
+                    ? '#fff'
+                    : 'var(--semantic-color-text)',
               }"
               @click="recordLockFilter = 'locked_only'"
             >
@@ -137,7 +142,9 @@
                     ? 'var(--primary)'
                     : 'transparent',
                 color:
-                  recordLockFilter === 'unlocked_only' ? '#fff' : 'var(--text)',
+                  recordLockFilter === 'unlocked_only'
+                    ? '#fff'
+                    : 'var(--semantic-color-text)',
               }"
               @click="recordLockFilter = 'unlocked_only'"
             >
@@ -1221,13 +1228,13 @@ function resetExport() {
 .wizard-main-title {
   font-size: 1.4rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
   margin-bottom: 4px;
 }
 
 .wizard-subtitle {
   font-size: 0.85rem;
-  color: var(--primary-light, #64748b);
+  color: var(--semantic-color-text-muted);
 }
 
 .wizard-status-badges {
@@ -1296,12 +1303,12 @@ function resetExport() {
 .step-title {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .step-desc {
   font-size: 0.72rem;
-  color: var(--primary-light, #64748b);
+  color: var(--semantic-color-text-muted);
 }
 
 /* Wizard Body */
@@ -1316,13 +1323,13 @@ function resetExport() {
 .pane-title {
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
   margin-bottom: 6px;
 }
 
 .pane-description {
   font-size: 0.9rem;
-  color: var(--primary-light, #64748b);
+  color: var(--semantic-color-text-muted);
   margin-bottom: 24px;
 }
 
@@ -1377,12 +1384,12 @@ function resetExport() {
 .format-name {
   font-size: 1rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .format-detail {
   font-size: 0.8rem;
-  color: var(--primary-light, #64748b);
+  color: var(--semantic-color-text-muted);
   flex: 1;
 }
 

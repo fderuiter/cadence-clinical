@@ -1,6 +1,9 @@
 import AiActionButton from "./components/clinical/AiActionButton.vue";
 import AiSuggestionDrawer from "./components/clinical/AiSuggestionDrawer.vue";
+import AuditLogViewer from "./components/clinical/AuditLogViewer.vue";
+import ClinicalDataTable from "./components/clinical/ClinicalDataTable.vue";
 import ClinicalDrawer from "./components/clinical/ClinicalDrawer.vue";
+import ClinicalFieldLayout from "./components/clinical/ClinicalFieldLayout.vue";
 import ClinicalFormField from "./components/clinical/ClinicalFormField.vue";
 import ClinicalInput from "./components/clinical/ClinicalInput.vue";
 import ClinicalLookupInput from "./components/clinical/ClinicalLookupInput.vue";
@@ -9,7 +12,10 @@ import ClinicalQueryFlag from "./components/clinical/ClinicalQueryFlag.vue";
 import ClinicalQueryPanel from "./components/clinical/ClinicalQueryPanel.vue";
 import ClinicalRadioGroup from "./components/clinical/ClinicalRadioGroup.vue";
 import ConfidenceBadge from "./components/clinical/ConfidenceBadge.vue";
+import PersonaSwitcher from "./components/clinical/PersonaSwitcher.vue";
+import EmptyState from "./components/common/EmptyState.vue";
 import FileUploadModal from "./components/FileUploadModal.vue";
+import MediaPlayer from "./components/MediaPlayer.vue";
 import ModalErrorAlert from "./components/ModalErrorAlert.vue";
 import { useAsyncRetry } from "./composables/useAsyncRetry.js";
 import { useEscapeClose } from "./composables/useEscapeClose.js";
@@ -21,7 +27,10 @@ import {
 export {
   AiActionButton,
   AiSuggestionDrawer,
+  AuditLogViewer,
+  ClinicalDataTable,
   ClinicalDrawer,
+  ClinicalFieldLayout,
   ClinicalFormField,
   ClinicalInput,
   ClinicalLookupInput,
@@ -30,8 +39,11 @@ export {
   ClinicalQueryPanel,
   ClinicalRadioGroup,
   ConfidenceBadge,
+  EmptyState,
   FileUploadModal,
+  MediaPlayer,
   ModalErrorAlert,
+  PersonaSwitcher,
   getFocusableElements,
   useAsyncRetry,
   useEscapeClose,
