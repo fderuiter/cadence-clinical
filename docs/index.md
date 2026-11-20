@@ -60,4 +60,4 @@ Cadence Clinical separates **public browser evaluation** from **authenticated fu
 | **Local Full-Stack Development**     | Local workstation via `.NET Aspire` AppHost or `docker compose`                                   | Real Keycloak OIDC + PKCE, YARP API Gateway (`:8000`), `.NET 10` services, and PostgreSQL 18                   | Backend/frontend engineering, database migrations, OIDC authorization testing, and GxP qualification |
 
 - Setting up a local stack? Follow the [Local Development Environment guide](LOCAL_DEV_ENVIRONMENT.md).
-- Looking for a specific design decision, service contract, or compliance artifact? Start at the [Documentation Index](DOCUMENTATION_INDEX.md) or the [ADR Log](adr/index.md).
+- Looking for a specific design decision, architectural narrative, service contract, or compliance artifact? Start at the [Documentation Index](DOCUMENTATION_INDEX.md), the [Engineering Blog](blog/index.md), or the [ADR Log](adr/index.md).

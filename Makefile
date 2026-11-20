@@ -7,7 +7,7 @@
 # ==============================================================================
 
 .DEFAULT_GOAL := help
-.PHONY: help setup wizard doctor build dev fix lint-paths typecheck lint format action-pinning check verify ci test sync-gxp gxp-sync gxp-snapshot rtm adr docs ports db-reset db-reset-offline
+.PHONY: help setup wizard doctor build dev fix lint-paths typecheck lint format action-pinning check verify ci test sync-gxp gxp-sync gxp-snapshot rtm adr post docs ports db-reset db-reset-offline
 
 # Colour codes
 CYAN  := \033[0;36m
@@ -90,6 +90,10 @@ rtm: ## Validate requirement tags and the RTM integrity stamps (cadence gxp vali
 adr: ## Scaffold a new Architecture Decision Record (make adr TITLE="Use X for Y")
 	@test -n "$(TITLE)" || { echo "Usage: make adr TITLE=\"Use X for Y\""; exit 1; }
 	$(CADENCE_CLI) scaffold adr "$(TITLE)"
+
+post: ## Scaffold a new engineering blog post (make post TITLE="Ship X")
+	@test -n "$(TITLE)" || { echo "Usage: make post TITLE=\"Ship X\""; exit 1; }
+	$(CADENCE_CLI) scaffold post "$(TITLE)"
 
 docs: ## Serve the VitePress documentation portal locally
 	pnpm docs:dev

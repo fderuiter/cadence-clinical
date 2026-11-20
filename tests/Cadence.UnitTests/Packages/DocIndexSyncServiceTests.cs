@@ -91,6 +91,9 @@ public sealed class DocIndexSyncServiceTests : IDisposable
     [Fact]
     public void DetermineCategory_CategorizesPathsCorrectly()
     {
+        DocIndexSyncService.DetermineCategory("blog/index.md").Should().Be("## Engineering blog");
+        DocIndexSyncService.DetermineCategory("blog/2026-11-19-keeping-cadence-in-one-repository.md").Should().Be("## Engineering blog");
+        DocIndexSyncService.DetermineCategory("docs/blog/2026-11-19-keeping-cadence-in-one-repository.md").Should().Be("## Engineering blog");
         DocIndexSyncService.DetermineCategory("kernel/SPEC.md").Should().Be("## Kernel and roadmap");
         DocIndexSyncService.DetermineCategory("architecture/repository-migration/MIGRATION_PLAN.md").Should().Be("## Former repository migration program");
         DocIndexSyncService.DetermineCategory("adr/001.md").Should().Be("## Architecture decision records");
@@ -102,6 +105,20 @@ public sealed class DocIndexSyncServiceTests : IDisposable
         DocIndexSyncService.DetermineCategory("strategy/MARKET_HYPOTHESES.md").Should().Be("## Product");
         DocIndexSyncService.DetermineCategory("FUNCTIONAL_PRODUCT_SPECIFICATION.md").Should().Be("## Product");
         DocIndexSyncService.DetermineCategory("api/designer.md").Should().Be("## Developing and running");
+    }
+
+    [Fact]
+    public void ExtractDocMetadata_ReadsYamlFrontmatterSummaryAndTitle_AndSkipsVueTags()
+    {
+        string filePath = Path.Combine(_tempDir, "2026-11-20-post.md");
+        File.WriteAllText(
+            filePath,
+            "---\ntitle: \"Frontmatter Blog Title\"\nsummary: \"Concise [ADR-2603](../adr/index.md) summary from frontmatter.\"\ndraft: true\n---\n\n<BlogIndex />\n");
+
+        var (title, desc) = DocIndexSyncService.ExtractDocMetadata(filePath, "blog/2026-11-20-post.md");
+
+        title.Should().Be("Frontmatter Blog Title");
+        desc.Should().Be("Concise ADR-2603 summary from frontmatter.");
     }
 
     [Fact]
