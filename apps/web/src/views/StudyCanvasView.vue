@@ -359,11 +359,8 @@
                   ? `The rest of ${stage.label} arrives as its services are built.`
                   : `No part of ${stage.label} has a service yet.`
               }}
-              <a
-                :href="UNAVAILABLE_SCREENS_ISSUE"
-                target="_blank"
-                rel="noopener"
-                >See what's planned (#4829)</a
+              <router-link to="/plans">
+                Compare product families &amp; pre-release roadmap </router-link
               >.
             </p>
           </section>
@@ -487,7 +484,6 @@ import {
   canVerifySource,
 } from "../canvas/authority";
 import type { PaletteTarget } from "../canvas/palette";
-import { UNAVAILABLE_SCREENS_ISSUE } from "../router/availability.js";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import CanvasFormWorkspace from "../components/canvas/CanvasFormWorkspace.vue";
