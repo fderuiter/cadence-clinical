@@ -6,14 +6,53 @@
  * @returns {Function} The debounced function.
  */
 export function debounce(func, wait) {
-  let timeout;
-  return function (...args) {
-    const context = this;
-    clearTimeout(timeout);
+  let timeout = null;
+  let pendingArgs = null;
+  let pendingContext = null;
+
+  function debounced(...args) {
+    pendingContext = this;
+    pendingArgs = args;
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
     timeout = setTimeout(() => {
-      func.apply(context, args);
+      const ctx = pendingContext;
+      const callArgs = pendingArgs;
+      timeout = null;
+      pendingContext = null;
+      pendingArgs = null;
+      func.apply(ctx, callArgs);
     }, wait);
+  }
+
+  debounced.flush = function flushDebounced() {
+    if (timeout === null) {
+      return undefined;
+    }
+    clearTimeout(timeout);
+    const ctx = pendingContext;
+    const callArgs = pendingArgs;
+    timeout = null;
+    pendingContext = null;
+    pendingArgs = null;
+    return func.apply(ctx, callArgs);
   };
+
+  debounced.cancel = function cancelDebounced() {
+    if (timeout !== null) {
+      clearTimeout(timeout);
+      timeout = null;
+    }
+    pendingContext = null;
+    pendingArgs = null;
+  };
+
+  debounced.pending = function isDebouncedPending() {
+    return timeout !== null;
+  };
+
+  return debounced;
 }
 
 /**
@@ -101,7 +140,30 @@ export {
   decryptAESGCM,
   deriveSessionKey,
   deriveKeyFromPIN,
+  SEMANTIC_ACTION_PATTERN,
+  STEP_UP_ACTION_MAX_LENGTH,
+  SEMANTIC_ACTIONS,
+  isValidStepUpAction,
+  isValidSemanticAction,
+  buildStepUpVerificationPayload,
+  SIGNATURE_OTHER_REASON,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+  requiresCustomSignatureReason,
+  resolveSignatureReason,
+  deriveSignerRoleFromClaims,
 } from "./signing.js";
+
+export {
+  DEFAULT_AUTH_RETURN_URL_KEY,
+  sanitizeReturnUrl,
+  saveAuthReturnUrl,
+  peekAuthReturnUrl,
+  consumeAuthReturnUrl,
+  clearAuthReturnUrl,
+  resolveOidcRedirectUri,
+  isStepUpAuthFailure,
+  createOidcSessionCoordinator,
+} from "./session.js";
 
 /**
  * Generates vanilla HTML string for a single condition row in the rule builder.
@@ -768,11 +830,18 @@ import {
   MediaPlayer,
   ModalErrorAlert,
   PersonaSwitcher,
+  SignOutConfirmModal,
   useAsyncRetry,
   useFocusTrap,
   getFocusableElements,
   trapTabFocus,
   useEscapeClose,
+  registerDraftSource,
+  flushRegisteredDraftSources,
+  flushRegisteredDraftSourcesSync,
+  hasRegisteredUnsavedDrafts,
+  resetDraftSourcesForTests,
+  useSignOutGuard,
 } from "./src/index.js";
 
 export {
@@ -795,11 +864,18 @@ export {
   MediaPlayer,
   ModalErrorAlert,
   PersonaSwitcher,
+  SignOutConfirmModal,
   useAsyncRetry,
   useFocusTrap,
   getFocusableElements,
   trapTabFocus,
   useEscapeClose,
+  registerDraftSource,
+  flushRegisteredDraftSources,
+  flushRegisteredDraftSourcesSync,
+  hasRegisteredUnsavedDrafts,
+  resetDraftSourcesForTests,
+  useSignOutGuard,
 };
 
 // Dynamic Hover Pointer Capability Detection
