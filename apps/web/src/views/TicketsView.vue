@@ -600,11 +600,13 @@
 import { ref, reactive, computed, onMounted } from "vue";
 import TicketDetailDrawer from "../components/tickets/TicketDetailDrawer.vue";
 import TicketCreateModal from "../components/tickets/TicketCreateModal.vue";
-import apiClient from "../services/api";
+import { ticketsApi } from "../api/ticketsApi";
+import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useToastStore } from "../stores/toasts.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 
+const knowledgeStore = useKnowledgeStore();
 const tickets = ref([]);
 const kpis = reactive({
   active_tickets: 0,
@@ -770,19 +772,30 @@ const initialMockTickets = [
   },
 ];
 
+function mergeDemoEscalatedTickets(baseTickets) {
+  if (!isDemoBuild() || !knowledgeStore.escalatedTickets.length) {
+    return baseTickets;
+  }
+  const seen = new Set(baseTickets.map((t) => t.id || t.reference));
+  const extra = knowledgeStore.escalatedTickets.filter(
+    (t) => !seen.has(t.id) && !seen.has(t.reference)
+  );
+  return [...extra, ...baseTickets];
+}
+
 onMounted(async () => {
   // Sample tickets only in a demo build (#4523, #4827); elsewhere the list shows what the service returns.
   if (isDemoBuild()) {
-    tickets.value = [...initialMockTickets];
+    tickets.value = mergeDemoEscalatedTickets([...initialMockTickets]);
   }
-  fetchTicketsFromApi();
+  await fetchTicketsFromApi();
 });
 
 const fetchTicketsFromApi = async () => {
   try {
-    const res = await apiClient.get("/api/v1/tickets");
+    const res = await ticketsApi.listTickets();
     if (res && Array.isArray(res)) {
-      tickets.value = res;
+      tickets.value = isDemoBuild() ? mergeDemoEscalatedTickets(res) : res;
     }
   } catch (err) {
     if (!isDemoBuild()) {
@@ -1038,19 +1051,28 @@ const handleTicketSigned = ({ ticketId, signature_token, meaning }) => {
   }
 };
 
-const handleTicketCreated = (payload) => {
-  if (!allowUnbackedAction("Creating a ticket")) return;
-  const newTicket = {
-    id: "tk-" + Date.now(),
-    reference: "DEV-2026-" + Math.floor(1000 + Math.random() * 9000),
-    ...payload,
-    status: "OPEN",
-    created_by: "active.user@cadence.io",
-    created_at: new Date().toISOString(),
-    sla_target_at: new Date(Date.now() + 3600 * 1000 * 24).toISOString(),
-    version_index: 1,
-  };
-  tickets.value.unshift(newTicket);
+const handleTicketCreated = (createdTicket) => {
+  if (!createdTicket) return;
+  knowledgeStore.recordEscalatedTicket(createdTicket);
+  const existingIdx = tickets.value.findIndex(
+    (t) => t.id === createdTicket.id || t.reference === createdTicket.reference
+  );
+  if (existingIdx !== -1) {
+    tickets.value.splice(existingIdx, 1);
+  }
+  tickets.value.unshift(createdTicket);
+
+  const refId = createdTicket.reference || createdTicket.id;
+  const simulated = isDemoBuild() || String(refId || "").startsWith("SIM-");
+  useToastStore().push({
+    tone: "success",
+    title: simulated
+      ? `Simulated ticket ${refId} saved in demo session`
+      : `Support ticket ${refId} submitted`,
+    message: createdTicket.assigned_queue
+      ? `Reference ID: ${refId} (${createdTicket.assigned_queue})`
+      : `Reference ID: ${refId}`,
+  });
 };
 
 const exportAuditTrail = (format) => {

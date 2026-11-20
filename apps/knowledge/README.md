@@ -1,6 +1,6 @@
 # Knowledge service
 
-Knowledge base scaffold. It holds the article, article version, category, contextual help mapping and protocol knowledge chunk model; no business endpoints are mapped yet.
+Knowledge base and training service. It serves controlled SOP resolution (`GET /api/v1/knowledge/contextual-help`), published article search and detail (`GET /api/v1/knowledge/articles`, `GET /api/v1/knowledge/articles/{article_id}`), category taxonomy (`GET /api/v1/knowledge/categories`), and study training/delegation endpoints.
 
 **Status:** a standalone ASP.NET Core 10 scaffold service. Under [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and the [clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map, §15 roadmap) it becomes an application module over the clinical kernel. The disposition of the scaffold services is tracked in issue #4787.
 
@@ -17,8 +17,10 @@ Knowledge base scaffold. It holds the article, article version, category, contex
 
 - `GET /healthz`, `GET /healthz/live`, `GET /healthz/ready` (anonymous; mapped by `MapCadenceHealthAndStatusEndpoints` and `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready` checks `KnowledgeDbContext`.
 - `GET /api/v1/knowledge/status` (anonymous status payload).
+- `GET /api/v1/knowledge/contextual-help?route=&persona=`, `GET /api/v1/knowledge/categories`, `GET /api/v1/knowledge/articles`, and `GET /api/v1/knowledge/articles/{article_id}` (`knowledge:read`, staff roles; see [ADR-2819](../../docs/adr/2026-11-20-contextual-sop-resolution-and-audited-ticket-escalation.md)).
+- Study training curricula, batch assignments, certificates, and delegation log sign-off under `/api/v1/training/**`.
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
-- The gateway forwards `/api/v1/knowledge/**` to this service. Compose publishes host port 8015 (container port 8080); the gateway's default upstream is `http://localhost:8015` (`KNOWLEDGE_SERVICE_URL`).
+- The gateway forwards `/api/v1/knowledge/**` and `/api/v1/training/**` to this service. Compose publishes host port 8015 (container port 8080); the gateway's default upstream is `http://localhost:8015` (`KNOWLEDGE_SERVICE_URL`).
 
 ## Security
 
@@ -45,7 +47,8 @@ pre-selects nothing.
 
 ## Tests
 
-- No service-specific tests exist yet.
+- Unit and endpoint tests: `tests/Cadence.UnitTests/Knowledge/ContextualHelpEndpointsTests.cs` and `tests/Cadence.UnitTests/Knowledge/TrainingEndpointsTests.cs`.
+- PostgreSQL integration tests: `tests/Cadence.IntegrationTests/Tickets/TicketPersistenceAndAuditPostgresTests.cs`.
 - Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 
 ## Run locally

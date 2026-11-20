@@ -11187,6 +11187,167 @@
         }
       }
     },
+    "/api/v1/knowledge/contextual-help": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "operationId": "ResolveContextualHelp",
+        "parameters": [
+          {
+            "name": "route",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "persona",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ContextualHelpResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/categories": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "operationId": "ListKnowledgeCategories",
+        "parameters": [
+          {
+            "name": "persona",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Knowledge_KnowledgeCategoryDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/articles": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "operationId": "ListKnowledgeArticles",
+        "parameters": [
+          {
+            "name": "status_filter",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "persona",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Knowledge_KnowledgeArticleDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/articles/{article_id}": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "operationId": "GetKnowledgeArticle",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_KnowledgeArticleDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/training/curricula": {
       "get": {
         "tags": [
@@ -13315,6 +13476,249 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Tickets_AnonymousTypeOfstringAndstring"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets": {
+      "post": {
+        "tags": [
+          "Tickets"
+        ],
+        "operationId": "CreateTicket",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Tickets_CreateTicketRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_TicketResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Tickets"
+        ],
+        "operationId": "ListTickets",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gxp_severity",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assigned_queue",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Tickets_TicketResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{ticket_id}": {
+      "get": {
+        "tags": [
+          "Tickets"
+        ],
+        "operationId": "GetTicket",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_TicketResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
                 }
               }
             }
@@ -26576,6 +26980,106 @@
           }
         }
       },
+      "Knowledge_ContextualHelpMappingDto": {
+        "required": [
+          "id",
+          "route_pattern",
+          "persona",
+          "article_id",
+          "section_anchor",
+          "priority",
+          "is_active"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "route_pattern": {
+            "type": "string"
+          },
+          "persona": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "article_id": {
+            "type": "string"
+          },
+          "section_anchor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "priority": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "is_active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Knowledge_ContextualHelpResponseDto": {
+        "required": [
+          "matched_mapping",
+          "primary_article",
+          "primary_version",
+          "section_anchor",
+          "related_articles"
+        ],
+        "type": "object",
+        "properties": {
+          "matched_mapping": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Knowledge_ContextualHelpMappingDto"
+              }
+            ]
+          },
+          "primary_article": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Knowledge_KnowledgeArticleDto"
+              }
+            ]
+          },
+          "primary_version": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Knowledge_KnowledgeArticleVersionDto"
+              }
+            ]
+          },
+          "section_anchor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "related_articles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Knowledge_KnowledgeArticleDto"
+            }
+          }
+        }
+      },
       "Knowledge_DelegationSummaryDto": {
         "required": [
           "id",
@@ -26656,6 +27160,222 @@
             "type": "string"
           },
           "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "Knowledge_KnowledgeArticleDto": {
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "category_id",
+          "category_name",
+          "status",
+          "version_index",
+          "version_label",
+          "current_published_version_id",
+          "tags",
+          "author_user_id",
+          "last_edited_by",
+          "approved_by",
+          "body_markdown",
+          "body_html",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "category_id": {
+            "type": "string"
+          },
+          "category_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "version_label": {
+            "type": "string"
+          },
+          "current_published_version_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "author_user_id": {
+            "type": "string"
+          },
+          "last_edited_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "approved_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "body_markdown": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "body_html": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Knowledge_KnowledgeArticleVersionDto": {
+        "required": [
+          "id",
+          "article_id",
+          "version_index",
+          "version_label",
+          "body_markdown",
+          "body_html",
+          "status_at_snapshot",
+          "is_locked",
+          "created_at",
+          "created_by",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "article_id": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "version_label": {
+            "type": "string"
+          },
+          "body_markdown": {
+            "type": "string"
+          },
+          "body_html": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status_at_snapshot": {
+            "type": "string"
+          },
+          "is_locked": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": "string"
+          }
+        }
+      },
+      "Knowledge_KnowledgeCategoryDto": {
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "description",
+          "parent_id",
+          "persona_visibility",
+          "is_deleted",
+          "created_at",
+          "created_by"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "parent_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "persona_visibility": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "is_deleted": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
             "type": "string"
           }
         }
@@ -28609,6 +29329,280 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Tickets_CreateTicketRequestDto": {
+        "required": [
+          "title",
+          "description"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "SYSTEM_SUPPORT"
+          },
+          "gxp_severity": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "MINOR"
+          },
+          "priority": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "MEDIUM"
+          },
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "entity_type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "entity_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "source_route": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "persona": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Tickets_ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Tickets_TicketResponseDto": {
+        "required": [
+          "id",
+          "reference",
+          "title",
+          "description",
+          "category",
+          "priority",
+          "gxp_severity",
+          "status",
+          "assigned_queue",
+          "assignee_role",
+          "assignee_user",
+          "reporter",
+          "created_by",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "related_entity_type",
+          "related_entity_id",
+          "source_route",
+          "acknowledge_target_at",
+          "sla_target_at",
+          "sla_breached",
+          "sla_amber_warned",
+          "escalation_count",
+          "reason_for_change",
+          "created_at",
+          "version_index"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "string"
+          },
+          "gxp_severity": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "assigned_queue": {
+            "type": "string"
+          },
+          "assignee_role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "assignee_user": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reporter": {
+            "type": "string"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "related_entity_type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "related_entity_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "source_route": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "acknowledge_target_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "sla_target_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "sla_breached": {
+            "type": "boolean"
+          },
+          "sla_amber_warned": {
+            "type": "boolean"
+          },
+          "escalation_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       }

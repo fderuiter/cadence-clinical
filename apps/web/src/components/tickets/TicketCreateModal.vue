@@ -252,7 +252,9 @@
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
 import { useFocusTrap } from "ui";
-import { allowUnbackedAction } from "../../utils/unbackedActions.js";
+import { ticketsApi } from "../../api/ticketsApi";
+import { describeApiError } from "../../utils/apiErrors.js";
+import { isDemoBuild } from "../../utils/demoMode.js";
 
 const props = defineProps({
   isOpen: {
@@ -279,14 +281,22 @@ const modalRef = ref(null);
 const loading = ref(false);
 const errorMessage = ref("");
 
+function defaultStudyForBuild() {
+  return isDemoBuild() ? "STUDY-ONC-202" : "";
+}
+
+function defaultSiteForBuild() {
+  return isDemoBuild() ? "SITE-101" : "";
+}
+
 const form = reactive({
   title: "",
   description: "",
   category: "PROTOCOL_DEVIATION",
   gxp_severity: "MINOR",
   priority: "MEDIUM",
-  study_id: props.defaultStudyId || "STUDY-ONC-202",
-  site_id: props.defaultSiteId || "SITE-101",
+  study_id: props.defaultStudyId || defaultStudyForBuild(),
+  site_id: props.defaultSiteId || defaultSiteForBuild(),
   subject_id: "",
   entity_type: "",
   entity_id: "",
@@ -300,8 +310,9 @@ function applyInitialData() {
   form.category = init.category || "PROTOCOL_DEVIATION";
   form.gxp_severity = init.gxp_severity || "MINOR";
   form.priority = init.priority || "MEDIUM";
-  form.study_id = init.study_id || props.defaultStudyId || "STUDY-ONC-202";
-  form.site_id = init.site_id || props.defaultSiteId || "SITE-101";
+  form.study_id =
+    init.study_id || props.defaultStudyId || defaultStudyForBuild();
+  form.site_id = init.site_id || props.defaultSiteId || defaultSiteForBuild();
   form.subject_id = init.subject_id || "";
   form.entity_type = init.entity_type || "";
   form.entity_id = init.entity_id || "";
@@ -343,31 +354,30 @@ const handleSubmit = async () => {
     errorMessage.value = "Please complete all required fields.";
     return;
   }
-  if (!allowUnbackedAction("Support ticket escalation")) {
-    errorMessage.value =
-      "Support ticket escalation isn't available yet. No Cadence service records tickets yet, so nothing was submitted and your entry is preserved.";
-    return;
-  }
   loading.value = true;
   errorMessage.value = "";
   try {
-    const payload = {
-      title: form.title,
-      description: form.description,
+    const reason = form.reason_for_change.trim();
+    const requestPayload = {
+      title: form.title.trim(),
+      description: form.description.trim(),
       category: form.category,
       gxp_severity: form.gxp_severity,
       priority: form.priority,
-      study_id: form.study_id || null,
-      site_id: form.site_id || null,
-      subject_id: form.subject_id || null,
+      study_id: form.study_id?.trim() || null,
+      site_id: form.site_id?.trim() || null,
+      subject_id: form.subject_id?.trim() || null,
       entity_type: form.entity_type || null,
-      entity_id: form.entity_id || null,
-      reason_for_change: form.reason_for_change,
+      entity_id: form.entity_id?.trim() || null,
+      source_route: props.initialData?.source_route || null,
+      persona: props.initialData?.persona || null,
     };
-    emit("created", payload);
+    const createdTicket = await ticketsApi.createTicket(requestPayload, reason);
+    emit("created", createdTicket);
     close();
   } catch (err) {
-    errorMessage.value = err.message || "Failed to create ticket.";
+    errorMessage.value =
+      describeApiError(err) || err?.message || "Failed to create ticket.";
   } finally {
     loading.value = false;
   }

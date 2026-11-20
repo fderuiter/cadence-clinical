@@ -86,6 +86,37 @@
         <p>Resolving contextual SOP guidance...</p>
       </div>
 
+      <!-- Error State -->
+      <div
+        v-else-if="knowledgeStore.error"
+        id="contextual-help-error-alert"
+        class="help-error-alert"
+        role="alert"
+        aria-live="assertive"
+      >
+        <div class="error-alert-header">
+          <span class="error-alert-icon" aria-hidden="true">⚠️</span>
+          <h4 class="error-alert-title">
+            {{
+              knowledgeStore.lastFailedAction?.type === "search"
+                ? "Unable to Search SOP Articles"
+                : "Unable to Load Contextual SOP Guidance"
+            }}
+          </h4>
+        </div>
+        <p class="error-alert-message">{{ knowledgeStore.error }}</p>
+        <div class="error-alert-actions">
+          <button
+            id="btn-contextual-help-retry"
+            type="button"
+            class="btn btn-secondary btn-retry"
+            @click="handleRetry"
+          >
+            ↻ Retry
+          </button>
+        </div>
+      </div>
+
       <!-- Search Results View -->
       <div
         v-else-if="isSearchOpen && searchInput.trim()"
@@ -335,7 +366,8 @@ import { useRoute } from "vue-router";
 import { ClinicalDrawer, useEscapeClose } from "ui";
 import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
-import { allowUnbackedAction } from "../utils/unbackedActions.js";
+import { useToastStore } from "../stores/toasts.js";
+import { isDemoBuild } from "../utils/demoMode.js";
 import TicketCreateModal from "./tickets/TicketCreateModal.vue";
 
 const knowledgeStore = useKnowledgeStore();
@@ -406,9 +438,25 @@ function handleEscalate() {
   knowledgeStore.prepareEscalation();
 }
 
-function handleTicketCreated(_payload) {
-  if (!allowUnbackedAction("Support ticket escalation")) {
-    return;
+async function handleRetry() {
+  await knowledgeStore.retryLastAction();
+}
+
+function handleTicketCreated(createdTicket) {
+  if (createdTicket) {
+    knowledgeStore.recordEscalatedTicket(createdTicket);
+    const refId = createdTicket.reference || createdTicket.id;
+    const queueSuffix = createdTicket.assigned_queue
+      ? ` (${createdTicket.assigned_queue})`
+      : "";
+    const simulated = isDemoBuild() || String(refId || "").startsWith("SIM-");
+    useToastStore().push({
+      tone: "success",
+      title: simulated
+        ? `Simulated ticket ${refId} saved in demo session`
+        : `Support ticket ${refId} submitted`,
+      message: `Reference ID: ${refId}${queueSuffix}`,
+    });
   }
   knowledgeStore.cancelEscalation();
   knowledgeStore.closeDrawer();
@@ -456,8 +504,9 @@ onMounted(() => {
   window.addEventListener("keydown", handleKeydown);
   if (
     route?.path &&
+    !knowledgeStore.hasLoadedContextualHelp &&
     !knowledgeStore.primaryArticle &&
-    knowledgeStore.currentRoute !== route.path
+    !knowledgeStore.loading
   ) {
     knowledgeStore.fetchContextualHelp(route.path, authStore.currentPersona);
   }
@@ -1046,6 +1095,47 @@ onUnmounted(() => {
   text-align: center;
   color: #64748b;
   font-size: 0.84rem;
+}
+
+.help-error-alert {
+  padding: 16px;
+  border: 1px solid #dc2626;
+  border-radius: 8px;
+  background-color: #fef2f2;
+  color: #7f1d1d;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.error-alert-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.error-alert-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #7f1d1d;
+}
+
+.error-alert-message {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: #991b1b;
+}
+
+.error-alert-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.btn-retry {
+  border-color: #b91c1c;
+  color: #7f1d1d;
 }
 
 :deep(.clinical-drawer-footer) {

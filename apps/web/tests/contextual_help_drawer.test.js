@@ -1,13 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
+import { createMemoryHistory, createRouter } from "vue-router";
 import { router } from "../src/router/index.js";
 import { useAuthStore } from "../src/stores/auth.js";
 import { useKnowledgeStore } from "../src/stores/knowledge.js";
+import { useToastStore } from "../src/stores/toasts.js";
 import {
   knowledgeService,
   getFallbackContextualHelp,
 } from "../src/api/knowledge.js";
+import { ticketsApi } from "../src/api/ticketsApi";
 import ContextualHelpDrawer from "../src/components/ContextualHelpDrawer.vue";
 import AppShell from "../src/components/AppShell.vue";
 import App from "../src/App.vue";
@@ -77,12 +80,31 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
 
     authStore.isAuthenticated = true;
     authStore.currentPersona = "site_crc";
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.clear();
+    }
+    knowledgeStore.clearEscalatedTickets();
 
     vi.clearAllMocks();
   });
 
   describe("1. API Service & Offline Fallbacks", () => {
-    it("returns correct fallback SOPs for /ecrf, /mdr, /ctms, and /audit", () => {
+    it("returns correct fallback SOPs for /studies, /studies/:studyCode, /ecrf, /mdr, /ctms, /ssu, and /audit", () => {
+      const studiesListHelp = getFallbackContextualHelp(
+        "/studies",
+        "sponsor_designer"
+      );
+      expect(studiesListHelp.primary_article.title).toContain("SOP-STD-101");
+
+      const studyCanvasHelp = getFallbackContextualHelp(
+        "/studies/DEMO-01",
+        "site_crc"
+      );
+      expect(studyCanvasHelp.primary_article.title).toContain("SOP-STD-102");
+      expect(studyCanvasHelp.matched_mapping.route_pattern).toBe(
+        "/studies/:studyCode"
+      );
+
       const ecrfHelp = getFallbackContextualHelp("/ecrf", "site_crc");
       expect(ecrfHelp.primary_article.title).toContain("SOP-ECRF-201");
       expect(ecrfHelp.section_anchor).toBe(
@@ -94,6 +116,9 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
 
       const ctmsHelp = getFallbackContextualHelp("/ctms", "cra_monitor");
       expect(ctmsHelp.primary_article.title).toContain("SOP-CTMS-302");
+
+      const ssuHelp = getFallbackContextualHelp("/ssu", "cra_monitor");
+      expect(ssuHelp.primary_article.title).toContain("SOP-SSU-205");
 
       const auditHelp = getFallbackContextualHelp("/audit", "auditor");
       expect(auditHelp.primary_article.title).toContain("SOP-AUD-401");
@@ -435,6 +460,141 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       expect(knowledgeStore.displayedArticle.id).toBe("art-mdr-01");
       expect(wrapper.find("#help-search-input").exists()).toBe(false);
     });
+    it("loads contextual SOP guidance when opening /ecrf on initial application mount", async () => {
+      const localRouter = createRouter({
+        history: createMemoryHistory(),
+        routes: [{ path: "/ecrf", component: { template: "<div />" } }],
+      });
+      await localRouter.push("/ecrf");
+      await localRouter.isReady();
+
+      // Reset knowledgeStore to initial application mount state (currentRoute === "/ecrf", hasLoadedContextualHelp === false)
+      knowledgeStore.$reset();
+      knowledgeStore.openDrawer();
+
+      const resolveSpy = vi
+        .spyOn(knowledgeService, "resolveContextualHelp")
+        .mockResolvedValue(mockResolvedSop);
+
+      const wrapper = mount(ContextualHelpDrawer, {
+        global: {
+          plugins: [pinia, localRouter],
+        },
+      });
+
+      await vi.waitFor(() =>
+        expect(resolveSpy).toHaveBeenCalledWith({
+          route: "/ecrf",
+          persona: "site_crc",
+        })
+      );
+      await wrapper.vm.$nextTick();
+
+      expect(knowledgeStore.primaryArticle?.id).toBe("art-test-01");
+      expect(wrapper.text()).toContain(
+        "SOP-ECRF-201: Subject Enrollment & eCRF Data Capture"
+      );
+      wrapper.unmount();
+    });
+
+    it("displays an accessible error alert and retry button when contextual SOP lookup fails", async () => {
+      vi.stubEnv("VITE_DEMO_MODE", "false");
+      const resolveSpy = vi
+        .spyOn(knowledgeService, "resolveContextualHelp")
+        .mockRejectedValueOnce(
+          Object.assign(new Error("Upstream knowledge service unavailable"), {
+            status: 500,
+          })
+        )
+        .mockResolvedValueOnce(mockResolvedSop);
+
+      await knowledgeStore.fetchContextualHelp("/ecrf", "site_crc");
+      knowledgeStore.openDrawer();
+
+      const wrapper = mount(ContextualHelpDrawer, {
+        global: {
+          plugins: [pinia, router],
+        },
+      });
+
+      const alertEl = wrapper.find("#contextual-help-error-alert");
+      expect(alertEl.exists()).toBe(true);
+      expect(alertEl.attributes("role")).toBe("alert");
+      expect(alertEl.text()).toContain(
+        "Unable to Load Contextual SOP Guidance"
+      );
+      expect(alertEl.text()).toContain("HTTP 500");
+      expect(wrapper.text()).not.toContain(
+        "No Specific SOP Mapped for This Route"
+      );
+
+      const retryBtn = wrapper.find("#btn-contextual-help-retry");
+      expect(retryBtn.exists()).toBe(true);
+      await retryBtn.trigger("click");
+      await vi.waitFor(() => expect(resolveSpy).toHaveBeenCalledTimes(2));
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find("#contextual-help-error-alert").exists()).toBe(false);
+      expect(wrapper.text()).toContain(
+        "SOP-ECRF-201: Subject Enrollment & eCRF Data Capture"
+      );
+    });
+
+    it("displays an accessible error alert and retry button when article search fails", async () => {
+      vi.stubEnv("VITE_DEMO_MODE", "false");
+      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
+        mockResolvedSop
+      );
+      const searchSpy = vi
+        .spyOn(knowledgeService, "listArticles")
+        .mockRejectedValueOnce(
+          Object.assign(new Error("Knowledge article index unreachable"), {
+            status: 500,
+          })
+        )
+        .mockResolvedValueOnce([
+          {
+            id: "art-search-02",
+            title: "SOP-SSU-205: Site Startup Readiness",
+            body_html: "<p>Greenlight verification</p>",
+            tags: ["ssu", "greenlight"],
+            version_label: "1.1",
+          },
+        ]);
+
+      await knowledgeStore.fetchContextualHelp("/ecrf", "site_crc");
+      knowledgeStore.openDrawer();
+
+      const wrapper = mount(ContextualHelpDrawer, {
+        global: {
+          plugins: [pinia, router],
+        },
+      });
+      await router.isReady();
+      await wrapper.vm.$nextTick();
+
+      await wrapper.find(".btn-icon-toggle").trigger("click");
+      await wrapper.find("#help-search-input").setValue("greenlight");
+
+      await vi.waitFor(
+        () =>
+          expect(wrapper.find("#contextual-help-error-alert").exists()).toBe(
+            true
+          ),
+        { timeout: 2000 }
+      );
+      const alertEl = wrapper.find("#contextual-help-error-alert");
+      expect(alertEl.attributes("role")).toBe("alert");
+      expect(alertEl.text()).toContain("Unable to Search SOP Articles");
+      expect(wrapper.text()).not.toContain("No SOPs matched your query");
+
+      await wrapper.find("#btn-contextual-help-retry").trigger("click");
+      await vi.waitFor(() => expect(searchSpy).toHaveBeenCalledTimes(2));
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find("#contextual-help-error-alert").exists()).toBe(false);
+      expect(wrapper.text()).toContain("SOP-SSU-205: Site Startup Readiness");
+    });
   });
 
   describe("4. Global Integration in AppShell & App.vue", () => {
@@ -477,12 +637,56 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
     }, 20000);
   });
 
-  describe("5. Ticket Escalation Refusal Outside Demo Mode", () => {
-    it("blocks unbacked support ticket escalation outside demo mode with an explicit alert while preserving user input", async () => {
+  describe("5. Live Ticket Escalation & Demo Session Retention", () => {
+    it("submits escalated tickets to POST /api/v1/tickets with X-Change-Reason outside demo mode and shows a toast with the returned reference ID", async () => {
       vi.stubEnv("VITE_DEMO_MODE", "false");
       vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
         mockResolvedSop
       );
+
+      const persistedTicket = {
+        id: "a1b2c3d4-0000-4000-8000-000000000104", // deid-ignore
+        reference: "DEV-2026-0104",
+        title: "Site 102 blood pressure field locked",
+        description:
+          "Coordinator cannot enter systolic value for subject SUBJ-8812.",
+        category: "PROTOCOL_DEVIATION",
+        priority: "MEDIUM",
+        gxp_severity: "MINOR",
+        status: "OPEN",
+        assigned_queue: "DATA_CAPTURE_ECRF",
+        assignee_role: "DATA_CAPTURE_ECRF",
+        assignee_user: null,
+        reporter: "usr-crc-01",
+        created_by: "usr-crc-01",
+        study_id: "STUDY-ONC-202",
+        site_id: "SITE-102",
+        subject_id: "SUBJ-8812",
+        related_entity_type: "CRF_FORM",
+        related_entity_id: "art-test-01",
+        source_route: "/ecrf",
+        acknowledge_target_at: "2026-08-05T14:00:00Z",
+        sla_target_at: "2026-08-06T10:00:00Z",
+        sla_breached: false,
+        sla_amber_warned: false,
+        escalation_count: 0,
+        reason_for_change:
+          "Escalated to Support Ticket from Contextual Help on /ecrf",
+        created_at: "2026-08-05T10:00:00Z",
+        version_index: 1,
+      };
+
+      const fetchMock = vi.fn(async (input, init) => {
+        const req = input instanceof Request ? input : new Request(input, init);
+        expect(req.url).toContain("/api/v1/tickets");
+        expect(req.method).toBe("POST");
+        expect(req.headers.get("X-Change-Reason")).toBeTruthy();
+        return new Response(JSON.stringify(persistedTicket), {
+          status: 201,
+          headers: { "Content-Type": "application/json" },
+        });
+      });
+      vi.stubGlobal("fetch", fetchMock);
 
       await knowledgeStore.fetchContextualHelp("/ecrf", "site_crc");
       knowledgeStore.openDrawer();
@@ -496,19 +700,79 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       await wrapper.find(".btn-escalate").trigger("click");
       expect(knowledgeStore.isEscalating).toBe(true);
 
-      const titleInput = wrapper.find("#ticket-title");
-      const descInput = wrapper.find("#ticket-desc");
-      await titleInput.setValue("Site 102 blood pressure field locked");
-      await descInput.setValue("Coordinator cannot enter systolic value.");
+      await wrapper
+        .find("#ticket-title")
+        .setValue("Site 102 blood pressure field locked");
+      await wrapper
+        .find("#ticket-desc")
+        .setValue(
+          "Coordinator cannot enter systolic value for subject SUBJ-8812."
+        );
+      await wrapper.find("#ticket-subject").setValue("SUBJ-8812");
 
       await wrapper.find("#btn-submit-ticket").trigger("click");
+      await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
       await wrapper.vm.$nextTick();
 
+      expect(wrapper.find("#ticket-escalation-refusal").exists()).toBe(false);
+      expect(knowledgeStore.isEscalating).toBe(false);
+      expect(knowledgeStore.isOpen).toBe(false);
+
+      const toasts = useToastStore().toasts;
+      expect(toasts.length).toBeGreaterThan(0);
+      expect(toasts[0].tone).toBe("success");
+      expect(toasts[0].title).toContain("DEV-2026-0104");
+      expect(toasts[0].message).toContain("DATA_CAPTURE_ECRF");
+    });
+
+    it("displays an accessible alert and preserves user input when live ticket submission fails", async () => {
+      vi.stubEnv("VITE_DEMO_MODE", "false");
+      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
+        mockResolvedSop
+      );
+      vi.spyOn(ticketsApi, "createTicket").mockRejectedValueOnce(
+        Object.assign(
+          new Error(
+            "Direct participant PII (email address) is prohibited in support tickets."
+          ),
+          {
+            status: 400,
+            data: {
+              title: "Direct participant PII is prohibited",
+              status: 400,
+              detail:
+                "Direct participant PII (email address) is prohibited in support tickets.",
+            },
+          }
+        )
+      );
+
+      await knowledgeStore.fetchContextualHelp("/ecrf", "site_crc");
+      knowledgeStore.openDrawer();
+
+      const wrapper = mount(ContextualHelpDrawer, {
+        global: {
+          plugins: [pinia, router],
+        },
+      });
+
+      await wrapper.find(".btn-escalate").trigger("click");
+      await wrapper
+        .find("#ticket-title")
+        .setValue("Site 102 blood pressure field locked");
+      await wrapper
+        .find("#ticket-desc")
+        .setValue("Coordinator cannot enter systolic value.");
+
+      await wrapper.find("#btn-submit-ticket").trigger("click");
+      await vi.waitFor(() =>
+        expect(wrapper.find("#ticket-escalation-refusal").exists()).toBe(true)
+      );
+
       const refusalBanner = wrapper.find("#ticket-escalation-refusal");
-      expect(refusalBanner.exists()).toBe(true);
       expect(refusalBanner.attributes("role")).toBe("alert");
       expect(refusalBanner.text()).toContain(
-        "Support ticket escalation isn't available yet"
+        "Direct participant PII (email address) is prohibited"
       );
       expect(knowledgeStore.isEscalating).toBe(true);
       expect(wrapper.find("#ticket-title").element.value).toBe(
@@ -519,8 +783,12 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       );
     });
 
-    it("allows demo-mode support ticket escalation simulation without error banner", async () => {
+    it("retains escalated tickets in session state during demo mode and shows a simulated reference ID", async () => {
       vi.stubEnv("VITE_DEMO_MODE", "true");
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(() => Promise.reject(new TypeError("Demo offline mode")))
+      );
       vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
         mockResolvedSop
       );
@@ -535,13 +803,32 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       });
 
       await wrapper.find(".btn-escalate").trigger("click");
-      await wrapper.find("#ticket-title").setValue("Demo ticket");
-      await wrapper.find("#ticket-desc").setValue("Demo description");
+      await wrapper
+        .find("#ticket-title")
+        .setValue("Demo vital signs edit check question");
+      await wrapper
+        .find("#ticket-desc")
+        .setValue("Subject SUBJ-8812 systolic validation query.");
       await wrapper.find("#btn-submit-ticket").trigger("click");
+
+      await vi.waitFor(() => expect(knowledgeStore.isEscalating).toBe(false));
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find("#ticket-escalation-refusal").exists()).toBe(false);
-      expect(knowledgeStore.isEscalating).toBe(false);
+      expect(knowledgeStore.escalatedTickets.length).toBe(1);
+      const savedTicket = knowledgeStore.escalatedTickets[0];
+      expect(savedTicket.reference).toMatch(/^SIM-\d{4}-\d{4}$/);
+      expect(savedTicket.assigned_queue).toBe("DATA_CAPTURE_ECRF");
+
+      const storedRaw = sessionStorage.getItem(
+        "cadence_demo_escalated_tickets"
+      );
+      expect(storedRaw).toBeTruthy();
+      expect(JSON.parse(storedRaw)[0].reference).toBe(savedTicket.reference);
+
+      const toasts = useToastStore().toasts;
+      expect(toasts.length).toBeGreaterThan(0);
+      expect(toasts[0].title).toContain(savedTicket.reference);
     });
   });
 });
