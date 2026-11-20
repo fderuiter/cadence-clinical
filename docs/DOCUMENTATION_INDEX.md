@@ -274,7 +274,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2375: Write-Time Soft-Versioning and Active Inactive Cloning for eCRF Form Submissions](adr/2026-08-13-write-time-soft-versioning-and-active-inactive-cloning-for-ecrf-form-submissions.md) | Current | Also known as: ADR-2172 (former number) |
 | [ADR-2376: Biostatistical Export Pipeline Interoperability and Architecture](adr/2026-08-14-biostatistical-export-pipeline-interoperability.md) | Current | Also known as: ADR-094 (former number) |
 | [ADR-2179: Comprehensive Hexagonal Architecture Standardization and Frontend Modularization](adr/2026-08-14-comprehensive-hexagonal-architecture-standardization-and-frontend-modularization.md) | Current | - Status: Accepted |
-| [ADR-071: GitHub Pages Documentation Hosting](adr/2026-08-14-github-pages-documentation-hosting.md) | Current | - Status: Accepted |
+| [ADR-071: GitHub Pages Documentation Hosting](adr/2026-08-14-github-pages-documentation-hosting.md) | Historical | - Status: Superseded by ADR-2550 |
 | [ADR-2175: Graph-Native Zero-Downtime Protocol Amendment and In-Flight Subject Migration Engine](adr/2026-08-14-graph-native-zero-downtime-protocol-amendment-and-in-flight-subject-migration-engine.md) | Current | - Status: Accepted |
 | [ADR-2176: Isolated Concurrent Pytest Harness and Worker Lifecycle](adr/2026-08-14-isolated-concurrent-pytest-harness-and-worker-lifecycle.md) | Current | - Status: Accepted |
 | [ADR-2173: Offline TypeScript Schema Generator using SQLModel Base Metadata](adr/2026-08-14-offline-typescript-schema-generator-using-sqlmodel-base-metadata.md) | Current | - Status: Accepted |
@@ -564,6 +564,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2546: Isolate Static Demo Builds with Stateful MSW Handlers](adr/2026-11-19-isolate-static-demo-builds-with-stateful-msw-handlers.md) | Current | - Status: Accepted |
 | [ADR-2817: Caller-Bound Participant Self-Service Wallet and Receipt OCR Capabilities](adr/2026-11-19-caller-bound-participant-self-service-wallet-and-receipt-ocr-capabilities.md) | Current | - Status: Accepted |
 | [ADR-2818: Clinical and Gateway Endpoints Take Time From IClock and Ban TimeProvider](adr/2026-11-20-clinical-and-gateway-endpoints-take-time-from-iclock-and-ban-timeprovider.md) | Current | - Status: Accepted |
+| [ADR-2550: Co-Host Interactive Demos on GitHub Pages Subpaths](adr/2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.md) | Current | - Status: Accepted |
 | [ADR-2547: Keycloak Self-Registration and Clinical Kernel Trial Bootstrap](adr/2026-11-20-keycloak-self-registration-and-clinical-kernel-trial-bootstrap.md) | Current | - Status: Accepted |
 | [ADR-2819: Export Canonical Demo Manifest from Kernel Seed](adr/2026-11-20-export-canonical-demo-manifest-from-kernel-seed.md) | Current | - Status: Accepted |
 
@@ -719,11 +720,12 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 ## Documentation site
 
 `pnpm docs:dev` serves this folder with VitePress; `pnpm docs:build` builds the static site (validating
-`rtm` on every run, plus `openapi`, `schema-doc` and `markdown` when `CADENCE_DOCS_SKIP_CHECKS` is unset).
-Sidebar navigation is synthesized from this index (`docs/.vitepress/sidebar.mjs`), and the root guides
-(`README.md`, `ARCHITECTURE.md`, `AGENTS.md`, `CONTEXT.md`, `CONTRIBUTING.md`, `SECURITY.md`,
-`SUPPORT.md` and `LICENSE`) are staged into `docs/` so local search indexes them and links to them stay
-inside the portal.
+`rtm` on every run, plus `openapi`, `schema-doc` and `markdown` when `CADENCE_DOCS_SKIP_CHECKS` is unset), and
+`pnpm docs:stage-demos` stages the interactive staff (`/demo/`) and participant (`/subject-portal/`) demos into
+`docs/.vitepress/dist`. `docs/index.md` serves as the site's home page, sidebar navigation is synthesized from
+this index (`docs/.vitepress/sidebar.mjs`), and the root guides (`README.md`, `ARCHITECTURE.md`, `AGENTS.md`,
+`CONTEXT.md`, `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md` and `LICENSE`) are staged into `docs/` (with
+`README.md` at `docs/README.md`) so local search indexes them and links to them stay inside the portal.
 
 Write relative links and heading anchors as you would for GitHub. On the site, links to unindexed files
 outside `docs/`, to non-Markdown files or to folders without an `index.md` open on GitHub

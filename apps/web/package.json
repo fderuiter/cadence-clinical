@@ -34,8 +34,8 @@
   "main": "index.js",
   "name": "web",
   "scripts": {
-    "build": "vite build --base=/cadence-clinical/",
-    "build:demo": "vite build --mode demo --base=/cadence-clinical/",
+    "build": "vite build",
+    "build:demo": "vite build --mode demo",
     "dev": "vite",
     "format": "prettier --write .",
     "generate:api": "node scripts/generate-api-types.js",

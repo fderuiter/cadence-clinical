@@ -10,6 +10,7 @@ import {
   DEMO_STUDY,
   DEMO_TENANT_UUID,
 } from "demo-fixtures";
+import { kernelApi } from "@/api/kernelApi";
 import { createWebDemoStore } from "@/mocks/demoStore";
 import { useAuthStore } from "@/stores/auth";
 import { cloneDefaultClinicalUsdm, useClinicalStore } from "@/stores/clinical";
@@ -183,12 +184,24 @@ describe("Canonical Demo Manifest & Deterministic Demo Ledger (apps/web)", () =>
     setActivePinia(createPinia());
     const auth = useAuthStore();
     auth.startDemoSession();
-    const entitlements = await auth.loadEntitlements();
-    expect(entitlements?.tenant_ref).toBe(`tenant:${DEMO_TENANT_UUID}`);
-    expect(entitlements?.subscription_ref).toBeNull();
-    expect(entitlements?.tier).toBe("Complete");
+    vi.spyOn(kernelApi, "entitlements").mockRejectedValueOnce(
+      new Error("MSW worker not mounted in unit test")
+    );
+    const fallbackEntitlements = await auth.loadEntitlements();
+    expect(fallbackEntitlements?.tenant_ref).toBe(`tenant:${DEMO_TENANT_UUID}`);
+    expect(fallbackEntitlements?.subscription_ref).toBeNull();
+    expect(fallbackEntitlements?.tier).toBe("Complete");
 
     const demoStore = createWebDemoStore();
+    demoStore.upgradeSubscriptionTier("Select");
+    demoStore.upgradeSubscriptionTier("Individual");
+    vi.spyOn(kernelApi, "entitlements").mockImplementation(async () =>
+      demoStore.getEntitlements()
+    );
+    const liveDemoEntitlements = await auth.loadEntitlements({ force: true });
+    expect(liveDemoEntitlements?.tenant_ref).toBe(`tenant:${DEMO_TENANT_UUID}`);
+    expect(liveDemoEntitlements?.tier).toBe("Individual");
+
     const trialResult = demoStore.bootstrapTrial({ tier: "Select" });
     expect(trialResult.tenant_ref).toBe(`tenant:${DEMO_TENANT_UUID}`);
     expect(trialResult.organization_ref).toBe(

@@ -496,40 +496,10 @@ export const useAuthStore = defineStore("auth", {
       if (this.entitlementsLoaded && !force && this.entitlements) {
         return this.entitlements;
       }
-      if (this.isDemoMode) {
-        const demoTenantUuid =
-          DEMO_TENANT_UUID || "00000000-0000-0000-0000-000000000000";
-        this.entitlements = {
-          tenant_ref: `tenant:${demoTenantUuid}`,
-          tenant_id: demoTenantUuid,
-          subscription_ref: null,
-          tier: "Complete",
-          status: "Active",
-          started_at: null,
-          trial_ends_at: null,
-          is_read_only: false,
-          product_families: [
-            "Blueprint",
-            "Capture",
-            "Orbit",
-            "Engage",
-            "Allocate",
-            "Vigil",
-            "Lens",
-            "Assure",
-          ],
-          baseline_capabilities: [
-            "audit_trail",
-            "electronic_signatures",
-            "authorization",
-            "record_export",
-          ],
-          environment_notice: PRE_RELEASE_ENVIRONMENT_NOTICE,
-        };
-        this.entitlementsLoaded = true;
-        return this.entitlements;
-      }
-      if (!this.accessToken || this.accessToken === "test-access-token") {
+      if (
+        !this.isDemoMode &&
+        (!this.accessToken || this.accessToken === "test-access-token")
+      ) {
         if (!force) {
           return this.entitlements;
         }
@@ -540,6 +510,38 @@ export const useAuthStore = defineStore("auth", {
         this.entitlementsLoaded = true;
         return snapshot;
       } catch {
+        if (this.isDemoMode && !this.entitlements) {
+          const demoTenantUuid =
+            DEMO_TENANT_UUID || "00000000-0000-0000-0000-000000000000";
+          this.entitlements = {
+            tenant_ref: `tenant:${demoTenantUuid}`,
+            tenant_id: demoTenantUuid,
+            subscription_ref: null,
+            tier: "Complete",
+            status: "Active",
+            started_at: null,
+            trial_ends_at: null,
+            is_read_only: false,
+            product_families: [
+              "Blueprint",
+              "Capture",
+              "Orbit",
+              "Engage",
+              "Allocate",
+              "Vigil",
+              "Lens",
+              "Assure",
+            ],
+            baseline_capabilities: [
+              "audit_trail",
+              "electronic_signatures",
+              "authorization",
+              "record_export",
+            ],
+            environment_notice: PRE_RELEASE_ENVIRONMENT_NOTICE,
+          };
+          this.entitlementsLoaded = true;
+        }
         return this.entitlements;
       }
     },

@@ -748,4 +748,55 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       expect(listCalls()).toContainEqual({ studyId: "onc-401", limit: 1 });
     });
   });
+
+  describe("adaptive inspector rail", () => {
+    it("collapses into a toggle rail when no object or Assist prompt is active and auto-expands on selection or Assist", async () => {
+      await open("/studies/CAD-101?stage=conduct&section=participants");
+      await expect(wrapper.element).toBeAccessible();
+
+      const panes = wrapper.find(".panes");
+      const inspector = wrapper.find("#canvas-inspector");
+      const toggleBtn = wrapper.find("#btn-toggle-inspector");
+
+      expect(panes.classes()).toContain("panes--inspector-collapsed");
+      expect(inspector.attributes("data-collapsed")).toBe("true");
+      expect(toggleBtn.attributes("aria-expanded")).toBe("false");
+
+      // Manual expand and collapse via rail toggle button.
+      await toggleBtn.trigger("click");
+      expect(panes.classes()).not.toContain("panes--inspector-collapsed");
+      expect(inspector.attributes("data-collapsed")).toBe("false");
+      expect(toggleBtn.attributes("aria-expanded")).toBe("true");
+
+      await toggleBtn.trigger("click");
+      expect(panes.classes()).toContain("panes--inspector-collapsed");
+      expect(inspector.attributes("data-collapsed")).toBe("true");
+
+      // Selecting a participant automatically expands the inspector and shows the UX-5 verb toolbar.
+      await wrapper.find("#participant-017-0001").trigger("click");
+      await flushPromises();
+
+      expect(panes.classes()).not.toContain("panes--inspector-collapsed");
+      expect(inspector.attributes("data-collapsed")).toBe("false");
+      expect(wrapper.find("#verb-details").exists()).toBe(true);
+      await expect(wrapper.element).toBeAccessible();
+
+      // Returning to study home without a selection collapses the inspector again; ?ask= with AI on auto-expands it.
+      await router.push("/studies/CAD-101");
+      await flushPromises();
+      expect(panes.classes()).toContain("panes--inspector-collapsed");
+
+      await router.push("/studies/CAD-101?ask=Which+sites+have+open+queries");
+      await flushPromises();
+
+      expect(panes.classes()).not.toContain("panes--inspector-collapsed");
+      expect(inspector.attributes("data-collapsed")).toBe("false");
+
+      // Switching AI assistance off hides Assist and collapses the otherwise-empty inspector again.
+      await wrapper.find("#btn-ai-assistance").trigger("click");
+      await flushPromises();
+      expect(panes.classes()).toContain("panes--inspector-collapsed");
+      expect(inspector.attributes("data-collapsed")).toBe("true");
+    });
+  });
 });

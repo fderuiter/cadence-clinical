@@ -105,13 +105,20 @@
     <p v-if="!props.studyCode" class="unavailable-note">
       Milestones, monitoring visits, delegation, financials, start-up and RTSM
       aren't available yet in this pre-release environment (Orbit and Allocate
-      roadmap). See <a href="/plans">plans &amp; product-family roadmap</a>.
+      roadmap). See
+      <component
+        :is="routerLinkComponent ?? 'a'"
+        v-bind="
+          routerLinkComponent ? { to: '/plans' } : { href: fallbackPlansHref }
+        "
+        >plans &amp; product-family roadmap</component
+      >.
     </p>
   </section>
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
 import { executionApi } from "../../api/executionApi";
 import { useClinicalStore } from "../../stores/clinical";
 import { useToastStore } from "../../stores/toasts.js";
@@ -128,6 +135,9 @@ const props = defineProps({
 
 const store = useClinicalStore();
 const toasts = useToastStore();
+const instance = getCurrentInstance();
+const routerLinkComponent = instance?.appContext.components.RouterLink;
+const fallbackPlansHref = `${(import.meta.env.BASE_URL || "/").replace(/\/?$/, "/")}plans`;
 
 const studyCode = ref(props.studyCode || store.activeStudyId);
 const siteCode = ref(store.activeSiteId);

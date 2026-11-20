@@ -9,7 +9,7 @@ const { STAGED_ROOT_DOCS } = fs.existsSync(rootDocsModulePath)
   ? require(rootDocsModulePath)
   : {
       STAGED_ROOT_DOCS: Object.freeze({
-        "README.md": "index.md",
+        "README.md": "README.md",
         "ARCHITECTURE.md": "ARCHITECTURE.md",
         "AGENTS.md": "AGENTS.md",
         "CONTEXT.md": "CONTEXT.md",

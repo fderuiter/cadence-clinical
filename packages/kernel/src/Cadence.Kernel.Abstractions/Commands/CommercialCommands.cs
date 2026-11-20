@@ -62,6 +62,20 @@ public sealed record GrantProductEntitlement(
     string IdempotencyKey,
     string ReasonForChange) : ICommand<ProductEntitlementId>;
 
+/// <summary>
+/// Disables a commercial <c>ProductEntitlement</c> for one product family under a tenant's <c>Subscription</c>
+/// when switching to a narrower commercial tier. Never alters clinical study grants or existing clinical records.
+/// </summary>
+[KernelCapability("entitlement.revoke", VerbClass.Execute)]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
+public sealed record RevokeProductEntitlement(
+    TenantId TenantId,
+    SubscriptionId SubscriptionId,
+    ProductFamily Family,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<SubscriptionId>;
+
 /// <summary>Validation and domain errors raised by commercial subscription and entitlement commands.</summary>
 public static class CommercialErrors
 {

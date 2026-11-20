@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite",
     "dev:demo": "vite --mode demo",
-    "build": "vite build --base=/subject-portal/",
-    "build:demo": "vite build --mode demo --base=/subject-portal/",
+    "build": "vite build",
+    "build:demo": "vite build --mode demo",
     "test": "vitest run --coverage",
     "test:e2e": "playwright test",
     "lint": "eslint .",
