@@ -12,8 +12,7 @@
       class="status-line"
     >
       The kernel has no enrollment for {{ subjectCode }} that you may see, so
-      its eCRF queries can't be listed here. Open a form on the eCRF screen to
-      see that form's queries.
+      its queries can't be listed here.
     </p>
     <p v-else-if="queries.loading" class="status-line" role="status">
       Loading {{ subjectCode }}'s queries…
@@ -42,6 +41,8 @@
       :subject-code="subjectCode"
       :act="queries.act"
       :act-many="queries.actMany"
+      :form-to="formTo"
+      :observation-to="observationTo"
       show-form
     />
     <p
@@ -59,14 +60,16 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, watch } from "vue";
+import { computed, reactive, watch } from "vue";
+import type { RouteLocationRaw } from "vue-router";
+import type { FormQueryResponse } from "../../api/ecrfQueriesApi";
 import { useFormQueries } from "../../composables/useFormQueries";
 import FormQueryList from "../ecrf/FormQueryList.vue";
 
 /**
- * A participant's eCRF queries across their forms, read from the Execution module by kernel enrollment (#5461), with
- * the transitions the module allows from each state. Raising a query needs a value's current revision, so it is done
- * on the form itself (eCRF screen). Each transition is one request: there are no batch routes.
+ * A participant's queries across their forms, read from the Execution module by kernel enrollment (#5461), with
+ * the transitions the module allows from each state. Each query links directly to its target form and observation
+ * inside Clinical Canvas.
  */
 const props = defineProps<{
   studyCode?: string;
@@ -74,7 +77,24 @@ const props = defineProps<{
   /** The participant's kernel enrollment id, or null when the kernel has none the reader may see. */
   enrollmentId: string | null;
   canManage: boolean;
+  formLocation?: (formId: string) => RouteLocationRaw | null;
+  observationLocation?: (
+    observationId: string,
+    formId: string
+  ) => RouteLocationRaw | null;
 }>();
+
+const formTo = computed(() =>
+  props.formLocation
+    ? (q: FormQueryResponse) => props.formLocation!(q.form_id)
+    : undefined
+);
+const observationTo = computed(() =>
+  props.observationLocation
+    ? (q: FormQueryResponse) =>
+        props.observationLocation!(q.observation_id, q.form_id)
+    : undefined
+);
 
 // reactive() unwraps the composable's refs for the template.
 const queries = reactive(useFormQueries());

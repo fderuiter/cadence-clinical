@@ -3,9 +3,14 @@ import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { executionApi } from "../../src/api/executionApi";
+import { ecrfFormsApi } from "../../src/api/ecrfFormsApi";
 import { ecrfQueriesApi } from "../../src/api/ecrfQueriesApi";
+import { kernelApi } from "../../src/api/kernelApi";
 import { ApiError } from "../../src/api/client";
-import { findKernelEnrollmentRef } from "../../src/canvas/kernelStudy";
+import {
+  findKernelEnrollmentRef,
+  findStudyScheduleOptions,
+} from "../../src/canvas/kernelStudy";
 import { useAuthStore } from "../../src/stores/auth";
 import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 
@@ -16,6 +21,20 @@ vi.mock("../../src/api/executionApi", () => ({
     activateSite: vi.fn(),
   },
 }));
+
+vi.mock("../../src/api/ecrfFormsApi", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    ecrfFormsApi: {
+      listForEnrollment: vi.fn(),
+      openForm: vi.fn(),
+      getForm: vi.fn(),
+      saveValues: vi.fn(),
+      signForm: vi.fn(),
+    },
+  };
+});
 
 vi.mock("../../src/api/ecrfQueriesApi", async (importOriginal) => {
   const actual = await importOriginal();
@@ -30,9 +49,23 @@ vi.mock("../../src/api/ecrfQueriesApi", async (importOriginal) => {
   };
 });
 
+vi.mock("../../src/api/kernelApi", () => ({
+  kernelApi: {
+    listProposals: vi.fn(async () => []),
+    search: vi.fn(async () => []),
+    getCommands: vi.fn(),
+    getObservation: vi.fn(),
+    getZoomPath: vi.fn(async () => []),
+  },
+}));
+
 vi.mock("../../src/canvas/kernelStudy", async (importOriginal) => {
   const actual = await importOriginal();
-  return { ...actual, findKernelEnrollmentRef: vi.fn() };
+  return {
+    ...actual,
+    findKernelEnrollmentRef: vi.fn(),
+    findStudyScheduleOptions: vi.fn(async () => null),
+  };
 });
 
 const PARTICIPANT_ID = "0192f3c4-5e6a-7b8c-9d0e-000000000001";
@@ -46,16 +79,37 @@ const PARTICIPANT = {
   enrollment_index: 1,
 };
 
-const ENROLLMENT_ID = "enrollment-a";
+const ENROLLMENT_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000e001";
+const FORM_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000f001";
+const OBSERVATION_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000a001";
 const QUERY_ID = "query-a";
+
+function formSummary(overrides = {}) {
+  return {
+    form_id: FORM_ID,
+    enrollment_id: ENROLLMENT_ID,
+    protocol_version_id: "0192f3c4-5e6a-7b8c-9d0e-00000000b001",
+    collection_spec_id: "VS",
+    collection_title: "Vital Signs",
+    planned_activity_id: "WEEK2",
+    collected_at: "2027-03-14T09:00:00Z",
+    opened_at: "2027-03-14T09:00:00Z",
+    opened_by: "crc1",
+    complete: false,
+    item_count: 2,
+    recorded_count: 1,
+    version: 1,
+    ...overrides,
+  };
+}
 
 function query(overrides = {}) {
   return {
     query_id: QUERY_ID,
-    form_id: "form-a",
+    form_id: FORM_ID,
     enrollment_id: ENROLLMENT_ID,
     item_id: "SYSBP",
-    observation_id: "observation-a",
+    observation_id: OBSERVATION_ID,
     revision: 1,
     current_revision: 1,
     value_changed: false,
@@ -104,12 +158,18 @@ describe("Clinical Canvas: a participant's data", () => {
       limit: 50,
       offset: 0,
     });
+    for (const fn of Object.values(ecrfFormsApi)) vi.mocked(fn).mockReset();
+    vi.mocked(ecrfFormsApi.listForEnrollment).mockResolvedValue([
+      formSummary(),
+    ]);
     for (const fn of Object.values(ecrfQueriesApi)) vi.mocked(fn).mockReset();
     vi.mocked(findKernelEnrollmentRef).mockReset();
     vi.mocked(findKernelEnrollmentRef).mockResolvedValue({
       kind: "enrollment",
       id: ENROLLMENT_ID,
     });
+    vi.mocked(findStudyScheduleOptions).mockReset();
+    vi.mocked(findStudyScheduleOptions).mockResolvedValue(null);
     vi.mocked(ecrfQueriesApi.listForEnrollment).mockResolvedValue([query()]);
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -145,7 +205,7 @@ describe("Clinical Canvas: a participant's data", () => {
     auth.rawRoles = roles;
   }
 
-  it("opens a participant's queries by kernel enrollment and points to the eCRF screen for its forms (#5461)", async () => {
+  it("lists opened forms and queries for the participant's enrollment and opens forms inside Clinical Canvas", async () => {
     await openRecord();
 
     expect(router.currentRoute.value.query).toEqual({
@@ -157,14 +217,28 @@ describe("Clinical Canvas: a participant's data", () => {
       "017",
       "017-0001"
     );
+    expect(ecrfFormsApi.listForEnrollment).toHaveBeenCalledWith(ENROLLMENT_ID);
     expect(ecrfQueriesApi.listForEnrollment).toHaveBeenCalledWith(
       ENROLLMENT_ID
     );
-    const link = wrapper.find("#record-open-ecrf");
-    expect(link.attributes("href")).toBe(
-      "/ecrf?studyId=CAD-101&subjectId=017-0001"
+    expect(wrapper.find("#record-open-ecrf").exists()).toBe(false);
+
+    const formsPanel = wrapper.find("#record-forms");
+    expect(formsPanel.text()).toContain("Vital Signs");
+    expect(formsPanel.text()).toContain("WEEK2");
+    expect(formsPanel.text()).toContain("1/2 recorded");
+
+    const openExistingLink = wrapper.find(`#record-form-link-${FORM_ID}`);
+    expect(openExistingLink.attributes("href")).toBe(
+      `/studies/CAD-101?stage=conduct&participant=participant:${PARTICIPANT_ID}&form=collection_instance:${FORM_ID}`
     );
-    // The zoom path now ends at the participant, and the inspector shows it.
+
+    const openNewLink = wrapper.find("#record-open-form");
+    expect(openNewLink.attributes("href")).toBe(
+      `/studies/CAD-101?stage=conduct&participant=participant:${PARTICIPANT_ID}&form=new`
+    );
+
+    // The zoom path ends at the participant, and the inspector shows it.
     expect(wrapper.find("#zoom-participant").attributes("aria-current")).toBe(
       "page"
     );
@@ -217,13 +291,131 @@ describe("Clinical Canvas: a participant's data", () => {
       const item = wrapper.find(`#query-${QUERY_ID}`);
       expect(item.text()).toContain("Open");
       expect(item.text()).toContain("SYSBP, revision 1");
-      expect(item.text()).toContain("form form-a");
+      expect(item.text()).toContain(`form ${FORM_ID}`);
       expect(item.text()).toContain("Value differs from the source note");
       expect(
         wrapper.find(`#query-open-form-${QUERY_ID}`).attributes("href")
       ).toBe(
-        "/ecrf?studyId=CAD-101&subjectId=017-0001&formId=form-a&itemId=SYSBP"
+        `/studies/CAD-101?stage=conduct&participant=participant:${PARTICIPANT_ID}&form=collection_instance:${FORM_ID}`
       );
+    });
+
+    it("links a query directly to its target form and observation inside Clinical Canvas with zoom path and return navigation", async () => {
+      vi.mocked(ecrfFormsApi.getForm).mockResolvedValue({
+        form_id: FORM_ID,
+        enrollment_id: ENROLLMENT_ID,
+        participant_id: PARTICIPANT_ID,
+        protocol_version_id: "0192f3c4-5e6a-7b8c-9d0e-00000000b001",
+        collection_spec_id: "VS",
+        collection_title: "Vital Signs",
+        planned_activity_id: "WEEK2",
+        collected_at: "2027-03-14T09:00:00Z",
+        opened_at: "2027-03-14T09:00:00Z",
+        opened_by: "crc1",
+        complete: false,
+        missing_required: ["DIABP"],
+        content_hash: "sha256:abc",
+        version: 1,
+        locks: [],
+        assertions: [],
+        signatures: [],
+        items: [
+          {
+            item_id: "SYSBP",
+            concept: "concept:systolic@1",
+            unit: "mm[Hg]",
+            value_kind: "quantity",
+            required: true,
+            value: {
+              type: "quantity",
+              value: 182,
+              unit: "mm[Hg]",
+              comparator: null,
+            },
+            observation_id: OBSERVATION_ID,
+            revision: 1,
+            recorded_by: "crc1",
+            recorded_at: "2027-03-14T09:05:00Z",
+          },
+        ],
+      });
+      vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([query()]);
+      vi.mocked(kernelApi.getObservation).mockResolvedValue({
+        ref: `observation:${OBSERVATION_ID}@1`,
+        enrollment_ref: `enrollment:${ENROLLMENT_ID}`,
+        concept: "concept:systolic@1",
+        value: {
+          type: "quantity",
+          value: 182,
+          unit: "mm[Hg]",
+          comparator: null,
+        },
+        observed_at: "2027-03-14T09:00:00Z",
+        version: 1,
+        locks: [],
+        revisions: [
+          {
+            number: 1,
+            value: {
+              type: "quantity",
+              value: 182,
+              unit: "mm[Hg]",
+              comparator: null,
+            },
+            reason_for_change: "Initial entry",
+            recorded_by: "crc1",
+            recorded_at: "2027-03-14T09:05:00Z",
+            recorded_until: null,
+          },
+        ],
+        assertions: [],
+        audit: [],
+      });
+
+      await openRecord();
+
+      await wrapper.find(`#query-open-form-${QUERY_ID}`).trigger("click");
+      await flushPromises();
+
+      expect(router.currentRoute.value.query).toEqual({
+        stage: "conduct",
+        participant: `participant:${PARTICIPANT_ID}`,
+        form: `collection_instance:${FORM_ID}`,
+      });
+      expect(wrapper.find("#zoom-form").text()).toBe("Vital Signs · WEEK2");
+      expect(wrapper.find("#zoom-form").attributes("aria-current")).toBe(
+        "page"
+      );
+
+      await wrapper.find("#ecrf-item-observation-SYSBP").trigger("click");
+      await flushPromises();
+
+      expect(router.currentRoute.value.query).toEqual({
+        stage: "conduct",
+        participant: `participant:${PARTICIPANT_ID}`,
+        form: `collection_instance:${FORM_ID}`,
+        observation: `observation:${OBSERVATION_ID}`,
+      });
+      expect(wrapper.find("#zoom-study").text()).toBe("CAD-101");
+      expect(wrapper.find("#zoom-site").text()).toBe("Site 017");
+      expect(wrapper.find("#zoom-participant").text()).toBe("017-0001");
+      expect(wrapper.find("#zoom-form").text()).toBe("Vital Signs · WEEK2");
+      expect(wrapper.find("#zoom-observation").text()).toBe(
+        "concept:systolic@1"
+      );
+      expect(wrapper.find("[data-testid=observation-concept]").text()).toBe(
+        "concept:systolic@1"
+      );
+
+      const backLink = wrapper.find("#observation-back");
+      expect(backLink.text()).toBe("Back to Vital Signs · WEEK2");
+      await backLink.trigger("click");
+      await flushPromises();
+      expect(router.currentRoute.value.query).toEqual({
+        stage: "conduct",
+        participant: `participant:${PARTICIPANT_ID}`,
+        form: `collection_instance:${FORM_ID}`,
+      });
     });
 
     it("lets a site user answer an open query, and nothing more", async () => {
@@ -253,7 +445,7 @@ describe("Clinical Canvas: a participant's data", () => {
       expect(ecrfQueriesApi.transition).toHaveBeenCalledWith(
         "answer",
         expect.objectContaining({
-          formId: "form-a",
+          formId: FORM_ID,
           queryId: QUERY_ID,
           text: "Corrected per source",
           reason: "Corrected per source",

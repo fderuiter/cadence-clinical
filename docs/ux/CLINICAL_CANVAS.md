@@ -368,9 +368,8 @@ rail, the three panes, the zoom path and the `⌘K` palette, and shows only what
 participants by state on study home (an interim count from Execution's list totals until Pulse metrics are
 Indicators, D6), the study's recent activity on study home from the kernel's activity stream (PX-11), newest first and
 filterable by family, with entries about hidden objects kept in place as hidden, the Participants section (adding a participant in screening, and moving a participant between
-the states Execution allows, less unblinding), Site activation, and a participant's data (observations by visit
-with source data verification, queries with their transitions, and form submissions). Selections are addressed by NodeRef in the
-URL. For a selected participant, Trace lists the kernel's lineage walk back from it, edge by edge, and Impact
+the states Execution allows, less unblinding), Site activation, and a participant's data (opened case report forms from Execution's enrollment form list, embedded form opening and item entry with Schedule of Activities selectors, queries with their transitions and links to target forms and observations, and embedded kernel observation inspection and correction). Selections, forms (`?form=collection_instance:<id>` or `?form=new`) and observations (`?observation=observation:<id>`) are addressed by NodeRef in the
+URL and shown in the zoom path (`Studies / <study> / Site <site> / <participant> / <form> / <observation>`); direct visits to `/observations/:observationRef` resolve the enrollment's scope path and redirect authorized readers into the study's Canvas workspace. For a selected participant, Trace lists the kernel's lineage walk back from it, edge by edge, and Impact
 counts what depends on it by kind, expandable to objects; objects the reader may not see stay in place as hidden and
 are counted (ADR-2540). The design stage's Protocol versions section lists the study's versions from the kernel, a version
 the reader may not see kept in place as hidden. On a selected amendment, Impact is K-PROT-2 by element: the elements it adds,

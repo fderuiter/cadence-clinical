@@ -58,8 +58,10 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             .Select(v => v.Content)
             .SingleAsync(cancellationToken)
             .ConfigureAwait(false);
-        var items = ProtocolDesignDocument.Read(content).Design?.CollectionSpecs
-            .FirstOrDefault(s => string.Equals(s.Id, found.CollectionSpecId, StringComparison.Ordinal))?.Items ?? [];
+        var spec = ProtocolDesignDocument.Read(content).Design?.CollectionSpecs
+            .FirstOrDefault(s => string.Equals(s.Id, found.CollectionSpecId, StringComparison.Ordinal));
+        var items = spec?.Items ?? [];
+        var collectionTitle = string.IsNullOrWhiteSpace(spec?.Name) ? null : spec.Name;
 
         // A signature names the revisions current when it was recorded; any later revision or value supersedes it (#5463).
         string? contentHash = values.Count == 0
@@ -97,7 +99,64 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             scoped.Locks(),
             assertions,
             attestations,
-            contentHash);
+            contentHash,
+            collectionTitle);
+    }
+
+    public async Task<IReadOnlyList<CollectionInstanceSummary>> ListForEnrollmentAsync(
+        TenantId tenant,
+        EnrollmentId enrollment,
+        CancellationToken cancellationToken)
+    {
+        await using var db = contexts.Create(tenant);
+        var instances = await db.CollectionInstances.AsNoTracking()
+            .Where(c => c.EnrollmentId == enrollment)
+            .OrderBy(c => c.OpenedAt).ThenBy(c => c.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (instances.Count == 0)
+        {
+            return [];
+        }
+
+        var versionIds = instances.Select(c => c.ProtocolVersionId).Distinct().ToList();
+        var rawVersions = await db.ProtocolVersions.AsNoTracking()
+            .Where(v => versionIds.Contains(v.Id))
+            .Select(v => new { v.Id, v.Content })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var specsByVersion = rawVersions.ToDictionary(
+            v => v.Id,
+            v => ProtocolDesignDocument.Read(v.Content).Design?.CollectionSpecs ?? []);
+
+        return [.. instances.Select(instance => ToSummary(instance, specsByVersion.GetValueOrDefault(instance.ProtocolVersionId) ?? []))];
+    }
+
+    private static CollectionInstanceSummary ToSummary(CollectionInstance instance, IReadOnlyList<CollectionSpec> specs)
+    {
+        var spec = specs.FirstOrDefault(s => string.Equals(s.Id, instance.CollectionSpecId, StringComparison.Ordinal));
+        var specItems = spec?.Items ?? [];
+        var collectionTitle = string.IsNullOrWhiteSpace(spec?.Name) ? null : spec.Name;
+        var recordedItems = instance.Members.Select(m => m.ItemId).ToHashSet(StringComparer.Ordinal);
+        var itemCount = specItems.Select(i => i.Id).Concat(recordedItems).Distinct(StringComparer.Ordinal).Count();
+        var complete = specItems.All(i => !i.Required || recordedItems.Contains(i.Id));
+        return new CollectionInstanceSummary(
+            instance.Id,
+            instance.EnrollmentId,
+            instance.ParticipantId,
+            instance.StudyId,
+            instance.StudySiteId,
+            instance.ProtocolVersionId,
+            instance.CollectionSpecId,
+            instance.PlannedActivityId,
+            instance.CollectedAt,
+            instance.OpenedBy,
+            instance.OpenedAt,
+            instance.VersionIndex,
+            complete,
+            itemCount,
+            recordedItems.Count,
+            collectionTitle);
     }
 
     /// <summary>

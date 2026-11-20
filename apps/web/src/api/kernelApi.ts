@@ -24,6 +24,10 @@ export type KernelCommand = Schemas["Kernel_KernelCommandResponse"];
 export type KernelSearchHit = Schemas["Kernel_KernelSearchHitResponse"];
 export type KernelProtocolVersion =
   Schemas["Kernel_KernelProtocolVersionResponse"];
+export type KernelScheduleOfActivities =
+  Schemas["Kernel_KernelScheduleOfActivitiesResponse"];
+export type KernelSoaColumn = Schemas["Kernel_KernelSoaColumnResponse"];
+export type KernelSoaRow = Schemas["Kernel_KernelSoaRowResponse"];
 export type KernelLineageNode = Schemas["Kernel_KernelLineageNodeResponse"];
 export type KernelLineageEdge = Schemas["Kernel_KernelLineageEdgeResponse"];
 export type KernelLineage = Schemas["Kernel_KernelLineageResponse"];
@@ -358,6 +362,20 @@ export const kernelApi = {
       client.GET("/api/v1/kernel/studies/{studyRef}/protocol-versions", {
         params: { path: { studyRef } },
       })
+    );
+  },
+
+  /** A protocol version's Schedule of Activities: planned activities as columns, collection specifications as rows (ADR-2475). */
+  getScheduleOfActivities(
+    versionRef: string
+  ): Promise<KernelScheduleOfActivities> {
+    return unwrapResponse(
+      client.GET(
+        "/api/v1/kernel/protocol-versions/{versionRef}/schedule-of-activities",
+        {
+          params: { path: { versionRef } },
+        }
+      )
     );
   },
 

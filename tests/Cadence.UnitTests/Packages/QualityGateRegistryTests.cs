@@ -312,6 +312,19 @@ public sealed class QualityGateRegistryTests : IDisposable
         gate.Run(context).Should().BeFalse("pre-commit hook executes schema documentation drift check when EF Core entity files are staged");
     }
 
+    [Fact]
+    public void DuplicationGate_InPreCommitMode_IgnoresNonCSharpDuplicates()
+    {
+        string cssAliases = string.Join("\n", Enumerable.Range(1, 20).Select(i => $"  --alias-{i}: var(--semantic-token-{i});"));
+        Write("apps/web/src/style.css", $":root {{\n{cssAliases}\n}}\n");
+        Write("apps/subject-portal/src/style.css", $":root {{\n{cssAliases}\n}}\n");
+
+        var gate = QualityGates.Find("duplication")!;
+        var context = Context(files: ["apps/web/src/style.css", "apps/subject-portal/src/style.css"], preCommit: true);
+
+        gate.Run(context).Should().BeTrue("duplication gate fails only when a duplicate involves a C# file, even when pre-commit passes staged files");
+    }
+
     private GateContext Context(string[]? files = null, bool preCommit = false) => new(_root, files, preCommit);
 
     private static string Region(string body) => $"{GateDocs.BeginMarker}\n\n{body.TrimEnd('\n')}\n\n{GateDocs.EndMarker}\n";

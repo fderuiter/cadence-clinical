@@ -48,6 +48,7 @@ public sealed class RouteAuthorizationTests
     private static readonly (string Host, string Route, string Reason)[] SignedInCallerRoutes =
     [
         ("kernel", "/api/v1/kernel/*", "The kernel authorizes each object from the caller's grants: reads mask what they do not cover, commands go through the authority evaluator."),
+        ("kernel", "GET /api/v1/execution/forms", "Answers only when the caller may see the enrollment, as kernel reads decide it; otherwise 403."),
         ("kernel", "POST /api/v1/execution/forms", "Sends OpenCollectionInstance, which the kernel authorizes against the caller's grant on the enrollment (collection.open)."),
         ("kernel", "GET /api/v1/execution/forms/{formId:guid}", "Answers only when the caller may see the form's enrollment, as kernel reads decide it; otherwise 403."),
         ("kernel", "PUT /api/v1/execution/forms/{formId:guid}/values", "Sends RecordCollectedValues, which the kernel authorizes against the caller's grant on the form's enrollment (collection.record)."),
