@@ -59,6 +59,7 @@ public static class Program
         AddCommand(root, "validate-path-patterns", "Checks file path and directory conventions", () => PathPatternValidatorService.ValidatePathPatterns());
         AddCommand(root, "validate-readmes", "Checks that every app and package has a README", () => ReadmeValidatorService.ValidateReadmes());
         AddCommand(root, "validate-codeowners", "Checks the CODEOWNERS file", () => CodeownersValidatorService.ValidateCodeowners());
+        AddCommand(root, "validate-workflow-security", "Checks GitHub Actions SHA pinning, checkout credentials and least-privilege permissions", () => WorkflowSecurityValidatorService.ValidateWorkflowSecurity());
         AddCommand(root, "validate-markdown", "Checks Markdown formatting and workspace links", () => MarkdownValidatorService.ValidateMarkdown());
         AddCommand(root, "query-linter", "Lints database and ORM query statements", () => QueryLinterService.LintQueries());
         AddCommand(root, "extract-env-vars", "Checks that environment variables read in code are documented", ToolCommands.ConfigureExtractEnvVars);
