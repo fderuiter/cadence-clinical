@@ -564,6 +564,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2546: Isolate Static Demo Builds with Stateful MSW Handlers](adr/2026-11-19-isolate-static-demo-builds-with-stateful-msw-handlers.md) | Current | - Status: Accepted |
 | [ADR-2817: Caller-Bound Participant Self-Service Wallet and Receipt OCR Capabilities](adr/2026-11-19-caller-bound-participant-self-service-wallet-and-receipt-ocr-capabilities.md) | Current | - Status: Accepted |
 | [ADR-2818: Clinical and Gateway Endpoints Take Time From IClock and Ban TimeProvider](adr/2026-11-20-clinical-and-gateway-endpoints-take-time-from-iclock-and-ban-timeprovider.md) | Current | - Status: Accepted |
+| [ADR-2547: Keycloak Self-Registration and Clinical Kernel Trial Bootstrap](adr/2026-11-20-keycloak-self-registration-and-clinical-kernel-trial-bootstrap.md) | Current | - Status: Accepted |
 | [ADR-2641: Participant ePRO Interop Endpoints and Keyed-HMAC BYOD Activation](adr/2026-11-20-participant-epro-interop-endpoints-and-keyed-hmac-byod-activation.md) | Current | - Status: Accepted |
 
 ## Developing and running
@@ -717,11 +718,14 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 
 ## Documentation site
 
-`pnpm docs:dev` serves this folder with VitePress; `pnpm docs:build` builds the static site (it also
-runs the quality gates and regenerates the API, schema and RTM documents). The site's home page is
-generated from the root README.
+`pnpm docs:dev` serves this folder with VitePress; `pnpm docs:build` builds the static site (validating
+`rtm` on every run, plus `openapi`, `schema-doc` and `markdown` when `CADENCE_DOCS_SKIP_CHECKS` is unset).
+Sidebar navigation is synthesized from this index (`docs/.vitepress/sidebar.mjs`), and the root guides
+(`README.md`, `ARCHITECTURE.md`, `AGENTS.md`, `CONTEXT.md`, `CONTRIBUTING.md`, `SECURITY.md`,
+`SUPPORT.md` and `LICENSE`) are staged into `docs/` so local search indexes them and links to them stay
+inside the portal.
 
-Write relative links as you would for GitHub. On the site, a link to a file outside `docs/`, to a
-non-Markdown file or to a folder without an `index.md` opens that file on GitHub
-(`docs/.vitepress/repoLinks.mjs`). Any other link to a missing page, including in the nav and sidebar,
-fails the build.
+Write relative links and heading anchors as you would for GitHub. On the site, links to unindexed files
+outside `docs/`, to non-Markdown files or to folders without an `index.md` open on GitHub
+(`docs/.vitepress/repoLinks.mjs`), while headings emit both VitePress and GitHub slugs. Any link to a
+missing page or missing `#anchor` fragment, including in the nav and sidebar, fails the build.
