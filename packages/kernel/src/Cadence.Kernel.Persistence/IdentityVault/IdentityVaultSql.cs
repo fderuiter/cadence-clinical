@@ -37,6 +37,7 @@ internal static class IdentityVaultSql
         "put_record(text, uuid, text, bytea, bytea, bytea, timestamptz)",
         "shred_record(text, uuid, timestamptz)",
         "get_record(text, uuid)",
+        "find_subject_by_blind_index(text, bytea)",
         "put_link(uuid, uuid, timestamptz)",
         "linked_person(uuid)",
         "linked_participants(uuid)",
@@ -137,6 +138,18 @@ internal static class IdentityVaultSql
             WHERE r.tenant_id = identity_vault.require_tenant() AND r.layer = p_layer AND r.subject_id = p_subject
         $fn$;
 
+        CREATE FUNCTION identity_vault.find_subject_by_blind_index(p_layer text, p_blind_index bytea) RETURNS uuid
+        LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $fn$
+            SELECT r.subject_id
+            FROM identity_vault.identity_records r
+            WHERE r.tenant_id = identity_vault.require_tenant()
+              AND r.layer = p_layer
+              AND r.blind_index = p_blind_index
+              AND r.erased_at IS NULL
+            ORDER BY r.recorded_at ASC, r.subject_id ASC
+            LIMIT 1
+        $fn$;
+
         CREATE FUNCTION identity_vault.put_link(p_participant uuid, p_person uuid, p_linked_at timestamptz) RETURNS void
         LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $fn$
         DECLARE t uuid := identity_vault.require_tenant();
@@ -167,10 +180,43 @@ internal static class IdentityVaultSql
         REVOKE ALL ON FUNCTION identity_vault.put_record(text, uuid, text, bytea, bytea, bytea, timestamptz) FROM PUBLIC;
         REVOKE ALL ON FUNCTION identity_vault.shred_record(text, uuid, timestamptz) FROM PUBLIC;
         REVOKE ALL ON FUNCTION identity_vault.get_record(text, uuid) FROM PUBLIC;
+        REVOKE ALL ON FUNCTION identity_vault.find_subject_by_blind_index(text, bytea) FROM PUBLIC;
         REVOKE ALL ON FUNCTION identity_vault.put_link(uuid, uuid, timestamptz) FROM PUBLIC;
         REVOKE ALL ON FUNCTION identity_vault.linked_person(uuid) FROM PUBLIC;
         REVOKE ALL ON FUNCTION identity_vault.linked_participants(uuid) FROM PUBLIC;
         """;
+
+    public const string CreateBlindIndexLookup = """
+        CREATE OR REPLACE FUNCTION identity_vault.find_subject_by_blind_index(p_layer text, p_blind_index bytea) RETURNS uuid
+        LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $fn$
+            SELECT r.subject_id
+            FROM identity_vault.identity_records r
+            WHERE r.tenant_id = identity_vault.require_tenant()
+              AND r.layer = p_layer
+              AND r.blind_index = p_blind_index
+              AND r.erased_at IS NULL
+            ORDER BY r.recorded_at ASC, r.subject_id ASC
+            LIMIT 1
+        $fn$;
+        REVOKE ALL ON FUNCTION identity_vault.find_subject_by_blind_index(text, bytea) FROM PUBLIC;
+        DO $grant$
+        DECLARE r record;
+        BEGIN
+            FOR r IN
+                SELECT DISTINCT grantee
+                FROM information_schema.routine_privileges
+                WHERE specific_schema = 'identity_vault'
+                  AND routine_name = 'get_record'
+                  AND privilege_type = 'EXECUTE'
+                  AND grantee NOT IN ('PUBLIC', current_user)
+            LOOP
+                EXECUTE format('GRANT EXECUTE ON FUNCTION identity_vault.find_subject_by_blind_index(text, bytea) TO %I', r.grantee);
+            END LOOP;
+        END
+        $grant$;
+        """;
+
+    public const string DropBlindIndexLookup = "DROP FUNCTION IF EXISTS identity_vault.find_subject_by_blind_index(text, bytea);";
 
     /// <summary>SQLSTATE raised when the migration finds direct identifiers on <c>kernel.people</c>.</summary>
     public const string PeopleHoldIdentifiersSqlState = "KV003";
@@ -228,6 +274,12 @@ internal static class IdentityVaultSql
 internal static class IdentityVaultMigrationBuilderExtensions
 {
     public static void CreateIdentityVault(this MigrationBuilder migrationBuilder) => migrationBuilder.Sql(IdentityVaultSql.Create);
+
+    public static void CreateIdentityVaultBlindIndexLookup(this MigrationBuilder migrationBuilder) =>
+        migrationBuilder.Sql(IdentityVaultSql.CreateBlindIndexLookup);
+
+    public static void DropIdentityVaultBlindIndexLookup(this MigrationBuilder migrationBuilder) =>
+        migrationBuilder.Sql(IdentityVaultSql.DropBlindIndexLookup);
 
     public static void DropIdentityVault(this MigrationBuilder migrationBuilder) => migrationBuilder.Sql(IdentityVaultSql.Drop);
 

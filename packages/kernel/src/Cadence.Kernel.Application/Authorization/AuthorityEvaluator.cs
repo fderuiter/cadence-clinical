@@ -157,6 +157,9 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
     /// <summary>Condition: the actor holds a current qualification a requirement names (K-AUTH-5).</summary>
     public const string QualificationCondition = "qualification.current";
 
+    /// <summary>Condition: the actor holds active grant-issuance or delegation authority permitting invitee onboarding.</summary>
+    public const string InviteeOnboardingCondition = "grant.onboarding";
+
     /// <summary>How many grants a delegation chain may have above it; deeper chains are not in effect.</summary>
     public const int MaxDelegationDepth = 8;
 
@@ -192,7 +195,19 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
             }
         }
 
-        return await EvaluateGrantsAsync(request, qualified: true, cancellationToken).ConfigureAwait(false);
+        var grantDecision = await EvaluateGrantsAsync(request, qualified: true, cancellationToken).ConfigureAwait(false);
+        if (grantDecision.Permitted)
+        {
+            return grantDecision;
+        }
+
+        if (token is "person.register" or "tenant.enroll_member" or "identity.record.person"
+            && await DecideInviteeOnboardingAsync(request, cancellationToken).ConfigureAwait(false) is { } onboardingDecision)
+        {
+            return onboardingDecision;
+        }
+
+        return grantDecision;
     }
 
     /// <summary>
@@ -293,6 +308,27 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
         {
             return AuthorizationDecision.Permit(
                 conditions: EvaluatedCondition.Satisfied(DelegatorCondition, "Signed this delegation", request.Resource, NodeRef.For(parent.Id)));
+        }
+
+        return null;
+    }
+
+    private async Task<AuthorizationDecision?> DecideInviteeOnboardingAsync(AuthorizationRequest request, CancellationToken cancellationToken)
+    {
+        var held = await store.GrantsHeldAsync(request.Tenant, request.Actor, cancellationToken).ConfigureAwait(false);
+        var roles = await RoleCapabilitiesAsync(request.Tenant, held, cancellationToken).ConfigureAwait(false);
+
+        foreach (var grant in held)
+        {
+            if ((grant.WithGrantOption || Carries(grant, "grant.issue", roles))
+                && await InEffectAsync(request, grant, cancellationToken).ConfigureAwait(false))
+            {
+                return AuthorizationDecision.Permit(
+                    conditions: EvaluatedCondition.Satisfied(
+                        InviteeOnboardingCondition,
+                        $"Holds active grant or delegation authority under {grant.Scope}",
+                        NodeRef.For(grant.Id)));
+            }
         }
 
         return null;

@@ -901,6 +901,86 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/org/team": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["GetOrgTeam"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/org/invitations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["InviteOrgMember"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/org/delegations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["DelegateOrgDuties"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/org/grants/{grantId}/revoke": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["RevokeOrgGrant"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/org/members/{personId}/reveal": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["RevealOrgMemberIdentity"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1017,6 +1097,49 @@ export interface components {
     /** @enum {unknown} */
     Kernel_DateTimePrecision:
       "Year" | "Month" | "Day" | "Minute" | "Second" | null;
+    Kernel_DelegateDutiesRequest: {
+      email: string;
+      full_name?: null | string;
+      given_name?: null | string;
+      family_name?: null | string;
+      /** Format: uuid */
+      parent_grant_id?: null | string;
+      duties?: null | string[];
+      capabilities?: null | string[];
+      role_code?: null | string;
+      /** Format: uuid */
+      role_id?: null | string;
+      scope_level?: null | string;
+      /** Format: uuid */
+      scope_target_id?: null | string;
+      scope_country?: null | string;
+      study_code?: null | string;
+      site_code?: null | string;
+      /** Format: date-time */
+      valid_from?: null | string;
+      /** Format: date-time */
+      valid_to?: null | string;
+      /** @default false */
+      with_grant_option: boolean;
+      reason_for_change?: null | string;
+    };
+    Kernel_DelegateDutiesResponse: {
+      /** Format: uuid */
+      person_id: string;
+      /** Format: uuid */
+      parent_grant_id: string;
+      /** Format: uuid */
+      primary_grant_id: string;
+      grant_ids: string[];
+      capabilities: string[];
+      reused_existing_account: boolean;
+      welcome_email_sent: boolean;
+      scope_label: string;
+      /** Format: date-time */
+      valid_from: string;
+      /** Format: date-time */
+      valid_to: null | string;
+    };
     Kernel_DependentGroup: {
       kind: string;
       /** Format: int32 */
@@ -1313,6 +1436,42 @@ export interface components {
     Kernel_IntentRouteResponse: {
       query: string;
       recommendations: components["schemas"]["Kernel_IntentRecommendation"][];
+    };
+    Kernel_InviteMemberRequest: {
+      email: string;
+      full_name?: null | string;
+      given_name?: null | string;
+      family_name?: null | string;
+      role_code?: null | string;
+      /** Format: uuid */
+      role_id?: null | string;
+      capability?: null | string;
+      /** @default Study */
+      scope_level: string;
+      /** Format: uuid */
+      scope_target_id?: null | string;
+      scope_country?: null | string;
+      /** Format: date-time */
+      valid_from?: null | string;
+      /** Format: date-time */
+      valid_to?: null | string;
+      /** @default false */
+      with_grant_option: boolean;
+      reason_for_change?: null | string;
+    };
+    Kernel_InviteMemberResponse: {
+      /** Format: uuid */
+      person_id: string;
+      /** Format: uuid */
+      grant_id: string;
+      reused_existing_account: boolean;
+      reused_existing_grant: boolean;
+      welcome_email_sent: boolean;
+      scope_label: string;
+      /** Format: date-time */
+      valid_from: string;
+      /** Format: date-time */
+      valid_to: null | string;
     };
     Kernel_JsonElement: unknown;
     Kernel_KernelActivityEntryResponse: {
@@ -1834,6 +1993,102 @@ export interface components {
       /** Format: date-time */
       collected_at: string;
     };
+    Kernel_OrgDelegableGrantDto: {
+      /** Format: uuid */
+      grant_id: string;
+      label: string;
+      scope_key: string;
+      scope_level: string;
+      /** Format: uuid */
+      scope_target_id: null | string;
+      scope_country: null | string;
+      scope_label: string;
+      capabilities: string[];
+      /** Format: date-time */
+      valid_from: null | string;
+      /** Format: date-time */
+      valid_to: null | string;
+    };
+    Kernel_OrgDutyOptionDto: {
+      duty: string;
+      label: string;
+      capabilities: string[];
+    };
+    Kernel_OrgMemberGrantDto: {
+      /** Format: uuid */
+      grant_id: string;
+      kind: string;
+      summary: string;
+      /** Format: uuid */
+      role_id: null | string;
+      role_code: null | string;
+      capability: null | string;
+      capabilities: string[];
+      scope_level: string;
+      /** Format: uuid */
+      scope_target_id: null | string;
+      scope_country: null | string;
+      scope_code: string;
+      scope_label: string;
+      /** Format: uuid */
+      parent_grant_id: null | string;
+      with_grant_option: boolean;
+      issued_by: string;
+      /** Format: date-time */
+      issued_at: string;
+      reason_for_change: string;
+      /** Format: date-time */
+      valid_from: null | string;
+      /** Format: date-time */
+      valid_to: null | string;
+      is_active: boolean;
+      is_revoked: boolean;
+      can_revoke: boolean;
+    };
+    Kernel_OrgRoleDto: {
+      /** Format: uuid */
+      role_id: string;
+      code: string;
+      name: string;
+      capabilities: string[];
+    };
+    Kernel_OrgScopeOptionDto: {
+      key: string;
+      level: string;
+      /** Format: uuid */
+      target_id: null | string;
+      country: null | string;
+      code: string;
+      label: string;
+      parent_label: null | string;
+      can_issue_grants: boolean;
+    };
+    Kernel_OrgTeamMemberDto: {
+      /** Format: uuid */
+      person_id: string;
+      display_name: string;
+      email: null | string;
+      identity_revealed: boolean;
+      has_sealed_identity: boolean;
+      can_reveal_identity: boolean;
+      /** Format: date-time */
+      joined_at: string;
+      active_grants: components["schemas"]["Kernel_OrgMemberGrantDto"][];
+      historical_grants: components["schemas"]["Kernel_OrgMemberGrantDto"][];
+    };
+    Kernel_OrgTeamViewResponse: {
+      tenant_code: string;
+      tenant_name: string;
+      actor_id: string;
+      can_invite: boolean;
+      can_delegate: boolean;
+      can_reveal_identity: boolean;
+      roles: components["schemas"]["Kernel_OrgRoleDto"][];
+      scopes: components["schemas"]["Kernel_OrgScopeOptionDto"][];
+      delegable_grants: components["schemas"]["Kernel_OrgDelegableGrantDto"][];
+      duty_catalog: components["schemas"]["Kernel_OrgDutyOptionDto"][];
+      members: components["schemas"]["Kernel_OrgTeamMemberDto"][];
+    };
     Kernel_PlannedVisit: {
       activity_id: string;
       name: string;
@@ -1883,6 +2138,28 @@ export interface components {
       /** Format: uuid */
       query_id?: null | string;
       item_id?: null | string;
+    };
+    Kernel_RevealMemberIdentityResponse: {
+      /** Format: uuid */
+      person_id: string;
+      display_name: string;
+      email: null | string;
+      given_name: null | string;
+      family_name: null | string;
+    };
+    Kernel_RevokeOrgGrantRequest: {
+      /** Format: date-time */
+      effective_at?: null | string;
+      reason_for_change?: null | string;
+    };
+    Kernel_RevokeOrgGrantResponse: {
+      /** Format: uuid */
+      grant_id: string;
+      revoked: boolean;
+      /** Format: date-time */
+      valid_from: null | string;
+      /** Format: date-time */
+      valid_to: null | string;
     };
     Kernel_SaveFormValuesRequest: {
       values: components["schemas"]["Kernel_FormValueRequest"][];
@@ -4954,6 +5231,393 @@ export interface operations {
       };
       /** @description Unprocessable Entity. Kernel errors: `K.Collection.SignatureMeaningInvalid`, `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Trust.MethodRequired`. */
       422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetOrgTeam: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_OrgTeamViewResponse"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.TenantRequired`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  InviteOrgMember: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_InviteMemberRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_InviteMemberResponse"];
+        };
+      };
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_InviteMemberResponse"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Authority.RoleUnknown`, `K.Authority.ScopeUnknown`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `M.Org.Identity.CrossTenantConflict`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Authority.CapabilityInvalid`, `K.Authority.ScopeInvalid`, `K.Authority.ValidityInvalid`, `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `M.Org.Authority.UnblindingForbidden`, `M.Org.Invitation.EmailInvalid`, `M.Org.Invitation.NameRequired`, `M.Org.Invitation.TargetInvalid`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Bad Gateway. Kernel errors: `M.Org.Identity.ProvisioningFailed`. */
+      502: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Service Unavailable. Kernel errors: `M.Org.Identity.VaultUnavailable`. */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  DelegateOrgDuties: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_DelegateDutiesRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_DelegateDutiesResponse"];
+        };
+      };
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_DelegateDutiesResponse"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authority.GrantOptionRequired`, `K.Authorization.Denied`, `K.Subscription.Expired`, `M.Org.Authority.NoDelegableGrant`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`, `K.Authority.RoleUnknown`, `K.Authority.ScopeUnknown`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.ConcurrencyConflict`, `K.Authority.ParentInactive`, `K.Command.IdempotencyConflict`, `M.Org.Identity.CrossTenantConflict`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Authority.DelegationExceedsParent`, `K.Authority.ScopeInvalid`, `K.Authority.SelfDelegation`, `K.Authority.ValidityInvalid`, `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `M.Org.Authority.UnblindingForbidden`, `M.Org.Invitation.EmailInvalid`, `M.Org.Invitation.TargetInvalid`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Bad Gateway. Kernel errors: `M.Org.Identity.ProvisioningFailed`. */
+      502: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Service Unavailable. Kernel errors: `M.Org.Identity.VaultUnavailable`. */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  RevokeOrgGrant: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        grantId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json":
+          null | components["schemas"]["Kernel_RevokeOrgGrantRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_RevokeOrgGrantResponse"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.ConcurrencyConflict`, `K.Authority.RevocationInvalid`, `K.Command.IdempotencyConflict`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  RevealOrgMemberIdentity: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        personId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_RevealMemberIdentityResponse"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.IdentityVault.Erased`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Service Unavailable. Kernel errors: `M.Org.Identity.VaultUnavailable`. */
+      503: {
         headers: {
           [name: string]: unknown;
         };

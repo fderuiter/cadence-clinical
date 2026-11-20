@@ -104,12 +104,6 @@ K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.ProtocolKnowledgeCh
 K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.TrainingAssignment.SiteId
 K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.TrainingAssignment.StudyId
 K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.TrainingCurriculum.StudyId
-K-MOD-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.DelegationOfAuthority.SiteId
-K-MOD-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.DelegationOfAuthority.StudyId
-K-MOD-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.PersonnelAssignment.SiteId
-K-MOD-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.PersonnelAssignment.StudyId
-K-MOD-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.TrainingLog.SiteId
-K-MOD-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.TrainingLog.StudyId
 K-MOD-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.BudgetContract.SiteId
 K-MOD-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.BudgetContract.StudyId
 K-MOD-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.HoldbackReserve.SiteId
@@ -393,13 +387,6 @@ K-XS-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Endpoints.TrainingCurriculu
 K-XS-1|Cadence.Apps.Notifications|Cadence.Apps.Notifications.Domain.NotificationAuditLog
 K-XS-1|Cadence.Apps.Notifications|Cadence.Apps.Notifications.Domain.NotificationPayload.SiteId
 K-XS-1|Cadence.Apps.Notifications|Cadence.Apps.Notifications.Domain.NotificationRenderModel.StudyId
-K-XS-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.DelegationOfAuthority.SiteId
-K-XS-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.DelegationOfAuthority.StudyId
-K-XS-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.OrgAuditLog
-K-XS-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.PersonnelAssignment.SiteId
-K-XS-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.PersonnelAssignment.StudyId
-K-XS-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.TrainingLog.SiteId
-K-XS-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.TrainingLog.StudyId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.BudgetContract.SiteId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.BudgetContract.StudyId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.HoldbackReserve.SiteId

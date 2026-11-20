@@ -40,7 +40,6 @@ internal static class ServiceHosts
             ["tickets"] = Boot<Cadence.Apps.Tickets.Program>,
             ["eisf"] = Boot<Cadence.Apps.Eisf.Program>,
             ["econsent"] = Boot<Cadence.Apps.Econsent.Program>,
-            ["org"] = Boot<Cadence.Apps.Org.Program>,
             ["fileshare"] = Boot<Cadence.Apps.Fileshare.Program>,
             ["imaging"] = Boot<Cadence.Apps.Imaging.Program>,
             ["knowledge"] = Boot<Cadence.Apps.Knowledge.Program>,

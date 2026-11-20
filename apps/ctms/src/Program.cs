@@ -1,5 +1,6 @@
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
+using Cadence.Apps.Ctms.Infrastructure.Kernel;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Kernel.Time;
@@ -19,6 +20,7 @@ builder.Services.AddCadenceSecurity();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.AddCadencePostgresDbContext<CtmsDbContext>();
 builder.Services.AddFluidTemplating();
+builder.Services.AddKernelDelegationBridge(builder.Configuration);
 
 builder.Services.AddMassTransit(x =>
 {

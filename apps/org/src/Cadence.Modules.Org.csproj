@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Cadence.Modules.Org</RootNamespace>
+    <AssemblyName>Cadence.Modules.Org</AssemblyName>
+    <Description>Organization administration module in the composition host (ADR-2610, ADR-2611): tenant team directory, Keycloak OIDC seat provisioning, IdentityVault person sealing, and kernel grant/delegation lifecycle.</Description>
+    <CadenceRequireXmlDocs>true</CadenceRequireXmlDocs>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!-- A module references the kernel's abstractions and module SDK only (K-XS-2, ADR-2600). -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\packages\kernel\src\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\packages\kernel\src\Cadence.Kernel.Modules\Cadence.Kernel.Modules.csproj" />
+    <ProjectReference Include="..\..\..\packages\security\src\Cadence.Security.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- PrivateAssets: keeps the OpenAPI source generator out of the host's other projects (spec §2.4). -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Cadence.UnitTests" />
+    <InternalsVisibleTo Include="Cadence.IntegrationTests" />
+  </ItemGroup>
+
+</Project>

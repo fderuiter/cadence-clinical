@@ -19,7 +19,6 @@ One document per module, rendered from each module's EF Core design-time model. 
 | [kernel](kernel.md) | `KernelDbContext` | 62 |
 | [knowledge](knowledge.md) | `KnowledgeDbContext` | 13 |
 | [notifications](notifications.md) | `NotificationsDbContext` | 7 |
-| [org](org.md) | `OrgDbContext` | 5 |
 | [payments](payments.md) | `PaymentsDbContext` | 17 |
 | [quality](quality.md) | `QualityDbContext` | 5 |
 | [safety](safety.md) | `SafetyDbContext` | 16 |

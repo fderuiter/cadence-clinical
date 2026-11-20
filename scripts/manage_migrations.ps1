@@ -37,7 +37,7 @@ function Capitalize-Name([string]$name) {
 }
 
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-$knownServices = @("ctms", "econsent", "eisf", "etmf", "execution", "fileshare", "imaging", "interop", "knowledge", "notifications", "org", "payments", "quality", "safety", "tickets")
+$knownServices = @("ctms", "econsent", "eisf", "etmf", "execution", "fileshare", "imaging", "interop", "knowledge", "notifications", "payments", "quality", "safety", "tickets")
 
 $targetServices = @()
 if ($Service.ToLowerInvariant() -eq "all") {

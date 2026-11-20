@@ -9,7 +9,9 @@ using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
+using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.References;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -93,12 +95,44 @@ internal sealed class DelegateGrantHandler : ICommandHandler<DelegateGrant, Gran
 
         if (parent.Grantee != context.Actor || !parent.IsInEffect(context.RecordedAt, context.RecordedAt))
         {
-            return AuthorityErrors.ParentInactive;
+            var parentRef = NodeRef.For(parent.Id);
+            return AuthorityErrors.ParentInactive with
+            {
+                Explanation = new Explanation(
+                    Subject: parentRef,
+                    Claim: $"Delegation under grant {parent.Id.Value:D} is not permitted: the delegating grant is not held by you or is not in effect.",
+                    Producer: "kernel.authority",
+                    Steps: [new ExplanationStep("Only an active grant held by the caller may serve as a delegation parent.", [parentRef])],
+                    Conditions:
+                    [
+                        EvaluatedCondition.Unsatisfied(
+                            "grant.delegable",
+                            "Hold an active parent grant in effect at the time of delegation",
+                            parentRef),
+                    ],
+                    NextActions: [new NextAction("Select an active delegable grant you currently hold.", "grant.delegate", parentRef)]),
+            };
         }
 
         if (!parent.WithGrantOption)
         {
-            return AuthorityErrors.GrantOptionRequired;
+            var parentRef = NodeRef.For(parent.Id);
+            return AuthorityErrors.GrantOptionRequired with
+            {
+                Explanation = new Explanation(
+                    Subject: parentRef,
+                    Claim: $"Delegation under grant {parent.Id.Value:D} is not permitted: the parent grant does not carry the grant option.",
+                    Producer: "kernel.authority",
+                    Steps: [new ExplanationStep("A grant without the grant option cannot be sub-delegated.", [parentRef])],
+                    Conditions:
+                    [
+                        EvaluatedCondition.Unsatisfied(
+                            "grant.delegable",
+                            "Hold a parent grant issued with WithGrantOption enabled",
+                            parentRef),
+                    ],
+                    NextActions: [new NextAction("Ask a tenant or study administrator to issue a delegable grant.", "grant.issue", parentRef)]),
+            };
         }
 
         if (command.Grantee == context.Actor)
@@ -121,7 +155,10 @@ internal sealed class DelegateGrantHandler : ICommandHandler<DelegateGrant, Gran
 
         if (await AuthorityChecks.ExceedsAsync(grant, parent, context, cancellationToken).ConfigureAwait(false) is { } exceeds)
         {
-            return AuthorityErrors.DelegationExceedsParent.WithMessage(exceeds);
+            return AuthorityErrors.DelegationExceedsParent.WithMessage(exceeds.Message) with
+            {
+                Explanation = exceeds.Explanation,
+            };
         }
 
         context.Work.Add(grant);
@@ -168,25 +205,115 @@ internal static class AuthorityChecks
     }
 
     /// <summary>Why the delegation does not lie within its parent, or null when it does.</summary>
-    public static async Task<string?> ExceedsAsync(Grant delegation, Grant parent, ICommandContext context, CancellationToken cancellationToken)
+    public static async Task<(string Message, Explanation Explanation)?> ExceedsAsync(
+        Grant delegation,
+        Grant parent,
+        ICommandContext context,
+        CancellationToken cancellationToken)
     {
+        var parentRef = NodeRef.For(parent.Id);
         var granted = await CapabilitiesAsync(delegation, context, cancellationToken).ConfigureAwait(false);
         var held = await CapabilitiesAsync(parent, context, cancellationToken).ConfigureAwait(false);
-        if (!granted.All(held.Contains))
+        var missingCapabilities = granted.Where(c => !held.Contains(c)).OrderBy(c => c, StringComparer.Ordinal).ToList();
+        var capabilitiesWithin = missingCapabilities.Count == 0;
+
+        var path = await PathOfAsync(delegation.Scope, context, cancellationToken).ConfigureAwait(false);
+        var scopeWithin = path is not null && parent.Scope.Covers(path);
+
+        var validityWithin = parent.CurrentValidity is { } bound
+            && delegation.CurrentValidity is { } validity
+            && validity.Start >= bound.Start
+            && (bound.End is null || (validity.End is { } end && end <= bound.End.Value));
+
+        if (capabilitiesWithin && scopeWithin && validityWithin)
+        {
+            return null;
+        }
+
+        var message = ExceedsMessage(capabilitiesWithin, scopeWithin);
+        var validityGap = parent.CurrentValidity?.End is { } boundEnd
+            ? $"Set valid-until on or before {boundEnd:yyyy-MM-dd}"
+            : "Set validity within the parent grant's effective start and end window";
+
+        EvaluatedCondition[] conditions =
+        [
+            capabilitiesWithin
+                ? EvaluatedCondition.Satisfied(
+                    "delegation.capabilities",
+                    $"Requested capabilities ({string.Join(", ", granted.OrderBy(c => c, StringComparer.Ordinal))}) lie within the parent grant",
+                    parentRef)
+                : EvaluatedCondition.Unsatisfied(
+                    "delegation.capabilities",
+                    $"Remove capabilities not held by parent grant ({string.Join(", ", missingCapabilities)})",
+                    parentRef),
+            scopeWithin
+                ? EvaluatedCondition.Satisfied(
+                    "delegation.scope",
+                    $"Requested scope ({delegation.Scope}) lies within parent scope ({parent.Scope})",
+                    parentRef)
+                : EvaluatedCondition.Unsatisfied(
+                    "delegation.scope",
+                    $"Choose a target scope within {parent.Scope}",
+                    parentRef),
+            validityWithin
+                ? EvaluatedCondition.Satisfied(
+                    "delegation.validity",
+                    "Requested validity window lies within the parent grant's validity window",
+                    parentRef)
+                : EvaluatedCondition.Unsatisfied(
+                    "delegation.validity",
+                    validityGap,
+                    parentRef),
+        ];
+
+        var nextActions = new List<NextAction>();
+        if (!capabilitiesWithin)
+        {
+            nextActions.Add(new NextAction(
+                $"Delegate only capabilities held by the parent grant ({string.Join(", ", held.OrderBy(c => c, StringComparer.Ordinal))}).",
+                "grant.delegate",
+                parentRef));
+        }
+
+        if (!scopeWithin)
+        {
+            nextActions.Add(new NextAction(
+                $"Restrict the delegation scope to {parent.Scope} or a narrower scope beneath it.",
+                "grant.delegate",
+                parentRef));
+        }
+
+        if (!validityWithin)
+        {
+            nextActions.Add(new NextAction(
+                parent.CurrentValidity?.End is { } maxEnd
+                    ? $"Choose an end date on or before {maxEnd:yyyy-MM-dd}."
+                    : "Choose a start date on or after the parent grant's start time.",
+                "grant.delegate",
+                parentRef));
+        }
+
+        var explanation = new Explanation(
+            Subject: parentRef,
+            Claim: $"Delegation under grant {parent.Id.Value:D} is not permitted: {message}",
+            Producer: "kernel.authority",
+            Steps: [new ExplanationStep(message, [parentRef])],
+            Conditions: conditions,
+            NextActions: nextActions);
+
+        return (message, explanation);
+    }
+
+    private static string ExceedsMessage(bool capabilitiesWithin, bool scopeWithin)
+    {
+        if (!capabilitiesWithin)
         {
             return "It grants capabilities the delegating grant does not hold.";
         }
 
-        if (await PathOfAsync(delegation.Scope, context, cancellationToken).ConfigureAwait(false) is not { } path || !parent.Scope.Covers(path))
-        {
-            return "Its scope is not within the delegating grant's scope.";
-        }
-
-        var within = parent.CurrentValidity is { } bound
-            && delegation.CurrentValidity is { } validity
-            && validity.Start >= bound.Start
-            && (bound.End is null || (validity.End is { } end && end <= bound.End.Value));
-        return within ? null : "Its valid period is not within the delegating grant's.";
+        return !scopeWithin
+            ? "Its scope is not within the delegating grant's scope."
+            : "Its valid period is not within the delegating grant's.";
     }
 
     private static async Task<IReadOnlySet<string>> CapabilitiesAsync(Grant grant, ICommandContext context, CancellationToken cancellationToken)

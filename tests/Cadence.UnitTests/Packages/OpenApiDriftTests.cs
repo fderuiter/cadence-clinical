@@ -44,7 +44,7 @@ public sealed class OpenApiDriftTests : IDisposable
     public void FindDrift_ReportsMissingChangedAndStaleSpecs_AndIgnoresLegacy()
     {
         File.WriteAllText(Path.Combine(_exported, "ctms_openapi.json"), Spec);
-        File.WriteAllText(Path.Combine(_exported, "org_openapi.json"), Spec);
+        File.WriteAllText(Path.Combine(_exported, "quality_openapi.json"), Spec);
         File.WriteAllText(Path.Combine(_committed, "ctms_openapi.json"), Spec.Replace("CtmsStatus", "Renamed"));
         File.WriteAllText(Path.Combine(_committed, "gateway_openapi.json"), Spec);
         Directory.CreateDirectory(Path.Combine(_committed, "legacy"));
@@ -52,7 +52,7 @@ public sealed class OpenApiDriftTests : IDisposable
 
         OpenApiSyncService.FindDrift(_exported, _committed).Should().Equal(
             "ctms_openapi.json (out of date)",
-            "org_openapi.json (missing)",
+            "quality_openapi.json (missing)",
             "gateway_openapi.json (no service serves it)");
     }
 
@@ -75,7 +75,7 @@ public sealed class OpenApiDriftTests : IDisposable
     {
         File.WriteAllText(Path.Combine(_exported, "ctms_openapi.json"), Spec);
         File.WriteAllText(Path.Combine(_committed, "ctms_openapi.json"), Spec);
-        File.WriteAllText(Path.Combine(_committed, "org_openapi.json"), Spec);
+        File.WriteAllText(Path.Combine(_committed, "quality_openapi.json"), Spec);
 
         OpenApiSyncService.FindDrift(_exported, _committed, isTargetedExport: true).Should().BeEmpty();
     }
@@ -85,6 +85,7 @@ public sealed class OpenApiDriftTests : IDisposable
     [InlineData("apps/kernel-api/src/Host/Program.cs", "kernel")]
     [InlineData("apps/ctms/src/Endpoints/CtmsEndpoints.cs", "ctms")]
     [InlineData("apps/intelligence/src/IntelligenceModule.cs", "kernel")]
+    [InlineData("apps/org/src/Endpoints/OrgEndpoints.cs", "kernel")]
     [InlineData("packages/contracts/src/Dto/SubjectDto.cs", null)]
     [InlineData("apps/web/src/components/Footer.vue", null)]
     public void ResolveServiceFromPath_MapsMicroservicePathsCorrectly(string path, string? expectedService)

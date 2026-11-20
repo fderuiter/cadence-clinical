@@ -193,7 +193,6 @@ services:
       TICKETS_SERVICE_URL: http://tickets:8080
       EISF_SERVICE_URL: http://eisf:8080
       ECONSENT_SERVICE_URL: http://econsent:8080
-      ORG_SERVICE_URL: http://org:8080
       FILESHARE_SERVICE_URL: http://fileshare:8080
       IMAGING_SERVICE_URL: http://imaging:8080
       KNOWLEDGE_SERVICE_URL: http://knowledge:8080
@@ -308,7 +307,9 @@ services:
     container_name: cadence-ctms
     ports:
       - "8007:8080"
-    environment: *db-env
+    environment:
+      <<: *db-env
+      KERNEL_SERVICE_URL: http://kernel:8080
     depends_on: *db-depends
 
   safety:
@@ -364,19 +365,6 @@ services:
       <<: *db-env
       # Local-only AES-256 key for field encryption (#4770); generate a real one with `openssl rand -base64 32`.
       FIELD_ENCRYPTION_KEY: bG9jYWwtZGV2LW9ubHktZmllbGQtZW5jcnlwdC1rZXk= # pragma: allowlist secret
-    depends_on: *db-depends
-
-  org:
-    <<: *dotnet-service
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.dotnet
-      args:
-        APP_NAME: org
-    container_name: cadence-org
-    ports:
-      - "8012:8080"
-    environment: *db-env
     depends_on: *db-depends
 
   fileshare:

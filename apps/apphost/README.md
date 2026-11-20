@@ -42,12 +42,12 @@ routes answer as the service being down.
 
   | Port | Service   | Port | Service       | Port | Service   |
   | ---- | --------- | ---- | ------------- | ---- | --------- |
-  | 8000 | gateway   | 8006 | notifications | 8012 | org       |
-  | 8001 | designer  | 8007 | ctms          | 8013 | fileshare |
-  | 8002 | execution | 8008 | safety        | 8014 | imaging   |
-  | 8003 | etmf      | 8009 | tickets       | 8015 | knowledge |
-  | 8004 | interop   | 8010 | eisf          | 8016 | payments  |
-  | 8005 | quality   | 8011 | econsent      | 8018 | kernel    |
+  | 8000 | gateway   | 8006 | notifications | 8013 | fileshare |
+  | 8001 | designer  | 8007 | ctms          | 8014 | imaging   |
+  | 8002 | execution | 8008 | safety        | 8015 | knowledge |
+  | 8003 | etmf      | 8009 | tickets       | 8016 | payments  |
+  | 8004 | interop   | 8010 | eisf          | 8018 | kernel    |
+  | 8005 | quality   | 8011 | econsent      |      |           |
 
 - Every service except the gateway and designer references the `cadence` database
   (`ConnectionStrings:cadence`), waits for PostgreSQL, and applies its own migrations on start

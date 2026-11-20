@@ -92,7 +92,6 @@ start without it. An address that is not an absolute http or https URL fails sta
 | `/api/v1/tickets/**`         | tickets                                                                  | `TICKETS_SERVICE_URL`       |
 | `/api/v1/eisf/**`            | eisf                                                                     | `EISF_SERVICE_URL`          |
 | `/api/v1/econsent/**`        | econsent                                                                 | `ECONSENT_SERVICE_URL`      |
-| `/api/v1/org/**`             | org                                                                      | `ORG_SERVICE_URL`           |
 | `/api/v1/fileshare/**`       | fileshare                                                                | `FILESHARE_SERVICE_URL`     |
 | `/api/v1/imaging/**`         | imaging                                                                  | `IMAGING_SERVICE_URL`       |
 | `/api/v1/knowledge/**`       | knowledge                                                                | `KNOWLEDGE_SERVICE_URL`     |
@@ -101,6 +100,7 @@ start without it. An address that is not an absolute http or https URL fails sta
 | `/api/v1/kernel/**`          | kernel ([apps/kernel-api](../kernel-api/README.md))                      | `KERNEL_SERVICE_URL`        |
 | `/api/v1/ai/**`              | kernel (the [Intelligence module](../intelligence/README.md))            | `KERNEL_SERVICE_URL`        |
 | `/api/v1/execution/forms/**` | kernel (the [Execution module](../execution/module/README.md), ADR-2622) | `KERNEL_SERVICE_URL`        |
+| `/api/v1/org/**`             | kernel (the [Org module](../org/README.md), ADR-2611)                    | `KERNEL_SERVICE_URL`        |
 
 `tests/Cadence.UnitTests/Gateway/GatewayRouteCoverageTests.cs` boots the gateway and every service and fails when a route leads to a
 prefix its service does not map, or when a service maps an `/api/v1` endpoint no route reaches. Add or remove a

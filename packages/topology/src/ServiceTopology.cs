@@ -60,12 +60,11 @@ public static class ServiceTopology
         new("tickets", "tickets", 8009, "TICKETS_SERVICE_URL", ["tickets"], Database: true, Core: false),
         new("eisf", "eisf", 8010, "EISF_SERVICE_URL", ["eisf"], Database: true, Core: false),
         new("econsent", "econsent", 8011, "ECONSENT_SERVICE_URL", ["econsent"], Database: true, Core: false),
-        new("org", "org", 8012, "ORG_SERVICE_URL", ["org"], Database: true, Core: false),
         new("fileshare", "fileshare", 8013, "FILESHARE_SERVICE_URL", ["fileshare"], Database: true, Core: false),
         new("imaging", "imaging", 8014, "IMAGING_SERVICE_URL", ["imaging"], Database: true, Core: false),
         new("knowledge", "knowledge", 8015, "KNOWLEDGE_SERVICE_URL", ["knowledge", "training"], Database: true, Core: false),
         new("payments", "payments", 8016, "PAYMENTS_SERVICE_URL", ["payments"], Database: true, Core: false),
-        new("kernel", "kernel-api", 8018, "KERNEL_SERVICE_URL", ["kernel", "ai", "execution/forms"], Database: true, Core: true),
+        new("kernel", "kernel-api", 8018, "KERNEL_SERVICE_URL", ["kernel", "ai", "execution/forms", "org"], Database: true, Core: true),
     ];
 
     /// <summary>The service called <paramref name="name"/>.</summary>

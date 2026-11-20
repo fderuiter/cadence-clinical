@@ -142,6 +142,13 @@ public interface IIdentityVault
     /// (K-IDN-2). A replayed idempotency key is refused.
     /// </summary>
     Task<CommandResult<IReadOnlyList<ParticipantId>>> RevealLinksAsync(RevealPersonLinks command, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Resolves the pseudonymous <see cref="PersonId"/> whose person-layer e-mail blind index matches
+    /// <paramref name="email"/> in <paramref name="tenant"/>, or null when no unerased match exists. Discloses no
+    /// direct identifier (ADR-2458, ADR-2611).
+    /// </summary>
+    Task<PersonId?> FindPersonByEmailAsync(TenantId tenant, string email, CancellationToken cancellationToken = default);
 }
 
 /// <summary>A reveal command: one per layer, so each layer has its own capability (K-IDN-1).</summary>

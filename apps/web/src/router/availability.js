@@ -21,6 +21,8 @@ export const AVAILABLE_SCREENS = new Set([
   // Execution: site activation and eTMF compliance status; the other CTMS tabs run only in a demo build.
   "ctms",
   "ssu",
+  // Kernel Org module: OIDC seat invitations, bounded clinical delegations, and grant revocation (ADR-2611).
+  "team",
 ]);
 
 /** Routes unlocked in interactive static demo builds backed by stateful MSW handlers. */
@@ -81,6 +83,15 @@ export const SCREEN_CATALOG = Object.freeze({
     isBaselineCapability: true,
     roadmapStage: "Active workspace shell",
     summary: "Role-tailored workspace orientation and quick-start navigation.",
+  },
+  team: {
+    title: "Team & Access",
+    family: "Cadence Core",
+    minimumTier: "Baseline",
+    isBaselineCapability: true,
+    roadmapStage: "Active Clinical Kernel Org module",
+    summary:
+      "Workspace seat invitations, OIDC provisioning, bounded clinical duty delegations, and immediate grant revocation.",
   },
   mdr: {
     title: "Protocol & SoA Designer",

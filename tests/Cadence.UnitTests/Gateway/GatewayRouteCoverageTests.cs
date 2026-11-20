@@ -42,7 +42,6 @@ public sealed class GatewayRouteCoverageTests
         ["tickets-cluster"] = MappedPaths<Cadence.Apps.Tickets.Program>,
         ["eisf-cluster"] = MappedPaths<Cadence.Apps.Eisf.Program>,
         ["econsent-cluster"] = MappedPaths<Cadence.Apps.Econsent.Program>,
-        ["org-cluster"] = MappedPaths<Cadence.Apps.Org.Program>,
         ["fileshare-cluster"] = MappedPaths<Cadence.Apps.Fileshare.Program>,
         ["imaging-cluster"] = MappedPaths<Cadence.Apps.Imaging.Program>,
         ["knowledge-cluster"] = MappedPaths<Cadence.Apps.Knowledge.Program>,

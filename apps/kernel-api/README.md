@@ -17,6 +17,7 @@ The Clinical Kernel's HTTP host ([ADR-2540](../../docs/adr/2026-09-30-kernel-api
 - `KernelMigrationHostedService`: applies the kernel migrations on start when `Database:MigrateOnStartup` or `Database:MigrateOnly` is set, then each module's (`AddModuleMigrations`, in its own schema).
 - The Intelligence module ([`apps/intelligence`](../intelligence/README.md), ADR-2630): `AddCadenceIntelligenceModule` and `MapIntelligenceModule()` add the AI agent runtime, its ledger and controls, and the command-palette intent router under `/api/v1/ai`.
 - The Execution module ([`apps/execution/module`](../execution/module/README.md), ADR-2622): `AddCadenceExecutionModule` and `MapExecutionModule()` add eCRF forms over kernel form instances under `/api/v1/execution/forms`. `KernelReadAccess` gives module reads the kernel's masking (`IKernelReadAccess`).
+- The Org module ([`apps/org`](../org/README.md), [ADR-2611](../../docs/adr/2026-11-20-org-module-oidc-provisioning-and-grant-invitations.md)): `AddCadenceOrgModule` and `MapOrgModule()` add OIDC user provisioning, seat invitations, duty delegations, grant revocations, and audited identity reveal under `/api/v1/org`.
 - The activity projector (`AddKernelActivityProjection()`, ADR-2485): copies committed kernel events into the activity stream every five seconds. This is the one host with kernel persistence, so it runs the projector (ADR-2540 §4.7).
 
 The endpoints, response records and tenant filter live in [`packages/kernel/src/Cadence.Kernel.Api`](../../packages/kernel/README.md).
@@ -74,7 +75,7 @@ Proposals an agent or a person made (ADR-2489), for the Canvas's Needs Attention
 
 Also `GET /healthz`, `/healthz/live`, `/healthz/ready` and `GET /api/v1/kernel/status` (anonymous). OpenAPI and the Scalar reference are mapped in Development only; the exported document is [docs/openapi/kernel_openapi.json](../../docs/openapi/kernel_openapi.json).
 
-The gateway forwards `/api/v1/kernel/**`, `/api/v1/ai/**` and `/api/v1/execution/forms/**` here. Compose publishes host port 8018 (container port 8080); the gateway's default upstream is `http://localhost:8018` (`KERNEL_SERVICE_URL`).
+The gateway forwards `/api/v1/kernel/**`, `/api/v1/ai/**`, `/api/v1/execution/forms/**` and `/api/v1/org/**` here. Compose publishes host port 8018 (container port 8080); the gateway's default upstream is `http://localhost:8018` (`KERNEL_SERVICE_URL`).
 
 ## Security
 
@@ -86,7 +87,7 @@ The gateway forwards `/api/v1/kernel/**`, `/api/v1/ai/**` and `/api/v1/execution
 
 ## Key dependencies
 
-- Project references: `Cadence.Kernel.Abstractions`, `Cadence.Kernel.Application`, `Cadence.Kernel.Persistence`, `Cadence.Kernel.Api`, `Cadence.Modules.Intelligence`, `Cadence.Modules.Execution`, `Cadence.Security`, `Cadence.Database`, `Cadence.Telemetry`.
+- Project references: `Cadence.Kernel.Abstractions`, `Cadence.Kernel.Application`, `Cadence.Kernel.Persistence`, `Cadence.Kernel.Api`, `Cadence.Modules.Intelligence`, `Cadence.Modules.Execution`, `Cadence.Modules.Org`, `Cadence.Security`, `Cadence.Database`, `Cadence.Telemetry`.
 - Packages: `Microsoft.AspNetCore.OpenApi`, `Scalar.AspNetCore`, `Npgsql.EntityFrameworkCore.PostgreSQL` (versions in `Directory.Packages.props`).
 
 ## Tests

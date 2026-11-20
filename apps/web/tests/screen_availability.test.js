@@ -39,6 +39,7 @@ describe("Screen availability", () => {
       "observation",
       "ssu",
       "study",
+      "team",
     ]);
     expect(isScreenAvailable("login")).toBe(true);
     expect(isScreenAvailable("unavailable")).toBe(true);
@@ -75,6 +76,7 @@ describe("Screen availability", () => {
       "nav-studies",
       "nav-data-collection",
       "nav-site-readiness",
+      "nav-team",
     ]);
     expect(wrapper.text()).not.toContain("Design & Metadata");
     expect(wrapper.text()).not.toContain("EDC");
@@ -94,6 +96,7 @@ describe("Screen availability", () => {
     expect(wrapper.text()).toContain("Studies");
     expect(wrapper.text()).toContain("Data collection");
     expect(wrapper.text()).toContain("Site readiness");
+    expect(wrapper.text()).toContain("Team & access");
     expect(wrapper.text()).toContain("Orientation");
     expect(wrapper.text()).not.toContain("MDR Protocol Designer");
     expect(wrapper.text()).not.toContain("Notifications");

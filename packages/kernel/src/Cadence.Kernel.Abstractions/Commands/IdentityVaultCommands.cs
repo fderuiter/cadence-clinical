@@ -17,6 +17,7 @@ namespace Cadence.Kernel.Commands;
 /// </remarks>
 [KernelCapability("identity.record.person", VerbClass.Execute, Resource = nameof(PersonId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
 public sealed record RecordPersonIdentity(
     TenantId TenantId,
     PersonId PersonId,

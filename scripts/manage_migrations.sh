@@ -18,7 +18,7 @@ if [ -z "$ACTION" ] || [ -z "$SERVICE" ]; then
 fi
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-KNOWN_SERVICES=("ctms" "econsent" "eisf" "etmf" "execution" "fileshare" "imaging" "interop" "knowledge" "notifications" "org" "payments" "quality" "safety" "tickets")
+KNOWN_SERVICES=("ctms" "econsent" "eisf" "etmf" "execution" "fileshare" "imaging" "interop" "knowledge" "notifications" "payments" "quality" "safety" "tickets")
 
 SERVICE_LOWER="$(echo "$SERVICE" | tr '[:upper:]' '[:lower:]')"
 

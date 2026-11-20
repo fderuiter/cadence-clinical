@@ -24,6 +24,54 @@ async function readJsonBody(request) {
 }
 
 export function createWebDemoHandlers(store = webDemoStore) {
+  const orgDemoState = {
+    members: [
+      {
+        person_id: "cf64a3b4-33cc-4925-8452-75e29ca9526e", // deid-ignore
+        person_ref: "person:cf64a3b4-33cc-4925-8452-75e29ca9526e", // deid-ignore
+        display_label: "Member cf64a3b4",
+        has_sealed_identity: true,
+        email: null,
+        active_grants: [
+          {
+            grant_id: "01950000-0000-7000-8000-000000000102", // deid-ignore
+            grant_ref: "grant:01950000-0000-7000-8000-000000000102", // deid-ignore
+            role_id: "01950000-0000-7000-8000-000000000202", // deid-ignore
+            role_code: "DEMO_INVESTIGATOR",
+            role_name: "Site investigator",
+            scope_kind: "StudySite",
+            scope_target_id: "00000000-0000-0000-0000-000000000201", // deid-ignore
+            scope_label: "StudySite: SITE-101",
+            parent_grant_id: null,
+            valid_from: "2026-01-05T09:00:00Z",
+            valid_to: null,
+            with_grant_option: true,
+            capabilities: [
+              "participant.register",
+              "participant.screen",
+              "collection.record",
+              "collection.sign",
+            ],
+            is_active: true,
+            revoked_at: null,
+          },
+        ],
+        historical_grants: [],
+      },
+    ],
+    sealed: new Map([
+      [
+        "cf64a3b4-33cc-4925-8452-75e29ca9526e", // deid-ignore
+        {
+          person_id: "cf64a3b4-33cc-4925-8452-75e29ca9526e", // deid-ignore
+          email: "pi.site101@example.com", // deid-ignore
+          given_name: "Principal",
+          family_name: "Investigator",
+        },
+      ],
+    ]),
+  };
+
   return [
     // Health & identity
     http.get("*/health", () =>
@@ -71,6 +119,174 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.post("*/api/v1/kernel/onboarding/trial", async ({ request }) => {
       const body = await readJsonBody(request);
       return HttpResponse.json(store.bootstrapTrial(body));
+    }),
+    http.get("*/api/v1/org/team", () =>
+      HttpResponse.json({
+        tenant_code: "demo-workspace",
+        can_invite: true,
+        can_delegate: true,
+        can_revoke: true,
+        can_reveal_identity: true,
+        roles: [
+          {
+            role_id: "01950000-0000-7000-8000-000000000201", // deid-ignore
+            code: "DEMO_SPONSOR_ADMIN",
+            name: "Sponsor administrator",
+            capabilities: ["grant.issue", "grant.revoke", "person.register"],
+          },
+          {
+            role_id: "01950000-0000-7000-8000-000000000202", // deid-ignore
+            code: "DEMO_INVESTIGATOR",
+            name: "Site investigator",
+            capabilities: ["collection.sign", "collection.record"],
+          },
+          {
+            role_id: "01950000-0000-7000-8000-000000000203", // deid-ignore
+            code: "DEMO_CRC",
+            name: "Clinical research coordinator",
+            capabilities: ["participant.screen", "collection.record"],
+          },
+        ],
+        scopes: [
+          {
+            kind: "Tenant",
+            target_id: null,
+            code: null,
+            label: "Entire workspace (Tenant)",
+          },
+          {
+            kind: "Study",
+            target_id: "00000000-0000-0000-0000-000000000001", // deid-ignore
+            code: "DEMO-01",
+            label: "Study: DEMO-01",
+          },
+          {
+            kind: "StudySite",
+            target_id: "00000000-0000-0000-0000-000000000201", // deid-ignore
+            code: "SITE-101",
+            label: "StudySite: SITE-101",
+          },
+        ],
+        delegable_grants: [],
+        duty_catalog: [
+          {
+            duty_code: "CRF_DATA_ENTRY",
+            label: "CRF Data Entry",
+            capability: "collection.record",
+          },
+          {
+            duty_code: "SUBJECT_SCREENING",
+            label: "Subject Screening",
+            capability: "participant.screen",
+          },
+          {
+            duty_code: "INFORMED_CONSENT",
+            label: "Informed Consent",
+            capability: "participant.register",
+          },
+        ],
+        members: orgDemoState.members,
+      })
+    ),
+    http.post("*/api/v1/org/invitations", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const suffix = String(orgDemoState.members.length + 10).padStart(2, "0");
+      const personId = `01950000-0000-7000-8000-0000000099${suffix}`; // deid-ignore
+      const grantId = `01950000-0000-7000-8000-0000000088${suffix}`; // deid-ignore
+      orgDemoState.sealed.set(personId, {
+        person_id: personId,
+        email: body?.email || "member@example.com", // deid-ignore
+        given_name: body?.full_name || "Workspace",
+        family_name: "Member",
+      });
+      orgDemoState.members.push({
+        person_id: personId,
+        person_ref: `person:${personId}`,
+        display_label: `Member ${personId.slice(0, 8)}`,
+        has_sealed_identity: true,
+        email: null,
+        active_grants: [
+          {
+            grant_id: grantId,
+            grant_ref: `grant:${grantId}`,
+            role_id: "01950000-0000-7000-8000-000000000203", // deid-ignore
+            role_code: body?.role_code || "DEMO_CRC",
+            role_name: body?.role_code || "Clinical research coordinator",
+            scope_kind: body?.scope_kind || "Tenant",
+            scope_target_id: body?.scope_target_id || null,
+            scope_label: body?.scope_kind || "Tenant",
+            parent_grant_id: null,
+            valid_from: new Date().toISOString(),
+            valid_to: body?.valid_to || null,
+            with_grant_option: Boolean(body?.with_grant_option),
+            capabilities: ["collection.record"],
+            is_active: true,
+            revoked_at: null,
+          },
+        ],
+        historical_grants: [],
+      });
+      return HttpResponse.json(
+        {
+          person_id: personId,
+          person_ref: `person:${personId}`,
+          grant_id: grantId,
+          grant_ref: `grant:${grantId}`,
+          reused_existing_account: false,
+          welcome_email_sent: true,
+        },
+        { status: 201 }
+      );
+    }),
+    http.post("*/api/v1/org/delegations", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const suffix = String(orgDemoState.members.length + 30).padStart(2, "0");
+      const personId = `01950000-0000-7000-8000-0000000077${suffix}`; // deid-ignore
+      const grantId = `01950000-0000-7000-8000-0000000066${suffix}`; // deid-ignore
+      orgDemoState.sealed.set(personId, {
+        person_id: personId,
+        email: body?.email || "delegate@example.com", // deid-ignore
+        given_name: body?.full_name || "Delegated",
+        family_name: "Staff",
+      });
+      return HttpResponse.json(
+        {
+          person_id: personId,
+          person_ref: `person:${personId}`,
+          grant_ids: [grantId],
+          reused_existing_account: false,
+          welcome_email_sent: true,
+        },
+        { status: 201 }
+      );
+    }),
+    http.post("*/api/v1/org/grants/:grantId/revoke", ({ params }) => {
+      const grantId = String(params.grantId);
+      for (const member of orgDemoState.members) {
+        const idx = member.active_grants.findIndex(
+          (g) => g.grant_id === grantId
+        );
+        if (idx >= 0) {
+          const [removed] = member.active_grants.splice(idx, 1);
+          member.historical_grants.push({
+            ...removed,
+            is_active: false,
+            revoked_at: new Date().toISOString(),
+          });
+        }
+      }
+      return HttpResponse.json({ grant_id: grantId, revoked: true });
+    }),
+    http.post("*/api/v1/org/members/:personId/reveal", ({ params }) => {
+      const personId = String(params.personId);
+      return HttpResponse.json(
+        orgDemoState.sealed.get(personId) || {
+          person_id: personId,
+          email: "disclosed.member@example.com", // deid-ignore
+          given_name: "Disclosed",
+          family_name: "Member",
+        }
+      );
     }),
     http.get("*/api/v1/kernel/search", ({ request }) => {
       const url = new URL(request.url);

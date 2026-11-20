@@ -55,4 +55,9 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | `GET` | `/api/v1/kernel/status` | KernelStatus | Returns the Clinical Kernel API's operational status. |
 | `GET` | `/api/v1/kernel/studies/{studyRef}/proposals` | KernelListProposals | A study's proposals, newest first, optionally only those with one status (Open, Approved, Rejected, Withdrawn, Expired). |
 | `GET` | `/api/v1/kernel/studies/{studyRef}/protocol-versions` | KernelListProtocolVersions | A study's protocol versions, newest first, without their content. |
+| `POST` | `/api/v1/org/delegations` | DelegateOrgDuties |  |
+| `POST` | `/api/v1/org/grants/{grantId}/revoke` | RevokeOrgGrant |  |
+| `POST` | `/api/v1/org/invitations` | InviteOrgMember |  |
+| `POST` | `/api/v1/org/members/{personId}/reveal` | RevealOrgMemberIdentity |  |
+| `GET` | `/api/v1/org/team` | GetOrgTeam |  |
 | `GET` | `/healthz` | KernelHealthCheck | Clinical Kernel API health probe. |

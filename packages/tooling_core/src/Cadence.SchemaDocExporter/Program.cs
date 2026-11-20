@@ -34,7 +34,6 @@ public static class Program
         "Cadence.Apps.Interop",
         "Cadence.Apps.Knowledge",
         "Cadence.Apps.Notifications",
-        "Cadence.Apps.Org",
         "Cadence.Apps.Payments",
         "Cadence.Apps.Quality",
         "Cadence.Apps.Safety",

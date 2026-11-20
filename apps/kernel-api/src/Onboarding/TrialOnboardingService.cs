@@ -57,6 +57,8 @@ public sealed partial class TrialOnboardingService(
         "organization.register",
         "person.register",
         "tenant.enroll_member",
+        "identity.record.person",
+        "identity.reveal.person",
         "role.define",
         "grant.issue",
         "grant.delegate",
