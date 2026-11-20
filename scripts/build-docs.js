@@ -4,8 +4,6 @@ const path = require("path");
 
 const repoRoot = path.resolve(__dirname, "..");
 
-// Automatically set RTM_DRAFT to true for docs compilation to ensure the process is fail-safe when report.xml is absent.
-process.env.RTM_DRAFT = "true";
 if (!process.env.AUDIT_LOG_SECRET_KEY) {
   process.env.AUDIT_LOG_SECRET_KEY =
     "development_secret_key_for_rtm_generation_32bytes"; // pragma: allowlist secret
@@ -344,33 +342,21 @@ runPreflightChecks();
 try {
   // 1. Run validation scripts
   console.log("--- Step 1: Pre-Build Validation ---");
-  // `cadence ci` sets CADENCE_DOCS_SKIP_CHECKS=1 when its "Run Cadence quality sentinels" step already passed on
-  // this tree: that step runs the same gates, Markdown included, so running them again here only costs minutes.
+  // `cadence ci` and `deploy-docs.yml` set CADENCE_DOCS_SKIP_CHECKS=1 when quality sentinels already passed on
+  // this tree: that step runs openapi, schema-doc, and markdown, so running them again here only costs minutes.
   if (process.env.CADENCE_DOCS_SKIP_CHECKS === "1") {
     console.log(
-      "Skipping 'cadence check' and 'validate-markdown' (CADENCE_DOCS_SKIP_CHECKS=1: they already passed in this run)."
+      "Skipping 'openapi', 'schema-doc', and 'markdown' checks (CADENCE_DOCS_SKIP_CHECKS=1: they already passed in this run)."
     );
   } else {
     runCommand("node scripts/run-cli.js check openapi");
-    runCommand("node scripts/run-cli.js validate-markdown");
+    runCommand("node scripts/run-cli.js check schema-doc");
+    runCommand("node scripts/run-cli.js check markdown");
   }
-  runCommand("node scripts/run-cli.js generate-schema-doc");
-  runCommand("node scripts/run-cli.js generate-api-docs");
 
-  // 2. Run compliance compiler
-  console.log("--- Step 2: Running Compliance Tracer ---");
-  const reportPath = path.join(repoRoot, "report.xml");
-  const hasReport =
-    fs.existsSync(reportPath) && fs.statSync(reportPath).size > 0;
-  const envDraft = process.env.RTM_DRAFT || process.env.GENERATE_RTM_DRAFT;
-  const isEnvDraft =
-    envDraft && !["0", "false", "no", "off"].includes(envDraft.toLowerCase());
-
-  if (hasReport && !isEnvDraft) {
-    runCommand("node scripts/run-cli.js generate-rtm");
-  } else {
-    runCommand("node scripts/run-cli.js generate-rtm --draft");
-  }
+  // 2. Validate committed GxP snapshot without mutation
+  console.log("--- Step 2: Validating GxP Compliance Snapshot ---");
+  runCommand("node scripts/run-cli.js check rtm");
 
   // 3. Prepare files for VitePress
   console.log("--- Step 3: Preparing Documentation Files ---");

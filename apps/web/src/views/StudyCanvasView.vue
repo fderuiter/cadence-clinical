@@ -207,7 +207,20 @@
 
           <template v-else-if="hasOpenForm">
             <p
-              v-if="isNewForm && recordRef && !recordParticipant"
+              v-if="
+                isNewForm &&
+                recordRef &&
+                !recordParticipant &&
+                isRecordParticipantLoading
+              "
+              id="record-loading"
+              class="stage-empty"
+              role="status"
+            >
+              Loading participant…
+            </p>
+            <p
+              v-else-if="isNewForm && recordRef && !recordParticipant"
               id="record-not-loaded"
               class="stage-empty"
             >
@@ -253,6 +266,14 @@
               :observation-location="observationLocationFromRecord"
               @retry="canvas.loadRecord(recordParticipant)"
             />
+            <p
+              v-else-if="isRecordParticipantLoading"
+              id="record-loading"
+              class="stage-empty"
+              role="status"
+            >
+              Loading participant…
+            </p>
             <p v-else id="record-not-loaded" class="stage-empty">
               This participant isn't among those loaded for {{ studyCode }}.
               <router-link
@@ -352,7 +373,11 @@
           :study-code="studyCode"
           :participant="inspectedParticipant"
           :node-ref="inspectedNodeText"
-          :missing="Boolean(selectedNode) && !selectedParticipant"
+          :missing="
+            Boolean(selectedNode) &&
+            !selectedParticipant &&
+            !isSelectedParticipantLoading
+          "
           :protocol-version="inspectedVersion"
           :protocol-version-error="inspectedVersionError"
           :record-location="
@@ -416,7 +441,7 @@
     <CanvasPalette
       v-if="!inAppShell && paletteOpen"
       :study-code="studyCode"
-      :participants="canvas.participants"
+      :participants="canvas.paletteParticipants"
       @close="paletteOpen = false"
       @go="goToPaletteTarget"
     />
@@ -616,14 +641,37 @@ const loadedObservation = ref<KernelObservation | null>(null);
 const resolvedLineage = ref<{ siteCode: string; subjectCode: string } | null>(
   null
 );
+const resolvedParticipantId = ref("");
 let lineageRequest = 0;
+
+function isParticipantPending(id: string | undefined): boolean {
+  if (!studyCode.value || !id) return false;
+  if (canvas.knownParticipants[id]) return false;
+  if (canvas.participantLookups[id]) return true;
+  return !canvas.failedParticipantIds[id];
+}
+
+const isRecordParticipantLoading = computed(() =>
+  isParticipantPending(recordRef.value?.id)
+);
+const isSelectedParticipantLoading = computed(() =>
+  isParticipantPending(selectedNode.value?.id)
+);
 
 const loadedFormParticipant = computed<SubjectSummary | null>(() => {
   const pid = loadedForm.value?.participant_id;
   return pid ? (canvas.knownParticipants[pid] ?? null) : null;
 });
+const lineageParticipant = computed<SubjectSummary | null>(() =>
+  resolvedParticipantId.value
+    ? (canvas.knownParticipants[resolvedParticipantId.value] ?? null)
+    : null
+);
 const activeFormParticipant = computed<SubjectSummary | null>(
-  () => recordParticipant.value ?? loadedFormParticipant.value
+  () =>
+    recordParticipant.value ??
+    loadedFormParticipant.value ??
+    lineageParticipant.value
 );
 const activeParticipantNodeText = computed(() => {
   if (recordRef.value) return formatNodeRef(recordRef.value);
@@ -646,7 +694,8 @@ const inspectedParticipant = computed(
   () =>
     selectedParticipant.value ??
     recordParticipant.value ??
-    loadedFormParticipant.value
+    loadedFormParticipant.value ??
+    lineageParticipant.value
 );
 const inspectedNodeText = computed(() => {
   const participant = inspectedParticipant.value;
@@ -665,7 +714,8 @@ const zoomParticipant = computed(
   () =>
     recordParticipant.value ??
     loadedFormParticipant.value ??
-    selectedParticipant.value
+    selectedParticipant.value ??
+    lineageParticipant.value
 );
 const zoomParticipantCode = computed(
   () =>
@@ -870,12 +920,16 @@ const observationReturnLabel = computed(() => {
   return `Back to ${studyCode.value} home`;
 });
 
-async function resolveEnrollmentLineage(enrollmentRef: string) {
-  if (!enrollmentRef || typeof kernelApi.getZoomPath !== "function") return;
+async function resolveEnrollmentLineage(
+  enrollmentRef: string
+): Promise<{ req: number; siteCode: string; subjectCode: string } | null> {
+  if (!enrollmentRef || typeof kernelApi.getZoomPath !== "function") {
+    return null;
+  }
   const req = ++lineageRequest;
   try {
     const steps = await kernelApi.getZoomPath(enrollmentRef);
-    if (req !== lineageRequest) return;
+    if (req !== lineageRequest) return null;
     const siteStep = steps.find(
       (s) => s.level === "study_site" && s.mask === null && s.label
     );
@@ -883,14 +937,17 @@ async function resolveEnrollmentLineage(enrollmentRef: string) {
       (s) => s.level === "enrollment" && s.mask === null && s.label
     );
     if (siteStep?.label || enrollmentStep?.label) {
-      resolvedLineage.value = {
+      const lineage = {
         siteCode: siteStep?.label ?? "",
         subjectCode: enrollmentStep?.label ?? "",
       };
+      resolvedLineage.value = lineage;
+      return { req, ...lineage };
     }
   } catch {
     // Keep whatever scope context is already known in the URL.
   }
+  return null;
 }
 
 function onFormLoaded(form: EcrfForm) {
@@ -911,7 +968,7 @@ function onFormLoaded(form: EcrfForm) {
     }
   }
   if (!zoomParticipant.value && form.enrollment_id) {
-    resolveEnrollmentLineage(`enrollment:${form.enrollment_id}`);
+    void resolveEnrollmentLineage(`enrollment:${form.enrollment_id}`);
   }
 }
 
@@ -919,10 +976,18 @@ function onFormClosed() {
   router.push(formBackLocation.value);
 }
 
-function onObservationLoaded(obs: KernelObservation) {
+async function onObservationLoaded(obs: KernelObservation) {
   loadedObservation.value = obs;
   if (!zoomParticipant.value && obs.enrollment_ref) {
-    resolveEnrollmentLineage(obs.enrollment_ref);
+    const lineage = await resolveEnrollmentLineage(obs.enrollment_ref);
+    if (lineage?.subjectCode && !zoomParticipant.value) {
+      const participant = await canvas.resolveParticipantByCode(
+        lineage.subjectCode
+      );
+      if (lineage.req === lineageRequest && participant) {
+        resolvedParticipantId.value = participant.id;
+      }
+    }
   }
 }
 
@@ -1011,11 +1076,41 @@ watch(
     loadedForm.value = null;
     loadedObservation.value = null;
     resolvedLineage.value = null;
+    resolvedParticipantId.value = "";
     lineageRequest++;
     canvas.openStudy(code);
   },
   { immediate: true }
 );
+
+watch(
+  [
+    studyCode,
+    () => recordRef.value?.id,
+    () => selectedNode.value?.id,
+    () => loadedForm.value?.participant_id,
+  ],
+  ([code, recordId, selectedId, formParticipantId]) => {
+    if (!code) return;
+    const ids = new Set(
+      [recordId, selectedId, formParticipantId].filter((id): id is string =>
+        Boolean(id)
+      )
+    );
+    for (const id of ids) {
+      if (!canvas.knownParticipants[id]) {
+        void canvas.ensureParticipantById(id);
+      }
+    }
+  },
+  { immediate: true }
+);
+
+watch([paletteOpen, studyCode], ([open, code]) => {
+  if (!inAppShell && open && code) {
+    void canvas.ensurePaletteParticipants(code);
+  }
+});
 
 watch(openFormId, (id) => {
   if (!id) {
@@ -1026,6 +1121,8 @@ watch(openFormId, (id) => {
 });
 
 watch(openObservationRef, (refText) => {
+  resolvedParticipantId.value = "";
+  lineageRequest++;
   if (!refText) {
     loadedObservation.value = null;
   }
@@ -1034,6 +1131,7 @@ watch(openObservationRef, (refText) => {
 watch([hasOpenForm, openObservationRef], ([formOpen, obsRef]) => {
   if (!formOpen && !obsRef) {
     resolvedLineage.value = null;
+    resolvedParticipantId.value = "";
     lineageRequest++;
   }
 });
