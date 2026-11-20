@@ -1,0 +1,86 @@
+const { execSync } = require("child_process");
+const fs = require("fs");
+const path = require("path");
+
+const repoRoot = path.resolve(__dirname, "..");
+
+function normalizeRootBase(rawBase) {
+  const trimmed = String(rawBase || "/cadence-clinical/").trim();
+  const withLeading = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  return withLeading.endsWith("/") ? withLeading : `${withLeading}/`;
+}
+
+function stagePortalDemos({
+  rootDir = repoRoot,
+  portalBase = process.env.VITEPRESS_BASE || "/cadence-clinical/",
+} = {}) {
+  const normalizedBase = normalizeRootBase(portalBase);
+  const docsDistDir = path.join(rootDir, "docs", ".vitepress", "dist");
+
+  if (!fs.existsSync(path.join(docsDistDir, "index.html"))) {
+    throw new Error(
+      `VitePress output not found at ${docsDistDir}. Run 'pnpm docs:build' before staging subpath demos.`
+    );
+  }
+
+  const demoTargets = [
+    {
+      label: "Staff Demo (apps/web)",
+      filter: "web",
+      subpath: "demo",
+      basePath: `${normalizedBase}demo/`,
+      distDir: path.join(rootDir, "apps", "web", "dist"),
+      requiredFiles: ["index.html", "mockServiceWorker.js"],
+    },
+    {
+      label: "Participant Demo (apps/subject-portal)",
+      filter: "subject-portal",
+      subpath: "subject-portal",
+      basePath: `${normalizedBase}subject-portal/`,
+      distDir: path.join(rootDir, "apps", "subject-portal", "dist"),
+      requiredFiles: [
+        "index.html",
+        "manifest.json",
+        "mockServiceWorker.js",
+        "sw.js",
+      ],
+    },
+  ];
+
+  for (const target of demoTargets) {
+    console.log(
+      `--- Building ${target.label} with VITE_BASE_PATH=${target.basePath} ---`
+    );
+    execSync(`pnpm --filter ${target.filter} build:demo`, {
+      cwd: rootDir,
+      stdio: "inherit",
+      env: {
+        ...process.env,
+        VITE_BASE_PATH: target.basePath,
+      },
+    });
+
+    const destDir = path.join(docsDistDir, target.subpath);
+    fs.rmSync(destDir, { recursive: true, force: true });
+    fs.cpSync(target.distDir, destDir, { recursive: true });
+
+    for (const requiredFile of target.requiredFiles) {
+      const stagedFile = path.join(destDir, requiredFile);
+      if (!fs.existsSync(stagedFile)) {
+        throw new Error(
+          `Expected staged demo artifact '${requiredFile}' is missing from ${destDir}`
+        );
+      }
+    }
+
+    console.log(
+      `Staged ${target.label} into ${path.relative(rootDir, destDir)}`
+    );
+  }
+}
+
+if (require.main === module) {
+  stagePortalDemos();
+}
+
+module.exports = { normalizeRootBase, stagePortalDemos };

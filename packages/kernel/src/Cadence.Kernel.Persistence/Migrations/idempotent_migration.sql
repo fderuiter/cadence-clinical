@@ -243,7 +243,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929191437_InitialKernelIdentity') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260929191437_InitialKernelIdentity', '10.0.11');
+    VALUES ('20260929191437_InitialKernelIdentity', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -297,7 +297,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929195617_BitemporalFoundation') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260929195617_BitemporalFoundation', '10.0.11');
+    VALUES ('20260929195617_BitemporalFoundation', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -534,7 +534,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260929223332_CommandPipeline', '10.0.11');
+    VALUES ('20260929223332_CommandPipeline', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -598,7 +598,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929234442_OutboxRelayAndChainSeals') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260929234442_OutboxRelayAndChainSeals', '10.0.11');
+    VALUES ('20260929234442_OutboxRelayAndChainSeals', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -958,7 +958,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260930001034_TenantIsolation', '10.0.11');
+    VALUES ('20260930001034_TenantIsolation', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -1254,7 +1254,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260930004914_ConceptRegistry', '10.0.11');
+    VALUES ('20260930004914_ConceptRegistry', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -1598,7 +1598,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260930014016_StandardsRegistry', '10.0.11');
+    VALUES ('20260930014016_StandardsRegistry', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -1803,7 +1803,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930032422_ProtocolVersionsAndAttestations') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260930032422_ProtocolVersionsAndAttestations', '10.0.11');
+    VALUES ('20260930032422_ProtocolVersionsAndAttestations', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -1829,7 +1829,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930040415_KernelSearchIndexes') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260930040415_KernelSearchIndexes', '10.0.11');
+    VALUES ('20260930040415_KernelSearchIndexes', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -2084,7 +2084,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930043230_ParticipantsAndEnrollments') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260930043230_ParticipantsAndEnrollments', '10.0.11');
+    VALUES ('20260930043230_ParticipantsAndEnrollments', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -2197,7 +2197,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930045723_LineageStore') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260930045723_LineageStore', '10.0.11');
+    VALUES ('20260930045723_LineageStore', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -2264,7 +2264,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930053132_KernelActivityStream') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260930053132_KernelActivityStream', '10.0.11');
+    VALUES ('20260930053132_KernelActivityStream', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -2372,7 +2372,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930055034_ArtifactsAndVersions') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260930055034_ArtifactsAndVersions', '10.0.11');
+    VALUES ('20260930055034_ArtifactsAndVersions', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -2397,7 +2397,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930063002_TenantCodeDirectory') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260930063002_TenantCodeDirectory', '10.0.11');
+    VALUES ('20260930063002_TenantCodeDirectory', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -2573,7 +2573,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930065947_GrantsRolesAndDelegation') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260930065947_GrantsRolesAndDelegation', '10.0.11');
+    VALUES ('20260930065947_GrantsRolesAndDelegation', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -2636,7 +2636,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930080359_WorkQueueDefinitions') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260930080359_WorkQueueDefinitions', '10.0.11');
+    VALUES ('20260930080359_WorkQueueDefinitions', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -2961,7 +2961,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260930090624_ValidationRunsAndFindings', '10.0.11');
+    VALUES ('20260930090624_ValidationRunsAndFindings', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -3094,7 +3094,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930094042_EffectivityAndStudySiteActivation') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260930094042_EffectivityAndStudySiteActivation', '10.0.11');
+    VALUES ('20260930094042_EffectivityAndStudySiteActivation', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -3133,7 +3133,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930102009_ResolvedTerminologyBindings') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260930102009_ResolvedTerminologyBindings', '10.0.11');
+    VALUES ('20260930102009_ResolvedTerminologyBindings', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -3334,7 +3334,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930110610_IdentityVault') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260930110610_IdentityVault', '10.0.11');
+    VALUES ('20260930110610_IdentityVault', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -3549,7 +3549,7 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930133015_Qualifications') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260930133015_Qualifications', '10.0.11');
+    VALUES ('20260930133015_Qualifications', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -3646,7 +3646,732 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930142430_Proposals') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20260930142430_Proposals', '10.0.11');
+    VALUES ('20260930142430_Proposals', '10.0.15');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261006120000_AddFormVersionSnapshots') THEN
+    CREATE TABLE kernel.form_version_snapshots (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        study_id uuid NOT NULL,
+        protocol_version_id uuid NOT NULL,
+        protocol_version character varying(64) NOT NULL,
+        form_id character varying(128) NOT NULL,
+        form_hash character varying(71) NOT NULL,
+        open_rosa_xml text NOT NULL,
+        ddf_ir jsonb NOT NULL,
+        odm_xml text,
+        recorded_at timestamp with time zone NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_form_version_snapshots" PRIMARY KEY (id),
+        CONSTRAINT ck_form_version_snapshots_form_hash CHECK (form_hash ~ '^sha256:[0-9a-f]{64}$'),
+        CONSTRAINT "FK_form_version_snapshots_protocol_versions_tenant_id_protoc~" FOREIGN KEY (tenant_id, protocol_version_id) REFERENCES kernel.protocol_versions (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_form_version_snapshots_studies_tenant_id_study_id" FOREIGN KEY (tenant_id, study_id) REFERENCES kernel.studies (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_form_version_snapshots_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261006120000_AddFormVersionSnapshots') THEN
+    CREATE INDEX "IX_form_version_snapshots_tenant_id_protocol_version_id" ON kernel.form_version_snapshots (tenant_id, protocol_version_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261006120000_AddFormVersionSnapshots') THEN
+    CREATE UNIQUE INDEX "IX_form_version_snapshots_tenant_id_study_id_protocol_versio~" ON kernel.form_version_snapshots (tenant_id, study_id, protocol_version, form_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261006120000_AddFormVersionSnapshots') THEN
+    ALTER TABLE "kernel"."form_version_snapshots" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."form_version_snapshots" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."form_version_snapshots"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261006120000_AddFormVersionSnapshots') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20261006120000_AddFormVersionSnapshots', '10.0.15');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261006192109_ProposalConfidenceAndEscalation') THEN
+    ALTER TABLE kernel.proposals ADD confidence_score double precision;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261006192109_ProposalConfidenceAndEscalation') THEN
+    ALTER TABLE kernel.proposals ADD escalated_at timestamp with time zone;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261006192109_ProposalConfidenceAndEscalation') THEN
+    ALTER TABLE kernel.proposals ADD escalated_by_id character varying(256);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261006192109_ProposalConfidenceAndEscalation') THEN
+    ALTER TABLE kernel.proposals ADD escalated_by_kind character varying(32);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261006192109_ProposalConfidenceAndEscalation') THEN
+    ALTER TABLE kernel.proposals ADD escalated_to character varying(256);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261006192109_ProposalConfidenceAndEscalation') THEN
+    ALTER TABLE kernel.proposals ADD escalation_policy character varying(200);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261006192109_ProposalConfidenceAndEscalation') THEN
+    ALTER TABLE kernel.proposals ADD escalation_reason character varying(1000);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261006192109_ProposalConfidenceAndEscalation') THEN
+    ALTER TABLE kernel.proposals ADD is_escalated boolean NOT NULL DEFAULT FALSE;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261006192109_ProposalConfidenceAndEscalation') THEN
+    ALTER TABLE kernel.proposals ADD CONSTRAINT ck_proposals_confidence_score CHECK (confidence_score IS NULL OR (confidence_score >= 0.0 AND confidence_score <= 1.0));
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261006192109_ProposalConfidenceAndEscalation') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20261006192109_ProposalConfidenceAndEscalation', '10.0.15');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261015191056_ObservationsAndLocks') THEN
+    CREATE TABLE kernel.observations (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        enrollment_id uuid NOT NULL,
+        participant_id uuid NOT NULL,
+        study_id uuid NOT NULL,
+        concept_id uuid NOT NULL,
+        concept_version integer NOT NULL,
+        observed_at timestamp with time zone NOT NULL,
+        value character varying(4000) NOT NULL,
+        revision integer NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_observations" PRIMARY KEY (id),
+        CONSTRAINT "AK_observations_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT ck_observations_revision CHECK (revision > 0),
+        CONSTRAINT "FK_observations_enrollments_tenant_id_enrollment_id" FOREIGN KEY (tenant_id, enrollment_id) REFERENCES kernel.enrollments (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_observations_participants_tenant_id_participant_id" FOREIGN KEY (tenant_id, participant_id) REFERENCES kernel.participants (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_observations_studies_tenant_id_study_id" FOREIGN KEY (tenant_id, study_id) REFERENCES kernel.studies (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_observations_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261015191056_ObservationsAndLocks') THEN
+    CREATE TABLE kernel.observation_locks (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        observation_id uuid NOT NULL,
+        enrollment_id uuid NOT NULL,
+        locked_at timestamp with time zone NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_observation_locks" PRIMARY KEY (id),
+        CONSTRAINT "FK_observation_locks_observations_tenant_id_observation_id" FOREIGN KEY (tenant_id, observation_id) REFERENCES kernel.observations (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_observation_locks_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261015191056_ObservationsAndLocks') THEN
+    CREATE TABLE kernel.observation_revisions (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        observation_id uuid NOT NULL,
+        number integer NOT NULL,
+        value character varying(4000) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        recorded_by character varying(255) NOT NULL,
+        recorded_at timestamp with time zone NOT NULL,
+        CONSTRAINT "PK_observation_revisions" PRIMARY KEY (id),
+        CONSTRAINT ck_observation_revisions_number CHECK (number > 0),
+        CONSTRAINT "FK_observation_revisions_observations_tenant_id_observation_id" FOREIGN KEY (tenant_id, observation_id) REFERENCES kernel.observations (tenant_id, id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261015191056_ObservationsAndLocks') THEN
+    CREATE UNIQUE INDEX "IX_observation_locks_tenant_id_observation_id" ON kernel.observation_locks (tenant_id, observation_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261015191056_ObservationsAndLocks') THEN
+    CREATE UNIQUE INDEX "IX_observation_revisions_tenant_id_observation_id_number" ON kernel.observation_revisions (tenant_id, observation_id, number);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261015191056_ObservationsAndLocks') THEN
+    CREATE INDEX "IX_observations_tenant_id_enrollment_id" ON kernel.observations (tenant_id, enrollment_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261015191056_ObservationsAndLocks') THEN
+    CREATE INDEX "IX_observations_tenant_id_participant_id_concept_id" ON kernel.observations (tenant_id, participant_id, concept_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261015191056_ObservationsAndLocks') THEN
+    CREATE INDEX "IX_observations_tenant_id_study_id" ON kernel.observations (tenant_id, study_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261015191056_ObservationsAndLocks') THEN
+    ALTER TABLE "kernel"."observations" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."observations" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."observations"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261015191056_ObservationsAndLocks') THEN
+    ALTER TABLE "kernel"."observation_revisions" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."observation_revisions" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."observation_revisions"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261015191056_ObservationsAndLocks') THEN
+    ALTER TABLE "kernel"."observation_locks" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."observation_locks" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."observation_locks"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261015191056_ObservationsAndLocks') THEN
+    CREATE TRIGGER "trg_observation_revisions_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."observation_revisions"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_observation_revisions_no_truncate" BEFORE TRUNCATE ON "kernel"."observation_revisions"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261015191056_ObservationsAndLocks') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20261015191056_ObservationsAndLocks', '10.0.15');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261019215800_TypedObservationValues') THEN
+    ALTER TABLE kernel.observations
+        ALTER COLUMN value TYPE jsonb USING jsonb_build_object('type', 'text', 'value', value);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261019215800_TypedObservationValues') THEN
+    ALTER TABLE kernel.observation_revisions
+        ALTER COLUMN value TYPE jsonb USING jsonb_build_object('type', 'text', 'value', value);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261019215800_TypedObservationValues') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20261019215800_TypedObservationValues', '10.0.15');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000021_AssertionsAndScopedLocks') THEN
+    DROP POLICY IF EXISTS "tenant_isolation" ON "kernel"."observation_locks";
+    ALTER TABLE "kernel"."observation_locks" NO FORCE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."observation_locks" DISABLE ROW LEVEL SECURITY;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000021_AssertionsAndScopedLocks') THEN
+    DROP TABLE kernel.observation_locks;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000021_AssertionsAndScopedLocks') THEN
+    CREATE TABLE kernel.assertions (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        kind character varying(32) NOT NULL,
+        study_id uuid NOT NULL,
+        enrollment_id uuid,
+        target_kind character varying(64) NOT NULL,
+        target_id uuid NOT NULL,
+        target_revision integer,
+        text character varying(4000),
+        retracts_id uuid,
+        attestation_id uuid,
+        asserted_by character varying(255) NOT NULL,
+        asserted_at timestamp with time zone NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_assertions" PRIMARY KEY (id),
+        CONSTRAINT "AK_assertions_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT ck_assertions_lock_attested CHECK (kind NOT IN ('Locked', 'Frozen') OR attestation_id IS NOT NULL),
+        CONSTRAINT ck_assertions_target_revision CHECK (target_revision IS NULL OR target_revision > 0),
+        CONSTRAINT "FK_assertions_assertions_tenant_id_retracts_id" FOREIGN KEY (tenant_id, retracts_id) REFERENCES kernel.assertions (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_assertions_attestations_tenant_id_attestation_id" FOREIGN KEY (tenant_id, attestation_id) REFERENCES kernel.attestations (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_assertions_enrollments_tenant_id_enrollment_id" FOREIGN KEY (tenant_id, enrollment_id) REFERENCES kernel.enrollments (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_assertions_studies_tenant_id_study_id" FOREIGN KEY (tenant_id, study_id) REFERENCES kernel.studies (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_assertions_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000021_AssertionsAndScopedLocks') THEN
+    CREATE INDEX "IX_assertions_tenant_id_attestation_id" ON kernel.assertions (tenant_id, attestation_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000021_AssertionsAndScopedLocks') THEN
+    CREATE INDEX "IX_assertions_tenant_id_enrollment_id" ON kernel.assertions (tenant_id, enrollment_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000021_AssertionsAndScopedLocks') THEN
+    CREATE UNIQUE INDEX "IX_assertions_tenant_id_retracts_id" ON kernel.assertions (tenant_id, retracts_id) WHERE retracts_id IS NOT NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000021_AssertionsAndScopedLocks') THEN
+    CREATE INDEX "IX_assertions_tenant_id_study_id" ON kernel.assertions (tenant_id, study_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000021_AssertionsAndScopedLocks') THEN
+    CREATE INDEX "IX_assertions_tenant_id_target_id_kind" ON kernel.assertions (tenant_id, target_id, kind);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000021_AssertionsAndScopedLocks') THEN
+    ALTER TABLE "kernel"."assertions" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."assertions" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."assertions"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000021_AssertionsAndScopedLocks') THEN
+    CREATE TRIGGER "trg_assertions_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."assertions"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_assertions_no_truncate" BEFORE TRUNCATE ON "kernel"."assertions"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000021_AssertionsAndScopedLocks') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20261020000021_AssertionsAndScopedLocks', '10.0.15');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000022_CollectionInstances') THEN
+    CREATE TABLE kernel.collection_instances (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        study_id uuid NOT NULL,
+        study_site_id uuid NOT NULL,
+        enrollment_id uuid NOT NULL,
+        participant_id uuid NOT NULL,
+        protocol_version_id uuid NOT NULL,
+        collection_spec_id character varying(128) NOT NULL,
+        planned_activity_id character varying(128),
+        collected_at timestamp with time zone NOT NULL,
+        opened_by character varying(255) NOT NULL,
+        opened_at timestamp with time zone NOT NULL,
+        last_saved_at timestamp with time zone NOT NULL,
+        saves integer NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_collection_instances" PRIMARY KEY (id),
+        CONSTRAINT "AK_collection_instances_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT "FK_collection_instances_enrollments_tenant_id_enrollment_id_pa~" FOREIGN KEY (tenant_id, enrollment_id, participant_id, study_site_id) REFERENCES kernel.enrollments (tenant_id, id, participant_id, study_site_id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_collection_instances_protocol_versions_tenant_id_protocol_v~" FOREIGN KEY (tenant_id, protocol_version_id) REFERENCES kernel.protocol_versions (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_collection_instances_study_sites_tenant_id_study_site_id_st~" FOREIGN KEY (tenant_id, study_site_id, study_id) REFERENCES kernel.study_sites (tenant_id, id, study_id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_collection_instances_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000022_CollectionInstances') THEN
+    CREATE TABLE kernel.collection_instance_members (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        collection_instance_id uuid NOT NULL,
+        item_id character varying(128) NOT NULL,
+        observation_id uuid NOT NULL,
+        joined_at timestamp with time zone NOT NULL,
+        CONSTRAINT "PK_collection_instance_members" PRIMARY KEY (id),
+        CONSTRAINT "FK_collection_instance_members_collection_instances_tenant_id_~" FOREIGN KEY (tenant_id, collection_instance_id) REFERENCES kernel.collection_instances (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_collection_instance_members_observations_tenant_id_observat~" FOREIGN KEY (tenant_id, observation_id) REFERENCES kernel.observations (tenant_id, id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000022_CollectionInstances') THEN
+    CREATE UNIQUE INDEX "IX_collection_instance_members_tenant_id_collection_instance_i~" ON kernel.collection_instance_members (tenant_id, collection_instance_id, item_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000022_CollectionInstances') THEN
+    CREATE UNIQUE INDEX "IX_collection_instance_members_tenant_id_observation_id" ON kernel.collection_instance_members (tenant_id, observation_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000022_CollectionInstances') THEN
+    CREATE INDEX "IX_collection_instances_tenant_id_enrollment_id_participant_id~" ON kernel.collection_instances (tenant_id, enrollment_id, participant_id, study_site_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000022_CollectionInstances') THEN
+    CREATE INDEX "IX_collection_instances_tenant_id_protocol_version_id" ON kernel.collection_instances (tenant_id, protocol_version_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000022_CollectionInstances') THEN
+    CREATE INDEX "IX_collection_instances_tenant_id_study_site_id_study_id" ON kernel.collection_instances (tenant_id, study_site_id, study_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000022_CollectionInstances') THEN
+    ALTER TABLE "kernel"."collection_instances" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."collection_instances" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."collection_instances"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000022_CollectionInstances') THEN
+    ALTER TABLE "kernel"."collection_instance_members" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."collection_instance_members" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."collection_instance_members"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000022_CollectionInstances') THEN
+    CREATE TRIGGER "trg_collection_instance_members_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."collection_instance_members"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_collection_instance_members_no_truncate" BEFORE TRUNCATE ON "kernel"."collection_instance_members"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020000022_CollectionInstances') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20261020000022_CollectionInstances', '10.0.15');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
+    ALTER TABLE kernel.provenance_activities ADD proposal_id uuid;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
+    ALTER TABLE kernel.provenance_activities ADD requested_by character varying(256);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
+    ALTER TABLE kernel.proposals ADD requested_by_id character varying(256);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
+    CREATE INDEX "IX_provenance_activities_tenant_id_proposal_id" ON kernel.provenance_activities (tenant_id, proposal_id) WHERE proposal_id IS NOT NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
+    ALTER TABLE kernel.proposals ADD CONSTRAINT ck_proposals_requested_by CHECK ((proposed_by_kind = 'AutomationAgent' AND requested_by_id IS NOT NULL AND char_length(requested_by_id) > 0) OR (proposed_by_kind <> 'AutomationAgent' AND requested_by_id IS NULL));
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
+    DROP TRIGGER IF EXISTS "trg_proposals_immutable" ON "kernel"."proposals";
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
+    CREATE TRIGGER "trg_proposals_immutable" BEFORE UPDATE ON "kernel"."proposals"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_immutable_columns('id', 'tenant_id', 'study_id', 'intent', 'plan_artifact_version_id', 'affected', 'simulated_impact', 'requested_capabilities', 'expires_at', 'proposed_at', 'proposed_by_id', 'proposed_by_kind', 'model_id', 'content_hash', 'created_at', 'created_by', 'requested_by_id', 'confidence_score');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20261020031614_AgentRequesterAndProposalExecution', '10.0.15');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
+    CREATE TABLE kernel.subscriptions (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        tier character varying(32) NOT NULL,
+        status character varying(32) NOT NULL,
+        started_at timestamp with time zone NOT NULL,
+        trial_ends_at timestamp with time zone,
+        expired_at timestamp with time zone,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_subscriptions" PRIMARY KEY (id),
+        CONSTRAINT "AK_subscriptions_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT "FK_subscriptions_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
+    CREATE TABLE kernel.product_entitlements (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        subscription_id uuid NOT NULL,
+        family character varying(32) NOT NULL,
+        is_enabled boolean NOT NULL,
+        granted_at timestamp with time zone NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_product_entitlements" PRIMARY KEY (id),
+        CONSTRAINT "AK_product_entitlements_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT "FK_product_entitlements_subscriptions_tenant_id_subscription_id" FOREIGN KEY (tenant_id, subscription_id) REFERENCES kernel.subscriptions (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_product_entitlements_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
+    CREATE UNIQUE INDEX "IX_product_entitlements_tenant_id_family" ON kernel.product_entitlements (tenant_id, family);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
+    CREATE INDEX "IX_product_entitlements_tenant_id_subscription_id" ON kernel.product_entitlements (tenant_id, subscription_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
+    CREATE UNIQUE INDEX "IX_subscriptions_tenant_id" ON kernel.subscriptions (tenant_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
+    ALTER TABLE "kernel"."subscriptions" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."subscriptions" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."subscriptions"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
+    ALTER TABLE "kernel"."product_entitlements" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."product_entitlements" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."product_entitlements"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20261120152149_CommercialSubscriptionsAndEntitlements', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;

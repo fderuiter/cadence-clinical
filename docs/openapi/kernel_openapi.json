@@ -1396,7 +1396,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1453,6 +1453,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
             "status": 403
           },
           {
@@ -1565,7 +1569,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1622,6 +1626,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
             "status": 403
           },
           {
@@ -1730,7 +1738,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1787,6 +1795,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
             "status": 403
           },
           {
@@ -1891,7 +1903,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1948,6 +1960,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
             "status": 403
           },
           {
@@ -2191,7 +2207,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -2241,6 +2257,10 @@
             "status": 403
           },
           {
+            "code": "K.Subscription.Expired",
+            "status": 403
+          },
+          {
             "code": "K.Aggregate.NotFound",
             "status": 404
           },
@@ -2275,6 +2295,416 @@
           {
             "code": "K.Command.TenantRequired",
             "status": 422
+          }
+        ]
+      }
+    },
+    "/api/v1/kernel/entitlements": {
+      "get": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "The caller\u0027s tenant commercial subscription tier, trial state, and enabled product families.",
+        "description": "Commercial packaging boundary: never grants clinical study access or bypasses Grant, blinding, or consent. Audit trails, electronic signatures, authorization checks, and regulated record exports remain active regardless of tier or trial expiry.",
+        "operationId": "KernelGetEntitlements",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelEntitlementsResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kernel/entitlements/tier": {
+      "post": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Activates or upgrades the tenant\u0027s commercial tier in place while preserving all clinical and audit records.",
+        "description": "Transitions a trial or active subscription to Individual, Select, or Complete and grants the tier\u0027s product families through the kernel command pipeline without altering clinical Grants or existing study data.",
+        "operationId": "KernelUpgradeSubscriptionTier",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_KernelUpgradeSubscriptionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelEntitlementsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Commercial.SubscriptionUnknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Commercial.EntitlementRequired\u0060, \u0060K.Commercial.SubscriptionRequired\u0060, \u0060K.Commercial.TierInvalid\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
+            "status": 403
+          },
+          {
+            "code": "K.Commercial.SubscriptionUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Commercial.EntitlementRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Commercial.SubscriptionRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Commercial.TierInvalid",
+            "status": 422
+          }
+        ]
+      }
+    },
+    "/api/v1/kernel/onboarding/trial": {
+      "post": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Provisions an isolated self-service trial workspace for an authenticated OIDC caller.",
+        "description": "Mapped outside KernelTenantFilter for signed-in callers without an active tenant_id claim. Idempotently provisions Tenant, sponsor Organization, pseudonymous Person, TenantMembership, Sponsor Admin and Sponsor Designer Roles/Grants, and a Trialing Subscription with Blueprint \u002B Capture entitlements, then writes tenant_id and initial roles back to Keycloak.",
+        "operationId": "KernelBootstrapTrialWorkspace",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Kernel_KernelTrialOnboardingRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelTrialOnboardingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Commercial.OnboardingCallerInvalid\u0060, \u0060K.Subscription.Expired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Identity.TenantUnknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Authority.RoleCodeTaken\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Authority.CapabilityInvalid\u0060, \u0060K.Authority.GrantTargetInvalid\u0060, \u0060K.Authority.RoleCodeInvalid\u0060, \u0060K.Authority.RoleNameInvalid\u0060, \u0060K.Authority.ScopeInvalid\u0060, \u0060K.Authority.ValidityInvalid\u0060, \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Commercial.EntitlementRequired\u0060, \u0060K.Commercial.SubscriptionRequired\u0060, \u0060K.Commercial.TierInvalid\u0060, \u0060K.Commercial.TrialWindowInvalid\u0060, \u0060K.Identity.CodeRequired\u0060, \u0060K.Identity.MembershipRequired\u0060, \u0060K.Identity.NameRequired\u0060, \u0060K.Identity.PersonRequired\u0060, \u0060K.Identity.ResidencyInvalid\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway. Kernel errors: \u0060K.Commercial.IdentityProviderSyncFailed\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Commercial.OnboardingCallerInvalid",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
+            "status": 403
+          },
+          {
+            "code": "K.Identity.TenantUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Authority.RoleCodeTaken",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Authority.CapabilityInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Authority.GrantTargetInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Authority.RoleCodeInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Authority.RoleNameInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Authority.ScopeInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Authority.ValidityInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Commercial.EntitlementRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Commercial.SubscriptionRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Commercial.TierInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Commercial.TrialWindowInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Identity.CodeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Identity.MembershipRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Identity.NameRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Identity.PersonRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Identity.ResidencyInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Commercial.IdentityProviderSyncFailed",
+            "status": 502
           }
         ]
       }
@@ -2483,7 +2913,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -2530,6 +2960,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
             "status": 403
           },
           {
@@ -2738,7 +3172,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -2785,6 +3219,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
             "status": 403
           },
           {
@@ -2891,7 +3329,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -2938,6 +3376,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
             "status": 403
           },
           {
@@ -3044,7 +3486,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -3081,6 +3523,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
             "status": 403
           },
           {
@@ -3252,7 +3698,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -3309,6 +3755,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
             "status": 403
           },
           {
@@ -3488,7 +3938,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -3535,6 +3985,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
             "status": 403
           },
           {
@@ -3815,7 +4269,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -3862,6 +4316,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
             "status": 403
           },
           {
@@ -3970,7 +4428,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -4027,6 +4485,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
             "status": 403
           },
           {
@@ -4131,7 +4593,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -4188,6 +4650,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
             "status": 403
           },
           {
@@ -4282,7 +4748,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -4339,6 +4805,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
             "status": 403
           },
           {
@@ -4433,7 +4903,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -4490,6 +4960,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
             "status": 403
           },
           {
@@ -4605,7 +5079,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Trust.PersonRequired\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060, \u0060K.Trust.PersonRequired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -4646,6 +5120,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
             "status": 403
           },
           {
@@ -6757,6 +7235,75 @@
           }
         }
       },
+      "Kernel_KernelEntitlementsResponse": {
+        "required": [
+          "tenant_ref",
+          "tenant_id",
+          "subscription_ref",
+          "tier",
+          "status",
+          "started_at",
+          "trial_ends_at",
+          "is_read_only",
+          "product_families",
+          "baseline_capabilities",
+          "environment_notice"
+        ],
+        "type": "object",
+        "properties": {
+          "tenant_ref": {
+            "type": "string"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subscription_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tier": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "trial_ends_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "is_read_only": {
+            "type": "boolean"
+          },
+          "product_families": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "baseline_capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "environment_notice": {
+            "type": "string"
+          }
+        }
+      },
       "Kernel_KernelExplanationResponse": {
         "required": [
           "subject",
@@ -8021,6 +8568,94 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "Kernel_KernelTrialOnboardingRequest": {
+        "required": [
+          "organization_name"
+        ],
+        "type": "object",
+        "properties": {
+          "organization_name": {
+            "type": "string"
+          },
+          "residency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_KernelTrialOnboardingResponse": {
+        "required": [
+          "newly_provisioned",
+          "tenant_code",
+          "tenant_ref",
+          "organization_ref",
+          "person_ref",
+          "membership_ref",
+          "admin_role_ref",
+          "admin_grant_ref",
+          "assigned_roles",
+          "token_refresh_required",
+          "entitlements"
+        ],
+        "type": "object",
+        "properties": {
+          "newly_provisioned": {
+            "type": "boolean"
+          },
+          "tenant_code": {
+            "type": "string"
+          },
+          "tenant_ref": {
+            "type": "string"
+          },
+          "organization_ref": {
+            "type": "string"
+          },
+          "person_ref": {
+            "type": "string"
+          },
+          "membership_ref": {
+            "type": "string"
+          },
+          "admin_role_ref": {
+            "type": "string"
+          },
+          "admin_grant_ref": {
+            "type": "string"
+          },
+          "assigned_roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "token_refresh_required": {
+            "type": "boolean"
+          },
+          "entitlements": {
+            "$ref": "#/components/schemas/Kernel_KernelEntitlementsResponse"
+          }
+        }
+      },
+      "Kernel_KernelUpgradeSubscriptionRequest": {
+        "required": [
+          "tier"
+        ],
+        "type": "object",
+        "properties": {
+          "tier": {
+            "type": "string"
           }
         }
       },

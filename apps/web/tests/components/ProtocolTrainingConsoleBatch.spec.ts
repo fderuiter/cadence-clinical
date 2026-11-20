@@ -302,11 +302,12 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & PI Delegation Sign-Of
       .findAll(".modal-footer button")
       .find((btn) => btn.text().includes("Confirm & Execute Signature"))!
       .trigger("click");
-    await flushPromises();
 
-    expect(trainingApi.bulkSignOffDelegations).toHaveBeenCalledWith(
-      expect.objectContaining({ study_id: "CARDIO-2026", site_id: null }),
-      "step-up-token"
-    );
+    await vi.waitFor(() => {
+      expect(trainingApi.bulkSignOffDelegations).toHaveBeenCalledWith(
+        expect.objectContaining({ study_id: "CARDIO-2026", site_id: null }),
+        "step-up-token"
+      );
+    });
   });
 });

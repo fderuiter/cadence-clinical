@@ -103,6 +103,60 @@ public sealed class MarkdownTestPathTests : IDisposable
         exitCode.Should().Be(1);
     }
 
+    [Fact]
+    public void ValidateWorkspaceLinks_MissingSamePageHeadingAnchor_IsReported()
+    {
+        var doc = Write("docs/guide.md", "# Guide\n\n## Overview\n\nJump to [Missing](#does-not-exist).\n");
+
+        var issue = MarkdownParser.ValidateWorkspaceLinks(_root, [doc]).Should().ContainSingle().Subject;
+
+        issue.TargetLink.Should().Be("#does-not-exist");
+        issue.LineNumber.Should().Be(5);
+        issue.FilePath.Should().Be("docs/guide.md");
+    }
+
+    [Fact]
+    public void ValidateWorkspaceLinks_MissingCrossPageHeadingAnchor_IsReported()
+    {
+        Write("docs/target.md", "# Target Document\n\n## Known Section\n");
+        var source = Write("docs/source.md", "# Source\n\nRead [Target](target.md#unknown-section).\n");
+
+        var issue = MarkdownParser.ValidateWorkspaceLinks(_root, [source]).Should().ContainSingle().Subject;
+
+        issue.TargetLink.Should().Be("target.md#unknown-section");
+        issue.LineNumber.Should().Be(3);
+        issue.FilePath.Should().Be("docs/source.md");
+    }
+
+    [Fact]
+    public void ValidateWorkspaceLinks_AcceptsBothPortalAndGitHubHeadingSlugsAndSkipsCodeBlocks()
+    {
+        var schemaDoc = Write(
+            "docs/schema/kernel.md",
+            "# Kernel Schema\n\n" +
+            "## 15. Roadmap\n\n" +
+            "## kernel.activity_entries\n\n" +
+            "## How the RTM decides a requirement's state\n\n" +
+            "## `packages/ddf`\n");
+
+        var readerDoc = Write(
+            "docs/reader.md",
+            "# Reader\n\n" +
+            "- [GitHub numbered](schema/kernel.md#15-roadmap)\n" +
+            "- [VitePress numbered](schema/kernel.md#_15-roadmap)\n" +
+            "- [GitHub table](schema/kernel.md#kernelactivity_entries)\n" +
+            "- [VitePress table](schema/kernel.md#kernel-activity-entries)\n" +
+            "- [Punctuated](schema/kernel.md#how-the-rtm-decides-a-requirements-state)\n" +
+            "- [Code heading](schema/kernel.md#packagesddf)\n" +
+            "- [`Code label`](#reader)\n" +
+            "- Inline code `[ignored](schema/kernel.md#missing-inline)` is skipped.\n\n" +
+            "```markdown\n" +
+            "[ignored in fence](schema/kernel.md#missing-fence)\n" +
+            "```\n");
+
+        MarkdownParser.ValidateWorkspaceLinks(_root, [schemaDoc, readerDoc]).Should().BeEmpty();
+    }
+
     private string Write(string relativePath, string content)
     {
         string path = Path.Combine(_root, relativePath);

@@ -9,6 +9,7 @@ import CrcFormRenderer from "../src/components/persona/CrcFormRenderer.vue";
 import CraVerificationConsole from "../src/components/persona/CraVerificationConsole.vue";
 import DesignerSchemaPanel from "../src/components/persona/DesignerSchemaPanel.vue";
 import { useClinicalStore } from "../src/stores/clinical";
+import { useToastStore } from "../src/stores/toasts.js";
 import { useAuthStore } from "../src/stores/auth";
 
 describe("Persona Sub-Components & Domain Composables Unit Tests", () => {
@@ -127,8 +128,12 @@ describe("Persona Sub-Components & Domain Composables Unit Tests", () => {
       const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
 
       await promoteCandidate();
-      expect(alertSpy).toHaveBeenCalledWith(
-        expect.stringContaining("mandatory")
+      expect(alertSpy).not.toHaveBeenCalled();
+      expect(useToastStore().toasts).toContainEqual(
+        expect.objectContaining({
+          tone: "error",
+          message: expect.stringContaining("mandatory"),
+        })
       );
 
       alertSpy.mockRestore();

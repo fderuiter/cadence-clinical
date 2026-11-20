@@ -8,6 +8,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import CrcFormRenderer from "../../src/components/persona/CrcFormRenderer.vue";
+import * as availability from "../../src/router/availability.js";
 import { useClinicalStore } from "../../src/stores/clinical";
 import { apiClient } from "../../src/api/apiClient";
 
@@ -71,6 +72,9 @@ describe("CrcFormRenderer.vue", () => {
       global: {
         plugins: [pinia],
         stubs: {
+          "router-link": {
+            template: '<div><slot :navigate="() => {}" /></div>',
+          },
           ClinicalFormField: {
             template:
               '<div class="clinical-form-field-stub" :data-field-id="field.id">Field: {{ field.label }}</div>',
@@ -223,5 +227,30 @@ describe("CrcFormRenderer.vue", () => {
       "Re-Consent Gate Active"
     );
     expect(wrapper.find("#reconsent-gate-modal").text()).toContain("SUBJ-102");
+  });
+
+  it("guards the /training link behind isScreenAvailable('training')", () => {
+    const liveWrapper = createWrapper({
+      isTrainingGated: true,
+      missingCourses: ["GCP-101"],
+    });
+    expect(liveWrapper.find("#training-gating-banner").exists()).toBe(true);
+    expect(liveWrapper.find("#btn-complete-training").exists()).toBe(true);
+    liveWrapper.unmount();
+
+    vi.spyOn(availability, "isScreenAvailable").mockImplementation(
+      (routeName) => routeName !== "training"
+    );
+    const unavailableWrapper = createWrapper({
+      isTrainingGated: true,
+      missingCourses: ["GCP-101"],
+    });
+    expect(unavailableWrapper.find("#training-gating-banner").exists()).toBe(
+      true
+    );
+    expect(unavailableWrapper.find("#btn-complete-training").exists()).toBe(
+      false
+    );
+    unavailableWrapper.unmount();
   });
 });

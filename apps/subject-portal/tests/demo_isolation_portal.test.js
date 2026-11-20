@@ -10,6 +10,7 @@ import {
 } from "../src/mocks/browser.js";
 import { createPortalDemoStore } from "../src/mocks/demoHandlers.js";
 import { buildPortalGatewayHandlers } from "../src/mocks/handlers.js";
+import { createPortalHistory } from "../src/router/index.js";
 import { state } from "../src/stores/state.js";
 
 const PORTAL_HEADERS = {
@@ -82,6 +83,28 @@ describe("Subject Portal Demo Isolation & Stateful MSW Handlers", () => {
         options: { scope: "/subject-portal/" },
       },
     });
+
+    expect(
+      resolvePortalServiceWorkerOptions("/cadence-clinical/subject-portal/")
+    ).toEqual({
+      url: "/cadence-clinical/subject-portal/sw.js?msw=1",
+      options: { scope: "/cadence-clinical/subject-portal/" },
+    });
+  });
+
+  it("uses hash history in demo builds for subpath deep-link safety and web history in standard builds", () => {
+    const demoHistory = createPortalHistory(
+      { MODE: "demo" },
+      { memory: false, base: "/cadence-clinical/subject-portal/" }
+    );
+    expect(demoHistory.base).toContain("#");
+    expect(demoHistory.base).toContain("/cadence-clinical/subject-portal/");
+
+    const prodHistory = createPortalHistory(
+      { MODE: "production", VITE_DEMO_MODE: "false" },
+      { memory: false, base: "/subject-portal/" }
+    );
+    expect(prodHistory.base).not.toContain("#");
   });
 
   describe("Fail-closed portal boundary & stateful session persistence", () => {

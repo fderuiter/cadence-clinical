@@ -50,6 +50,7 @@ public static class Program
         AddCommand(root, "check", "Runs architecture sentinels and quality gates", CheckCommand.Configure);
         AddCommand(root, "test", "Runs fast unit tests or testcontainer integration suites", TestCommand.Configure);
         AddCommand(root, "ci", "Runs the jobs of .github/workflows/ci.yml on this machine while GitHub Actions is off", LocalCiCommand.Configure);
+        AddCommand(root, "rulesets", "Validates and synchronizes .github/rulesets/*.json to GitHub via gh api", RulesetsCommand.Configure);
         AddCommand(root, "dev", "Starts the .NET Aspire AppHost with all local services and datastores", DevCommand.Execute);
         AddCommand(root, "fix", "Executes self-healing auto-formatting and ADR validation pipeline", () => SelfHealService.ExecuteSelfHealing());
 
@@ -98,6 +99,7 @@ public static class Program
         var scaffold = AddBranch(root, "scaffold", "Architecture scaffolding tools");
         AddCommand(scaffold, "service", "Scaffolds a new C# Clean Architecture microservice", ScaffoldCommands.ConfigureService);
         AddCommand(scaffold, "adr", "Scaffolds a new Architectural Decision Record (ADR)", ScaffoldCommands.ConfigureAdr);
+        AddCommand(scaffold, "post", "Scaffolds a new engineering blog post in docs/blog/", ScaffoldCommands.ConfigurePost);
 
         var hook = AddBranch(root, "hook", "Agent lifecycle hooks: read the hook payload on stdin, exit 2 to block (PRD-SYS-053)");
         AddCommand(hook, "pre-tool", "Blocks destructive git and shell commands and hand edits to generated GxP documents",

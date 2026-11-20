@@ -65,6 +65,7 @@ else
 // an existing realm.
 const string ApiAudience = "cadence-api";
 Action<IResourceBuilder<ProjectResource>> useOidcOnGateway;
+Action<IResourceBuilder<ProjectResource>> useKeycloakAdminOnKernel;
 Action<IResourceBuilder<ViteAppResource>> useOidcOnWeb;
 if (builder.Configuration["AppHost:OidcAuthority"] is { Length: > 0 } authority)
 {
@@ -84,6 +85,17 @@ if (builder.Configuration["AppHost:OidcAuthority"] is { Length: > 0 } authority)
         .WithEnvironment("OIDC_AUTHORITY", authority.TrimEnd('/'))
         .WithEnvironment("OIDC_AUDIENCE", builder.Configuration["AppHost:OidcAudience"] is { Length: > 0 } audience ? audience : ApiAudience)
         .WithEnvironment("OIDC_REQUIRE_HTTPS_METADATA", (authorityUri.Scheme == "https").ToString().ToLowerInvariant());
+    useKeycloakAdminOnKernel = kernelResource =>
+    {
+        if (builder.Configuration["KeycloakAdmin:AdminPassword"] is { Length: > 0 } configuredAdminPassword)
+        {
+            kernelResource
+                .WithEnvironment("KeycloakAdmin__BaseUrl", keycloakUrl)
+                .WithEnvironment("KeycloakAdmin__Realm", realm)
+                .WithEnvironment("KeycloakAdmin__AdminUsername", builder.Configuration["KeycloakAdmin:AdminUsername"] ?? "admin")
+                .WithEnvironment("KeycloakAdmin__AdminPassword", configuredAdminPassword);
+        }
+    };
     useOidcOnWeb = web => web
         .WithEnvironment("VITE_KEYCLOAK_URL", keycloakUrl)
         .WithEnvironment("VITE_KEYCLOAK_REALM", realm);
@@ -105,6 +117,11 @@ else
         .WithEnvironment("OIDC_AUTHORITY", ReferenceExpression.Create($"{keycloakHttp}/realms/cadence"))
         .WithEnvironment("OIDC_AUDIENCE", ApiAudience)
         .WithEnvironment("OIDC_REQUIRE_HTTPS_METADATA", "false");
+    useKeycloakAdminOnKernel = kernelResource => kernelResource
+        .WithEnvironment("KeycloakAdmin__BaseUrl", keycloakHttp)
+        .WithEnvironment("KeycloakAdmin__Realm", "cadence")
+        .WithEnvironment("KeycloakAdmin__AdminUsername", keycloakAdmin)
+        .WithEnvironment("KeycloakAdmin__AdminPassword", keycloakAdminPassword);
     useOidcOnWeb = web => web
         .WithEnvironment("VITE_KEYCLOAK_URL", keycloakHttp)
         .WithEnvironment("VITE_KEYCLOAK_REALM", "cadence");
@@ -149,6 +166,7 @@ Service(builder.AddProject<Projects.Cadence_Apps_Knowledge>("knowledge"));
 // environment is Development.
 var kernel = Service(builder.AddProject<Projects.Cadence_Kernel_Host>("kernel"))
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName);
+useKeycloakAdminOnKernel(kernel);
 if (builder.Environment.IsDevelopment())
 {
     kernel.WithEnvironment("Kernel__DevelopmentTenant__Code", "cadence-local");

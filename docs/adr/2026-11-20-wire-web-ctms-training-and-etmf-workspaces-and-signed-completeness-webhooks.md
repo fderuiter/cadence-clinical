@@ -1,4 +1,4 @@
-# ADR-2819: Wire Web CTMS, Study Training, and eTMF Workspaces With Signed Completeness Webhooks
+# ADR-2820: Wire Web CTMS, Study Training, and eTMF Workspaces With Signed Completeness Webhooks
 
 - **Status:** Accepted
 - **Date:** 2026-11-20
@@ -20,7 +20,7 @@ While the `.NET` microservices for CTMS (`apps/ctms`), Study Training & Delegati
 ## 2. Decision Drivers & Constraints
 
 - **End-to-End GxP Integrity (`UX-9`):** Web views must never fabricate greenlight states, approval statuses, or cryptographic tokens in the browser; all mutations and evaluations must flow through authenticated OpenAPI clients with `X-Change-Reason` and Part 11 `X-Sig-Token` headers.
-- **Zero-Trust Service-to-Service Identity ([ADR-2250](2026-09-29-zero-trust-forwarded-identity-signing.md)):** Completeness updates sent from eTMF to Execution must carry an HMAC-SHA256 forwarded-identity header signed as `etmf_service` using `IClock` timestamps.
+- **Zero-Trust Service-to-Service Identity ([ADR-2256](2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md)):** Completeness updates sent from eTMF to Execution must carry an HMAC-SHA256 forwarded-identity header signed as `etmf_service` using `IClock` timestamps.
 - **Strict Role Separation (`PermissionMatrix`):** Site activation (`site_compliance:activate`), greenlight certification (`ctms_greenlight:certify`), clinical QC transitions (`etmf_document:transition_clinical_qc`), CRA visit completion (`monitoring_visit:update`), supervisory visit sign-off (`monitoring_visit:sign_off`), and PI delegation sign-off must enforce role splits in both backend RBAC and disabled-control UI explanations.
 - **Hide Unbacked Surfaces:** Tabs and API calls without `.NET` backend routes (financials, CRA workload, recruitment, RTSM, training progress/quiz heartbeats) must stay uncalled and hidden outside demo builds.
 

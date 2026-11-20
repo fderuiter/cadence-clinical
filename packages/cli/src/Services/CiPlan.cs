@@ -83,7 +83,10 @@ public sealed record CiStep(string Job, string Name)
     /// </summary>
     public string? CoveredBy { get; init; }
 
-    /// <summary>A program the step needs on <c>PATH</c>. Without it the step is skipped with <see cref="ToolHint"/>.</summary>
+    /// <summary>
+    /// A program the step needs on <c>PATH</c>. Without it the step fails unless <c>--allow-skip</c> skips it with
+    /// <see cref="ToolHint"/>.
+    /// </summary>
     public string? RequiredTool { get; init; }
 
     /// <summary>How to install <see cref="RequiredTool"/>.</summary>
@@ -153,8 +156,6 @@ public static class CiPlan
     private const string QualitySentinels = "dotnet-quality/Run Cadence quality sentinels";
     private const string StyleNodeInstall = "lint-and-static/Install Node dependencies";
     private const string StyleFrontendBuild = "lint-and-static/Build frontend workspace";
-    private const string RtmReport = "docs/SDLC/Requirements_Traceability_Matrix.md";
-    private const string IqReport = "docs/SDLC/IQ_OQ_PQ_Execution_Report.md";
     private const string E2eJob = "accessibility-e2e"; // deid-ignore: the ci.yml job key, not an account number
 
     /// <summary>
@@ -176,8 +177,8 @@ public static class CiPlan
     /// <summary>Jobs of <c>ci.yml</c> that act on GitHub itself and have no local meaning, with the reason.</summary>
     public static IReadOnlyDictionary<string, string> GitHubOnlyJobs { get; } = new Dictionary<string, string>
     {
-        ["actionlint"] = "runs actionlint in GitHub Actions",
         ["container-security"] = "builds container images across a matrix and uploads Trivy SARIF to GitHub Code Scanning",
+        ["ci-gate"] = "aggregates pull-request validation job outcomes into one required branch ruleset status check",
         ["classify"] = "labels the pull request through the GitHub API",
         ["automerge"] = "approves and merges the pull request through the GitHub API",
         ["release-and-archive"] = "calls the production pipeline on pushes to main, release/* and v* tags",
@@ -204,6 +205,16 @@ public static class CiPlan
 
     private static List<CiJob> BuildJobs()
     {
+        var actionlint = new CiJob("actionlint", "Workflow Action Pinning & Actionlint Gate",
+        [
+            new("actionlint", "Run actionlint")
+            {
+                RequiredTool = "actionlint",
+                ToolHint = "install actionlint 1.7.12 (CI runs rhysd/actionlint from github.com/rhysd/actionlint/releases)",
+                Commands = [new CiCommand("actionlint", [])],
+            },
+        ]);
+
         var lintAndStatic = new CiJob("lint-and-static", "Lint and Static Verification",
         [
             new("lint-and-static", "Install Node dependencies") { Commands = [Pnpm("install", "--frozen-lockfile")] },
@@ -272,10 +283,9 @@ public static class CiPlan
             {
                 Commands = [Pnpm("docs:build")],
 
-                // scripts/build-docs.js runs the full 'cadence check' again before building; it skips that when the
-                // same gates already passed in this run (#5028). It also rewrites the RTM as a draft.
+                // scripts/build-docs.js runs openapi, schema-doc, and markdown checks before building; it skips those
+                // duplicate gates when they already passed in this run (#5028), while still running 'check rtm'.
                 EnvironmentIfPassed = [new(QualitySentinels, "CADENCE_DOCS_SKIP_CHECKS", "1")],
-                RestoreFiles = [RtmReport, IqReport],
             },
         ]);
 
@@ -348,11 +358,14 @@ public static class CiPlan
             },
             new("dotnet-tests", "Fail the run when a PostgreSQL test did not execute")
             {
-                // LocalCiRunner already checks DatabaseTestEvidence on the DefaultResultsDir TRX files above; this step
-                // runs the shell gate's own self-test so both gates stay verified locally (#5684, #5689).
+                // LocalCiRunner checks DatabaseTestEvidence on DefaultResultsDir when NeedsPostgres is set (unless
+                // --allow-skip is passed), standing in for check-database-test-results.sh while also running its self-test.
+                NeedsPostgres = true,
                 RequiredTool = "bash",
                 ToolHint = "install bash to run the shell gate self-test; DatabaseTestEvidence already checked the TRX reports",
                 Commands = [new CiCommand("bash", ["scripts/test-check-database-test-results.sh"])],
+                InProcessDisplay = $"verify no PostgreSQL test in {RtmGeneratorService.DefaultResultsDir} was skipped",
+                InProcessCiText = "bash scripts/check-database-test-results.sh",
             },
         ]);
 
@@ -420,7 +433,7 @@ public static class CiPlan
             },
         };
 
-        return [lintAndStatic, dotnetQuality, nativeAotBuild, docsBuild, security, frontend, dotnetTests, e2e, compliance];
+        return [actionlint, lintAndStatic, dotnetQuality, nativeAotBuild, docsBuild, security, frontend, dotnetTests, e2e, compliance];
     }
 
     /// <summary>

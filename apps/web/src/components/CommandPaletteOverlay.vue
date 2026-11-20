@@ -2,7 +2,7 @@
   <CanvasPalette
     v-if="isOpen"
     :study-code="activeStudyCode"
-    :participants="canvasStore.participants"
+    :participants="canvasStore.paletteParticipants"
     :workspace-items="workspaceItems"
     @close="emit('close')"
     @go="handleGo"
@@ -10,12 +10,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import CanvasPalette from "./canvas/CanvasPalette.vue";
 import {
   buildWorkspacePaletteItems,
   executePaletteTarget,
+  resolveCanvasParticipantContext,
   type PaletteTarget,
   type PaletteWorkspaceAction,
 } from "../canvas/palette";
@@ -24,7 +25,7 @@ import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 
-defineProps<{
+const props = defineProps<{
   isOpen?: boolean;
 }>();
 
@@ -47,14 +48,31 @@ const activeStudyCode = computed(() => {
   return canvasStore.studyCode || "";
 });
 
-const workspaceItems = computed(() =>
-  buildWorkspacePaletteItems({
+watch(
+  [() => props.isOpen, activeStudyCode],
+  ([open, code]) => {
+    if (open && code) {
+      canvasStore.ensurePaletteParticipants(code);
+    }
+  },
+  { immediate: true }
+);
+
+const workspaceItems = computed(() => {
+  const participantContext = resolveCanvasParticipantContext(
+    activeStudyCode.value,
+    route?.query,
+    canvasStore
+  );
+  return buildWorkspacePaletteItems({
     isAuthenticated: Boolean(authStore.isAuthenticated),
     normalizedRoles: authStore.normalizedRoles || [],
     availablePersonas: authStore.availablePersonas || [],
     activeStudyCode: activeStudyCode.value,
-  })
-);
+    activeSubjectCode: participantContext.subjectCode,
+    activeEnrollmentId: participantContext.enrollmentId,
+  });
+});
 
 function handleAction(action: PaletteWorkspaceAction) {
   if (action.kind === "open-help") {

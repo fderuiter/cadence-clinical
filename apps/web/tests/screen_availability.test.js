@@ -7,8 +7,8 @@ import { useOnboardingStore } from "../src/stores/onboarding";
 import { useNotificationsStore } from "../src/stores/notifications";
 import {
   AVAILABLE_SCREENS,
-  UNAVAILABLE_SCREENS_ISSUE,
   isScreenAvailable,
+  screenMetadata,
   screenTitle,
 } from "../src/router/availability";
 import { signInAs } from "./helpers/signIn.js";
@@ -103,7 +103,7 @@ describe("Screen availability", () => {
     expect(wrapper.text()).not.toContain("eCRF Form Engine");
   });
 
-  it("explains a hidden screen, links to the tracking issue, and offers study workspace recovery", async () => {
+  it("explains a hidden screen with product-family entitlement, pre-release roadmap status, and study workspace recovery", async () => {
     signInAsSuperAdmin();
     await router.push("/quality");
 
@@ -113,10 +113,17 @@ describe("Screen availability", () => {
     expect(wrapper.find("h2").text()).toBe(
       "Quality & RBQM Cockpit isn't available yet"
     );
-    expect(wrapper.find("a").attributes("href")).toBe(
-      UNAVAILABLE_SCREENS_ISSUE
+    expect(screenMetadata("quality").family).toBe("Assure");
+    expect(screenMetadata("etmf").family).toBe("Orbit");
+    expect(wrapper.find("#unavailable-entitlement-card").text()).toContain(
+      "Assure"
     );
+    expect(wrapper.find("#unavailable-roadmap-card").text()).toContain(
+      "Roadmap Status"
+    );
+    expect(wrapper.html()).not.toContain("4829");
     expect(wrapper.find("#btn-unavailable-study").exists()).toBe(true);
+    expect(wrapper.find("#btn-unavailable-plans").exists()).toBe(true);
     expect(wrapper.find("#btn-unavailable-home").exists()).toBe(true);
   });
 
