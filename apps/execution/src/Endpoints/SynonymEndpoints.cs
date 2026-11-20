@@ -71,6 +71,11 @@ public static class SynonymEndpoints
                 statusCode: StatusCodes.Status403Forbidden);
         }
 
+        if (ExecutionScopeGuard.RequireAnyStudyScope(httpContext) is { } callerDenied)
+        {
+            return callerDenied;
+        }
+
         if (!httpContext.Request.HasFormContentType)
         {
             return TypedResults.Problem(
@@ -89,6 +94,11 @@ public static class SynonymEndpoints
 
         string scope = form["scope"].FirstOrDefault() ?? form["file_scope"].FirstOrDefault() ?? "STUDY";
         string? studyId = form["study_id"].FirstOrDefault() ?? form["studyId"].FirstOrDefault();
+
+        if (RequireSynonymScope(httpContext, scope, studyId) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
 
         using var ms = new MemoryStream();
         await file.CopyToAsync(ms, cancellationToken);
@@ -124,6 +134,11 @@ public static class SynonymEndpoints
                 statusCode: StatusCodes.Status403Forbidden);
         }
 
+        if (ExecutionScopeGuard.RequireAnyStudyScope(httpContext) is { } callerDenied)
+        {
+            return callerDenied;
+        }
+
         if (!httpContext.Request.HasFormContentType)
         {
             return TypedResults.Problem(
@@ -142,6 +157,12 @@ public static class SynonymEndpoints
 
         string scope = form["scope"].FirstOrDefault() ?? form["file_scope"].FirstOrDefault() ?? "STUDY";
         string? studyId = form["study_id"].FirstOrDefault() ?? form["studyId"].FirstOrDefault();
+
+        if (RequireSynonymScope(httpContext, scope, studyId) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
         string? changeReason = form["reason_for_change"].FirstOrDefault() ?? form["change_reason"].FirstOrDefault();
 
         if (string.IsNullOrWhiteSpace(changeReason) && httpContext.Request.Headers.TryGetValue("X-Change-Reason", out var headerVal))
@@ -184,9 +205,18 @@ public static class SynonymEndpoints
         ISynonymImportService synonymService,
         string? study_id,
         string? studyId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        HttpContext? httpContext = null)
     {
         string? effectiveStudyId = !string.IsNullOrWhiteSpace(study_id) ? study_id : studyId;
+        IResult? scopeDenied = !string.IsNullOrWhiteSpace(effectiveStudyId)
+            ? ExecutionScopeGuard.RequireStudy(httpContext, effectiveStudyId)
+            : ExecutionScopeGuard.RequireAllStudies(httpContext);
+        if (scopeDenied is not null)
+        {
+            return scopeDenied;
+        }
+
         var rules = await synonymService.GetActiveSynonymRulesAsync(effectiveStudyId, cancellationToken);
         return TypedResults.Ok(rules);
     }
@@ -195,9 +225,18 @@ public static class SynonymEndpoints
         ISynonymImportService synonymService,
         string? study_id,
         string? studyId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        HttpContext? httpContext = null)
     {
         string? effectiveStudyId = !string.IsNullOrWhiteSpace(study_id) ? study_id : studyId;
+        IResult? scopeDenied = !string.IsNullOrWhiteSpace(effectiveStudyId)
+            ? ExecutionScopeGuard.RequireStudy(httpContext, effectiveStudyId)
+            : ExecutionScopeGuard.RequireAllStudies(httpContext);
+        if (scopeDenied is not null)
+        {
+            return scopeDenied;
+        }
+
         var jobs = await synonymService.GetImportJobsAsync(effectiveStudyId, cancellationToken);
         return TypedResults.Ok(jobs);
     }
@@ -214,6 +253,15 @@ public static class SynonymEndpoints
             return TypedResults.Problem(
                 detail: "Deactivating synonym rules requires DATA_MANAGER or SPONSOR_DESIGNER authorization.",
                 statusCode: StatusCodes.Status403Forbidden);
+        }
+
+        var existing = await synonymService.GetRuleByIdAsync(id, cancellationToken).ConfigureAwait(false);
+        IResult? scopeDenied = existing is not null
+            ? RequireSynonymScope(httpContext, existing.Scope, existing.StudyId)
+            : ExecutionScopeGuard.RequireAnyStudyScope(httpContext);
+        if (scopeDenied is not null)
+        {
+            return scopeDenied;
         }
 
         string? changeReason = httpContext.Request.Query["reason_for_change"].FirstOrDefault() ??
@@ -238,10 +286,20 @@ public static class SynonymEndpoints
         return TypedResults.Ok(new { message = "Synonym rule deactivated successfully.", id });
     }
 
+    private static IResult? RequireSynonymScope(HttpContext? httpContext, string? scope, string? studyId) =>
+        IsGlobalScope(scope)
+            ? ExecutionScopeGuard.RequireAllStudies(httpContext)
+            : ExecutionScopeGuard.RequireStudy(httpContext, studyId);
+
+    private static bool IsGlobalScope(string? scope) =>
+        string.Equals(scope?.Trim(), "ENTERPRISE", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(scope?.Trim(), "GLOBAL", StringComparison.OrdinalIgnoreCase);
+
     private static bool HasImportAuthorization(AuthenticatedCaller? caller)
     {
         if (caller == null) return false;
         return caller.Roles.Any(r =>
+            r.Equals(Cadence.Security.Rbac.RoleNormalization.ROLE_SPONSOR_DM, StringComparison.OrdinalIgnoreCase) ||
             r.Equals("DATA_MANAGER", StringComparison.OrdinalIgnoreCase) ||
             r.Equals("SPONSOR_DESIGNER", StringComparison.OrdinalIgnoreCase));
     }

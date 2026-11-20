@@ -24,4 +24,9 @@ public interface ILabToxicityGovernanceService
     Task<Result<LabToxicityEvaluateResponse>> EvaluateAsync(
         LabToxicityEvaluateRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<StagedAdverseEventReviewResponse?> GetReviewByIdAsync(
+        string reviewId,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<StagedAdverseEventReviewResponse?>(null);
 }

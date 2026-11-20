@@ -23,9 +23,15 @@ public static class CgtEndpoints
 
         group.MapPost("/apheresis", async (
             CgtApheresisCreateRequest request,
+            HttpContext httpContext,
             ICgtApplicationService service,
             CancellationToken ct) =>
         {
+            if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.CollectionSiteId) is { } denied)
+            {
+                return denied;
+            }
+
             try
             {
                 var result = await service.InitializeApheresisAsync(request, ct);
@@ -40,9 +46,15 @@ public static class CgtEndpoints
 
         group.MapPost("/milestone", async (
             CgtMilestoneCreateRequest request,
+            HttpContext httpContext,
             ICgtApplicationService service,
             CancellationToken ct) =>
         {
+            if (await GuardStudyAndStoredCocAsync(httpContext, service, request.StudyId, request.ChainOfCustodyId, ct) is { } denied)
+            {
+                return denied;
+            }
+
             try
             {
                 var result = await service.RecordMilestoneAsync(request, ct);
@@ -57,9 +69,15 @@ public static class CgtEndpoints
 
         group.MapPost("/manufacturing-bind", async (
             CgtManufacturingBindRequest request,
+            HttpContext httpContext,
             ICgtApplicationService service,
             CancellationToken ct) =>
         {
+            if (await GuardStudyAndStoredCocAsync(httpContext, service, request.StudyId, request.ChainOfCustodyId, ct) is { } denied)
+            {
+                return denied;
+            }
+
             try
             {
                 var result = await service.BindManufacturingBatchAsync(request, ct);
@@ -74,9 +92,20 @@ public static class CgtEndpoints
 
         group.MapPost("/bedside-verify", async (
             CgtBedsideVerificationRequest request,
+            HttpContext httpContext,
             ICgtApplicationService service,
             CancellationToken ct) =>
         {
+            if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is { } requestDenied)
+            {
+                return requestDenied;
+            }
+
+            if (GuardCocScope(httpContext, await service.GetSubjectChainOfCustodyScopeAsync(request.StudyId, request.SubjectId, ct)) is { } cocDenied)
+            {
+                return cocDenied;
+            }
+
             try
             {
                 var result = await service.VerifyBedsideAsync(request, ct);
@@ -95,9 +124,20 @@ public static class CgtEndpoints
 
         group.MapPost("/infuse", async (
             CgtInfusionExecuteRequest request,
+            HttpContext httpContext,
             ICgtApplicationService service,
             CancellationToken ct) =>
         {
+            if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is { } requestDenied)
+            {
+                return requestDenied;
+            }
+
+            if (GuardCocScope(httpContext, await service.GetChainOfCustodyScopeAsync(request.ChainOfCustodyId, ct)) is { } cocDenied)
+            {
+                return cocDenied;
+            }
+
             try
             {
                 var result = await service.ExecuteInfusionAsync(request, ct);
@@ -116,9 +156,20 @@ public static class CgtEndpoints
 
         group.MapPost("/returns", async (
             CgtVialReturnReconciliationRequest request,
+            HttpContext httpContext,
             ICgtApplicationService service,
             CancellationToken ct) =>
         {
+            if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is { } requestDenied)
+            {
+                return requestDenied;
+            }
+
+            if (GuardCocScope(httpContext, await service.GetSubjectChainOfCustodyScopeAsync(request.StudyId, request.SubjectId, ct)) is { } cocDenied)
+            {
+                return cocDenied;
+            }
+
             var result = await service.LogVialReturnAsync(request, ct);
             return Results.Ok(result);
         })
@@ -126,9 +177,21 @@ public static class CgtEndpoints
 
         group.MapPost("/destruction-certificate", async (
             CgtDestructionCertificateCreateRequest request,
+            HttpContext httpContext,
             ICgtApplicationService service,
             CancellationToken ct) =>
         {
+            if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is { } requestDenied)
+            {
+                return requestDenied;
+            }
+
+            if (request.CocId is { } cocId
+                && GuardCocScope(httpContext, await service.GetChainOfCustodyScopeAsync(cocId, ct)) is { } cocDenied)
+            {
+                return cocDenied;
+            }
+
             try
             {
                 var result = await service.GenerateDestructionCertificateAsync(request, ct);
@@ -143,9 +206,28 @@ public static class CgtEndpoints
 
         group.MapPost("/verify-barcode", (
             CgtBarcodeVerifyRequest request,
+            HttpContext httpContext,
             ICgtApplicationService service) =>
         {
+            if ((ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
+                 ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } callerDenied)
+            {
+                return callerDenied;
+            }
+
             var result = service.VerifyBarcode(request);
+            if (!string.IsNullOrWhiteSpace(result.StudyId)
+                && ExecutionScopeGuard.RequireStudy(httpContext, result.StudyId) is { } studyDenied)
+            {
+                return studyDenied;
+            }
+
+            if (!string.IsNullOrWhiteSpace(result.SiteId)
+                && ExecutionScopeGuard.RequireSite(httpContext, result.SiteId) is { } siteDenied)
+            {
+                return siteDenied;
+            }
+
             return Results.Ok(result);
         })
         .RequirePermission("cgt_chain_of_custody:read");
@@ -153,10 +235,26 @@ public static class CgtEndpoints
         group.MapGet("/chain-of-custody/{studyId}/{subjectId}", async (
             string studyId,
             string subjectId,
+            HttpContext httpContext,
             ICgtApplicationService service,
             CancellationToken ct) =>
         {
+            if ((ExecutionScopeGuard.RequireStudy(httpContext, studyId)
+                 ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } callerDenied)
+            {
+                return callerDenied;
+            }
+
             var result = await service.GetFullTraceabilityAsync(studyId, subjectId, ct);
+            foreach (string? siteId in new[] { result.ChainOfCustody?.SiteId, result.BedsideVerification?.SiteId, result.DestructionCertificate?.SiteId })
+            {
+                if (!string.IsNullOrWhiteSpace(siteId)
+                    && ExecutionScopeGuard.RequireSite(httpContext, siteId) is { } siteDenied)
+                {
+                    return siteDenied;
+                }
+            }
+
             return Results.Ok(result);
         })
         .RequirePermission("cgt_chain_of_custody:read")
@@ -164,26 +262,57 @@ public static class CgtEndpoints
 
         group.MapGet("/certificates/{studyId}", async (
             string studyId,
+            HttpContext httpContext,
             ICgtApplicationService service,
             CancellationToken ct) =>
         {
+            if (ExecutionScopeGuard.RequireStudyAndResolveSiteFilter(httpContext, studyId, null, out var siteFilter, out _) is { } denied)
+            {
+                return denied;
+            }
+
             var result = await service.ListDestructionCertificatesAsync(studyId, ct);
-            return Results.Ok(result);
+            return Results.Ok(ExecutionScopeGuard.ApplyFilters(result, null, x => x.StudyId, siteFilter, x => x.SiteId));
         })
         .RequirePermission("cgt_chain_of_custody:read")
         .RequireStudyScope("studyId");
 
         group.MapGet("/reconciliations/{studyId}", async (
             string studyId,
+            HttpContext httpContext,
             ICgtApplicationService service,
             CancellationToken ct) =>
         {
+            if (ExecutionScopeGuard.RequireStudyAndResolveSiteFilter(httpContext, studyId, null, out var siteFilter, out _) is { } denied)
+            {
+                return denied;
+            }
+
             var result = await service.ListVialReconciliationsAsync(studyId, ct);
-            return Results.Ok(result);
+            return Results.Ok(ExecutionScopeGuard.ApplyFilters(result, null, x => x.StudyId, siteFilter, x => x.SiteId));
         })
         .RequirePermission("cgt_chain_of_custody:read")
         .RequireStudyScope("studyId");
 
         return routes;
     }
+
+    private static async Task<IResult?> GuardStudyAndStoredCocAsync(
+        HttpContext httpContext,
+        ICgtApplicationService service,
+        string studyId,
+        Guid chainOfCustodyId,
+        CancellationToken ct)
+    {
+        if ((ExecutionScopeGuard.RequireStudy(httpContext, studyId)
+             ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } callerDenied)
+        {
+            return callerDenied;
+        }
+
+        return GuardCocScope(httpContext, await service.GetChainOfCustodyScopeAsync(chainOfCustodyId, ct).ConfigureAwait(false));
+    }
+
+    private static IResult? GuardCocScope(HttpContext httpContext, (string StudyId, string SiteId)? scope) =>
+        scope is { } s ? ExecutionScopeGuard.RequireStudyAndSite(httpContext, s.StudyId, s.SiteId) : null;
 }

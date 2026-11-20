@@ -137,26 +137,45 @@ public static class LabRangeEndpoints
         string? studyId,
         string? site_id,
         string? siteId,
+        HttpContext httpContext,
         ILabRangeImportService labRangeImportService,
         CancellationToken ct)
     {
         string? effectiveStudyId = !string.IsNullOrWhiteSpace(study_id) ? study_id : studyId;
         string? effectiveSiteId = !string.IsNullOrWhiteSpace(site_id) ? site_id : siteId;
 
-        var result = await labRangeImportService.GetReferenceRangesAsync(effectiveStudyId ?? "", effectiveSiteId, ct);
-        return TypedResults.Ok(result);
+        if (ExecutionScopeGuard.ResolveStudyAndSiteFilters(httpContext, effectiveStudyId, effectiveSiteId, out var studyFilter, out var siteFilter, out var querySiteId) is { } denied)
+        {
+            return denied;
+        }
+
+        var result = await labRangeImportService.GetReferenceRangesAsync(effectiveStudyId ?? string.Empty, querySiteId, ct);
+        return TypedResults.Ok(ExecutionScopeGuard.ApplyFilters(result, studyFilter, r => r.StudyId, siteFilter, r => r.SiteId));
     }
 
     private static async Task<IResult> GetReferenceRangeByIdAsync(
         Guid id,
+        HttpContext httpContext,
         ILabRangeImportService labRangeImportService,
         CancellationToken ct)
     {
+        if ((ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
+             ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } callerDenied)
+        {
+            return callerDenied;
+        }
+
         var result = await labRangeImportService.GetReferenceRangeByIdAsync(id, ct);
         if (result is null)
         {
             return TypedResults.NotFound(new { code = "RANGE_NOT_FOUND", detail = $"Lab reference range with ID '{id}' was not found." });
         }
+
+        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(httpContext, result.StudyId, result.SiteId) is { } recordDenied)
+        {
+            return recordDenied;
+        }
+
         return TypedResults.Ok(result);
     }
 
@@ -166,6 +185,11 @@ public static class LabRangeEndpoints
         ILabRangeImportService labRangeImportService,
         CancellationToken ct)
     {
+        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId) is { } denied)
+        {
+            return denied;
+        }
+
         string createdBy = httpContext.User.ToAuthenticatedCaller()?.UserId ?? "DATA_MANAGER";
         string? changeReason = ChangeReasonHeader.Read(httpContext.Request) ?? request.ReasonForChange;
 
@@ -181,6 +205,11 @@ public static class LabRangeEndpoints
         ILabRangeImportService labRangeImportService,
         CancellationToken ct)
     {
+        if (await GuardStoredRangeAsync(id, httpContext, labRangeImportService, ct) is { } denied)
+        {
+            return denied;
+        }
+
         string updatedBy = httpContext.User.ToAuthenticatedCaller()?.UserId ?? "DATA_MANAGER";
         string? changeReason = ChangeReasonHeader.Read(httpContext.Request) ?? request.ReasonForChange;
 
@@ -199,6 +228,11 @@ public static class LabRangeEndpoints
         ILabRangeImportService labRangeImportService,
         CancellationToken ct)
     {
+        if (await GuardStoredRangeAsync(id, httpContext, labRangeImportService, ct) is { } denied)
+        {
+            return denied;
+        }
+
         string updatedBy = httpContext.User.ToAuthenticatedCaller()?.UserId ?? "DATA_MANAGER";
         string changeReason = ChangeReasonHeader.Read(httpContext.Request) ?? "Deactivating lab reference range.";
 
@@ -215,6 +249,11 @@ public static class LabRangeEndpoints
         ILabRangeImportService labRangeImportService,
         CancellationToken ct)
     {
+        if (ExecutionScopeGuard.RequireAnyStudyScope(httpContext) is { } callerDenied)
+        {
+            return callerDenied;
+        }
+
         BulkLabRangeDryRunRequest request;
 
         if (httpContext.Request.HasFormContentType)
@@ -252,6 +291,11 @@ public static class LabRangeEndpoints
                 ?? throw new BadHttpRequestException("Invalid JSON request body.");
         }
 
+        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
         try
         {
             var response = await labRangeImportService.DryRunAsync(request, ct);
@@ -268,6 +312,11 @@ public static class LabRangeEndpoints
         ILabRangeImportService labRangeImportService,
         CancellationToken ct)
     {
+        if (ExecutionScopeGuard.RequireAnyStudyScope(httpContext) is { } callerDenied)
+        {
+            return callerDenied;
+        }
+
         BulkLabRangeImportCommitRequest request;
 
         if (httpContext.Request.HasFormContentType)
@@ -309,6 +358,11 @@ public static class LabRangeEndpoints
                 ?? throw new BadHttpRequestException("Invalid JSON request body.");
         }
 
+        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
         string submittedBy = httpContext.User.ToAuthenticatedCaller()?.UserId ?? "DATA_MANAGER";
         string? headerChangeReason = ChangeReasonHeader.Read(httpContext.Request);
         if (!string.IsNullOrWhiteSpace(headerChangeReason))
@@ -330,39 +384,83 @@ public static class LabRangeEndpoints
     private static async Task<IResult> GetBatchStatusAsync(
         string? study_id,
         string? studyId,
+        HttpContext httpContext,
         ILabRangeImportService labRangeImportService,
         CancellationToken ct)
     {
         string? effectiveStudyId = !string.IsNullOrWhiteSpace(study_id) ? study_id : studyId;
-        var result = await labRangeImportService.GetImportJobsAsync(effectiveStudyId ?? "", ct);
-        return TypedResults.Ok(result);
+        if (ExecutionScopeGuard.ResolveStudyAndSiteFilters(httpContext, effectiveStudyId, null, out var studyFilter, out var siteFilter, out _) is { } denied)
+        {
+            return denied;
+        }
+
+        var result = await labRangeImportService.GetImportJobsAsync(effectiveStudyId ?? string.Empty, ct);
+        return TypedResults.Ok(ExecutionScopeGuard.ApplyFilters(result, studyFilter, j => j.StudyId, siteFilter, j => j.SiteId));
     }
 
     private static async Task<IResult> GetBatchStatusByIdAsync(
         Guid id,
+        HttpContext httpContext,
         ILabRangeImportService labRangeImportService,
         CancellationToken ct)
     {
+        if ((ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
+             ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } callerDenied)
+        {
+            return callerDenied;
+        }
+
         var result = await labRangeImportService.GetImportJobByIdAsync(id, ct);
         if (result is null)
         {
             return TypedResults.NotFound(new { code = "JOB_NOT_FOUND", detail = $"Batch import job with ID '{id}' was not found." });
         }
+
+        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(httpContext, result.StudyId, result.SiteId) is { } recordDenied)
+        {
+            return recordDenied;
+        }
+
         return TypedResults.Ok(result);
     }
 
     private static IResult ConvertUnit(
         UnitConversionRequest request,
+        HttpContext httpContext,
         ILabRangeImportService labRangeImportService)
     {
+        if (ExecutionScopeGuard.RequireAnyStudyScope(httpContext) is { } denied)
+        {
+            return denied;
+        }
+
         var response = labRangeImportService.ConvertUnit(request);
         return TypedResults.Ok(response);
     }
 
     private static IResult GetLoincCatalog(
+        HttpContext httpContext,
         ILabRangeImportService labRangeImportService)
     {
+        if (ExecutionScopeGuard.RequireAnyStudyScope(httpContext) is { } denied)
+        {
+            return denied;
+        }
+
         var response = labRangeImportService.GetLoincCatalog();
         return TypedResults.Ok(response);
+    }
+
+    private static async Task<IResult?> GuardStoredRangeAsync(
+        Guid id,
+        HttpContext httpContext,
+        ILabRangeImportService labRangeImportService,
+        CancellationToken ct)
+    {
+        var existing = await labRangeImportService.GetReferenceRangeByIdAsync(id, ct).ConfigureAwait(false);
+        return existing is not null
+            ? ExecutionScopeGuard.RequireStudyAndOptionalSite(httpContext, existing.StudyId, existing.SiteId)
+            : (ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
+                ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _));
     }
 }

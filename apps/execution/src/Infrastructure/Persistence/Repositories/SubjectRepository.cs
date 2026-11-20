@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -91,6 +92,11 @@ public sealed class SubjectRepository(ExecutionDbContext context)
         if (criteria.SiteCode is { } siteCode)
         {
             query = query.Where(s => s.SiteCode == siteCode);
+        }
+        else if (criteria.AllowedSites is { } allowedSites)
+        {
+            List<SiteCode?> siteValues = allowedSites.Select(s => (SiteCode?)s).ToList();
+            query = query.Where(s => siteValues.Contains(s.SiteCode));
         }
 
         if (criteria.Status is { } status)
