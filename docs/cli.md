@@ -163,10 +163,10 @@ Runs the jobs of `.github/workflows/ci.yml` on this machine, because GitHub Acti
 repository until 2027 (#5017). Each step runs the same command as in CI, in the same order, from the repository root.
 
 ```bash
-pnpm cadence ci                         # lint-and-static, dotnet-quality, native-aot-build, docs-build, security, unit-tests, dotnet-tests and compliance
+pnpm cadence ci                         # lint-and-static, dotnet-quality, native-aot-build, docs-build, security, unit-tests, dotnet-tests, accessibility-e2e and compliance
 pnpm cadence ci --job dotnet-tests      # one job (repeat --job for more)
 pnpm cadence ci --job compliance        # a job and the jobs it needs (unit-tests, dotnet-tests)
-pnpm cadence ci --job accessibility-e2e # the Playwright job, which CI runs only on a push to main
+pnpm cadence ci --job accessibility-e2e # the Playwright E2E and browser-to-database job alone
 pnpm cadence ci --list                  # what each step runs locally, without running it
 ```
 
@@ -189,7 +189,7 @@ Where it differs from CI:
   instead of passing with every database test skipped. After the test step passes, its TRX files are read, and any test
   in `Cadence.IntegrationTests` or `Cadence.E2ETests` that was skipped or did not execute fails the step too (#5325),
   except the opt-in lineage benchmark and browser correction check listed in `DatabaseTestEvidence.OptInTests` (the
-  browser correction check runs with `CADENCE_TEST_BROWSER=1` in `--job accessibility-e2e`). `--allow-skip` accepts the
+  browser correction check runs with `CADENCE_TEST_BROWSER=1` in the `accessibility-e2e` job). `--allow-skip` accepts the
   skips.
 - **Checks already run once are not repeated.** `lint-and-static` runs `markdown` and `api-clients`, `dotnet-quality`
   runs `cadence check --exclude api-clients --exclude vulnerabilities`, and `security` runs `vulnerabilities`. Steps in
