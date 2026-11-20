@@ -30,9 +30,9 @@ This decision implements requirements under Trace-17.
 
 Instead of copying, study version nodes directly reference global library nodes via shared relationships.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Reduces node duplication in the database.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Violates GxP study-level version freeze constraints. If a study is amended or frozen, modifying the shared global template could retroactively alter the historical metadata definition of a study.
   - ❌ Fails to allow localized study-specific overrides/extensions to the instantiated template.
 
@@ -40,11 +40,11 @@ Instead of copying, study version nodes directly reference global library nodes 
 
 When a study designer instantiates a library template, the platform clones the template's properties and payload into a distinct, study-scoped copy, and records an `INSTANTIATED_FROM` relationship pointing to the source library version node with tracing metadata (source ID, version, sponsor, and timestamp).
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Strictly preserves study-level immutability and GCP version freezing.
   - ✅ Allows study-specific changes to the copy without affecting the global template or other studies.
   - ✅ Provides perfect audit traceability back to the source library metadata version.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Moderately increases the number of nodes in the graph database.
 
 ---

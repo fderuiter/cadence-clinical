@@ -49,20 +49,20 @@ K-PROJ-1) and a rule format beside the one rule language (against K-RULE-3).
 
 - **Chosen Option:** Option 2. `tripartite.py` is not ported. Each of its parts maps to an existing home:
 
-| Tripartite part | Where it lives now |
-| --- | --- |
-| Data schema variables (`VariableDefinition`, `DataSchema`) | Protocol design `CollectionSpec` items bound to concept versions (K-SEM-1). Reusable ones are `CollectionSpecification` library items ([ADR-2503](2026-09-30-reusable-form-blocks-are-collection-specification-library-items.md)) |
-| `CdiscMetadata` (domain, OID, SDTM target, core designation) | Standards Registry data and mapping specifications (#4810), never the collected item (K-PROJ-1) |
-| `ConstraintDefinition` | `required` is `CollectionItem.Required`, and allowed values are a `TerminologyBinding`. Ranges, lengths and patterns are rule-pack edit checks (K-RULE-3, ADR-2461) |
-| `phi_pii_masked` | Direct identifiers live in the IdentityVault ([ADR-2253](2026-09-29-identity-vault-and-layered-participant-identity.md)) and are never form data |
-| `sdv_tier` | The monitoring plan's SDV strategy in the Quality engine (K-QBD-2). A verification is a `Verified(SDV)` Assertion |
-| UI schema (sections, widgets, viewports) | Form design in the DDF compiler: appearance and item text ([ADR-2502](2026-09-30-ddf-item-rules-use-the-one-rule-language.md)). It is presentation, so it stays out of the kernel (K-SCOPE-1) |
-| `AstEditCheck` | Rule-pack rules in the one rule language (ADR-2461), with findings (ADR-2462) |
-| `DerivedMathRule` | Derived variables (#5043) |
-| `CrossVisitDependency` | The protocol design's schedule and `ExpectedSchedule` (ADR-2487), with conditional visits in #5045 |
-| Version, `created_by` and `reason_for_change` fields | The ProtocolVersion lifecycle and the kernel audit log |
-| `PatientMigrationMatrix` | Effectivity ([ADR-2456](2026-09-30-effectivity-and-study-site-activation.md)) and Applicability (spec §7.5): which protocol version governs a participant, and when. Missing data after a retrospective change is a finding, not a directive |
-| `SyntheticPayload` and `UatEvidenceReport` | Evaluate-only simulation over candidate versions ([ADR-2480](2026-09-30-evaluate-only-simulation-over-candidate-versions.md)), with validation runs as the evidence |
+| Tripartite part                                              | Where it lives now                                                                                                                                                                                                                           |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Data schema variables (`VariableDefinition`, `DataSchema`)   | Protocol design `CollectionSpec` items bound to concept versions (K-SEM-1). Reusable ones are `CollectionSpecification` library items ([ADR-2503](2026-09-30-reusable-form-blocks-are-collection-specification-library-items.md))            |
+| `CdiscMetadata` (domain, OID, SDTM target, core designation) | Standards Registry data and mapping specifications (#4810), never the collected item (K-PROJ-1)                                                                                                                                              |
+| `ConstraintDefinition`                                       | `required` is `CollectionItem.Required`, and allowed values are a `TerminologyBinding`. Ranges, lengths and patterns are rule-pack edit checks (K-RULE-3, ADR-2461)                                                                          |
+| `phi_pii_masked`                                             | Direct identifiers live in the IdentityVault ([ADR-2253](2026-09-29-identity-vault-and-layered-participant-identity.md)) and are never form data                                                                                             |
+| `sdv_tier`                                                   | The monitoring plan's SDV strategy in the Quality engine (K-QBD-2). A verification is a `Verified(SDV)` Assertion                                                                                                                            |
+| UI schema (sections, widgets, viewports)                     | Form design in the DDF compiler: appearance and item text ([ADR-2502](2026-09-30-ddf-item-rules-use-the-one-rule-language.md)). It is presentation, so it stays out of the kernel (K-SCOPE-1)                                                |
+| `AstEditCheck`                                               | Rule-pack rules in the one rule language (ADR-2461), with findings (ADR-2462)                                                                                                                                                                |
+| `DerivedMathRule`                                            | Derived variables (#5043)                                                                                                                                                                                                                    |
+| `CrossVisitDependency`                                       | The protocol design's schedule and `ExpectedSchedule` (ADR-2487), with conditional visits in #5045                                                                                                                                           |
+| Version, `created_by` and `reason_for_change` fields         | The ProtocolVersion lifecycle and the kernel audit log                                                                                                                                                                                       |
+| `PatientMigrationMatrix`                                     | Effectivity ([ADR-2456](2026-09-30-effectivity-and-study-site-activation.md)) and Applicability (spec §7.5): which protocol version governs a participant, and when. Missing data after a retrospective change is a finding, not a directive |
+| `SyntheticPayload` and `UatEvidenceReport`                   | Evaluate-only simulation over candidate versions ([ADR-2480](2026-09-30-evaluate-only-simulation-over-candidate-versions.md)), with validation runs as the evidence                                                                          |
 
 - ADR-2231's product direction still stands: a visual designer, forms as data rather than DDL, one rule language that
   runs the same everywhere, amendments without downtime, and automated qualification. Only its tripartite document is

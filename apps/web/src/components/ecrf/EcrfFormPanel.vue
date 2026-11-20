@@ -121,7 +121,9 @@
     <template v-else>
       <dl class="ecrf-form-summary" data-testid="ecrf-form-summary">
         <dt>Form</dt>
-        <dd data-testid="ecrf-form-id">{{ form.form_id }}</dd>
+        <dd data-testid="ecrf-form-id">
+          {{ form.form_id }}
+        </dd>
         <dt>Collects</dt>
         <dd>{{ form.collection_spec_id }}</dd>
         <dt>Visit</dt>
@@ -129,7 +131,9 @@
         <dt>Collected</dt>
         <dd>{{ form.collected_at }}</dd>
         <dt>Version</dt>
-        <dd data-testid="ecrf-form-version">{{ form.version }}</dd>
+        <dd data-testid="ecrf-form-version">
+          {{ form.version }}
+        </dd>
         <dt>Status</dt>
         <dd data-testid="ecrf-form-status">
           <span v-if="form.complete" class="ecrf-form-complete">Complete</span>
@@ -149,12 +153,131 @@
       >
         <strong>Locked.</strong> Values cannot be changed while a lock is in
         force.
+        <span data-testid="ecrf-lock-scope-note">
+          <template v-if="assertionsLocked">
+            Source verifications, verification withdrawals, and query changes
+            are also blocked while a Locked assertion is in force.
+          </template>
+          <template v-else>
+            Source verification and queries remain available while Frozen.
+          </template>
+        </span>
         <ul>
           <li v-for="held in form.locks" :key="held.lock_id">
             {{ held.kind }} on {{ held.scope }} by {{ held.locked_by }} at
             {{ held.locked_at }}: {{ held.reason }}
           </li>
         </ul>
+      </div>
+
+      <div
+        v-if="canVerifySource && unverifiedItems.length > 0"
+        class="ecrf-bulk-sdv"
+        data-testid="ecrf-bulk-sdv"
+      >
+        <div class="ecrf-form-row">
+          <strong
+            >Source verification ({{ unverifiedItems.length }} unverified
+            {{ unverifiedItems.length === 1 ? "item" : "items" }})</strong
+          >
+          <button
+            id="ecrf-sdv-select-all"
+            class="btn btn-secondary"
+            type="button"
+            :disabled="sdvBusy || assertionsLocked"
+            @click="selectAllUnverifiedSdv"
+          >
+            Select all unverified
+          </button>
+          <button
+            v-if="selectedSdvItems.length > 0"
+            id="ecrf-sdv-clear-selection"
+            class="btn btn-secondary"
+            type="button"
+            :disabled="sdvBusy"
+            @click="selectedSdvItems = []"
+          >
+            Clear selection
+          </button>
+        </div>
+        <p
+          v-if="assertionsLocked"
+          class="ecrf-form-hint"
+          data-testid="ecrf-sdv-locked-note"
+        >
+          This scope is Locked, so source verifications cannot be recorded or
+          withdrawn until the lock is released.
+        </p>
+        <div v-else-if="selectedSdvItems.length > 0" class="ecrf-form-row">
+          <label for="ecrf-bulk-sdv-reason"
+            >Verification reason ({{ selectedSdvItems.length }} selected)</label
+          >
+          <input
+            id="ecrf-bulk-sdv-reason"
+            v-model="bulkSdvReason"
+            type="text"
+            autocomplete="off"
+            placeholder="Verified against source medical record"
+            :disabled="sdvBusy"
+          />
+          <button
+            id="ecrf-bulk-sdv-submit"
+            class="btn btn-primary"
+            type="button"
+            :disabled="sdvBusy || !bulkSdvReason.trim()"
+            @click="submitBulkSdv"
+          >
+            {{
+              sdvBusy
+                ? "Verifying…"
+                : `Verify selected (${selectedSdvItems.length})`
+            }}
+          </button>
+        </div>
+        <ul
+          v-if="bulkSdvResults.length > 0"
+          class="ecrf-bulk-sdv-results"
+          data-testid="ecrf-bulk-sdv-results"
+          aria-live="polite"
+        >
+          <li
+            v-for="res in bulkSdvResults"
+            :key="res.itemId"
+            :data-sdv-result="res.itemId"
+            :data-ok="String(res.ok)"
+            :class="
+              res.ok
+                ? 'ecrf-bulk-sdv-result--ok'
+                : 'ecrf-bulk-sdv-result--failed'
+            "
+          >
+            <strong>{{ res.itemId }}:</strong> {{ res.message }}
+          </li>
+        </ul>
+      </div>
+
+      <div
+        v-if="sdvOutcome"
+        data-testid="ecrf-sdv-outcome"
+        :class="[
+          'ecrf-form-outcome',
+          sdvOutcome.kind === 'done'
+            ? 'ecrf-form-outcome--saved'
+            : 'ecrf-form-outcome--failed',
+        ]"
+        aria-live="polite"
+        :role="sdvOutcome.kind === 'done' ? 'status' : 'alert'"
+      >
+        {{ sdvOutcome.message }}
+        <button
+          v-if="sdvOutcome.kind === 'stale'"
+          id="ecrf-sdv-reload"
+          class="btn btn-secondary"
+          type="button"
+          @click="reloadAfterSdvStale"
+        >
+          Reload form
+        </button>
       </div>
 
       <form id="ecrf-form-page" @submit.prevent="submit">
@@ -165,14 +288,22 @@
               <th scope="col">Value</th>
               <th scope="col">Or missing because</th>
               <th scope="col">Revision</th>
+              <th scope="col">Verification</th>
               <th scope="col">Queries</th>
             </tr>
           </thead>
           <tbody>
             <template v-for="item in items" :key="item.item_id">
               <tr
+                :id="`ecrf-row-${item.item_id}`"
                 :data-item="item.item_id"
-                :class="{ 'ecrf-item-edited': isEdited(item) }"
+                :data-highlighted="
+                  highlightItemId === item.item_id ? 'true' : undefined
+                "
+                :class="{
+                  'ecrf-item-edited': isEdited(item),
+                  'ecrf-item-highlighted': highlightItemId === item.item_id,
+                }"
               >
                 <th scope="row">
                   <label :for="`ecrf-item-${item.item_id}`">
@@ -227,7 +358,7 @@
                   </select>
                 </td>
                 <td class="ecrf-item-revision">
-                  <template v-if="item.value">
+                  <template v-if="item.value && !isUnrecordedValue(item.value)">
                     <component
                       :is="routerLinkTag"
                       v-if="itemObservationLink(item.observation_id)"
@@ -239,7 +370,73 @@
                     <template v-else>{{ item.revision }}</template>
                     by {{ item.recorded_by }} at {{ item.recorded_at }}
                   </template>
-                  <template v-else>No value</template>
+                  <template v-else> No value </template>
+                </td>
+                <td>
+                  <div class="ecrf-item-sdv">
+                    <span
+                      v-if="activeVerification(item)"
+                      class="ecrf-sdv-badge ecrf-sdv-badge--verified"
+                      :data-testid="`ecrf-sdv-status-${item.item_id}`"
+                    >
+                      Verified (rev {{ item.revision }})
+                    </span>
+                    <span
+                      v-else-if="needsReverification(item)"
+                      class="ecrf-sdv-badge ecrf-sdv-badge--reverify"
+                      :data-testid="`ecrf-sdv-status-${item.item_id}`"
+                    >
+                      Needs re-verification
+                    </span>
+                    <span
+                      v-else-if="hasRecordedValue(item)"
+                      class="ecrf-sdv-badge ecrf-sdv-badge--unverified"
+                      :data-testid="`ecrf-sdv-status-${item.item_id}`"
+                    >
+                      Unverified
+                    </span>
+                    <span
+                      v-else
+                      class="ecrf-sdv-none"
+                      :data-testid="`ecrf-sdv-status-${item.item_id}`"
+                    >
+                      No value
+                    </span>
+                    <div
+                      v-if="canVerifySource && hasRecordedValue(item)"
+                      class="ecrf-sdv-actions"
+                    >
+                      <template v-if="!activeVerification(item)">
+                        <input
+                          :id="`ecrf-sdv-select-${item.item_id}`"
+                          v-model="selectedSdvItems"
+                          type="checkbox"
+                          :value="item.item_id"
+                          :disabled="sdvBusy || assertionsLocked"
+                          :aria-label="`Select ${item.item_id} for source verification`"
+                        />
+                        <button
+                          :id="`ecrf-verify-${item.item_id}`"
+                          class="btn btn-secondary"
+                          type="button"
+                          :disabled="sdvBusy || assertionsLocked"
+                          @click="beginVerify(item)"
+                        >
+                          Verify
+                        </button>
+                      </template>
+                      <button
+                        v-else
+                        :id="`ecrf-unverify-${item.item_id}`"
+                        class="btn btn-secondary"
+                        type="button"
+                        :disabled="sdvBusy || assertionsLocked"
+                        @click="beginRetract(item, activeVerification(item)!)"
+                      >
+                        Withdraw verification
+                      </button>
+                    </div>
+                  </div>
                 </td>
                 <td>
                   <div class="ecrf-item-queries">
@@ -259,11 +456,11 @@
                       Value changed since queried
                     </span>
                     <button
-                      v-if="canManageQueries && item.observation_id"
+                      v-if="canManageQueries"
                       :id="`ecrf-raise-${item.item_id}`"
                       class="btn btn-secondary"
                       type="button"
-                      :disabled="queries.busy"
+                      :disabled="queries.busy || assertionsLocked"
                       @click="beginRaise(item)"
                     >
                       Raise query
@@ -272,15 +469,71 @@
                 </td>
               </tr>
               <tr
+                v-if="pendingSdv?.item_id === item.item_id"
+                class="ecrf-sdv-row"
+              >
+                <td colspan="6">
+                  <div class="ecrf-form-row">
+                    <label for="ecrf-sdv-reason">
+                      <template v-if="pendingSdv.mode === 'verify'">
+                        Reason for verifying {{ pendingSdv.item_id }} (revision
+                        {{ pendingSdv.revision }})
+                      </template>
+                      <template v-else>
+                        Reason for withdrawing verification on
+                        {{ pendingSdv.item_id }}
+                      </template>
+                    </label>
+                    <input
+                      id="ecrf-sdv-reason"
+                      v-model="sdvReason"
+                      type="text"
+                      autocomplete="off"
+                      :disabled="sdvBusy || assertionsLocked"
+                    />
+                    <button
+                      id="ecrf-sdv-confirm"
+                      class="btn btn-primary"
+                      type="button"
+                      :disabled="
+                        sdvBusy || assertionsLocked || !sdvReason.trim()
+                      "
+                      @click="confirmSdv"
+                    >
+                      {{
+                        pendingSdv.mode === "verify"
+                          ? "Confirm verification"
+                          : "Withdraw verification"
+                      }}
+                    </button>
+                    <button
+                      id="ecrf-sdv-cancel"
+                      class="btn btn-secondary"
+                      type="button"
+                      :disabled="sdvBusy"
+                      @click="pendingSdv = null"
+                    >
+                      Back
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr
                 v-if="raising?.item_id === item.item_id"
                 class="ecrf-raise-row"
               >
-                <td colspan="5">
+                <td colspan="6">
                   <div class="ecrf-form-row">
-                    <label for="ecrf-raise-text"
-                      >Query on {{ raising.item_id }} (revision
-                      {{ raising.revision }})</label
-                    >
+                    <label for="ecrf-raise-text">
+                      <template v-if="raising.unrecorded">
+                        Missing-data query on {{ raising.item_id }} (no value
+                        recorded)
+                      </template>
+                      <template v-else>
+                        Query on {{ raising.item_id }} (revision
+                        {{ raising.revision }})
+                      </template>
+                    </label>
                     <textarea
                       id="ecrf-raise-text"
                       v-model="raiseText"
@@ -349,7 +602,9 @@
           {{ outcome.changed === 1 ? "value" : "values" }} recorded, form
           version {{ outcome.version }}.
         </template>
-        <template v-else>{{ outcome.message }}</template>
+        <template v-else>
+          {{ outcome.message }}
+        </template>
         <div
           v-if="outcome.kind === 'locked' && outcome.unsaved.length > 0"
           class="ecrf-locked-unsaved"
@@ -393,9 +648,11 @@
         <FormQueryList
           v-else
           :queries="queries.queries"
-          :can-manage="canManageQueries"
+          :can-manage="!!canManageQueries"
           :busy="queries.busy"
+          :assertions-locked="assertionsLocked"
           :act="queries.act"
+          :act-many="queries.actMany"
           :form-to="queryFormLink"
           :observation-to="queryObservationLink"
         />
@@ -441,10 +698,10 @@
           >
           <template v-else>{{ assertion.target }}</template>
           <template v-if="assertion.revision !== null">
-            (revision {{ assertion.revision }})</template
-          >
+            (revision {{ assertion.revision }})
+          </template>
           by {{ assertion.asserted_by }} at {{ assertion.asserted_at }}
-          <template v-if="assertion.text">: “{{ assertion.text }}”</template>
+          <template v-if="assertion.text"> : “{{ assertion.text }}” </template>
           <em v-if="assertion.retracted_at">
             (retracted {{ assertion.retracted_at }})</em
           >
@@ -511,7 +768,9 @@
                     'ecrf-signed-changed': changedSince(signed),
                   }"
                 >
-                  <th scope="row">{{ signed.item_id }}</th>
+                  <th scope="row">
+                    {{ signed.item_id }}
+                  </th>
                   <td>{{ formatObservationValue(signed.value) }}</td>
                   <td>
                     <component
@@ -572,7 +831,9 @@
           <template v-if="signOutcome.kind === 'signed'">
             Form signed: {{ meaningLabel(signOutcome.meaning) }}.
           </template>
-          <template v-else>{{ signOutcome.message }}</template>
+          <template v-else>
+            {{ signOutcome.message }}
+          </template>
           <button
             v-if="signOutcome.kind === 'changed'"
             id="ecrf-sign-reload"
@@ -606,6 +867,7 @@
 import {
   computed,
   getCurrentInstance,
+  nextTick,
   onMounted,
   reactive,
   ref,
@@ -614,6 +876,7 @@ import {
 import type { RouteLocationRaw } from "vue-router";
 import {
   formatObservationValue,
+  isUnrecordedValue,
   MISSING_REASONS,
   type KernelObservationValue,
 } from "../../api/observationValue";
@@ -621,6 +884,7 @@ import {
   FORM_SIGN_SEMANTIC_ACTION,
   formSignatureAction,
   type EcrfForm,
+  type EcrfFormAssertion,
   type EcrfFormItem,
   type EcrfFormSignedValue,
   type EcrfSignatureMeaning,
@@ -631,6 +895,13 @@ import type {
   StudyPlannedActivityOption,
 } from "../../canvas/kernelStudy";
 import { observationNodeRef } from "../../canvas/nodeRef";
+import {
+  ASSERTION_ALREADY_RETRACTED,
+  ASSERTION_REVISION_STALE,
+  assertionErrorCode,
+  describeAssertionError,
+  kernelApi,
+} from "../../api/kernelApi";
 import {
   useEcrfForm,
   type EcrfUnsavedItem,
@@ -662,8 +933,12 @@ const props = defineProps<{
   ) => RouteLocationRaw | null;
   /** Builds a route location for a form inside the hosting workspace. */
   formLocation?: (formId: string) => RouteLocationRaw | null;
-  /** Offer raising, closing, reopening and cancelling queries (a monitor); the module still checks. */
+  /** Offer raising, closing, reopening and cancelling queries (a monitor or data manager); the module still checks. */
   canManageQueries?: boolean;
+  /** Offer verifying recorded values against source or withdrawing verifications (a monitor or data manager). */
+  canVerifySource?: boolean;
+  /** Item id to highlight and scroll into view when opened from a query worklist link. */
+  highlightItemId?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -691,6 +966,7 @@ const {
   signOutcome,
   canSign,
   locked,
+  assertionsLocked,
   dirty,
   editedItems,
   isEdited,
@@ -806,15 +1082,232 @@ function openNew() {
 const queries = reactive(useFormQueries());
 const raising = ref<{
   item_id: string;
-  observation_id: string;
-  revision: number;
+  observation_id: string | null;
+  revision: number | null;
+  unrecorded: boolean;
 } | null>(null);
 const raiseText = ref("");
+
+// Source Data Verification (SDV) state: append-only kernel assertions (`VerifyObservation`, `RetractAssertion`).
+const pendingSdv = ref<
+  | {
+      mode: "verify";
+      item_id: string;
+      observation_id: string;
+      revision: number;
+    }
+  | {
+      mode: "retract";
+      item_id: string;
+      assertion_id: string;
+    }
+  | null
+>(null);
+const sdvReason = ref("");
+const sdvBusy = ref(false);
+const sdvOutcome = ref<{
+  kind: "done" | "stale" | "failed";
+  message: string;
+} | null>(null);
+const selectedSdvItems = ref<string[]>([]);
+const bulkSdvReason = ref("");
+const bulkSdvResults = ref<
+  Array<{ itemId: string; ok: boolean; message: string }>
+>([]);
+
+function hasRecordedValue(item: EcrfFormItem): boolean {
+  return Boolean(item.observation_id) && !isUnrecordedValue(item.value);
+}
+
+function matchingTarget(
+  target: string | null | undefined,
+  observationId: string
+): boolean {
+  if (!target) return false;
+  const prefix = `observation:${observationId}`;
+  return target === prefix || target.startsWith(`${prefix}@`);
+}
+
+function activeVerification(item: EcrfFormItem): EcrfFormAssertion | null {
+  if (!hasRecordedValue(item) || !item.observation_id) return null;
+  const assertions = form.value?.assertions ?? [];
+  for (let i = assertions.length - 1; i >= 0; i--) {
+    const a = assertions[i];
+    if (
+      a.kind.toLowerCase() === "verified" &&
+      matchingTarget(a.target, item.observation_id) &&
+      !a.retracted_at &&
+      Number(a.revision) === Number(item.revision)
+    ) {
+      return a;
+    }
+  }
+  return null;
+}
+
+function needsReverification(item: EcrfFormItem): boolean {
+  if (!hasRecordedValue(item) || !item.observation_id) return false;
+  if (activeVerification(item)) return false;
+  return (form.value?.assertions ?? []).some(
+    (a) =>
+      a.kind.toLowerCase() === "verified" &&
+      matchingTarget(a.target, item.observation_id as string) &&
+      !a.retracted_at &&
+      a.revision !== null &&
+      Number(a.revision) < Number(item.revision)
+  );
+}
+
+const unverifiedItems = computed(() =>
+  items.value.filter(
+    (item) => hasRecordedValue(item) && !activeVerification(item)
+  )
+);
+
+function selectAllUnverifiedSdv() {
+  selectedSdvItems.value = unverifiedItems.value.map((item) => item.item_id);
+}
+
+function beginVerify(item: EcrfFormItem) {
+  if (!item.observation_id || !hasRecordedValue(item)) return;
+  pendingSdv.value = {
+    mode: "verify",
+    item_id: item.item_id,
+    observation_id: item.observation_id,
+    revision: Number(item.revision),
+  };
+  sdvReason.value = "";
+  sdvOutcome.value = null;
+}
+
+function beginRetract(item: EcrfFormItem, assertion: EcrfFormAssertion) {
+  pendingSdv.value = {
+    mode: "retract",
+    item_id: item.item_id,
+    assertion_id: assertion.assertion_id,
+  };
+  sdvReason.value = "";
+  sdvOutcome.value = null;
+}
+
+async function confirmSdv() {
+  const current = pendingSdv.value;
+  const text = sdvReason.value.trim();
+  if (!form.value || !current || !text || sdvBusy.value) return;
+  sdvBusy.value = true;
+  sdvOutcome.value = null;
+  bulkSdvResults.value = [];
+  const enrollmentRef = `enrollment:${form.value.enrollment_id}`;
+  try {
+    if (current.mode === "verify") {
+      await kernelApi.verifyObservation({
+        observationRef: `observation:${current.observation_id}`,
+        enrollmentRef,
+        revision: current.revision,
+        reason: text,
+        idempotencyKey: globalThis.crypto.randomUUID(),
+      });
+      pendingSdv.value = null;
+      sdvReason.value = "";
+      selectedSdvItems.value = selectedSdvItems.value.filter(
+        (id) => id !== current.item_id
+      );
+      await reload();
+      sdvOutcome.value = {
+        kind: "done",
+        message: `Verified ${current.item_id} (revision ${current.revision}).`,
+      };
+    } else {
+      await kernelApi.retractAssertion({
+        assertionRef: `assertion:${current.assertion_id}`,
+        enrollmentRef,
+        reason: text,
+        idempotencyKey: globalThis.crypto.randomUUID(),
+      });
+      pendingSdv.value = null;
+      sdvReason.value = "";
+      await reload();
+      sdvOutcome.value = {
+        kind: "done",
+        message: `Verification withdrawn on ${current.item_id}.`,
+      };
+    }
+  } catch (error) {
+    const code = assertionErrorCode(error);
+    const status = (error as { status?: number | null } | null)?.status ?? null;
+    const isStale =
+      code === ASSERTION_REVISION_STALE ||
+      code === ASSERTION_ALREADY_RETRACTED ||
+      status === 409;
+    sdvOutcome.value = {
+      kind: isStale ? "stale" : "failed",
+      message: describeAssertionError(error),
+    };
+  } finally {
+    sdvBusy.value = false;
+  }
+}
+
+async function submitBulkSdv() {
+  const text = bulkSdvReason.value.trim();
+  if (
+    !form.value ||
+    !text ||
+    sdvBusy.value ||
+    selectedSdvItems.value.length === 0
+  )
+    return;
+  const selected = new Set(selectedSdvItems.value);
+  const targets = unverifiedItems.value.filter((i) => selected.has(i.item_id));
+  if (targets.length === 0) return;
+
+  sdvBusy.value = true;
+  sdvOutcome.value = null;
+  const results: Array<{ itemId: string; ok: boolean; message: string }> = [];
+  const enrollmentRef = `enrollment:${form.value.enrollment_id}`;
+  try {
+    for (const target of targets) {
+      if (!target.observation_id) continue;
+      try {
+        await kernelApi.verifyObservation({
+          observationRef: `observation:${target.observation_id}`,
+          enrollmentRef,
+          revision: Number(target.revision),
+          reason: text,
+          idempotencyKey: globalThis.crypto.randomUUID(),
+        });
+        results.push({
+          itemId: target.item_id,
+          ok: true,
+          message: `Verified revision ${target.revision}.`,
+        });
+      } catch (error) {
+        results.push({
+          itemId: target.item_id,
+          ok: false,
+          message: describeAssertionError(error),
+        });
+      }
+    }
+    bulkSdvResults.value = results;
+    const failed = new Set(results.filter((r) => !r.ok).map((r) => r.itemId));
+    selectedSdvItems.value = selectedSdvItems.value.filter((id) =>
+      failed.has(id)
+    );
+    if (failed.size === 0) {
+      bulkSdvReason.value = "";
+    }
+    await reload();
+  } finally {
+    sdvBusy.value = false;
+  }
+}
 
 watch(
   () => (form.value ? `${form.value.form_id}@${form.value.version}` : null),
   (loaded) => {
     raising.value = null;
+    pendingSdv.value = null;
     if (loaded && form.value) {
       emit("form-loaded", form.value);
       void queries.load({ formId: form.value.form_id });
@@ -824,19 +1317,37 @@ watch(
   }
 );
 
+watch(
+  [() => form.value?.form_id, () => props.highlightItemId],
+  async ([loadedId, itemId]) => {
+    if (!loadedId || !itemId) return;
+    await nextTick();
+    const row = document.getElementById(`ecrf-row-${itemId}`);
+    row?.scrollIntoView?.({ block: "center" });
+    const input = document.getElementById(
+      `ecrf-item-${itemId}`
+    ) as HTMLInputElement | null;
+    if (input && !input.disabled) {
+      input.focus?.();
+    }
+  },
+  { immediate: true }
+);
+
 function liveOn(item: EcrfFormItem) {
   return form.value
     ? queries.forItem(form.value.form_id, item.item_id).filter(isLiveQuery)
     : [];
 }
 
-/** Starts a query on the item's value at the revision this form read returned. */
+/** Starts a query on the item's recorded value or on an unasked blank item. */
 function beginRaise(item: EcrfFormItem) {
-  if (!item.observation_id) return;
+  const unrecorded = !item.observation_id || isUnrecordedValue(item.value);
   raising.value = {
     item_id: item.item_id,
-    observation_id: item.observation_id,
-    revision: Number(item.revision),
+    observation_id: item.observation_id ?? null,
+    revision: item.observation_id ? Number(item.revision) : null,
+    unrecorded,
   };
   raiseText.value = "";
 }
@@ -845,6 +1356,7 @@ async function confirmRaise() {
   const target = raising.value;
   const text = raiseText.value.trim();
   if (!form.value || !target || !text) return;
+  const wasUnaskedWithoutObservation = !target.observation_id;
   const raised = await queries.raise(
     {
       formId: form.value.form_id,
@@ -854,12 +1366,24 @@ async function confirmRaise() {
     },
     text
   );
-  if (raised) raising.value = null;
+  if (raised) {
+    raising.value = null;
+    if (wasUnaskedWithoutObservation) {
+      await reload();
+    }
+  }
 }
 
 /** The value moved on since the form was read: read the form and its queries again. */
 async function reloadAfterStale() {
   queries.outcome = null;
+  await reload();
+  await queries.reload();
+}
+
+async function reloadAfterSdvStale() {
+  pendingSdv.value = null;
+  sdvOutcome.value = null;
   await reload();
   await queries.reload();
 }
@@ -969,10 +1493,12 @@ onMounted(() => {
 watch(
   () => props.formId,
   (next, prev) => {
-    if (next && next !== form.value?.form_id) {
+    if (next) {
       reuseId.value = next;
-      void load(next);
-    } else if (!next && prev && form.value) {
+      if (form.value?.form_id !== next) {
+        void load(next);
+      }
+    } else if (prev && form.value) {
       clearDraft();
       close();
     }
@@ -1070,6 +1596,63 @@ watch(dirty, (value) => emit("dirty-change", value));
 .ecrf-item-edited {
   background-color: #fffbeb;
 }
+.ecrf-item-highlighted {
+  background-color: #eff6ff;
+  outline: 2px solid #2563eb;
+}
+.ecrf-item-sdv {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.ecrf-sdv-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ecrf-sdv-badge {
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.ecrf-sdv-badge--verified {
+  background-color: #f0fdf4;
+  color: #166534;
+}
+.ecrf-sdv-badge--reverify {
+  background-color: #fffbeb;
+  color: #92400e;
+}
+.ecrf-sdv-badge--unverified {
+  background-color: #f1f5f9;
+  color: #475569;
+}
+.ecrf-sdv-none {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+.ecrf-bulk-sdv {
+  background-color: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+}
+.ecrf-bulk-sdv-results {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ecrf-bulk-sdv-result--ok {
+  color: #166534;
+}
+.ecrf-bulk-sdv-result--failed {
+  color: #991b1b;
+}
 .ecrf-form-error {
   color: #b91c1c;
   font-size: 0.8rem;
@@ -1166,5 +1749,11 @@ watch(dirty, (value) => emit("dirty-change", value));
 .ecrf-form-outcome--failed {
   background-color: #fef2f2;
   color: #991b1b;
+}
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
 }
 </style>

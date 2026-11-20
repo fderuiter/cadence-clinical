@@ -22,19 +22,18 @@ To prevent unauthorized, untracked, or direct mutations of clinical data within 
 ### Option 1: Option A (Selected): Implement an out-of-band schema introspection script using SQLAlchemy reflection alongside database-side SQL triggers for both PostgreSQL and SQLite.
 
 - **Overview:** Option A (Selected): Implement an out-of-band schema introspection script using SQLAlchemy reflection alongside database-side SQL triggers for both PostgreSQL and SQLite.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: Option B (Alternative): Keep manual tracking of TypeScript definitions and rely on application-level validations only.
 
 - **Overview:** Option B (Alternative): Keep manual tracking of TypeScript definitions and rely on application-level validations only.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

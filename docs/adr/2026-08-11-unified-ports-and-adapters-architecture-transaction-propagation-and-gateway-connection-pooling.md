@@ -29,21 +29,20 @@ This decision directly aligns with standard system requirements under **PRD-SYS-
 ### Option 1: **Option A (Selected) - Ports and Adapters + Connection Pooling + Session Propagation:**
 
 - **Overview:** - Introduce registry/adapter hooks for critical cross-boundary calls (e.g. `verify_trial_lock_status`, `resolve_personnel_assignments`, `is_sponsor_known_to_org_directory`).
-   - Share a single `httpx.AsyncClient` instance with explicit limits (100 max connections, 20 keepalives) at the `GatewayBaseClient` class level.
-   - Reuse existing context sessions in the transactional decorator by inspecting and yielding the thread/async-local context.
-- ***Pros:***
+  - Share a single `httpx.AsyncClient` instance with explicit limits (100 max connections, 20 keepalives) at the `GatewayBaseClient` class level.
+  - Reuse existing context sessions in the transactional decorator by inspecting and yielding the thread/async-local context.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B (Alternative) - Sibling Imports with Lax Controls:**
 
 - **Overview:** - Allow lazy imports of sibling modules or rely on runtime system probing hacks. This degrades maintainability, introduces dependency cycles, and risks regression in isolated execution modes.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

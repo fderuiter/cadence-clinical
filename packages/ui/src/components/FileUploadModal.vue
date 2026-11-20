@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, watch } from "vue";
+import ClinicalModal from "./clinical/ClinicalModal.vue";
 import ModalErrorAlert from "./ModalErrorAlert.vue";
-import { useFocusTrap } from "../composables/useFocusTrap.js";
 
 const props = defineProps({
   modelValue: {
@@ -36,7 +36,6 @@ const props = defineProps({
 
 const emit = defineEmits(["update:modelValue", "close", "uploaded", "error"]);
 
-const dialogRef = ref(null);
 const fileInputRef = ref(null);
 const selectedFile = ref(null);
 const reasonForChange = ref("");
@@ -45,6 +44,13 @@ const status = ref("idle"); // idle, hashing, requesting, uploading, verifying, 
 const progress = ref(0);
 const calculatedSha256 = ref(null);
 const errorMessage = ref("");
+
+const isUploadLocked = computed(
+  () =>
+    status.value === "requesting" ||
+    status.value === "uploading" ||
+    status.value === "verifying"
+);
 
 const isSubmitDisabled = computed(() => {
   return (
@@ -67,7 +73,7 @@ const formattedFileSize = computed(() => {
 });
 
 const closeModal = () => {
-  if (status.value === "uploading") return;
+  if (isUploadLocked.value) return;
   emit("update:modelValue", false);
   emit("close");
   resetForm();
@@ -229,11 +235,6 @@ watch(
   }
 );
 
-useFocusTrap(dialogRef, {
-  isOpen: () => props.modelValue,
-  onEscape: closeModal,
-});
-
 defineExpose({
   errorMessage,
   selectedFile,
@@ -247,154 +248,130 @@ defineExpose({
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="modelValue"
-      class="modal-backdrop"
-      role="presentation"
-      @click.self="closeModal"
-    >
+  <ClinicalModal
+    :model-value="modelValue"
+    :title="title"
+    :dismissible="!isUploadLocked"
+    dialog-class="modal-dialog file-upload-modal"
+    backdrop-class="modal-backdrop"
+    close-label="Close dialog"
+    @close="closeModal"
+  >
+    <div class="upload-modal-content">
+      <!-- Error alert -->
+      <ModalErrorAlert
+        :error="errorMessage"
+        retry-label="Retry Upload"
+        dismiss-label="Clear Error"
+        @retry="startUpload"
+        @dismiss="
+          errorMessage = '';
+          status = 'idle';
+          selectedFile = null;
+        "
+      />
+
+      <!-- Dropzone -->
       <div
-        ref="dialogRef"
-        class="modal-dialog"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="title"
-        tabindex="-1"
+        class="dropzone"
+        :class="{ 'is-dragging': isDragging, 'has-file': !!selectedFile }"
+        role="button"
+        tabindex="0"
+        aria-label="File dropzone"
+        @dragover="onDragOver"
+        @dragleave="onDragLeave"
+        @drop="onDrop"
+        @click="triggerFileInput"
+        @keydown.enter.prevent="triggerFileInput"
+        @keydown.space.prevent="triggerFileInput"
       >
-        <div class="modal-header">
-          <h2 class="modal-title">
-            {{ title }}
-          </h2>
-          <button
-            class="close-btn"
-            aria-label="Close dialog"
-            @click="closeModal"
-          >
-            ✕
-          </button>
+        <input
+          ref="fileInputRef"
+          type="file"
+          class="hidden-file-input"
+          aria-label="Upload file"
+          @change="onFileChange"
+        />
+
+        <div v-if="!selectedFile" class="dropzone-empty">
+          <span class="upload-icon">📁</span>
+          <p class="dropzone-title">Click to select or drag and drop file</p>
+          <p class="dropzone-hint">
+            Max size: {{ Math.round(maxSizeBytes / 1048576) }} MB
+          </p>
         </div>
 
-        <div class="modal-body">
-          <!-- Error alert -->
-          <ModalErrorAlert
-            :error="errorMessage"
-            retry-label="Retry Upload"
-            dismiss-label="Clear Error"
-            @retry="startUpload"
-            @dismiss="
-              errorMessage = '';
-              status = 'idle';
-              selectedFile = null;
-            "
-          />
-
-          <!-- Dropzone -->
-          <div
-            class="dropzone"
-            :class="{ 'is-dragging': isDragging, 'has-file': !!selectedFile }"
-            role="button"
-            tabindex="0"
-            aria-label="File dropzone"
-            @dragover="onDragOver"
-            @dragleave="onDragLeave"
-            @drop="onDrop"
-            @click="triggerFileInput"
-            @keydown.enter="triggerFileInput"
-            @keydown.space="triggerFileInput"
-          >
-            <input
-              ref="fileInputRef"
-              type="file"
-              class="hidden-file-input"
-              aria-label="Upload file"
-              @change="onFileChange"
-            />
-
-            <div v-if="!selectedFile" class="dropzone-empty">
-              <span class="upload-icon">📁</span>
-              <p class="dropzone-title">
-                Click to select or drag and drop file
-              </p>
-              <p class="dropzone-hint">
-                Max size: {{ Math.round(maxSizeBytes / 1048576) }} MB
-              </p>
-            </div>
-
-            <div v-else class="dropzone-file-info">
-              <span class="file-icon">📄</span>
-              <div class="file-details">
-                <p class="file-name">
-                  {{ selectedFile.name }}
-                </p>
-                <p class="file-meta">
-                  {{ formattedFileSize }} • {{ selectedFile.type || "binary" }}
-                </p>
-                <p v-if="calculatedSha256" class="file-checksum">
-                  SHA-256:
-                  <code>{{ calculatedSha256.substring(0, 16) }}...</code>
-                </p>
-                <p v-else-if="status === 'hashing'" class="file-hashing">
-                  ⏳ Calculating cryptographic SHA-256...
-                </p>
-              </div>
-            </div>
+        <div v-else class="dropzone-file-info">
+          <span class="file-icon">📄</span>
+          <div class="file-details">
+            <p class="file-name">
+              {{ selectedFile.name }}
+            </p>
+            <p class="file-meta">
+              {{ formattedFileSize }} • {{ selectedFile.type || "binary" }}
+            </p>
+            <p v-if="calculatedSha256" class="file-checksum">
+              SHA-256:
+              <code>{{ calculatedSha256.substring(0, 16) }}...</code>
+            </p>
+            <p v-else-if="status === 'hashing'" class="file-hashing">
+              ⏳ Calculating cryptographic SHA-256...
+            </p>
           </div>
-
-          <!-- Reason for change (21 CFR Part 11 Mandate) -->
-          <div class="form-group">
-            <label for="upload-reason" class="form-label">
-              Reason for Change (21 CFR Part 11 Mandate)
-              <span class="required-star">*</span>
-            </label>
-            <textarea
-              id="upload-reason"
-              v-model="reasonForChange"
-              class="form-textarea"
-              placeholder="State the regulatory justification for this document upload..."
-              rows="3"
-              required
-            ></textarea>
-            <span class="hint-text">Minimum 5 characters.</span>
-          </div>
-
-          <!-- Progress Indicator -->
-          <div
-            v-if="status === 'uploading' || status === 'verifying'"
-            class="progress-bar-wrapper"
-          >
-            <div class="progress-track">
-              <div
-                class="progress-fill"
-                :style="{ width: `${progress}%` }"
-              ></div>
-            </div>
-            <span class="progress-text">{{
-              status === "uploading" ? "Uploading..." : "Verifying SHA-256..."
-            }}</span>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button
-            class="btn btn-secondary"
-            :disabled="status === 'uploading'"
-            @click="closeModal"
-          >
-            Cancel
-          </button>
-          <button
-            class="btn btn-primary"
-            :disabled="isSubmitDisabled"
-            data-testid="upload-submit-btn"
-            @click="startUpload"
-          >
-            {{ status === "uploading" ? "Uploading..." : "Upload Document" }}
-          </button>
         </div>
       </div>
+
+      <!-- Reason for change (21 CFR Part 11 Mandate) -->
+      <div class="form-group">
+        <label for="upload-reason" class="form-label">
+          Reason for Change (21 CFR Part 11 Mandate)
+          <span class="required-star">*</span>
+        </label>
+        <textarea
+          id="upload-reason"
+          v-model="reasonForChange"
+          class="form-textarea"
+          placeholder="State the regulatory justification for this document upload..."
+          rows="3"
+          required
+        ></textarea>
+        <span class="hint-text">Minimum 5 characters.</span>
+      </div>
+
+      <!-- Progress Indicator -->
+      <div
+        v-if="status === 'uploading' || status === 'verifying'"
+        class="progress-bar-wrapper"
+      >
+        <div class="progress-track">
+          <div class="progress-fill" :style="{ width: `${progress}%` }"></div>
+        </div>
+        <span class="progress-text">{{
+          status === "uploading" ? "Uploading..." : "Verifying SHA-256..."
+        }}</span>
+      </div>
     </div>
-  </Teleport>
+
+    <template #footer>
+      <button
+        type="button"
+        class="btn btn-secondary"
+        :disabled="isUploadLocked"
+        @click="closeModal"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        :disabled="isSubmitDisabled"
+        data-testid="upload-submit-btn"
+        @click="startUpload"
+      >
+        {{ status === "uploading" ? "Uploading..." : "Upload Document" }}
+      </button>
+    </template>
+  </ClinicalModal>
 </template>
 
 <style scoped>
@@ -450,9 +427,7 @@ defineExpose({
   cursor: pointer;
 }
 
-.modal-body {
-  padding: 20px;
-  overflow-y: auto;
+.upload-modal-content {
   display: flex;
   flex-direction: column;
   gap: 16px;

@@ -1,7 +1,10 @@
 <template>
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div v-if="isOpen" class="drawer-backdrop" @click.self="close">
+  <div
+    v-if="isOpen"
+    class="drawer-backdrop"
+    role="presentation"
+    @click.self="close"
+  >
     <div
       ref="drawerRef"
       class="drawer-panel"
@@ -428,18 +431,18 @@
                 <span>🔒 Internal Sponsor Note</span>
               </label>
             </div>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <textarea
               v-model="newCommentContent"
               rows="3"
+              aria-label="Clinical discussion note"
               class="form-control"
               placeholder="Add a clinical note, investigator response, or internal audit review..."
             />
             <div class="comment-submit-row">
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 v-model="newCommentReason"
                 type="text"
+                aria-label="Reason for adding note"
                 class="form-control flex-1"
                 placeholder="Reason for change (GxP justification)..."
               />
@@ -467,17 +470,17 @@
               CFR Part 11 &amp; DEID scanned).
             </p>
             <div class="upload-inputs">
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 ref="fileInput"
                 type="file"
+                aria-label="Evidence attachment file"
                 class="file-input"
                 @change="onFileSelected"
               />
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 v-model="attachmentReason"
                 type="text"
+                aria-label="Reason for attaching evidence"
                 class="form-control"
                 placeholder="Mandatory GxP reason for attachment..."
               />
@@ -621,11 +624,10 @@
     </div>
 
     <!-- Protocol Document Viewer Modal -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       v-if="isCitationViewerOpen && activeCitation"
       class="citation-modal-backdrop"
+      role="presentation"
       @click.self="closeCitationViewer"
     >
       <div
@@ -718,10 +720,9 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { useFocusTrap } from "ui";
+import { EmptyState, useFocusTrap } from "ui";
 import TicketSignModal from "./TicketSignModal.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
-import EmptyState from "../common/EmptyState.vue";
 
 const props = defineProps({
   isOpen: {

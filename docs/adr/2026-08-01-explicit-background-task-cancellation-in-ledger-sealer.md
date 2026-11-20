@@ -22,18 +22,18 @@ During backend test execution, fast parallelized test sweeps (such as under `pyt
 ### Option 1: Inline exception suppression in tasks
 
 - **Overview:** Wrap background loop bodies in try-except blocks to catch closed loop errors.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Simple to implement.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Does not solve the root cause of task teardown timing, leaving resources or connections open.
 
 ### Option 2: Explicit Task Cancellation and Teardown Handling (Selected)
 
 - **Overview:** Track task handles globally and explicitly invoke `cancel()` and await the completion of the background tasks within `stop_background_sealer` and `stop_background_query_escalation` during the FastAPI application lifecycle shutdown.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Cleanly cancels the task and waits for cancellation completion, preventing closed event loop errors.
   - ✅ Highly deterministic and reliable for fast pytest parallel execution.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires stateful global task references.
 
 ## 4. Decision Outcome

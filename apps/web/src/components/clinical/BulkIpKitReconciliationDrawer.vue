@@ -118,6 +118,7 @@
           <button
             type="button"
             class="btn-alert-dismiss"
+            aria-label="Dismiss warning"
             @click="warningMessage = ''"
           >
             ✕
@@ -186,7 +187,7 @@
       </div>
 
       <!-- Main Drawer Body: Scanned Kits Buffer Table -->
-      <main class="drawer-body">
+      <div class="drawer-body">
         <div v-if="scannedItems.length === 0" class="empty-state-box">
           <div class="empty-icon">📦</div>
           <h3>Scan Buffer Empty</h3>
@@ -228,9 +229,15 @@
                   'row-lot-mismatch': item.hasLotMismatch,
                 }"
               >
-                <td class="col-index">{{ index + 1 }}</td>
-                <td class="col-kit mono fw-bold">{{ item.kitNumber }}</td>
-                <td class="col-lot mono">{{ item.scannedLotNumber }}</td>
+                <td class="col-index">
+                  {{ index + 1 }}
+                </td>
+                <td class="col-kit mono fw-bold">
+                  {{ item.kitNumber }}
+                </td>
+                <td class="col-lot mono">
+                  {{ item.scannedLotNumber }}
+                </td>
                 <td class="col-expected-lot mono">
                   {{ item.expectedLotNumber }}
                   <span v-if="item.hasLotMismatch" class="badge badge-alert-lot"
@@ -370,16 +377,16 @@
             </div>
           </div>
         </section>
-      </main>
+      </div>
 
       <!-- Drawer Footer Action Bar -->
       <footer class="drawer-footer">
         <div class="footer-summary">
-          <span class="summary-text" v-if="scannedItems.length > 0">
+          <span v-if="scannedItems.length > 0" class="summary-text">
             Ready to reconcile <strong>{{ scannedItems.length }}</strong> kit(s)
             (<strong>{{ quarantinedCount }}</strong> marked for quarantine)
           </span>
-          <span class="summary-text" v-else>
+          <span v-else class="summary-text">
             Scan barcodes to enable batch commitment
           </span>
         </div>
@@ -430,13 +437,14 @@
             <button
               type="button"
               class="btn-close"
+              aria-label="Close certificate dialog"
               @click="showCertificateModal = false"
             >
               ✕
             </button>
           </header>
 
-          <main class="cert-body">
+          <div class="cert-body">
             <div class="cert-header-grid">
               <div class="cert-meta-item">
                 <span class="lbl">Certificate ID:</span>
@@ -492,7 +500,7 @@
                 certificateData.digital_signature
               }}</code>
             </div>
-          </main>
+          </div>
 
           <footer class="cert-modal-footer">
             <button
@@ -1518,5 +1526,11 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+}
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
 }
 </style>

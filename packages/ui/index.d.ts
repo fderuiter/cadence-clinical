@@ -169,6 +169,137 @@ export const ClinicalModal: DefineComponent<
     title?: string;
     size?: "sm" | "md" | "lg" | "xl" | string;
     role?: "dialog" | "alertdialog" | string;
+    dismissible?: boolean;
+    closeOnBackdrop?: boolean;
+    initialFocus?:
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string
+      | null;
+    restoreFocus?: boolean | (() => HTMLElement | null);
+    teleport?: boolean | string;
+    id?: string;
+    dialogClass?: string | any[] | Record<string, boolean>;
+    backdropClass?: string | any[] | Record<string, boolean>;
+    closeLabel?: string;
+  },
+  {},
+  any
+>;
+
+export const ClinicalDrawer: DefineComponent<
+  {
+    modelValue?: boolean;
+    isOpen?: boolean;
+    title?: string;
+    subtitle?: string;
+    ariaLabel?: string;
+    ariaLabelledby?: string;
+    id?: string;
+    overlayId?: string;
+    overlayClass?: string | any[] | Record<string, boolean>;
+    panelClass?: string | any[] | Record<string, boolean>;
+    bodyClass?: string | any[] | Record<string, boolean>;
+    position?: "right" | "left" | string;
+    size?: "sm" | "md" | "lg" | "xl" | string;
+    role?: "dialog" | "alertdialog" | string;
+    dismissible?: boolean;
+    closeOnBackdrop?: boolean;
+    teleport?: boolean | string;
+    initialFocus?:
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string
+      | null;
+    restoreFocus?: boolean | (() => HTMLElement | null);
+    closeLabel?: string;
+    showHeader?: boolean;
+  },
+  {},
+  any
+>;
+
+export const AuditLogViewer: DefineComponent<
+  {
+    logs: Array<{
+      id: string | number;
+      timestamp?: string;
+      user_id?: string;
+      action?: string;
+      entity_type?: string;
+      entity_id?: string;
+      reason_for_change?: string;
+      changes?: Array<{ field: string; old_val?: any; new_val?: any }>;
+    }>;
+    title?: string;
+  },
+  {},
+  any
+>;
+
+export const ClinicalDataTable: DefineComponent<
+  {
+    columns: Array<{ key: string; label: string; sortable?: boolean }>;
+    data: Record<string, any>[];
+    pageSize?: number;
+    selectable?: boolean;
+    title?: string;
+  },
+  {},
+  any
+>;
+
+export const ClinicalFieldLayout: DefineComponent<
+  {
+    id: string;
+    label: string;
+    query?: any;
+    gridSpan?: number | string;
+    error?: string | null;
+    attributes?: Record<string, any>;
+    tag?: string;
+    extraClass?: string;
+    canManageQueries?: boolean;
+    queryLabel?: string;
+  },
+  {},
+  any
+>;
+
+export const EmptyState: DefineComponent<
+  {
+    icon?: string;
+    title?: string;
+    message?: string;
+    actionText?: string;
+  },
+  {},
+  any
+>;
+
+export const MediaPlayer: DefineComponent<
+  {
+    src: string;
+    mimeType?: string;
+    title?: string;
+    isWatermarked?: boolean;
+    watermarkText?: string;
+    autoplay?: boolean;
+    initialZoom?: number;
+  },
+  {},
+  any
+>;
+
+export const PersonaSwitcher: DefineComponent<
+  {
+    modelValue?: string;
+    personas?: Array<{
+      id: string;
+      label: string;
+      role: string;
+      badge?: string;
+    }>;
   },
   {},
   any
@@ -176,6 +307,7 @@ export const ClinicalModal: DefineComponent<
 
 export interface FocusTrapOptions {
   isOpen?: import("vue").Ref<boolean> | (() => boolean) | boolean;
+  modal?: import("vue").Ref<boolean> | (() => boolean) | boolean;
   onEscape?: (event: KeyboardEvent) => void;
   escapeDeactivates?: import("vue").Ref<boolean> | (() => boolean) | boolean;
   initialFocus?:

@@ -44,6 +44,7 @@
       />
 
       <QueriesPanel
+        :study-code="canvas.studyCode"
         :subject-code="participant.subject_id"
         :enrollment-id="record.enrollmentId"
         :can-manage="canManage"

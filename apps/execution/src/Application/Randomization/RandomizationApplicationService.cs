@@ -355,6 +355,20 @@ public sealed class RandomizationApplicationService(
         await subjects.GetByIdAsync(subjectIdOrCode, ct).ConfigureAwait(false)
             ?? await subjects.GetByCodeAsync(subjectIdOrCode, ct).ConfigureAwait(false);
 
+    /// <inheritdoc />
+    public async Task<StudyCode?> GetSchemeStudyAsync(Guid schemeId, CancellationToken ct = default)
+    {
+        var scheme = await randomization.GetSchemeAsync(schemeId, ct).ConfigureAwait(false);
+        return scheme?.StudyCode;
+    }
+
+    /// <inheritdoc />
+    public async Task<(StudyCode StudyId, SiteCode? SiteId)?> GetSubjectScopeAsync(string subjectIdOrCode, CancellationToken ct = default)
+    {
+        var subject = await ResolveSubjectAsync(subjectIdOrCode, ct).ConfigureAwait(false);
+        return subject is null ? null : (subject.StudyCode, subject.SiteCode);
+    }
+
     /// <summary>
     /// The scheme's permuted-block list: <see cref="RandomizationScheme.SlotsPerStratum"/> slots per stratum from
     /// blocks of the scheme's sizes, each block's size and shuffle drawn from <see cref="RandomNumberGenerator"/>, each

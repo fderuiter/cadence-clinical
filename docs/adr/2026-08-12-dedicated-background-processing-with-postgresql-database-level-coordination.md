@@ -24,16 +24,16 @@ To run long-running, background, or scheduled tasks—such as daily query escala
 
 ### Option 1: Main Connection Pool with Thread Locks (FastAPI / BackgroundTasks)
 
-- ***Pros:*** Simpler configuration, no need for secondary database pools or distributed locks.
-- ***Cons:*** Main clinical API connection pool can be fully starved under heavy background task loads. Does not coordinate tasks across multiple service instances/replicas.
+- _**Pros:**_ Simpler configuration, no need for secondary database pools or distributed locks.
+- _**Cons:**_ Main clinical API connection pool can be fully starved under heavy background task loads. Does not coordinate tasks across multiple service instances/replicas.
 
 ### Option 2: Dedicated Background Database Pool & PostgreSQL Advisory Locks (Selected)
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ **Database Isolation:** An isolated `bg_db_manager` with a dedicated pool (size: 5) guarantees user-facing APIs always have adequate connection capacity.
   - ✅ **Database-Level Mutual Exclusion:** PostgreSQL advisory locks (`pg_try_advisory_xact_lock`) with dedicated lock IDs (`42001`, `42002`, `42003`) coordinate cross-instance execution.
   - ✅ **Asynchronous Verification:** Offloads CPU-intensive operations (such as validation of ledger integrity) safely to FastAPI background tasks.
-- ***Cons:*** Slightly increased code complexity in connection management and startup orchestration.
+- _**Cons:**_ Slightly increased code complexity in connection management and startup orchestration.
 
 ## 4. Decision Outcome
 

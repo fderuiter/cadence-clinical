@@ -230,8 +230,28 @@ public sealed class QualityGateRegistryTests : IDisposable
     [Fact]
     public void EveryGate_HasAFailingFixture()
     {
+        QualityGates.All.Should().HaveCount(27);
         Fixtures().Keys.Should().BeEquivalentTo(QualityGates.All.Select(g => g.Name));
         FailsClosedOnly.Keys.Should().BeSubsetOf(QualityGates.All.Select(g => g.Name));
+    }
+
+    [Fact]
+    public void RunQualityGates_SkipsExcludedGatesByNameOrAlias_AndFailsClosedOnInvalidExcludeUsage()
+    {
+        Write("scratch/notes.txt", "left behind\n");
+        string[] unrelatedGates = QualityGates.All
+            .Select(g => g.Name)
+            .Where(n => n is not "dependencies" and not "path-patterns")
+            .ToArray();
+
+        QualityGateOrchestrator.RunQualityGates(excludedGates: ["no-such-gate"], repoRoot: _root)
+            .Should().Be(1, "unknown excluded gate names must fail closed");
+        QualityGateOrchestrator.RunQualityGates(gateName: "dependencies", excludedGates: ["path-patterns"], repoRoot: _root)
+            .Should().Be(1, "--exclude applies only when running all gates");
+        QualityGateOrchestrator.RunQualityGates(excludedGates: unrelatedGates, repoRoot: _root)
+            .Should().Be(1, "path-patterns still runs and fails when not excluded");
+        QualityGateOrchestrator.RunQualityGates(excludedGates: [.. unrelatedGates, "validate-path-patterns"], repoRoot: _root)
+            .Should().Be(0, "excluding path-patterns by alias skips it while running the remaining gate");
     }
 
     [Fact]
@@ -290,6 +310,19 @@ public sealed class QualityGateRegistryTests : IDisposable
         var context = Context(files: ["apps/econsent/src/Domain/EconsentEntities.cs"], preCommit: true);
 
         gate.Run(context).Should().BeFalse("pre-commit hook executes schema documentation drift check when EF Core entity files are staged");
+    }
+
+    [Fact]
+    public void DuplicationGate_InPreCommitMode_IgnoresNonCSharpDuplicates()
+    {
+        string cssAliases = string.Join("\n", Enumerable.Range(1, 20).Select(i => $"  --alias-{i}: var(--semantic-token-{i});"));
+        Write("apps/web/src/style.css", $":root {{\n{cssAliases}\n}}\n");
+        Write("apps/subject-portal/src/style.css", $":root {{\n{cssAliases}\n}}\n");
+
+        var gate = QualityGates.Find("duplication")!;
+        var context = Context(files: ["apps/web/src/style.css", "apps/subject-portal/src/style.css"], preCommit: true);
+
+        gate.Run(context).Should().BeTrue("duplication gate fails only when a duplicate involves a C# file, even when pre-commit passes staged files");
     }
 
     private GateContext Context(string[]? files = null, bool preCommit = false) => new(_root, files, preCommit);

@@ -29,6 +29,23 @@ public interface IAuthorityStore
     /// <summary>One grant with its validity history, or null.</summary>
     Task<Grant?> FindGrantAsync(TenantId tenant, GrantId grant, CancellationToken cancellationToken);
 
+    /// <summary>The grants with the given ids that exist in the tenant, each with its whole validity history.</summary>
+    async Task<IReadOnlyDictionary<GrantId, Grant>> FindGrantsAsync(
+        TenantId tenant, IReadOnlyCollection<GrantId> grants, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(grants);
+        var found = new Dictionary<GrantId, Grant>();
+        foreach (var id in grants.Distinct())
+        {
+            if (await FindGrantAsync(tenant, id, cancellationToken).ConfigureAwait(false) is { } grant)
+            {
+                found[id] = grant;
+            }
+        }
+
+        return found;
+    }
+
     /// <summary>The roles with the given ids that exist in the tenant.</summary>
     Task<IReadOnlyList<Role>> RolesAsync(TenantId tenant, IReadOnlyCollection<RoleId> roles, CancellationToken cancellationToken);
 
@@ -39,10 +56,46 @@ public interface IAuthorityStore
     Task<ScopePath> PathOfAsync(TenantId tenant, NodeRef resource, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Where each resource in <paramref name="resources"/> sits on the scope path. An object that does not exist, or
+    /// belongs to no organization or study, has <see cref="ScopePath.TenantWide"/>, which only tenant-wide grants cover.
+    /// </summary>
+    async Task<IReadOnlyDictionary<NodeRef, ScopePath>> PathsOfAsync(
+        TenantId tenant, IReadOnlyCollection<NodeRef> resources, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(resources);
+        var distinct = resources.Distinct().ToList();
+        var byObject = new Dictionary<NodeRef, ScopePath>();
+        foreach (var unversioned in distinct.Select(r => r.Unversioned()).Distinct())
+        {
+            byObject[unversioned] = await PathOfAsync(tenant, unversioned, cancellationToken).ConfigureAwait(false);
+        }
+
+        return distinct.ToDictionary(r => r, r => byObject[r.Unversioned()]);
+    }
+
+    /// <summary>
     /// The scope paths of the study sites reached by an object that belongs to no study itself: the study sites where a
     /// participant has an enrollment, or where a site takes part in a study. Empty for any other object.
     /// </summary>
     Task<IReadOnlyList<ScopePath>> StudySitePathsAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The scope paths of the study sites reached by each object in <paramref name="nodes"/> that belongs to no study
+    /// itself: the study sites where a participant has an enrollment, or where a site takes part in a study.
+    /// </summary>
+    async Task<IReadOnlyDictionary<NodeRef, IReadOnlyList<ScopePath>>> StudySitePathsAsync(
+        TenantId tenant, IReadOnlyCollection<NodeRef> nodes, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        var distinct = nodes.Distinct().ToList();
+        var byObject = new Dictionary<NodeRef, IReadOnlyList<ScopePath>>();
+        foreach (var unversioned in distinct.Select(n => n.Unversioned()).Distinct())
+        {
+            byObject[unversioned] = await StudySitePathsAsync(tenant, unversioned, cancellationToken).ConfigureAwait(false);
+        }
+
+        return distinct.ToDictionary(n => n, n => byObject[n.Unversioned()]);
+    }
 
     /// <summary>Every qualification held by <paramref name="actor"/>, with its whole validity history (K-AUTH-5).</summary>
     Task<IReadOnlyList<Qualification>> QualificationsHeldAsync(TenantId tenant, Actor actor, CancellationToken cancellationToken);
@@ -338,6 +391,97 @@ internal static class GrantChain
             }
 
             if (await store.FindGrantAsync(tenant, parentId, cancellationToken).ConfigureAwait(false) is not { } parent)
+            {
+                return false;
+            }
+
+            current = parent;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Returns the ids of grants in <paramref name="grants"/> that are in effect at <paramref name="at"/> as known at
+    /// <paramref name="knownAt"/> together with every grant above them, fetching parent grants in bulk per delegation
+    /// level up to <see cref="AuthorityEvaluator.MaxDelegationDepth"/> (K-AUTH-3).
+    /// </summary>
+    public static async Task<IReadOnlySet<GrantId>> FilterInEffectAsync(
+        IAuthorityStore store,
+        TenantId tenant,
+        IReadOnlyList<Grant> grants,
+        DateTimeOffset at,
+        DateTimeOffset knownAt,
+        CancellationToken cancellationToken)
+    {
+        var active = grants.Where(g => g.IsInEffect(at, knownAt)).ToList();
+        if (active.Count == 0)
+        {
+            return FrozenSet<GrantId>.Empty;
+        }
+
+        var byId = new Dictionary<GrantId, Grant>(grants.Count);
+        foreach (var grant in grants)
+        {
+            byId.TryAdd(grant.Id, grant);
+        }
+
+        var queried = new HashSet<GrantId>(byId.Keys);
+        var frontier = active
+            .Where(g => g.ParentGrantId is not null)
+            .Select(g => g.ParentGrantId!.Value)
+            .Distinct()
+            .ToList();
+
+        for (var depth = 0; depth < AuthorityEvaluator.MaxDelegationDepth && frontier.Count > 0; depth++)
+        {
+            var missing = frontier.Where(id => !queried.Contains(id)).ToList();
+            if (missing.Count > 0)
+            {
+                queried.UnionWith(missing);
+                var fetched = await store.FindGrantsAsync(tenant, missing, cancellationToken).ConfigureAwait(false);
+                foreach (var (id, parent) in fetched)
+                {
+                    byId[id] = parent;
+                }
+            }
+
+            var next = new HashSet<GrantId>();
+            foreach (var parentId in frontier)
+            {
+                if (byId.TryGetValue(parentId, out var parent)
+                    && parent.IsInEffect(at, knownAt)
+                    && parent.ParentGrantId is { } grandParentId)
+                {
+                    next.Add(grandParentId);
+                }
+            }
+
+            frontier = [.. next];
+        }
+
+        return active
+            .Where(grant => IsChainInEffect(grant, byId, at, knownAt))
+            .Select(grant => grant.Id)
+            .ToHashSet();
+    }
+
+    private static bool IsChainInEffect(Grant grant, IReadOnlyDictionary<GrantId, Grant> byId, DateTimeOffset at, DateTimeOffset knownAt)
+    {
+        var current = grant;
+        for (var depth = 0; depth <= AuthorityEvaluator.MaxDelegationDepth; depth++)
+        {
+            if (!current.IsInEffect(at, knownAt))
+            {
+                return false;
+            }
+
+            if (current.ParentGrantId is not { } parentId)
+            {
+                return true;
+            }
+
+            if (!byId.TryGetValue(parentId, out var parent))
             {
                 return false;
             }

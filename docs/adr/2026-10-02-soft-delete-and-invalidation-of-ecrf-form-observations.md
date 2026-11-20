@@ -50,4 +50,3 @@ When updating eCRF form submission payloads in the Execution service, existing o
 
 - **Affected Repositories / Services:** `apps/execution`
 - **Verification Plan:** Unit tests in `FormObservationSoftDeleteTests.cs` and schema migration validation.
-

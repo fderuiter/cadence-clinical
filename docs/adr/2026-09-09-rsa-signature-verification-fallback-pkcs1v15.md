@@ -24,20 +24,22 @@ However, during integration with legacy subsystems and during standard test suit
 ## 3. Options Considered
 
 ### Option A: Strict RSA-PSS Exclusive Verification
-Enforce RSA-PSS exclusively. Any signature generated with PKCS#1 v1.5 padding will be strictly rejected. This is highly secure but lacks backward compatibility and breaks verification for pre-existing keys.
-- ***Pros:***
-  - ✅ Addresses requirements
-- ***Cons:***
-  - ❌ Trade-offs accepted
 
+Enforce RSA-PSS exclusively. Any signature generated with PKCS#1 v1.5 padding will be strictly rejected. This is highly secure but lacks backward compatibility and breaks verification for pre-existing keys.
+
+- _**Pros:**_
+  - ✅ Addresses requirements
+- _**Cons:**_
+  - ❌ Trade-offs accepted
 
 ### Option B: Automatic Fallback to PKCS1v15 Verification (Selected)
-Attempt RSA-PSS verification first. If verification fails due to a padding or signature mismatch, attempt a secondary fallback verification using PKCS#1 v1.5 padding. This guarantees robust backward compatibility while keeping RSA-PSS as the primary expected padding.
-- ***Pros:***
-  - ✅ Addresses requirements
-- ***Cons:***
-  - ❌ Trade-offs accepted
 
+Attempt RSA-PSS verification first. If verification fails due to a padding or signature mismatch, attempt a secondary fallback verification using PKCS#1 v1.5 padding. This guarantees robust backward compatibility while keeping RSA-PSS as the primary expected padding.
+
+- _**Pros:**_
+  - ✅ Addresses requirements
+- _**Cons:**_
+  - ❌ Trade-offs accepted
 
 ## 4. Decision Outcome
 

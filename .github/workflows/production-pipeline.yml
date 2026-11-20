@@ -68,6 +68,9 @@ jobs:
       # Run GxP Dependency & Vulnerability Audit Gate
       - name: Run GxP Dependency Validation
         run: |
+          python3 -m venv "$RUNNER_TEMP/pip-audit-venv"
+          "$RUNNER_TEMP/pip-audit-venv/bin/python" -m pip install --quiet --upgrade pip pip-audit==2.10.1
+          export PATH="$RUNNER_TEMP/pip-audit-venv/bin:$PATH"
           node scripts/run-cli.js check vulnerabilities
 
       # Delete the committed copies first so a sync that exits 0 without

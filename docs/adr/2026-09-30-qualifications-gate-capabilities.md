@@ -54,12 +54,12 @@ them.
 
 **Qualifications.** A `Qualification` is held by an actor and says what it attests:
 
-| Kind | Meaning |
-| --- | --- |
-| `Training` | Completed training, such as GCP or a system's user training |
-| `ProtocolTraining` | Training on one protocol version, which it names |
-| `Credential` | A professional credential or licence |
-| `Certificate` | A certificate, such as a GCP or IATA certificate |
+| Kind               | Meaning                                                     |
+| ------------------ | ----------------------------------------------------------- |
+| `Training`         | Completed training, such as GCP or a system's user training |
+| `ProtocolTraining` | Training on one protocol version, which it names            |
+| `Credential`       | A professional credential or licence                        |
+| `Certificate`      | A certificate, such as a GCP or IATA certificate            |
 
 It has a lower snake_case `code` (at most 64 characters) that requirements match. Only `ProtocolTraining` names a
 protocol version, and it must. Its evidence is a version of an artifact of kind `TrainingRecord` or `Credential`, two
@@ -72,12 +72,12 @@ re-evaluated as of an earlier instant applies the requirements known then.
 
 **Commands.** Each is a kernel command, authorized, audited and raising a Trust event:
 
-| Command | Capability | Verb class | Authorized against | Event |
-| --- | --- | --- | --- | --- |
-| `RecordQualification` | `qualification.record` | Execute | tenant | `QualificationRecorded` |
-| `RevokeQualification` | `qualification.revoke` | Approve | the qualification | `QualificationRevoked` |
-| `DefineQualificationRequirement` | `qualification_requirement.define` | Approve | tenant | `QualificationRequirementDefined` |
-| `RetireQualificationRequirement` | `qualification_requirement.retire` | Approve | the requirement | `QualificationRequirementRetired` |
+| Command                          | Capability                         | Verb class | Authorized against | Event                             |
+| -------------------------------- | ---------------------------------- | ---------- | ------------------ | --------------------------------- |
+| `RecordQualification`            | `qualification.record`             | Execute    | tenant             | `QualificationRecorded`           |
+| `RevokeQualification`            | `qualification.revoke`             | Approve    | the qualification  | `QualificationRevoked`            |
+| `DefineQualificationRequirement` | `qualification_requirement.define` | Approve    | tenant             | `QualificationRequirementDefined` |
+| `RetireQualificationRequirement` | `qualification_requirement.retire` | Approve    | the requirement    | `QualificationRequirementRetired` |
 
 Recording is Execute because filing a training record is routine work, and automation agents cannot do it. Revoking
 and changing requirements are Approve because they change who may act.

@@ -128,7 +128,7 @@ Lineage(node, direction, depth, edge_kinds, valid_at, known_at) → { start, nod
 > no kind, and masked siblings reached over the same edge kind collapse into one "one or more" placeholder.
 
 - Every lineage read names its reader (an `Actor`). The kernel asks the host's `INodeVisibility.MaskAsync(tenant,
-  reader, nodes)` once per read. It returns the objects the reader may not see and a `MaskReason` for each:
+reader, nodes)` once per read. It returns the objects the reader may not see and a `MaskReason` for each:
   `NotPermitted`, `Blinded` (K-AUTH-4) or `IdentityVault` (K-IDN-1).
 - A masked object stays in the result as `Masked(kind, reason)`. Its `Ref` is null, and its handle is `masked:n`,
   numbered in the order the read reaches masked objects. Edges connect handles, so the path keeps its length and the
@@ -179,11 +179,11 @@ Lineage(node, direction, depth, edge_kinds, valid_at, known_at) → { start, nod
   optional (spec §16) if measured need appears. First measurement, on a local PostgreSQL 16 with the graph described
   in the benchmark (21 traces each, as the application role):
 
-  | Walk | Median | Max | Median edges returned |
-  | --- | --- | --- | --- |
-  | Backward, depth 5 | 9.6 ms | 424 ms (first, cold cache) | 62 |
-  | Backward, depth 10 | 156 ms | 218 ms | 2,030 |
-  | Forward, depth 5 | 6.4 ms | 36.5 ms | 62 |
+  | Walk               | Median | Max                        | Median edges returned |
+  | ------------------ | ------ | -------------------------- | --------------------- |
+  | Backward, depth 5  | 9.6 ms | 424 ms (first, cold cache) | 62                    |
+  | Backward, depth 10 | 156 ms | 218 ms                     | 2,030                 |
+  | Forward, depth 5   | 6.4 ms | 36.5 ms                    | 62                    |
 
 ## 6. Implementation & Verification
 

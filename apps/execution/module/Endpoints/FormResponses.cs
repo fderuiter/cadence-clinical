@@ -159,7 +159,10 @@ public sealed record FormResponse(
         var items = order
             .Select(id => FormItemResponse.From(id, specification.GetValueOrDefault(id), values.GetValueOrDefault(id)))
             .ToList();
-        var missing = items.Where(i => i.Required && i.Value is null).Select(i => i.ItemId).ToList();
+        var missing = items
+            .Where(i => i.Required && (i.Value is null || i.Value is MissingValue { Reason: NullFlavor.NotAsked }))
+            .Select(i => i.ItemId)
+            .ToList();
         return new(
             record.CollectionInstanceId.Value,
             record.EnrollmentId.Value,

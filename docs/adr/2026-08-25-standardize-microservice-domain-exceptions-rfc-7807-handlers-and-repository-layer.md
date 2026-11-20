@@ -15,29 +15,28 @@ Microservices across the Cadence eClinical Platform previously used inconsistent
 
 ## 2. Decision Drivers & Constraints
 
-* Unified exception hierarchy inheriting from `packages.hexagonal.DomainError`.
-* Standardized RFC 7807 problem details error responses across all FastAPI microservices.
-* Database exception mapping via `@map_database_exceptions` decorator on repository persistence methods.
-* Compliance with GxP 21 CFR Part 11 audit and error reporting standards (PRD-SYS-001).
+- Unified exception hierarchy inheriting from `packages.hexagonal.DomainError`.
+- Standardized RFC 7807 problem details error responses across all FastAPI microservices.
+- Database exception mapping via `@map_database_exceptions` decorator on repository persistence methods.
+- Compliance with GxP 21 CFR Part 11 audit and error reporting standards (PRD-SYS-001).
 
 ## 3. Options Considered
 
 ### Option 1: Standardize microservice domain exceptions extending `packages.hexagonal.DomainError`, register RFC 7807 error handlers on all FastAPIs, and decorate repository methods with database exception mapping (Selected).
 
 - **Overview:** Standardize microservice domain exceptions extending `packages.hexagonal.DomainError`, register RFC 7807 error handlers on all FastAPIs, and decorate repository methods with database exception mapping (Selected).
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: Allow ad-hoc exception types and HTTP responses across services (Rejected - leads to inconsistent client handling and ORM leakages).
 
 - **Overview:** Allow ad-hoc exception types and HTTP responses across services (Rejected - leads to inconsistent client handling and ORM leakages).
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 
@@ -52,7 +51,7 @@ Microservices across the Cadence eClinical Platform previously used inconsistent
 
 ## 6. Implementation & Verification
 
-* Refactored domain exceptions in `apps/payments`, `apps/execution`, and `apps/imaging` to inherit from `packages.hexagonal.DomainError`.
-* Registered `register_rfc7807_handlers(app)` across all 14 FastAPI microservices.
-* Applied `@map_database_exceptions` to repository persistence methods.
-* Verified via `uv run python scripts/validate_adrs.py` and `uv run pytest`.
+- Refactored domain exceptions in `apps/payments`, `apps/execution`, and `apps/imaging` to inherit from `packages.hexagonal.DomainError`.
+- Registered `register_rfc7807_handlers(app)` across all 14 FastAPI microservices.
+- Applied `@map_database_exceptions` to repository persistence methods.
+- Verified via `uv run python scripts/validate_adrs.py` and `uv run pytest`.

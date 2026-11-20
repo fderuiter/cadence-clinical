@@ -18,4 +18,8 @@ public interface ICgtApplicationService
     Task<CgtFullTraceabilityResponse> GetFullTraceabilityAsync(string studyId, string subjectId, CancellationToken cancellationToken = default);
     Task<List<CgtDestructionCertificateResponse>> ListDestructionCertificatesAsync(string studyId, CancellationToken cancellationToken = default);
     Task<List<CgtVialReturnReconciliationResponse>> ListVialReconciliationsAsync(string studyId, CancellationToken cancellationToken = default);
+    Task<(string StudyId, string SiteId)?> GetChainOfCustodyScopeAsync(Guid chainOfCustodyId, CancellationToken cancellationToken = default) =>
+        Task.FromResult<(string StudyId, string SiteId)?>(null);
+    Task<(string StudyId, string SiteId)?> GetSubjectChainOfCustodyScopeAsync(string studyId, string subjectId, CancellationToken cancellationToken = default) =>
+        Task.FromResult<(string StudyId, string SiteId)?>(null);
 }

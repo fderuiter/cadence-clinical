@@ -122,7 +122,7 @@
  * Manages intra-section and inter-section dragging operations, row appending, collapsing,
  * and passes viewport alerts downstream to individual CanvasFieldWidgets.
  */
-import { ref, computed } from "vue";
+import { ref, computed, toRaw } from "vue";
 import draggable from "vuedraggable";
 import CanvasFieldWidget from "./CanvasFieldWidget.vue";
 import { useDesignerStore } from "../../stores/designer.js";
@@ -187,7 +187,15 @@ function fieldHasWarning(field) {
 }
 
 const items = computed({
-  get: () => props.section.items || [],
+  get: () => {
+    const storeSection = designerStore.activeForm?.sections?.find(
+      (s) => s.id === props.section.id
+    );
+    if (storeSection && toRaw(storeSection) === toRaw(props.section)) {
+      return storeSection.items || [];
+    }
+    return props.section.items || [];
+  },
   set: (val) => {
     const updatedSection = { ...props.section, items: val };
     emit("update-section", updatedSection);

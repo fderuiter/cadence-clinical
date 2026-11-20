@@ -157,6 +157,7 @@ import {
   submitReconsentSignature,
 } from "../features/reconsent.js";
 import { useConsentStore } from "../stores/consent.js";
+import { state } from "../stores/state.js";
 
 const modalRef = ref(null);
 const consent = useConsentStore();
@@ -165,5 +166,10 @@ useFocusTrap(modalRef, {
   isOpen: () => consent.reconsentModalOpen,
   onEscape: closeReconsentModal,
   initialFocus: "#reconsent-sign-password",
+  restoreFocus: () => {
+    const prev = state.reconsentPreviouslyFocusedElement;
+    state.reconsentPreviouslyFocusedElement = null;
+    return prev;
+  },
 });
 </script>

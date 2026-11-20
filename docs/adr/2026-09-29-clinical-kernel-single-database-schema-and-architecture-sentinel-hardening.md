@@ -26,7 +26,7 @@ Following the clean-break migration to .NET 10 (ADR-2243) and the establishment 
 
 ### Option 1: Single Relational Database with Schema Partitioning & Universal ArchUnit Sentinels (Selected)
 
-- **Overview**: 
+- **Overview**:
   - Standardize Aspire AppHost and microservice EF Core `DbContext` configurations on a single PostgreSQL database (`cadence`) with schema isolation: `kernel`, `edc`, `ctms`, `etmf`, `quality`.
   - Expand ArchUnitNET rules `K-XS-1` and `K-XS-2` across all 18 microservice assemblies with zero tolerance for local entity duplication.
   - Refactor `apps/org` and `apps/ctms` to project directly from `Cadence.Kernel.Domain` UUIDv7 entities.

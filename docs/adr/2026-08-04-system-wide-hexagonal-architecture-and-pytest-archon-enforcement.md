@@ -24,19 +24,18 @@ Historically, our core microservices (specifically the Clinical Trial Metadata S
 ### Option 1: **Option A (Selected):** Implement Hexagonal (Ports and Adapters) Architecture and enforce import boundary rules via build-time `pytest-archon` testing.
 
 - **Overview:** **Option A (Selected):** Implement Hexagonal (Ports and Adapters) Architecture and enforce import boundary rules via build-time `pytest-archon` testing.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B:** Maintain legacy layered structures without automated import checking, relying purely on manual code reviews.
 
 - **Overview:** **Option B:** Maintain legacy layered structures without automated import checking, relying purely on manual code reviews.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

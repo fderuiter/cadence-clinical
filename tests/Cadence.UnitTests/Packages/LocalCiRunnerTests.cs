@@ -253,6 +253,20 @@ public class LocalCiRunnerTests
     }
 
     [Fact]
+    public void StepEnvironmentVariables_AreAlwaysPassedToCommands()
+    {
+        var browser = new CiStep("e2e", "browser")
+        {
+            Environment = new Dictionary<string, string> { ["CADENCE_TEST_BROWSER"] = "1" },
+            Commands = [Cmd("browser-test")],
+        };
+
+        LocalCiRunner.Run([Job("e2e", browser)], Defaults, Environment());
+
+        _variables["browser-test"].Should().Equal(new Dictionary<string, string> { ["CADENCE_TEST_BROWSER"] = "1" });
+    }
+
+    [Fact]
     public void RestoreFiles_ArePutBackAfterTheStep_EvenWhenItFails()
     {
         _files["/repo/report.md"] = "committed";

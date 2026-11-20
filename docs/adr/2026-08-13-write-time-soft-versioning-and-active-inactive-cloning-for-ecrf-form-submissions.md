@@ -25,14 +25,14 @@ In clinical trials governed by GxP and 21 CFR Part 11, eCRF form submission hist
 ### Option 1: Hard Deletes with Event Auditing
 
 - **Overview:** Overwrite rows in place and write audit events to a sidecar log.
-- ***Pros:*** Simpler database schema, smaller table size.
-- ***Cons:*** Violates strict GxP immutability for primary data tables, hard to recover old states from logs.
+- _**Pros:**_ Simpler database schema, smaller table size.
+- _**Cons:**_ Violates strict GxP immutability for primary data tables, hard to recover old states from logs.
 
 ### Option 2: Write-Time Soft-Versioning with Inactive Cloning (Selected)
 
 - **Overview:** Implement versioning columns (`protocol_version`, `is_active`, `is_readonly`, `cloned_from_id`) directly on `FormSubmission`. Protect inactive/read-only records via SQLAlchemy flush event listeners and automatically filter active rows in endpoints.
-- ***Pros:*** Fully compliant, highly audit-ready, integrated into the cryptographic ledger sealer, and simple to query.
-- ***Cons:*** Table size grows over time due to historical records, requiring proper indexing.
+- _**Pros:**_ Fully compliant, highly audit-ready, integrated into the cryptographic ledger sealer, and simple to query.
+- _**Cons:**_ Table size grows over time due to historical records, requiring proper indexing.
 
 ## 4. Decision Outcome
 

@@ -85,20 +85,20 @@ Open questions (#4808):
 
 ### 4.2 How elements map
 
-| USDM 4 | Protocol design |
-| --- | --- |
-| Official title, else the first title, else the study name | `title` |
-| `Objective` and its `endpoints`, level from the level decode | `objectives`, `endpoints` |
+| USDM 4                                                                                             | Protocol design                                                                                                                                                              |
+| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Official title, else the first title, else the study name                                          | `title`                                                                                                                                                                      |
+| `Objective` and its `endpoints`, level from the level decode                                       | `objectives`, `endpoints`                                                                                                                                                    |
 | `Estimand`: `variableOfInterestId`, `analysisPopulationId`, `interventionIds`, `populationSummary` | `estimands`: endpoint, population, `interventionIds`, the endpoint's text as the variable, the summary measure; arms are the arms whose study cells give those interventions |
-| `IntercurrentEvent.strategy` (free text) | a known strategy when the text names one, else `Other` with the text in `strategyText` |
-| `StudyDesignPopulation`, `AnalysisPopulation` | `populations` |
-| `EligibilityCriterion` with its `EligibilityCriterionItem` text | `eligibilityCriteria` |
-| `StudyArm` (type from the decode), interventions from its cells' elements | `arms` |
-| `StudyEpoch`, ordered by `previousId` and `nextId` | `epochs` |
-| `StudyCohort`, arms from `StudyArm.populationIds` | `cohorts` |
-| `StudyIntervention` and its first administration: dose, route, frequency | `interventions` (dose unit in UCUM where the CDISC unit code maps with certainty) |
-| `ScheduledActivityInstance` on the main timeline | `plannedActivities`: name from the encounter, locations from its settings and contact modes, timing per §4.3 |
-| `Activity` and its Biomedical Concepts | `collectionSpecs`, one item per concept with id `<activity>.<concept>` |
+| `IntercurrentEvent.strategy` (free text)                                                           | a known strategy when the text names one, else `Other` with the text in `strategyText`                                                                                       |
+| `StudyDesignPopulation`, `AnalysisPopulation`                                                      | `populations`                                                                                                                                                                |
+| `EligibilityCriterion` with its `EligibilityCriterionItem` text                                    | `eligibilityCriteria`                                                                                                                                                        |
+| `StudyArm` (type from the decode), interventions from its cells' elements                          | `arms`                                                                                                                                                                       |
+| `StudyEpoch`, ordered by `previousId` and `nextId`                                                 | `epochs`                                                                                                                                                                     |
+| `StudyCohort`, arms from `StudyArm.populationIds`                                                  | `cohorts`                                                                                                                                                                    |
+| `StudyIntervention` and its first administration: dose, route, frequency                           | `interventions` (dose unit in UCUM where the CDISC unit code maps with certainty)                                                                                            |
+| `ScheduledActivityInstance` on the main timeline                                                   | `plannedActivities`: name from the encounter, locations from its settings and contact modes, timing per §4.3                                                                 |
+| `Activity` and its Biomedical Concepts                                                             | `collectionSpecs`, one item per concept with id `<activity>.<concept>`                                                                                                       |
 
 The design gained two optional properties for this (additive, so `schemaVersion` stays 1): an estimand's
 `interventionIds`, checked as references to interventions, and an intercurrent event's `strategyText`, required when

@@ -895,7 +895,21 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionPostgresAp
     private HttpClient CreateClientFor(GoldenMasterScenario scenario)
     {
         string route = scenario.Route ?? string.Empty;
-        GatewayIdentity identity = TestSecurityContext.DefaultIdentity;
+        GatewayIdentity identity = TestSecurityContext.DefaultIdentity with
+        {
+            SiteIds =
+            [
+                "SITE-01",
+                "SITE-001",
+                "SITE-002",
+                "SITE-101",
+                "SITE-COMPLIANT-01",
+                "SITE-NONCOMPLIANT-01",
+                "SITE-AUTO-01",
+                "SITE-EDGE-008-COMPLIANT",
+                "SITE-EDGE-010-COMPLIANT",
+            ],
+        };
         if (route.StartsWith("/api/v1/execution/webhooks/etmf", StringComparison.Ordinal))
         {
             identity = TestSecurityContext.Identity("etmf-service", PermissionMatrix.EtmfServiceRole);

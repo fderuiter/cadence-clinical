@@ -5,7 +5,9 @@
     class="modal-overlay"
     style="display: none"
     role="dialog"
-    aria-modal="true"
+    :aria-modal="ui.signatureModalOpen ? 'true' : undefined"
+    :aria-hidden="!ui.signatureModalOpen ? 'true' : undefined"
+    :inert="!ui.signatureModalOpen || undefined"
     aria-labelledby="portal-modal-title"
     tabindex="-1"
   >
@@ -111,6 +113,10 @@ const ui = useUiStore();
 useFocusTrap(modalRef, {
   isOpen: () => ui.signatureModalOpen,
   onEscape: closeSignatureModal,
-  restoreFocus: () => state.initiatingButton || state.previouslyFocusedElement,
+  restoreFocus: () => {
+    const target = state.initiatingButton || state.previouslyFocusedElement;
+    state.initiatingButton = null;
+    return target;
+  },
 });
 </script>

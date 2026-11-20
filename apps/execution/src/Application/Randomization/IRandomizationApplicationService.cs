@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
 
 namespace Cadence.Apps.Execution.Application.Randomization;
@@ -36,4 +37,12 @@ public interface IRandomizationApplicationService
     /// The participant's arm and kit, or null when they are not randomised. Only the unblinded subject read calls this.
     /// </summary>
     Task<RevealedAllocation?> RevealAsync(string subjectIdOrCode, CancellationToken ct);
+
+    /// <summary>Resolves a scheme's owning study code without mutating state, for endpoint scope checks.</summary>
+    Task<StudyCode?> GetSchemeStudyAsync(Guid schemeId, CancellationToken ct = default) =>
+        Task.FromResult<StudyCode?>(null);
+
+    /// <summary>Resolves a participant's study and site codes without mutating state, for endpoint scope checks.</summary>
+    Task<(StudyCode StudyId, SiteCode? SiteId)?> GetSubjectScopeAsync(string subjectIdOrCode, CancellationToken ct = default) =>
+        Task.FromResult<(StudyCode StudyId, SiteCode? SiteId)?>(null);
 }

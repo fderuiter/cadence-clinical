@@ -27,20 +27,20 @@ This decision implements requirements under Trace-8.
 
 Replace static page elements with a comprehensive Vue 3 Single Page Application using standard Vue ecosystem packages.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Highly performant, extremely reactive, and lightweight bundle footprint.
   - ✅ Declarative routing setup with custom route meta tags simplifies role checks.
   - ✅ Standard keycloak-js adapter integrates natively with the platform's Keycloak realm.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires managing client-side navigation fallbacks for static deployments.
 
 ### Option 2: Server-Side Rendered (SSR) Multi-Page Application
 
 Generate and render views on the server and use simple interactive islands.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Simpler initial load times and no client-side routing complexity.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Reduced client-side responsiveness, and higher backend resource consumption per request.
 
 ## 4. Decision Outcome

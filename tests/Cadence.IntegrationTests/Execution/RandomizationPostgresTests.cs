@@ -386,7 +386,11 @@ public sealed class RandomizationPostgresTests(ExecutionPostgresApiFactory facto
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     private GatewayIdentity Caller(string name, string role) =>
-        TestSecurityContext.Identity($"{name}-{_run}", role) with { ChangeReason = Reason };
+        TestSecurityContext.Identity($"{name}-{_run}", role) with
+        {
+            SiteIds = RoleNormalization.GetNormalizedRoles([role]).Any(SiteAccessEvaluator.SITE_SCOPED_ROLES.Contains) ? [Site] : [],
+            ChangeReason = Reason,
+        };
 
     private object DefaultScheme() => new
     {

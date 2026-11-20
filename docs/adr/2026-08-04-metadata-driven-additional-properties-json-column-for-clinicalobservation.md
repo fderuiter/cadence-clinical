@@ -27,20 +27,20 @@ We need to purge these physical database columns and replace them with a dynamic
 ### Option 1: Retain Physical Columns
 
 - **Overview:** Maintain physical relational columns for every custom field or clinical metric.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Simplifies raw SQL querying.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Schema migration overhead is high.
   - ❌ Tables become sparse and bloated.
 
 ### Option 2: Metadata-driven JSON Column (ADR-2332) - Selected
 
 - **Overview:** Introduce an `additional_properties` JSON column to store dynamic fields, and proxy the attributes via properties.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Schema is flexible and extensible.
   - ✅ Complete backward compatibility through descriptor properties on the ORM class.
   - ✅ Simplifies database schema management and avoids costly migrations for custom fields.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Dynamic field updates require flagging changes in the SQLAlchemy unit of work.
 
 ## 4. Decision Outcome

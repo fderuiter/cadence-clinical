@@ -293,6 +293,11 @@ describe("Clinical Canvas: a participant's data", () => {
       expect(item.text()).toContain("SYSBP, revision 1");
       expect(item.text()).toContain(`form ${FORM_ID}`);
       expect(item.text()).toContain("Value differs from the source note");
+      expect(
+        wrapper.find(`#query-open-form-${QUERY_ID}`).attributes("href")
+      ).toBe(
+        `/studies/CAD-101?stage=conduct&participant=participant:${PARTICIPANT_ID}&form=collection_instance:${FORM_ID}`
+      );
     });
 
     it("links a query directly to its target form and observation inside Clinical Canvas with zoom path and return navigation", async () => {
@@ -369,7 +374,7 @@ describe("Clinical Canvas: a participant's data", () => {
 
       await openRecord();
 
-      await wrapper.find(`#query-form-${QUERY_ID}`).trigger("click");
+      await wrapper.find(`#query-open-form-${QUERY_ID}`).trigger("click");
       await flushPromises();
 
       expect(router.currentRoute.value.query).toEqual({

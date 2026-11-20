@@ -15,6 +15,7 @@ Also known as: ADR-2199 (former number)
 In clinical trials assessing critical primary and secondary endpoints (e.g. Major Adverse Cardiovascular Events [MACE], ischemic/hemorrhagic stroke, cardiovascular mortality, heart failure hospitalization, disease progression), protocol endpoint events must be independently and objectively adjudicated by an expert Clinical Endpoint Adjudication Committee (CEC) per FDA Guidance on Clinical Trial Endpoints and ICH E6(R2)/E9.
 
 Historically, endpoint adjudication systems suffered from several structural flaws:
+
 1. **Manual or Incomplete Dossier Packaging & PHI Leakage:** Compiling diagnostic materials (eCRFs, lab panels, 12-lead ECGs, imaging, narratives) was manual and risked exposing direct patient/site identifiers to blinded reviewers.
 2. **Blinding Compromise in Review Workflows:** Reviewers could inadvertently view peer adjudicator assessments prior to submitting their independent findings.
 3. **Disconnected EDC and Regulatory SDTM Domains:** Adjudicated determinations lived in isolated spreadsheets or portals, requiring manual, error-prone data reconciliation back to EDC casebooks and CDISC SDTM datasets.
@@ -31,24 +32,24 @@ Historically, endpoint adjudication systems suffered from several structural fla
 ## 3. Options Considered
 
 ### Option 1: Monolithic Custom Workflow Engine
+
 Build a standalone adjudication portal with an external database.
-- ***Pros:*** Decoupled from EDC execution core.
-- ***Cons:*** Heavy reconciliation overhead, sync latency, fragmented audit trails, lack of immediate SDTM compilation.
 
-
+- _**Pros:**_ Decoupled from EDC execution core.
+- _**Cons:**_ Heavy reconciliation overhead, sync latency, fragmented audit trails, lack of immediate SDTM compilation.
 
 ### Option 2: Native Cadence Execution Service with Hexagonal Blinding & CDISC Integration (Chosen)
+
 Implement `CecAdjudicationService`, `CecDossierRecord`, `CecCharterRecord`, and `CecMeetingRecord` directly within `apps/execution`, integrating with `SDTMDomain.CE` and `ClinicalObservation` persistence with role-projected blinding views.
-- ***Pros:***
+
+- _**Pros:**_
   - ✅ Instant zero-reconciliation EDC writeback and CDISC SDTM CE generation.
   - ✅ Cryptographic dossier and meeting minutes hashing (`SHA-256`).
   - ✅ Strict reader isolation enforced at the API projection layer.
   - ✅ 21 CFR Part 11 step-up electronic signatures integrated with platform security.
   - ✅ Audited model trigger protection across all committee actions.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires careful role-based blinding projection logic in API endpoints.
-
-
 
 ## 4. Decision Outcome
 
@@ -68,4 +69,3 @@ Implement `CecAdjudicationService`, `CecDossierRecord`, `CecCharterRecord`, and 
 ## 6. Implementation & Verification
 
 - **Verification Plan:** Full automated test coverage in `test_cec_endpoint_adjudication_suite.py` asserting dossier compilation, PHI scrubbing, blinding isolation, concordant auto-finalization, discordant escalation, Chair tie-breaking, meeting quorum calculations, and SDTM CE dataset compilation.
-

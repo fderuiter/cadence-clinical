@@ -22,19 +22,18 @@ Legacy Python typing constructs (`typing.List`, `typing.Dict`, `typing.Optional`
 ### Option 1: **Modern Python 3.10+ PEP 585/604 Syntax Lock (Selected)**: Refactor legacy imports to native syntax and enable Ruff UP linter rules globally.
 
 - **Overview:** **Modern Python 3.10+ PEP 585/604 Syntax Lock (Selected)**: Refactor legacy imports to native syntax and enable Ruff UP linter rules globally.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: Maintain legacy `typing.Optional` and `typing.List` syntax.
 
 - **Overview:** Maintain legacy `typing.Optional` and `typing.List` syntax.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

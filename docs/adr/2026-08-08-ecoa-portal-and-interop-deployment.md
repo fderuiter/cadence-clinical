@@ -31,9 +31,9 @@ This decision implements requirements under Trace-8.
 
 Integrate patient portal UI features into the existing sponsor/investigator web client (`apps/web`), and handle interop queries inside the primary execution database.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Avoids adding new services to `docker-compose.yml` and routing rules to the Gateway.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Severe risk of authorization bypass; exposing investigator-scoped frontend bundles to patients is a critical GxP vulnerability.
   - ❌ Sub-optimal bundle sizes for offline PWA rendering, degrading mobile page-load performance.
 
@@ -41,12 +41,12 @@ Integrate patient portal UI features into the existing sponsor/investigator web 
 
 Deploy the eCOA Subject Portal (`apps/subject-portal`) as an independent PWA and run the Interop Gateway (`apps/interop/`) as a dedicated, containerized microservice behind the API Gateway.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Complete physical and logical segregation of patient-facing UI from investigator-scoped UI.
   - ✅ Granular, gateway-enforced role boundary that drops non-ePRO routes for `Subject` JWTs.
   - ✅ Optimized mobile performance and offline-first PWA caching (IndexedDB local queues and service workers).
   - ✅ Self-contained, lightweight notification compute loop using async background tasks.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires managing two additional services in the deployment configuration (`docker-compose.yml`).
 
 ---

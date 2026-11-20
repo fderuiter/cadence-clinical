@@ -32,20 +32,20 @@ This decision implements requirements under Trace-1.
 ### Option 1: Separate RTSM Microservice with Independent Storage
 
 - **Overview:** Build a standalone RTSM microservice with its own database, security boundaries, and custom audit logging.
-- ***Pros:***
+- _**Pros:**_
   - ✅ High isolation; simplifies service boundaries.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Increases operational complexity and network overhead.
   - ❌ Bypasses or duplicates the existing `AuditedModel` triggers, Merkle-sealing, and trial-locking mechanics in the clinical execution database.
 
 ### Option 2: Unified Audited Persistence Models inside Clinical Execution Service
 
 - **Overview:** Model RTSM persistence directly inside the clinical execution database using `AuditedModel` base models. Utilize the existing schema management, automatic audit shadow triggers, and trial-locking boundaries. Apply encryption-at-rest using shared cryptographic helpers (such as AES/Fernet via `AllocationKeyManager`) for sensitive sequence and allocation data.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Leverages existing, validated database-trigger-based GxP audit tracking and soft-delete enforcement automatically.
   - ✅ Full compatibility with `TrialLockManager` and Merkle-root sealing.
   - ✅ Simple, pure-Python execution utilizing existing database managers.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Couples randomization schema with the clinical observations/visits schema (mitigated by clean logical separation into dedicated tables).
 
 ## 4. Decision Outcome

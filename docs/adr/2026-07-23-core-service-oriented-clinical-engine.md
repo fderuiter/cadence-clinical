@@ -25,19 +25,19 @@ This decision implements requirements under PRD-QRY-001.
 ### Option 1: Introduce Pandas and NumPy for statistics and unit conversion
 
 - **Overview:** Use standard scientific stack for outlier detection and UCUM handling.
-- ***Pros:***
+- _**Pros:**_
   - ✅ High standard library reliability.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Heavy third-party dependency footprint violates constraint against external scientific libraries.
 
 ### Option 2: Pure-Python and Jinja-based Relational Implementation
 
 - **Overview:** Build pure-Python mathematical functions for statistical outlier detection, standard Jinja2 templating for XML exports, and native SQLAlchemy schemas for patient observations.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Zero external scientific library dependencies.
   - ✅ Extremely lightweight and lightning fast (processes 1,000 observations in <100ms).
   - ✅ Full GxP auditability on all tables.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires custom implementation of standard statistical algorithms.
 
 ## 4. Decision Outcome

@@ -15,39 +15,38 @@ To satisfy requirement **PRD-SYS-008** (and related traceability requirements PR
 
 ## 2. Decision Drivers & Constraints
 
-* **Semantic Accuracy & Synonym Handling:** Clinical adverse events and medications require subword n-gram representations and clinical synonym expansion (e.g. cephalalgia -> headache, emesis -> vomiting).
-* **Deterministic Fallback & pgvector Integration:** In offline/unit environments or SQLite test harnesses, a deterministic 64-dimensional dense embedding generator and mathematical cosine similarity function provide high-fidelity testing without GPU dependencies, while production systems utilize pgvector cosine distance operators (`<=>`).
-* **GxP 21 CFR Part 11 Dual Attribution:** AI proposals must be tagged with model identifiers (`system:ai:tier1:all-MiniLM-L6-v2`) and confidence scores. When a Data Manager accepts, overrides, or queries a suggestion, both the AI generator and human reviewer identities, timestamps, and justifications must be recorded in `ClinicalCodingLedger`.
-* **Zero External Network Latency:** Tier 1 semantic matching must complete within local sub-50ms execution budgets.
+- **Semantic Accuracy & Synonym Handling:** Clinical adverse events and medications require subword n-gram representations and clinical synonym expansion (e.g. cephalalgia -> headache, emesis -> vomiting).
+- **Deterministic Fallback & pgvector Integration:** In offline/unit environments or SQLite test harnesses, a deterministic 64-dimensional dense embedding generator and mathematical cosine similarity function provide high-fidelity testing without GPU dependencies, while production systems utilize pgvector cosine distance operators (`<=>`).
+- **GxP 21 CFR Part 11 Dual Attribution:** AI proposals must be tagged with model identifiers (`system:ai:tier1:all-MiniLM-L6-v2`) and confidence scores. When a Data Manager accepts, overrides, or queries a suggestion, both the AI generator and human reviewer identities, timestamps, and justifications must be recorded in `ClinicalCodingLedger`.
+- **Zero External Network Latency:** Tier 1 semantic matching must complete within local sub-50ms execution budgets.
 
 ## 3. Options Considered
 
 ### Option 1: **Option A: Hybrid Dense Vector + Lexical Pipeline with Local Deterministic Embeddings (Selected)**
 
 - **Overview:** - Dense 64-dimensional normalized vector representations with clinical concept expansion and cosine similarity scoring.
-   - Combined scoring weighting vector semantic similarity (0.50) and lexical Levenshtein/Token distance (0.50).
-   - Dual-attribution ledger recording in `ClinicalCodingLedger`.
-- ***Pros:***
+  - Combined scoring weighting vector semantic similarity (0.50) and lexical Levenshtein/Token distance (0.50).
+  - Dual-attribution ledger recording in `ClinicalCodingLedger`.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B: Pure Lexical Fuzzy String Distance (Levenshtein / Trie)**
 
 - **Overview:** - Fails on semantic synonyms (e.g., "emesis" vs "vomiting").
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 3: **Option C: Direct LLM Prompting over Cloud APIs**
 
 - **Overview:** - High latency, non-deterministic scoring, high operational cost, and potential GxP data residency non-compliance.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 
@@ -61,20 +60,19 @@ To satisfy requirement **PRD-SYS-008** (and related traceability requirements PR
 
 ## 5. Consequences & Trade-offs
 
-* **Positive:**
+- **Positive:**
   - High accuracy matching for complex clinical verbatims and multi-ingredient drug names.
   - Seamless testability without requiring external vector database services during CI/CD.
   - Full GxP compliance with immutable dual-attribution audit ledger entries.
-* **Negative:**
+- **Negative:**
   - Requires maintaining clinical synonym ontology dictionaries in sync with periodic MedDRA/WHODrug releases.
 
 ## 6. Implementation & Verification
 
-* **Core Implementation:**
+- **Core Implementation:**
   - `apps/execution/coding/matcher.py`: Embedding generation, cosine similarity, hybrid MedDRA/WHODrug matchers.
   - `apps/execution/coding/service.py`: `suggest_semantic_coding`, enhanced `process_coding_action`.
   - `apps/execution/coding/adapters.py`: GxP dual-attribution ledger persistence.
   - `apps/execution/presentation/routers/dictionaries.py`: `POST /api/v1/execution/coding/assignments/{assignment_id}/suggest`.
-* **Verification Tests:**
+- **Verification Tests:**
   - `apps/execution/tests/test_semantic_medical_coding.py`: 5 comprehensive tests validating mathematical cosine similarity, vector representations, MedDRA semantic matching, WHODrug semantic matching, and Part 11 dual attribution.
-

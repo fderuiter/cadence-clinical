@@ -8,6 +8,9 @@ import { showToast } from "../widgets/toast.js";
 import { logAuditRecord } from "./audit.js";
 
 export function openReconsentModal() {
+  if (typeof document !== "undefined" && !state.reconsentModalOpen) {
+    state.reconsentPreviouslyFocusedElement = document.activeElement;
+  }
   if (!state.pendingReconsent) {
     state.pendingReconsent = {
       id: "req_default",
@@ -38,6 +41,11 @@ export function closeReconsentModal() {
   }
   state.reconsentModalOpen = false;
   state.reconsentModalError = "";
+  const prev = state.reconsentPreviouslyFocusedElement;
+  if (prev && typeof prev.focus === "function" && !prev.closest?.("[inert]")) {
+    prev.focus();
+    state.reconsentPreviouslyFocusedElement = null;
+  }
 }
 
 export async function checkPendingReconsent() {
@@ -196,6 +204,15 @@ export async function submitReconsentSignature() {
     state.consentSigned = true;
     state.reconsentModalOpen = false;
     state.reconsentModalError = "";
+    const prev = state.reconsentPreviouslyFocusedElement;
+    if (
+      prev &&
+      typeof prev.focus === "function" &&
+      !prev.closest?.("[inert]")
+    ) {
+      prev.focus();
+      state.reconsentPreviouslyFocusedElement = null;
+    }
 
     showToast(
       "Re-Consent signed and submitted successfully. Submissions unlocked."

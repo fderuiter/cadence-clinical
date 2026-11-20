@@ -30,31 +30,30 @@ Under PRD-SYS-041 and PRD-SYS-053, the Cadence platform requires an automated sc
 ### Option 1: **Option A (Selected): Dedicated Schema-per-Tenant with Dynamic Session `search_path` and Transactional DDL Pipeline**
 
 - **Overview:** - Each sponsor/tenant receives an isolated PostgreSQL schema (`tenant_xyz`).
-   - Shared models in `apps/execution/database/models` are dynamically created inside the tenant schema using `Base.metadata.create_all` with `search_path` configuration.
-   - Triggers and genesis cryptographic blocks are deployed automatically during provisioning.
-   - Transactional rollback purges the schema if provisioning fails.
-- ***Pros:***
+  - Shared models in `apps/execution/database/models` are dynamically created inside the tenant schema using `Base.metadata.create_all` with `search_path` configuration.
+  - Triggers and genesis cryptographic blocks are deployed automatically during provisioning.
+  - Transactional rollback purges the schema if provisioning fails.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B: Shared Single-Schema with Row-Level Security (RLS) and Tenant ID Columns**
 
 - **Overview:** - All tenant rows mixed in a single global table with `tenant_id` column.
-   - Higher operational risk of data leakage via misconfigured ORM queries or missing `.where()` clauses. Harder to satisfy strict sponsor data separation audits.
-- ***Pros:***
+  - Higher operational risk of data leakage via misconfigured ORM queries or missing `.where()` clauses. Harder to satisfy strict sponsor data separation audits.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 3: **Option C: Database-per-Tenant**
 
 - **Overview:** - High infrastructure overhead, connection pool exhaustion, and slow provisioning times for dynamic multi-tenant SaaS.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

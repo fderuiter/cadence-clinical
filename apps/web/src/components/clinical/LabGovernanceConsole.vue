@@ -3120,7 +3120,7 @@ onMounted(() => {
   font-size: 0.75rem;
   text-transform: uppercase;
   font-weight: 700;
-  color: var(--primary-light, #64748b);
+  color: var(--semantic-color-text-muted);
   letter-spacing: 0.05em;
 }
 
@@ -3298,5 +3298,11 @@ onMounted(() => {
   font-size: 0.85rem;
   border: 1px solid #cbd5e1;
   border-radius: 4px;
+}
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
 }
 </style>

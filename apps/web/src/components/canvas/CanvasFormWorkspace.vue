@@ -45,6 +45,7 @@
         :form-id="formId"
         :enrollment-context="enrollmentContext"
         :can-manage-queries="canManageQueries"
+        :can-verify-source="canVerifySource"
         :form-location="formLocation"
         :observation-location="observationLocation"
         @form-loaded="emit('form-loaded', $event)"
@@ -77,6 +78,7 @@ const props = defineProps<{
   formId: string | null;
   formLabel?: string;
   canManageQueries: boolean;
+  canVerifySource?: boolean;
   backLocation: RouteLocationRaw;
   backLabel: string;
   formLocation: (formId: string) => RouteLocationRaw;

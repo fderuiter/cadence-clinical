@@ -47,7 +47,67 @@ export type KernelObservationAuditEntry =
   Schemas["Kernel_ObservationAuditView"];
 export type KernelProposal = Schemas["Kernel_KernelProposalResponse"];
 export type KernelProposalState = Schemas["Kernel_KernelProposalStateResponse"];
+export type KernelAssertionState =
+  Schemas["Kernel_KernelAssertionStateResponse"];
 export type { KernelObservationValue };
+
+export const ASSERTION_LOCKED = "K.Assertion.Locked";
+export const ASSERTION_REVISION_STALE = "K.Assertion.RevisionStale";
+export const ASSERTION_ALREADY_RETRACTED = "K.Assertion.AlreadyRetracted";
+export const KERNEL_AUTHORIZATION_DENIED = "K.Authorization.Denied";
+
+/** Source data verification of one observation's current revision (`VerifyObservation`). */
+export interface KernelObservationVerification {
+  /** The observation's NodeRef; a version suffix is ignored. */
+  observationRef: string;
+  /** The enrollment the observation belongs to: the scope the verification is authorised against. */
+  enrollmentRef: string;
+  /** The revision the monitor verified; the kernel answers 409 (`K.Assertion.RevisionStale`) if it moved on. */
+  revision: number;
+  assertionId?: string | null;
+  reason: string;
+  /** One key per verification the user confirms, reused if that request is retried. */
+  idempotencyKey: string;
+}
+
+/** Retraction (withdrawal) of an active assertion (`RetractAssertion`). */
+export interface KernelAssertionRetraction {
+  /** The assertion's NodeRef (`assertion:<uuid>`). */
+  assertionRef: string;
+  /** The enrollment the target belongs to: the scope the withdrawal is authorised against. */
+  enrollmentRef: string;
+  assertionId?: string | null;
+  reason: string;
+  /** One key per withdrawal the user confirms, reused if that request is retried. */
+  idempotencyKey: string;
+}
+
+/** Extracts the kernel error code (`K.Assertion.Locked`, …) from a failed call, or null. */
+export function assertionErrorCode(error: unknown): string | null {
+  const data = (error as { data?: unknown } | null)?.data;
+  if (!data || typeof data !== "object") return null;
+  const code = (data as { code?: unknown }).code;
+  return typeof code === "string" ? code : null;
+}
+
+/** Actionable user-facing explanation when a verification or withdrawal call fails. */
+export function describeAssertionError(error: unknown): string {
+  const code = assertionErrorCode(error);
+  const status = (error as { status?: number | null } | null)?.status ?? null;
+  if (code === ASSERTION_LOCKED || status === 423) {
+    return "This scope is locked (Locked), so verifications cannot be recorded or withdrawn until the lock is released.";
+  }
+  if (code === ASSERTION_ALREADY_RETRACTED) {
+    return "That verification was already withdrawn; reload the form.";
+  }
+  if (code === ASSERTION_REVISION_STALE || status === 409) {
+    return "The value changed since you loaded the form; reload the form and verify the current revision.";
+  }
+  if (code === KERNEL_AUTHORIZATION_DENIED || status === 403) {
+    return "You are not authorised to verify or withdraw verifications on this participant.";
+  }
+  return error instanceof Error ? error.message : String(error);
+}
 
 /** A proposal's status as the kernel derives it: an open proposal past its expiry reads as Expired (ADR-2489). */
 export type KernelProposalStatus =
@@ -166,6 +226,63 @@ export const kernelApi = {
           enrollment_ref: enrollmentRef,
           value,
           expected_version: expectedVersion,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /**
+   * Verifies an observation's current revision against source (`POST /api/v1/kernel/observations/{observationRef}/verifications`).
+   * Rejects with 409 (`K.Assertion.RevisionStale`), 423 (`K.Assertion.Locked`), 422 (no reason), or 403 (`K.Authorization.Denied`).
+   */
+  verifyObservation({
+    observationRef,
+    enrollmentRef,
+    revision,
+    assertionId,
+    reason,
+    idempotencyKey,
+  }: KernelObservationVerification): Promise<KernelAssertionState> {
+    return unwrapResponse(
+      client.POST(
+        "/api/v1/kernel/observations/{observationRef}/verifications",
+        {
+          params: { path: { observationRef: unversioned(observationRef) } },
+          body: {
+            enrollment_ref: enrollmentRef,
+            revision,
+            ...(assertionId ? { assertion_id: assertionId } : {}),
+          },
+          headers: {
+            "X-Change-Reason": encodeChangeReason(reason),
+            "Idempotency-Key": idempotencyKey,
+          },
+        }
+      )
+    );
+  },
+
+  /**
+   * Withdraws an active verification or assertion with a mandatory reason (`POST /api/v1/kernel/assertions/{assertionRef}/retraction`).
+   * Rejects with 409 (`K.Assertion.AlreadyRetracted`), 423 (`K.Assertion.Locked`), 422 (no reason), or 403 (`K.Authorization.Denied`).
+   */
+  retractAssertion({
+    assertionRef,
+    enrollmentRef,
+    assertionId,
+    reason,
+    idempotencyKey,
+  }: KernelAssertionRetraction): Promise<KernelAssertionState> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/assertions/{assertionRef}/retraction", {
+        params: { path: { assertionRef: unversioned(assertionRef) } },
+        body: {
+          enrollment_ref: enrollmentRef,
+          ...(assertionId ? { assertion_id: assertionId } : {}),
         },
         headers: {
           "X-Change-Reason": encodeChangeReason(reason),
