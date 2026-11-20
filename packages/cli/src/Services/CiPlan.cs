@@ -178,6 +178,7 @@ public static class CiPlan
     {
         ["actionlint"] = "runs actionlint in GitHub Actions",
         ["container-security"] = "builds container images across a matrix and uploads Trivy SARIF to GitHub Code Scanning",
+        ["ci-gate"] = "aggregates pull-request validation job outcomes into one required branch ruleset status check",
         ["classify"] = "labels the pull request through the GitHub API",
         ["automerge"] = "approves and merges the pull request through the GitHub API",
         ["release-and-archive"] = "calls the production pipeline on pushes to main, release/* and v* tags",
