@@ -1,22 +1,18 @@
 <template>
   <div>
     <!-- Contextual Help Slide-Out Drawer -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <div
-      v-if="knowledgeStore.isOpen"
-      id="contextual-help-drawer-overlay"
-      class="drawer-overlay"
-      @click.self="knowledgeStore.closeDrawer()"
+    <ClinicalDrawer
+      :is-open="knowledgeStore.isOpen"
+      :teleport="false"
+      id="contextual-help-drawer"
+      overlay-id="contextual-help-drawer-overlay"
+      overlay-class="drawer-overlay"
+      panel-class="drawer-panel"
+      body-class="drawer-body"
+      aria-labelledby="help-drawer-title"
+      @close="knowledgeStore.closeDrawer()"
     >
-      <div
-        id="contextual-help-drawer"
-        ref="drawerRef"
-        class="drawer-panel"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="help-drawer-title"
-        tabindex="-1"
-      >
+      <template #header>
         <!-- Header -->
         <div class="drawer-header">
           <div class="header-main-row">
@@ -81,234 +77,226 @@
             </button>
           </div>
         </div>
+      </template>
 
-        <!-- Body Content -->
-        <div class="drawer-body">
-          <!-- Loading State -->
-          <div v-if="knowledgeStore.loading" class="loading-state">
-            <div class="spinner" />
-            <p>Resolving contextual SOP guidance...</p>
-          </div>
+      <!-- Body Content -->
+      <!-- Loading State -->
+      <div v-if="knowledgeStore.loading" class="loading-state">
+        <div class="spinner" />
+        <p>Resolving contextual SOP guidance...</p>
+      </div>
 
-          <!-- Search Results View -->
-          <div
-            v-else-if="isSearchOpen && searchInput.trim()"
-            class="search-results-section"
+      <!-- Search Results View -->
+      <div
+        v-else-if="isSearchOpen && searchInput.trim()"
+        class="search-results-section"
+      >
+        <div class="section-subhead">
+          <h4>Search Results ({{ knowledgeStore.searchResults.length }})</h4>
+          <button
+            v-if="knowledgeStore.selectedArticle"
+            class="btn-link"
+            @click="knowledgeStore.backToPrimary()"
           >
-            <div class="section-subhead">
-              <h4>
-                Search Results ({{ knowledgeStore.searchResults.length }})
-              </h4>
-              <button
-                v-if="knowledgeStore.selectedArticle"
-                class="btn-link"
-                @click="knowledgeStore.backToPrimary()"
-              >
-                ← Back to Matched SOP
-              </button>
-            </div>
+            ← Back to Matched SOP
+          </button>
+        </div>
 
-            <div
-              v-if="knowledgeStore.searchResults.length === 0"
-              class="empty-search"
-            >
-              <p>
-                No SOPs matched your query "<em>{{ searchInput }}</em
-                >".
-              </p>
-            </div>
+        <div
+          v-if="knowledgeStore.searchResults.length === 0"
+          class="empty-search"
+        >
+          <p>
+            No SOPs matched your query "<em>{{ searchInput }}</em
+            >".
+          </p>
+        </div>
 
-            <div v-else class="search-items-list">
-              <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-              <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-              <div
-                v-for="item in knowledgeStore.searchResults"
-                :key="item.id"
-                class="search-result-card"
-                :class="{
-                  active: knowledgeStore.displayedArticle?.id === item.id,
-                }"
-                @click="selectSearchResult(item)"
-              >
-                <div class="result-card-header">
-                  <h5 class="result-title">
-                    {{ item.title }}
-                  </h5>
-                  <span v-if="item.version_label" class="badge badge-version">
-                    v{{ item.version_label }}
-                  </span>
-                </div>
-                <div v-if="item.tags" class="tags-row">
-                  <span
-                    v-for="t in formatTags(item.tags)"
-                    :key="t"
-                    class="tag-pill"
-                  >
-                    #{{ t }}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Matched / Selected SOP View -->
+        <div v-else class="search-items-list">
           <div
-            v-else-if="knowledgeStore.displayedArticle"
-            class="guidance-content"
+            v-for="item in knowledgeStore.searchResults"
+            :key="item.id"
+            class="search-result-card"
+            :class="{
+              active: knowledgeStore.displayedArticle?.id === item.id,
+            }"
+            role="button"
+            tabindex="0"
+            :aria-pressed="knowledgeStore.displayedArticle?.id === item.id"
+            @click="selectSearchResult(item)"
+            @keydown.enter.prevent="selectSearchResult(item)"
+            @keydown.space.prevent="selectSearchResult(item)"
           >
-            <!-- Back to Matched Spotlight SOP Bar if inspecting related -->
-            <div v-if="knowledgeStore.selectedArticle" class="back-bar">
-              <button class="btn-back" @click="knowledgeStore.backToPrimary()">
-                ← Return to Route Spotlight SOP
-              </button>
-            </div>
-
-            <!-- Spotlight SOP Card -->
-            <div class="sop-card">
-              <div class="sop-meta-header">
-                <span class="category-badge">
-                  {{
-                    knowledgeStore.displayedArticle.category_name ||
-                    "Clinical Guidance"
-                  }}
-                </span>
-                <span
-                  v-if="knowledgeStore.displayedArticle.version_label"
-                  class="badge badge-version"
-                >
-                  v{{ knowledgeStore.displayedArticle.version_label }}
-                </span>
-                <span class="badge badge-status">PUBLISHED</span>
-              </div>
-
-              <h4 class="sop-title">
-                {{ knowledgeStore.displayedArticle.title }}
-              </h4>
-
-              <!-- Tags -->
-              <div v-if="knowledgeStore.displayedArticle.tags" class="tags-row">
-                <span
-                  v-for="tag in formatTags(
-                    knowledgeStore.displayedArticle.tags
-                  )"
-                  :key="tag"
-                  class="tag-pill"
-                >
-                  #{{ tag }}
-                </span>
-              </div>
-
-              <!-- Section Anchor Callout -->
-              <div
-                v-if="knowledgeStore.activeSectionAnchor"
-                class="anchor-callout"
-              >
-                <span class="anchor-icon">🎯</span>
-                <div class="anchor-text">
-                  <strong>Spotlight Section:</strong>
-                  <code>{{ knowledgeStore.activeSectionAnchor }}</code>
-                </div>
-              </div>
-
-              <!-- Article Body Header & Toggle -->
-              <div class="body-toggle-bar">
-                <span class="body-toggle-label"
-                  >Standard Operating Procedure Content</span
-                >
-                <button
-                  type="button"
-                  class="btn-toggle-body"
-                  @click="knowledgeStore.toggleArticleBody()"
-                >
-                  {{
-                    knowledgeStore.isArticleBodyExpanded
-                      ? "▲ Collapse Body"
-                      : "▼ Expand Body"
-                  }}
-                </button>
-              </div>
-
-              <!-- Collapsible Article Body -->
-              <div
-                v-if="knowledgeStore.isArticleBodyExpanded"
-                class="sop-body prose-content"
-              >
-                <div
-                  v-if="knowledgeStore.displayedArticle.body_html"
-                  v-html="knowledgeStore.displayedArticle.body_html"
-                />
-                <div
-                  v-else-if="knowledgeStore.displayedArticle.body_markdown"
-                  class="markdown-pre"
-                >
-                  {{ knowledgeStore.displayedArticle.body_markdown }}
-                </div>
-              </div>
-            </div>
-
-            <!-- Related Articles / Secondary Guides -->
-            <div
-              v-if="
-                !knowledgeStore.selectedArticle &&
-                knowledgeStore.relatedArticles.length > 0
-              "
-              class="related-section"
-            >
-              <h5 class="related-title">
-                📚 Related Clinical SOPs ({{
-                  knowledgeStore.relatedArticles.length
-                }})
+            <div class="result-card-header">
+              <h5 class="result-title">
+                {{ item.title }}
               </h5>
-              <div class="related-list">
-                <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-                <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-                <div
-                  v-for="rel in knowledgeStore.relatedArticles"
-                  :key="rel.id"
-                  class="related-card"
-                  @click="knowledgeStore.selectArticle(rel)"
-                >
-                  <div class="related-card-top">
-                    <span class="related-card-title">{{ rel.title }}</span>
-                    <span
-                      v-if="rel.version_label"
-                      class="badge badge-version-sm"
-                    >
-                      v{{ rel.version_label }}
-                    </span>
-                  </div>
-                  <div v-if="rel.tags" class="tags-row">
-                    <span
-                      v-for="t in formatTags(rel.tags).slice(0, 2)"
-                      :key="t"
-                      class="tag-pill tag-pill-sm"
-                    >
-                      #{{ t }}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <span v-if="item.version_label" class="badge badge-version">
+                v{{ item.version_label }}
+              </span>
+            </div>
+            <div v-if="item.tags" class="tags-row">
+              <span
+                v-for="t in formatTags(item.tags)"
+                :key="t"
+                class="tag-pill"
+              >
+                #{{ t }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Matched / Selected SOP View -->
+      <div v-else-if="knowledgeStore.displayedArticle" class="guidance-content">
+        <!-- Back to Matched Spotlight SOP Bar if inspecting related -->
+        <div v-if="knowledgeStore.selectedArticle" class="back-bar">
+          <button class="btn-back" @click="knowledgeStore.backToPrimary()">
+            ← Return to Route Spotlight SOP
+          </button>
+        </div>
+
+        <!-- Spotlight SOP Card -->
+        <div class="sop-card">
+          <div class="sop-meta-header">
+            <span class="category-badge">
+              {{
+                knowledgeStore.displayedArticle.category_name ||
+                "Clinical Guidance"
+              }}
+            </span>
+            <span
+              v-if="knowledgeStore.displayedArticle.version_label"
+              class="badge badge-version"
+            >
+              v{{ knowledgeStore.displayedArticle.version_label }}
+            </span>
+            <span class="badge badge-status">PUBLISHED</span>
+          </div>
+
+          <h4 class="sop-title">
+            {{ knowledgeStore.displayedArticle.title }}
+          </h4>
+
+          <!-- Tags -->
+          <div v-if="knowledgeStore.displayedArticle.tags" class="tags-row">
+            <span
+              v-for="tag in formatTags(knowledgeStore.displayedArticle.tags)"
+              :key="tag"
+              class="tag-pill"
+            >
+              #{{ tag }}
+            </span>
+          </div>
+
+          <!-- Section Anchor Callout -->
+          <div v-if="knowledgeStore.activeSectionAnchor" class="anchor-callout">
+            <span class="anchor-icon">🎯</span>
+            <div class="anchor-text">
+              <strong>Spotlight Section:</strong>
+              <code>{{ knowledgeStore.activeSectionAnchor }}</code>
             </div>
           </div>
 
-          <!-- Empty Fallback State -->
-          <div v-else class="empty-state">
-            <div class="empty-icon">🔍</div>
-            <h4>No Specific SOP Mapped for This Route</h4>
-            <p>
-              There is currently no published SOP mapped specifically to
-              <code>{{ knowledgeStore.currentRoute }}</code> for persona
-              <strong>{{ activePersonaLabel }}</strong>.
-            </p>
-            <div class="empty-actions">
-              <button class="btn btn-secondary" @click="openSearchWithFallback">
-                🔍 Search Knowledge Hub
-              </button>
+          <!-- Article Body Header & Toggle -->
+          <div class="body-toggle-bar">
+            <span class="body-toggle-label"
+              >Standard Operating Procedure Content</span
+            >
+            <button
+              type="button"
+              class="btn-toggle-body"
+              @click="knowledgeStore.toggleArticleBody()"
+            >
+              {{
+                knowledgeStore.isArticleBodyExpanded
+                  ? "▲ Collapse Body"
+                  : "▼ Expand Body"
+              }}
+            </button>
+          </div>
+
+          <!-- Collapsible Article Body -->
+          <div
+            v-if="knowledgeStore.isArticleBodyExpanded"
+            class="sop-body prose-content"
+          >
+            <div
+              v-if="knowledgeStore.displayedArticle.body_html"
+              v-html="knowledgeStore.displayedArticle.body_html"
+            />
+            <div
+              v-else-if="knowledgeStore.displayedArticle.body_markdown"
+              class="markdown-pre"
+            >
+              {{ knowledgeStore.displayedArticle.body_markdown }}
             </div>
           </div>
         </div>
 
-        <!-- Footer -->
+        <!-- Related Articles / Secondary Guides -->
+        <div
+          v-if="
+            !knowledgeStore.selectedArticle &&
+            knowledgeStore.relatedArticles.length > 0
+          "
+          class="related-section"
+        >
+          <h5 class="related-title">
+            📚 Related Clinical SOPs ({{
+              knowledgeStore.relatedArticles.length
+            }})
+          </h5>
+          <div class="related-list">
+            <div
+              v-for="rel in knowledgeStore.relatedArticles"
+              :key="rel.id"
+              class="related-card"
+              role="button"
+              tabindex="0"
+              @click="knowledgeStore.selectArticle(rel)"
+              @keydown.enter.prevent="knowledgeStore.selectArticle(rel)"
+              @keydown.space.prevent="knowledgeStore.selectArticle(rel)"
+            >
+              <div class="related-card-top">
+                <span class="related-card-title">{{ rel.title }}</span>
+                <span v-if="rel.version_label" class="badge badge-version-sm">
+                  v{{ rel.version_label }}
+                </span>
+              </div>
+              <div v-if="rel.tags" class="tags-row">
+                <span
+                  v-for="t in formatTags(rel.tags).slice(0, 2)"
+                  :key="t"
+                  class="tag-pill tag-pill-sm"
+                >
+                  #{{ t }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty Fallback State -->
+      <div v-else class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <h4>No Specific SOP Mapped for This Route</h4>
+        <p>
+          There is currently no published SOP mapped specifically to
+          <code>{{ knowledgeStore.currentRoute }}</code> for persona
+          <strong>{{ activePersonaLabel }}</strong>.
+        </p>
+        <div class="empty-actions">
+          <button class="btn btn-secondary" @click="openSearchWithFallback">
+            🔍 Search Knowledge Hub
+          </button>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <template #footer>
         <div class="drawer-footer">
           <button
             type="button"
@@ -327,8 +315,8 @@
             Close
           </button>
         </div>
-      </div>
-    </div>
+      </template>
+    </ClinicalDrawer>
 
     <!-- Ticket Escalation Modal -->
     <TicketCreateModal
@@ -344,20 +332,18 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
-import { useFocusTrap } from "../composables/useFocusTrap.js";
+import { ClinicalDrawer, useEscapeClose } from "ui";
 import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import TicketCreateModal from "./tickets/TicketCreateModal.vue";
 
-const drawerRef = ref(null);
 const knowledgeStore = useKnowledgeStore();
 const authStore = useAuthStore();
 const route = useRoute();
 
-useFocusTrap(drawerRef, {
-  isOpen: () => knowledgeStore.isOpen,
-  onEscape: () => knowledgeStore.closeDrawer(),
+useEscapeClose(() => knowledgeStore.closeDrawer(), {
+  isOpen: () => knowledgeStore.isOpen && !knowledgeStore.isEscalating,
 });
 
 const isSearchOpen = ref(false);
@@ -484,7 +470,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.drawer-overlay {
+:deep(.drawer-overlay) {
   position: fixed;
   top: 0;
   left: 0;
@@ -497,7 +483,7 @@ onUnmounted(() => {
   backdrop-filter: blur(2px);
 }
 
-.drawer-panel {
+:deep(.drawer-panel) {
   background-color: white;
   width: var(
     --semantic-drawer-width-sm,
@@ -656,7 +642,7 @@ onUnmounted(() => {
   font-size: 0.85rem;
 }
 
-.drawer-body {
+:deep(.drawer-body) {
   flex: 1;
   overflow-y: auto;
   padding: 16px 20px;
@@ -951,10 +937,17 @@ onUnmounted(() => {
   gap: 4px;
 }
 
-.related-card:hover {
+.related-card:hover,
+.related-card:focus-visible {
   background-color: #ffffff;
   border-color: var(--accent, #4f46e5);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.related-card:focus-visible,
+.search-result-card:focus-visible {
+  outline: 2px solid var(--accent, #4f46e5);
+  outline-offset: 2px;
 }
 
 .related-card-top {
@@ -1053,6 +1046,11 @@ onUnmounted(() => {
   text-align: center;
   color: #64748b;
   font-size: 0.84rem;
+}
+
+:deep(.clinical-drawer-footer) {
+  padding: 0;
+  border-top: none;
 }
 
 .drawer-footer {

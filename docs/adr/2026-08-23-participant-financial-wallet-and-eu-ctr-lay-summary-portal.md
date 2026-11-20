@@ -13,27 +13,26 @@ Describe the architectural context and problem statement. Reference the applicab
 
 ## 2. Decision Drivers & Constraints
 
-* Technical constraint 1
-* Business/GxP requirement (PRD-SYS-127)
+- Technical constraint 1
+- Business/GxP requirement (PRD-SYS-127)
 
 ## 3. Options Considered
 
 ### Option 1: Option A (Selected)
 
 - **Overview:** Option A (Selected)
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: Option B (Alternative)
 
 - **Overview:** Option B (Alternative)
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 
@@ -48,5 +47,5 @@ Describe the architectural context and problem statement. Reference the applicab
 
 ## 6. Implementation & Verification
 
-* Target files/packages modified.
-* Verification tests added under `tests/`.
+- Target files/packages modified.
+- Verification tests added under `tests/`.

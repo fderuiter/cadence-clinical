@@ -36,11 +36,14 @@ public static class DatabaseTestEvidence
 
     /// <summary>
     /// Tests that are skipped by design even with a database, because they need a separate opt-in: the 10M-edge
-    /// lineage benchmark (<c>CADENCE_LINEAGE_BENCHMARK=1</c>). Each one is named here so the exemption is reviewed.
+    /// lineage benchmark (<c>CADENCE_LINEAGE_BENCHMARK=1</c>) and the Chromium browser-to-database correction check
+    /// (<c>CADENCE_TEST_BROWSER=1</c>, executed in <c>accessibility-e2e</c>). Each one is named here so the exemption // deid-ignore
+    /// is reviewed.
     /// </summary>
     public static readonly IReadOnlySet<string> OptInTests = new HashSet<string>(StringComparer.Ordinal)
     {
         "Cadence.IntegrationTests.Kernel.LineageBenchmarkPostgresTests.BenchmarkTenMillionEdgesTraceLatency",
+        "Cadence.IntegrationTests.Kernel.KernelObservationHostPostgresTests.BrowserCorrectionReachesTheDatabaseWithItsReason",
     };
 
     /// <summary>The skipped or not-executed tests from the database assemblies in the TRX files under <paramref name="resultsPath"/>.</summary>

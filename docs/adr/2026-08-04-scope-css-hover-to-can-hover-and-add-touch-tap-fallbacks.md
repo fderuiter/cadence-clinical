@@ -24,20 +24,20 @@ Standard CSS `:hover` states trigger inconsistently on mobile/touch screens, oft
 ### Option 1: Native CSS `@media (hover: hover)` Media Queries
 
 - **Overview:** Directly wrap all `:hover` rules inside a `@media (hover: hover)` media query.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Declarative and runs without JS.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Harder to dynamically override for testing or manual accessibility overrides.
   - ❌ No shared, programmatic way to query hover capability within Vue JS application states.
 
 ### Option 2: Centralized dynamic pointer detection via body class (Selected)
 
 - **Overview:** Centralize a JS helper in the shared `packages/ui` package that queries `window.matchMedia("(hover: hover)")`, adds/removes `.can-hover` class on `document.body`, and monitors changes.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Simple CSS scoping (e.g. `.can-hover .btn:hover`).
   - ✅ Allows Vue components to check body classes or shared media query states.
   - ✅ Completely avoids sticky hovers on touch devices.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires a brief JS execution on initial script load.
 
 ## 4. Decision Outcome

@@ -29,20 +29,20 @@ This decision implements requirements under **Trace-16** and **Trace-7**.
 ### Option 1: Manual Documentation Updates and Peer Review
 
 - **Overview:** Rely strictly on developer discipline and peer-review checks to ensure documentation and diagrams match compose configurations.
-- ***Pros:***
+- _**Pros:**_
   - ✅ No scripting overhead.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Highly error-prone and vulnerable to developer oversight.
   - ❌ Does not prevent documentation drift in continuous integration.
 
 ### Option 2: Automated Validation Gating via a Custom Python Linter
 
 - **Overview:** Update ARCHITECTURE.md and the Technical Design Document with a dedicated local topology section, and add a custom static validation script that extracts actual services from `docker-compose.yml` and cross-references them against standard Mermaid diagrams inside our documentation.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Eradicates manual validation errors and completely blocks drift.
   - ✅ Instantaneous execution in pre-commit hooks and CI/CD pipelines (<0.1 seconds).
   - ✅ Requires no external heavy dependencies, ensuring portability.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires maintaining a lightweight parsing script.
 
 ## 4. Decision Outcome

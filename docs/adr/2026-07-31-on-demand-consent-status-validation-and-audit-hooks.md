@@ -24,19 +24,18 @@ The clinical execution service previously relied on a deprecated write endpoint 
 ### Option 1: Synchronous On-Demand Pull-Through Consent Cache & `before_flush` ORM Event Hooks (Selected)
 
 - **Overview:** Synchronous On-Demand Pull-Through Consent Cache & `before_flush` ORM Event Hooks (Selected)
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: Asynchronous Webhook Push Synchronization (Rejected — vulnerable to race conditions)
 
 - **Overview:** Asynchronous Webhook Push Synchronization (Rejected — vulnerable to race conditions)
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

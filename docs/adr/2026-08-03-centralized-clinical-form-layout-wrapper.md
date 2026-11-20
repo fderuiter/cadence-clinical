@@ -31,9 +31,9 @@ This decision addresses the following requirements:
 ### Option 1: Decentralized State (Status Quo)
 
 - **Overview:** Retain query-related logic, validation error containers, and interactive panel toggles inside each independent input component.
-- ***Pros:***
+- _**Pros:**_
   - ✅ No new components or wrapper layers are introduced.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Extreme code duplication of template logic and query-handling event maps.
   - ❌ Brittle integration where new clinical input primitives would have to duplicate all query panel logic.
   - ❌ Disparate accessibility keyboard-handling implementations.
@@ -41,12 +41,12 @@ This decision addresses the following requirements:
 ### Option 2: Centralized Layout Wrapper (`ClinicalFieldLayout.vue`)
 
 - **Overview:** Abstract all common layout, label/legend generation, query flags, validation messages, role authorization, and panel toggle logic into a centralized wrapper component (`ClinicalFieldLayout.vue`). Inputs are simplified to act as "headless" elements inside a default slot, utilizing standard Vue slot bindings to share the relevant identifiers.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Eliminates redundant code across all input components.
   - ✅ Guarantees identical styling, error messages, and layout behavior across all forms.
   - ✅ Centralizes role validation gates and key listeners (such as closing open query panels on `Escape` keypress).
   - ✅ Simplifies future styling migrations and the onboarding of new input types.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Adds a nesting layer in the DOM, which is negligible in terms of performance.
 
 ## 4. Decision Outcome

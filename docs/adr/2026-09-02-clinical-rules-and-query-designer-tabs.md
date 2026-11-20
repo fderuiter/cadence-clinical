@@ -28,18 +28,18 @@ This decision addresses the following requirements:
 ### Option 1: Disable ESLint rules on shared packages
 
 - **Overview:** Disable `no-unused-vars` inside `packages/ui` configuration.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Avoids rewriting exported helper files.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Violates GxP coding standards and quality gates.
 
 ### Option 2: Modernize parameter signatures and document unused variables
 
 - **Overview:** Prefix unused forms parameters or add `eslint-disable-next-line` markers to preserve public API signatures while silencing static warnings cleanly.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Preserves the public API contract for existing callers.
   - ✅ Fully satisfies CI/CD ESLint constraints.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Adds minimal boilerplate comments.
 
 ## 4. Decision Outcome

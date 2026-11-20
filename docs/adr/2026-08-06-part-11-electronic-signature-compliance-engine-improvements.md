@@ -27,20 +27,22 @@ This decision addresses the following vulnerabilities and gaps traced to **Trace
 ## 3. Options Considered
 
 ### Option A: Strict Enforced RSA-PSS Verification with Explict Legacy Rejection (Selected)
-Enforce RSA-PSS (Probabilistic Signature Scheme) with SHA-256 padding for RSA public key signatures. If a signature fails RSA-PSS verification, check if it was signed using legacy PKCS#1 v1.5 padding. If PKCS#1 v1.5 verification succeeds, explicitly log a `COMPLIANCE ALERT` to the audit trails and return a designated `LEGACY_PADDING_REJECTED` failure to prevent the insecure signature from being accepted. Additionally, validate that exactly one certificate/signature block exists to block injection exploits, and rigorously reject bypasses on mandatory documents when strict compliance is enabled.
-- ***Pros:***
-  - ✅ Addresses requirements
-- ***Cons:***
-  - ❌ Trade-offs accepted
 
+Enforce RSA-PSS (Probabilistic Signature Scheme) with SHA-256 padding for RSA public key signatures. If a signature fails RSA-PSS verification, check if it was signed using legacy PKCS#1 v1.5 padding. If PKCS#1 v1.5 verification succeeds, explicitly log a `COMPLIANCE ALERT` to the audit trails and return a designated `LEGACY_PADDING_REJECTED` failure to prevent the insecure signature from being accepted. Additionally, validate that exactly one certificate/signature block exists to block injection exploits, and rigorously reject bypasses on mandatory documents when strict compliance is enabled.
+
+- _**Pros:**_
+  - ✅ Addresses requirements
+- _**Cons:**_
+  - ❌ Trade-offs accepted
 
 ### Option B: Permissive Fallback to PKCS#1 v1.5 Padding
-Allow deterministic PKCS#1 v1.5 verification to succeed silently (or with a warning) to maximize compatibility with legacy external integrations. This option, however, compromises strict 21 CFR Part 11 security requirements and fails to align with rigorous GxP posture, leaving the system exposed to legacy cryptographic vulnerabilities.
-- ***Pros:***
-  - ✅ Addresses requirements
-- ***Cons:***
-  - ❌ Trade-offs accepted
 
+Allow deterministic PKCS#1 v1.5 verification to succeed silently (or with a warning) to maximize compatibility with legacy external integrations. This option, however, compromises strict 21 CFR Part 11 security requirements and fails to align with rigorous GxP posture, leaving the system exposed to legacy cryptographic vulnerabilities.
+
+- _**Pros:**_
+  - ✅ Addresses requirements
+- _**Cons:**_
+  - ❌ Trade-offs accepted
 
 ## 4. Decision Outcome
 

@@ -55,8 +55,8 @@ applicability, the rest of #4777, are later slices.
 ## 4. Decision Outcome
 
 - **Model.** `Effectivity(id, tenant, study, protocol_version, scope_level, scope_country?, scope_study_site?,
-  status, status_since)` with `EffectivityStatusPeriod(effectivity, status, evidence uuid[], valid_period,
-  recorded_period)` rows. A version has at most one effectivity per scope.
+status, status_since)` with `EffectivityStatusPeriod(effectivity, status, evidence uuid[], valid_period,
+recorded_period)` rows. A version has at most one effectivity per scope.
 - **Lifecycle.** `Pending → RegulatoryApproved | EthicsApproved → Effective`, in either approval order and with
   either approval optional. `Withdrawn` is reachable from every status and is terminal, and `Effective` is left only by
   withdrawal. A change takes effect after the current status began and not after it is recorded.

@@ -23,19 +23,18 @@
 ### Option 1: Centralized signature gating and RBAC permission registration (Selected).
 
 - **Overview:** Centralized signature gating and RBAC permission registration (Selected).
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: Ad-hoc per-endpoint signature validation logic in individual FastAPI routers.
 
 - **Overview:** Ad-hoc per-endpoint signature validation logic in individual FastAPI routers.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

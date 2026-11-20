@@ -13,7 +13,7 @@ Every selectable object in the Clinical Canvas needs one reference that works in
 trace link and an event (Canvas doc PX-2). The study also has to zoom from the portfolio down to a single
 observation (PX-1). Issue #4846 (decision D7) records the gaps:
 
-- The kernel has strongly-typed UUIDv7 identifiers (spec §3.2), but no public form that says *what kind* of object
+- The kernel has strongly-typed UUIDv7 identifiers (spec §3.2), but no public form that says _what kind_ of object
   an id names, or which version of it. A bare UUID in a URL cannot be resolved without guessing the table.
 - The scope path in spec §9.3 stops at `study_site`. The UI also needs participant, visit, assessment and
   observation levels.
@@ -127,13 +127,13 @@ tenant (portfolio) → organization → site
 
 ### 4.5 Where NodeRefs appear
 
-| Place | Rule |
-| --- | --- |
-| Event envelope | `subject`: the aggregate the command changed, pinned to its new version. Additive (K-EVT-1). Null for events about no aggregate, such as `DecisionDenied`. |
-| Lineage edges | `from` and `to` are NodeRefs (spec §9.6). The lineage store (#4815) persists them. |
-| Web URLs | The canonical object URL is `/n/{node-ref}` in the web app. The app asks the kernel for the zoom path and renders the object in its study context. |
-| Kernel HTTP API | `GET /api/v1/kernel/nodes/{node-ref}`, `…/path` and `…/children`. These are added when the kernel API host resolves the caller's tenant (#4780) and read authorization (#4781); until then the navigator is used in-process (ADR-2244). |
-| Palette, search, activity stream, explanations | Results and entries carry NodeRefs (D3, D5, D9). |
+| Place                                          | Rule                                                                                                                                                                                                                                    |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Event envelope                                 | `subject`: the aggregate the command changed, pinned to its new version. Additive (K-EVT-1). Null for events about no aggregate, such as `DecisionDenied`.                                                                              |
+| Lineage edges                                  | `from` and `to` are NodeRefs (spec §9.6). The lineage store (#4815) persists them.                                                                                                                                                      |
+| Web URLs                                       | The canonical object URL is `/n/{node-ref}` in the web app. The app asks the kernel for the zoom path and renders the object in its study context.                                                                                      |
+| Kernel HTTP API                                | `GET /api/v1/kernel/nodes/{node-ref}`, `…/path` and `…/children`. These are added when the kernel API host resolves the caller's tenant (#4780) and read authorization (#4781); until then the navigator is used in-process (ADR-2244). |
+| Palette, search, activity stream, explanations | Results and entries carry NodeRefs (D3, D5, D9).                                                                                                                                                                                        |
 
 ## 5. Consequences & Trade-offs
 

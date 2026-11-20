@@ -26,9 +26,9 @@ This decision implements requirements under Trace-11.
 ### Option 1: Fragmented/Bespoke Utility Implementations
 
 - **Overview:** Retain bespoke helper functions and CSS files within each discrete app folder.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Allows rapid individual app modifications without cross-service review.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Severe code duplication across the repository.
   - ❌ Risk of cryptographic ledger divergence (different hash templates/schemas for patient portals vs. main platform).
   - ❌ High overhead for UI alignment.
@@ -36,11 +36,11 @@ This decision implements requirements under Trace-11.
 ### Option 2: Shared `ui` Package Standardization
 
 - **Overview:** Move core layout primitives, ledger-block construction, and debounce utilities into the shared `packages/ui` library.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Single source of truth for cryptographic auditing (`buildLedgerBlock`) and input components (`createClinicalInput`).
   - ✅ Guarantees identical styling guidelines, removing redundant CSS declarations.
   - ✅ Drastically reduces lines of duplicate code, directly validated by automated scanners.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires coordination to avoid breaking changes in downstream consuming apps.
 
 ## 4. Decision Outcome

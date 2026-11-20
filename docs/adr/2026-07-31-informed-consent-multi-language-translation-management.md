@@ -28,19 +28,18 @@ This decision addresses the following requirements:
 ### Option 1: **Integrated Multi-Language Versioning (Selected):** Represent translation as an audited, version-tracked entity `ConsentTranslation` referencing either a source clause or a template version. Add review workflow states (`DRAFT`, `IN_REVIEW`, `APPROVED`) and protect approved retrievals with a read-through cache with thread safety and stale-on-error fallback.
 
 - **Overview:** **Integrated Multi-Language Versioning (Selected):** Represent translation as an audited, version-tracked entity `ConsentTranslation` referencing either a source clause or a template version. Add review workflow states (`DRAFT`, `IN_REVIEW`, `APPROVED`) and protect approved retrievals with a read-through cache with thread safety and stale-on-error fallback.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Dynamic In-Memory Localized Translation:** Perform live translation at runtime using an external translation provider. Rejected due to high latency, lack of deterministic human review, and compliance/reproducibility issues under GxP standards.
 
 - **Overview:** **Dynamic In-Memory Localized Translation:** Perform live translation at runtime using an external translation provider. Rejected due to high latency, lack of deterministic human review, and compliance/reproducibility issues under GxP standards.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

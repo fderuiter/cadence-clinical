@@ -31,20 +31,20 @@ This decision implements requirements under PRD-QRY-001.
 ### Option 1: Standalone Coding Query Handler
 
 - **Overview:** Build a separate service to manage coding queries, with periodic polling to sync query state with coding assignments.
-- ***Pros:***
+- _**Pros:**_
   - ✅ High isolation.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Complex synchronization and higher risk of state drift.
   - ❌ Lacks transactional safety across database updates and query changes.
 
 ### Option 2: Transactional Inline Integration in Clinical Execution Service (Selected)
 
 - **Overview:** Integrate query and assignment tracking directly inside the transactional operations of the clinical execution service (`create_observation`, `process_coding_action`, and query state updates).
-- ***Pros:***
+- _**Pros:**_
   - ✅ Atomic, single-transaction guarantees for assignment creation, query generation, and ledger updates.
   - ✅ Easy implementation of robust, database-level checks for duplicate open queries on coordinates.
   - ✅ Native use of the database shadow triggers for automatic, zero-overhead Part 11 auditing.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Adds logical coupling between the coding matcher and the query service within `apps/execution/main.py`.
 
 ---

@@ -22,19 +22,18 @@ The platform is moving towards a standardized Vue 3 single page application (SPA
 ### Option 1: **Option A (Selected)**: Completely deprecate and remove `packages/ui/econsent.js` and consolidate all normalization and state logic inside `apps/web/src/api/econsent.js` and Pinia stores.
 
 - **Overview:** **Option A (Selected)**: Completely deprecate and remove `packages/ui/econsent.js` and consolidate all normalization and state logic inside `apps/web/src/api/econsent.js` and Pinia stores.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B (Alternative)**: Retain `packages/ui/econsent.js` as a compatibility shim and proxy all Vue 3 store calls through it.
 
 - **Overview:** **Option B (Alternative)**: Retain `packages/ui/econsent.js` as a compatibility shim and proxy all Vue 3 store calls through it.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

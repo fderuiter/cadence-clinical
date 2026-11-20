@@ -1,6 +1,5 @@
 <template>
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div class="palette-backdrop" @click.self="emit('close')">
+  <div class="palette-backdrop" role="presentation" @click.self="emit('close')">
     <div
       id="canvas-palette"
       ref="dialogRef"
@@ -36,7 +35,6 @@
         role="listbox"
         aria-label="Results"
       >
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/mouse-events-have-key-events -->
         <li
           v-for="(item, index) in results"
           :id="`canvas-palette-item-${index}`"
@@ -47,7 +45,10 @@
           tabindex="-1"
           :aria-selected="index === active"
           @click="choose(item)"
+          @keydown.enter.prevent="choose(item)"
+          @keydown.space.prevent="choose(item)"
           @mouseenter="active = index"
+          @focus="active = index"
         >
           <span class="palette-group">{{ item.group }}</span>
           <span class="palette-label">{{ item.label }}</span>
@@ -81,7 +82,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
-import { useFocusTrap } from "../../composables/useFocusTrap";
+import { useFocusTrap } from "ui";
 import { kernelApi, type KernelSearchHit } from "../../api/kernelApi";
 import { STAGES, participantStateLabel } from "../../canvas/lifecycle";
 import type { SubjectSummary } from "../../api/executionApi";

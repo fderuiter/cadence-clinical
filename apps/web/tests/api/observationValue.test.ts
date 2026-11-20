@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   MISSING_REASONS,
   formatObservationValue,
+  isUnrecordedValue,
   parseCorrection,
   parseFormEntry,
   sameObservationValue,
@@ -154,11 +155,22 @@ describe("parseFormEntry (ADR-2622)", () => {
     expect(parseFormEntry("C123", item("Coded")).ok).toBe(false);
   });
 
-  it("offers the missing reasons a user may record, not the kernel's Masked", () => {
+  it("offers the missing reasons a user may record, not the kernel's Masked or NotAsked", () => {
     expect(MISSING_REASONS.map((r) => r.reason)).not.toContain("Masked");
+    expect(MISSING_REASONS.map((r) => r.reason)).not.toContain("NotAsked");
     expect(MISSING_REASONS).toContainEqual({
       reason: "NotDone",
       text: "Not done",
     });
+    expect(isUnrecordedValue(null)).toBe(true);
+    expect(isUnrecordedValue({ type: "missing", reason: "NotAsked" })).toBe(
+      true
+    );
+    expect(isUnrecordedValue({ type: "missing", reason: "NotDone" })).toBe(
+      false
+    );
+    expect(
+      isUnrecordedValue({ type: "quantity", value: 120, unit: "mm[Hg]" })
+    ).toBe(false);
   });
 });

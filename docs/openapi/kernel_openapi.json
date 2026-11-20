@@ -1671,6 +1671,332 @@
         ]
       }
     },
+    "/api/v1/kernel/observations/{observationRef}/verifications": {
+      "post": {
+        "tags": [
+          "Kernel observations"
+        ],
+        "summary": "Verifies the current revision of an observation against source with the signed reason for change (observation.verify).",
+        "operationId": "KernelVerifyObservation",
+        "parameters": [
+          {
+            "name": "observationRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_KernelVerifyObservationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelAssertionStateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Assertion.RevisionStale\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked. Kernel errors: \u0060K.Assertion.Locked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Assertion.RevisionStale",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Assertion.Locked",
+            "status": 423
+          }
+        ]
+      }
+    },
+    "/api/v1/kernel/assertions/{assertionRef}/retraction": {
+      "post": {
+        "tags": [
+          "Kernel observations"
+        ],
+        "summary": "Retracts a verification, answer or query assertion with the signed reason for change (assertion.retract).",
+        "operationId": "KernelRetractAssertion",
+        "parameters": [
+          {
+            "name": "assertionRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_KernelRetractAssertionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelAssertionStateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Assertion.AlreadyRetracted\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Assertion.NotRetractable\u0060, \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked. Kernel errors: \u0060K.Assertion.Locked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Assertion.AlreadyRetracted",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Assertion.NotRetractable",
+            "status": 422
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Assertion.Locked",
+            "status": 423
+          }
+        ]
+      }
+    },
     "/api/v1/kernel/studies/{studyRef}/proposals": {
       "get": {
         "tags": [
@@ -3219,7 +3545,7 @@
         "tags": [
           "Execution queries"
         ],
-        "summary": "Lists the queries on every form of an enrollment, oldest first.",
+        "summary": "Lists the queries on every form of an enrollment or across visible enrollments of a study, oldest first.",
         "operationId": "ExecutionListEnrollmentQueries",
         "parameters": [
           {
@@ -3228,6 +3554,42 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "participant",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "value_changed",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
@@ -3257,6 +3619,16 @@
           },
           "403": {
             "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -3326,7 +3698,7 @@
         "tags": [
           "Execution queries"
         ],
-        "summary": "Raises a query on the current revision of one of the form\u0027s values (execution.query.raise).",
+        "summary": "Raises a query on the current revision of one of the form\u0027s values or on a blank item (execution.query.raise).",
         "operationId": "ExecutionRaiseFormQuery",
         "parameters": [
           {
@@ -3360,8 +3732,18 @@
               }
             }
           },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Not Found. Kernel errors: \u0060M.Execution.Form.CollectionInstanceUnknown\u0060, \u0060M.Execution.Query.ObservationUnknown\u0060.",
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060. Kernel errors: \u0060M.Execution.Form.CollectionInstanceUnknown\u0060, \u0060M.Execution.Query.ObservationUnknown\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -3371,7 +3753,7 @@
             }
           },
           "401": {
-            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -3381,7 +3763,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060. Kernel errors: \u0060K.Authorization.Denied\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -3391,7 +3773,7 @@
             }
           },
           "409": {
-            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060M.Execution.Query.RevisionStale\u0060.",
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060M.Execution.Query.RevisionStale\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -3401,7 +3783,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Collection.ValuesInvalid\u0060, \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -3411,7 +3793,7 @@
             }
           },
           "423": {
-            "description": "Locked. Kernel errors: \u0060K.Assertion.Locked\u0060.",
+            "description": "Locked. Kernel errors: \u0060K.Assertion.Locked\u0060. Kernel errors: \u0060K.Assertion.Locked\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -5312,6 +5694,44 @@
               "string"
             ],
             "format": "int64"
+          },
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "study_site_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "site_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "collection_spec_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "planned_activity_id": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -5892,6 +6312,51 @@
                 "$ref": "#/components/schemas/Kernel_KernelSoaAmendmentDiffResponse"
               }
             ]
+          }
+        }
+      },
+      "Kernel_KernelAssertionStateResponse": {
+        "required": [
+          "ref",
+          "kind",
+          "target",
+          "revision",
+          "retracts",
+          "asserted_at",
+          "asserted_by"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "retracts": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "asserted_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "asserted_by": {
+            "type": "string"
           }
         }
       },
@@ -6910,6 +7375,24 @@
           }
         }
       },
+      "Kernel_KernelRetractAssertionRequest": {
+        "required": [
+          "enrollment_ref"
+        ],
+        "type": "object",
+        "properties": {
+          "enrollment_ref": {
+            "type": "string"
+          },
+          "assertion_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "Kernel_KernelScheduleOfActivitiesResponse": {
         "required": [
           "version",
@@ -7381,6 +7864,33 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "Kernel_KernelVerifyObservationRequest": {
+        "required": [
+          "enrollment_ref",
+          "revision"
+        ],
+        "type": "object",
+        "properties": {
+          "enrollment_ref": {
+            "type": "string"
+          },
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "assertion_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -8043,18 +8553,21 @@
         "required": [
           "observation_id",
           "revision",
-          "text",
-          "query_id"
+          "text"
         ],
         "type": "object",
         "properties": {
           "observation_id": {
-            "type": "string",
+            "type": [
+              "null",
+              "string"
+            ],
             "format": "uuid"
           },
           "revision": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
+              "null",
               "integer",
               "string"
             ],
@@ -8069,6 +8582,12 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "item_id": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
