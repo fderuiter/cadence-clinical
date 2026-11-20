@@ -60,7 +60,17 @@ public sealed class DocIndexSyncServiceTests : IDisposable
 
         File.WriteAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"), "# Index\n");
         File.WriteAllText(Path.Combine(docsDir, "empty.md"), ""); // Empty file
-        foreach (string stagedPage in new[] { "AGENTS.md", "ARCHITECTURE.md", "LICENSE.md", "index.md" })
+        foreach (string stagedPage in new[]
+                 {
+                     "AGENTS.md",
+                     "ARCHITECTURE.md",
+                     "CONTEXT.md",
+                     "CONTRIBUTING.md",
+                     "LICENSE.md",
+                     "SECURITY.md",
+                     "SUPPORT.md",
+                     "index.md"
+                 })
         {
             File.WriteAllText(Path.Combine(docsDir, stagedPage), "# Staged VitePress page\n");
         }

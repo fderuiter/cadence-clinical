@@ -218,6 +218,55 @@ public sealed class BuildDocsScriptTests : IDisposable
         File.ReadAllText(iqPath).Should().Be(originalIq);
     }
 
+    [Fact]
+    public void BuildDocs_WhenAllEightRootGuidesExist_StagesRewritesAndCleansUpAllEight()
+    {
+        string repoRoot = FindRepoRoot();
+        Directory.CreateDirectory(Path.Combine(_fixtureRoot, "docs", ".vitepress"));
+        File.Copy(
+            Path.Combine(repoRoot, "docs", ".vitepress", "rootDocs.cjs"),
+            Path.Combine(_fixtureRoot, "docs", ".vitepress", "rootDocs.cjs"));
+
+        File.WriteAllText(Path.Combine(_fixtureRoot, "CONTEXT.md"), "# Glossary\n\nSee [Contributing](CONTRIBUTING.md).\n");
+        File.WriteAllText(Path.Combine(_fixtureRoot, "CONTRIBUTING.md"), "# Contributing\n");
+        File.WriteAllText(Path.Combine(_fixtureRoot, "SECURITY.md"), "# Security\n");
+        File.WriteAllText(Path.Combine(_fixtureRoot, "SUPPORT.md"), "# Support\n");
+
+        var prepResult = RunBuildDocs(args: ["--prepare-only"]);
+        prepResult.ExitCode.Should().Be(0, prepResult.Output);
+
+        string[] allEight =
+        [
+            "index.md",
+            "ARCHITECTURE.md",
+            "AGENTS.md",
+            "CONTEXT.md",
+            "CONTRIBUTING.md",
+            "SECURITY.md",
+            "SUPPORT.md",
+            "LICENSE.md"
+        ];
+
+        foreach (string staged in allEight)
+        {
+            File.Exists(Path.Combine(_fixtureRoot, "docs", staged)).Should().BeTrue($"{staged} should be staged by --prepare-only");
+        }
+
+        File.ReadAllText(Path.Combine(_fixtureRoot, "docs", "CONTEXT.md"))
+            .Should().Contain("(CONTRIBUTING.md)");
+
+        var buildResult = RunBuildDocs(new Dictionary<string, string?>
+        {
+            ["CADENCE_DOCS_SKIP_CHECKS"] = "1",
+        });
+        buildResult.ExitCode.Should().Be(0, buildResult.Output);
+
+        foreach (string staged in allEight)
+        {
+            File.Exists(Path.Combine(_fixtureRoot, "docs", staged)).Should().BeFalse($"temporary {staged} must be cleaned up after build");
+        }
+    }
+
     private void SetupFixtureRepository()
     {
         string repoRoot = FindRepoRoot();
