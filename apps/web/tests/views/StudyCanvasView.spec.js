@@ -56,6 +56,7 @@ vi.mock("../../src/api/ecrfQueriesApi", async (importOriginal) => {
 vi.mock("../../src/api/executionApi", () => ({
   executionApi: {
     listSubjects: vi.fn(),
+    getSubjectDetail: vi.fn(),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
   },
@@ -129,6 +130,7 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       ],
     });
     vi.mocked(executionApi.listSubjects).mockReset();
+    vi.mocked(executionApi.getSubjectDetail).mockReset();
     vi.mocked(executionApi.getSiteComplianceStatus).mockReset();
     serveParticipants();
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -437,13 +439,60 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
     );
   });
 
-  it("says so when the selected participant isn't loaded, rather than guessing", async () => {
+  it("hydrates a cold-linked inspector participant and says when an unknown UUID isn't loaded", async () => {
     await open(`/studies/CAD-101?node=participant:${IDS[2]}`);
+
+    expect(wrapper.find("#canvas-inspector-title").text()).toBe("017-0003");
+    expect(wrapper.find("#verb-trace").exists()).toBe(true);
+
+    const unknownId = "0192f3c4-5e6a-7b8c-9d0e-000000000099";
+    await router.push(`/studies/CAD-101?node=participant:${unknownId}`);
+    await flushPromises();
 
     expect(wrapper.find("#canvas-inspector-title").text()).toBe(
       "Participant not loaded"
     );
     expect(wrapper.find("#verb-trace").exists()).toBe(false);
+  });
+
+  it("hydrates cold ?form=new participant links and discards stale participant lookups when switching studies", async () => {
+    let answerOldLookup;
+    vi.mocked(executionApi.listSubjects).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answerOldLookup = resolve;
+        })
+    );
+
+    await router.push(
+      `/studies/OLD-1?stage=conduct&participant=participant:${IDS[0]}&form=new`
+    );
+    await router.isReady();
+    wrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [pinia, router] }, attachTo: document.body }
+    );
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find("#record-loading").exists()).toBe(true);
+    expect(wrapper.find("#record-not-loaded").exists()).toBe(false);
+
+    await router.push(
+      `/studies/CAD-101?stage=conduct&participant=participant:${IDS[1]}&form=new`
+    );
+    await flushPromises();
+
+    answerOldLookup({
+      items: [participant(0, { subject_id: "OLD-0001", study_id: "OLD-1" })],
+      total: 1,
+      limit: 200,
+      offset: 0,
+    });
+    await flushPromises();
+
+    expect(wrapper.find("#canvas-form-workspace").exists()).toBe(true);
+    expect(wrapper.find("#canvas-inspector-title").text()).toBe("017-0002");
+    expect(wrapper.text()).not.toContain("OLD-0001");
   });
 
   it("pages through participants with Show more", async () => {
@@ -598,24 +647,90 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       expect(wrapper.find("#canvas-inspector-title").text()).toBe("017-0003");
     });
 
-    it("moves through results with the arrow keys and goes to a stage", async () => {
+    it("populates study participants on study home, resolves exact codes beyond 200 rows, and suppresses Open study for subject codes", async () => {
+      const many = Array.from({ length: 250 }, (_, i) =>
+        participant(0, {
+          id: `0192f3c4-5e6a-7b8c-9d0e-${String(i + 1).padStart(12, "0")}`,
+          subject_id: `017-${String(i + 1).padStart(4, "0")}`,
+          enrollment_index: i + 1,
+        })
+      );
+      serveParticipants(many);
+      vi.mocked(executionApi.getSubjectDetail).mockImplementation(
+        async (subjectCode) => {
+          const found = many.find((p) => p.subject_id === subjectCode);
+          if (!found) {
+            throw Object.assign(new Error("Not found"), { status: 404 });
+          }
+          return {
+            subject_id: found.subject_id,
+            study_id: found.study_id,
+            status: found.status,
+            site_id: found.site_id,
+            treatment_group: null,
+            randomization_seed: null,
+            investigational_product_id: null,
+          };
+        }
+      );
+
       await open("/studies/CAD-101");
       await wrapper.find("#btn-open-palette").trigger("click");
-
-      await wrapper.find("#canvas-palette-input").setValue("conduct");
-      const input = wrapper.find("#canvas-palette-input");
-      expect(input.attributes("aria-activedescendant")).toBe(
-        "canvas-palette-item-0"
-      );
-      await input.trigger("keydown", { key: "ArrowDown" });
-      expect(input.attributes("aria-activedescendant")).toBe(
-        "canvas-palette-item-1"
-      );
-      await input.trigger("keydown", { key: "ArrowUp" });
-      await input.trigger("keydown", { key: "Enter" });
       await flushPromises();
 
-      expect(router.currentRoute.value.query).toEqual({ stage: "conduct" });
+      await wrapper.find("#canvas-palette-input").setValue("017-0205");
+      await flushPromises();
+
+      const options = wrapper.findAll("#canvas-palette-list [role=option]");
+      expect(options[0].text()).toContain("017-0205");
+      expect(
+        options.some((o) => o.find(".palette-group").text() === "Open study")
+      ).toBe(false);
+
+      await wrapper.find("#canvas-palette-input").trigger("keydown", {
+        key: "Enter",
+      });
+      await flushPromises();
+
+      expect(router.currentRoute.value.query).toEqual({
+        stage: "conduct",
+        section: "participants",
+        node: "participant:0192f3c4-5e6a-7b8c-9d0e-000000000205",
+      });
+      expect(wrapper.find("#canvas-inspector-title").text()).toBe("017-0205");
+    });
+
+    it("moves through results with the arrow keys, scrolling active items into view, and goes to a stage", async () => {
+      const scrollSpy = vi.fn();
+      const originalScroll = HTMLElement.prototype.scrollIntoView;
+      HTMLElement.prototype.scrollIntoView = scrollSpy;
+      try {
+        await open("/studies/CAD-101");
+        await wrapper.find("#btn-open-palette").trigger("click");
+        await flushPromises();
+
+        await wrapper.find("#canvas-palette-input").setValue("conduct");
+        const input = wrapper.find("#canvas-palette-input");
+        expect(input.attributes("aria-activedescendant")).toBe(
+          "canvas-palette-item-0"
+        );
+        await input.trigger("keydown", { key: "ArrowDown" });
+        expect(input.attributes("aria-activedescendant")).toBe(
+          "canvas-palette-item-1"
+        );
+        expect(scrollSpy).toHaveBeenLastCalledWith({ block: "nearest" });
+
+        await input.trigger("keydown", { key: "ArrowUp" });
+        expect(scrollSpy).toHaveBeenCalledTimes(2);
+        expect(scrollSpy).toHaveBeenLastCalledWith({ block: "nearest" });
+
+        await input.trigger("keydown", { key: "Enter" });
+        await flushPromises();
+
+        expect(router.currentRoute.value.query).toEqual({ stage: "conduct" });
+      } finally {
+        HTMLElement.prototype.scrollIntoView = originalScroll;
+      }
     });
 
     it("opens another study by the code typed, exactly as typed", async () => {
