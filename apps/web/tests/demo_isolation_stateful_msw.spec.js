@@ -546,6 +546,45 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
       );
       expect(chemSummary?.complete).toBe(false);
     });
+
+    it("serves stateful kernel entitlements and in-place tier upgrades without hitting 501 boundary", async () => {
+      const initialRes = await fetch(`${origin}/api/v1/kernel/entitlements`, {
+        headers: DEMO_HEADERS,
+      });
+      expect(initialRes.status).toBe(200);
+      const initialEntitlements = await initialRes.json();
+      expect(initialEntitlements.tier).toBe("Complete");
+
+      const upgradeRes = await fetch(
+        `${origin}/api/v1/kernel/entitlements/tier`,
+        {
+          method: "POST",
+          headers: {
+            ...DEMO_HEADERS,
+            "Idempotency-Key": "demo-tier-select-1",
+            "X-Change-Reason": "Evaluate Select tier in demo",
+          },
+          body: JSON.stringify({ tier: "Select" }),
+        }
+      );
+      expect(upgradeRes.status).toBe(200);
+      const upgraded = await upgradeRes.json();
+      expect(upgraded.tier).toBe("Select");
+      expect(upgraded.product_families).toEqual([
+        "Blueprint",
+        "Capture",
+        "Orbit",
+        "Engage",
+        "Allocate",
+      ]);
+
+      const subsequentRes = await fetch(
+        `${origin}/api/v1/kernel/entitlements`,
+        { headers: DEMO_HEADERS }
+      );
+      const subsequent = await subsequentRes.json();
+      expect(subsequent.tier).toBe("Select");
+    });
   });
 
   describe("Demo route availability & router guard behavior", () => {
