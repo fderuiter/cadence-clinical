@@ -16,15 +16,19 @@ import { isDemoBuild } from "../utils/demoMode";
 
 /** Route names whose screens call endpoints the .NET services serve. */
 export const AVAILABLE_SCREENS = new Set([
-  // Clinical Canvas: participants and their counts, and site activation, from Execution.
+  // Clinical Canvas: lifecycle stages (Design, Start, Conduct, Data) over Kernel, Execution, CTMS, eTMF, and Knowledge.
   "study",
   // Execution: subjects, forms, observations, SDV, queries (#4828).
   "ecrf",
   // Kernel: one observation and its correction (ADR-2620).
   "observation",
-  // Execution: site activation and eTMF compliance status; the other CTMS tabs run only in a demo build.
+  // Execution + CTMS + eTMF: site activation, milestones, monitoring visits & letters, delegation of authority, and startup greenlight.
   "ctms",
   "ssu",
+  // eTMF: Trial Master File binder, essential document QC staging, and clinical QC review.
+  "etmf",
+  // Knowledge: protocol curricula, training assignments, and 21 CFR Part 11 delegation sign-off.
+  "training",
 ]);
 
 /** Routes unlocked in interactive static demo builds backed by stateful MSW handlers. */

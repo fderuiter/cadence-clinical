@@ -12,7 +12,7 @@
       <button
         class="view-tab-btn"
         :class="{ active: viewMode === 'single' }"
-        @click="viewMode = 'single'"
+        @click="switchToSingleView"
       >
         🔎 Single Site Detail Console ({{ activeSiteId }})
       </button>
@@ -35,11 +35,15 @@
               v-model="docForm.type"
               class="select-input"
             >
-              <option value="FDA_1572">Form FDA 1572</option>
-              <option value="IRB_APPROVAL">IRB Approval Letter</option>
-              <option value="CTA_AGREEMENT">Clinical Trial Agreement</option>
+              <option value="FDA_1572">Form FDA 1572 (05.02.02)</option>
+              <option value="IRB_APPROVAL">
+                IRB Approval Letter (04.01.02)
+              </option>
+              <option value="CTA_AGREEMENT">
+                Clinical Trial Agreement (05.02.12)
+              </option>
               <option value="PROTOCOL_SIGNATURE">
-                Protocol Signature Page
+                Protocol Signature Page (05.02.03)
               </option>
             </select>
           </div>
@@ -52,6 +56,17 @@
               type="file"
               class="text-input"
               @change="onDocFileSelected"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="doc-upload-reason">Reason for Change:</label>
+            <input
+              id="doc-upload-reason"
+              v-model="docForm.reasonForChange"
+              type="text"
+              class="text-input"
+              placeholder="Stage essential startup document for clinical QC"
             />
           </div>
         </div>
@@ -106,7 +121,8 @@
           </button>
           <button
             class="btn btn-primary btn-batch-certify"
-            :disabled="loading || selectedSiteIds.size === 0"
+            :disabled="!canCertify || loading || selectedSiteIds.size === 0"
+            :title="!canCertify ? GREENLIGHT_CERTIFY_ROLE_REASON : undefined"
             @click="openBatchCertifyModal"
           >
             <span class="btn-icon">🛡️</span> Batch Certify Country Sites
@@ -114,6 +130,29 @@
               {{ selectedSiteIds.size }}
             </span>
           </button>
+        </div>
+      </div>
+
+      <p
+        v-if="!canCertify"
+        id="greenlight-certify-role-note"
+        class="role-note"
+        role="note"
+      >
+        {{ GREENLIGHT_CERTIFY_ROLE_REASON }}
+      </p>
+
+      <div
+        v-if="matrixErrorMessage"
+        id="matrix-load-error"
+        data-testid="ssu-matrix-error"
+        class="alert alert-danger"
+        role="alert"
+      >
+        <span class="alert-icon">⚠️</span>
+        <div>
+          <strong>Couldn't load country readiness matrix:</strong>
+          {{ matrixErrorMessage }}
         </div>
       </div>
 
@@ -224,7 +263,8 @@
 
         <button
           class="btn btn-primary btn-batch-certify"
-          :disabled="loading || selectedSiteIds.size === 0"
+          :disabled="!canCertify || loading || selectedSiteIds.size === 0"
+          :title="!canCertify ? GREENLIGHT_CERTIFY_ROLE_REASON : undefined"
           @click="openBatchCertifyModal"
         >
           <span class="btn-icon">🛡️</span> Batch Certify Country Sites
@@ -313,7 +353,6 @@
                 'row-non-compliant': !site.is_compliant,
               }"
             >
-              <!-- Checkbox Column -->
               <td class="col-checkbox">
                 <input
                   type="checkbox"
@@ -335,7 +374,6 @@
                 />
               </td>
 
-              <!-- Site Info Column -->
               <td class="col-site">
                 <div class="site-cell">
                   <span class="site-id-badge">{{ site.site_id }}</span>
@@ -346,7 +384,6 @@
                 </div>
               </td>
 
-              <!-- 6 Facets Grid Column -->
               <td class="col-facets">
                 <div class="facets-pill-grid">
                   <span
@@ -418,7 +455,6 @@
                 </div>
               </td>
 
-              <!-- Readiness Score Column -->
               <td class="col-readiness">
                 <div class="readiness-cell">
                   <span
@@ -439,7 +475,6 @@
                 </div>
               </td>
 
-              <!-- Greenlight Status Column -->
               <td class="col-status">
                 <div class="status-cell">
                   <span
@@ -474,7 +509,6 @@
                 </div>
               </td>
 
-              <!-- Actions Column -->
               <td class="col-action">
                 <button
                   class="btn btn-secondary btn-sm"
@@ -533,21 +567,19 @@
               </div>
             </div>
 
-            <!-- Selected Sites Cohort Summary -->
             <div class="batch-summary-box">
               <h4>Selected Cohort Sites ({{ selectedSiteIds.size }}):</h4>
               <div class="selected-sites-grid">
                 <div
-                  v-for="siteId in Array.from(selectedSiteIds)"
-                  :key="siteId"
+                  v-for="siteIdItem in Array.from(selectedSiteIds)"
+                  :key="siteIdItem"
                   class="selected-site-tag"
                 >
-                  <span class="site-tag-id">✓ {{ siteId }}</span>
+                  <span class="site-tag-id">✓ {{ siteIdItem }}</span>
                 </div>
               </div>
             </div>
 
-            <!-- 21 CFR Part 11 Electronic Signature Credentials -->
             <div class="esign-form">
               <h4 class="esign-title">Electronic Signature Credentials</h4>
 
@@ -599,8 +631,13 @@
             <button
               class="btn btn-primary btn-submit-batch-certify"
               :disabled="
-                !batchSigForm.name || !batchSigForm.role || isSubmitting
+                !canCertify ||
+                !batchSigForm.name ||
+                !batchSigForm.role ||
+                !batchSigForm.changeReason.trim() ||
+                isSubmitting
               "
+              :title="!canCertify ? GREENLIGHT_CERTIFY_ROLE_REASON : undefined"
               @click="executeBatchCertification"
             >
               {{
@@ -641,8 +678,8 @@
             Site Greenlight Console: {{ activeSiteId }}
           </h2>
           <p class="console-subtitle">
-            Single-site 6-facet greenlight scorecard, essential document review,
-            regulatory milestones, and single-site certification.
+            Single-site 6-facet greenlight scorecard, essential document staging
+            into eTMF QC, and single-site certification.
           </p>
         </div>
 
@@ -654,23 +691,44 @@
           >
             <span class="btn-icon">🔄</span> Refresh
           </button>
-          <button class="btn btn-primary" @click="showUploadDocModal = true">
+          <button
+            id="btn-ssu-upload-doc"
+            class="btn btn-primary"
+            @click="showUploadDocModal = true"
+          >
             <span class="btn-icon">📄</span> Upload Document
           </button>
           <button
-            v-if="!isGreenlighted"
-            class="btn btn-override"
-            @click="showOverrideModal = true"
-          >
-            <span class="btn-icon">⚡</span> Executive Override
-          </button>
-          <button
+            id="btn-ssu-certify-single"
             class="btn btn-primary"
-            :disabled="loading || isGreenlighted"
+            :disabled="!canCertify || loading || isGreenlighted"
+            :title="!canCertify ? GREENLIGHT_CERTIFY_ROLE_REASON : undefined"
             @click="openCertifyModal"
           >
             <span class="btn-icon">🛡️</span> Certify Greenlight
           </button>
+        </div>
+      </div>
+
+      <p
+        v-if="!canCertify"
+        id="greenlight-single-role-note"
+        class="role-note"
+        role="note"
+      >
+        {{ GREENLIGHT_CERTIFY_ROLE_REASON }}
+      </p>
+
+      <div
+        v-if="gateErrorMessage"
+        data-testid="ssu-gate-error"
+        class="alert alert-danger"
+        role="alert"
+      >
+        <span class="alert-icon">⚠️</span>
+        <div>
+          <strong>Couldn't load site greenlight status:</strong>
+          {{ gateErrorMessage }}
         </div>
       </div>
 
@@ -753,7 +811,6 @@
         </div>
 
         <div class="facets-grid">
-          <!-- Facet 1: Regulatory & IRB -->
           <div
             class="facet-card"
             :class="{
@@ -783,7 +840,6 @@
             </p>
           </div>
 
-          <!-- Facet 2: Executed CTA & Budget -->
           <div
             class="facet-card"
             :class="{
@@ -810,7 +866,6 @@
             </p>
           </div>
 
-          <!-- Facet 3: eISF Baseline -->
           <div
             class="facet-card"
             :class="{
@@ -839,7 +894,6 @@
             </p>
           </div>
 
-          <!-- Facet 4: DOA Log -->
           <div
             class="facet-card"
             :class="{
@@ -868,7 +922,6 @@
             </p>
           </div>
 
-          <!-- Facet 5: Staff Training -->
           <div
             class="facet-card"
             :class="{
@@ -899,7 +952,6 @@
             </p>
           </div>
 
-          <!-- Facet 6: IP Release -->
           <div
             class="facet-card"
             :class="{
@@ -938,6 +990,17 @@
             </button>
           </div>
           <div class="modal-body">
+            <div
+              v-if="certifyErrorMessage"
+              class="alert alert-danger"
+              role="alert"
+            >
+              <span class="alert-icon">⚠️</span>
+              <div>
+                <strong>Certification Rejected:</strong>
+                {{ certifyErrorMessage }}
+              </div>
+            </div>
             <p>
               You are certifying regulatory greenlight activation for site
               <strong>{{ activeSiteId }}</strong> in
@@ -976,8 +1039,12 @@
               Cancel
             </button>
             <button
+              id="btn-confirm-single-certify"
               class="btn btn-primary"
-              :disabled="isSubmitting"
+              :disabled="
+                !canCertify || !sigForm.changeReason.trim() || isSubmitting
+              "
+              :title="!canCertify ? GREENLIGHT_CERTIFY_ROLE_REASON : undefined"
               @click="executeGreenlightCertification"
             >
               {{ isSubmitting ? "Certifying..." : "Sign & Certify Greenlight" }}
@@ -990,10 +1057,42 @@
 </template>
 
 <script setup>
-import { encodeChangeReason } from "../../api/changeReason";
-import { computed, onMounted, reactive, ref } from "vue";
-
+import { computed, onMounted, reactive, ref, watch } from "vue";
+import { ctmsApi } from "../../api/ctmsApi";
+import { etmfService } from "../../api/etmf";
+import {
+  GREENLIGHT_CERTIFY_ROLE_REASON,
+  canCertifyGreenlight,
+} from "../../canvas/authority";
+import { useAuthStore } from "../../stores/auth";
 import { useToastStore } from "../../stores/toasts.js";
+
+const DOC_TYPE_TAXONOMY = {
+  FDA_1572: {
+    zone: 5,
+    section: "05.02",
+    artifactCode: "05.02.02",
+    artifactType: "Form FDA 1572",
+  },
+  IRB_APPROVAL: {
+    zone: 4,
+    section: "04.01",
+    artifactCode: "04.01.02",
+    artifactType: "IRB / IEC Approval",
+  },
+  CTA_AGREEMENT: {
+    zone: 5,
+    section: "05.02",
+    artifactCode: "05.02.12",
+    artifactType: "Clinical Trial Agreement",
+  },
+  PROTOCOL_SIGNATURE: {
+    zone: 5,
+    section: "05.02",
+    artifactCode: "05.02.03",
+    artifactType: "Protocol Signature Page",
+  },
+};
 
 const props = defineProps({
   studyId: {
@@ -1008,17 +1107,24 @@ const props = defineProps({
     type: String,
     default: "US",
   },
+  initialViewMode: {
+    type: String,
+    default: "matrix",
+  },
 });
 
-const emit = defineEmits(["greenlight-certified", "override-authorized"]);
+const emit = defineEmits(["greenlight-certified"]);
+
+const authStore = useAuthStore();
+const canCertify = computed(() => canCertifyGreenlight(authStore));
 
 // View Mode: 'matrix' (default) or 'single'
-const viewMode = ref("matrix");
+const viewMode = ref(props.initialViewMode === "single" ? "single" : "matrix");
 
 // Reactive Scope State
-const activeStudyId = ref(props.studyId);
-const activeSiteId = ref(props.siteId);
-const activeCountry = ref(props.countryCode);
+const activeStudyId = ref(props.studyId || "PROTOCOL-2026-01");
+const activeSiteId = ref(props.siteId || "SITE-101");
+const activeCountry = ref(props.countryCode || "US");
 const loading = ref(false);
 const isSubmitting = ref(false);
 const currentTab = ref("documents");
@@ -1031,22 +1137,24 @@ const matrixStatusFilter = ref("ALL");
 const showBatchCertifyModal = ref(false);
 const batchSuccessData = ref(null);
 const batchErrorMessage = ref(null);
+const matrixErrorMessage = ref("");
 
-// Modals
+// Single-site State & Modals
 const showCertifyModal = ref(false);
-const showOverrideModal = ref(false);
 const showUploadDocModal = ref(false);
+const gateErrorMessage = ref("");
+const certifyErrorMessage = ref("");
 
 // Forms
 const sigForm = reactive({
-  name: "Dr. Eleanor Vance",
-  role: "VP of Regulatory & Clinical Operations",
+  name: authStore.identity?.username || "Sponsor Operations",
+  role: authStore.activeRole || "Clinical Data Manager",
   changeReason: "All 6 startup facets verified and approved",
 });
 
 const batchSigForm = reactive({
-  name: "Dr. Eleanor Vance",
-  role: "VP of Regulatory & Clinical Operations",
+  name: authStore.identity?.username || "Sponsor Operations",
+  role: authStore.activeRole || "Clinical Data Manager",
   changeReason:
     "I certify under 21 CFR Part 11 that all selected sites meet statutory greenlight requirements and authorize trial execution.",
 });
@@ -1055,7 +1163,30 @@ const docForm = reactive({
   type: "FDA_1572",
   fileName: "Form_FDA_1572_Site101_v1.pdf",
   file: null,
+  reasonForChange: "Stage essential startup document for clinical QC review",
 });
+
+watch(
+  () => props.studyId,
+  (val) => {
+    if (val && val !== activeStudyId.value) {
+      activeStudyId.value = val;
+      refreshAll();
+    }
+  }
+);
+
+watch(
+  () => props.siteId,
+  (val) => {
+    if (val && val !== activeSiteId.value) {
+      activeSiteId.value = val;
+      if (viewMode.value === "single") {
+        evaluateGreenlight();
+      }
+    }
+  }
+);
 
 function onDocFileSelected(event) {
   const file = event.target?.files?.[0] || null;
@@ -1063,14 +1194,20 @@ function onDocFileSelected(event) {
   if (file) docForm.fileName = file.name;
 }
 
-async function sha256Hex(file) {
-  const hashBuffer = await crypto.subtle.digest(
-    "SHA-256",
-    await file.arrayBuffer()
-  );
+async function sha256Hex(bytesBuffer) {
+  const hashBuffer = await crypto.subtle.digest("SHA-256", bytesBuffer);
   return Array.from(new Uint8Array(hashBuffer))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
+}
+
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return typeof btoa === "function" ? btoa(binary) : "";
 }
 
 async function submitDoc() {
@@ -1084,36 +1221,37 @@ async function submitDoc() {
 
   isSubmitting.value = true;
   try {
-    const fileHash = await sha256Hex(docForm.file);
-    const payload = {
-      study_id: activeStudyId.value,
-      site_id: activeSiteId.value,
-      doc_type: docForm.type,
-      file_name: docForm.fileName,
-      file_hash: fileHash,
-    };
+    const rawBuffer = await docForm.file.arrayBuffer();
+    const fileHash = await sha256Hex(rawBuffer);
+    const contentText =
+      new TextDecoder("utf-8", { fatal: false }).decode(rawBuffer) ||
+      arrayBufferToBase64(rawBuffer);
+    const taxonomy =
+      DOC_TYPE_TAXONOMY[docForm.type] || DOC_TYPE_TAXONOMY.FDA_1572;
+    const fileName = docForm.file.name || docForm.fileName;
 
-    const res = await fetch("/api/v1/ctms/startup/documents", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+    const stagedDoc = await etmfService.stageQcDocument({
+      content: contentText,
+      studyId: activeStudyId.value,
+      siteId: activeSiteId.value,
+      filename: fileName,
+      mimeType: docForm.file.type || "application/pdf",
+      artifactHint: `${taxonomy.artifactType} (${taxonomy.artifactCode}) [sha256:${fileHash}]`,
+      reasonForChange:
+        docForm.reasonForChange?.trim() ||
+        "Stage essential startup document for clinical QC review",
     });
 
-    if (!res.ok) {
-      useToastStore().addToast({
-        message: `Failed to upload document: HTTP ${res.status}`,
-        tone: "error",
-      });
-      return;
-    }
-
-    const newDoc = await res.json();
-    essentialDocuments.value.push(newDoc);
+    essentialDocuments.value.push(stagedDoc);
     showUploadDocModal.value = false;
     docForm.file = null;
   } catch (err) {
+    const statusLabel = err?.status ? `HTTP ${err.status}` : "";
+    const detail = err?.message || "Request failed";
     useToastStore().addToast({
-      message: `Error uploading document: ${err.message}`,
+      message: statusLabel
+        ? `Failed to upload document: ${statusLabel} (${detail})`
+        : `Failed to upload document: ${detail}`,
       tone: "error",
     });
   } finally {
@@ -1240,27 +1378,25 @@ function toggleSelectAllCompliant() {
   }
 }
 
-function toggleSiteSelection(siteId, isCompliant, status) {
+function toggleSiteSelection(siteIdItem, isCompliant, status) {
   if (!isCompliant || status === "APPROVED" || status === "OVERRIDDEN") return;
 
-  if (selectedSiteIds.value.has(siteId)) {
-    selectedSiteIds.value.delete(siteId);
+  if (selectedSiteIds.value.has(siteIdItem)) {
+    selectedSiteIds.value.delete(siteIdItem);
   } else {
-    selectedSiteIds.value.add(siteId);
+    selectedSiteIds.value.add(siteIdItem);
   }
 }
 
 function openBatchCertifyModal() {
-  if (selectedSiteIds.value.size > 0) {
-    batchErrorMessage.value = null;
-    showBatchCertifyModal.value = true;
-  }
+  if (!canCertify.value || selectedSiteIds.value.size === 0) return;
+  batchErrorMessage.value = null;
+  showBatchCertifyModal.value = true;
 }
 
 function inspectSiteDetail(site) {
   activeSiteId.value = site.site_id;
-  viewMode.value = "single";
-  refreshAll();
+  switchToSingleView();
 }
 
 function switchToMatrixView() {
@@ -1268,130 +1404,99 @@ function switchToMatrixView() {
   fetchCountryMatrix();
 }
 
-// API Methods
+function switchToSingleView() {
+  viewMode.value = "single";
+  evaluateGreenlight();
+}
+
+// Authenticated CTMS OpenAPI Methods (zero fake fallbacks, UX-9)
 async function fetchCountryMatrix() {
+  if (!activeStudyId.value?.trim()) {
+    matrixSites.value = [];
+    return;
+  }
   loading.value = true;
+  matrixErrorMessage.value = "";
   try {
-    const res = await fetch(
-      `/api/v1/ctms/startup/matrix?study_id=${activeStudyId.value}&country_code=${activeCountry.value}`
-    );
-    if (res.ok) {
-      matrixSites.value = await res.json();
-    } else {
-      matrixSites.value = generateFallbackMatrix(
-        activeStudyId.value,
-        activeCountry.value
-      );
-    }
-  } catch {
-    matrixSites.value = generateFallbackMatrix(
-      activeStudyId.value,
+    const sites = await ctmsApi.getCountryMatrix(
+      activeStudyId.value.trim(),
       activeCountry.value
     );
+    matrixSites.value = Array.isArray(sites) ? sites : [];
+  } catch (err) {
+    matrixSites.value = [];
+    const toasts = useToastStore();
+    const toastId = toasts.apiError(
+      "Country readiness matrix could not be loaded",
+      err
+    );
+    matrixErrorMessage.value =
+      toasts.toasts.find((t) => t.id === toastId)?.message ||
+      err?.message ||
+      "Request failed";
   } finally {
     loading.value = false;
   }
 }
 
 async function executeBatchCertification() {
+  if (!canCertify.value) return;
   isSubmitting.value = true;
   batchErrorMessage.value = null;
   const selectedIds = Array.from(selectedSiteIds.value);
   try {
-    const res = await fetch("/api/v1/ctms/startup/matrix/batch-certify", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Change-Reason": encodeChangeReason(batchSigForm.changeReason),
-      },
-      body: JSON.stringify({
-        study_id: activeStudyId.value,
+    const data = await ctmsApi.batchCertifyCountrySites(
+      {
+        study_id: activeStudyId.value.trim(),
         country_code: activeCountry.value,
         site_ids: selectedIds,
         meaning: batchSigForm.changeReason,
-      }),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      batchSuccessData.value = data;
-      showBatchCertifyModal.value = false;
-      selectedSiteIds.value.clear();
-      await fetchCountryMatrix();
-    } else {
-      const errData = await res.json().catch(() => null);
-      const detail =
-        errData?.detail ||
-        errData?.title ||
-        `Batch certification rejected: HTTP ${res.status}`;
-      batchErrorMessage.value = detail;
-      useToastStore().addToast({
-        message: detail,
-        tone: "error",
-      });
-    }
-  } catch {
-    executeFallbackBatchCertification(selectedIds);
+      },
+      batchSigForm.changeReason
+    );
+    batchSuccessData.value = data;
+    showBatchCertifyModal.value = false;
+    selectedSiteIds.value.clear();
+    await fetchCountryMatrix();
+  } catch (err) {
+    const toasts = useToastStore();
+    const toastId = toasts.apiError(
+      "Batch greenlight certification failed",
+      err
+    );
+    batchErrorMessage.value =
+      toasts.toasts.find((t) => t.id === toastId)?.message ||
+      err?.message ||
+      "Batch certification rejected";
   } finally {
     isSubmitting.value = false;
   }
 }
 
-function executeFallbackBatchCertification(selectedIds) {
-  const now = new Date().toISOString();
-  const certifiedItems = [];
-
-  matrixSites.value.forEach((site) => {
-    if (selectedIds.includes(site.site_id)) {
-      site.overall_status = "APPROVED";
-      site.greenlight_token = `hmac_sha256_batch_token_${site.site_id}_${Date.now()}`;
-      site.greenlight_certified_by = batchSigForm.name;
-      site.greenlight_certified_at = now;
-      certifiedItems.push({
-        site_id: site.site_id,
-        site_name: site.site_name,
-        greenlight_token: site.greenlight_token,
-        certified_at: now,
-        certified_by: batchSigForm.name,
-        status: "APPROVED",
-      });
-    }
-  });
-
-  batchSuccessData.value = {
-    success: true,
-    certified_count: certifiedItems.length,
-    study_id: activeStudyId.value,
-    country_code: activeCountry.value,
-    certified_sites: certifiedItems,
-    message: `Batch certified ${certifiedItems.length} sites in ${activeCountry.value}`,
-  };
-
-  showBatchCertifyModal.value = false;
-  selectedSiteIds.value.clear();
-}
-
 async function evaluateGreenlight() {
+  if (!activeStudyId.value?.trim() || !activeSiteId.value?.trim()) {
+    gateData.value = null;
+    return;
+  }
   loading.value = true;
+  gateErrorMessage.value = "";
   try {
-    const res = await fetch(
-      `/api/v1/ctms/startup/sites/${activeSiteId.value}/greenlight?study_id=${activeStudyId.value}&country_code=${activeCountry.value}`
-    );
-    if (res.ok) {
-      gateData.value = await res.json();
-    } else {
-      gateData.value = generateFallbackSingleGate(
-        activeStudyId.value,
-        activeSiteId.value,
-        activeCountry.value
-      );
-    }
-  } catch {
-    gateData.value = generateFallbackSingleGate(
-      activeStudyId.value,
-      activeSiteId.value,
+    gateData.value = await ctmsApi.evaluateSiteGreenlight(
+      activeSiteId.value.trim(),
+      activeStudyId.value.trim(),
       activeCountry.value
     );
+  } catch (err) {
+    gateData.value = null;
+    const toasts = useToastStore();
+    const toastId = toasts.apiError(
+      `Couldn't load greenlight status for ${activeSiteId.value}`,
+      err
+    );
+    gateErrorMessage.value =
+      toasts.toasts.find((t) => t.id === toastId)?.message ||
+      err?.message ||
+      "Request failed";
   } finally {
     loading.value = false;
   }
@@ -1414,38 +1519,35 @@ function onJurisdictionChange() {
 }
 
 function openCertifyModal() {
+  if (!canCertify.value) return;
+  certifyErrorMessage.value = "";
   showCertifyModal.value = true;
 }
 
 async function executeGreenlightCertification() {
+  if (!canCertify.value) return;
   isSubmitting.value = true;
+  certifyErrorMessage.value = "";
   try {
-    const res = await fetch(
-      `/api/v1/ctms/startup/sites/${activeSiteId.value}/greenlight/certify?study_id=${activeStudyId.value}&country_code=${activeCountry.value}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Change-Reason": encodeChangeReason(sigForm.changeReason),
-        },
-      }
+    const certified = await ctmsApi.certifySiteGreenlight(
+      activeSiteId.value.trim(),
+      activeStudyId.value.trim(),
+      sigForm.changeReason,
+      activeCountry.value
     );
-    if (res.ok) {
-      gateData.value = await res.json();
-      showCertifyModal.value = false;
-      emit("greenlight-certified", gateData.value);
-    } else {
-      const now = new Date().toISOString();
-      if (gateData.value) {
-        gateData.value.overall_status = "APPROVED";
-        gateData.value.greenlight_token = `hmac_sha256_token_${activeSiteId.value}_${Date.now()}`;
-        gateData.value.greenlight_certified_by = sigForm.name;
-        gateData.value.greenlight_certified_at = now;
-      }
-      showCertifyModal.value = false;
-    }
+    gateData.value = certified;
+    showCertifyModal.value = false;
+    emit("greenlight-certified", certified);
   } catch (err) {
-    console.error("Error certifying greenlight:", err);
+    const toasts = useToastStore();
+    const toastId = toasts.apiError(
+      `Greenlight certification failed for ${activeSiteId.value}`,
+      err
+    );
+    certifyErrorMessage.value =
+      toasts.toasts.find((t) => t.id === toastId)?.message ||
+      err?.message ||
+      "Certification rejected";
   } finally {
     isSubmitting.value = false;
   }
@@ -1453,164 +1555,13 @@ async function executeGreenlightCertification() {
 
 function copyToken() {
   if (gateData.value?.greenlight_token) {
-    navigator.clipboard.writeText(gateData.value.greenlight_token);
-    alert("Greenlight activation token copied to clipboard!");
+    navigator.clipboard?.writeText(gateData.value.greenlight_token);
+    useToastStore().push({
+      tone: "info",
+      title: "Token copied",
+      message: "Greenlight activation token copied to clipboard.",
+    });
   }
-}
-
-// Fallback Generators
-function generateFallbackMatrix(studyId, countryCode) {
-  const country = (countryCode || "US").toUpperCase();
-  const prefixMap = {
-    US: "SITE-10",
-    DE: "SITE-20",
-    EU: "SITE-20",
-    JP: "SITE-30",
-    GB: "SITE-40",
-    GLOBAL: "SITE-50",
-  };
-  const prefix = prefixMap[country] || "SITE-50";
-
-  return [
-    {
-      site_id: `${prefix}1`,
-      site_name: `${country} Central University Medical Center`,
-      country_code: country,
-      overall_status: "PENDING",
-      readiness_percentage: 100,
-      facet_regulatory_irb: true,
-      facet_cta_budget: true,
-      facet_eisf_baseline: true,
-      facet_doa_log: true,
-      facet_staff_training: true,
-      facet_ip_release: true,
-      is_compliant: true,
-      greenlight_token: null,
-      greenlight_certified_by: null,
-      greenlight_certified_at: null,
-      is_overridden: false,
-      unfulfilled_reasons: [],
-    },
-    {
-      site_id: `${prefix}2`,
-      site_name: `${country} St. Jude Research Institute`,
-      country_code: country,
-      overall_status: "PENDING",
-      readiness_percentage: 100,
-      facet_regulatory_irb: true,
-      facet_cta_budget: true,
-      facet_eisf_baseline: true,
-      facet_doa_log: true,
-      facet_staff_training: true,
-      facet_ip_release: true,
-      is_compliant: true,
-      greenlight_token: null,
-      greenlight_certified_by: null,
-      greenlight_certified_at: null,
-      is_overridden: false,
-      unfulfilled_reasons: [],
-    },
-    {
-      site_id: `${prefix}3`,
-      site_name: `${country} Metro Health Clinical Center`,
-      country_code: country,
-      overall_status: "PENDING",
-      readiness_percentage: 100,
-      facet_regulatory_irb: true,
-      facet_cta_budget: true,
-      facet_eisf_baseline: true,
-      facet_doa_log: true,
-      facet_staff_training: true,
-      facet_ip_release: true,
-      is_compliant: true,
-      greenlight_token: null,
-      greenlight_certified_by: null,
-      greenlight_certified_at: null,
-      is_overridden: false,
-      unfulfilled_reasons: [],
-    },
-    {
-      site_id: `${prefix}4`,
-      site_name: `${country} Regional Oncology Center`,
-      country_code: country,
-      overall_status: "PENDING",
-      readiness_percentage: 100,
-      facet_regulatory_irb: true,
-      facet_cta_budget: true,
-      facet_eisf_baseline: true,
-      facet_doa_log: true,
-      facet_staff_training: true,
-      facet_ip_release: true,
-      is_compliant: true,
-      greenlight_token: null,
-      greenlight_certified_by: null,
-      greenlight_certified_at: null,
-      is_overridden: false,
-      unfulfilled_reasons: [],
-    },
-    {
-      site_id: `${prefix}5`,
-      site_name: `${country} Community Health Network`,
-      country_code: country,
-      overall_status: "BLOCKED",
-      readiness_percentage: 67,
-      facet_regulatory_irb: true,
-      facet_cta_budget: true,
-      facet_eisf_baseline: true,
-      facet_doa_log: false,
-      facet_staff_training: true,
-      facet_ip_release: false,
-      is_compliant: false,
-      greenlight_token: null,
-      greenlight_certified_by: null,
-      greenlight_certified_at: null,
-      is_overridden: false,
-      unfulfilled_reasons: [
-        "Pending Delegation of Authority (DOA) Log Sign-off",
-        "Pending Investigational Product Depot Greenlight Release",
-      ],
-    },
-    {
-      site_id: `${prefix}6`,
-      site_name: `${country} Academic Medical Group`,
-      country_code: country,
-      overall_status: "BLOCKED",
-      readiness_percentage: 83,
-      facet_regulatory_irb: true,
-      facet_cta_budget: false,
-      facet_eisf_baseline: true,
-      facet_doa_log: true,
-      facet_staff_training: true,
-      facet_ip_release: true,
-      is_compliant: false,
-      greenlight_token: null,
-      greenlight_certified_by: null,
-      greenlight_certified_at: null,
-      is_overridden: false,
-      unfulfilled_reasons: ["Missing Executed CTA & Budget Schedule"],
-    },
-  ];
-}
-
-function generateFallbackSingleGate(studyId, siteId, countryCode) {
-  return {
-    id: `gate_${siteId}`,
-    study_id: studyId,
-    site_id: siteId,
-    country_code: countryCode,
-    overall_status: "PENDING",
-    readiness_percentage: 100,
-    facet_regulatory_irb: true,
-    facet_cta_budget: true,
-    facet_eisf_baseline: true,
-    facet_doa_log: true,
-    facet_staff_training: true,
-    facet_ip_release: true,
-    greenlight_token: null,
-    greenlight_certified_by: null,
-    greenlight_certified_at: null,
-    is_overridden: false,
-  };
 }
 
 // Expose reactivity for Vitest helper access
@@ -1625,6 +1576,11 @@ defineExpose({
   viewMode,
   matrixSites,
   selectedSiteIds,
+  gateData,
+  evaluateGreenlight,
+  fetchCountryMatrix,
+  executeGreenlightCertification,
+  executeBatchCertification,
 });
 
 onMounted(() => {
@@ -1749,6 +1705,37 @@ onMounted(() => {
   display: flex;
   gap: 10px;
   align-items: center;
+}
+
+.role-note {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+}
+
+.alert {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.alert-danger {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.alert-info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
 }
 
 .scope-bar {
@@ -1876,11 +1863,6 @@ onMounted(() => {
 
 .btn-secondary:hover:not(:disabled) {
   background: #f1f5f9;
-}
-
-.btn-override {
-  background: #7c3aed;
-  color: #ffffff;
 }
 
 .btn-counter-badge {

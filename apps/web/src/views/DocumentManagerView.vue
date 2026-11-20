@@ -8,15 +8,42 @@
       />
     </aside>
     <main class="document-content-area">
+      <div class="etmf-workspace-bar">
+        <div class="etmf-tab-group">
+          <button
+            id="btn-etmf-tab-binder"
+            type="button"
+            class="etmf-tab-btn"
+            :class="{ active: activeWorkspaceTab === 'binder' }"
+            @click="activeWorkspaceTab = 'binder'"
+          >
+            📁 Binder Documents
+          </button>
+          <button
+            id="btn-etmf-tab-qc-queue"
+            type="button"
+            class="etmf-tab-btn"
+            :class="{ active: activeWorkspaceTab === 'qc-queue' }"
+            @click="activeWorkspaceTab = 'qc-queue'"
+          >
+            🛡️ Clinical QC Queue
+          </button>
+        </div>
+        <span v-if="effectiveStudyId" class="etmf-study-chip">
+          Study: <strong>{{ effectiveStudyId }}</strong>
+        </span>
+      </div>
+
       <DocumentGrid
+        v-if="activeWorkspaceTab === 'binder'"
         :documents="etmfStore.documents"
         @preview="handlePreviewDocument"
         @inspect="handleInspectDocument"
       />
+      <CraQcQueue v-else />
     </main>
 
     <!-- Document Metadata Inspection Drawer -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       v-if="inspectedDoc"
@@ -68,7 +95,8 @@
               <div class="meta-item">
                 <span class="meta-label">Zone &amp; Section</span>
                 <span class="meta-val"
-                  >Zone {{ inspectedDoc.zone_id || 1 }} - Trial Management</span
+                  >Zone {{ inspectedDoc.zone_id || inspectedDoc.zone || 1 }} -
+                  Trial Management</span
                 >
               </div>
               <div class="meta-item">
@@ -119,7 +147,7 @@
                 <span class="meta-val font-mono">{{
                   inspectedDoc.formattedCreatedAt ||
                   inspectedDoc.created_at ||
-                  new Date().toISOString()
+                  "—"
                 }}</span>
               </div>
             </div>
@@ -228,19 +256,57 @@
                   inspectedDoc.status === 'TECHNICAL_QC' ||
                   inspectedDoc.status === 'DRAFT'
                 "
-                style="margin-top: 10px; display: flex; gap: 8px"
+                class="qc-accept-panel"
               >
+                <label for="qc-accept-reason" class="meta-label">
+                  Clinical QC Review Justification (min 10 characters)
+                </label>
+                <input
+                  id="qc-accept-reason"
+                  v-model="qcAcceptReason"
+                  type="text"
+                  class="qc-reason-input"
+                  :disabled="!canReviewQc || reviewingQc"
+                  placeholder="Verified artifact taxonomy, dates, and signatures"
+                />
+                <p
+                  v-if="!canReviewQc"
+                  id="etmf-qc-role-note"
+                  class="qc-role-note"
+                >
+                  {{ ETMF_QC_REVIEW_ROLE_REASON }}
+                </p>
+                <p
+                  v-if="qcReviewError"
+                  id="etmf-qc-review-error"
+                  class="qc-error-note"
+                  role="alert"
+                >
+                  {{ qcReviewError }}
+                </p>
                 <button
+                  id="btn-accept-ai-classification"
+                  type="button"
                   class="btn btn-secondary"
                   style="
-                    flex: 1;
+                    width: 100%;
                     padding: 6px 10px;
                     font-size: 11px;
                     cursor: pointer;
                   "
+                  :disabled="
+                    !canReviewQc ||
+                    reviewingQc ||
+                    qcAcceptReason.trim().length < 10
+                  "
+                  :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
                   @click="handleAcceptClassification(inspectedDoc)"
                 >
-                  ✓ Accept AI Classification
+                  {{
+                    reviewingQc
+                      ? "Submitting Clinical QC..."
+                      : "✓ Accept AI Classification"
+                  }}
                 </button>
               </div>
             </div>
@@ -273,20 +339,64 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
-import { useEtmfStore } from "../stores/etmf";
-import { useClinicalStore } from "../stores/clinical";
-import TmfBinderTree from "../components/etmf/TmfBinderTree.vue";
+import {
+  ETMF_QC_REVIEW_ROLE_REASON,
+  canReviewEtmfQc,
+} from "../canvas/authority";
+import CraQcQueue from "../components/etmf/CraQcQueue.vue";
 import DocumentGrid from "../components/etmf/DocumentGrid.vue";
-import PdfPreviewModal from "../components/etmf/PdfPreviewModal.vue";
 import ExportJobDrawer from "../components/etmf/ExportJobDrawer.vue";
+import PdfPreviewModal from "../components/etmf/PdfPreviewModal.vue";
+import TmfBinderTree from "../components/etmf/TmfBinderTree.vue";
+import { useAuthStore } from "../stores/auth";
+import { useClinicalStore } from "../stores/clinical";
+import { useEtmfStore } from "../stores/etmf";
+import { useToastStore } from "../stores/toasts.js";
 
+const props = defineProps({
+  studyId: {
+    type: String,
+    default: "",
+  },
+});
+
+const authStore = useAuthStore();
 const etmfStore = useEtmfStore();
 const clinicalStore = useClinicalStore();
 const route = useRoute();
+
+const activeWorkspaceTab = ref("binder");
 const selectedDoc = ref(null);
 const inspectedDoc = ref(null);
+const qcAcceptReason = ref(
+  "Verified DIA Reference Model classification and wet-ink signatures."
+);
+const reviewingQc = ref(false);
+const qcReviewError = ref("");
+
+const canReviewQc = computed(() => canReviewEtmfQc(authStore));
+const effectiveStudyId = computed(
+  () => props.studyId || clinicalStore.activeStudyId || etmfStore.currentStudyId
+);
+
+function syncStudyScope(study) {
+  if (study) {
+    clinicalStore.activeStudyId = study;
+    etmfStore.currentStudyId = study;
+  }
+}
+
+watch(
+  () => props.studyId,
+  (val) => {
+    if (val) {
+      syncStudyScope(val);
+      etmfStore.fetchBinderTree();
+    }
+  }
+);
 
 function handleArtifactSelect(artifactCode) {
   etmfStore.fetchDocuments(artifactCode);
@@ -297,6 +407,7 @@ function handlePreviewDocument(doc) {
 }
 
 function handleInspectDocument(doc) {
+  qcReviewError.value = "";
   inspectedDoc.value = doc;
 }
 
@@ -310,12 +421,12 @@ function getDocSha256(doc) {
   if (doc.sha256) return doc.sha256;
   if (doc.cryptographic_seal) return doc.cryptographic_seal;
   if (doc.merkle_hash) return doc.merkle_hash;
-  return "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+  return "—";
 }
 
 function getIntelligenceReport(doc) {
   if (!doc) return null;
-  const meta = doc.metadata_json || {};
+  const meta = doc.metadata_json || doc.metadataJson || {};
   return meta.document_intelligence || null;
 }
 
@@ -389,22 +500,66 @@ function getExtractedProtocol(doc) {
   return doc.study_id || null;
 }
 
-function handleAcceptClassification(doc) {
-  if (doc) {
-    doc.status = "APPROVED";
-    doc.approval_status = "APPROVED";
+async function handleAcceptClassification(doc) {
+  if (!doc || !canReviewQc.value) return;
+  const docId = doc.id || doc.document_id || doc.documentId;
+  const reason = qcAcceptReason.value.trim();
+  if (!docId || reason.length < 10) {
+    qcReviewError.value =
+      "A clinical QC justification of at least 10 characters is required.";
+    return;
+  }
+
+  reviewingQc.value = true;
+  qcReviewError.value = "";
+  try {
+    const updated = await etmfStore.reviewQcDocument(docId, {
+      decision: "ACCEPT",
+      reason_for_change: reason,
+    });
+    if (inspectedDoc.value) {
+      const nextStatus = updated?.status ?? inspectedDoc.value.status;
+      inspectedDoc.value = {
+        ...inspectedDoc.value,
+        ...(updated || {}),
+        status: nextStatus,
+        approval_status: nextStatus,
+      };
+    }
+    useToastStore().push({
+      tone: "success",
+      title: "Artifact approved in eTMF",
+      message: `${doc.filename || docId} passed clinical QC review.`,
+    });
+  } catch (err) {
+    const toasts = useToastStore();
+    const toastId = toasts.apiError("Clinical QC review failed", err);
+    qcReviewError.value =
+      toasts.toasts.find((t) => t.id === toastId)?.message ||
+      err?.message ||
+      "Request failed";
+  } finally {
+    reviewingQc.value = false;
   }
 }
 
 onMounted(() => {
-  if (route && route.query) {
-    if (route.query.studyId) clinicalStore.activeStudyId = route.query.studyId;
+  if (props.studyId) {
+    syncStudyScope(props.studyId);
+  } else if (route && route.query) {
+    if (route.query.studyId) syncStudyScope(route.query.studyId);
     if (route.query.siteId) clinicalStore.activeSiteId = route.query.siteId;
     if (route.query.subjectId)
       clinicalStore.activeSubjectId = route.query.subjectId;
     if (route.query.visitId) clinicalStore.activeVisitId = route.query.visitId;
   }
   etmfStore.fetchBinderTree();
+});
+
+defineExpose({
+  inspectedDoc,
+  qcAcceptReason,
+  handleAcceptClassification,
 });
 </script>
 
@@ -435,6 +590,80 @@ onMounted(() => {
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+.etmf-workspace-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  background: #f8fafc;
+}
+
+.etmf-tab-group {
+  display: flex;
+  gap: 8px;
+}
+
+.etmf-tab-btn {
+  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+}
+
+.etmf-tab-btn.active {
+  background: #0f4c81;
+  border-color: #0f4c81;
+  color: #ffffff;
+}
+
+.etmf-study-chip {
+  font-size: 12px;
+  color: #475569;
+}
+
+.qc-accept-panel {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.qc-reason-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  font-size: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+}
+
+.qc-role-note {
+  margin: 0;
+  font-size: 11px;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.qc-error-note {
+  margin: 0;
+  font-size: 11px;
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  padding: 6px 8px;
 }
 
 .metadata-drawer-overlay {
@@ -507,69 +736,70 @@ onMounted(() => {
 .drawer-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .section-heading {
   margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--primary);
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
 }
 
 .meta-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
 }
 
 .meta-item {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .meta-label {
   font-size: 11px;
   color: var(--text-muted);
-  font-weight: 500;
 }
 
 .meta-val {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--semantic-color-text);
 }
 
 .font-mono {
-  font-family: monospace;
+  font-family: var(--font-mono, monospace);
 }
 
 .reason-box {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--semantic-color-primary, #2563eb);
   padding: 10px 12px;
-  background: rgba(0, 123, 255, 0.05);
-  border-left: 3px solid var(--accent);
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 12px;
 }
 
 .crypto-seal-card {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
   padding: 10px 12px;
-  background: #f8fafc;
-  border: 1px dashed var(--border);
   border-radius: 6px;
 }
 
 .sha256-hash-display {
   display: block;
+  font-family: var(--font-mono, monospace);
   font-size: 11px;
-  color: var(--primary);
   word-break: break-all;
-  background: #fff;
+  color: #166534;
+  background: rgba(255, 255, 255, 0.7);
   padding: 6px;
   border-radius: 4px;
-  border: 1px solid var(--border);
 }
 
 .drawer-footer {
@@ -577,5 +807,20 @@ onMounted(() => {
   border-top: 1px solid var(--border);
   display: flex;
   justify-content: flex-end;
+}
+
+.intelligence-card {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.text-success {
+  color: #166534;
+}
+
+.text-warning {
+  color: #b45309;
 }
 </style>

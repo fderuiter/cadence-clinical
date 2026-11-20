@@ -14,8 +14,8 @@ using Microsoft.Extensions.Hosting;
 var builder = DistributedApplication.CreateBuilder(args);
 
 // Profiles (#4991). `full` (the default) runs every service. `core` runs what the Clinical Canvas calls today: the
-// kernel API host, execution, the gateway and the web app. Choose one with `-- --AppHost:Profile=core` or
-// AppHost__Profile=core.
+// kernel API host, execution, etmf, ctms, knowledge, the gateway and the web app. Choose one with
+// `-- --AppHost:Profile=core` or AppHost__Profile=core.
 string profile = (builder.Configuration["AppHost:Profile"] ?? "full").Trim().ToLowerInvariant();
 if (profile is not ("full" or "core"))
 {
@@ -136,9 +136,13 @@ IResourceBuilder<ProjectResource> Service(IResourceBuilder<ProjectResource> proj
     return project;
 }
 
-Service(builder.AddProject<Projects.Cadence_Apps_Execution>("execution"))
+var execution = Service(builder.AddProject<Projects.Cadence_Apps_Execution>("execution"))
     .WithEnvironment("DemographicsEncryption__KeyBase64", demographicsEncryptionKey)
     .WithEnvironment("RANDOMIZATION_ALLOCATION_KEY", randomizationAllocationKey);
+Service(builder.AddProject<Projects.Cadence_Apps_Etmf>("etmf"))
+    .WithEnvironment("EXECUTION_SERVICE_URL", execution.GetEndpoint("http"));
+Service(builder.AddProject<Projects.Cadence_Apps_Ctms>("ctms"));
+Service(builder.AddProject<Projects.Cadence_Apps_Knowledge>("knowledge"));
 // The local realm's users sign in with tenant code cadence-local (ADR-2514); the kernel host provisions that tenant on
 // start, in Development only (ADR-2542), with the demo study and the realm users' grants (ADR-2543). A project resource
 // does not inherit the AppHost's environment, so the kernel is given it, and the tenant settings only when that
@@ -174,13 +178,11 @@ if (full)
         .WithArgs("server", "/data", "--console-address", ":9001");
 
     Service(builder.AddProject<Projects.Cadence_Apps_Designer>("designer"));
-    Service(builder.AddProject<Projects.Cadence_Apps_Etmf>("etmf"));
     Service(builder.AddProject<Projects.Cadence_Apps_Interop>("interop"))
         .WithEnvironment("FIELD_LOOKUP_HASH_KEY", fieldLookupHashKey)
         .WithEnvironment("CADENCE_SCE_SIGNING_KEY", sceSigningKey);
     Service(builder.AddProject<Projects.Cadence_Apps_Quality>("quality"));
     Service(builder.AddProject<Projects.Cadence_Apps_Notifications>("notifications"));
-    Service(builder.AddProject<Projects.Cadence_Apps_Ctms>("ctms"));
     Service(builder.AddProject<Projects.Cadence_Apps_Safety>("safety"));
     Service(builder.AddProject<Projects.Cadence_Apps_Tickets>("tickets"));
     Service(builder.AddProject<Projects.Cadence_Apps_Eisf>("eisf"));
@@ -191,7 +193,6 @@ if (full)
     Service(builder.AddProject<Projects.Cadence_Apps_Imaging>("imaging"))
         .WithEnvironment("CADENCE_IMAGING_DEID_SIGNING_KEY", imagingDeidSigningKey)
         .WithEnvironment("CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY", imagingDeidPseudonymizationKey);
-    Service(builder.AddProject<Projects.Cadence_Apps_Knowledge>("knowledge"));
     Service(builder.AddProject<Projects.Cadence_Apps_Payments>("payments"))
         .WithEnvironment("FIELD_ENCRYPTION_KEY", fieldEncryptionKey);
 }

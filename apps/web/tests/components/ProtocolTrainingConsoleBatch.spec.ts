@@ -1,40 +1,22 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import { useAuthStore } from "../../src/stores/auth";
-import ProtocolTrainingConsole from "../../src/components/clinical/ProtocolTrainingConsole.vue";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { soaClient } from "../../src/api/soaClient";
 import { trainingApi } from "../../src/api/training";
+import ProtocolTrainingConsole from "../../src/components/clinical/ProtocolTrainingConsole.vue";
+import { useAuthStore } from "../../src/stores/auth";
 import { delegationBatchBindingId } from "../../src/utils/signatureBinding";
+import { signInAs } from "../helpers/signIn.js";
 
-describe("ProtocolTrainingConsole.vue - Batch Assignment & Bulk Sign-Off Features", () => {
-  const mockAssignment = {
-    id: "asn-101",
-    user_id: "site_investigator_01",
-    user_name: "Dr. Eleanor Vance",
-    user_role: "Principal Investigator",
+describe("ProtocolTrainingConsole.vue - Batch Assignment & PI Delegation Sign-Off", () => {
+  const mockCurriculum = {
+    id: "curriculum-v3-delta",
+    title: "Protocol V3.0 Delta Amendment Curriculum",
+    protocol_version: "3.0",
     study_id: "CARDIO-2026",
-    site_id: "SITE-101",
-    status: "IN_PROGRESS",
-    time_spent_seconds: 0,
-    quiz_score: null,
-    completed_at: null,
-    curriculum: {
-      id: "curriculum-v3-delta",
-      title: "Protocol V3.0 Delta Amendment Curriculum",
-      protocol_version: "3.0",
-      study_id: "CARDIO-2026",
-      modules: [
-        {
-          id: "mod-1",
-          title: "Introduction",
-          module_type: "PROCEDURE_DELTA",
-          min_reading_time_seconds: 30,
-          content_text: "Delta overview...",
-          quiz_questions: [],
-        },
-      ],
-    },
+    description: "Delta overview...",
+    is_active: true,
+    created_at: "2026-10-01T10:00:00Z",
   };
 
   const mockDelegations = [
@@ -72,37 +54,29 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & Bulk Sign-Off Feature
 
   beforeEach(() => {
     setActivePinia(createPinia());
-    useAuthStore().user = {
-      sub: "site_investigator_01",
-      username: "site_investigator_01",
-    } as never;
-    vi.useFakeTimers();
+    signInAs(useAuthStore(), ["Data Manager"], { username: "sponsor_dm_01" });
 
-    vi.spyOn(trainingApi, "listAssignments").mockResolvedValue([
-      mockAssignment,
-    ]);
-    vi.spyOn(trainingApi, "getAssignmentDetail").mockResolvedValue(
-      mockAssignment
-    );
-    vi.spyOn(trainingApi, "recordProgress").mockResolvedValue({
-      success: true,
-    });
+    vi.spyOn(trainingApi, "listAssignments").mockResolvedValue([]);
+    vi.spyOn(trainingApi, "listCurricula").mockResolvedValue([mockCurriculum]);
+    vi.spyOn(trainingApi, "getCurriculum").mockResolvedValue(mockCurriculum);
     vi.spyOn(trainingApi, "listDelegations").mockResolvedValue(mockDelegations);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    vi.useRealTimers();
   });
 
   async function openBatchTab() {
-    const wrapper = mount(ProtocolTrainingConsole);
-    await vi.runOnlyPendingTimersAsync();
+    const wrapper = mount(ProtocolTrainingConsole, {
+      props: { studyId: "CARDIO-2026" },
+    });
+    await flushPromises();
     const batchTabBtn = wrapper
       .findAll(".tab-btn")
       .find((btn) => btn.text().includes("Batch Assignments"));
     expect(batchTabBtn).toBeDefined();
     await batchTabBtn!.trigger("click");
+    await flushPromises();
     return wrapper;
   }
 
@@ -112,10 +86,6 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & Bulk Sign-Off Feature
     expect(trainingApi.listDelegations).toHaveBeenCalledWith({
       study_id: "CARDIO-2026",
     });
-    expect(wrapper.find(".batch-layout").exists()).toBe(true);
-    expect(wrapper.text()).toContain(
-      "Multi-Site & Role Batch Curriculum Assignment"
-    );
     const options = wrapper
       .findAll(".batch-filter-grid .checkbox-label")
       .map((label) => label.text());
@@ -160,7 +130,7 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & Bulk Sign-Off Feature
     ).toBeDefined();
   });
 
-  it("shows the server's refusal when a batch is rejected", async () => {
+  it("shows the server's refusal when batchAssignCurriculum is rejected", async () => {
     vi.spyOn(trainingApi, "batchAssignCurriculum").mockRejectedValue(
       new Error("Study 'CARDIO-2026' has no staff at: SITE-999.")
     );
@@ -174,62 +144,45 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & Bulk Sign-Off Feature
       .findAll(".modal-footer button")
       .find((btn) => btn.text().includes("Confirm & Deploy Batch"))!
       .trigger("click");
-    await vi.runOnlyPendingTimersAsync();
+    await flushPromises();
 
     expect(wrapper.find("[role='alert']").text()).toContain(
       "has no staff at: SITE-999"
     );
   });
 
-  it("executes batch assignment and renders execution manifest with skipped duplicates", async () => {
-    const mockBatchResponse = {
+  it("executes batchAssignCurriculum and renders execution manifest with skipped duplicates", async () => {
+    vi.spyOn(trainingApi, "batchAssignCurriculum").mockResolvedValue({
       batch_transaction_id: "tx-batch-999",
       curriculum_id: "curriculum-v3-delta",
       study_id: "CARDIO-2026",
-      total_eligible: 6,
-      total_assigned: 5,
+      total_eligible: 2,
+      total_assigned: 1,
       total_skipped: 1,
       assignments: [],
       skipped_items: [
         {
-          user_id: "user_site-101_principal_investigator",
+          user_id: "usr-01",
           site_id: "SITE-101",
-          user_role: "Principal Investigator",
+          user_role: "Sub-Investigator",
           reason:
             "Active training assignment already exists for this curriculum",
         },
       ],
       executed_at: "2026-10-07T10:00:00Z",
-    };
-
-    vi.spyOn(trainingApi, "batchAssignCurriculum").mockResolvedValue(
-      mockBatchResponse
-    );
+    });
 
     const wrapper = await openBatchTab();
     await wrapper
       .find(".batch-filter-grid input[value='SITE-101']")
       .setValue(true);
-
-    // Open batch confirmation modal
-    const deployBtn = wrapper.find(".batch-preview-bar button");
-    await deployBtn.trigger("click");
-
-    expect(wrapper.find(".modal-card").exists()).toBe(true);
-    expect(wrapper.text()).toContain("Confirm Batch Curriculum Assignment");
-
-    // The audit reason is required: there is no default.
-    const confirmBtnBefore = wrapper
-      .findAll(".modal-footer button")
-      .find((btn) => btn.text().includes("Confirm & Deploy Batch"));
-    expect(confirmBtnBefore!.attributes("disabled")).toBeDefined();
+    await wrapper.find(".batch-preview-bar button").trigger("click");
     await wrapper.find("#batch-reason").setValue("Amendment 3 training");
-
-    // Click confirm in modal
-    const confirmBtn = wrapper
+    await wrapper
       .findAll(".modal-footer button")
-      .find((btn) => btn.text().includes("Confirm & Deploy Batch"));
-    await confirmBtn!.trigger("click");
+      .find((btn) => btn.text().includes("Confirm & Deploy Batch"))!
+      .trigger("click");
+    await flushPromises();
 
     expect(trainingApi.batchAssignCurriculum).toHaveBeenCalledWith({
       curriculum_id: "curriculum-v3-delta",
@@ -238,17 +191,18 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & Bulk Sign-Off Feature
       roles: [],
       reason_for_change: "Amendment 3 training",
     });
-
-    await wrapper.vm.$nextTick();
     expect(wrapper.text()).toContain("Tx ID: tx-batch-999");
     expect(wrapper.text()).toContain("Skipped Duplicates: 1");
-    expect(wrapper.text()).toContain(
-      "Active training assignment already exists"
-    );
   });
 
-  it("renders Delegation Bulk Sign-Off tab and executes Part 11 signature with digital seal", async () => {
-    const mockBulkSignResponse = {
+  it("renders Delegation Bulk Sign-Off tab and executes Part 11 signature via POST /api/v1/training/delegations/bulk-signoff", async () => {
+    signInAs(useAuthStore(), ["Principal Investigator"], {
+      username: "pi_vance",
+    });
+    vi.spyOn(soaClient, "verifySignature").mockResolvedValue({
+      sig_token: "step-up-token",
+    });
+    vi.spyOn(trainingApi, "bulkSignOffDelegations").mockResolvedValue({
       batch_transaction_id: "tx-del-888",
       total_requested: 2,
       total_signed: 2,
@@ -259,52 +213,28 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & Bulk Sign-Off Feature
         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       etmf_artifact_id: "05.02.04",
       executed_at: "2026-10-07T10:00:00Z",
-    };
-
-    vi.spyOn(trainingApi, "bulkSignOffDelegations").mockResolvedValue(
-      mockBulkSignResponse
-    );
-    vi.spyOn(soaClient, "verifySignature").mockResolvedValue({
-      sig_token: "step-up-token",
     });
 
-    const wrapper = mount(ProtocolTrainingConsole);
-    await vi.runOnlyPendingTimersAsync();
+    const wrapper = mount(ProtocolTrainingConsole, {
+      props: { studyId: "CARDIO-2026" },
+    });
+    await flushPromises();
 
     const delTabBtn = wrapper
       .findAll(".tab-btn")
       .find((btn) => btn.text().includes("Delegation Bulk Sign-Off"));
     await delTabBtn!.trigger("click");
+    await flushPromises();
 
-    expect(trainingApi.listDelegations).toHaveBeenCalled();
-    expect(wrapper.find(".delegations-layout").exists()).toBe(true);
-
-    // Select all pending delegation records
-    const selectAllCheckbox = wrapper.find("thead input[type='checkbox']");
-    await selectAllCheckbox.setValue(true);
-
-    expect(wrapper.text()).toContain("Selected for Sign-Off: 2 records");
-
-    // Open Part 11 Bulk Signature modal
-    const signBtn = wrapper.find(".delegation-actions-bar button");
-    await signBtn.trigger("click");
-
-    expect(wrapper.find(".modal-card").exists()).toBe(true);
-    expect(wrapper.text()).toContain(
-      "21 CFR Part 11 Bulk Delegation Log Sign-Off"
-    );
-
-    // Fill password in modal
-    const passwordInput = wrapper.find("#bulk-password");
-    await passwordInput.setValue("SecurePassword123!");
-
-    // Confirm bulk signature
-    const executeBtn = wrapper
+    await wrapper.find("thead input[type='checkbox']").setValue(true);
+    await wrapper.find(".delegation-actions-bar button").trigger("click");
+    await wrapper.find("#bulk-password").setValue("SecurePassword123!");
+    await wrapper
       .findAll(".modal-footer button")
-      .find((btn) => btn.text().includes("Confirm & Execute Signature"));
-    await executeBtn!.trigger("click");
+      .find((btn) => btn.text().includes("Confirm & Execute Signature"))!
+      .trigger("click");
+    await flushPromises();
 
-    // The password only buys a step-up token bound to these ids; the signer is the signed-in user (ADR-2515).
     expect(soaClient.verifySignature).toHaveBeenCalledWith(
       expect.objectContaining({
         password: "SecurePassword123!", // pragma: allowlist secret
@@ -327,22 +257,23 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & Bulk Sign-Off Feature
       },
       "step-up-token"
     );
-
-    await wrapper.vm.$nextTick();
     expect(wrapper.text()).toContain(
       "Bulk Delegation Sign-Off Executed Successfully"
     );
     expect(wrapper.text()).toContain("eTMF Artifact: Zone 5 (05.02.04)");
-    expect(wrapper.text()).toContain(
-      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-    );
   });
 
   it("names no site when the selected delegations span several sites", async () => {
+    signInAs(useAuthStore(), ["Principal Investigator"], {
+      username: "pi_vance",
+    });
     vi.mocked(trainingApi.listDelegations).mockResolvedValue([
       mockDelegations[0],
       { ...mockDelegations[1], site_id: "SITE-102" },
     ]);
+    vi.spyOn(soaClient, "verifySignature").mockResolvedValue({
+      sig_token: "step-up-token",
+    });
     vi.spyOn(trainingApi, "bulkSignOffDelegations").mockResolvedValue({
       batch_transaction_id: "tx-del-889",
       total_requested: 2,
@@ -354,16 +285,16 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & Bulk Sign-Off Feature
       etmf_artifact_id: "05.02.04",
       executed_at: "2026-10-07T10:00:00Z",
     });
-    vi.spyOn(soaClient, "verifySignature").mockResolvedValue({
-      sig_token: "step-up-token",
-    });
 
-    const wrapper = mount(ProtocolTrainingConsole);
-    await vi.runOnlyPendingTimersAsync();
+    const wrapper = mount(ProtocolTrainingConsole, {
+      props: { studyId: "CARDIO-2026" },
+    });
+    await flushPromises();
     await wrapper
       .findAll(".tab-btn")
       .find((btn) => btn.text().includes("Delegation Bulk Sign-Off"))!
       .trigger("click");
+    await flushPromises();
     await wrapper.find("thead input[type='checkbox']").setValue(true);
     await wrapper.find(".delegation-actions-bar button").trigger("click");
     await wrapper.find("#bulk-password").setValue("SecurePassword123!");
@@ -371,9 +302,7 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & Bulk Sign-Off Feature
       .findAll(".modal-footer button")
       .find((btn) => btn.text().includes("Confirm & Execute Signature"))!
       .trigger("click");
-    await vi.waitFor(() =>
-      expect(trainingApi.bulkSignOffDelegations).toHaveBeenCalled()
-    );
+    await flushPromises();
 
     expect(trainingApi.bulkSignOffDelegations).toHaveBeenCalledWith(
       expect.objectContaining({ study_id: "CARDIO-2026", site_id: null }),

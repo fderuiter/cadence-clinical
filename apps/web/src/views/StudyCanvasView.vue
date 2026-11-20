@@ -298,6 +298,41 @@
             :study-code="studyCode"
           />
 
+          <DocumentManagerView
+            v-else-if="section?.id === 'documents'"
+            :key="`docs-${studyCode}`"
+            :study-id="studyCode"
+          />
+
+          <SsuGreenlightConsole
+            v-else-if="section?.id === 'greenlight'"
+            :key="`greenlight-${studyCode}`"
+            :study-id="studyCode"
+            :site-id="siteFilter || 'SITE-101'"
+          />
+
+          <StudyTrainingView
+            v-else-if="section?.id === 'training'"
+            :key="`training-${studyCode}`"
+            :study-id="studyCode"
+          />
+
+          <CtmsView
+            v-else-if="section?.id === 'milestones'"
+            :key="`milestones-${studyCode}`"
+            :study-code="studyCode"
+            :initial-site-id="siteFilter"
+            section-mode="milestones"
+          />
+
+          <CtmsView
+            v-else-if="section?.id === 'monitoring'"
+            :key="`monitoring-${studyCode}`"
+            :study-code="studyCode"
+            :initial-site-id="siteFilter"
+            section-mode="monitoring"
+          />
+
           <QueriesSection
             v-else-if="section?.id === 'queries'"
             :key="`queries-${studyCode}`"
@@ -477,9 +512,13 @@ import QueriesSection, {
 import StudyActivity from "../components/canvas/StudyActivity.vue";
 import StudyPulse from "../components/canvas/StudyPulse.vue";
 import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue";
+import SsuGreenlightConsole from "../components/clinical/SsuGreenlightConsole.vue";
 import NeedsAttention from "../components/ai/NeedsAttention.vue";
 import ProposalReview from "../components/ai/ProposalReview.vue";
+import CtmsView from "./CtmsView.vue";
+import DocumentManagerView from "./DocumentManagerView.vue";
 import ObservationView from "./ObservationView.vue";
+import StudyTrainingView from "./StudyTrainingView.vue";
 import { useAiAssistance } from "../ai/aiAssistance";
 
 /**

@@ -157,7 +157,9 @@ describe("TherapeuticAreaWizard.vue - Interactive Therapeutic Area Wizard Specif
   });
 
   it("captures localStorage read/parse errors during loadSavedState()", async () => {
-    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const consoleWarnSpy = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => {});
     window.localStorage.setItem("cadence_ta_wizard_state", "{ invalid json }");
 
     const wrapper = mount(TherapeuticAreaWizard, {
@@ -227,11 +229,13 @@ describe("TherapeuticAreaWizard.vue - Interactive Therapeutic Area Wizard Specif
 
   it("allows user to dismiss and retry storage error banner", async () => {
     let shouldFail = true;
-    vi.spyOn(window.localStorage, "setItem").mockImplementation((key, value) => {
-      if (shouldFail) {
-        throw new DOMException("QuotaExceededError", "QuotaExceededError");
+    vi.spyOn(window.localStorage, "setItem").mockImplementation(
+      (key, value) => {
+        if (shouldFail) {
+          throw new DOMException("QuotaExceededError", "QuotaExceededError");
+        }
       }
-    });
+    );
 
     const wrapper = mount(TherapeuticAreaWizard, {
       global: {

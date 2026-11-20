@@ -8,7 +8,15 @@ export type StageId =
   "design" | "start" | "conduct" | "data" | "analyze" | "submit";
 
 export type SectionId =
-  "protocol-versions" | "site-activation" | "participants" | "queries";
+  | "protocol-versions"
+  | "site-activation"
+  | "documents"
+  | "greenlight"
+  | "training"
+  | "participants"
+  | "milestones"
+  | "monitoring"
+  | "queries";
 
 export interface Section {
   id: SectionId;
@@ -50,6 +58,24 @@ export const STAGES: readonly Stage[] = [
         description:
           "A site's activation documents and activating the site once they are complete",
       },
+      {
+        id: "documents",
+        label: "Essential documents",
+        description:
+          "Trial master file binder, essential document staging, and clinical quality review",
+      },
+      {
+        id: "greenlight",
+        label: "Greenlight gates",
+        description:
+          "Country and site operational readiness gates and startup certification",
+      },
+      {
+        id: "training",
+        label: "Training",
+        description:
+          "Protocol curricula, staff qualification assignments, and delegation sign-off",
+      },
     ],
   },
   {
@@ -61,6 +87,18 @@ export const STAGES: readonly Stage[] = [
         id: "participants",
         label: "Participants",
         description: "The study's participants in enrollment order",
+      },
+      {
+        id: "milestones",
+        label: "Site milestones",
+        description:
+          "Planned and achieved operational milestones across study sites",
+      },
+      {
+        id: "monitoring",
+        label: "Monitoring visits",
+        description:
+          "Scheduled site visits, structured findings, supervisory sign-off, and visit letters",
       },
     ],
   },

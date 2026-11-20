@@ -7,23 +7,41 @@
           <span class="badge badge-gxp">21 CFR Part 11</span>
           <span class="badge badge-regulatory">ICH GCP E6(R2) §4</span>
           <span class="badge badge-standard">DIA TMF Zone 5 (05.02.04)</span>
-          <span class="badge badge-standard">Automated EDC Write-Gating</span>
         </div>
         <h2 class="view-title">Study Training &amp; Qualification Hub</h2>
         <p class="view-subtitle">
-          Automated delta-curricula for protocol amendments, interactive
-          time-on-page tracking, comprehension quizzes (&ge;80%), 21 CFR Part 11
-          electronic signatures, and real-time EDC write-permission gating.
+          Protocol curricula, role- and site-scoped batch curriculum assignment,
+          and 21 CFR Part 11 Principal Investigator delegation sign-off.
         </p>
       </div>
+      <div class="protocol-filter-group">
+        <label for="training-protocol-filter">Protocol Version:</label>
+        <input
+          id="training-protocol-filter"
+          v-model="protocolVersionFilter"
+          type="text"
+          class="protocol-filter-input"
+          placeholder="All versions (e.g. 2.0)"
+          @change="loadMetrics"
+        />
+      </div>
     </div>
+
+    <p
+      v-if="loadError"
+      data-testid="training-load-error"
+      class="error-banner"
+      role="alert"
+    >
+      Couldn't load study training metrics: {{ loadError }}
+    </p>
 
     <!-- Metric KPI Summary Cards -->
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-icon alert-icon">📚</div>
         <div class="stat-details">
-          <div class="stat-value">
+          <div id="kpi-active-curricula" class="stat-value">
             {{ activeCurriculaCount }}
           </div>
           <div class="stat-label">Active Protocol Curricula</div>
@@ -33,7 +51,10 @@
       <div class="stat-card">
         <div class="stat-icon capa-icon">✅</div>
         <div class="stat-details">
-          <div class="stat-value text-success">
+          <div
+            id="kpi-completed-qualifications"
+            class="stat-value text-success"
+          >
             {{ completedQualificationsCount }}
           </div>
           <div class="stat-label">Verified Qualifications</div>
@@ -43,53 +64,109 @@
       <div class="stat-card">
         <div class="stat-icon rbqm-icon">🔒</div>
         <div class="stat-details">
-          <div class="stat-value text-warning">
+          <div id="kpi-pending-assignments" class="stat-value text-warning">
             {{ pendingGatedCount }}
           </div>
-          <div class="stat-label">Gated Staff Assignments</div>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon">🎯</div>
-        <div class="stat-details">
-          <div class="stat-value">80%</div>
-          <div class="stat-label">Min Quiz Threshold</div>
+          <div class="stat-label">Pending Staff Assignments</div>
         </div>
       </div>
     </div>
 
     <!-- Integrated Protocol Training Console -->
     <div class="console-wrapper">
-      <ProtocolTrainingConsole />
+      <ProtocolTrainingConsole
+        :study-id="effectiveStudyId"
+        :protocol-version="effectiveProtocolVersion"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 import ProtocolTrainingConsole from "../components/clinical/ProtocolTrainingConsole.vue";
 import { trainingApi } from "../api/training";
+import { useToastStore } from "../stores/toasts.js";
 
-const activeCurriculaCount = ref(1);
+const props = defineProps({
+  studyId: {
+    type: String,
+    default: "",
+  },
+  protocolVersion: {
+    type: String,
+    default: "",
+  },
+});
+
+const route = useRoute();
+const activeCurriculaCount = ref(0);
 const completedQualificationsCount = ref(0);
-const pendingGatedCount = ref(1);
+const pendingGatedCount = ref(0);
+const loadError = ref("");
+const protocolVersionFilter = ref(
+  props.protocolVersion || String(route?.query?.protocolVersion || "")
+);
 
-onMounted(async () => {
+const effectiveStudyId = computed(
+  () => props.studyId || String(route?.query?.studyId || "")
+);
+const effectiveProtocolVersion = computed(
+  () =>
+    protocolVersionFilter.value.trim() ||
+    props.protocolVersion ||
+    String(route?.query?.protocolVersion || "")
+);
+
+async function loadMetrics() {
+  loadError.value = "";
   try {
-    const curricula = await trainingApi.listCurricula();
-    activeCurriculaCount.value = curricula.length || 1;
+    const curriculaQuery = {};
+    if (effectiveStudyId.value)
+      curriculaQuery.study_id = effectiveStudyId.value;
+    if (effectiveProtocolVersion.value) {
+      curriculaQuery.protocol_version = effectiveProtocolVersion.value;
+    }
 
-    const assignments = await trainingApi.listAssignments();
-    completedQualificationsCount.value = assignments.filter(
+    const assignmentQuery = {};
+    if (effectiveStudyId.value)
+      assignmentQuery.study_id = effectiveStudyId.value;
+
+    const [curricula, assignments] = await Promise.all([
+      trainingApi.listCurricula(curriculaQuery),
+      trainingApi.listAssignments(assignmentQuery),
+    ]);
+
+    activeCurriculaCount.value = Array.isArray(curricula)
+      ? curricula.length
+      : 0;
+    const list = Array.isArray(assignments) ? assignments : [];
+    completedQualificationsCount.value = list.filter(
       (a) => a.status === "COMPLETED"
     ).length;
-    pendingGatedCount.value = assignments.filter(
+    pendingGatedCount.value = list.filter(
       (a) => a.status !== "COMPLETED"
     ).length;
   } catch (err) {
-    console.error("Failed to load training metrics:", err);
+    const toasts = useToastStore();
+    const toastId = toasts.apiError(
+      "Couldn't load study training metrics",
+      err
+    );
+    loadError.value =
+      toasts.toasts.find((t) => t.id === toastId)?.message ||
+      err?.message ||
+      "Request failed";
   }
+}
+
+watch([effectiveStudyId, effectiveProtocolVersion], () => {
+  loadMetrics();
+});
+
+onMounted(() => {
+  loadMetrics();
 });
 </script>
 
@@ -156,6 +233,16 @@ onMounted(async () => {
   line-height: 1.5;
 }
 
+.error-banner {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  font-size: 0.875rem;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -198,9 +285,5 @@ onMounted(async () => {
 
 .text-warning {
   color: #b45309;
-}
-
-.console-wrapper {
-  margin-top: var(--spacing-md, 16px);
 }
 </style>

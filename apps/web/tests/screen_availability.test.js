@@ -36,9 +36,11 @@ describe("Screen availability", () => {
     expect([...AVAILABLE_SCREENS].sort()).toEqual([
       "ctms",
       "ecrf",
+      "etmf",
       "observation",
       "ssu",
       "study",
+      "training",
     ]);
     expect(isScreenAvailable("login")).toBe(true);
     expect(isScreenAvailable("unavailable")).toBe(true);
@@ -103,13 +105,13 @@ describe("Screen availability", () => {
 
   it("explains a hidden screen, links to the tracking issue, and offers study workspace recovery", async () => {
     signInAsSuperAdmin();
-    await router.push("/etmf");
+    await router.push("/quality");
 
     const wrapper = mount(UnavailableView, { global: { plugins: [router] } });
 
     expect(router.currentRoute.value.path).toBe("/unavailable");
     expect(wrapper.find("h2").text()).toBe(
-      "eTMF Document Vault isn't available yet"
+      "Quality & RBQM Cockpit isn't available yet"
     );
     expect(wrapper.find("a").attributes("href")).toBe(
       UNAVAILABLE_SCREENS_ISSUE
