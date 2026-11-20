@@ -1,8 +1,11 @@
 <template>
-  <div class="app-shell">
+  <div
+    class="app-shell"
+    :style="{ '--shell-header-height': `${headerHeight}px` }"
+  >
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
-    <header class="app-header">
+    <header ref="headerRef" class="app-header">
       <div class="header-left">
         <router-link
           :to="authStore.isAuthenticated ? studiesPath : '/login'"
@@ -248,7 +251,15 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, provide, ref, watch } from "vue";
+import {
+  computed,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  provide,
+  ref,
+  watch,
+} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
@@ -278,6 +289,18 @@ const router = useRouter();
 const isCommandPaletteOpen = ref(false);
 const isMobileMenuOpen = ref(false);
 const statusAnnouncement = ref("");
+const headerRef = ref(null);
+const headerHeight = ref(57);
+let headerResizeObserver = null;
+
+function syncHeaderHeight() {
+  const el = headerRef.value;
+  if (!el || typeof el.getBoundingClientRect !== "function") return;
+  const measured = Math.round(el.getBoundingClientRect().height);
+  if (measured > 0) {
+    headerHeight.value = measured;
+  }
+}
 
 const availablePersonas = computed(() => authStore.availablePersonas || []);
 const normalizedRoles = computed(() => authStore.normalizedRoles || []);
@@ -402,8 +425,24 @@ watch(
   }
 );
 
+watch(
+  () => [
+    authStore.isAuthenticated,
+    authStore.activePlanBadge,
+    isMobileMenuOpen.value,
+  ],
+  () => {
+    nextTick(syncHeaderHeight);
+  }
+);
+
 onMounted(() => {
   window.addEventListener("keydown", handleGlobalKeydown);
+  syncHeaderHeight();
+  if (typeof ResizeObserver !== "undefined" && headerRef.value) {
+    headerResizeObserver = new ResizeObserver(() => syncHeaderHeight());
+    headerResizeObserver.observe(headerRef.value);
+  }
   if (
     authStore.isAuthenticated &&
     typeof authStore.loadEntitlements === "function"
@@ -414,6 +453,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener("keydown", handleGlobalKeydown);
+  if (headerResizeObserver) {
+    headerResizeObserver.disconnect();
+    headerResizeObserver = null;
+  }
 });
 </script>
 
@@ -433,32 +476,6 @@ onUnmounted(() => {
   width: 1px;
   height: 1px;
   overflow: hidden;
-}
-
-.plan-status-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  text-decoration: none;
-  background: #eff6ff;
-  border: 1px solid #93c5fd;
-  color: #1d4ed8;
-  white-space: nowrap;
-}
-
-.plan-status-badge.is-trial {
-  background: #f0fdf4;
-  border-color: #86efac;
-  color: #166534;
-}
-
-.plan-status-badge.is-expired {
-  background: #fef2f2;
-  border-color: #fca5a5;
-  color: #991b1b;
 }
 
 .skip-link:focus {
@@ -698,6 +715,7 @@ onUnmounted(() => {
 .shell-main.shell-main-canvas {
   max-width: none;
   padding: 0;
+  overflow: visible;
 }
 
 .mobile-menu-toggle {
