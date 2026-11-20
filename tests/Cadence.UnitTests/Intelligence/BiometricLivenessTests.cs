@@ -1,9 +1,9 @@
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Cadence.Modules.Intelligence.Endpoints;
 using Cadence.Security.Authentication;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -41,10 +41,11 @@ public sealed class BiometricLivenessTests
     public void BiometricLivenessTokenService_ExpiredToken_FailsVerification()
     {
         string subject = "SUBJ-TEST-002";
-        var past = TimeProvider.System.GetUtcNow().AddMinutes(-30);
+        var clock = new FakeClock();
+        var past = clock.UtcNow.AddMinutes(-30);
         string token = BiometricLivenessTokenService.IssueToken(subject, 0.95m, true, "camera", now: past);
 
-        bool isValid = BiometricLivenessTokenService.VerifyToken(token, subject, out _);
+        bool isValid = BiometricLivenessTokenService.VerifyToken(token, subject, out _, now: clock.UtcNow);
 
         isValid.Should().BeFalse();
     }
@@ -78,13 +79,14 @@ public sealed class BiometricLivenessTests
     [Fact]
     public async Task VerifyLivenessAsync_ValidFrames_ReturnsOkWithVerifiedToken()
     {
+        var clock = new FakeClock();
         var request = new VerifyLivenessRequest(
             SubjectPseudonym: "SUBJ-100",
             VideoFrames: new List<string> { "frame1_base64_data", "frame2_base64_data" },
             ChallengeId: "ch-001",
             FallbackMode: false);
 
-        var result = await BiometricEndpoints.VerifyLivenessAsync(request, TimeProvider.System, TestContext.Current.CancellationToken);
+        var result = await BiometricEndpoints.VerifyLivenessAsync(request, clock, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<Ok<VerifyLivenessResponse>>();
         var okResult = (Ok<VerifyLivenessResponse>)result;
@@ -93,7 +95,7 @@ public sealed class BiometricLivenessTests
         okResult.Value.Status.Should().Be("VERIFIED");
         okResult.Value.AntiSpoofScore.Should().Be(0.98m);
 
-        bool isVerified = BiometricLivenessTokenService.VerifyToken(okResult.Value.LivenessToken, "SUBJ-100", out var data);
+        bool isVerified = BiometricLivenessTokenService.VerifyToken(okResult.Value.LivenessToken, "SUBJ-100", out var data, now: clock.UtcNow);
         isVerified.Should().BeTrue();
         data!.Mode.Should().Be("camera");
     }
@@ -102,13 +104,14 @@ public sealed class BiometricLivenessTests
     [Fact]
     public async Task VerifyLivenessAsync_CoordinatorFallback_ReturnsOkWithFallbackToken()
     {
+        var clock = new FakeClock();
         var request = new VerifyLivenessRequest(
             SubjectPseudonym: "SUBJ-101",
             VideoFrames: null,
             ChallengeId: "ch-002",
             FallbackMode: true);
 
-        var result = await BiometricEndpoints.VerifyLivenessAsync(request, TimeProvider.System, TestContext.Current.CancellationToken);
+        var result = await BiometricEndpoints.VerifyLivenessAsync(request, clock, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<Ok<VerifyLivenessResponse>>();
         var okResult = (Ok<VerifyLivenessResponse>)result;
@@ -116,7 +119,7 @@ public sealed class BiometricLivenessTests
         okResult.Value!.IsLive.Should().BeTrue();
         okResult.Value.Status.Should().Be("VERIFIED");
 
-        bool isVerified = BiometricLivenessTokenService.VerifyToken(okResult.Value.LivenessToken, "SUBJ-101", out var data);
+        bool isVerified = BiometricLivenessTokenService.VerifyToken(okResult.Value.LivenessToken, "SUBJ-101", out var data, now: clock.UtcNow);
         isVerified.Should().BeTrue();
         data!.Mode.Should().Be("coordinator_fallback");
     }
@@ -131,7 +134,7 @@ public sealed class BiometricLivenessTests
             ChallengeId: "ch-003",
             FallbackMode: false);
 
-        var result = await BiometricEndpoints.VerifyLivenessAsync(request, TimeProvider.System, TestContext.Current.CancellationToken);
+        var result = await BiometricEndpoints.VerifyLivenessAsync(request, new FakeClock(), TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<BadRequest<VerifyLivenessResponse>>();
         var badResult = (BadRequest<VerifyLivenessResponse>)result;
@@ -150,7 +153,7 @@ public sealed class BiometricLivenessTests
             ChallengeId: null,
             FallbackMode: false);
 
-        var result = await BiometricEndpoints.VerifyLivenessAsync(request, TimeProvider.System, TestContext.Current.CancellationToken);
+        var result = await BiometricEndpoints.VerifyLivenessAsync(request, new FakeClock(), TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ValidationProblem>();
     }

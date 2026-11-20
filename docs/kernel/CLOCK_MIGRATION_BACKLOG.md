@@ -15,7 +15,7 @@
 - `apps/execution` uses the kernel clock. Its own `Application/Abstractions/IClock.cs` and
   `Infrastructure/SystemClock.cs` are deleted. The semantics are the same: both return `DateTimeOffset` in UTC.
 - `Microsoft.CodeAnalysis.BannedApiAnalyzers` is pinned in `Directory.Packages.props`. The repo-root
-  `BannedSymbols.txt` bans `DateTime.Now`, `DateTime.UtcNow`, `DateTimeOffset.Now` and `DateTimeOffset.UtcNow`.
+  `BannedSymbols.txt` bans `DateTime.Now`, `DateTime.UtcNow`, `DateTimeOffset.Now`, `DateTimeOffset.UtcNow`, `TimeProvider.System` and `TimeProvider.GetUtcNow`.
 - `Microsoft.CodeAnalysis.BannedApiAnalyzers` and `BannedSymbols.txt` are included unconditionally in root `Directory.Build.props`, enforcing K-TIME-3 globally across all C# projects in the repository.
   Because `TreatWarningsAsErrors` is on, a violation fails the build with RS0030. Tests use `FakeClock`, or `SystemClock.Instance`
   where the code under test checks the real clock ([TESTING.md, Time in tests](../TESTING.md#time-in-tests)).
@@ -73,5 +73,5 @@ The project opts into the ban. None of these changes needed a migration or chang
 ## How to count again
 
 ```bash
-grep -rEn 'DateTime(Offset)?\.(Utc)?Now\b' --include=*.cs --exclude-dir=Migrations apps packages
+grep -rEn '(DateTime(Offset)?\.(Utc)?Now|TimeProvider\.System|\.GetUtcNow)\b' --include=*.cs --exclude-dir=Migrations apps packages
 ```

@@ -10,6 +10,7 @@ using Cadence.Apps.Knowledge.Endpoints;
 using Cadence.Apps.Knowledge.Infrastructure.Persistence;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -30,12 +31,7 @@ public class TrainingEndpointsTests
     private const string Study = "CARDIO-2026";
     private const string CurriculumId = "curriculum-v3-delta";
 
-    private sealed class TestTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
-    }
-
-    private readonly TestTimeProvider _timeProvider = new(new DateTimeOffset(2026, 10, 7, 10, 0, 0, TimeSpan.Zero));
+    private readonly FakeClock _clock = new(new DateTimeOffset(2026, 10, 7, 10, 0, 0, TimeSpan.Zero));
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
@@ -111,7 +107,7 @@ public class TrainingEndpointsTests
             UserName = "Staff user_1",
             UserRole = "Clinical Research Coordinator",
             Status = "PENDING",
-            CreatedAt = _timeProvider.GetUtcNow(),
+            CreatedAt = _clock.UtcNow,
         });
         await db.SaveChangesAsync(Ct);
 
@@ -258,7 +254,7 @@ public class TrainingEndpointsTests
     }
 
     private Task<IResult> BatchAssign(KnowledgeDbContext db, BatchAssignCurriculumRequest request, HttpContext caller) =>
-        Invoke("BatchAssignCurriculumAsync", request, db, caller, _timeProvider, Ct);
+        Invoke("BatchAssignCurriculumAsync", request, db, caller, _clock, Ct);
 
     private static BatchAssignCurriculumRequest Request(
         List<string>? sites = null, List<string>? roles = null, List<string>? people = null) =>
@@ -280,7 +276,7 @@ public class TrainingEndpointsTests
             ProtocolVersion = "3.0",
             Title = "Protocol V3.0 Delta Amendment Curriculum",
             IsActive = isActive,
-            CreatedAt = _timeProvider.GetUtcNow(),
+            CreatedAt = _clock.UtcNow,
         });
         await db.SaveChangesAsync(Ct);
     }
@@ -299,7 +295,7 @@ public class TrainingEndpointsTests
                 Role = role,
                 TaskCode = "EDC_DATA_ENTRY",
                 Duties = "eCRF data entry",
-                CreatedAt = _timeProvider.GetUtcNow(),
+                CreatedAt = _clock.UtcNow,
             });
         }
 

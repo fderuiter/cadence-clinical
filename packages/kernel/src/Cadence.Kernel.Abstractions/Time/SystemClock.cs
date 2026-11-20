@@ -1,5 +1,6 @@
 namespace Cadence.Kernel.Time;
 
+#pragma warning disable RS0030 // SystemClock is the single sanctioned production wrapper over TimeProvider.System (K-TIME-3).
 /// <summary>
 /// Production <see cref="IClock"/> implementation backed by <see cref="TimeProvider.System"/>.
 /// Register as a singleton; it is stateless and thread-safe.
@@ -13,3 +14,4 @@ public sealed class SystemClock : IClock
     /// <inheritdoc />
     public DateTimeOffset UtcNow => TimeProvider.System.GetUtcNow();
 }
+#pragma warning restore RS0030
