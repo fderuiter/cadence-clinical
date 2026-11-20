@@ -39,6 +39,7 @@
 
       <!-- Demo role tester select & EHR Reconciliation Drawer toggle -->
       <div
+        v-if="demoBuild"
         style="
           display: flex;
           gap: var(--spacing-xs);
@@ -89,13 +90,109 @@
       class="ecrf-workspace-layout"
       style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap"
     >
-      <!-- Left Column: CRC Persona Component & CRA Verification Bar Slot -->
+      <!-- Left Column: Kernel eCRF Form Outside Demo Builds; Persona Walkthrough in Demo Builds -->
       <div class="ecrf-form-column" style="flex: 1 1 580px; min-width: 0">
         <!-- Outside demo builds the subject list comes from Execution for the chosen study (#4828). -->
         <StudySubjectsBar v-if="!demoBuild" @loaded="selectListedSubject" />
 
-        <!-- CRC Persona Component: Reusable Subject Registration & Screening Card -->
+        <!-- Participant selector & Clinical Canvas handoff outside demo builds -->
+        <section
+          v-if="!demoBuild"
+          id="ecrf-participant-bar"
+          aria-label="Participant selection"
+          style="
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--semantic-color-surface, #fff);
+          "
+        >
+          <div
+            style="
+              display: flex;
+              flex-wrap: wrap;
+              align-items: center;
+              gap: 10px;
+            "
+          >
+            <label
+              for="ecrf-subject-selector"
+              style="font-size: 0.85rem; font-weight: 600"
+            >
+              Participant
+            </label>
+            <select
+              id="ecrf-subject-selector"
+              v-model="selectedSubjectId"
+              :disabled="store.subjectsLoading || store.subjects.length === 0"
+              style="
+                flex: 1 1 14rem;
+                min-width: 0;
+                padding: 6px 8px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+              "
+            >
+              <option v-if="store.subjects.length === 0" value="">
+                No subjects listed
+              </option>
+              <option
+                v-for="sub in store.subjects"
+                :key="sub.id"
+                :value="sub.id"
+              >
+                {{ sub.id }}{{ sub.siteId ? ` · Site ${sub.siteId}` : ""
+                }}{{ sub.status ? ` (${sub.status})` : "" }}
+              </option>
+            </select>
+
+            <component
+              :is="routerLinkComponent"
+              v-if="showManageParticipantsLink && routerLinkComponent"
+              id="ecrf-manage-participants-link"
+              :to="manageParticipantsLocation"
+              style="
+                font-size: 0.85rem;
+                font-weight: 600;
+                color: var(--accent, #2563eb);
+                text-decoration: underline;
+              "
+            >
+              Manage participants in Clinical Canvas
+            </component>
+            <a
+              v-else-if="showManageParticipantsLink"
+              id="ecrf-manage-participants-link"
+              :href="manageParticipantsHref"
+              style="
+                font-size: 0.85rem;
+                font-weight: 600;
+                color: var(--accent, #2563eb);
+                text-decoration: underline;
+              "
+            >
+              Manage participants in Clinical Canvas
+            </a>
+          </div>
+
+          <p
+            v-if="enrollmentStatusMessage"
+            id="ecrf-enrollment-status"
+            role="status"
+            aria-live="polite"
+            style="margin: 0; font-size: 0.85rem; color: var(--neutral-dark)"
+          >
+            {{ enrollmentStatusMessage }}
+          </p>
+        </section>
+
+        <!-- CRC Persona Component: Reusable Subject Registration & Screening Card (demo only) -->
         <SubjectEnrollmentForm
+          v-if="demoBuild"
           :can-enroll="
             authStore.isCrc ||
             activeUserRole === 'site_investigator' ||
@@ -110,7 +207,7 @@
         <!-- The participant's case report form, a kernel form instance saved a page at a time (ADR-2622). -->
         <EcrfFormPanel
           :form-id="routeQuery('formId')"
-          :enrollment-id="routeQuery('enrollmentId')"
+          :enrollment-id="activeEnrollmentProp"
           :collection-spec-id="routeQuery('collectionSpecId')"
           :planned-activity-id="routeQuery('plannedActivityId')"
           :highlight-item-id="routeQuery('itemId')"
@@ -128,6 +225,7 @@
         />
 
         <CrcFormRenderer
+          v-if="demoBuild"
           v-model:selected-subject-id="selectedSubjectId"
           v-model:selected-visit-id="selectedVisitId"
           v-model:show-econsent-modal="showEconsentModal"
@@ -164,8 +262,9 @@
         />
       </div>
 
-      <!-- Right Column: PI Persona Component & CDASH Metadata Tools -->
+      <!-- Right Column: PI Persona Component & CDASH Metadata Tools (demo only) -->
       <div
+        v-if="demoBuild"
         class="ecrf-side-column"
         style="
           flex: 1 1 380px;
@@ -256,8 +355,8 @@
       </div>
     </div>
 
-    <!-- Full-Width Bottom Section: Study Designer Persona Component -->
-    <div style="margin-top: 24px">
+    <!-- Full-Width Bottom Section: Study Designer Persona Component (demo only) -->
+    <div v-if="demoBuild" style="margin-top: 24px">
       <DesignerSchemaPanel
         v-model:edit-item-value="schema.editItemValue"
         v-model:edit-item-reason="schema.editItemReason"
@@ -283,8 +382,9 @@
       />
     </div>
 
-    <!-- Reason for Change Modal Dialog -->
+    <!-- Reason for Change Modal Dialog (demo sample form & SDV only) -->
     <ReasonModal
+      v-if="demoBuild"
       :show="showReasonModal"
       title="Reason for Change Required"
       description="To comply with 21 CFR Part 11 / EU Annex 11, you must document a reason for changing this clinical data field."
@@ -294,8 +394,9 @@
       @cancel="cancelChange"
     />
 
-    <!-- eSource EHR Source Data Reconciliation Drawer -->
+    <!-- eSource EHR Source Data Reconciliation Drawer (demo only) -->
     <EhrReconciliationDrawer
+      v-if="demoBuild"
       :is-open="showEhrReconciliationDrawer"
       :study-id="store.currentStudyId || 'STUDY-101'"
       :subject-id="selectedSubjectId"
@@ -305,7 +406,15 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch, onMounted, onUnmounted, computed } from "vue";
+import {
+  ref,
+  reactive,
+  watch,
+  onMounted,
+  onUnmounted,
+  computed,
+  getCurrentInstance,
+} from "vue";
 import { useRoute, onBeforeRouteLeave } from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
@@ -328,15 +437,27 @@ import { useConsentGating } from "../composables/useConsentGating";
 import { useVerification } from "../composables/useVerification";
 import { useSchemaIngestion } from "../composables/useSchemaIngestion";
 import { useEcrfDrafts } from "../composables/useEcrfDrafts";
-import { allowUnbackedAction } from "../utils/unbackedActions.js";
-import { isDemoBuild } from "../utils/demoMode.js";
-import { canManageQueries, canVerifySource } from "../canvas/authority";
+import {
+  allowUnbackedAction,
+  unbackedActionsEnabled,
+} from "../utils/unbackedActions.js";
+import {
+  canManageParticipants,
+  canManageQueries,
+  canVerifySource,
+} from "../canvas/authority";
+import { findKernelEnrollmentRef } from "../canvas/kernelStudy";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
 const toastStore = useToastStore();
 const route = useRoute();
-const demoBuild = isDemoBuild();
+const demoBuild = unbackedActionsEnabled();
+const instance = getCurrentInstance();
+const routerLinkComponent =
+  instance?.appContext.components.RouterLink ||
+  instance?.appContext.components["router-link"] ||
+  null;
 
 const showEhrReconciliationDrawer = ref(false);
 
@@ -349,8 +470,14 @@ function routeQuery(name) {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
+const initialRouteStudyId = routeQuery("studyId") ?? "";
+const initialRouteSubjectId = routeQuery("subjectId") ?? "";
+const initialRouteEnrollmentId = routeQuery("enrollmentId") ?? "";
+
 // Selected Subject & Visit State
-const selectedSubjectId = ref("SUBJ-001");
+const selectedSubjectId = ref(
+  demoBuild ? "SUBJ-001" : initialRouteSubjectId || ""
+);
 const selectedVisitId = ref("Screening");
 
 const currentStudyId = computed(
@@ -361,7 +488,10 @@ const currentStudyId = computed(
     "STUDY-USDM-001"
 );
 
-// Domain Composable: Draft Persistence & Dirty Tracking
+// Non-demo builds never persist or restore sample-form drafts in localStorage (ADR-2622).
+const draftStudyScope = computed(() => (demoBuild ? currentStudyId.value : ""));
+
+// Domain Composable: Draft Persistence & Dirty Tracking (demo sample form only)
 const {
   dirtyFields,
   isDirty,
@@ -370,10 +500,146 @@ const {
   restoreDraft,
   clearDraft,
 } = useEcrfDrafts(
-  currentStudyId,
+  draftStudyScope,
   selectedSubjectId,
   selectedVisitId,
   computed(() => store.formValues)
+);
+
+// Kernel enrollment resolution for the selected participant outside demo mode
+const resolvedEnrollmentId = ref(initialRouteEnrollmentId);
+const enrollmentStatusMessage = ref("");
+const selectionChangedFromInitial = ref(false);
+let enrollmentLookupSeq = 0;
+
+const selectedSubject = computed(
+  () => store.subjects.find((s) => s.id === selectedSubjectId.value) ?? null
+);
+
+const activeEnrollmentProp = computed(() => {
+  if (demoBuild) return routeQuery("enrollmentId");
+  return resolvedEnrollmentId.value || null;
+});
+
+const showManageParticipantsLink = computed(
+  () =>
+    !demoBuild &&
+    Boolean(authStore.isAuthenticated) &&
+    canManageParticipants(authStore)
+);
+
+const manageParticipantsLocation = computed(() => {
+  const code = store.activeStudyId.trim();
+  if (code) {
+    return {
+      path: `/studies/${encodeURIComponent(code)}`,
+      query: { stage: "conduct", section: "participants" },
+    };
+  }
+  return { path: "/studies" };
+});
+
+const manageParticipantsHref = computed(() => {
+  const code = store.activeStudyId.trim();
+  if (code) {
+    return `/studies/${encodeURIComponent(code)}?stage=conduct&section=participants`;
+  }
+  return "/studies";
+});
+
+async function resolveSelectedEnrollment() {
+  if (demoBuild) return;
+  const studyCode = store.activeStudyId.trim();
+  const subjectCode = selectedSubjectId.value.trim();
+
+  if (
+    initialRouteEnrollmentId &&
+    !selectionChangedFromInitial.value &&
+    ((studyCode && studyCode !== initialRouteStudyId) ||
+      (subjectCode && subjectCode !== initialRouteSubjectId))
+  ) {
+    selectionChangedFromInitial.value = true;
+  }
+
+  if (!studyCode || !subjectCode) {
+    enrollmentLookupSeq++;
+    if (
+      initialRouteEnrollmentId &&
+      !selectionChangedFromInitial.value &&
+      !studyCode &&
+      !subjectCode
+    ) {
+      resolvedEnrollmentId.value = initialRouteEnrollmentId;
+      enrollmentStatusMessage.value = "";
+      return;
+    }
+    resolvedEnrollmentId.value = "";
+    enrollmentStatusMessage.value = "";
+    return;
+  }
+
+  if (
+    initialRouteEnrollmentId &&
+    !selectionChangedFromInitial.value &&
+    (!initialRouteStudyId || studyCode === initialRouteStudyId) &&
+    (!initialRouteSubjectId || subjectCode === initialRouteSubjectId)
+  ) {
+    enrollmentLookupSeq++;
+    resolvedEnrollmentId.value = initialRouteEnrollmentId;
+    enrollmentStatusMessage.value = "";
+    return;
+  }
+
+  const seq = ++enrollmentLookupSeq;
+  const siteCode =
+    selectedSubject.value?.siteId ||
+    (subjectCode === initialRouteSubjectId ? routeQuery("siteId") : null) ||
+    null;
+
+  enrollmentStatusMessage.value = `Resolving kernel enrollment for ${subjectCode}…`;
+
+  try {
+    const refResult = await findKernelEnrollmentRef(
+      studyCode,
+      siteCode,
+      subjectCode
+    );
+    if (seq !== enrollmentLookupSeq) return;
+    if (refResult?.id) {
+      resolvedEnrollmentId.value = refResult.id;
+      enrollmentStatusMessage.value = "";
+    } else {
+      resolvedEnrollmentId.value = "";
+      enrollmentStatusMessage.value = `No kernel enrollment found for ${subjectCode} in ${studyCode}.`;
+    }
+  } catch (err) {
+    if (seq !== enrollmentLookupSeq) return;
+    resolvedEnrollmentId.value = "";
+    const detail = err instanceof Error ? err.message : String(err);
+    enrollmentStatusMessage.value = `Could not resolve kernel enrollment for ${subjectCode}: ${detail}`;
+  }
+}
+
+watch(
+  [
+    () => store.activeStudyId,
+    selectedSubjectId,
+    () => selectedSubject.value?.siteId ?? "",
+  ],
+  ([nextStudy, nextSubject], [prevStudy, prevSubject]) => {
+    if (
+      prevStudy !== undefined &&
+      (nextStudy !== prevStudy || nextSubject !== prevSubject)
+    ) {
+      if (
+        nextStudy !== initialRouteStudyId ||
+        nextSubject !== initialRouteSubjectId
+      ) {
+        selectionChangedFromInitial.value = true;
+      }
+    }
+    void resolveSelectedEnrollment();
+  }
 );
 
 // Screening and Enrollment State (CRC)
@@ -415,7 +681,7 @@ const activeUserRole = computed(() => {
       return "site_investigator";
     return roles[0] || "site_investigator";
   }
-  return demoRole.value;
+  return demoBuild ? demoRole.value : "site_investigator";
 });
 
 // Domain Composable 1: Consent Gating (CRC)
@@ -465,12 +731,13 @@ const ecrfReasonOptions = [
 const showReasonModal = ref(false);
 const pendingValueChange = ref(null);
 
-// Consolidated lookup validation and state management
+// Consolidated lookup validation and state management (demo only)
 const lookupStatuses = ref({});
 const lookupRequestCounters = reactive({});
 const debouncedLookups = {};
 
 async function performConceptCodeValidation(fieldId, value) {
+  if (!demoBuild) return;
   if (!value || !value.trim()) {
     lookupStatuses.value[fieldId] = null;
     return;
@@ -529,6 +796,7 @@ function getDebouncedLookup(fieldId) {
 }
 
 function handleLookupInput(field, value) {
+  if (!demoBuild) return;
   const fieldId = field.id;
   store.formValues[fieldId] = value;
 
@@ -540,7 +808,7 @@ function handleLookupInput(field, value) {
   getDebouncedLookup(fieldId)(value);
 }
 
-// eCRF Session Management
+// eCRF Session Management (demo sample form only)
 const ecrfSessions = reactive({});
 
 function getSessionKey() {
@@ -548,6 +816,7 @@ function getSessionKey() {
 }
 
 function loadEcrfSession() {
+  if (!demoBuild) return;
   const key = getSessionKey();
   if (!ecrfSessions[key]) {
     ecrfSessions[key] = {
@@ -577,49 +846,51 @@ function loadEcrfSession() {
   });
 }
 
-watch(
-  () => store.formValues,
-  (newValues) => {
-    const key = getSessionKey();
-    if (!ecrfSessions[key]) {
-      ecrfSessions[key] = { values: {}, queries: {} };
-    }
-    ecrfSessions[key].values = newValues;
-  },
-  { deep: true }
-);
+if (demoBuild) {
+  watch(
+    () => store.formValues,
+    (newValues) => {
+      const key = getSessionKey();
+      if (!ecrfSessions[key]) {
+        ecrfSessions[key] = { values: {}, queries: {} };
+      }
+      ecrfSessions[key].values = newValues;
+    },
+    { deep: true }
+  );
 
-watch(
-  () => store.formQueries,
-  (newQueries) => {
-    const key = getSessionKey();
-    if (!ecrfSessions[key]) {
-      ecrfSessions[key] = { values: {}, queries: {} };
-    }
-    ecrfSessions[key].queries = newQueries;
-  },
-  { deep: true }
-);
+  watch(
+    () => store.formQueries,
+    (newQueries) => {
+      const key = getSessionKey();
+      if (!ecrfSessions[key]) {
+        ecrfSessions[key] = { values: {}, queries: {} };
+      }
+      ecrfSessions[key].queries = newQueries;
+    },
+    { deep: true }
+  );
 
-watch(
-  () => store.formValues,
-  () => {
-    store.triggerValueChange();
-  },
-  { deep: true }
-);
+  watch(
+    () => store.formValues,
+    () => {
+      store.triggerValueChange();
+    },
+    { deep: true }
+  );
+}
 
 onMounted(async () => {
   window.addEventListener("beforeunload", handleBeforeUnload);
   if (route && route.query) {
-    if (route.query.studyId) store.activeStudyId = route.query.studyId;
-    if (route.query.siteId) store.activeSiteId = route.query.siteId;
+    if (route.query.studyId) store.activeStudyId = String(route.query.studyId);
+    if (route.query.siteId) store.activeSiteId = String(route.query.siteId);
     if (route.query.subjectId) {
       const sId = String(route.query.subjectId);
       store.activeSubjectId = sId;
       selectedSubjectId.value = sId;
     }
-    if (route.query.visitId) {
+    if (demoBuild && route.query.visitId) {
       store.activeVisitId = route.query.visitId;
       const vId = String(route.query.visitId);
       if (
@@ -639,16 +910,23 @@ onMounted(async () => {
     await store.loadSubjects(store.activeStudyId);
   }
   selectListedSubject();
+  if (!demoBuild) {
+    await resolveSelectedEnrollment();
+  }
 });
 
 onUnmounted(() => {
   window.removeEventListener("beforeunload", handleBeforeUnload);
 });
 
+const hasUnsavedChanges = computed(
+  () => formPanelDirty.value || (demoBuild && isDirty.value)
+);
+
 // Route & Browser Navigation Guards
 if (typeof onBeforeRouteLeave === "function") {
   onBeforeRouteLeave(() => {
-    if (isDirty.value || formPanelDirty.value) {
+    if (hasUnsavedChanges.value) {
       const confirmLeave = window.confirm(
         "You have unsaved eCRF draft changes. Are you sure you want to leave?"
       );
@@ -660,7 +938,7 @@ if (typeof onBeforeRouteLeave === "function") {
 }
 
 function handleBeforeUnload(event) {
-  if (isDirty.value || formPanelDirty.value) {
+  if (hasUnsavedChanges.value) {
     event.preventDefault();
     event.returnValue = "";
     return "";
@@ -675,7 +953,9 @@ function selectListedSubject() {
   if (!store.subjects.some((s) => s.id === selectedSubjectId.value)) {
     selectedSubjectId.value = store.subjects[0]?.id ?? "";
   }
-  loadEcrfSession();
+  if (demoBuild) {
+    loadEcrfSession();
+  }
 }
 
 function getValidationError(field) {
@@ -684,8 +964,9 @@ function getValidationError(field) {
   return res.valid ? null : res.message;
 }
 
-// Reason Modal & Field Changes
+// Reason Modal & Field Changes (demo only)
 function handleFieldChange(field, newValue, targetEl) {
+  if (!demoBuild) return;
   const oldValue = store.formValues[field.id] || "";
   if (newValue === oldValue) return;
 
@@ -741,7 +1022,11 @@ function saveChange(finalReason) {
 
     pendingSdvToggle.value = null;
     showReasonModal.value = false;
-    alert(`Source Document Verification (SDV) status updated and logged!`);
+    toastStore.push({
+      tone: "success",
+      title: "SDV updated",
+      message: "Source Document Verification (SDV) status updated and logged!",
+    });
     return;
   }
 
@@ -759,6 +1044,7 @@ function saveChange(finalReason) {
 }
 
 function commitChange(field, oldValue, newValue, reason) {
+  if (!allowUnbackedAction("Editing the sample form")) return;
   store.formValues[field.id] = newValue;
   handleVerificationInvalidationOnEdit(
     field,
@@ -790,7 +1076,11 @@ function commitChange(field, oldValue, newValue, reason) {
 function createQuery(fieldId, msgFromComponent = null) {
   const msg = msgFromComponent !== null ? msgFromComponent : "";
   if (!msg) {
-    alert("Please enter a discrepancy message!");
+    toastStore.push({
+      tone: "error",
+      title: "Message required",
+      message: "Please enter a discrepancy message!",
+    });
     return;
   }
   if (!allowUnbackedAction("Raising a query")) return;
@@ -818,7 +1108,11 @@ function createQuery(fieldId, msgFromComponent = null) {
 function respondQuery(fieldId, respFromComponent = null) {
   const resp = respFromComponent !== null ? respFromComponent : "";
   if (!resp) {
-    alert("Please enter a response!");
+    toastStore.push({
+      tone: "error",
+      title: "Response required",
+      message: "Please enter a response!",
+    });
     return;
   }
   if (!allowUnbackedAction("Answering a query")) return;

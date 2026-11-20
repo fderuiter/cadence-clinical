@@ -190,7 +190,7 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
 
     const openFormLink = wrapper.find("#query-open-form-query-1");
     expect(openFormLink.attributes("href")).toBe(
-      "/ecrf?studyId=CAD-101&subjectId=017-0001&formId=form-vs-1&itemId=DIABP"
+      "/ecrf?studyId=CAD-101&subjectId=017-0001&enrollmentId=enrollment-1&formId=form-vs-1&itemId=DIABP"
     );
     await openFormLink.trigger("click");
     await flushPromises();
@@ -198,6 +198,7 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
     expect(router.currentRoute.value.query).toEqual({
       studyId: "CAD-101",
       subjectId: "017-0001",
+      enrollmentId: "enrollment-1",
       formId: "form-vs-1",
       itemId: "DIABP",
     });
