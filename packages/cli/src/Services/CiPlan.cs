@@ -177,7 +177,7 @@ public static class CiPlan
     /// <summary>Jobs of <c>ci.yml</c> that act on GitHub itself and have no local meaning, with the reason.</summary>
     public static IReadOnlyDictionary<string, string> GitHubOnlyJobs { get; } = new Dictionary<string, string>
     {
-        ["actionlint"] = "runs actionlint and workflow action pinning in GitHub Actions",
+        ["actionlint"] = "runs actionlint in GitHub Actions",
         ["container-security"] = "builds container images across a matrix and uploads Trivy SARIF to GitHub Code Scanning",
         ["classify"] = "labels the pull request through the GitHub API",
         ["automerge"] = "approves and merges the pull request through the GitHub API",
