@@ -24,12 +24,12 @@ Pursuant to **FDA 21 CFR Part 11** and **PRD-EDC-007**, patient-entered eCOA dia
 ### Option 1: AES-CBC or Fernet
 
 - **Overview:** Standard AES block ciphers.
-- ***Cons:*** Lack of built-in authenticated data (AAD) support; Fernet has no native Web Crypto subtle API equivalent in standard browsers without massive third-party packages.
+- _**Cons:**_ Lack of built-in authenticated data (AAD) support; Fernet has no native Web Crypto subtle API equivalent in standard browsers without massive third-party packages.
 
 ### Option 2: AES-GCM (Selected)
 
 - **Overview:** Authenticated encryption with associated data (AEAD) using Galois/Counter Mode.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Universally supported by browser Web Crypto and Python `cryptography` libraries.
   - ✅ High performance and hardware acceleration.
   - ✅ Built-in authenticity verification (tags) and AAD binding.

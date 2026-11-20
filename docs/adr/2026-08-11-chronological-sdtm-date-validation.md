@@ -31,9 +31,9 @@ This addresses clinical mapping and validation fidelity under PRD-CRF-006.
 
 Add CHECK constraints directly to Postgres to enforce date ranges.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ High reliability at the storage layer.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Difficult to support dynamic or flexible schema changes.
   - ❌ Validation fails late (at save time) rather than during API ingestion/mapping validation.
 
@@ -41,11 +41,11 @@ Add CHECK constraints directly to Postgres to enforce date ranges.
 
 Add model-level validators (`@model_validator(mode="after")`) to `SDTMRecordAE`, `SDTMRecordCM`, and `SDTMRecordSV`.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Fail-fast: Rejects invalid date pairs during the mapping and conversion pipeline before database interaction.
   - ✅ Flexible: Handles standard/partial ISO 8601 strings cleanly.
   - ✅ Reusable: Fully integrated with Pydantic's typing and validation system.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Adds slight overhead during parsing (mitigated by highly-optimized string digit comparison).
 
 ## 4. Decision Outcome

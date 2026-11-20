@@ -53,7 +53,7 @@ events, outbox, idempotency or chain.
    change), `IKernelCommandSender`, `CommandResult<T>` (value, registered `KernelError`, or replay), `Actor`
    (`Person`, `ServiceAccount` with `svc:` ids, `AutomationAgent` with `agent:` ids; `system`, `anonymous` and similar
    ids are refused at construction, following ADR-2257), the `EventEnvelope` of spec §5.2 and `[KernelEvent(type,
-   schemaVersion)]`.
+schemaVersion)]`.
 2. **Error registry (K-ERR-1):** every `KernelError` is a public static field with a code `K.<Area>.<Name>` and an
    HTTP status; `KernelErrors.All` collects them, and a unit test fails on a duplicate or malformed code.
 3. **Pipeline in `Cadence.Kernel.Application` (`KernelCommandPipeline`):** validate the command → resolve the actor

@@ -27,21 +27,20 @@ Clinical trial site payments and site startup (SSU) operations involve complex f
 ### Option 1: **Option A (Selected) - Modular Pure In-Memory Financial & SSU Engines in `packages/engine_core/`**:
 
 - **Overview:** - `packages/engine_core/financial/`: `PayableLedgerEngine`, `GrantContract`, `FeeMatrixItem`, `PayeeSplitRule`, multi-tier overhead and holdback retention calculations.
-   - `packages/engine_core/operations/`: `SiteGreenlightEngine`, multi-stage regulatory clearance matrices, deficiency diagnostics, and greenlight status determination (`BLOCKED`, `CONDITIONAL_RELEASE`, `GREENLIGHT_CLEARED`).
-- ***Pros:***
+  - `packages/engine_core/operations/`: `SiteGreenlightEngine`, multi-stage regulatory clearance matrices, deficiency diagnostics, and greenlight status determination (`BLOCKED`, `CONDITIONAL_RELEASE`, `GREENLIGHT_CLEARED`).
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B - Direct Database Coupling in `apps/payments` and `apps/ctms`**:
 
 - **Overview:** - Tightly coupling financial and greenlight logic with SQL ORM tables inside application services.
-   - _Rejected_: Violates clean hexagonal boundaries and prevents pure domain testing across microservices.
-- ***Pros:***
+  - _Rejected_: Violates clean hexagonal boundaries and prevents pure domain testing across microservices.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

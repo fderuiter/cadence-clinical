@@ -32,27 +32,26 @@ This decision resolves requirements under `@req:PRD-SYS-048` and `@req:PRD-SYS-0
 ### Option 1: **Option A (Selected): Application-Level WHODrug Gating with Pre-Flight AS2 Interceptor**
 
 - **Overview:** - Pure application domain service with zero ORM leaks, strict validation before XML compilation and AS2 transmission.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B: Health Authority Gateway ACK B Post-Processing**
 
 - **Overview:** - _Rejected_: Waiting for regulatory agency rejections violates GxP compliance and risks regulatory enforcement actions.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 3: **Option C: Client-Side-Only Form Input Validation**
 
 - **Overview:** - _Rejected_: Fails defense-in-depth; direct API submissions, batch imports, or legacy migrations could bypass client checks.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

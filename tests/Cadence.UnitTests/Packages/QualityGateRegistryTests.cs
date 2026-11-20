@@ -230,8 +230,28 @@ public sealed class QualityGateRegistryTests : IDisposable
     [Fact]
     public void EveryGate_HasAFailingFixture()
     {
+        QualityGates.All.Should().HaveCount(27);
         Fixtures().Keys.Should().BeEquivalentTo(QualityGates.All.Select(g => g.Name));
         FailsClosedOnly.Keys.Should().BeSubsetOf(QualityGates.All.Select(g => g.Name));
+    }
+
+    [Fact]
+    public void RunQualityGates_SkipsExcludedGatesByNameOrAlias_AndFailsClosedOnInvalidExcludeUsage()
+    {
+        Write("scratch/notes.txt", "left behind\n");
+        string[] unrelatedGates = QualityGates.All
+            .Select(g => g.Name)
+            .Where(n => n is not "dependencies" and not "path-patterns")
+            .ToArray();
+
+        QualityGateOrchestrator.RunQualityGates(excludedGates: ["no-such-gate"], repoRoot: _root)
+            .Should().Be(1, "unknown excluded gate names must fail closed");
+        QualityGateOrchestrator.RunQualityGates(gateName: "dependencies", excludedGates: ["path-patterns"], repoRoot: _root)
+            .Should().Be(1, "--exclude applies only when running all gates");
+        QualityGateOrchestrator.RunQualityGates(excludedGates: unrelatedGates, repoRoot: _root)
+            .Should().Be(1, "path-patterns still runs and fails when not excluded");
+        QualityGateOrchestrator.RunQualityGates(excludedGates: [.. unrelatedGates, "validate-path-patterns"], repoRoot: _root)
+            .Should().Be(0, "excluding path-patterns by alias skips it while running the remaining gate");
     }
 
     [Fact]

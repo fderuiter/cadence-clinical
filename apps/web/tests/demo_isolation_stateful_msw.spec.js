@@ -405,6 +405,59 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
       const help = await helpRes.json();
       expect(help.primary_article).toBeTruthy();
     });
+
+    it("supports kernel SDV verifications, retractions, and study-wide query worklist filters", async () => {
+      const obsRef = "observation:00000000-0000-0000-0000-000000000001";
+      const enrollmentRef = "enrollment:00000000-0000-0000-0000-000000001001";
+
+      const verifyRes = await fetch(
+        `${origin}/api/v1/kernel/observations/${encodeURIComponent(obsRef)}/verifications`,
+        {
+          method: "POST",
+          headers: {
+            ...DEMO_HEADERS,
+            "Idempotency-Key": "idem-sdv-1",
+            "X-Change-Reason": "Verified against EHR source",
+          },
+          body: JSON.stringify({
+            enrollment_ref: enrollmentRef,
+            revision: 1,
+          }),
+        }
+      );
+      expect(verifyRes.status).toBe(201);
+      const verified = await verifyRes.json();
+      expect(verified.kind).toBe("Verified");
+      expect(verified.ref).toMatch(/^assertion:/);
+
+      const retractRes = await fetch(
+        `${origin}/api/v1/kernel/assertions/${encodeURIComponent(verified.ref)}/retraction`,
+        {
+          method: "POST",
+          headers: {
+            ...DEMO_HEADERS,
+            "Idempotency-Key": "idem-retract-1",
+            "X-Change-Reason": "Withdrawn after chart update",
+          },
+          body: JSON.stringify({
+            enrollment_ref: enrollmentRef,
+          }),
+        }
+      );
+      expect(retractRes.status).toBe(200);
+      const retracted = await retractRes.json();
+      expect(retracted.retracts).toBe(verified.ref);
+
+      const studyQueriesRes = await fetch(
+        `${origin}/api/v1/execution/forms/queries?study_id=00000000-0000-0000-0000-000000000001&status=open&site=SITE-101`,
+        { headers: DEMO_HEADERS }
+      );
+      expect(studyQueriesRes.status).toBe(200);
+      const studyQueries = await studyQueriesRes.json();
+      expect(studyQueries.length).toBeGreaterThanOrEqual(1);
+      expect(studyQueries[0].site_code).toBe("SITE-101");
+      expect(studyQueries[0].subject_code).toBe("SUBJ-1001");
+    });
   });
 
   describe("Demo route availability & router guard behavior", () => {

@@ -27,23 +27,22 @@ We need a way to support bypass blocks via a skip-to-content link, global visual
 ### Option 1: **Option A (Selected): First-Focusable Skip Link & Strict Validation Option Toggle**
 
 - **Overview:** - Place the "Skip to main content" link as the absolute first focusable element in the DOM inside `AppShell.vue`.
-   - Visual concealment via global stylesheet (`style.css`) using `.skip-link` utility.
-   - Target the main content container with `id="main-content"` and add `tabindex="-1"`.
-   - Update the custom `accessibility-matcher.js` to allow tests to deep-merge custom options, enabling individual tests (like `AppShell.spec.js`) to toggle strict landmark checks.
-- ***Pros:***
+  - Visual concealment via global stylesheet (`style.css`) using `.skip-link` utility.
+  - Target the main content container with `id="main-content"` and add `tabindex="-1"`.
+  - Update the custom `accessibility-matcher.js` to allow tests to deep-merge custom options, enabling individual tests (like `AppShell.spec.js`) to toggle strict landmark checks.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B: Strict Global Landmark Checks**
 
 - **Overview:** - Enforce landmark rules (`landmark-one-main`) globally for all component tests.
-   - Negative: Breaks hundreds of isolated unit/fragment component tests.
-- ***Pros:***
+  - Negative: Breaks hundreds of isolated unit/fragment component tests.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

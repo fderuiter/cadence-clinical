@@ -126,10 +126,10 @@ records the gaps:
 - Enrollment events (ADR-2453) are scoped under their study site and study. `ParticipantRegistered` is scoped to
   the tenant only, because a Participant is identity only and belongs to no single study.
 - A kernel HTTP endpoint and live push (server-sent events) wait for the kernel API host's tenant resolution and
-  read authorization (#4780, #4781). Until then applications call `IActivityStream` in-process. *(Update: the kernel
+  read authorization (#4780, #4781). Until then applications call `IActivityStream` in-process. _(Update: the kernel
   API host serves `GET activity` and runs the projector; the scope's visibility is its read authorization. See
   [ADR-2540 §4.7](2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md#47-activity-stream). Live push is
-  still open.)*
+  still open.)_
 - A host registers `AddKernelActivityStream()`, `AddKernelActivityProjection()` and an `INodeVisibility`. Exactly
   one host per deployment runs the projector, as with the other background jobs.
 

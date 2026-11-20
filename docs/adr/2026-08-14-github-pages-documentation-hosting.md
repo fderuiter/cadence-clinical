@@ -28,15 +28,15 @@ This decision fulfills requirements under Trace-8.
 
 Deploy exclusively the static output of VitePress (`docs/.vitepress/dist`) to GitHub Pages via `.github/workflows/deploy-docs.yml`.
 
-- ***Pros:*** Fast build times, zero extraneous client bundle payload, direct URL resolution for architectural and SDLC documentation, and clean separation of concerns.
-- ***Cons:*** Interactive web demo is no longer hosted on public GitHub Pages (available via local dev server `pnpm dev`).
+- _**Pros:**_ Fast build times, zero extraneous client bundle payload, direct URL resolution for architectural and SDLC documentation, and clean separation of concerns.
+- _**Cons:**_ Interactive web demo is no longer hosted on public GitHub Pages (available via local dev server `pnpm dev`).
 
 ### Option 2: Hybrid Nested Co-Hosting (`/` for Demo SPA, `/docs/` for VitePress)
 
 Bundle the VitePress output into a nested subdirectory inside `apps/web/dist/docs`.
 
-- ***Pros:*** Co-locates both demo and docs under a single Pages environment.
-- ***Cons:*** Tight coupling between web app build and docs generation, increased build complexity, potential asset collision, and unneeded demo bundle overhead.
+- _**Pros:**_ Co-locates both demo and docs under a single Pages environment.
+- _**Cons:**_ Tight coupling between web app build and docs generation, increased build complexity, potential asset collision, and unneeded demo bundle overhead.
 
 ## 4. Decision Outcome
 

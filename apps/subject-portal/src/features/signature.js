@@ -1,5 +1,5 @@
 // 21 CFR Part 11 electronic signature modal for ePRO and eConsent.
-import { sha256 } from "ui";
+import { getFocusableElements, sha256 } from "ui";
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
 import {
@@ -51,21 +51,35 @@ export function openSignatureModal(actionType = "epro") {
     reasonSelect.value = "Initial Questionnaire Completion";
   }
 
-  document.getElementById("portal-sign-modal").style.display = "flex";
+  const modal = document.getElementById("portal-sign-modal");
+  if (modal) {
+    modal.style.display = "flex";
+    if (
+      typeof HTMLElement !== "undefined" &&
+      "inert" in HTMLElement.prototype
+    ) {
+      modal.inert = false;
+    }
+    modal.removeAttribute("inert");
+    modal.removeAttribute("aria-hidden");
+    modal.setAttribute("aria-modal", "true");
+  }
   state.signatureModalOpen = true;
 
   // Ensure initial focus lands inside the modal even if rendered outside Vue mount
-  const modal = document.getElementById("portal-sign-modal");
   if (modal && !modal.contains(document.activeElement)) {
-    const focusableSelectors =
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-    let elements = Array.from(
-      modal.querySelectorAll(focusableSelectors)
-    ).filter((el) => !el.disabled);
-    const visible = elements.filter((el) => el.offsetParent !== null);
-    const focusableElements = visible.length > 0 ? visible : elements;
+    const focusableElements = getFocusableElements(modal);
     if (focusableElements.length > 0) {
       focusableElements[0].focus();
+    } else {
+      const rawInputs = Array.from(
+        modal.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((el) => !el.disabled);
+      if (rawInputs.length > 0) {
+        rawInputs[0].focus();
+      }
     }
   }
 }
@@ -75,17 +89,31 @@ export function closeSignatureModal() {
   const passwordEl = document.getElementById("sign-password");
   if (passwordEl) passwordEl.value = "";
   const modalEl = document.getElementById("portal-sign-modal");
-  if (modalEl) modalEl.style.display = "none";
+  if (modalEl) {
+    modalEl.style.display = "none";
+    if (
+      typeof HTMLElement !== "undefined" &&
+      "inert" in HTMLElement.prototype
+    ) {
+      modalEl.inert = true;
+    }
+    modalEl.setAttribute("inert", "");
+    modalEl.setAttribute("aria-hidden", "true");
+    modalEl.removeAttribute("aria-modal");
+  }
   state.signatureModalOpen = false;
   if (
     state.initiatingButton &&
     typeof state.initiatingButton.focus === "function"
   ) {
-    state.initiatingButton.focus();
-    state.initiatingButton = null;
+    if (!state.initiatingButton.closest?.("[inert]")) {
+      state.initiatingButton.focus();
+      state.initiatingButton = null;
+    }
   } else if (
     state.previouslyFocusedElement &&
-    typeof state.previouslyFocusedElement.focus === "function"
+    typeof state.previouslyFocusedElement.focus === "function" &&
+    !state.previouslyFocusedElement.closest?.("[inert]")
   ) {
     state.previouslyFocusedElement.focus();
   }

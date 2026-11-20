@@ -1,4 +1,4 @@
-# ADR-2545: Isolate Static Demo Builds with Stateful MSW Handlers
+# ADR-2546: Isolate Static Demo Builds with Stateful MSW Handlers
 
 - **Status:** Accepted
 - **Date:** 2026-11-19

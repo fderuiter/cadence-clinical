@@ -24,19 +24,18 @@ To maintain code quality and prevent technical debt across the platform services
 ### Option 1: Automatically format and fix all import and style violations across the API gateway using Ruff.
 
 - **Overview:** Automatically format and fix all import and style violations across the API gateway using Ruff.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: Manually suppress lint warnings using inline comments.
 
 - **Overview:** Manually suppress lint warnings using inline comments.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

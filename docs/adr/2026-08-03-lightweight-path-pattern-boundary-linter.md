@@ -27,21 +27,21 @@ This decision addresses structural and layout verification requirements under **
 ### Option 1: AST-Based and Language-Specific Content Linting
 
 - **Overview:** Write complex parsers to analyze code structure, import statements, and AST patterns across JS/TS/Python.
-- ***Pros:***
+- _**Pros:**_
   - ✅ High precision of semantic usage of components/imports.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Heavy execution overhead, far exceeding the 150ms target.
   - ❌ Fragile when encountering unparseable or intermediate file states during staging.
 
 ### Option 2: Static Path Pattern and Layout Linter
 
 - **Overview:** Build a lightweight, static glob and pattern matcher utilizing Python's standard library (`pathlib`, `fnmatch`).
-- ***Pros:***
+- _**Pros:**_
   - ✅ Zero external runtime dependencies.
   - ✅ Fast execution (< 100ms) with minimal footprint.
   - ✅ Highly actionable failure messages specifying correct target folders.
   - ✅ Easily integrable into git pre-commit hooks and make pipelines.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Does not parse code contents to verify inline import boundaries (which are already handled by other linters/tests).
 
 ## 4. Decision Outcome

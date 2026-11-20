@@ -24,19 +24,18 @@ The shared UI package (`packages/ui`) lacked explicit devDependencies for the Vi
 ### Option 1: **Option A (Selected):** Add explicit devDependencies for `vite` and `vitest` with matching pinned versions (`^8.1.5` and `^4.1.10` respectively) directly to `packages/ui/package.json`.
 
 - **Overview:** **Option A (Selected):** Add explicit devDependencies for `vite` and `vitest` with matching pinned versions (`^8.1.5` and `^4.1.10` respectively) directly to `packages/ui/package.json`.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B (Alternative):** Configure peer dependency overrides or hoisting rules in the root `package.json`. This was rejected because explicit dependency definition in local package configurations provides cleaner package isolation and avoids unexpected package hoisting behaviors.
 
 - **Overview:** **Option B (Alternative):** Configure peer dependency overrides or hoisting rules in the root `package.json`. This was rejected because explicit dependency definition in local package configurations provides cleaner package isolation and avoids unexpected package hoisting behaviors.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

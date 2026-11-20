@@ -241,6 +241,36 @@ export function createWebDemoHandlers(store = webDemoStore) {
         return HttpResponse.json(result.data);
       }
     ),
+    http.post(
+      "*/api/v1/kernel/observations/:observationRef/verifications",
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        const result = store.verifyObservation(
+          decodeURIComponent(String(params.observationRef)),
+          body,
+          decodeReasonHeader(request)
+        );
+        if (result.conflict) {
+          return HttpResponse.json(result.problem, { status: 409 });
+        }
+        return HttpResponse.json(result.data, { status: 201 });
+      }
+    ),
+    http.post(
+      "*/api/v1/kernel/assertions/:assertionRef/retraction",
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        const result = store.retractAssertion(
+          decodeURIComponent(String(params.assertionRef)),
+          body,
+          decodeReasonHeader(request)
+        );
+        if (result.conflict) {
+          return HttpResponse.json(result.problem, { status: 409 });
+        }
+        return HttpResponse.json(result.data);
+      }
+    ),
 
     // Execution — Subjects, Sites, Compliance, Activation
     http.get("*/api/v1/execution/subjects", ({ request }) => {
@@ -309,7 +339,14 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.get("*/api/v1/execution/forms/queries", ({ request }) => {
       const url = new URL(request.url);
       return HttpResponse.json(
-        store.listEnrollmentQueries(url.searchParams.get("enrollment_id"))
+        store.listEnrollmentQueries({
+          enrollmentId: url.searchParams.get("enrollment_id"),
+          studyId: url.searchParams.get("study_id"),
+          status: url.searchParams.get("status"),
+          site: url.searchParams.get("site"),
+          participant: url.searchParams.get("participant"),
+          valueChanged: url.searchParams.get("value_changed"),
+        })
       );
     }),
     http.get("*/api/v1/execution/forms/:formId/queries", ({ params }) =>

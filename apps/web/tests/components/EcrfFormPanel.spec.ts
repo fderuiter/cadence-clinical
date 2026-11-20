@@ -6,12 +6,26 @@ import EcrfFormPanel from "../../src/components/ecrf/EcrfFormPanel.vue";
 import { ecrfFormsApi } from "../../src/api/ecrfFormsApi";
 import { ApiError } from "../../src/api/client";
 import { ecrfQueriesApi } from "../../src/api/ecrfQueriesApi";
+import { kernelApi } from "../../src/api/kernelApi";
 import { useAuthStore } from "../../src/stores/auth.js";
 import { scopedKey } from "../../src/utils/userScopedStorage.js";
 
 vi.mock("../../src/auth/keycloak.js", () => ({
   getKeycloakClient: () => null,
 }));
+
+vi.mock("../../src/api/kernelApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../src/api/kernelApi")>();
+  return {
+    ...actual,
+    kernelApi: {
+      ...actual.kernelApi,
+      verifyObservation: vi.fn(),
+      retractAssertion: vi.fn(),
+    },
+  };
+});
 
 vi.mock("../../src/api/ecrfQueriesApi", async (importOriginal) => {
   const actual =
@@ -22,6 +36,7 @@ vi.mock("../../src/api/ecrfQueriesApi", async (importOriginal) => {
       raise: vi.fn(),
       listForForm: vi.fn(),
       listForEnrollment: vi.fn(),
+      listForStudy: vi.fn(),
       transition: vi.fn(),
     },
   };
@@ -109,6 +124,8 @@ function form(overrides: Record<string, unknown> = {}) {
 function resetQueries() {
   for (const fn of Object.values(ecrfQueriesApi)) vi.mocked(fn).mockReset();
   vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([]);
+  vi.mocked(kernelApi.verifyObservation).mockReset();
+  vi.mocked(kernelApi.retractAssertion).mockReset();
 }
 
 function signInUser(sub = "crc-1", tenantId: string | undefined = "tenant-1") {
@@ -766,12 +783,12 @@ describe("EcrfFormPanel: queries on form values (#5461)", () => {
     expect(view.find("#ecrf-raise-SYSBP").exists()).toBe(false);
   });
 
-  it("raises a query on an item's value at the revision the form read returned", async () => {
-    vi.mocked(ecrfQueriesApi.raise).mockResolvedValue(formQuery() as never);
+  it("raises a query on an item's value at the revision the form read returned, and raises missing-data queries on blank items", async () => {
+    vi.mocked(ecrfQueriesApi.raise).mockResolvedValueOnce(formQuery() as never);
     const view = await mountWith({ canManageQueries: true });
 
-    // An item without a value has nothing to query.
-    expect(view.find("#ecrf-raise-DIABP").exists()).toBe(false);
+    // Blank required items can also be queried without marking the form complete.
+    expect(view.find("#ecrf-raise-DIABP").exists()).toBe(true);
     await view.find("#ecrf-raise-SYSBP").trigger("click");
     expect(view.find('label[for="ecrf-raise-text"]').text()).toContain(
       "Query on SYSBP (revision 3)"
@@ -793,6 +810,66 @@ describe("EcrfFormPanel: queries on form values (#5461)", () => {
     );
     expect(view.find('[data-testid="ecrf-query-outcome"]').text()).toBe(
       "Query raised."
+    );
+
+    // Raise a missing-data query on blank required item DIABP: reloads form with NotAsked at revision 1 while keeping form incomplete.
+    const blankObsId = "0192f3c4-5e6a-7b8c-9d0e-00000000a002";
+    vi.mocked(ecrfQueriesApi.raise).mockResolvedValueOnce(
+      formQuery({
+        query_id: "query-blank",
+        item_id: "DIABP",
+        observation_id: blankObsId,
+        revision: 1,
+        current_revision: 1,
+      }) as never
+    );
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValueOnce(
+      form({
+        complete: false,
+        missing_required: ["DIABP"],
+        items: [
+          form().items[0],
+          item({
+            item_id: "DIABP",
+            unit: "mm[Hg]",
+            value_kind: "Quantity",
+            required: true,
+            value: { type: "missing", reason: "NotAsked" },
+            observation_id: blankObsId,
+            revision: 1,
+            recorded_by: "monitor",
+            recorded_at: "2027-03-14T10:01:00Z",
+          }),
+          form().items[2],
+        ],
+      }) as never
+    );
+
+    await view.find("#ecrf-raise-DIABP").trigger("click");
+    expect(view.find('label[for="ecrf-raise-text"]').text()).toContain(
+      "Missing-data query on DIABP (no value recorded)"
+    );
+    await view
+      .find("#ecrf-raise-text")
+      .setValue("Diastolic BP missing on source");
+    await view.find("#ecrf-raise-confirm").trigger("click");
+    await flushPromises();
+
+    expect(vi.mocked(ecrfQueriesApi.raise).mock.calls[1][0]).toMatchObject({
+      formId: FORM_ID,
+      observationId: null,
+      revision: null,
+      itemId: "DIABP",
+      text: "Diastolic BP missing on source",
+    });
+    expect(view.find('[data-testid="ecrf-form-status"]').text()).toContain(
+      "Incomplete"
+    );
+    expect(
+      (view.find("#ecrf-item-DIABP").element as HTMLInputElement).value
+    ).toBe("");
+    expect(view.find('[data-testid="ecrf-sdv-status-DIABP"]').text()).toBe(
+      "No value"
     );
   });
 
@@ -1334,5 +1411,326 @@ describe("EcrfFormPanel: account-scoped browser drafts", () => {
     expect(
       (wrapper.find("#ecrf-item-COMMENT").element as HTMLInputElement).value
     ).toBe("quota note");
+  });
+});
+
+describe("EcrfFormPanel: source data verification, lock scopes, and item highlighting", () => {
+  const OBS_DIA = "0192f3c4-5e6a-7b8c-9d0e-00000000a002";
+  const ASSERTION_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000c001";
+  let wrapper: VueWrapper | undefined;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.mocked(ecrfFormsApi.getForm).mockReset();
+    resetQueries();
+  });
+
+  afterEach(() => {
+    wrapper?.unmount();
+    wrapper = undefined;
+  });
+
+  it("verifies a recorded item with a mandatory reason, withdraws the verification, and clears verified status when a newer revision exists", async () => {
+    vi.mocked(ecrfFormsApi.getForm)
+      .mockResolvedValueOnce(form() as never)
+      .mockResolvedValueOnce(
+        form({
+          assertions: [
+            {
+              assertion_id: ASSERTION_ID,
+              kind: "Verified",
+              target: `observation:${OBS_ID}`,
+              revision: 3,
+              text: null,
+              asserted_at: "2027-03-14T11:00:00Z",
+              asserted_by: "cra1",
+              reason: "Checked against bedside chart",
+              retracted_at: null,
+            },
+          ],
+        }) as never
+      )
+      .mockResolvedValueOnce(
+        form({
+          assertions: [
+            {
+              assertion_id: ASSERTION_ID,
+              kind: "Verified",
+              target: `observation:${OBS_ID}`,
+              revision: 2,
+              text: null,
+              asserted_at: "2027-03-14T11:00:00Z",
+              asserted_by: "cra1",
+              reason: "Checked against bedside chart",
+              retracted_at: null,
+            },
+          ],
+        }) as never
+      );
+    vi.mocked(kernelApi.verifyObservation).mockResolvedValue({
+      ref: `assertion:${ASSERTION_ID}`,
+      kind: "Verified",
+      target: `observation:${OBS_ID}`,
+      revision: 3,
+      retracts: null,
+      asserted_at: "2027-03-14T11:00:00Z",
+      asserted_by: "cra1",
+    });
+    vi.mocked(kernelApi.retractAssertion).mockResolvedValue({
+      ref: "assertion:0192f3c4-5e6a-7b8c-9d0e-00000000c002",
+      kind: "Verified",
+      target: `observation:${OBS_ID}`,
+      revision: 3,
+      retracts: `assertion:${ASSERTION_ID}`,
+      asserted_at: "2027-03-14T11:05:00Z",
+      asserted_by: "cra1",
+    });
+
+    wrapper = mount(EcrfFormPanel, {
+      props: { formId: FORM_ID, canVerifySource: true },
+    });
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="ecrf-sdv-status-SYSBP"]').text()).toBe(
+      "Unverified"
+    );
+    expect(wrapper.find("#ecrf-verify-DIABP").exists()).toBe(false);
+
+    await wrapper.find("#ecrf-verify-SYSBP").trigger("click");
+    expect(
+      wrapper.find("#ecrf-sdv-confirm").attributes("disabled")
+    ).toBeDefined();
+    await wrapper
+      .find("#ecrf-sdv-reason")
+      .setValue(" Checked against bedside chart ");
+    await wrapper.find("#ecrf-sdv-confirm").trigger("click");
+    await flushPromises();
+
+    expect(kernelApi.verifyObservation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        observationRef: `observation:${OBS_ID}`,
+        enrollmentRef: "enrollment:e",
+        revision: 3,
+        reason: "Checked against bedside chart",
+      })
+    );
+    expect(wrapper.find('[data-testid="ecrf-sdv-status-SYSBP"]').text()).toBe(
+      "Verified (rev 3)"
+    );
+
+    // Withdraw verification with mandatory reason; simulated reload has revision 3 vs Verified@2 -> Needs re-verification!
+    await wrapper.find("#ecrf-unverify-SYSBP").trigger("click");
+    await wrapper
+      .find("#ecrf-sdv-reason")
+      .setValue("Addendum updated source BP");
+    await wrapper.find("#ecrf-sdv-confirm").trigger("click");
+    await flushPromises();
+
+    expect(kernelApi.retractAssertion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        assertionRef: `assertion:${ASSERTION_ID}`,
+        enrollmentRef: "enrollment:e",
+        reason: "Addendum updated source BP",
+      })
+    );
+    expect(wrapper.find('[data-testid="ecrf-sdv-status-SYSBP"]').text()).toBe(
+      "Needs re-verification"
+    );
+  });
+
+  it("selects all unverified recorded items, dispatches one verification command per item, and reports per-item outcomes", async () => {
+    const twoRecorded = form({
+      complete: true,
+      missing_required: [],
+      items: [
+        form().items[0],
+        item({
+          item_id: "DIABP",
+          unit: "mm[Hg]",
+          value_kind: "Quantity",
+          required: true,
+          value: { type: "quantity", value: 78, unit: "mm[Hg]" },
+          observation_id: OBS_DIA,
+          revision: 1,
+          recorded_by: "crc1",
+          recorded_at: "2027-03-14T09:06:00Z",
+        }),
+        form().items[2],
+      ],
+    });
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(twoRecorded as never);
+    vi.mocked(kernelApi.verifyObservation)
+      .mockResolvedValueOnce({
+        ref: `assertion:${ASSERTION_ID}`,
+        kind: "Verified",
+        target: `observation:${OBS_ID}`,
+        revision: 3,
+        retracts: null,
+        asserted_at: "2027-03-14T11:00:00Z",
+        asserted_by: "cra1",
+      })
+      .mockRejectedValueOnce(
+        new ApiError("Conflict", 409, null, {
+          code: "K.Assertion.RevisionStale",
+        })
+      );
+
+    wrapper = mount(EcrfFormPanel, {
+      props: { formId: FORM_ID, canVerifySource: true },
+    });
+    await flushPromises();
+
+    await wrapper.find("#ecrf-sdv-select-all").trigger("click");
+    await wrapper
+      .find("#ecrf-bulk-sdv-reason")
+      .setValue("Verified vitals page against clinic chart");
+    await wrapper.find("#ecrf-bulk-sdv-submit").trigger("click");
+    await flushPromises();
+
+    expect(kernelApi.verifyObservation).toHaveBeenCalledTimes(2);
+    const [call1, call2] = vi.mocked(kernelApi.verifyObservation).mock.calls;
+    expect(call1[0].observationRef).toBe(`observation:${OBS_ID}`);
+    expect(call2[0].observationRef).toBe(`observation:${OBS_DIA}`);
+    expect(call1[0].idempotencyKey).not.toBe(call2[0].idempotencyKey);
+
+    const results = wrapper.find('[data-testid="ecrf-bulk-sdv-results"]');
+    expect(
+      results.find('[data-sdv-result="SYSBP"]').attributes("data-ok")
+    ).toBe("true");
+    expect(
+      results.find('[data-sdv-result="DIABP"]').attributes("data-ok")
+    ).toBe("false");
+    expect(results.find('[data-sdv-result="DIABP"]').text()).toContain(
+      "value changed"
+    );
+  });
+
+  it("allows SDV and queries while Frozen, blocks them while Locked, and highlights a target item", async () => {
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValueOnce(
+      form({
+        locks: [
+          {
+            lock_id: "l-frozen",
+            kind: "Frozen",
+            scope: `collection_instance:${FORM_ID}`,
+            locked_at: "2027-04-01T00:00:00Z",
+            locked_by: "dm1",
+            reason: "Interim analysis",
+          },
+        ],
+      }) as never
+    );
+
+    wrapper = mount(EcrfFormPanel, {
+      props: {
+        formId: FORM_ID,
+        canVerifySource: true,
+        canManageQueries: true,
+        highlightItemId: "DIABP",
+      },
+    });
+    await flushPromises();
+
+    expect(wrapper.find("#ecrf-row-DIABP").attributes("data-highlighted")).toBe(
+      "true"
+    );
+    expect(
+      wrapper.find("#ecrf-item-SYSBP").attributes("disabled")
+    ).toBeDefined();
+    expect(
+      wrapper.find("#ecrf-verify-SYSBP").attributes("disabled")
+    ).toBeUndefined();
+    expect(
+      wrapper.find("#ecrf-raise-SYSBP").attributes("disabled")
+    ).toBeUndefined();
+    expect(
+      wrapper.find('[data-testid="ecrf-lock-scope-note"]').text()
+    ).toContain("remain available while Frozen");
+
+    wrapper.unmount();
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValueOnce(
+      form({
+        locks: [
+          {
+            lock_id: "l-locked",
+            kind: "Locked",
+            scope: `study:s`,
+            locked_at: "2027-05-01T00:00:00Z",
+            locked_by: "dm1",
+            reason: "Final database lock",
+          },
+        ],
+      }) as never
+    );
+
+    wrapper = mount(EcrfFormPanel, {
+      props: {
+        formId: FORM_ID,
+        canVerifySource: true,
+        canManageQueries: true,
+      },
+    });
+    await flushPromises();
+
+    expect(
+      wrapper.find("#ecrf-verify-SYSBP").attributes("disabled")
+    ).toBeDefined();
+    expect(
+      wrapper.find("#ecrf-raise-SYSBP").attributes("disabled")
+    ).toBeDefined();
+    expect(
+      wrapper.find('[data-testid="ecrf-lock-scope-note"]').text()
+    ).toContain("Locked assertion is in force");
+  });
+
+  it("prompts the user to reload the form when verifying a stale revision (409 K.Assertion.RevisionStale)", async () => {
+    vi.mocked(ecrfFormsApi.getForm)
+      .mockResolvedValueOnce(form() as never)
+      .mockResolvedValueOnce(
+        form({
+          version: 3,
+          items: [
+            item({
+              ...form().items[0],
+              value: { type: "quantity", value: 126, unit: "mm[Hg]" },
+              revision: 4,
+            }),
+            form().items[1],
+            form().items[2],
+          ],
+        }) as never
+      );
+    vi.mocked(kernelApi.verifyObservation).mockRejectedValueOnce(
+      new ApiError("Stale revision", 409, null, {
+        code: "K.Assertion.RevisionStale",
+      })
+    );
+
+    wrapper = mount(EcrfFormPanel, {
+      props: { formId: FORM_ID, canVerifySource: true },
+    });
+    await flushPromises();
+
+    await wrapper.find("#ecrf-verify-SYSBP").trigger("click");
+    await wrapper.find("#ecrf-sdv-reason").setValue("Source chart check");
+    await wrapper.find("#ecrf-sdv-confirm").trigger("click");
+    await flushPromises();
+
+    const sdvOutcome = wrapper.find('[data-testid="ecrf-sdv-outcome"]');
+    expect(sdvOutcome.attributes("role")).toBe("alert");
+    expect(sdvOutcome.text()).toContain("reload the form");
+    const reloadBtn = wrapper.find("#ecrf-sdv-reload");
+    expect(reloadBtn.exists()).toBe(true);
+
+    await reloadBtn.trigger("click");
+    await flushPromises();
+
+    expect(ecrfFormsApi.getForm).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-testid="ecrf-sdv-outcome"]').exists()).toBe(
+      false
+    );
+    expect(
+      (wrapper.find("#ecrf-item-SYSBP").element as HTMLInputElement).value
+    ).toBe("126");
   });
 });

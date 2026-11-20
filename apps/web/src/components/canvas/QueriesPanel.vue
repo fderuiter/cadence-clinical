@@ -38,7 +38,10 @@
       :queries="queries.queries"
       :can-manage="canManage"
       :busy="queries.busy"
+      :study-code="studyCode"
+      :subject-code="subjectCode"
       :act="queries.act"
+      :act-many="queries.actMany"
       show-form
     />
     <p
@@ -66,6 +69,7 @@ import FormQueryList from "../ecrf/FormQueryList.vue";
  * on the form itself (eCRF screen). Each transition is one request: there are no batch routes.
  */
 const props = defineProps<{
+  studyCode?: string;
   subjectCode: string;
   /** The participant's kernel enrollment id, or null when the kernel has none the reader may see. */
   enrollmentId: string | null;

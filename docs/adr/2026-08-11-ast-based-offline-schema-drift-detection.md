@@ -27,19 +27,19 @@ This decision addresses requirements under PRD-SYS-001 and Trace-14.
 ### Option 1: Regex or Text Pattern Matching
 
 - **Overview:** Use regular expressions or simple text/line scanning to parse TypeScript files.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Zero extra third-party Node.js dependencies in the workspace root.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Extremely fragile and prone to false positives or failures when formatting, comments, or indentation change.
   - ❌ Fails to parse complex structures or nested typescript interfaces accurately.
 
 ### Option 2: AST-Based Extraction via Babel Parser
 
 - **Overview:** Use `@babel/parser` in a Node.js utility script (`scripts/parse_frontend_ast.js`) to parse the TypeScript source files into an AST and walk the nodes to extract schema declarations.
-- ***Pros:***
+- _**Pros:**_
   - ✅ 100% immune to whitespace, formatting, or comments.
   - ✅ Highly precise, resolving nested properties and typescript interfaces with full structural fidelity.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Introduces `@babel/parser` as a devDependency in the root `package.json`.
 
 ## 4. Decision Outcome

@@ -52,15 +52,15 @@ JsonLogic. ADR-2502 moved DDF item rules onto it.
 
 - **Chosen Option:** Option 2. `rules/ast.py` and `rules/sentinels.py` are not ported. Each check maps as follows:
 
-| engine_core check | Where it lives now |
-| --- | --- |
-| `validate_node` (operand counts, required fields) | `RuleExpressionJson` parsing is strict: an unknown operator or property, or a wrong number of arguments, is an error when a pack or item rule is read |
-| `calculate_expression_complexity` | `RuleExpressionJson.MaxDepth` (64) and `MaxNodes` (4096) refuse an expression that is too deep or too large |
-| `extract_field_references`, `detect_unresolved_references` for form items | DDF compile: a rule that names an item the study does not have fails the compile (ADR-2502) |
-| `detect_unresolved_references` for rule packs | Binding collection-stage packs to the `CollectionSpec` versions they check (#4728) |
-| `detect_circular_dependencies`, skip logic | `DdfDependencyGraph.FindCycles` in the DDF compile (ADR-2502) |
-| `detect_circular_dependencies`, derived variables | Derived variables (#5043) |
-| `RuleDefinition` versioning, checksum and audit fields | Rule packs are versioned library content with the kernel audit log (ADR-2461) |
+| engine_core check                                                         | Where it lives now                                                                                                                                    |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `validate_node` (operand counts, required fields)                         | `RuleExpressionJson` parsing is strict: an unknown operator or property, or a wrong number of arguments, is an error when a pack or item rule is read |
+| `calculate_expression_complexity`                                         | `RuleExpressionJson.MaxDepth` (64) and `MaxNodes` (4096) refuse an expression that is too deep or too large                                           |
+| `extract_field_references`, `detect_unresolved_references` for form items | DDF compile: a rule that names an item the study does not have fails the compile (ADR-2502)                                                           |
+| `detect_unresolved_references` for rule packs                             | Binding collection-stage packs to the `CollectionSpec` versions they check (#4728)                                                                    |
+| `detect_circular_dependencies`, skip logic                                | `DdfDependencyGraph.FindCycles` in the DDF compile (ADR-2502)                                                                                         |
+| `detect_circular_dependencies`, derived variables                         | Derived variables (#5043)                                                                                                                             |
+| `RuleDefinition` versioning, checksum and audit fields                    | Rule packs are versioned library content with the kernel audit log (ADR-2461)                                                                         |
 
 - `Cadence.Core.Domain.Rules` (`RuleAst.cs`, `RuleEvaluator.cs`) is a second rule language with no production
   caller. It is removed, with `RuleEvaluatorTests`, `RuleChecksumTests` and the rule case in

@@ -27,9 +27,9 @@ This ADR specifically relates to requirements under **PRD-QRY-005**, **PRD-QRY-0
 ### Option 1: Ad-hoc Check-Logic inside Main Execution Module
 
 - **Overview:** Maintain inline REST routes and write manually embedded procedural checks to verify role memberships and study parameters on every request.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Requires no new modules or structural file layout modifications.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Highly error-prone and hard to maintain as more endpoints are added.
   - ❌ Violates separation of concerns and architecture patterns of the other routers (locks, documents, safety).
   - ❌ Inflexible when roles or permissions are refactored in core packages.
@@ -37,11 +37,11 @@ This ADR specifically relates to requirements under **PRD-QRY-005**, **PRD-QRY-0
 ### Option 2: Modular Router Extraction with Finer-Grained RBAC & Local Study Scope Guards [Selected]
 
 - **Overview:** Move all four SDV/TSDV endpoints and their associated Pydantic v2 schemas to `apps/execution/presentation/routers/sdv.py`. Implement granular permissions (`sdv:read`, `sdv:create`, `sdv:update`) and map them correctly inside `packages/security/rbac.py`. Integrate a local `StudyScopeChecker` / `require_study_scope()` that extracts `study_id` from route path parameters, query parameters, header keys, or JSON body payloads securely.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Extremely clean, testable, and robust routing layout mirroring other decoupled services.
   - ✅ Centralized permission matrix dictates access, resolving RBAC checks dynamically.
   - ✅ Avoids endpoint stream-reading bugs by safely cloning the HTTP request body stream.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires updating shared code in `packages/security/rbac.py`.
 
 ## 4. Decision Outcome

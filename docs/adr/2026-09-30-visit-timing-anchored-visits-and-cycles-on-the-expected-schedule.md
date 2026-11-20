@@ -83,7 +83,7 @@ timed activity, and a chain of anchors that loops.
 ### 4.3 Cycles (slice C)
 
 `ActivityTiming` gains an optional repeat: a count and an interval in days. `Plan` expands it into occurrences, and
-`PlannedVisit` gains an occurrence number (1 when the activity does not repeat). Occurrence *n* is due
+`PlannedVisit` gains an occurrence number (1 when the activity does not repeat). Occurrence _n_ is due
 `(n - 1) * interval` days after the first. The simulation's schedule changes are keyed by activity and occurrence.
 
 ## 5. Consequences & Trade-offs

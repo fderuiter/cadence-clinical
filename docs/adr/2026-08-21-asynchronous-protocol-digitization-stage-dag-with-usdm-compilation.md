@@ -24,18 +24,20 @@ This decision addresses requirement **PRD-DDF-001** (AI-Native USDM Protocol Dig
 ## 3. Options Considered
 
 ### Option 1: Monolithic Synchronous Extraction Pipeline
+
 - **Overview:** Maintain a single-shot synchronous endpoint that runs all extraction and compilation logic in one request cycle.
-- ***Pros:*** Simple API contract; minimal intermediate state storage.
-- ***Cons:*** ❌ Timeouts on large protocol documents (>50 pages); no granular progress reporting; failure at any step requires restarting the entire extraction; no checkpoint inspection.
+- _**Pros:**_ Simple API contract; minimal intermediate state storage.
+- _**Cons:**_ ❌ Timeouts on large protocol documents (>50 pages); no granular progress reporting; failure at any step requires restarting the entire extraction; no checkpoint inspection.
 
 ### Option 2: Multi-Stage Directed Acyclic Graph (DAG) with Checkpointing & Schema Gates (Selected)
+
 - **Overview:** Decompose protocol ingestion into five discrete, sequenced stages: `LAYOUT_PARSING` ➔ `SOA_EXTRACTION` ➔ `BIOMEDICAL_CONCEPT_MAPPING` ➔ `ECRF_SYNTHESIS` ➔ `USDM_COMPILATION`. Each stage executes against a thread-safe job store, records timing/confidence metrics, and validates outputs through strict schema gates before advancing.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Resilient execution with immutable stage checkpoints and resumption.
   - ✅ Clear fault localization and diagnostic error capture at schema validation gates.
   - ✅ Non-blocking asynchronous job execution with real-time progress percentages.
   - ✅ Clean separation of concerns matching CDISC MDR/DDF domain models.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires in-memory / persistent job state management.
 
 ## 4. Decision Outcome

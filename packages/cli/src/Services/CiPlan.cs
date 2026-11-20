@@ -107,6 +107,9 @@ public sealed record CiStep(string Job, string Name)
     /// <summary>Directories to delete before the step runs, relative to the repository root.</summary>
     public IReadOnlyList<string> CleanDirectories { get; init; } = [];
 
+    /// <summary>Variables always set for the step's commands.</summary>
+    public IReadOnlyDictionary<string, string> Environment { get; init; } = new Dictionary<string, string>();
+
     /// <summary>Variables set for the step's commands when another step passed first (see <see cref="CiEnvironmentIfPassed"/>).</summary>
     public IReadOnlyList<CiEnvironmentIfPassed> EnvironmentIfPassed { get; init; } = [];
 
@@ -228,36 +231,19 @@ public static class CiPlan
                 Commands = [new CiCommand("shellcheck", [])],
             },
             new("lint-and-static", "Run Markdown validation") { Commands = [NodeCli("check", "markdown")] },
+            new("lint-and-static", "Validate web API clients against OpenAPI types") { Commands = [NodeCli("check", "api-clients")] },
         ]);
 
         var dotnetQuality = new CiJob("dotnet-quality", ".NET Quality & Sentinel Checks",
         [
             new("dotnet-quality", "Build .NET solution") { Commands = [Dotnet("build", "Cadence.sln")] },
-            new("dotnet-quality", "Verify .NET C# code formatting (.editorconfig)")
+            new("dotnet-quality", "Run Cadence quality sentinels")
             {
-                Commands = [Dotnet("format", "Cadence.sln", "--verify-no-changes", "--no-restore")],
+                Commands = [CadenceCliNoBuild("check", "--exclude", "api-clients", "--exclude", "vulnerabilities")],
             },
-            new("dotnet-quality", "Run Cadence quality sentinels") { Commands = [CadenceCliNoBuild("check")] },
             new("dotnet-quality", "Run architecture tests")
             {
                 Commands = [Dotnet("test", "tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj", "--no-build")],
-            },
-            new("dotnet-quality", "Run ADR validation") { CoveredBy = QualitySentinels, Commands = [CadenceCliNoBuild("check", "adrs")] },
-            new("dotnet-quality", "Run CODEOWNERS coverage validation") { Commands = [CadenceCliNoBuild("validate-codeowners")] },
-            new("dotnet-quality", "Verify schema documentation freshness")
-            {
-                CoveredBy = QualitySentinels,
-                Commands = [CadenceCliNoBuild("check", "schema-doc")],
-            },
-            new("dotnet-quality", "Verify OpenAPI specification drift") { CoveredBy = QualitySentinels, Commands = [CadenceCliNoBuild("check", "openapi")] },
-            new("dotnet-quality", "Run requirements traceability validation") { Commands = [CadenceCliNoBuild("check", "rtm")] },
-            new("dotnet-quality", "Run code duplication verification")
-            {
-                CoveredBy = QualitySentinels,
-                Files = CiFileSource.ChangedFiles,
-                FilePattern = @"\.(py|js|vue|css|cs)$",
-                NoFilesMessage = "No relevant files changed.",
-                Commands = [CadenceCliNoBuild("check", "duplication")],
             },
         ]);
 
@@ -290,7 +276,11 @@ public static class CiPlan
         var security = new CiJob("security", "Security and Vulnerability Audit",
         [
             new("security", "Run static analysis") { Always = true, CoveredBy = QualitySentinels, Commands = [NodeCli("check", "audit-security")] },
-            new("security", "Run dependency audit") { Always = true, CoveredBy = QualitySentinels, Commands = [NodeCli("check", "vulnerabilities")] },
+            new("security", "Run dependency audit")
+            {
+                Always = true,
+                Commands = [Dotnet("restore", "Cadence.sln"), NodeCli("check", "vulnerabilities")],
+            },
             new("security", "Run secret detection")
             {
                 Always = true,
@@ -367,6 +357,16 @@ public static class CiPlan
             new(E2eJob, "Build UI package") { CoveredBy = StyleUiBuild, Commands = [Pnpm("--filter", "ui", "build")] },
             new(E2eJob, "Run Subject Portal E2E Accessibility Tests") { Commands = [Pnpm("--filter", "subject-portal", "test:e2e")] },
             new(E2eJob, "Run Web Application E2E Accessibility Tests") { Commands = [Pnpm("--filter", "web", "test:e2e")] },
+            new(E2eJob, "Run Browser-to-Database Correction Integration Test")
+            {
+                NeedsPostgres = true,
+                Environment = new Dictionary<string, string> { ["CADENCE_TEST_BROWSER"] = "1" },
+                Commands =
+                [
+                    Dotnet("test", "tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj", "--configuration", "Release",
+                        "--filter", "FullyQualifiedName~BrowserCorrectionReachesTheDatabaseWithItsReason"),
+                ],
+            },
         ])
         {
             OnRequestOnly = $"{PushOnly}; run it with '--job {E2eJob}'",

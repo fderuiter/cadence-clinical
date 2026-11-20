@@ -23,21 +23,21 @@ In clinical trial applications governed by regulatory frameworks like GxP and FD
 ### Option 1: Application-Level Triggers and Auditing
 
 - **Overview:** Rely entirely on application services and SQLAlchemy/SQLModel listeners to validate change reasons and block deletes.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Simple to implement in Python.
   - ✅ Same code runs on SQLite and PostgreSQL.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Leaves the database vulnerable to bypasses if direct SQL queries or database-level operations are run.
   - ❌ Lacks absolute guarantees of compliance at the persistence layer.
 
 ### Option 2: Database-Native Write Verification and Immutability Triggers (Selected)
 
 - **Overview:** Enforce constraints via database-native triggers.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Guaranteed GxP compliance at the persistence layer.
   - ✅ Blocks any bypass from direct SQL or misconfigured backend routes.
   - ✅ Custom SQLite emulation ensures local and CI tests match production PostgreSQL behavior.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Higher complexity in writing database-level SQL triggers and replicating behaviors in test environments.
 
 ## 4. Decision Outcome

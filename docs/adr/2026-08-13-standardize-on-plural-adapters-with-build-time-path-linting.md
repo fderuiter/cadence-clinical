@@ -24,9 +24,9 @@ The Cadence Clinical platform consists of multiple active microservices and pack
 
 Allow both `adapter` and `adapters` as valid folder names under `apps/` microservices.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Requires no immediate refactoring of existing directories.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Increases complexity in architectural assertions.
   - ❌ Higher risk of cognitive confusion and inconsistent layout patterns in future services.
 
@@ -34,11 +34,11 @@ Allow both `adapter` and `adapters` as valid folder names under `apps/` microser
 
 Unify all sub-projects and service directory structures to strictly use the plural `adapters` name and enforce this with build-time verification.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Predictable, fully standardized structure across the entire codebase.
   - ✅ Simpler and more rigid architecture assertions in packages like `packages/hexagonal/tests/test_hexagonal_architecture.py`.
   - ✅ Automated build-time validation prevents any regression or accidental introduction of a singular `adapter` package.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires a one-time migration of any existing files and directories.
 
 ## 4. Decision Outcome

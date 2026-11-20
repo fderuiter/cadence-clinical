@@ -78,16 +78,16 @@ and resolve codes such as MedDRA terms. Issue #4848 (decision D9) records the ga
 
 Sources are an explicit allow-list in `KernelSearchStore`. A table is searchable only when it is listed.
 
-| Source | NodeRef | Code | Title | Detail |
-| --- | --- | --- | --- | --- |
-| organizations | `organization` | code | name | |
-| sites | `site` | site code | name | country |
-| studies | `study` | study code | title | |
-| concepts | `concept` (pinned to the concept version) | CDISC code | preferred label | |
-| code_systems | `code_system` | | name | publisher |
-| terminology codes (`code_system_entries`) | `code_system_version` the code belongs to | code | display | code system and version |
-| standard_versions | `standard_version` | standard code | name | version |
-| library_items | `library_item` | key | title | |
+| Source                                    | NodeRef                                   | Code          | Title           | Detail                  |
+| ----------------------------------------- | ----------------------------------------- | ------------- | --------------- | ----------------------- |
+| organizations                             | `organization`                            | code          | name            |                         |
+| sites                                     | `site`                                    | site code     | name            | country                 |
+| studies                                   | `study`                                   | study code    | title           |                         |
+| concepts                                  | `concept` (pinned to the concept version) | CDISC code    | preferred label |                         |
+| code_systems                              | `code_system`                             |               | name            | publisher               |
+| terminology codes (`code_system_entries`) | `code_system_version` the code belongs to | code          | display         | code system and version |
+| standard_versions                         | `standard_version`                        | standard code | name            | version                 |
+| library_items                             | `library_item`                            | key           | title           |                         |
 
 - Results are NodeRefs pinned to the version read (ADR-2481 §4.2). A terminology code refers to its code-system
   version and carries the code, because codes are not kernel objects of their own.

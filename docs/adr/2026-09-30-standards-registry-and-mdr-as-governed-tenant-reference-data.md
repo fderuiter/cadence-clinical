@@ -69,11 +69,11 @@ tenant boundary stays uniform across the kernel.
 
 ### 4.1 Model
 
-| Aggregate | Owns | Governance |
-| --- | --- | --- |
-| `StandardVersion` | datasets, variables, value-level definitions, terminology bindings | Draft → Approved → Deprecated |
-| `LibraryItem` | one version of a keyed item (`Kind`, `Key`, `Version`) with canonical JSON content | Draft → Approved → Deprecated |
-| `StudyStandardsProfile` | a study's declared standard versions, CT versions and library pins | revised in place, one per study |
+| Aggregate               | Owns                                                                               | Governance                      |
+| ----------------------- | ---------------------------------------------------------------------------------- | ------------------------------- |
+| `StandardVersion`       | datasets, variables, value-level definitions, terminology bindings                 | Draft → Approved → Deprecated   |
+| `LibraryItem`           | one version of a keyed item (`Kind`, `Key`, `Version`) with canonical JSON content | Draft → Approved → Deprecated   |
+| `StudyStandardsProfile` | a study's declared standard versions, CT versions and library pins                 | revised in place, one per study |
 
 - A standard version is identified by `(tenant, standard code, version)`; registering the same pair twice fails.
 - Its **content hash** is the SHA-256 of the canonical JSON of the normalized package (datasets and variables by

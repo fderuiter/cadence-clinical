@@ -24,20 +24,22 @@ Deterministic padding schemes are susceptible to certain classes of cryptographi
 ## 3. Options Considered
 
 ### Option A: RSA-PSS (Probabilistic Signature Scheme) with SHA-256 (Selected)
-Standardize all RSA signature generation and verification on RSA-PSS padding with MGF1 (Mask Generation Function 1) and a SHA-256 hash function. This utilizes the maximum possible salt length for optimal security.
-- ***Pros:***
-  - ✅ Addresses requirements
-- ***Cons:***
-  - ❌ Trade-offs accepted
 
+Standardize all RSA signature generation and verification on RSA-PSS padding with MGF1 (Mask Generation Function 1) and a SHA-256 hash function. This utilizes the maximum possible salt length for optimal security.
+
+- _**Pros:**_
+  - ✅ Addresses requirements
+- _**Cons:**_
+  - ❌ Trade-offs accepted
 
 ### Option B: PKCS#1 v1.5 Deterministic Padding
-Maintain the legacy PKCS#1 v1.5 padding scheme. While simpler, it is cryptographically deprecated for new designs and fails to meet modern NIST/FIPS-140 guidelines for high-security electronic signatures.
-- ***Pros:***
-  - ✅ Addresses requirements
-- ***Cons:***
-  - ❌ Trade-offs accepted
 
+Maintain the legacy PKCS#1 v1.5 padding scheme. While simpler, it is cryptographically deprecated for new designs and fails to meet modern NIST/FIPS-140 guidelines for high-security electronic signatures.
+
+- _**Pros:**_
+  - ✅ Addresses requirements
+- _**Cons:**_
+  - ❌ Trade-offs accepted
 
 ## 4. Decision Outcome
 

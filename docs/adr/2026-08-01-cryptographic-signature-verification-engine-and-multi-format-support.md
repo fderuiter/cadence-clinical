@@ -23,19 +23,18 @@ To satisfy FDA 21 CFR Part 11 and clinical compliance requirements (PRD-SYS-001)
 ### Option 1: **Option A (Selected):** Build an integrated multi-format Cryptographic Signature Verification Engine in `packages/security/crypto_verifier.py` with support for RSA, ECDSA, and HMAC, XML/JSON parsing, and canonicalization.
 
 - **Overview:** **Option A (Selected):** Build an integrated multi-format Cryptographic Signature Verification Engine in `packages/security/crypto_verifier.py` with support for RSA, ECDSA, and HMAC, XML/JSON parsing, and canonicalization.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B:** Restrict the platform to simple symmetric HMAC signatures, requiring external services to perform asymmetric public-key certificate verification.
 
 - **Overview:** **Option B:** Restrict the platform to simple symmetric HMAC signatures, requiring external services to perform asymmetric public-key certificate verification.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

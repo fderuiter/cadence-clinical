@@ -25,22 +25,21 @@ This refactoring supports system maintainability under **PRD-SYS-001** (Standard
 ### Option 1: **Option A (Selected): Deconsolidate models.py into domain submodules under a Python package with a lazy-loading **init**.py shim**
 
 - **Overview:** - Segregate the 49 models and enums into 17 business-isolated submodules (`audit.py`, `subject.py`, `consent.py`, etc.).
-   - Use custom dynamic `__getattr__` and `__dir__` implementation in `apps/execution/database/models/__init__.py` to lazy-load objects on demand.
-   - Provide a programmatic `discover_models()` helper to load all submodules when `Base.metadata` schema discovery is needed.
-- ***Pros:***
+  - Use custom dynamic `__getattr__` and `__dir__` implementation in `apps/execution/database/models/__init__.py` to lazy-load objects on demand.
+  - Provide a programmatic `discover_models()` helper to load all submodules when `Base.metadata` schema discovery is needed.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B (Alternative): Move models but manually update all imports across all services**
 
 - **Overview:** - Physically move the files and rewrite all active imports in hundreds of files across the codebase.
-   - Extremely high risk, tedious, and prone to introducing regression bugs.
-- ***Pros:***
+  - Extremely high risk, tedious, and prone to introducing regression bugs.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

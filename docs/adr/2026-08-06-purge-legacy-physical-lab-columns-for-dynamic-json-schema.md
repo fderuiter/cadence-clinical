@@ -24,19 +24,18 @@ To prevent database schema bloating and align with the design in ADR-2332, we ne
 ### Option 1: Option A (Selected): Inline pre-migration of legacy columns to JSON before performing the DROP COLUMN operation.
 
 - **Overview:** Option A (Selected): Inline pre-migration of legacy columns to JSON before performing the DROP COLUMN operation.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: Option B (Alternative): Manual migration script executed separately by operators before the database upgrade.
 
 - **Overview:** Option B (Alternative): Manual migration script executed separately by operators before the database upgrade.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 
