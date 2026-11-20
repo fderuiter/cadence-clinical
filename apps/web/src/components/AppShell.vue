@@ -1,8 +1,11 @@
 <template>
-  <div class="app-shell">
+  <div
+    class="app-shell"
+    :style="{ '--shell-header-height': `${headerHeight}px` }"
+  >
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
-    <header class="app-header">
+    <header ref="headerRef" class="app-header">
       <div class="header-left">
         <router-link
           :to="authStore.isAuthenticated ? studiesPath : '/login'"
@@ -245,6 +248,18 @@ const router = useRouter();
 const isCommandPaletteOpen = ref(false);
 const isMobileMenuOpen = ref(false);
 const statusAnnouncement = ref("");
+const headerRef = ref(null);
+const headerHeight = ref(57);
+let headerResizeObserver = null;
+
+function syncHeaderHeight() {
+  const el = headerRef.value;
+  if (!el || typeof el.getBoundingClientRect !== "function") return;
+  const measured = Math.round(el.getBoundingClientRect().height);
+  if (measured > 0) {
+    headerHeight.value = measured;
+  }
+}
 
 const availablePersonas = computed(() => authStore.availablePersonas || []);
 const normalizedRoles = computed(() => authStore.normalizedRoles || []);
@@ -334,10 +349,19 @@ function handleGlobalKeydown(event) {
 
 onMounted(() => {
   window.addEventListener("keydown", handleGlobalKeydown);
+  syncHeaderHeight();
+  if (typeof ResizeObserver !== "undefined" && headerRef.value) {
+    headerResizeObserver = new ResizeObserver(() => syncHeaderHeight());
+    headerResizeObserver.observe(headerRef.value);
+  }
 });
 
 onUnmounted(() => {
   window.removeEventListener("keydown", handleGlobalKeydown);
+  if (headerResizeObserver) {
+    headerResizeObserver.disconnect();
+    headerResizeObserver = null;
+  }
 });
 </script>
 
@@ -565,6 +589,7 @@ onUnmounted(() => {
 .shell-main.shell-main-canvas {
   max-width: none;
   padding: 0;
+  overflow: visible;
 }
 
 .mobile-menu-toggle {

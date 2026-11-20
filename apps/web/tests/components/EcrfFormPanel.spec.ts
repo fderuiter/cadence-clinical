@@ -1866,4 +1866,22 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
       (wrapper.find("#ecrf-item-SYSBP").element as HTMLInputElement).value
     ).toBe("126");
   });
+
+  it("wraps the six-column items table in a keyboard-focusable accessible horizontal scroll region", async () => {
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
+    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    await flushPromises();
+
+    const scrollRegion = wrapper.find('[data-testid="ecrf-form-items-scroll"]');
+    expect(scrollRegion.exists()).toBe(true);
+    expect(scrollRegion.attributes("role")).toBe("region");
+    expect(scrollRegion.attributes("tabindex")).toBe("0");
+    expect(scrollRegion.attributes("aria-label")).toBe(
+      "Case report form items"
+    );
+    expect(scrollRegion.find('[data-testid="ecrf-form-items"]').exists()).toBe(
+      true
+    );
+    await expect(wrapper.element).toBeAccessible();
+  });
 });
