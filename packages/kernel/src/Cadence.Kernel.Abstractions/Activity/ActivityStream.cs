@@ -35,6 +35,7 @@ public static class KernelEventFamilies
         ["SubscriptionExpired"] = EventFamily.Execution,
         ["SubscriptionActivated"] = EventFamily.Execution,
         ["ProductEntitlementGranted"] = EventFamily.Execution,
+        ["ProductEntitlementRevoked"] = EventFamily.Execution,
         ["StudyRegistered"] = EventFamily.Knowledge,
         ["SiteRegistered"] = EventFamily.Execution,
         ["SiteLinkedToStudy"] = EventFamily.Execution,

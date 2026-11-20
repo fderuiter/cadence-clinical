@@ -45,8 +45,9 @@ const config = defineConfig({
     "**/runs/**",
     ...(isDevServer ? [] : getDraftBlogPostExcludes(docsDir)),
   ],
-  // Links VitePress cannot serve are pointed at GitHub by repoLinksPlugin; any other dead link or anchor fails the build.
-  ignoreDeadLinks: false,
+  // Links VitePress cannot serve are pointed at GitHub by repoLinksPlugin; co-hosted demo subpaths are staged
+  // into dist/demo and dist/subject-portal after VitePress compiles, while any other dead link or anchor fails the build.
+  ignoreDeadLinks: [/^\/(demo|subject-portal)(\/|$)/],
   markdown: {
     config(md) {
       md.use(dualHeadingAnchorsPlugin);
@@ -81,6 +82,8 @@ const config = defineConfig({
     },
     nav: [
       { text: "Home", link: "/" },
+      { text: "Staff Demo", link: "/demo/", target: "_self" },
+      { text: "Participant Demo", link: "/subject-portal/", target: "_self" },
       { text: "Blog", link: "/blog/index", activeMatch: "^/blog/" },
       { text: "Doc Index", link: "/DOCUMENTATION_INDEX" },
       { text: "Kernel Spec", link: "/kernel/CLINICAL_KERNEL_SPECIFICATION" },
