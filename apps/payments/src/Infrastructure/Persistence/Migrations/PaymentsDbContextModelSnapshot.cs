@@ -17,7 +17,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.11")
+                .HasAnnotation("ProductVersion", "10.0.15")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -501,7 +501,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("WalletId");
 
-                    b.ToTable("payments_participant_disbursements", (string)null);
+                    b.ToTable("payments_participant_disbursements", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_payments_participant_disbursements_status", "\"Status\" IN ('DISPATCHED', 'SETTLED', 'FAILED', 'CANCELLED')");
+                        });
                 });
 
             modelBuilder.Entity("Cadence.Apps.Payments.Domain.ParticipantExpenseClaim", b =>
@@ -611,7 +614,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("WalletId");
 
-                    b.ToTable("payments_participant_expense_claims", (string)null);
+                    b.ToTable("payments_participant_expense_claims", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_payments_participant_expense_claims_status", "\"Status\" IN ('PENDING_REVIEW', 'APPROVED', 'REJECTED')");
+                        });
                 });
 
             modelBuilder.Entity("Cadence.Apps.Payments.Domain.ParticipantStipendRule", b =>
@@ -1048,7 +1054,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("VisitCode");
 
-                    b.ToTable("payments_payables", (string)null);
+                    b.ToTable("payments_payables", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_payments_payables_status", "\"Status\" IN ('TRIGGERED', 'VERIFIED', 'INVOICED', 'CANCELLED')");
+                        });
                 });
 
             modelBuilder.Entity("Cadence.Apps.Payments.Domain.PayableAllocation", b =>
@@ -1465,7 +1474,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("StudyId");
 
-                    b.ToTable("payments_self_billing_invoices", (string)null);
+                    b.ToTable("payments_self_billing_invoices", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_payments_self_billing_invoices_status", "\"Status\" IN ('DRAFT', 'APPROVED', 'RECONCILED', 'CANCELLED')");
+                        });
                 });
 
             modelBuilder.Entity("Cadence.Apps.Payments.Domain.SplitPayeeConfig", b =>

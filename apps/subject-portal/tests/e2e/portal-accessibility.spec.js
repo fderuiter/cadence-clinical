@@ -603,7 +603,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
         btnOpacity: btnStyle.opacity,
         badgeOpacity: badgeStyle.opacity,
         animationIterationCount: btnStyle.animationIterationCount,
-        animationDurationSec: parseFloat(btnStyle.animationDuration) || 0,
+        btnAnimationSec: parseFloat(btnStyle.animationDuration) || 0,
         drawerTransitionSec: parseFloat(drawerStyle.transitionDuration) || 0,
       };
     });
@@ -611,7 +611,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     expect(motionStyles.btnOpacity).toBe("1");
     expect(motionStyles.badgeOpacity).toBe("1");
     expect(motionStyles.animationIterationCount).toBe("1");
-    expect(motionStyles.animationDurationSec).toBeLessThanOrEqual(0.001);
+    expect(motionStyles.btnAnimationSec).toBeLessThanOrEqual(0.001);
     expect(motionStyles.drawerTransitionSec).toBeLessThanOrEqual(0.001);
   });
 });
