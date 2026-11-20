@@ -1,11 +1,24 @@
 // Gateway API dispatch and the typed fetch helpers built on it.
 import { state } from "../stores/state.js";
+import { isDemoBuild } from "../utils/demoMode.js";
 
 // Where the portal sends API calls. In the Vite dev server this is the portal's own origin, and its /api proxy forwards
-// to the gateway, which sends no CORS headers (#5451); builds and tests default to the gateway's published port.
-const API_BASE_URL = (
-  import.meta.env?.VITE_API_BASE_URL || "http://localhost:8000"
-).replace(/\/+$/, "");
+// to the gateway, which sends no CORS headers (#5451); demo builds resolve to same-origin for MSW interception, while
+// standard builds and tests default to the gateway's published port.
+export function getApiBaseUrl() {
+  const configured = import.meta.env?.VITE_API_BASE_URL;
+  if (configured) {
+    return configured.replace(/\/+$/, "");
+  }
+  if (
+    isDemoBuild() &&
+    typeof globalThis.location?.origin === "string" &&
+    globalThis.location.origin.startsWith("http")
+  ) {
+    return globalThis.location.origin.replace(/\/+$/, "");
+  }
+  return "http://localhost:8000";
+}
 
 // Auth Fetch Helpers
 export async function fetchAssignments(subjectId) {
@@ -39,13 +52,14 @@ export async function dispatchApi(endpoint, options = {}) {
     cleanEndpoint = cleanEndpoint.substring(1);
   }
 
+  const apiBaseUrl = getApiBaseUrl();
   let url;
   if (cleanEndpoint.startsWith("api/v1/")) {
-    url = `${API_BASE_URL}/${cleanEndpoint}`;
+    url = `${apiBaseUrl}/${cleanEndpoint}`;
   } else if (cleanEndpoint.startsWith("payments/")) {
-    url = `${API_BASE_URL}/api/v1/${cleanEndpoint}`;
+    url = `${apiBaseUrl}/api/v1/${cleanEndpoint}`;
   } else {
-    url = `${API_BASE_URL}/api/v1/interop/${cleanEndpoint}`;
+    url = `${apiBaseUrl}/api/v1/interop/${cleanEndpoint}`;
   }
 
   const defaultHeaders = {

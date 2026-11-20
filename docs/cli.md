@@ -27,6 +27,7 @@ Some commands also have a `make` target. Those targets use `pnpm cadence` and sh
 | `make dev`                               | `cadence dev`                                 |
 | `make fix`                               | `cadence fix`                                 |
 | `make check`                             | `cadence check`                               |
+| `make action-pinning`                    | `cadence check workflow-security`             |
 | `make test`                              | `cadence test`                                |
 | `make verify`                            | `cadence check`, then `cadence test`          |
 | `make ci`                                | `cadence ci`                                  |
@@ -90,35 +91,36 @@ must make it fail.
 
 <!-- quality-gates:begin (generated from packages/cli/src/Services/QualityGates.cs by `pnpm cadence generate-cli-docs`; do not edit) -->
 
-| Gate                  | Also accepted                                 | Takes `[files]` | Pre-commit hook (`--pre-commit`)                                                                                                       |
-| --------------------- | --------------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `dotnet-format`       |                                               |                 | Skipped: the hook runs `dotnet format` on the staged C# files itself                                                                   |
-| `dotnet-format-style` |                                               |                 | Skipped: the hook runs `dotnet format` on the staged C# files itself                                                                   |
-| `clean-secrets`       | `clean-secrets-baseline`                      |                 | Runs                                                                                                                                   |
-| `duplication`         | `detect-code-duplication`                     | yes             | Runs on the staged files                                                                                                               |
-| `cli-docs`            | `validate-cli-docs`                           |                 | Runs                                                                                                                                   |
-| `adrs`                | `validate-adrs`                               |                 | Runs                                                                                                                                   |
-| `arch-drift`          | `validate-architecture-drift`                 |                 | Runs                                                                                                                                   |
-| `sanitizer`           | `path-requirement-sanitizer`                  | yes             | Runs on the staged files                                                                                                               |
-| `markdown`            | `validate-markdown`                           | yes             | Runs on the staged files                                                                                                               |
-| `env-vars`            | `validate-environment-variables`              |                 | Runs                                                                                                                                   |
-| `dev-env`             | `validate-dev-environment`, `dev-environment` |                 | Runs                                                                                                                                   |
-| `readmes`             | `validate-readmes`                            |                 | Runs                                                                                                                                   |
-| `codeowners`          | `validate-codeowners`                         |                 | Runs                                                                                                                                   |
-| `imports`             | `validate-imports`                            |                 | Runs                                                                                                                                   |
-| `security`            | `audit-security`                              | yes             | Runs on the staged files                                                                                                               |
-| `deid`                | `deid-compliance-scan`                        | yes             | Runs on the staged files                                                                                                               |
-| `openapi`             | `auto-stage-openapi`                          | yes             | Quick: exports specs only for the services the staged C# files touch, otherwise checks `docs/api` against the committed `docs/openapi` |
-| `api-clients`         | `validate-api-clients`                        |                 | Runs                                                                                                                                   |
-| `schema-doc`          | `auto-stage-schema-doc`                       | yes             | Quick: runs the drift check when staged files include Entity Framework entities, migrations, or configurations, otherwise skips it     |
-| `path-patterns`       | `validate-path-patterns`                      | yes             | Runs on the staged files                                                                                                               |
-| `query-linter`        | `query-style-linter`                          | yes             | Runs on the staged files                                                                                                               |
-| `vulnerabilities`     | `validate-vulnerabilities`                    |                 | Runs                                                                                                                                   |
-| `dependencies`        | `validate-dependencies`                       |                 | Runs                                                                                                                                   |
-| `doc-index`           | `validate-doc-index`                          |                 | Runs                                                                                                                                   |
-| `rtm`                 | `gxp-rtm-validate`                            |                 | Runs                                                                                                                                   |
-| `gxp-snapshot`        | `gxp-snapshot-guard`                          |                 | Quick: checks the staged files instead of the branch                                                                                   |
-| `baseline-ratchet`    | `baselines`                                   |                 | Quick: checks the staged files; `CADENCE_BASELINE_GROWTH="<reason>"` admits growth                                                     |
+| Gate                  | Also accepted                                  | Takes `[files]` | Pre-commit hook (`--pre-commit`)                                                                                                       |
+| --------------------- | ---------------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `dotnet-format`       |                                                |                 | Skipped: the hook runs `dotnet format` on the staged C# files itself                                                                   |
+| `dotnet-format-style` |                                                |                 | Skipped: the hook runs `dotnet format` on the staged C# files itself                                                                   |
+| `clean-secrets`       | `clean-secrets-baseline`                       |                 | Runs                                                                                                                                   |
+| `duplication`         | `detect-code-duplication`                      | yes             | Runs on the staged files                                                                                                               |
+| `cli-docs`            | `validate-cli-docs`                            |                 | Runs                                                                                                                                   |
+| `adrs`                | `validate-adrs`                                |                 | Runs                                                                                                                                   |
+| `arch-drift`          | `validate-architecture-drift`                  |                 | Runs                                                                                                                                   |
+| `sanitizer`           | `path-requirement-sanitizer`                   | yes             | Runs on the staged files                                                                                                               |
+| `markdown`            | `validate-markdown`                            | yes             | Runs on the staged files                                                                                                               |
+| `env-vars`            | `validate-environment-variables`               |                 | Runs                                                                                                                                   |
+| `dev-env`             | `validate-dev-environment`, `dev-environment`  |                 | Runs                                                                                                                                   |
+| `readmes`             | `validate-readmes`                             |                 | Runs                                                                                                                                   |
+| `codeowners`          | `validate-codeowners`                          |                 | Runs                                                                                                                                   |
+| `workflow-security`   | `validate-workflow-security`, `action-pinning` |                 | Runs                                                                                                                                   |
+| `imports`             | `validate-imports`                             |                 | Runs                                                                                                                                   |
+| `security`            | `audit-security`                               | yes             | Runs on the staged files                                                                                                               |
+| `deid`                | `deid-compliance-scan`                         | yes             | Runs on the staged files                                                                                                               |
+| `openapi`             | `auto-stage-openapi`                           | yes             | Quick: exports specs only for the services the staged C# files touch, otherwise checks `docs/api` against the committed `docs/openapi` |
+| `api-clients`         | `validate-api-clients`                         |                 | Runs                                                                                                                                   |
+| `schema-doc`          | `auto-stage-schema-doc`                        | yes             | Quick: runs the drift check when staged files include Entity Framework entities, migrations, or configurations, otherwise skips it     |
+| `path-patterns`       | `validate-path-patterns`                       | yes             | Runs on the staged files                                                                                                               |
+| `query-linter`        | `query-style-linter`                           | yes             | Runs on the staged files                                                                                                               |
+| `vulnerabilities`     | `validate-vulnerabilities`                     |                 | Runs                                                                                                                                   |
+| `dependencies`        | `validate-dependencies`                        |                 | Runs                                                                                                                                   |
+| `doc-index`           | `validate-doc-index`                           |                 | Runs                                                                                                                                   |
+| `rtm`                 | `gxp-rtm-validate`                             |                 | Runs                                                                                                                                   |
+| `gxp-snapshot`        | `gxp-snapshot-guard`                           |                 | Quick: checks the staged files instead of the branch                                                                                   |
+| `baseline-ratchet`    | `baselines`                                    |                 | Quick: checks the staged files; `CADENCE_BASELINE_GROWTH="<reason>"` admits growth                                                     |
 
 <!-- quality-gates:end -->
 
@@ -210,7 +212,7 @@ Where it differs from CI:
   fails with the install hint so an incomplete environment cannot report green. Pass `--allow-skip` to record missing
   tool steps as skipped, with the install hint, instead of failing.
 - **Not run:** the Playwright browser install, and the jobs that act on GitHub or container registries
-  (`container-security`, `classify`, `automerge`, `release-and-archive`).
+  (`container-security`, `classify`, `automerge`, `release-and-archive`, `deploy-docs`).
 - **Commit first.** CI checks out the commit, so run `cadence ci` on committed work: gates that list files with git (the
   full DEID scan, for example) do not see untracked files, and a changed-files step falls back to the working tree only
   when the branch has no commits over the base.
@@ -248,6 +250,7 @@ Paths are relative to the repository root. "Calls" is the method the command run
 | `validate-path-patterns`      | Fails on directories named `tmp`, `temp`, `scratch` or `old_src`, `.vue` files outside `apps/` and `packages/`, and `.sh` files outside `scripts/`.                                                                                                                                                                                                   | `PathPatternValidatorService.ValidatePathPatterns`                                        |
 | `validate-readmes`            | Fails when a direct subdirectory of `apps/` or `packages/` has no `README.md`, or its README has no `# ` title.                                                                                                                                                                                                                                       | `ReadmeValidatorService.ValidateReadmes`                                                  |
 | `validate-codeowners`         | Fails when `.github/CODEOWNERS` is missing or empty.                                                                                                                                                                                                                                                                                                  | `CodeownersValidatorService.ValidateCodeowners`                                           |
+| `validate-workflow-security`  | Validates `.github/workflows/*.{yml,yaml}` and `.github/actions/**/action.{yml,yaml}` for 40-hex commit SHAs with version comments, `sha256:` digests on `docker://` refs, `persist-credentials: false` on `actions/checkout`, and least-privilege permissions.                                                                                       | `WorkflowSecurityValidatorService.ValidateWorkflowSecurity`                               |
 | `validate-markdown`           | Checks workspace links and `#` heading spacing in `docs/**/*.md`.                                                                                                                                                                                                                                                                                     | `MarkdownValidatorService.ValidateMarkdown`                                               |
 | `query-linter`                | Scans `.cs` files outside `tests/`. Fails on interpolated `FromSqlRaw($...)` or `ExecuteSqlRaw($...)`, and on `== true` or `== false`.                                                                                                                                                                                                                | `QueryLinterService.LintQueries`                                                          |
 | `extract-env-vars`            | Finds environment variable reads in `.cs` and `.py` files. Fails if `.env.example` is missing. With `--check`, returns exit code 1 when variables missing from `.env.example` or `docs/ENVIRONMENT_VARIABLES.md` are found. It never writes files.                                                                                                    | `EnvVarExtractorService.ExtractAndValidateEnvVars`                                        |
@@ -297,19 +300,22 @@ Validates a feature branch. It writes and stages nothing under `docs/SDLC`.
 #### `cadence gxp snapshot`
 
 The integration owner's only command for writing the snapshot. Run it on the integrated candidate against PostgreSQL:
-`CADENCE_GXP_SNAPSHOT=1 pnpm cadence gxp snapshot`.
+`CADENCE_GXP_SNAPSHOT=1 pnpm cadence gxp snapshot` (or pass `--results-dir <dir>` to reuse verified CI PostgreSQL test
+evidence without re-running `dotnet test`).
 
-1. Runs the tests as `cadence gxp sync` does.
+1. Runs the tests as `cadence gxp sync` does, or reuses existing TRX reports and `*.database.txt` fixture evidence
+   under `<dir>` when `--results-dir <dir>` is given.
 2. Regenerates `docs/SDLC/Requirements_Traceability_Matrix.md`, `docs/SDLC/IQ_OQ_PQ_Execution_Report.md` and
    `docs/SDLC/runs/`.
-3. Fails, without staging, on the same errors as `cadence gxp sync`, and also when the RTM's test mapping does not
-   match the tags in `tests/`.
-4. Otherwise stages those files with `git add`. Commit them with `CADENCE_GXP_SNAPSHOT=1` set, so the pre-commit
-   `gxp-snapshot` gate admits them.
+3. Fails, without staging, on the same errors as `cadence gxp sync`, when `*.database.txt` fixture metadata is missing
+   under `--results-dir`, and when the RTM's test mapping does not match the tags in `tests/`.
+4. Otherwise stages those files with `git add` when `.git` is present. Commit them with `CADENCE_GXP_SNAPSHOT=1` set,
+   so the pre-commit `gxp-snapshot` gate admits them.
 
-| Option     | Description                                                                                                                             |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `--commit` | After staging, runs `git commit -m "docs(rtm): take the GxP snapshot from the integrated candidate"` with `CADENCE_GXP_SNAPSHOT=1` set. |
+| Option                | Description                                                                                                                                                                                    |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--commit`            | After staging, runs `git commit -m "docs(rtm): take the GxP snapshot from the integrated candidate"` with `CADENCE_GXP_SNAPSHOT=1` set.                                                        |
+| `--results-dir <dir>` | Reuses verified TRX reports and `*.database.txt` fixture evidence under `<dir>` instead of running `dotnet test`; fails if `*.database.txt` is missing or any mandatory database test skipped. |
 
 #### `cadence gxp validate`
 

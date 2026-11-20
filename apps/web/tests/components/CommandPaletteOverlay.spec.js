@@ -223,5 +223,16 @@ describe("CommandPaletteOverlay.vue - Unified Global Command Palette", () => {
     });
     await wrapper2.find(".palette-backdrop").trigger("click");
     expect(wrapper2.emitted("close")).toBeTruthy();
+
+    const wrapperAttached = mount(CommandPaletteOverlay, {
+      attachTo: document.body,
+      props: { isOpen: true },
+      global: { plugins: [pinia, router] },
+    });
+    await wrapperAttached
+      .find("#canvas-palette-input")
+      .trigger("keydown", { key: "Escape" });
+    expect(wrapperAttached.emitted("close")).toHaveLength(1);
+    wrapperAttached.unmount();
   });
 });

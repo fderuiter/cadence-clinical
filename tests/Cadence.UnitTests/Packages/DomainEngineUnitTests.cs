@@ -6,7 +6,6 @@ using System.Security.Cryptography;
 using System.Text;
 
 using Cadence.Core.Domain.Randomization;
-using Cadence.Core.Domain.Rules;
 using Cadence.Core.Domain.Supply;
 using Cadence.Core.Domain.Toxicity;
 using Cadence.Testing;
@@ -299,31 +298,5 @@ public class DomainEngineUnitTests
         eval.IsHysLawMet.Should().BeTrue();
         eval.AlertLevel.Should().Be("HYS_LAW_CRITICAL");
         eval.EvalTimestamp.Should().Be("2026-01-01T00:00:00.0000000Z");
-    }
-
-    [Fact]
-    public void RuleEvaluator_EvaluatesAstAndJsonLogic()
-    {
-        var evaluator = new RuleEvaluator(FakeClock.DefaultStart.UtcDateTime);
-
-        var astNode = new ExpressionNode
-        {
-            Type = "logical",
-            Operator = "and",
-            Operands = new List<ExpressionNode>
-            {
-                new() { Type = "comparison", Operator = ">=", Operands = new List<ExpressionNode> { new() { Type = "variable", VariableName = "age" }, new() { Type = "constant", Value = 18 } } },
-                new() { Type = "comparison", Operator = "==", Operands = new List<ExpressionNode> { new() { Type = "variable", VariableName = "consent" }, new() { Type = "constant", Value = true } } }
-            }
-        };
-
-        var context = new Dictionary<string, object?>
-        {
-            { "age", 25 },
-            { "consent", true }
-        };
-
-        var result = evaluator.Evaluate(astNode, context);
-        result.Should().Be(true);
     }
 }

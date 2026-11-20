@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Econsent.Domain;
 using Cadence.Apps.Econsent.Infrastructure.Persistence;
 using Cadence.Contracts;
+using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
@@ -145,10 +146,10 @@ public static class EconsentEndpoints
         CaptureConsentRequest request,
         EconsentDbContext dbContext,
         HttpContext httpContext,
-        TimeProvider timeProvider,
+        IClock clock,
         CancellationToken cancellationToken)
     {
-        return await ProcessCaptureConsentAsync(template_id, version_index, request, dbContext, httpContext, timeProvider, cancellationToken);
+        return await ProcessCaptureConsentAsync(template_id, version_index, request, dbContext, httpContext, clock, cancellationToken);
     }
 
     private static async Task<IResult> CaptureConsentLegacyAsync(
@@ -156,10 +157,10 @@ public static class EconsentEndpoints
         CaptureConsentRequest request,
         EconsentDbContext dbContext,
         HttpContext httpContext,
-        TimeProvider timeProvider,
+        IClock clock,
         CancellationToken cancellationToken)
     {
-        return await ProcessCaptureConsentAsync(template_id, 1, request, dbContext, httpContext, timeProvider, cancellationToken);
+        return await ProcessCaptureConsentAsync(template_id, 1, request, dbContext, httpContext, clock, cancellationToken);
     }
 
     public static async Task<IResult> ProcessCaptureConsentAsync(
@@ -168,7 +169,7 @@ public static class EconsentEndpoints
         CaptureConsentRequest request,
         EconsentDbContext dbContext,
         HttpContext httpContext,
-        TimeProvider timeProvider,
+        IClock clock,
         CancellationToken cancellationToken)
     {
         if (request is null)
@@ -206,7 +207,7 @@ public static class EconsentEndpoints
             errors["signature_data"] = ["SignatureData is required."];
         }
 
-        DateTimeOffset now = timeProvider.GetUtcNow();
+        DateTimeOffset now = clock.UtcNow;
 
         BiometricLivenessTokenData? livenessData = null;
         if (string.IsNullOrWhiteSpace(request.LivenessToken))
@@ -363,10 +364,10 @@ public static class EconsentEndpoints
         EconsentDbContext dbContext,
         IPublishEndpoint publishEndpoint,
         HttpContext httpContext,
-        TimeProvider timeProvider,
+        IClock clock,
         CancellationToken cancellationToken)
     {
-        return await ProcessPublishTemplateAsync(template_id, version_index, request, dbContext, publishEndpoint, httpContext, timeProvider, cancellationToken);
+        return await ProcessPublishTemplateAsync(template_id, version_index, request, dbContext, publishEndpoint, httpContext, clock, cancellationToken);
     }
 
     private static async Task<IResult> PublishTemplateAsync(
@@ -375,10 +376,10 @@ public static class EconsentEndpoints
         EconsentDbContext dbContext,
         IPublishEndpoint publishEndpoint,
         HttpContext httpContext,
-        TimeProvider timeProvider,
+        IClock clock,
         CancellationToken cancellationToken)
     {
-        return await ProcessPublishTemplateAsync(template_id, 1, request, dbContext, publishEndpoint, httpContext, timeProvider, cancellationToken);
+        return await ProcessPublishTemplateAsync(template_id, 1, request, dbContext, publishEndpoint, httpContext, clock, cancellationToken);
     }
 
     public static async Task<IResult> ProcessPublishTemplateAsync(
@@ -388,10 +389,10 @@ public static class EconsentEndpoints
         EconsentDbContext dbContext,
         IPublishEndpoint publishEndpoint,
         HttpContext httpContext,
-        TimeProvider timeProvider,
+        IClock clock,
         CancellationToken cancellationToken)
     {
-        DateTimeOffset now = timeProvider.GetUtcNow();
+        DateTimeOffset now = clock.UtcNow;
 
         var template = await dbContext.ConsentTemplates
             .FirstOrDefaultAsync(t => t.TemplateId == templateId && t.VersionIndex == versionIndex, cancellationToken)
