@@ -210,7 +210,7 @@ Where it differs from CI:
 - **Tools are not installed for you.** Hadolint, ShellCheck and detect-secrets run when they are on `PATH` and are
   reported as skipped, with the install command, when they are not.
 - **Not run:** the Playwright browser install, and the jobs that act on GitHub or container registries (`actionlint`,
-  `container-security`, `classify`, `automerge`, `release-and-archive`).
+  `container-security`, `classify`, `automerge`, `release-and-archive`, `deploy-docs`).
 - **Commit first.** CI checks out the commit, so run `cadence ci` on committed work: gates that list files with git (the
   full DEID scan, for example) do not see untracked files, and a changed-files step falls back to the working tree only
   when the branch has no commits over the base.
@@ -298,19 +298,22 @@ Validates a feature branch. It writes and stages nothing under `docs/SDLC`.
 #### `cadence gxp snapshot`
 
 The integration owner's only command for writing the snapshot. Run it on the integrated candidate against PostgreSQL:
-`CADENCE_GXP_SNAPSHOT=1 pnpm cadence gxp snapshot`.
+`CADENCE_GXP_SNAPSHOT=1 pnpm cadence gxp snapshot` (or pass `--results-dir <dir>` to reuse verified CI PostgreSQL test
+evidence without re-running `dotnet test`).
 
-1. Runs the tests as `cadence gxp sync` does.
+1. Runs the tests as `cadence gxp sync` does, or reuses existing TRX reports and `*.database.txt` fixture evidence
+   under `<dir>` when `--results-dir <dir>` is given.
 2. Regenerates `docs/SDLC/Requirements_Traceability_Matrix.md`, `docs/SDLC/IQ_OQ_PQ_Execution_Report.md` and
    `docs/SDLC/runs/`.
-3. Fails, without staging, on the same errors as `cadence gxp sync`, and also when the RTM's test mapping does not
-   match the tags in `tests/`.
-4. Otherwise stages those files with `git add`. Commit them with `CADENCE_GXP_SNAPSHOT=1` set, so the pre-commit
-   `gxp-snapshot` gate admits them.
+3. Fails, without staging, on the same errors as `cadence gxp sync`, when `*.database.txt` fixture metadata is missing
+   under `--results-dir`, and when the RTM's test mapping does not match the tags in `tests/`.
+4. Otherwise stages those files with `git add` when `.git` is present. Commit them with `CADENCE_GXP_SNAPSHOT=1` set,
+   so the pre-commit `gxp-snapshot` gate admits them.
 
-| Option     | Description                                                                                                                             |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `--commit` | After staging, runs `git commit -m "docs(rtm): take the GxP snapshot from the integrated candidate"` with `CADENCE_GXP_SNAPSHOT=1` set. |
+| Option                | Description                                                                                                                                                                                    |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--commit`            | After staging, runs `git commit -m "docs(rtm): take the GxP snapshot from the integrated candidate"` with `CADENCE_GXP_SNAPSHOT=1` set.                                                        |
+| `--results-dir <dir>` | Reuses verified TRX reports and `*.database.txt` fixture evidence under `<dir>` instead of running `dotnet test`; fails if `*.database.txt` is missing or any mandatory database test skipped. |
 
 #### `cadence gxp validate`
 

@@ -59,6 +59,36 @@ expect "fails when Cadence.E2ETests produces no TRX report" 1 "$(new_tree missin
 expect "fails when Cadence.IntegrationTests produces no TRX report" 1 "$(new_tree missing_integration "" "$passing_trx")"
 expect "fails when no TRX reports exist" 1 "$(mkdir -p "$work/none/tests/Cadence.IntegrationTests" && echo "$work/none")"
 
+new_gxp_tree() {
+  local root="$work/$1"
+  mkdir -p "$root/TestResults/gxp"
+  if [ "${2:-}" != "" ]; then
+    printf '%s\n' "$2" > "$root/TestResults/gxp/gxp_integration.trx"
+  fi
+  if [ "${3:-}" != "" ]; then
+    printf '%s\n' "$3" > "$root/TestResults/gxp/gxp_e2e.trx"
+  fi
+  if [ "${4:-}" != "" ]; then
+    printf '%s\n' "$4" > "$root/TestResults/gxp/kernel.database.txt"
+  fi
+  if [ "${5:-}" != "" ]; then
+    printf '%s\n' "$5" > "$root/TestResults/gxp/gxp_unit.trx"
+  fi
+  echo "$root"
+}
+
+gxp_integration_pass='<TestRun><TestDefinitions><UnitTest id="1"><TestMethod codeBase="/bin/Cadence.IntegrationTests.dll" className="Sample" name="Passes" /></UnitTest></TestDefinitions><Results><UnitTestResult testId="1" testName="Sample.Passes" outcome="Passed" /></Results></TestRun>'
+gxp_integration_skip='<TestRun><TestDefinitions><UnitTest id="1"><TestMethod codeBase="/bin/Cadence.IntegrationTests.dll" className="Sample" name="SkippedDb" /></UnitTest></TestDefinitions><Results><UnitTestResult testId="1" testName="Sample.SkippedDb" outcome="NotExecuted" /></Results></TestRun>'
+gxp_e2e_pass='<TestRun><TestDefinitions><UnitTest id="2"><TestMethod codeBase="/bin/Cadence.E2ETests.dll" className="Sample" name="Flow" /></UnitTest></TestDefinitions><Results><UnitTestResult testId="2" testName="Sample.Flow" outcome="Passed" /></Results></TestRun>'
+gxp_unit_skip='<TestRun><TestDefinitions><UnitTest id="3"><TestMethod codeBase="/bin/Cadence.UnitTests.dll" className="Sample" name="UnitSkip" /></UnitTest></TestDefinitions><Results><UnitTestResult testId="3" testName="Sample.UnitSkip" outcome="NotExecuted" /></Results></TestRun>'
+gxp_db_txt='fixture=kernel
+server_version=18.1'
+
+expect "TestResults/gxp passes when database TRX and *.database.txt exist (ignoring unit skips)" 0 "$(new_gxp_tree gxp_pass "$gxp_integration_pass" "$gxp_e2e_pass" "$gxp_db_txt" "$gxp_unit_skip")"
+expect "TestResults/gxp fails on a skipped database test" 1 "$(new_gxp_tree gxp_skip "$gxp_integration_skip" "$gxp_e2e_pass" "$gxp_db_txt")"
+expect "TestResults/gxp fails when *.database.txt is missing" 1 "$(new_gxp_tree gxp_no_db "$gxp_integration_pass" "$gxp_e2e_pass" "")"
+expect "TestResults/gxp fails when Cadence.E2ETests.dll TRX is missing" 1 "$(new_gxp_tree gxp_no_e2e "$gxp_integration_pass" "" "$gxp_db_txt")"
+
 if [ "$failures" -ne 0 ]; then
   echo "$failures gate case(s) failed"
   exit 1

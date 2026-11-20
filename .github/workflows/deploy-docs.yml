@@ -1,20 +1,7 @@
 name: Deploy Developer Documentation
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "docs/**"
-      - "apps/web/**"
-      - "packages/ui/**"
-      - "README.md"
-      - "ARCHITECTURE.md"
-      - "CONTEXT.md"
-      - "AGENTS.md"
-      - "CONTRIBUTING.md"
-      - "LICENSE"
-      - "scripts/build-docs.js"
-      - ".github/workflows/deploy-docs.yml"
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -70,18 +57,20 @@ jobs:
 
       - name: Generate Documentation Artifact SHA256 Checksums
         run: |
-          (cd docs/.vitepress/dist && find . -type f -exec sha256sum {} + > SHA256SUMS)
-          cat docs/.vitepress/dist/SHA256SUMS | head -n 20
-
-      - name: Generate SLSA Build Provenance for Documentation
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        with:
-          subject-path: "docs/.vitepress/dist/**"
+          (cd docs/.vitepress/dist && LC_ALL=C find . -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/SHA256SUMS"
+          mv "$RUNNER_TEMP/SHA256SUMS" docs/.vitepress/dist/SHA256SUMS
+          (cd docs/.vitepress/dist && sha256sum -c SHA256SUMS)
+          head -n 20 docs/.vitepress/dist/SHA256SUMS
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         with:
           path: docs/.vitepress/dist
+
+      - name: Generate SLSA Build Provenance for Documentation
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: "${{ runner.temp }}/artifact.tar"
 
   deploy:
     name: Deploy to GitHub Pages
