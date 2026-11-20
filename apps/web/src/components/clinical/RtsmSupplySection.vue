@@ -96,7 +96,7 @@
             id="cgt-aph-din"
             v-model="aphDin"
             type="text"
-            placeholder="e.g. W000026123456"
+            placeholder="ISBT-128 DIN code"
           />
           <label for="cgt-aph-reason">Reason for change</label>
           <input
@@ -256,10 +256,8 @@
 
     <p id="rtsm-dose-escalation-scope-note" class="unavailable-note">
       Adaptive oncology dose escalation (BOIN / CRM / RAR cohort transitions) is
-      not backed by a Cadence service yet and runs only in demo builds. See
-      <a :href="UNAVAILABLE_SCREENS_ISSUE" target="_blank" rel="noopener"
-        >#4829</a
-      >.
+      not backed by a Cadence service yet and runs only in demo builds (Allocate
+      roadmap). See <a href="/plans">plans &amp; product-family roadmap</a>.
     </p>
 
     <BulkIpKitReconciliationDrawer
@@ -289,7 +287,6 @@ import {
   canSeedIpKits,
 } from "../../canvas/authority";
 import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
-import { UNAVAILABLE_SCREENS_ISSUE } from "../../router/availability.js";
 import BulkIpKitReconciliationDrawer from "./BulkIpKitReconciliationDrawer.vue";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
@@ -346,7 +343,7 @@ const aphReason = ref("");
 
 const seedKitNumber = ref("");
 const seedLotNumber = ref("");
-const seedExpiry = ref("2027-12-31");
+const seedExpiry = ref("");
 const seedReason = ref("");
 
 async function loadSupplyOverview() {
@@ -530,5 +527,9 @@ onMounted(() => {
   margin: 0;
   color: var(--text-muted, #64748b);
   font-size: 0.88rem;
+}
+
+.data-table {
+  font-variant-numeric: tabular-nums;
 }
 </style>

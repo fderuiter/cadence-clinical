@@ -112,7 +112,7 @@
             id="btn-confirm-achieve-milestone"
             type="button"
             class="btn btn-primary"
-            :disabled="!achieveReason.trim() || saving"
+            :disabled="!achieveDate || !achieveReason.trim() || saving"
             @click="confirmAchieve"
           >
             {{ saving ? "Saving..." : "Confirm achieved" }}
@@ -168,6 +168,7 @@
             :disabled="
               !studyInput.trim() ||
               !newSiteId.trim() ||
+              !newPlannedDate ||
               !newReason.trim() ||
               saving
             "
@@ -232,11 +233,11 @@ newSiteId.value = siteInput.value;
 const canManage = computed(() => canManageMilestones(authStore));
 const milestones = ref<SiteMilestone[]>([]);
 const newType = ref("SITE_ACTIVATION");
-const newPlannedDate = ref("2026-06-15");
+const newPlannedDate = ref("");
 const newReason = ref("");
 
 const activeAchieveMilestone = ref<SiteMilestone | null>(null);
-const achieveDate = ref("2026-06-15");
+const achieveDate = ref("");
 const achieveReason = ref("");
 
 async function loadMilestones() {
@@ -354,5 +355,9 @@ onMounted(() => {
 .ms-planned {
   background: #e0f2fe;
   color: #0369a1;
+}
+
+.data-table {
+  font-variant-numeric: tabular-nums;
 }
 </style>

@@ -51,6 +51,36 @@
       </div>
     </header>
 
+    <section
+      id="overview-plan-summary"
+      class="overview-plan-banner"
+      aria-label="Workspace plan and pre-release status"
+    >
+      <div class="overview-plan-main">
+        <span
+          id="overview-active-plan-badge"
+          class="overview-plan-pill"
+          :class="{ 'is-expired': authStore.isTrialExpired }"
+        >
+          {{ authStore.activePlanBadge || "Individual Plan" }}
+        </span>
+        <span class="overview-families-text">
+          Entitled families:
+          <strong>{{ authStore.entitledFamilies.join(", ") }}</strong>
+        </span>
+        <span class="overview-prerelease-note">
+          {{ PRE_RELEASE_ENVIRONMENT_NOTICE }}
+        </span>
+      </div>
+      <router-link
+        id="overview-link-plans"
+        to="/plans"
+        class="btn btn-secondary overview-plans-link"
+      >
+        Plans &amp; entitlements
+      </router-link>
+    </section>
+
     <div class="overview-grid">
       <!-- Left Column: Quick-Start Checklist & Guided Tour -->
       <section
@@ -171,8 +201,9 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding";
 import { isScreenAvailable } from "../router/availability";
@@ -181,6 +212,15 @@ import { hasRequiredRole } from "../router";
 const router = useRouter();
 const authStore = useAuthStore();
 const onboardingStore = useOnboardingStore();
+
+onMounted(() => {
+  if (
+    authStore.isAuthenticated &&
+    typeof authStore.loadEntitlements === "function"
+  ) {
+    authStore.loadEntitlements();
+  }
+});
 
 const userName = computed(() => {
   if (authStore.user?.firstName) {
@@ -490,7 +530,7 @@ const ALL_LAUNCHERS = [
     description:
       "Open a study workspace to navigate lifecycle stages, participant status, protocol versions, and activity.",
     routeSpec: "study",
-    badgeText: "Live Workspace",
+    badgeText: "Blueprint · Live",
     badgeClass: "badge-active",
     featured: true,
   },
@@ -501,7 +541,7 @@ const ALL_LAUNCHERS = [
     description:
       "Capture clinical visit observations, validate case report forms, and perform source data verification.",
     routeSpec: "ecrf",
-    badgeText: "Live Workflow",
+    badgeText: "Capture · Live",
     badgeClass: "badge-active",
     featured: true,
   },
@@ -512,7 +552,7 @@ const ALL_LAUNCHERS = [
     description:
       "Track site activation requirements, startup milestones, and operational site readiness.",
     routeSpec: "site-readiness",
-    badgeText: "Live Workflow",
+    badgeText: "Orbit · Live",
     badgeClass: "badge-active",
     featured: true,
   },
@@ -676,6 +716,67 @@ function startGuidedTour() {
   background: rgba(245, 158, 11, 0.15);
   color: #fbbf24;
   border-color: rgba(245, 158, 11, 0.3);
+}
+
+.overview-plan-banner {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 14px 20px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.overview-plan-main {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.overview-plan-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+}
+
+.overview-plan-pill.is-expired {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.overview-families-text {
+  font-size: 0.86rem;
+  color: #1e293b;
+}
+
+.overview-prerelease-note {
+  font-size: 0.8rem;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+.overview-plans-link {
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 6px;
 }
 
 .overview-grid {

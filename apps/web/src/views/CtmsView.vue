@@ -39,11 +39,9 @@
 
       <p id="ctms-unbacked-scope-note" class="live-unbacked-note">
         Grant financials, CRA workload allocation, recruitment target updates,
-        and adaptive dose escalation remain gated to demo builds until a Cadence
-        service serves them. Tracked in
-        <a :href="UNAVAILABLE_SCREENS_ISSUE" target="_blank" rel="noopener"
-          >#4829</a
-        >.
+        and adaptive dose escalation remain gated to demo builds in this
+        pre-release environment (Orbit and Allocate roadmap). See
+        <a href="/plans">plans &amp; product-family roadmap</a>.
       </p>
     </div>
 
@@ -2411,7 +2409,6 @@ import CtmsMilestonesSection from "../components/clinical/CtmsMilestonesSection.
 import CtmsMonitoringSection from "../components/clinical/CtmsMonitoringSection.vue";
 import CtmsDelegationSection from "../components/clinical/CtmsDelegationSection.vue";
 import RtsmSupplySection from "../components/clinical/RtsmSupplySection.vue";
-import { UNAVAILABLE_SCREENS_ISSUE } from "../router/availability.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import apiClient from "../services/api";

@@ -504,4 +504,8 @@ onMounted(() => {
 .muted-inline {
   color: #94a3b8;
 }
+
+.data-table {
+  font-variant-numeric: tabular-nums;
+}
 </style>

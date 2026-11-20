@@ -14,6 +14,7 @@ type Schemas = components["schemas"];
 export type SubjectSummary = Schemas["Execution_SubjectSummaryResponse"];
 export type SubjectList = Schemas["Execution_SubjectListResponse"];
 export type Subject = Schemas["Execution_SubjectResponse"];
+export type SubjectDetail = Schemas["Execution_SubjectDetailResponse"];
 export type ComplianceStatus = Schemas["Execution_ComplianceStatusResponse"];
 export type OperationEnvelope = Schemas["Execution_OperationEnvelopeResponse"];
 export type RandomizationScheme =
@@ -127,6 +128,17 @@ export const executionApi = {
             limit: query.limit,
             offset: query.offset,
           },
+        },
+      })
+    );
+  },
+
+  /** Full detail for a participant by subject code (GET /api/v1/execution/subjects/{subjectId}). */
+  getSubjectDetail(subjectId: string): Promise<SubjectDetail> {
+    return unwrapResponse(
+      client.GET("/api/v1/execution/subjects/{subjectId}", {
+        params: {
+          path: { subjectId },
         },
       })
     );

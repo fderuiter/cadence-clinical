@@ -69,14 +69,14 @@ describe("ctmsApi typed OpenAPI wrapper", () => {
     expect(req.headers.get("X-Change-Reason")).toBeTruthy();
   });
 
-  it("gates AdaptiveDoseEscalationConsole cohort transitions behind demoBuild with #4829 reference", async () => {
+  it("gates AdaptiveDoseEscalationConsole cohort transitions behind demoBuild with /plans roadmap link", async () => {
     const wrapper = mount(AdaptiveDoseEscalationConsole, {
       props: { studyId: "CAD-101" },
     });
 
-    expect(wrapper.find("#adaptive-dose-unbacked-note").text()).toContain(
-      "#4829"
-    );
+    const unbackedNote = wrapper.find("#adaptive-dose-unbacked-note");
+    expect(unbackedNote.text()).toContain("plans & product-family roadmap");
+    expect(unbackedNote.find('a[href="/plans"]').exists()).toBe(true);
 
     await wrapper.find(".btn-primary-action").trigger("click");
     expect(wrapper.find(".modal-backdrop").exists()).toBe(false);

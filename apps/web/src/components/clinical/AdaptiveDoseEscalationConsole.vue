@@ -55,10 +55,8 @@
       class="unbacked-scope-note"
     >
       Adaptive dose escalation cohort decisions have no Cadence backend service
-      yet and run only in demo builds. See
-      <a :href="UNAVAILABLE_SCREENS_ISSUE" target="_blank" rel="noopener"
-        >#4829</a
-      >.
+      yet and run only in demo builds (Allocate roadmap). See
+      <a href="/plans">plans &amp; product-family roadmap</a>.
     </p>
 
     <!-- Active Cohort Recommendation Banner -->
@@ -389,7 +387,6 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { UNAVAILABLE_SCREENS_ISSUE } from "../../router/availability.js";
 import { isDemoBuild } from "../../utils/demoMode.js";
 import { allowUnbackedAction } from "../../utils/unbackedActions.js";
 

@@ -54,6 +54,10 @@ namespace Cadence.Kernel.Serialization;
 [JsonSerializable(typeof(ProtocolVersionId?))]
 [JsonSerializable(typeof(List<ProtocolVersionId>))]
 [JsonSerializable(typeof(ProtocolVersionId[]))]
+[JsonSerializable(typeof(SubscriptionId))]
+[JsonSerializable(typeof(SubscriptionId?))]
+[JsonSerializable(typeof(ProductEntitlementId))]
+[JsonSerializable(typeof(ProductEntitlementId?))]
 public partial class KernelJsonSerializerContext : JsonSerializerContext
 {
 }

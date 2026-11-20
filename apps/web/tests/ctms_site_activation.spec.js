@@ -125,7 +125,12 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     expect(
       wrapper.find("#btn-check-site-compliance").attributes()
     ).toHaveProperty("disabled");
-    expect(wrapper.find("#ctms-unbacked-scope-note").text()).toContain("#4829");
+    expect(wrapper.find("#ctms-unbacked-scope-note").text()).toContain(
+      "Orbit and Allocate roadmap"
+    );
+    expect(wrapper.find("#ctms-unbacked-scope-note a").attributes("href")).toBe(
+      "/plans"
+    );
   });
 
   it("starts with no study or site outside a demo build when no claims are assigned", () => {

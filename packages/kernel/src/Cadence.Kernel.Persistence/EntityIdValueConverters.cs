@@ -154,3 +154,13 @@ public class ProposalIdValueConverter() : ValueConverter<ProposalId, Guid>(
     id => id.Value,
     guid => new ProposalId(guid)
 );
+
+public class SubscriptionIdValueConverter() : ValueConverter<SubscriptionId, Guid>(
+    id => id.Value,
+    guid => new SubscriptionId(guid)
+);
+
+public class ProductEntitlementIdValueConverter() : ValueConverter<ProductEntitlementId, Guid>(
+    id => id.Value,
+    guid => new ProductEntitlementId(guid)
+);

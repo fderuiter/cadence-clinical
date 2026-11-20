@@ -206,11 +206,9 @@
 
     <p v-if="!props.studyCode" class="unavailable-note">
       Grant financials, CRA workload allocation, recruitment target updates, and
-      adaptive dose escalation aren't available yet: no Cadence service serves
-      them. See
-      <a :href="UNAVAILABLE_SCREENS_ISSUE" target="_blank" rel="noopener"
-        >#4829</a
-      >.
+      adaptive dose escalation aren't available yet in this pre-release
+      environment (Orbit and Allocate roadmap). See
+      <a href="/plans">plans &amp; product-family roadmap</a>.
     </p>
   </section>
 </template>
@@ -222,7 +220,6 @@ import { canActivateSite } from "../../canvas/authority";
 import { useAuthStore } from "../../stores/auth";
 import { useClinicalStore } from "../../stores/clinical";
 import { useToastStore } from "../../stores/toasts.js";
-import { UNAVAILABLE_SCREENS_ISSUE } from "../../router/availability.js";
 import {
   formatScopeForbiddenGuidance,
   isForbiddenScopeError,

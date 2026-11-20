@@ -734,6 +734,80 @@ jobs:
           CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
         run: node scripts/run-cli.js check gxp-snapshot
 
+  ci-gate:
+    name: CI Gate
+    needs:
+      [
+        actionlint,
+        lint-and-static,
+        dotnet-quality,
+        native-aot-build,
+        docs-build,
+        security,
+        container-security,
+        unit-tests,
+        dotnet-tests,
+        accessibility-e2e,
+        compliance,
+      ]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Verify validation job outcomes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          ACTIONLINT_RESULT: ${{ needs.actionlint.result }}
+          LINT_AND_STATIC_RESULT: ${{ needs.lint-and-static.result }}
+          DOTNET_QUALITY_RESULT: ${{ needs.dotnet-quality.result }}
+          NATIVE_AOT_BUILD_RESULT: ${{ needs.native-aot-build.result }}
+          DOCS_BUILD_RESULT: ${{ needs.docs-build.result }}
+          SECURITY_RESULT: ${{ needs.security.result }}
+          CONTAINER_SECURITY_RESULT: ${{ needs.container-security.result }}
+          UNIT_TESTS_RESULT: ${{ needs.unit-tests.result }}
+          DOTNET_TESTS_RESULT: ${{ needs.dotnet-tests.result }}
+          ACCESSIBILITY_E2E_RESULT: ${{ needs.accessibility-e2e.result }}
+          COMPLIANCE_RESULT: ${{ needs.compliance.result }}
+        run: |
+          set -euo pipefail
+          FAILED=0
+
+          check_required() {
+            local job="$1"
+            local result="$2"
+            echo "$job: $result"
+            if [ "$result" != "success" ]; then
+              echo "::error::Required validation job '$job' did not succeed (result: $result)."
+              FAILED=1
+            fi
+          }
+
+          check_required "actionlint" "$ACTIONLINT_RESULT"
+          check_required "lint-and-static" "$LINT_AND_STATIC_RESULT"
+          check_required "dotnet-quality" "$DOTNET_QUALITY_RESULT"
+          check_required "native-aot-build" "$NATIVE_AOT_BUILD_RESULT"
+          check_required "docs-build" "$DOCS_BUILD_RESULT"
+          check_required "security" "$SECURITY_RESULT"
+          check_required "unit-tests" "$UNIT_TESTS_RESULT"
+          check_required "dotnet-tests" "$DOTNET_TESTS_RESULT"
+          check_required "accessibility-e2e" "$ACCESSIBILITY_E2E_RESULT"
+          check_required "compliance" "$COMPLIANCE_RESULT"
+
+          echo "container-security: $CONTAINER_SECURITY_RESULT"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            if [ "$CONTAINER_SECURITY_RESULT" != "success" ] && [ "$CONTAINER_SECURITY_RESULT" != "skipped" ]; then
+              echo "::error::Conditional validation job 'container-security' failed or cancelled (result: $CONTAINER_SECURITY_RESULT)."
+              FAILED=1
+            fi
+          elif [ "$CONTAINER_SECURITY_RESULT" != "success" ]; then
+            echo "::error::Validation job 'container-security' did not succeed on $EVENT_NAME (result: $CONTAINER_SECURITY_RESULT)."
+            FAILED=1
+          fi
+
+          if [ "$FAILED" -ne 0 ]; then
+            exit 1
+          fi
+
   classify:
     name: Classify Change
     if: github.event_name == 'pull_request'
@@ -808,37 +882,13 @@ jobs:
 
   automerge:
     name: Enable Automerge
-    needs:
-      [
-        classify,
-        actionlint,
-        lint-and-static,
-        dotnet-quality,
-        native-aot-build,
-        docs-build,
-        security,
-        container-security,
-        unit-tests,
-        dotnet-tests,
-        accessibility-e2e,
-        compliance,
-      ]
+    needs: [classify, ci-gate]
     if: >-
       always() &&
       !cancelled() &&
       github.event_name == 'pull_request' &&
       needs.classify.outputs.is_safe == 'true' &&
-      needs.actionlint.result == 'success' &&
-      needs.lint-and-static.result == 'success' &&
-      needs.dotnet-quality.result == 'success' &&
-      needs.native-aot-build.result == 'success' &&
-      needs.docs-build.result == 'success' &&
-      needs.security.result == 'success' &&
-      (needs.container-security.result == 'success' || needs.container-security.result == 'skipped') &&
-      needs.unit-tests.result == 'success' &&
-      needs.dotnet-tests.result == 'success' &&
-      needs.accessibility-e2e.result == 'success' &&
-      needs.compliance.result == 'success'
+      needs.ci-gate.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write

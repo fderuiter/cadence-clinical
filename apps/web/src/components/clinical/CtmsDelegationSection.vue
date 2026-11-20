@@ -285,7 +285,7 @@ const doaLog = ref<DoaLog | null>(null);
 
 const newStaffUserId = ref("");
 const newTaskCode = ref("CRF_DATA_ENTRY");
-const newStartDate = ref("2026-06-15");
+const newStartDate = ref("");
 const newReason = ref("");
 
 const activeSignOffRecord = ref<DelegationRecord | null>(null);
@@ -473,5 +473,9 @@ onMounted(() => {
 .doa-revoked {
   background: #fee2e2;
   color: #b91c1c;
+}
+
+.data-table {
+  font-variant-numeric: tabular-nums;
 }
 </style>

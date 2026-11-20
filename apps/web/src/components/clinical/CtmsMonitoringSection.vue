@@ -161,7 +161,7 @@
             id="btn-confirm-complete-visit"
             type="button"
             class="btn btn-primary"
-            :disabled="!completeReason.trim() || saving"
+            :disabled="!completeActualDate || !completeReason.trim() || saving"
             @click="confirmComplete"
           >
             {{ saving ? "Saving..." : "Submit completion" }}
@@ -331,11 +331,11 @@ const canSignOff = computed(() => canSignOffMonitoringVisits(authStore));
 const visits = ref<MonitoringVisit[]>([]);
 const newVisitType = ref("IMV");
 const newCraId = ref(authStore.userId || "cra_monitor");
-const newScheduledDate = ref("2026-06-20");
+const newScheduledDate = ref("");
 const newReason = ref("");
 
 const activeCompleteVisit = ref<MonitoringVisit | null>(null);
-const completeActualDate = ref("2026-06-20");
+const completeActualDate = ref("");
 const completeFindingDesc = ref("");
 const completeReason = ref("");
 
@@ -540,5 +540,9 @@ onMounted(() => {
   white-space: pre-wrap;
   font-size: 0.82rem;
   color: #334155;
+}
+
+.data-table {
+  font-variant-numeric: tabular-nums;
 }
 </style>

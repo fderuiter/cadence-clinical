@@ -68,6 +68,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .ctms-section .data-table th,
