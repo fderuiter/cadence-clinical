@@ -13,6 +13,7 @@ import ClinicalQueryPanel from "./components/clinical/ClinicalQueryPanel.vue";
 import ClinicalRadioGroup from "./components/clinical/ClinicalRadioGroup.vue";
 import ConfidenceBadge from "./components/clinical/ConfidenceBadge.vue";
 import PersonaSwitcher from "./components/clinical/PersonaSwitcher.vue";
+import SignOutConfirmModal from "./components/clinical/SignOutConfirmModal.vue";
 import EmptyState from "./components/common/EmptyState.vue";
 import FileUploadModal from "./components/FileUploadModal.vue";
 import MediaPlayer from "./components/MediaPlayer.vue";
@@ -24,6 +25,13 @@ import {
   trapTabFocus,
   useFocusTrap,
 } from "./composables/useFocusTrap.js";
+import {
+  flushRegisteredDraftSources,
+  hasRegisteredUnsavedDrafts,
+  registerDraftSource,
+  resetDraftSourcesForTests,
+  useSignOutGuard,
+} from "./composables/useSignOutGuard.js";
 
 export {
   AiActionButton,
@@ -45,9 +53,15 @@ export {
   MediaPlayer,
   ModalErrorAlert,
   PersonaSwitcher,
+  SignOutConfirmModal,
+  flushRegisteredDraftSources,
   getFocusableElements,
+  hasRegisteredUnsavedDrafts,
+  registerDraftSource,
+  resetDraftSourcesForTests,
   trapTabFocus,
   useAsyncRetry,
   useEscapeClose,
   useFocusTrap,
+  useSignOutGuard,
 };

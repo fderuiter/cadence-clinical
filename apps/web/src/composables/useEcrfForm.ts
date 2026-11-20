@@ -29,6 +29,7 @@ import {
   parseFormEntry,
   type KernelObservationValue,
 } from "../api/observationValue";
+import { registerDraftSource } from "ui";
 import { useAuthStore } from "../stores/auth.js";
 import { scopedKey, storageScopeOf } from "../utils/userScopedStorage.js";
 
@@ -372,6 +373,27 @@ export function useEcrfForm(
     }, DRAFT_DEBOUNCE_MS);
   }
 
+  /** Immediately flushes any pending debounced eCRF draft edits to account-scoped browser storage. */
+  function flushDraft(): void {
+    const hadPendingTimer = draftTimer !== null;
+    cancelDraftSave();
+    const current = form.value;
+    if (!current || locked.value) return;
+    const key = getDraftStorageKey(current.form_id);
+    if (!key) return;
+    if (dirty.value) {
+      persistDraft(current.form_id, key);
+    } else if (hadPendingTimer || draftSaved) {
+      removeDraftKey(key);
+      draftSaved = false;
+    }
+  }
+
+  const unregisterDraftSource = registerDraftSource({
+    flush: flushDraft,
+    hasDrafts: () => Boolean(form.value && !locked.value && dirty.value),
+  });
+
   watch(
     () => scopedKey(currentScope(), ECRF_FORM_DRAFT_NAMESPACE),
     () => {
@@ -389,7 +411,10 @@ export function useEcrfForm(
   );
 
   if (getCurrentInstance()) {
-    onUnmounted(cancelDraftSave);
+    onUnmounted(() => {
+      cancelDraftSave();
+      unregisterDraftSource();
+    });
   }
 
   /** A form can be signed as read: it has values (a content hash) and no unsaved entries. */
@@ -720,6 +745,7 @@ export function useEcrfForm(
     editedItems,
     isEdited,
     getDraftStorageKey,
+    flushDraft,
     clearDraft,
     load,
     reload,

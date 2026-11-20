@@ -305,6 +305,23 @@ export const PersonaSwitcher: DefineComponent<
   any
 >;
 
+export const SignOutConfirmModal: DefineComponent<
+  {
+    modelValue?: boolean;
+    open?: boolean;
+    title?: string;
+    description?: string;
+    stayLabel?: string;
+    confirmLabel?: string;
+    id?: string;
+    teleport?: boolean | string;
+    onConfirm?: () => void;
+    onCancel?: () => void;
+  },
+  {},
+  any
+>;
+
 export interface FocusTrapOptions {
   isOpen?: import("vue").Ref<boolean> | (() => boolean) | boolean;
   modal?: import("vue").Ref<boolean> | (() => boolean) | boolean;
@@ -355,10 +372,37 @@ export function useAsyncRetry<T extends (...args: any[]) => any>(
 };
 
 // Utility functions
+export type DebouncedFunction<T extends (...args: any[]) => any> = ((
+  ...args: Parameters<T>
+) => void) & {
+  flush: () => ReturnType<T> | undefined;
+  cancel: () => void;
+  pending: () => boolean;
+};
+
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
-): (...args: Parameters<T>) => void;
+): DebouncedFunction<T>;
+
+export function registerDraftSource(source: {
+  flush?: () => void | Promise<void>;
+  hasDrafts?: () => boolean;
+}): () => void;
+export function flushRegisteredDraftSources(): Promise<void>;
+export function hasRegisteredUnsavedDrafts(): boolean;
+export function resetDraftSourcesForTests(): void;
+export function useSignOutGuard(options?: {
+  onConfirmSignOut?: () => void | Promise<void>;
+  flushExternalDrafts?: () => void | Promise<void>;
+  hasExternalDrafts?: () => boolean;
+}): {
+  isConfirmOpen: import("vue").Ref<boolean>;
+  isFlushing: import("vue").Ref<boolean>;
+  requestSignOut: () => Promise<{ prompted: boolean; signedOut: boolean }>;
+  confirmSignOut: () => Promise<void>;
+  cancelSignOut: () => void;
+};
 export function createClinicalLookupInput(
   id: string,
   label: string,
@@ -454,5 +498,142 @@ export function deriveSessionKey(
 ): Promise<Uint8Array>;
 export function deriveKeyFromPIN(
   pin: string,
-  salt: string
+  salt: string | Uint8Array,
+  iterations?: number
 ): Promise<Uint8Array>;
+
+export const SEMANTIC_ACTION_PATTERN: RegExp;
+export const STEP_UP_ACTION_MAX_LENGTH: number;
+export const SEMANTIC_ACTIONS: Readonly<{
+  CTMS_DOA_SIGN_OFF: "ctms.doa.sign_off";
+  ECONSENT_CAPTURE: "econsent.consent.capture";
+  ECONSENT_RECONSENT_SIGN: "econsent.reconsent.sign";
+  CEC_CHAIR_ADJUDICATE: "execution.cec.chair_adjudicate";
+  ETMF_DOCUMENT_SIGN_OFF: "etmf.document.sign_off";
+  COLLECTION_SIGN: "collection.sign";
+  SOA_APPROVE: "designer.soa.approve";
+}>;
+export function isValidStepUpAction(action: string | null | undefined): boolean;
+export function isValidSemanticAction(
+  semanticAction: string | null | undefined
+): boolean;
+export interface StepUpVerificationPayloadInput {
+  username?: string | null;
+  password: string;
+  totp?: string | null;
+  action: string;
+  semanticAction?: string;
+  semantic_action?: string;
+  batchId?: string | null;
+  batch_id?: string | null;
+}
+export interface StepUpVerificationPayload {
+  username?: string;
+  password: string;
+  totp?: string;
+  action: string;
+  semantic_action: string;
+  batch_id?: string;
+}
+export function buildStepUpVerificationPayload(
+  input: StepUpVerificationPayloadInput
+): StepUpVerificationPayload;
+
+export const SIGNATURE_OTHER_REASON: "Other";
+export const SIGNATURE_PASSWORD_INPUT_ATTRS: Readonly<{
+  type: "password";
+  inputmode: "text";
+  autocomplete: "current-password";
+  autocapitalize: "off";
+  autocorrect: "off";
+  spellcheck: "false";
+}>;
+export function requiresCustomSignatureReason(
+  selectedReason: string | null | undefined
+): boolean;
+export function resolveSignatureReason(
+  selectedReason: string | null | undefined,
+  customReason?: string | null
+): { valid: boolean; reason: string; error: string | null };
+export function deriveSignerRoleFromClaims(
+  claimsOrRoles: string[] | string | Record<string, any> | null | undefined,
+  fallback?: string
+): string;
+
+export const DEFAULT_AUTH_RETURN_URL_KEY: string;
+export function sanitizeReturnUrl(
+  rawUrl: string | null | undefined,
+  options?: { baseOrigin?: string }
+): string | null;
+export function saveAuthReturnUrl(
+  url: string | null | undefined,
+  options?: { storage?: Storage | null; key?: string; baseOrigin?: string }
+): string | null;
+export function peekAuthReturnUrl(options?: {
+  storage?: Storage | null;
+  key?: string;
+  baseOrigin?: string;
+}): string | null;
+export function consumeAuthReturnUrl(options?: {
+  storage?: Storage | null;
+  key?: string;
+  baseOrigin?: string;
+}): string | null;
+export function clearAuthReturnUrl(options?: {
+  storage?: Storage | null;
+  key?: string;
+}): void;
+export function resolveOidcRedirectUri(
+  targetPathOrUrl?: string | null,
+  options?: { origin?: string; basePath?: string }
+): string;
+export function isStepUpAuthFailure(
+  url: string | URL | null | undefined,
+  status: number,
+  errorBody?: any
+): boolean;
+
+export interface OidcTokenRefreshResult {
+  ok: boolean;
+  refreshed: boolean;
+  token: string | null;
+  error?: any;
+}
+
+export interface OidcSessionCoordinator {
+  attachKeycloak: (keycloakInstance: any) => any;
+  resolveKeycloak: () => any;
+  ensureFreshToken: (minValidity?: number) => Promise<OidcTokenRefreshResult>;
+  refreshOnUnauthorized: (options?: {
+    returnUrl?: string | null;
+  }) => Promise<OidcTokenRefreshResult>;
+  markSessionExpired: (options?: {
+    reason?: string;
+    error?: any;
+    returnUrl?: string | null;
+  }) => string | null;
+  markAuthenticated: (token?: string | null) => void;
+  beginVoluntaryLogout: () => void;
+  reset: () => void;
+  isSessionExpired: () => boolean;
+  isRefreshing: () => boolean;
+  saveReturnUrl: (url: string | null | undefined) => string | null;
+  peekReturnUrl: () => string | null;
+  consumeReturnUrl: () => string | null;
+}
+
+export function createOidcSessionCoordinator(options?: {
+  getKeycloak?: () => any;
+  minValiditySeconds?: number;
+  forceRefreshMinValiditySeconds?: number;
+  onTokenRefreshed?: (token: string | null, keycloak: any) => void;
+  onSessionExpired?: (context: {
+    reason: string;
+    error?: any;
+    returnUrl: string | null;
+  }) => void;
+  onAuthLogout?: () => void;
+  getCurrentReturnUrl?: () => string | null;
+  storage?: Storage | null;
+  returnUrlKey?: string;
+}): OidcSessionCoordinator;

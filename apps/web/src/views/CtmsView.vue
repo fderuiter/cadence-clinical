@@ -1908,7 +1908,14 @@
       </div>
 
       <!-- Modal 2: FDA Part 11 Electronic Signature & Re-Authentication -->
-      <div v-if="showSignatureModal" class="modal-overlay">
+      <div
+        v-if="showSignatureModal"
+        ref="sigModalRef"
+        class="modal-overlay"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Electronic Signature and Identity Verification"
+      >
         <div class="modal">
           <div class="modal-header">
             Electronic Signature & Identity Verification (Part 11)
@@ -1943,7 +1950,7 @@
               <input
                 id="sig-password"
                 v-model="sigPassword"
-                type="password"
+                v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
                 placeholder="Password"
                 :disabled="sigBusy"
               />
@@ -1995,7 +2002,7 @@
             <button
               class="btn btn-cancel"
               :disabled="sigBusy"
-              @click="showSignatureModal = false"
+              @click="cancelSignatureModal"
             >
               Cancel
             </button>
@@ -2363,6 +2370,12 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { useRoute } from "vue-router";
+import {
+  buildStepUpVerificationPayload,
+  SEMANTIC_ACTIONS,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+  useFocusTrap,
+} from "ui";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import CraVerificationConsole from "../components/persona/CraVerificationConsole.vue";
@@ -2708,8 +2721,23 @@ function confirmJustification() {
 }
 
 // Prompt for eSignature (FDA Part 11)
+const sigModalRef = ref(null);
+useFocusTrap(sigModalRef, {
+  isOpen: () => showSignatureModal.value,
+  onEscape: cancelSignatureModal,
+});
+
+function cancelSignatureModal() {
+  sigPassword.value = "";
+  sigTotp.value = "";
+  sigError.value = "";
+  sigBusy.value = false;
+  showSignatureModal.value = false;
+}
+
 function promptSignature(callback) {
-  sigUsername.value = store.user?.username || "";
+  const authStore = useAuthStore();
+  sigUsername.value = authStore.user?.username || store.user?.username || "";
   sigPassword.value = "";
   sigTotp.value = "";
   sigSigningReason.value = "INVESTIGATOR_SIGNATURE";
@@ -2734,24 +2762,35 @@ async function confirmSignature() {
     return;
   }
 
+  const username = sigUsername.value;
+  const password = sigPassword.value;
+  const totp = sigTotp.value || null;
+  const reason = sigReasonForChange.value;
+
+  // Immediately scrub sensitive credentials on submit (21 CFR Part 11 hygiene)
+  sigPassword.value = "";
+  sigTotp.value = "";
   sigBusy.value = true;
   sigError.value = "";
 
   try {
+    const verificationPayload = buildStepUpVerificationPayload({
+      username,
+      password,
+      totp,
+      action: "/api/v1/ctms/doa/sign-off",
+      semanticAction: SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF,
+    });
+
     const reauthRes = await apiClient.post(
       "/api/v1/auth/signature-verification",
-      {
-        username: sigUsername.value,
-        password: sigPassword.value,
-        totp: sigTotp.value || null,
-        action: "/api/v1/ctms/doa/sign-off",
-      }
+      verificationPayload
     );
 
     const sigToken = reauthRes.sig_token;
 
     if (signatureCallback) {
-      await signatureCallback(sigToken, sigReasonForChange.value);
+      await signatureCallback(sigToken, reason);
     }
     showSignatureModal.value = false;
   } catch (err) {

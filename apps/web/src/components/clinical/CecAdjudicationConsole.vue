@@ -1412,6 +1412,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { buildStepUpVerificationPayload, SEMANTIC_ACTIONS } from "ui";
 import { isDemoBuild } from "../../utils/demoMode.js";
 import { allowUnbackedAction } from "../../utils/unbackedActions.js";
 import { apiClient } from "../../api/apiClient";
@@ -1932,20 +1933,22 @@ async function submitChairAdjudication() {
     );
     return;
   }
+  const enteredPassword = chairForm.value.password;
+  chairForm.value.password = "";
   isSubmitting.value = true;
   try {
     const dossierId = activeDossier.value?.dossier_id || "DOSSIER-101";
     const actionUrl = `/api/v1/execution/cec/dossiers/${dossierId}/chair-adjudicate`;
-    const semanticAction = "execution.cec.chair_adjudicate";
+    const verificationPayload = buildStepUpVerificationPayload({
+      username: chairForm.value.signer_name || "chair_adjudicator",
+      password: enteredPassword,
+      action: actionUrl,
+      semanticAction: SEMANTIC_ACTIONS.CEC_CHAIR_ADJUDICATE,
+    });
 
     const reauthRes = await apiClient.post(
       "/api/v1/auth/signature-verification",
-      {
-        username: chairForm.value.signer_name || "chair_adjudicator",
-        password: chairForm.value.password,
-        action: actionUrl,
-        semantic_action: semanticAction,
-      }
+      verificationPayload
     );
 
     const sigToken = reauthRes?.sig_token;
@@ -1963,7 +1966,7 @@ async function submitChairAdjudication() {
       adjudication_rationale: chairForm.value.adjudication_rationale,
       signature_token: sigToken,
       signer_name: chairForm.value.signer_name,
-      password: chairForm.value.password,
+      password: enteredPassword,
       signature_meaning: chairForm.value.signature_meaning,
     };
 

@@ -2,10 +2,14 @@
 import { createApp } from "vue";
 import { createPinia } from "pinia";
 import Keycloak from "keycloak-js";
-import { initHoverDetection } from "ui";
+import { initHoverDetection, sanitizeReturnUrl } from "ui";
 import App from "./App.vue";
 import { installAuthorizedFetch } from "./api/authorization.js";
 import { initKeycloakAuth } from "./auth/bootstrap.js";
+import {
+  consumeWebReturnUrl,
+  peekWebReturnUrl,
+} from "./auth/sessionCoordinator.js";
 import { vKeyboardClick } from "./directives/keyboardClick";
 import { i18n } from "./i18n/index.js";
 import { router } from "./router";
@@ -56,12 +60,16 @@ async function bootstrapApp() {
       await initKeycloakAuth({
         authStore,
         Keycloak,
-        onSessionEnded: () => {
+        onSessionEnded: (ctx) => {
           const current = router.currentRoute.value;
+          const returnTarget =
+            sanitizeReturnUrl(current?.fullPath) ||
+            ctx?.returnUrl ||
+            peekWebReturnUrl();
           if (current.matched.some((record) => record.meta.requiresAuth)) {
             router.replace({
               path: "/login",
-              query: { redirect: current.fullPath },
+              query: { redirect: returnTarget || current.fullPath },
             });
           }
         },
@@ -76,7 +84,14 @@ async function bootstrapApp() {
     const path = pathname.startsWith(base)
       ? pathname.slice(base.length)
       : pathname;
-    await router.replace(`${path || "/"}${search}${hash}`);
+    const currentTarget = `${path || "/"}${search}${hash}`;
+    const savedReturnUrl =
+      authStore.isAuthenticated &&
+      (!path || path === "/" || path === "/login") &&
+      !search
+        ? consumeWebReturnUrl()
+        : null;
+    await router.replace(savedReturnUrl || currentTarget);
   } finally {
     app.use(router);
     await router.isReady();
