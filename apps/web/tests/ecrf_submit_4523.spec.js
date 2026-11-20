@@ -72,16 +72,19 @@ describe("EcrfView submitEcrf API integration and failure handling (#4523)", () 
     return mount(EcrfView, { global: { plugins: [pinia] } });
   }
 
-  it("sends the sample form nowhere outside a demo build: refuses it, records no ledger block and keeps its fields (ADR-2622)", async () => {
+  it("hides the sample form outside a demo build and refuses submitEcrf without ledger writes or network calls (ADR-2622)", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const wrapper = mountView();
     await flushPromises();
     fetchSpy.mockClear();
 
+    expect(wrapper.findComponent(CrcFormRenderer).exists()).toBe(false);
+    expect(wrapper.findComponent(SubjectEnrollmentForm).exists()).toBe(false);
+
     store.formValues.VSSBP = "120";
     const ledgerBefore = store.ledgerBlocks.length;
 
-    wrapper.findComponent(CrcFormRenderer).vm.$emit("submit-ecrf");
+    await wrapper.vm.submitEcrf();
     await flushPromises();
 
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -97,7 +100,30 @@ describe("EcrfView submitEcrf API integration and failure handling (#4523)", () 
     fetchSpy.mockRestore();
   });
 
-  it("refuses screening, which no service evaluates, and shows no result", async () => {
+  it("omits legacy enrollment outside demo builds and refuses unbacked screening", async () => {
+    const wrapper = mountView();
+    await flushPromises();
+    expect(wrapper.findComponent(SubjectEnrollmentForm).exists()).toBe(false);
+
+    wrapper.vm.onSubjectScreen({
+      subjectId: "SUBJ-001",
+      studyId: "TEST-STUDY",
+    });
+    await flushPromises();
+
+    expect(wrapper.vm.screeningResult).toBe(null);
+    expect(store.ledgerBlocks.some((b) => b.action === "SUBJECT_SCREEN")).toBe(
+      false
+    );
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(useToastStore(pinia).toasts[0]).toMatchObject({
+      tone: "error",
+      title: "Screening a subject isn't available yet",
+    });
+  });
+
+  it("renders SubjectEnrollmentForm in a demo build without calling window.alert on screening", async () => {
+    vi.stubEnv("VITE_DEMO_MODE", "true");
     const wrapper = mountView();
     await flushPromises();
     const form = wrapper.findComponent(SubjectEnrollmentForm);
@@ -106,13 +132,6 @@ describe("EcrfView submitEcrf API integration and failure handling (#4523)", () 
     form.vm.$emit("screen", { subjectId: "SUBJ-001", studyId: "TEST-STUDY" });
     await flushPromises();
 
-    expect(form.props("screeningResult")).toBe(null);
-    expect(store.ledgerBlocks.some((b) => b.action === "SUBJECT_SCREEN")).toBe(
-      false
-    );
-    expect(useToastStore(pinia).toasts[0]).toMatchObject({
-      tone: "error",
-      title: "Screening a subject isn't available yet",
-    });
+    expect(alertSpy).not.toHaveBeenCalled();
   });
 });

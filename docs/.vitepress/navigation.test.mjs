@@ -56,7 +56,7 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     }
   });
 
-  it("includes all 73 active non-ADR pages from docs/DOCUMENTATION_INDEX.md without manual edits", () => {
+  it("includes all 78 active non-ADR pages from docs/DOCUMENTATION_INDEX.md without manual edits", () => {
     const indexContent = fs.readFileSync(indexPath, "utf-8");
     const parsedEntries = parseDocumentationIndex(indexContent, {
       docsDir,
@@ -77,7 +77,7 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
         .map((entry) => entry.link.split("#")[0])
     );
 
-    expect(activeDocsAndHomeRoutes.size).toBe(73);
+    expect(activeDocsAndHomeRoutes.size).toBe(78);
 
     const allActiveNonAdrPortalRoutes = new Set(
       parsedEntries
@@ -91,8 +91,8 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
         .map((entry) => entry.link.split("#")[0])
     );
 
-    // 73 active docs/ + home pages plus the 7 additional staged root guides/policies = 80 portal pages
-    expect(allActiveNonAdrPortalRoutes.size).toBe(80);
+    // 78 active docs/ + home pages plus the 7 additional staged root guides/policies = 85 portal pages
+    expect(allActiveNonAdrPortalRoutes.size).toBe(85);
 
     const sidebar = synthesizeSidebarFromIndex(indexPath, {
       docsDir,
@@ -119,6 +119,60 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     expect(sidebarLinks.has("/schema/kernel")).toBe(true);
     expect(sidebarLinks.has("/ux/CLINICAL_CANVAS")).toBe(true);
     expect(sidebarLinks.has("/web/API_MIGRATION")).toBe(true);
+    expect(sidebarLinks.has("/blog/index")).toBe(true);
+  });
+
+  it("synthesizes the Engineering Blog group newest-first and excludes draft blog posts from portal routes", () => {
+    const tmpRepo = makeTempWorkspace();
+    const tmpDocs = path.join(tmpRepo, "docs");
+    const tmpBlog = path.join(tmpDocs, "blog");
+    fs.mkdirSync(tmpBlog, { recursive: true });
+
+    fs.writeFileSync(path.join(tmpBlog, "index.md"), "# Engineering Blog\n");
+    fs.writeFileSync(
+      path.join(tmpBlog, "2026-09-29-older.md"),
+      '---\ntitle: "Older Post"\ndraft: false\n---\n# Older Post\n'
+    );
+    fs.writeFileSync(
+      path.join(tmpBlog, "2026-11-19-newer.md"),
+      '---\ntitle: "Newer Post"\ndraft: false\n---\n# Newer Post\n'
+    );
+    fs.writeFileSync(
+      path.join(tmpBlog, "2026-11-25-draft.md"),
+      '---\ntitle: "Draft Post"\ndraft: true\n---\n# Draft Post\n'
+    );
+
+    const sampleIndex = [
+      "# Documentation Index",
+      "",
+      "## Engineering blog",
+      "",
+      "| Document | Status | What it is |",
+      "| --- | --- | --- |",
+      "| [Older Post](blog/2026-09-29-older.md) | Current | Older milestone |",
+      "| [Cadence Engineering Blog](blog/index.md) | Current | Blog overview |",
+      "| [Newer Post](blog/2026-11-19-newer.md) | Current | Newer milestone |",
+      "| [Draft Post](blog/2026-11-25-draft.md) | Current | Draft milestone |",
+      "",
+    ].join("\n");
+
+    const sidebar = synthesizeSidebarFromIndex(
+      path.join(tmpDocs, "DOCUMENTATION_INDEX.md"),
+      {
+        docsDir: tmpDocs,
+        repoRoot: tmpRepo,
+        indexContent: sampleIndex,
+      }
+    );
+
+    const blogGroup = sidebar.find((g) => g.text === "Engineering Blog");
+    expect(blogGroup).toBeDefined();
+    expect(blogGroup.collapsed).toBe(false);
+    expect(blogGroup.items.map((item) => item.link)).toEqual([
+      "/blog/index",
+      "/blog/2026-11-19-newer",
+      "/blog/2026-09-29-older",
+    ]);
   });
 
   it("groups REST API and Data Model references into collapsed sections separate from historical records", () => {

@@ -157,7 +157,7 @@
             {{ $t("ecrf.form.trainingGatedDesc") }}
           </p>
         </div>
-        <div>
+        <div v-if="trainingAvailable">
           <router-link v-slot="{ navigate }" to="/training" custom>
             <button
               id="btn-complete-training"
@@ -915,10 +915,12 @@
 <script setup>
 import { computed, reactive, ref } from "vue";
 import { ClinicalFormField } from "ui";
+import { isScreenAvailable } from "../../router/availability.js";
 import { useClinicalStore } from "../../stores/clinical";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 
 const clinicalStore = useClinicalStore();
+const trainingAvailable = computed(() => isScreenAvailable("training"));
 
 const props = defineProps({
   store: { type: Object, required: true },
