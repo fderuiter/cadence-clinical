@@ -181,7 +181,8 @@ public static class CiPlan
         ["container-security"] = "builds container images across a matrix and uploads Trivy SARIF to GitHub Code Scanning",
         ["classify"] = "labels the pull request through the GitHub API",
         ["automerge"] = "approves and merges the pull request through the GitHub API",
-        ["release-and-archive"] = "calls the production pipeline on a push to main",
+        ["release-and-archive"] = "calls the production pipeline on pushes to main, release/* and v* tags",
+        ["deploy-docs"] = "deploys the documentation portal to GitHub Pages on a push to main",
     };
 
     /// <summary>The jobs, in the order <c>cadence ci</c> runs them.</summary>
@@ -334,7 +335,10 @@ public static class CiPlan
                 [
                     Dotnet("test", "Cadence.sln", "--configuration", "Release", "-nologo", "--no-build",
                         "--results-directory", RtmGeneratorService.DefaultResultsDir, "--logger", "trx;LogFilePrefix=gxp")
-                        with { CiText = "dotnet test Cadence.sln --configuration Release --no-build" },
+                        with
+                        {
+                            CiText = $"dotnet test Cadence.sln --configuration Release --no-build --results-directory {RtmGeneratorService.DefaultResultsDir} --logger \"trx;LogFilePrefix=gxp\"",
+                        },
                 ],
             },
             new("dotnet-tests", "Fail the run when a PostgreSQL test did not execute")
