@@ -11,7 +11,12 @@ const DATA_COLLECTION_ROLES = [
   "monitor",
 ];
 
-const SITE_READINESS_SPONSOR_ROLES = ["cra", "monitor", "sponsor_admin"];
+const SITE_READINESS_SPONSOR_ROLES = [
+  "cra",
+  "monitor",
+  "data_manager",
+  "sponsor_admin",
+];
 const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
 const NON_ONBOARDING_ROUTES = new Set([
   "landing",

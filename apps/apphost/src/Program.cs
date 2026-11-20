@@ -150,6 +150,7 @@ if (builder.Environment.IsDevelopment())
     kernel.WithEnvironment("Kernel__DevelopmentTenant__Code", "cadence-local");
     kernel.WithEnvironment("Kernel__DevelopmentTenant__DemoData", "true");
 }
+Service(builder.AddProject<Projects.Cadence_Apps_Ctms>("ctms"));
 
 if (full)
 {
@@ -180,7 +181,6 @@ if (full)
         .WithEnvironment("CADENCE_SCE_SIGNING_KEY", sceSigningKey);
     Service(builder.AddProject<Projects.Cadence_Apps_Quality>("quality"));
     Service(builder.AddProject<Projects.Cadence_Apps_Notifications>("notifications"));
-    Service(builder.AddProject<Projects.Cadence_Apps_Ctms>("ctms"));
     Service(builder.AddProject<Projects.Cadence_Apps_Safety>("safety"));
     Service(builder.AddProject<Projects.Cadence_Apps_Tickets>("tickets"));
     Service(builder.AddProject<Projects.Cadence_Apps_Eisf>("eisf"));

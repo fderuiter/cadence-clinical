@@ -35,6 +35,7 @@ public static class SiteMilestoneEndpoints
             .WithName("ListSiteMilestones")
             .WithSummary("List site milestones filtered by study or site.")
             .Produces<List<SiteMilestoneResponseDto>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission(ReadPermission);
 
         group.MapPost("/site-milestones", CreateSiteMilestoneAsync)
@@ -42,6 +43,7 @@ public static class SiteMilestoneEndpoints
             .WithSummary("Create a new site milestone.")
             .Produces<SiteMilestoneResponseDto>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission(CreatePermission);
 
         group.MapPut("/site-milestones/{milestone_id}", UpdateSiteMilestoneAsync)
@@ -49,6 +51,7 @@ public static class SiteMilestoneEndpoints
             .WithSummary("Update site milestone status, planned date, or actual date.")
             .Produces<SiteMilestoneResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(UpdatePermission);
 
@@ -59,8 +62,14 @@ public static class SiteMilestoneEndpoints
         [FromQuery(Name = "study_id")] string? studyId,
         [FromQuery(Name = "site_id")] string? siteId,
         CtmsDbContext db,
+        HttpContext httpContext,
         CancellationToken ct)
     {
+        if (CtmsScopeGuard.ResolveStudyAndSiteFilters(httpContext, studyId, siteId, out var studyFilter, out var siteFilter) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
         IQueryable<CtmsSiteMilestone> query = db.CtmsSiteMilestones.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(studyId))
@@ -77,7 +86,8 @@ public static class SiteMilestoneEndpoints
             .OrderBy(m => m.PlannedDate ?? new DateTimeOffset(m.CreatedAt, TimeSpan.Zero))
             .ToListAsync(ct);
 
-        var dtos = milestones.Select(ToResponseDto).ToList();
+        var scopedMilestones = CtmsScopeGuard.ApplyFilters(milestones, studyFilter, m => m.StudyId, siteFilter, m => m.SiteId);
+        var dtos = scopedMilestones.Select(ToResponseDto).ToList();
         return TypedResults.Ok(dtos);
     }
 
@@ -96,11 +106,6 @@ public static class SiteMilestoneEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        if (!MonitoringVisitEndpoints.TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
-        {
-            return problem!;
-        }
-
         if (string.IsNullOrWhiteSpace(request.Site) ||
             string.IsNullOrWhiteSpace(request.Study) ||
             string.IsNullOrWhiteSpace(request.MilestoneType))
@@ -109,6 +114,16 @@ public static class SiteMilestoneEndpoints
                 title: "Validation error",
                 detail: "site_id, study_id, and milestone_type are required.",
                 statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, request.Study, request.Site) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
+        if (!MonitoringVisitEndpoints.TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
+        {
+            return problem!;
         }
 
         var (user, role) = ResolveCaller(httpContext);
@@ -162,6 +177,11 @@ public static class SiteMilestoneEndpoints
         [FromServices] IClock clock,
         CancellationToken ct)
     {
+        if (CtmsScopeGuard.RequireAnyScopeForLookup(httpContext) is { } missingScope)
+        {
+            return missingScope;
+        }
+
         var milestone = await db.CtmsSiteMilestones.FirstOrDefaultAsync(m => m.Id == milestoneId, ct);
         if (milestone is null)
         {
@@ -169,6 +189,11 @@ public static class SiteMilestoneEndpoints
                 title: "Milestone not found",
                 detail: $"Site milestone '{milestoneId}' not found.",
                 statusCode: StatusCodes.Status404NotFound);
+        }
+
+        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, milestone.StudyId, milestone.SiteId) is { } scopeDenied)
+        {
+            return scopeDenied;
         }
 
         if (!MonitoringVisitEndpoints.TryExtractReasonForChange(httpContext, request?.ReasonForChange, out string reason, out var problem))

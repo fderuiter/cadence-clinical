@@ -45,6 +45,7 @@ public static class DoaEndpoints
             .WithSummary("Assign site trial task delegation requiring Principal Investigator sign-off.")
             .Produces<DelegationResponseDto>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(AssignPermission);
 
@@ -53,6 +54,7 @@ public static class DoaEndpoints
             .WithSummary("Revoke or end a delegated trial duty with reason for change.")
             .Produces<DelegationResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(RevokePermission);
 
@@ -61,6 +63,7 @@ public static class DoaEndpoints
             .WithSummary("Endorse Delegation of Authority task assignment with Principal Investigator eSignature.")
             .Produces<DelegationResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(SignOffPermission);
 
@@ -68,6 +71,7 @@ public static class DoaEndpoints
             .WithName("GetSiteDoaLog")
             .WithSummary("Fetch active and historical DOA log matrix for a site.")
             .Produces<DoaLogResponseDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(ReadPermission);
 
@@ -75,6 +79,7 @@ public static class DoaEndpoints
             .WithName("ExportSiteDoaPdf")
             .WithSummary("Export 21 CFR Part 11 signed DOA PDF log.")
             .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(ReadPermission);
 
@@ -126,6 +131,11 @@ public static class DoaEndpoints
                 title: "Start date required",
                 detail: "Effective start date is required.",
                 statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (await CtmsScopeGuard.RequireDoaSiteScopeAsync(httpContext, db, request.Site, ct) is { } scopeDenied)
+        {
+            return scopeDenied;
         }
 
         if (!TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
@@ -195,9 +205,9 @@ public static class DoaEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        if (!TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
+        if (CtmsScopeGuard.RequireAnyScopeForLookup(httpContext) is { } missingScope)
         {
-            return problem!;
+            return missingScope;
         }
 
         var delegation = await db.CtmsDelegations.FirstOrDefaultAsync(d => d.Id == request.RecordId, ct);
@@ -207,6 +217,16 @@ public static class DoaEndpoints
                 title: "Delegation record not found",
                 detail: $"Delegation record '{request.RecordId}' does not exist.",
                 statusCode: StatusCodes.Status404NotFound);
+        }
+
+        if (await CtmsScopeGuard.RequireDoaSiteScopeAsync(httpContext, db, delegation.SiteId, ct) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
+        if (!TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
+        {
+            return problem!;
         }
 
         if (!delegation.IsActive)
@@ -259,9 +279,9 @@ public static class DoaEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        if (!TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
+        if (CtmsScopeGuard.RequireAnyScopeForLookup(httpContext) is { } missingScope)
         {
-            return problem!;
+            return missingScope;
         }
 
         var delegation = await db.CtmsDelegations.FirstOrDefaultAsync(d => d.Id == request.RecordId, ct);
@@ -271,6 +291,16 @@ public static class DoaEndpoints
                 title: "Delegation record not found",
                 detail: $"Delegation record '{request.RecordId}' does not exist.",
                 statusCode: StatusCodes.Status404NotFound);
+        }
+
+        if (await CtmsScopeGuard.RequireDoaSiteScopeAsync(httpContext, db, delegation.SiteId, ct) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
+        if (!TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
+        {
+            return problem!;
         }
 
         if (!delegation.IsActive)
@@ -318,8 +348,14 @@ public static class DoaEndpoints
     public static async Task<IResult> GetSiteDoaLogAsync(
         [FromRoute(Name = "site_id")] string siteId,
         CtmsDbContext db,
+        HttpContext httpContext,
         CancellationToken ct)
     {
+        if (await CtmsScopeGuard.RequireDoaSiteScopeAsync(httpContext, db, siteId, ct) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
         if (string.IsNullOrWhiteSpace(siteId) || !await SiteExistsAsync(db, siteId, ct))
         {
             return TypedResults.Problem(
@@ -361,6 +397,11 @@ public static class DoaEndpoints
         [FromServices] IClock clock,
         CancellationToken ct)
     {
+        if (await CtmsScopeGuard.RequireDoaSiteScopeAsync(httpContext, db, siteId, ct) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
         if (string.IsNullOrWhiteSpace(siteId) || !await SiteExistsAsync(db, siteId, ct))
         {
             return TypedResults.Problem(

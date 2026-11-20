@@ -16,6 +16,86 @@ export type SubjectList = Schemas["Execution_SubjectListResponse"];
 export type Subject = Schemas["Execution_SubjectResponse"];
 export type ComplianceStatus = Schemas["Execution_ComplianceStatusResponse"];
 export type OperationEnvelope = Schemas["Execution_OperationEnvelopeResponse"];
+export type RandomizationScheme =
+  Schemas["Execution_RandomizationSchemeResponse"];
+export type IpKitBatchReconciliationRequest =
+  Schemas["Execution_IpKitBatchReconciliationRequest"];
+export type IpKitItemReconcileRequest =
+  Schemas["Execution_IpKitItemReconcileRequest"];
+export type IpKitScanValidateRequest =
+  Schemas["Execution_IpKitScanValidateRequest"];
+export type IpKitSeedItem = Schemas["Execution_IpKitSeedItem"];
+export type SeedInventoryRequest = Schemas["Execution_SeedInventoryRequest"];
+export type CgtApheresisCreateRequest =
+  Schemas["Execution_CgtApheresisCreateRequest"];
+export type CgtMilestoneCreateRequest =
+  Schemas["Execution_CgtMilestoneCreateRequest"];
+
+export interface SiteIpKitInventoryItem {
+  id?: string;
+  study_id: string;
+  site_id: string;
+  kit_number: string;
+  lot_number: string;
+  status: string;
+  expiration_date?: string | null;
+  residual_volume_ml?: number | null;
+  residual_volume_percentage?: number | null;
+  treatment_arm?: string | null;
+}
+
+export interface IpKitScanValidationResult {
+  kit_number: string;
+  study_id: string;
+  site_id: string;
+  found_in_inventory: boolean;
+  expected_lot_number?: string | null;
+  scanned_lot_number?: string | null;
+  lot_mismatch_detected: boolean;
+  current_status?: string | null;
+  recommended_disposition?: string | null;
+  warning?: string | null;
+}
+
+export interface IpKitReconciliationCertificate {
+  certificate_id: string;
+  study_id: string;
+  site_id: string;
+  processed_by?: string | null;
+  processed_at?: string | null;
+  total_kits_reconciled?: number;
+  quarantined_count?: number;
+  returned_to_site_count?: number;
+  returned_to_depot_count?: number;
+  lot_mismatch_count?: number;
+  notes?: string | null;
+  payload_hash?: string | null;
+  items?: Array<Record<string, unknown>>;
+}
+
+export interface CgtChainOfCustodyTrace {
+  chain_of_custody_id?: string;
+  id?: string;
+  study_id: string;
+  subject_id: string;
+  din?: string | null;
+  batch_id?: string | null;
+  collection_site_id?: string | null;
+  current_stage?: string | null;
+  status?: string | null;
+  milestones?: Array<{
+    id?: string;
+    stage: string;
+    milestone_type: string;
+    timestamp?: string | null;
+    location_name?: string | null;
+    temperature_celsius?: number | null;
+    seal_intact?: boolean;
+    custodian_name?: string | null;
+    tracking_number?: string | null;
+    notes?: string | null;
+  }>;
+}
 
 export interface AddSubject {
   studyId: string;
@@ -135,68 +215,143 @@ export const executionApi = {
   },
 
   /** Reconciles a batch of IP kit returns atomically in RTSM (POST /api/v1/execution/rtsm/kits/reconcile-batch). */
-  async reconcileIpKitBatch(payload: {
-    study_id: string;
-    site_id: string;
-    processed_by: string;
-    notes?: string;
-    reason_for_change: string;
-    items: Array<{
-      kit_number: string;
-      lot_number: string;
-      expected_lot_number?: string;
-      residual_volume_ml?: number;
-      residual_volume_percentage?: number;
-      disposition: string;
-      disposition_reason: string;
-    }>;
-  }): Promise<any> {
-    const res = await fetch("/api/v1/execution/rtsm/kits/reconcile-batch", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Change-Reason": encodeChangeReason(payload.reason_for_change),
-      },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: "Request failed" }));
-      throw new Error(
-        err.detail || "Server failed to process batch reconciliation."
-      );
-    }
-    return res.json();
+  reconcileIpKitBatch(
+    payload: IpKitBatchReconciliationRequest
+  ): Promise<{ certificate?: IpKitReconciliationCertificate }> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/rtsm/kits/reconcile-batch", {
+        body: payload,
+        headers: {
+          "X-Change-Reason": encodeChangeReason(payload.reason_for_change),
+        },
+      })
+    ) as unknown as Promise<{ certificate?: IpKitReconciliationCertificate }>;
   },
 
   /** Retrieves site IP kit inventory catalog (GET /api/v1/execution/rtsm/kits/inventory/{studyId}/{siteId}). */
-  async getSiteIpKitInventory(studyId: string, siteId: string): Promise<any[]> {
-    const res = await fetch(
-      `/api/v1/execution/rtsm/kits/inventory/${studyId}/${siteId}`
+  getSiteIpKitInventory(
+    studyId: string,
+    siteId: string
+  ): Promise<SiteIpKitInventoryItem[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/execution/rtsm/kits/inventory/{studyId}/{siteId}", {
+        params: { path: { studyId, siteId } },
+      })
+    ) as unknown as Promise<SiteIpKitInventoryItem[]>;
+  },
+
+  /** Seeds site IP kit inventory (POST /api/v1/execution/rtsm/kits/seed-inventory). */
+  seedSiteIpKitInventory(
+    payload: SeedInventoryRequest,
+    changeReason: string
+  ): Promise<unknown> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/rtsm/kits/seed-inventory", {
+        body: payload,
+        headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
+      })
     );
-    if (!res.ok) {
-      throw new Error("Failed to load site IP kit inventory");
-    }
-    return res.json();
+  },
+
+  /** Retrieves a Part 11 IP kit reconciliation certificate (GET /api/v1/execution/rtsm/kits/certificates/{certificateId}). */
+  getIpKitCertificate(
+    certificateId: string
+  ): Promise<IpKitReconciliationCertificate> {
+    return unwrapResponse(
+      client.GET("/api/v1/execution/rtsm/kits/certificates/{certificateId}", {
+        params: { path: { certificateId } },
+      })
+    ) as unknown as Promise<IpKitReconciliationCertificate>;
   },
 
   /** Validates scanned barcode against site inventory (POST /api/v1/execution/rtsm/kits/validate-scan). */
-  async validateIpKitScan(
+  validateIpKitScan(
     studyId: string,
     siteId: string,
     scannedBarcode: string
-  ): Promise<any> {
-    const res = await fetch("/api/v1/execution/rtsm/kits/validate-scan", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        study_id: studyId,
-        site_id: siteId,
-        scanned_barcode: scannedBarcode,
-      }),
-    });
-    if (!res.ok) {
-      throw new Error("Failed to validate barcode scan");
-    }
-    return res.json();
+  ): Promise<IpKitScanValidationResult> {
+    const [kitPart, lotPart] = scannedBarcode.split("|");
+    return unwrapResponse(
+      client.POST("/api/v1/execution/rtsm/kits/validate-scan", {
+        body: {
+          study_id: studyId,
+          site_id: siteId,
+          kit_number: (kitPart ?? scannedBarcode).trim(),
+          scanned_lot_number: lotPart ? lotPart.trim() : null,
+        },
+      })
+    ) as unknown as Promise<IpKitScanValidationResult>;
+  },
+
+  /** Lists a study's randomization scheme versions without blinded allocation lists (GET /api/v1/execution/randomization/schemes). */
+  listRandomizationSchemes(studyId: string): Promise<RandomizationScheme[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/execution/randomization/schemes", {
+        params: { query: { study_id: studyId } },
+      })
+    );
+  },
+
+  /** Retrieves autologous Cell & Gene Therapy chain-of-custody trace for a participant. */
+  getChainOfCustody(
+    studyId: string,
+    subjectId: string
+  ): Promise<CgtChainOfCustodyTrace> {
+    return unwrapResponse(
+      client.GET(
+        "/api/v1/execution/rtsm/cgt/chain-of-custody/{studyId}/{subjectId}",
+        {
+          params: { path: { studyId, subjectId } },
+        }
+      )
+    ) as unknown as Promise<CgtChainOfCustodyTrace>;
+  },
+
+  /** Initiates an autologous Cell & Gene Therapy apheresis chain-of-custody record. */
+  recordCgtApheresis(
+    payload: CgtApheresisCreateRequest,
+    changeReason: string
+  ): Promise<unknown> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/rtsm/cgt/apheresis", {
+        body: payload,
+        headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
+      })
+    );
+  },
+
+  /** Appends a cryogenic transit or facility custody milestone to an active chain-of-custody record. */
+  recordCgtMilestone(
+    payload: CgtMilestoneCreateRequest,
+    changeReason: string
+  ): Promise<unknown> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/rtsm/cgt/milestone", {
+        body: payload,
+        headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
+      })
+    );
+  },
+
+  /** Lists study CGT destruction certificates. */
+  listCgtCertificates(
+    studyId: string
+  ): Promise<Array<Record<string, unknown>>> {
+    return unwrapResponse(
+      client.GET("/api/v1/execution/rtsm/cgt/certificates/{studyId}", {
+        params: { path: { studyId } },
+      })
+    ) as unknown as Promise<Array<Record<string, unknown>>>;
+  },
+
+  /** Lists study CGT vial return reconciliations. */
+  listCgtReconciliations(
+    studyId: string
+  ): Promise<Array<Record<string, unknown>>> {
+    return unwrapResponse(
+      client.GET("/api/v1/execution/rtsm/cgt/reconciliations/{studyId}", {
+        params: { path: { studyId } },
+      })
+    ) as unknown as Promise<Array<Record<string, unknown>>>;
   },
 };

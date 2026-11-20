@@ -31,7 +31,7 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.randomization_allocations`](#edcrandomization_allocations) | `RandomizationAllocation` | 18 |
 | [`edc.randomization_list_slots`](#edcrandomization_list_slots) | `RandomizationListSlot` | 6 |
 | [`edc.randomization_schemes`](#edcrandomization_schemes) | `RandomizationScheme` | 23 |
-| [`edc.site_compliance_caches`](#edcsite_compliance_caches) | `SiteComplianceCache` | 12 |
+| [`edc.site_compliance_caches`](#edcsite_compliance_caches) | `SiteComplianceCache` | 15 |
 | [`edc.staged_adverse_event_reviews`](#edcstaged_adverse_event_reviews) | `StagedAdverseEventReview` | 27 |
 | [`edc.subject_consents`](#edcsubject_consents) | `SubjectConsent` | 14 |
 | [`edc.synonym_rules`](#edcsynonym_rules) | `SynonymRule` | 15 |
@@ -819,8 +819,11 @@ Entity: `SiteComplianceCache`
 | Column | Type | Null | Default | Key |
 | --- | --- | --- | --- | --- |
 | `Id` | `uuid` | no |  | PK |
+| `ActivatedAt` | `timestamp with time zone` | yes |  |  |
+| `ActivatedBy` | `character varying(255)` | yes |  |  |
 | `CreatedAt` | `timestamp with time zone` | no |  |  |
 | `CreatedBy` | `text` | no |  |  |
+| `IsActivated` | `boolean` | no | `False` |  |
 | `IsComplete` | `boolean` | no |  |  |
 | `Milestone` | `character varying(255)` | no |  |  |
 | `ReasonForChange` | `text` | no |  |  |
