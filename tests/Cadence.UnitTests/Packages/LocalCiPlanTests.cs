@@ -116,8 +116,11 @@ public partial class LocalCiPlanTests
     {
         foreach (var (job, step, workflowStep) in PlanStepsWithWorkflowSteps().Where(t => t.Step.NotRunLocally is not null))
         {
+            step.NotRunLocally.Should().NotBeNullOrWhiteSpace();
             string conditions = $"{WorkflowJobFor(job).If} {workflowStep.If}";
-            conditions.Should().Contain(PushOnly, $"'{job.Key} / {step.Name}' is never run locally");
+            bool pushOnly = conditions.Contains(PushOnly, StringComparison.Ordinal);
+            bool runnerProvisioning = (workflowStep.Run ?? "").Contains("steps.playwright-cache.outputs.cache-hit", StringComparison.Ordinal);
+            (pushOnly || runnerProvisioning).Should().BeTrue($"'{job.Key} / {step.Name}' is never run locally");
         }
 
         foreach (var job in CiPlan.Jobs)
@@ -156,7 +159,16 @@ public partial class LocalCiPlanTests
     [Fact]
     public void Select_WithoutJobs_RunsEveryJobThatIsNotOnRequestOnly()
     {
-        CiPlan.Select([]).Select(j => j.Key).Should().Equal("lint-and-static", "dotnet-quality", "native-aot-build", "docs-build", "security", "unit-tests", "dotnet-tests", "compliance");
+        CiPlan.Select([]).Select(j => j.Key).Should().Equal(
+            "lint-and-static",
+            "dotnet-quality",
+            "native-aot-build",
+            "docs-build",
+            "security",
+            "unit-tests",
+            "dotnet-tests",
+            "accessibility-e2e",
+            "compliance");
     }
 
     [Fact]
