@@ -3,6 +3,7 @@
     id="study-canvas"
     class="canvas"
     :class="{ 'canvas-in-shell': inAppShell }"
+    :style="{ '--canvas-topbar-height': `${topbarHeight}px` }"
   >
     <a v-if="!inAppShell" class="skip-link" href="#canvas-workspace"
       >Skip to workspace</a
@@ -10,6 +11,7 @@
 
     <component
       :is="inAppShell ? 'div' : 'header'"
+      ref="topbarRef"
       class="topbar"
       :role="inAppShell ? 'region' : undefined"
       :aria-label="inAppShell ? 'Study context' : undefined"
@@ -143,7 +145,10 @@
         </nav>
       </div>
 
-      <div class="panes">
+      <div
+        class="panes"
+        :class="{ 'panes--inspector-collapsed': inspectorCollapsed }"
+      >
         <nav id="canvas-navigator" class="navigator" aria-label="Sections">
           <router-link
             id="nav-study-home"
@@ -207,7 +212,20 @@
 
           <template v-else-if="hasOpenForm">
             <p
-              v-if="isNewForm && recordRef && !recordParticipant"
+              v-if="
+                isNewForm &&
+                recordRef &&
+                !recordParticipant &&
+                isRecordParticipantLoading
+              "
+              id="record-loading"
+              class="stage-empty"
+              role="status"
+            >
+              Loading participant…
+            </p>
+            <p
+              v-else-if="isNewForm && recordRef && !recordParticipant"
               id="record-not-loaded"
               class="stage-empty"
             >
@@ -238,6 +256,7 @@
               :back-label="formBackLabel"
               :form-location="formLocationById"
               :observation-location="observationLocationFromForm"
+              @dirty-change="formWorkspaceDirty = $event"
               @form-loaded="onFormLoaded"
               @closed="onFormClosed"
             />
@@ -253,6 +272,14 @@
               :observation-location="observationLocationFromRecord"
               @retry="canvas.loadRecord(recordParticipant)"
             />
+            <p
+              v-else-if="isRecordParticipantLoading"
+              id="record-loading"
+              class="stage-empty"
+              role="status"
+            >
+              Loading participant…
+            </p>
             <p v-else id="record-not-loaded" class="stage-empty">
               This participant isn't among those loaded for {{ studyCode }}.
               <router-link
@@ -338,21 +365,23 @@
                   ? `The rest of ${stage.label} arrives as its services are built.`
                   : `No part of ${stage.label} has a service yet.`
               }}
-              <a
-                :href="UNAVAILABLE_SCREENS_ISSUE"
-                target="_blank"
-                rel="noopener"
-                >See what's planned (#4829)</a
+              <router-link to="/plans">
+                Compare product families &amp; pre-release roadmap </router-link
               >.
             </p>
           </section>
         </component>
 
         <CanvasInspector
+          ref="inspectorRef"
           :study-code="studyCode"
           :participant="inspectedParticipant"
           :node-ref="inspectedNodeText"
-          :missing="Boolean(selectedNode) && !selectedParticipant"
+          :missing="
+            Boolean(selectedNode) &&
+            !selectedParticipant &&
+            !isSelectedParticipantLoading
+          "
           :protocol-version="inspectedVersion"
           :protocol-version-error="inspectedVersionError"
           :record-location="
@@ -371,6 +400,7 @@
           "
           :can-manage-participants="canChangeParticipants"
           :assist-prompt="askText"
+          @update:collapsed="inspectorCollapsed = $event"
         />
       </div>
     </template>
@@ -706,7 +736,7 @@
     <CanvasPalette
       v-if="!inAppShell && paletteOpen"
       :study-code="studyCode"
-      :participants="canvas.participants"
+      :participants="canvas.paletteParticipants"
       @close="paletteOpen = false"
       @go="goToPaletteTarget"
     />
@@ -723,7 +753,14 @@ import {
   ref,
   watch,
 } from "vue";
-import { useRoute, useRouter, type LocationQueryRaw } from "vue-router";
+import {
+  onBeforeRouteLeave,
+  onBeforeRouteUpdate,
+  useRoute,
+  useRouter,
+  type LocationQueryRaw,
+  type RouteLocationNormalized,
+} from "vue-router";
 import type { EcrfForm } from "../api/ecrfFormsApi";
 import type { SubjectSummary } from "../api/executionApi";
 import {
@@ -755,7 +792,6 @@ import {
   canVerifySource,
 } from "../canvas/authority";
 import type { PaletteTarget } from "../canvas/palette";
-import { UNAVAILABLE_SCREENS_ISSUE } from "../router/availability.js";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import CanvasFormWorkspace from "../components/canvas/CanvasFormWorkspace.vue";
@@ -812,6 +848,20 @@ const { enabled: aiEnabled, setEnabled: setAiEnabled } = useAiAssistance();
 
 const paletteOpen = ref(false);
 const typedStudy = ref("");
+const inspectorCollapsed = ref(true);
+const inspectorRef = ref<InstanceType<typeof CanvasInspector> | null>(null);
+const topbarRef = ref<HTMLElement | null>(null);
+const topbarHeight = ref(45);
+let topbarResizeObserver: ResizeObserver | null = null;
+
+function syncTopbarHeight() {
+  const el = topbarRef.value;
+  if (!el || typeof el.getBoundingClientRect !== "function") return;
+  const measured = Math.round(el.getBoundingClientRect().height);
+  if (measured > 0) {
+    topbarHeight.value = measured;
+  }
+}
 
 const hasStudyDirectoryService = computed(
   () => typeof kernelApi.listStudies === "function"
@@ -1166,18 +1216,42 @@ const recordParticipant = computed<SubjectSummary | null>(() =>
 );
 
 const loadedForm = ref<EcrfForm | null>(null);
+const formWorkspaceDirty = ref(false);
 const loadedObservation = ref<KernelObservation | null>(null);
 const resolvedLineage = ref<{ siteCode: string; subjectCode: string } | null>(
   null
 );
+const resolvedParticipantId = ref("");
 let lineageRequest = 0;
+
+function isParticipantPending(id: string | undefined): boolean {
+  if (!studyCode.value || !id) return false;
+  if (canvas.knownParticipants[id]) return false;
+  if (canvas.participantLookups[id]) return true;
+  return !canvas.failedParticipantIds[id];
+}
+
+const isRecordParticipantLoading = computed(() =>
+  isParticipantPending(recordRef.value?.id)
+);
+const isSelectedParticipantLoading = computed(() =>
+  isParticipantPending(selectedNode.value?.id)
+);
 
 const loadedFormParticipant = computed<SubjectSummary | null>(() => {
   const pid = loadedForm.value?.participant_id;
   return pid ? (canvas.knownParticipants[pid] ?? null) : null;
 });
+const lineageParticipant = computed<SubjectSummary | null>(() =>
+  resolvedParticipantId.value
+    ? (canvas.knownParticipants[resolvedParticipantId.value] ?? null)
+    : null
+);
 const activeFormParticipant = computed<SubjectSummary | null>(
-  () => recordParticipant.value ?? loadedFormParticipant.value
+  () =>
+    recordParticipant.value ??
+    loadedFormParticipant.value ??
+    lineageParticipant.value
 );
 const activeParticipantNodeText = computed(() => {
   if (recordRef.value) return formatNodeRef(recordRef.value);
@@ -1200,7 +1274,8 @@ const inspectedParticipant = computed(
   () =>
     selectedParticipant.value ??
     recordParticipant.value ??
-    loadedFormParticipant.value
+    loadedFormParticipant.value ??
+    lineageParticipant.value
 );
 const inspectedNodeText = computed(() => {
   const participant = inspectedParticipant.value;
@@ -1219,7 +1294,8 @@ const zoomParticipant = computed(
   () =>
     recordParticipant.value ??
     loadedFormParticipant.value ??
-    selectedParticipant.value
+    selectedParticipant.value ??
+    lineageParticipant.value
 );
 const zoomParticipantCode = computed(
   () =>
@@ -1288,6 +1364,7 @@ function studyLocation(query: StudyQuery = {}, code = studyCode.value) {
 function selectParticipant(participant: SubjectSummary) {
   const node = tryNodeRef("participant", participant.id);
   if (!node) return;
+  inspectorRef.value?.expand();
   router.push(
     studyLocation({
       stage: "conduct",
@@ -1424,12 +1501,16 @@ const observationReturnLabel = computed(() => {
   return `Back to ${studyCode.value} home`;
 });
 
-async function resolveEnrollmentLineage(enrollmentRef: string) {
-  if (!enrollmentRef || typeof kernelApi.getZoomPath !== "function") return;
+async function resolveEnrollmentLineage(
+  enrollmentRef: string
+): Promise<{ req: number; siteCode: string; subjectCode: string } | null> {
+  if (!enrollmentRef || typeof kernelApi.getZoomPath !== "function") {
+    return null;
+  }
   const req = ++lineageRequest;
   try {
     const steps = await kernelApi.getZoomPath(enrollmentRef);
-    if (req !== lineageRequest) return;
+    if (req !== lineageRequest) return null;
     const siteStep = steps.find(
       (s) => s.level === "study_site" && s.mask === null && s.label
     );
@@ -1437,14 +1518,17 @@ async function resolveEnrollmentLineage(enrollmentRef: string) {
       (s) => s.level === "enrollment" && s.mask === null && s.label
     );
     if (siteStep?.label || enrollmentStep?.label) {
-      resolvedLineage.value = {
+      const lineage = {
         siteCode: siteStep?.label ?? "",
         subjectCode: enrollmentStep?.label ?? "",
       };
+      resolvedLineage.value = lineage;
+      return { req, ...lineage };
     }
   } catch {
     // Keep whatever scope context is already known in the URL.
   }
+  return null;
 }
 
 function onFormLoaded(form: EcrfForm) {
@@ -1465,23 +1549,34 @@ function onFormLoaded(form: EcrfForm) {
     }
   }
   if (!zoomParticipant.value && form.enrollment_id) {
-    resolveEnrollmentLineage(`enrollment:${form.enrollment_id}`);
+    void resolveEnrollmentLineage(`enrollment:${form.enrollment_id}`);
   }
 }
 
 function onFormClosed() {
+  formWorkspaceDirty.value = false;
+  loadedForm.value = null;
   router.push(formBackLocation.value);
 }
 
-function onObservationLoaded(obs: KernelObservation) {
+async function onObservationLoaded(obs: KernelObservation) {
   loadedObservation.value = obs;
   if (!zoomParticipant.value && obs.enrollment_ref) {
-    resolveEnrollmentLineage(obs.enrollment_ref);
+    const lineage = await resolveEnrollmentLineage(obs.enrollment_ref);
+    if (lineage?.subjectCode && !zoomParticipant.value) {
+      const participant = await canvas.resolveParticipantByCode(
+        lineage.subjectCode
+      );
+      if (lineage.req === lineageRequest && participant) {
+        resolvedParticipantId.value = participant.id;
+      }
+    }
   }
 }
 
 function selectVersion(version: KernelProtocolVersion) {
   if (!version.ref) return;
+  inspectorRef.value?.expand();
   router.push(
     studyLocation({
       stage: "design",
@@ -1509,7 +1604,7 @@ function applyParticipantFilter(filter: { status: string; siteId: string }) {
 }
 
 function applyStudyQueryFilter(filter: StudyQueriesFilterState) {
-  router.push(
+  router.replace(
     studyLocation({
       stage: "data",
       section: "queries",
@@ -1530,6 +1625,7 @@ function drillToParticipants(status: string) {
 function goToPaletteTarget(target: PaletteTarget) {
   paletteOpen.value = false;
   if (target.ask) {
+    inspectorRef.value?.expand();
     // Ask keeps the view and its selection, and opens Assist with the question.
     router.push({
       name: "study",
@@ -1537,6 +1633,9 @@ function goToPaletteTarget(target: PaletteTarget) {
       query: { ...route.query, ask: target.ask },
     });
     return;
+  }
+  if (target.participant) {
+    inspectorRef.value?.expand();
   }
   const node = target.participant
     ? tryNodeRef("participant", target.participant.id)
@@ -1565,6 +1664,7 @@ watch(
     loadedForm.value = null;
     loadedObservation.value = null;
     resolvedLineage.value = null;
+    resolvedParticipantId.value = "";
     lineageRequest++;
     canvas.openStudy(code);
     if (!code) {
@@ -1573,6 +1673,35 @@ watch(
   },
   { immediate: true }
 );
+
+watch(
+  [
+    studyCode,
+    () => recordRef.value?.id,
+    () => selectedNode.value?.id,
+    () => loadedForm.value?.participant_id,
+  ],
+  ([code, recordId, selectedId, formParticipantId]) => {
+    if (!code) return;
+    const ids = new Set(
+      [recordId, selectedId, formParticipantId].filter((id): id is string =>
+        Boolean(id)
+      )
+    );
+    for (const id of ids) {
+      if (!canvas.knownParticipants[id]) {
+        void canvas.ensureParticipantById(id);
+      }
+    }
+  },
+  { immediate: true }
+);
+
+watch([paletteOpen, studyCode], ([open, code]) => {
+  if (!inAppShell && open && code) {
+    void canvas.ensurePaletteParticipants(code);
+  }
+});
 
 watch(openFormId, (id) => {
   if (!id) {
@@ -1583,6 +1712,8 @@ watch(openFormId, (id) => {
 });
 
 watch(openObservationRef, (refText) => {
+  resolvedParticipantId.value = "";
+  lineageRequest++;
   if (!refText) {
     loadedObservation.value = null;
   }
@@ -1591,6 +1722,7 @@ watch(openObservationRef, (refText) => {
 watch([hasOpenForm, openObservationRef], ([formOpen, obsRef]) => {
   if (!formOpen && !obsRef) {
     resolvedLineage.value = null;
+    resolvedParticipantId.value = "";
     lineageRequest++;
   }
 });
@@ -1645,6 +1777,57 @@ watch(
   { immediate: true }
 );
 
+const UNSAVED_FORM_CONFIRM_MESSAGE =
+  "You have unsaved eCRF draft changes. Are you sure you want to leave?";
+
+function leavesActiveForm(to: RouteLocationNormalized): boolean {
+  const nextStudyCode = single(to.params.studyCode).trim();
+  if (!nextStudyCode || nextStudyCode !== studyCode.value) return true;
+  if (parseNodeRef(to.query.proposal)?.kind === "proposal") return true;
+  if (observationNodeRef(to.query.observation)) return true;
+
+  const nextFormQuery = single(to.query.form).trim();
+  if (nextFormQuery === "new") return true;
+  const nextFormId = collectionInstanceId(nextFormQuery);
+  if (!nextFormId) return true;
+
+  const currentFormId = loadedForm.value?.form_id || openFormId.value;
+  return Boolean(currentFormId && nextFormId !== currentFormId);
+}
+
+function handleBeforeUnload(event: BeforeUnloadEvent) {
+  if (formWorkspaceDirty.value) {
+    event.preventDefault();
+    event.returnValue = "";
+    return "";
+  }
+}
+
+function confirmDiscardUnsavedForm(): boolean {
+  // eslint-disable-next-line no-alert -- Vue Router navigation guards require synchronous window.confirm.
+  return window.confirm(UNSAVED_FORM_CONFIRM_MESSAGE);
+}
+
+if (typeof onBeforeRouteLeave === "function") {
+  onBeforeRouteLeave(() => {
+    if (formWorkspaceDirty.value && !confirmDiscardUnsavedForm()) {
+      return false;
+    }
+  });
+}
+
+if (typeof onBeforeRouteUpdate === "function") {
+  onBeforeRouteUpdate((to) => {
+    if (
+      formWorkspaceDirty.value &&
+      leavesActiveForm(to) &&
+      !confirmDiscardUnsavedForm()
+    ) {
+      return false;
+    }
+  });
+}
+
 function onGlobalKeydown(event: KeyboardEvent) {
   if (inAppShell) return;
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -1654,15 +1837,35 @@ function onGlobalKeydown(event: KeyboardEvent) {
 }
 
 onMounted(() => {
+  window.addEventListener("beforeunload", handleBeforeUnload);
   if (!inAppShell) {
     document.addEventListener("keydown", onGlobalKeydown);
   }
+  syncTopbarHeight();
+  if (
+    typeof ResizeObserver !== "undefined" &&
+    topbarRef.value instanceof HTMLElement
+  ) {
+    topbarResizeObserver = new ResizeObserver(() => syncTopbarHeight());
+    topbarResizeObserver.observe(topbarRef.value);
+  }
 });
-onUnmounted(() => document.removeEventListener("keydown", onGlobalKeydown));
+onUnmounted(() => {
+  window.removeEventListener("beforeunload", handleBeforeUnload);
+  document.removeEventListener("keydown", onGlobalKeydown);
+  if (topbarResizeObserver) {
+    topbarResizeObserver.disconnect();
+    topbarResizeObserver = null;
+  }
+});
 </script>
 
 <style scoped>
 .canvas {
+  --canvas-sticky-offset: 0px;
+  --canvas-pane-top: calc(
+    var(--canvas-sticky-offset) + var(--canvas-topbar-height, 45px)
+  );
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -1672,7 +1875,8 @@ onUnmounted(() => document.removeEventListener("keydown", onGlobalKeydown));
 }
 
 .canvas.canvas-in-shell {
-  min-height: calc(100vh - 57px);
+  --canvas-sticky-offset: var(--shell-header-height, 57px);
+  min-height: calc(100vh - var(--canvas-sticky-offset));
 }
 
 .skip-link {
@@ -1687,6 +1891,9 @@ onUnmounted(() => document.removeEventListener("keydown", onGlobalKeydown));
 }
 
 .topbar {
+  position: sticky;
+  top: var(--canvas-sticky-offset);
+  z-index: 20;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -1820,9 +2027,17 @@ onUnmounted(() => document.removeEventListener("keydown", onGlobalKeydown));
   min-height: 0;
 }
 
+.panes.panes--inspector-collapsed {
+  grid-template-columns: 14rem minmax(0, 1fr) 2.75rem;
+}
+
 .navigator {
+  position: sticky;
+  top: var(--canvas-pane-top);
+  align-self: start;
+  max-height: calc(100vh - var(--canvas-pane-top));
+  overflow-y: auto;
   padding: 12px;
-  border-right: 1px solid var(--border);
   background: var(--semantic-color-surface, #fff);
 }
 
@@ -1863,10 +2078,16 @@ onUnmounted(() => document.removeEventListener("keydown", onGlobalKeydown));
 .workspace {
   padding: 16px;
   min-width: 0;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
 }
 
 .canvas :deep(#canvas-inspector) {
-  border-left: 1px solid var(--border);
+  position: sticky;
+  top: var(--canvas-pane-top);
+  align-self: start;
+  max-height: calc(100vh - var(--canvas-pane-top));
+  overflow-y: auto;
   background: var(--semantic-color-surface, #fff);
 }
 
@@ -2090,17 +2311,29 @@ onUnmounted(() => document.removeEventListener("keydown", onGlobalKeydown));
 }
 
 @media (max-width: 960px) {
-  .panes {
+  .panes,
+  .panes.panes--inspector-collapsed {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .navigator {
-    border-right: 0;
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+    align-self: stretch;
     border-bottom: 1px solid var(--border);
   }
 
-  .canvas :deep(#canvas-inspector) {
+  .workspace {
     border-left: 0;
+    border-right: 0;
+  }
+
+  .canvas :deep(#canvas-inspector) {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+    align-self: stretch;
     border-top: 1px solid var(--border);
   }
 }

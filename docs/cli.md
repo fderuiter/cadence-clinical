@@ -16,6 +16,7 @@ The script runs `node scripts/run-cli.js`, which executes the compiled Native AO
 pnpm cadence doctor
 pnpm cadence check duplication
 pnpm cadence gxp sync --dry-run
+pnpm cadence scaffold post "Ship Kernel Phase 3"
 ```
 
 Some commands also have a `make` target. Those targets use `pnpm cadence` and share its on-demand CLI build.
@@ -35,6 +36,7 @@ Some commands also have a `make` target. Those targets use `pnpm cadence` and sh
 | `make rtm`                               | `cadence gxp validate`                        |
 | `make gxp-snapshot`                      | `CADENCE_GXP_SNAPSHOT=1 cadence gxp snapshot` |
 | `make adr TITLE="..."`                   | `cadence scaffold adr "<title>"`              |
+| `make post TITLE="..."`                  | `cadence scaffold post "<title>"`             |
 | `make db-reset`, `make db-reset-offline` | `cadence db reset`                            |
 
 `make wizard` runs `scripts/setup_wizard.sh` directly. That is the same script as `cadence wizard onboarding`.
@@ -107,6 +109,7 @@ must make it fail.
 | `readmes`             | `validate-readmes`                             |                 | Runs                                                                                                                                   |
 | `codeowners`          | `validate-codeowners`                          |                 | Runs                                                                                                                                   |
 | `workflow-security`   | `validate-workflow-security`, `action-pinning` |                 | Runs                                                                                                                                   |
+| `rulesets`            | `validate-rulesets`                            |                 | Runs                                                                                                                                   |
 | `imports`             | `validate-imports`                             |                 | Runs                                                                                                                                   |
 | `security`            | `audit-security`                               | yes             | Runs on the staged files                                                                                                               |
 | `deid`                | `deid-compliance-scan`                         | yes             | Runs on the staged files                                                                                                               |
@@ -162,19 +165,19 @@ Runs the jobs of `.github/workflows/ci.yml` on this machine, because GitHub Acti
 repository until 2027 (#5017). Each step runs the same command as in CI, in the same order, from the repository root.
 
 ```bash
-pnpm cadence ci                         # lint-and-static, dotnet-quality, native-aot-build, docs-build, security, unit-tests, dotnet-tests, accessibility-e2e and compliance
+pnpm cadence ci                         # actionlint, lint-and-static, dotnet-quality, native-aot-build, docs-build, security, unit-tests, dotnet-tests, accessibility-e2e and compliance
 pnpm cadence ci --job dotnet-tests      # one job (repeat --job for more)
 pnpm cadence ci --job compliance        # a job and the jobs it needs (unit-tests, dotnet-tests)
 pnpm cadence ci --job accessibility-e2e # the Playwright E2E and browser-to-database job alone
 pnpm cadence ci --list                  # what each step runs locally, without running it
 ```
 
-| Option            | Description                                                                                                                                                                                    |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `-j\|--job <job>` | Runs this job and the jobs it needs. Jobs: `lint-and-static`, `dotnet-quality`, `native-aot-build`, `docs-build`, `security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`. |
-| `--allow-skip`    | Accepts a run whose database tests did not execute: without PostgreSQL, or with skips in the integration and E2E results.                                                                      |
-| `--base <ref>`    | The ref that changed files are compared with, for the duplication, DEID and detect-secrets steps. Default: `origin/main`.                                                                      |
-| `--list`          | Prints each step and what it runs locally, then exits `0`.                                                                                                                                     |
+| Option            | Description                                                                                                                                                                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `-j\|--job <job>` | Runs this job and the jobs it needs. Jobs: `actionlint`, `lint-and-static`, `dotnet-quality`, `native-aot-build`, `docs-build`, `security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`.                                           |
+| `--allow-skip`    | Skips steps whose required binary (`actionlint`, `hadolint`, `shellcheck`, `detect-secrets-hook`, `bash`) is missing on `PATH` with the install hint, and accepts a run whose database tests did not execute (without PostgreSQL or with skipped TRX). |
+| `--base <ref>`    | The ref that changed files are compared with, for the duplication, DEID and detect-secrets steps. Default: `origin/main`.                                                                                                                              |
+| `--list`          | Prints each step and what it runs locally, then exits `0`.                                                                                                                                                                                             |
 
 It follows the workflow's rules: inside a job, a failed step stops the later steps unless CI gives them `if: always()`,
 and the compliance job runs only when the frontend and .NET test steps passed. The run itself never stops early. It
@@ -195,11 +198,10 @@ Where it differs from CI:
   `security` whose gate already ran inside `Run Cadence quality sentinels` (the static security audit, secrets and DEID)
   are reported as _covered_ when `Run Cadence quality sentinels` passed; if that step failed, each runs on its own so
   the summary shows which gate failed. The Node install and UI build in later jobs are covered by earlier jobs.
-  The documentation build (`pnpm docs:build`) also starts with `cadence check` and Markdown validation; after that step
-  passed it runs with `CADENCE_DOCS_SKIP_CHECKS=1`, which skips them and saves about two and a half minutes.
-- **The docs build leaves the reports alone.** `pnpm docs:build` regenerates the RTM and IQ/OQ/PQ report as drafts;
-  `cadence ci` puts back the committed copies of both after the step, pass or fail, so the compliance job compares its
-  own regenerated reports with what is committed.
+  The documentation build (`pnpm docs:build`) also runs the read-only `openapi`, `schema-doc`, `markdown` and `rtm`
+  checks; after `Run Cadence quality sentinels` passed it runs with `CADENCE_DOCS_SKIP_CHECKS=1`, which skips the
+  duplicate `openapi`, `schema-doc` and `markdown` gates while keeping `check rtm`, saving several minutes without
+  touching `docs/SDLC` or `docs/schema`.
 - **The tests run once.** The .NET test step writes its TRX files to `TestResults/gxp`, and the compliance job's
   `Generate Compliance Reports` step builds the RTM and IQ/OQ/PQ report from them instead of running `gxp sync`, which
   would run every test again. It writes them to `TestResults/gxp/preview/` (to `docs/SDLC` only with
@@ -207,10 +209,12 @@ Where it differs from CI:
   `Check GxP Snapshot Policy` (`cadence check gxp-snapshot`) then fails if the branch changed the committed reports. With
   `CADENCE_GXP_SNAPSHOT=1` it runs `cadence gxp diff` instead, which fails if the regenerated reports differ from the
   committed ones outside their evidence block, and puts the committed copies back when they match.
-- **Tools are not installed for you.** Hadolint, ShellCheck and detect-secrets run when they are on `PATH` and are
-  reported as skipped, with the install command, when they are not.
-- **Not run:** the Playwright browser install, and the jobs that act on GitHub or container registries (`actionlint`,
-  `container-security`, `classify`, `automerge`, `release-and-archive`, `deploy-docs`).
+- **Required binaries must be on `PATH`.** `actionlint` (`rhysd/actionlint` in CI), Hadolint, ShellCheck,
+  `detect-secrets-hook` and `bash` are not installed for you: when any required binary is missing on `PATH`, the step
+  fails with the install hint so an incomplete environment cannot report green. Pass `--allow-skip` to record missing
+  tool steps as skipped, with the install hint, instead of failing.
+- **Not run:** the Playwright browser install, and the jobs that act on GitHub or container registries
+  (`container-security`, `ci-gate`, `classify`, `automerge`, `release-and-archive`, `deploy-docs`).
 - **Commit first.** CI checks out the commit, so run `cadence ci` on committed work: gates that list files with git (the
   full DEID scan, for example) do not see untracked files, and a changed-files step falls back to the working tree only
   when the branch has no commits over the base.
@@ -219,6 +223,33 @@ Where it differs from CI:
 
 `tests/Cadence.UnitTests/Packages/LocalCiPlanTests.cs` reads `ci.yml` and fails when a job or step is added, renamed or
 removed, or runs a different command, until `packages/cli/src/Services/CiPlan.cs` follows.
+
+### `cadence rulesets`
+
+Validates the declarative GitHub Repository Rulesets in `.github/rulesets/*.json` (`main.json`, `release_branches.json`,
+`version_tags.json`) against `.github/workflows/*.yml` and reconciles them to GitHub via `gh api`.
+
+```bash
+pnpm cadence rulesets --dry-run                       # validate locally and preview planned gh api operations
+pnpm cadence rulesets                                 # reconcile .github/rulesets/*.json to GitHub via gh api
+pnpm cadence rulesets --repo fderuiter/cadence-clinical # target an explicit owner/repo
+```
+
+| Option                | Description                                                                                                                             |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `--dry-run`           | Validates `.github/rulesets/*.json` and workflow parity, prints the planned `gh api` reconciliation, and exits without mutating GitHub. |
+| `--repo <owner/repo>` | Target GitHub repository (`owner/repo`). Defaults to `GITHUB_REPOSITORY`, then `git remote get-url origin`.                             |
+
+Before making any API request, `cadence rulesets` runs the `rulesets` quality gate (`RulesetService.Validate`): every
+branch ruleset must set `strict_required_status_checks_policy: true`, pin required status checks to GitHub Actions
+(`integration_id: 15368`), require `CI Gate` and `Check for Merge Conflicts`, and match active pull-request workflow
+jobs (`CI Gate` in `.github/workflows/ci.yml` must use `if: always()` and evaluate every pull-request validation job).
+
+Without `--dry-run`, it fetches `gh api --paginate repos/<owner>/<repo>/rulesets?per_page=100`, updates existing
+rulesets by `name` (`PUT repos/<owner>/<repo>/rulesets/<id> --input <file>`), and creates missing ones
+(`POST repos/<owner>/<repo>/rulesets --input <file>`). Requires `gh` authenticated with `Administration: write` on the
+target repository, and exits `1` whenever validation fails or any `gh api` call returns a non-zero exit code or invalid
+JSON.
 
 ### `cadence dev`
 
@@ -245,7 +276,7 @@ Paths are relative to the repository root. "Calls" is the method the command run
 | `detect-duplication`          | Finds duplicated blocks (over 15 normalized lines) in `.cs`, `.py`, `.js`, `.vue` and `.css` files under `apps/` and `packages/`. Writes `duplication_summary.json`. Fails only when a duplicate involves a `.cs` file.                                                                                                                               | `DuplicationDetectorService.DetectDuplication`                                            |
 | `validate-imports`            | Fails when a `.cs` file in one `apps/<service>` has `using Cadence.Apps.<other service>`.                                                                                                                                                                                                                                                             | `ImportValidatorService.ValidateImports`                                                  |
 | `validate-dependencies`       | Fails when `apps/web/package.json` lists `node-forge`, `elliptic` or `jose`. Passes if the file is missing.                                                                                                                                                                                                                                           | `DependencyValidatorService.ValidateDependencies`                                         |
-| `validate-path-patterns`      | Fails on directories named `tmp`, `temp`, `scratch` or `old_src`, `.vue` files outside `apps/` and `packages/`, and `.sh` files outside `scripts/`.                                                                                                                                                                                                   | `PathPatternValidatorService.ValidatePathPatterns`                                        |
+| `validate-path-patterns`      | Fails on directories named `tmp`, `temp`, `scratch` or `old_src`, `.vue` files outside `apps/`, `packages/` and `docs/.vitepress/`, and `.sh` files outside `scripts/`.                                                                                                                                                                               | `PathPatternValidatorService.ValidatePathPatterns`                                        |
 | `validate-readmes`            | Fails when a direct subdirectory of `apps/` or `packages/` has no `README.md`, or its README has no `# ` title.                                                                                                                                                                                                                                       | `ReadmeValidatorService.ValidateReadmes`                                                  |
 | `validate-codeowners`         | Fails when `.github/CODEOWNERS` is missing or empty.                                                                                                                                                                                                                                                                                                  | `CodeownersValidatorService.ValidateCodeowners`                                           |
 | `validate-workflow-security`  | Validates `.github/workflows/*.{yml,yaml}` and `.github/actions/**/action.{yml,yaml}` for 40-hex commit SHAs with version comments, `sha256:` digests on `docker://` refs, `persist-credentials: false` on `actions/checkout`, and least-privilege permissions.                                                                                       | `WorkflowSecurityValidatorService.ValidateWorkflowSecurity`                               |
@@ -362,6 +393,19 @@ Runs `bash scripts/migrate_service_wizard.sh -ServiceName <name>` in the current
 Creates `docs/adr/<yyyy-mm-dd>-<slug>.md` from a built-in template. The ADR number is one more than the highest `ADR-<n>:` found on the first line of existing ADRs, or 100 if there are none. Fails if the file already exists. Appends a link to `docs/adr/index.md` if that file exists.
 
 The title is required. With make, pass it as `make adr TITLE="Use X for Y"`.
+
+#### `cadence scaffold post <title>`
+
+Creates `docs/blog/<yyyy-mm-dd>-<slug>.md` with YAML frontmatter (`title`, `date`, `authors`, `summary`, `tags`, `draft`, `related`) and structured Markdown sections, then updates `docs/DOCUMENTATION_INDEX.md` under `## Engineering blog` when that file exists. Posts start with `draft: true` by default so drafts stay excluded from public index pages, site search, and `/feed.xml` until flipped to `draft: false` (or created with `--publish`). Fails with exit code `1` if the title produces an empty slug or the dated file already exists.
+
+The title is required. With make, pass it as `make post TITLE="Ship X"`.
+
+| Option                 | Description                                                                                                                            |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `-a\|--author <value>` | Author GitHub handle or display name (comma-separated for multiple, e.g. `fderuiter` or `--author=@fderuiter`). Default: `@fderuiter`. |
+| `-t\|--tag <slug>`     | Topic tag slug; repeat or comma-separate for multiple tags. Default: `engineering`.                                                    |
+| `-s\|--summary <text>` | One-sentence summary excerpt for the blog index and RSS feed. Defaults to a sentence derived from `<title>`.                           |
+| `--publish`            | Writes `draft: false` so the post is published immediately instead of starting as a draft.                                             |
 
 ### `cadence hook`
 

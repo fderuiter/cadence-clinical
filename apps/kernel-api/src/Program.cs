@@ -11,6 +11,7 @@ using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Application.Search;
 using Cadence.Kernel.Application.Simulation;
 using Cadence.Kernel.Host;
+using Cadence.Kernel.Host.Onboarding;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.Activity;
@@ -50,8 +51,14 @@ string connectionString = CadenceDatabaseExtensions.ResolvePostgresConnectionStr
 KernelMigrationHostedService.Register(builder.Services, builder.Configuration, connectionString);
 
 // A local stack's sign-ins name a tenant code (cadence-local in the local realm, ADR-2514); in Development the host can
-// provision that tenant on start, as a platform operator only it holds (ADR-2542). Refused in any other environment.
-string[] platformOperators = DevelopmentTenantBootstrap.Register(builder.Services, builder.Configuration, builder.Environment);
+// provision that tenant on start, as a platform operator it holds (ADR-2542). Self-service trial onboarding uses a
+// dedicated host-scoped service account across environments so authenticated OIDC callers without a tenant can bootstrap
+// an isolated trial workspace through the command pipeline.
+string[] platformOperators =
+[
+    .. DevelopmentTenantBootstrap.Register(builder.Services, builder.Configuration, builder.Environment),
+    KernelAuthorityOptions.TrialOnboardingOperator.Id,
+];
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.Services.AddHttpContextAccessor();
 builder.Services
@@ -62,8 +69,8 @@ builder.Services
     .AddKernelSearch()
     .AddKernelAuthorization()
 
-    // Decisions come from the caller's grants, roles and delegations (ADR-2455). The only platform operator is the
-    // development tenant bootstrap, and only when it is configured (ADR-2542); callers never act as it.
+    // Decisions come from the caller's grants, roles and delegations (ADR-2455). Platform operators are host-scoped
+    // service accounts (development bootstrap when configured, plus self-service trial onboarding); callers never act as them.
     .AddKernelAuthorityEvaluator(platformOperators)
 
     // The activity stream (ADR-2485). This is the one host with kernel persistence, so it also runs the projector
@@ -106,6 +113,8 @@ builder.Services.AddIntelligenceTools().AddIntelligenceMcp();
 
 // The kernel tenant comes from the tenant code the gateway signs, through the kernel's tenant directory (ADR-2540).
 builder.Services.AddSingleton<IKernelTenantResolver, DirectoryTenantResolver>();
+builder.Services.AddKeycloakOnboarding(builder.Configuration);
+builder.Services.AddScoped<TrialOnboardingService>();
 
 builder.Services.AddHealthChecks()
     .AddCheck("kernel-database", new KernelDatabaseHealthCheck(connectionString), tags: [CadenceTelemetryExtensions.ReadinessTag]);
@@ -118,7 +127,13 @@ app.MapCadenceHealthAndStatusEndpoints(
     "kernel",
     "Clinical Kernel API health probe.",
     "Returns the Clinical Kernel API's operational status.");
-app.MapKernelApi().MapKernelReads().MapKernelStudyImports().MapKernelObservations().MapKernelProposals();
+app.MapKernelApi()
+    .MapKernelReads()
+    .MapKernelStudyImports()
+    .MapKernelObservations()
+    .MapKernelProposals()
+    .MapKernelEntitlements()
+    .MapTrialOnboarding();
 app.MapIntelligenceModule();
 app.MapExecutionModule();
 app.MapIntelligenceMcp();

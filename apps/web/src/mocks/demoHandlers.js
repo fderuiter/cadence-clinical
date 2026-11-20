@@ -62,6 +62,29 @@ export function createWebDemoHandlers(store = webDemoStore) {
     }),
 
     // Kernel Search, Nodes, Zoom Path, Children, Commands, Authorization
+    http.get("*/api/v1/kernel/entitlements", () =>
+      HttpResponse.json(store.getEntitlements())
+    ),
+    http.post("*/api/v1/kernel/entitlements/tier", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const updated = store.upgradeSubscriptionTier(body?.tier);
+      if (!updated) {
+        return HttpResponse.json(
+          {
+            type: "https://cadence.clinical/errors/K.Commercial.TierInvalid",
+            title: "Invalid commercial tier",
+            status: 400,
+            code: "K.Commercial.TierInvalid",
+          },
+          { status: 400 }
+        );
+      }
+      return HttpResponse.json(updated);
+    }),
+    http.post("*/api/v1/kernel/onboarding/trial", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return HttpResponse.json(store.bootstrapTrial(body));
+    }),
     http.get("*/api/v1/kernel/search", ({ request }) => {
       const url = new URL(request.url);
       const q = url.searchParams.get("q") || "";

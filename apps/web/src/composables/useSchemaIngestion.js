@@ -1,5 +1,6 @@
 import { ref, computed } from "vue";
 import { describeKernelError, kernelApi } from "../api/kernelApi";
+import { useToastStore } from "../stores/toasts.js";
 
 const MAX_SYNC_UPLOAD_BYTES = 10 * 1024 * 1024;
 
@@ -20,6 +21,10 @@ export function useSchemaIngestion(store) {
   const rejectingItemId = ref(null);
   const rejectItemReason = ref("");
   const promoteChangeReason = ref("");
+
+  function notify(tone, title, message) {
+    useToastStore().push({ tone, title, message });
+  }
 
   const unreviewedCount = computed(() => {
     if (!store.candidateDraft || !store.candidateDraft.items) return 0;
@@ -81,7 +86,31 @@ export function useSchemaIngestion(store) {
       file.type === "text/xml" ||
       file.type === "application/json";
 
+    const isPdf = lowerName.endsWith(".pdf") || file.type === "application/pdf";
+
     if (!isXmlOrJson) {
+      if (isPdf && typeof store?.uploadProtocolDocument === "function") {
+        importingDraft.value = true;
+        try {
+          await store.uploadProtocolDocument(
+            file,
+            "Uploader triggers protocol ingestion scan."
+          );
+          const message =
+            "Protocol Document ingested successfully. Candidate draft loaded.";
+          importSuccessMessage.value = message;
+          notify("success", "Protocol ingested", message);
+        } catch (err) {
+          const message = "Ingestion failed: " + (err?.message || String(err));
+          importErrorMessage.value = message;
+          notify("error", "Ingestion failed", message);
+        } finally {
+          importingDraft.value = false;
+          if (input) input.value = "";
+        }
+        return;
+      }
+
       importErrorMessage.value = `Unsupported file '${file.name}'. Upload an ODM v1.3.2 XML (.xml) or USDM v4 JSON (.json) file.`;
       if (input) input.value = "";
       return;
@@ -192,7 +221,9 @@ export function useSchemaIngestion(store) {
         "Accepted by clinical reviewer"
       );
     } catch (err) {
-      importErrorMessage.value = "Transition failed: " + err.message;
+      const message = "Transition failed: " + (err?.message || String(err));
+      importErrorMessage.value = message;
+      notify("error", "Transition failed", message);
     }
   }
 
@@ -210,8 +241,9 @@ export function useSchemaIngestion(store) {
 
   async function saveEditItem(itemId) {
     if (!editItemReason.value.trim()) {
-      importErrorMessage.value =
-        "Change reason justification is mandatory for edits!";
+      const message = "Change reason justification is mandatory for edits!";
+      importErrorMessage.value = message;
+      notify("error", "Reason required", message);
       return;
     }
     const item = store.candidateDraft.items[itemId];
@@ -232,7 +264,9 @@ export function useSchemaIngestion(store) {
       editItemValue.value = "";
       editItemReason.value = "";
     } catch (err) {
-      importErrorMessage.value = "Transition failed: " + err.message;
+      const message = "Transition failed: " + (err?.message || String(err));
+      importErrorMessage.value = message;
+      notify("error", "Transition failed", message);
     }
   }
 
@@ -248,8 +282,9 @@ export function useSchemaIngestion(store) {
 
   async function confirmRejectItem(itemId) {
     if (!rejectItemReason.value.trim()) {
-      importErrorMessage.value =
-        "Change reason justification is mandatory for rejection!";
+      const message = "Change reason justification is mandatory for rejection!";
+      importErrorMessage.value = message;
+      notify("error", "Reason required", message);
       return;
     }
     try {
@@ -262,13 +297,17 @@ export function useSchemaIngestion(store) {
       rejectingItemId.value = null;
       rejectItemReason.value = "";
     } catch (err) {
-      importErrorMessage.value = "Transition failed: " + err.message;
+      const message = "Transition failed: " + (err?.message || String(err));
+      importErrorMessage.value = message;
+      notify("error", "Transition failed", message);
     }
   }
 
   async function promoteCandidate() {
     if (!promoteChangeReason.value.trim()) {
-      alert("Promotion change reason justification is mandatory!");
+      const message = "Promotion change reason justification is mandatory!";
+      importErrorMessage.value = message;
+      notify("error", "Reason required", message);
       return;
     }
     try {
@@ -276,11 +315,15 @@ export function useSchemaIngestion(store) {
         store.candidateDraft.id,
         promoteChangeReason.value
       );
-      importSuccessMessage.value =
+      const message =
         "Candidate promoted successfully into formal DRAFT version!";
+      importSuccessMessage.value = message;
+      notify("success", "Candidate promoted", message);
       promoteChangeReason.value = "";
     } catch (err) {
-      importErrorMessage.value = "Promotion failed: " + err.message;
+      const message = "Promotion failed: " + (err?.message || String(err));
+      importErrorMessage.value = message;
+      notify("error", "Promotion failed", message);
     }
   }
 

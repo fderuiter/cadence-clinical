@@ -498,15 +498,31 @@ describe("EcrfFormPanel: a kernel form instance saved a page at a time (ADR-2622
     expect(view.find('[data-testid="ecrf-form-id"]').text()).toBe(FORM_ID);
   });
 
-  it("reports a form that can't be loaded", async () => {
-    vi.mocked(ecrfFormsApi.getForm).mockRejectedValue(
-      new ApiError("Form does not exist.", 404)
-    );
-    const view = await mountWith({ formId: FORM_ID });
+  it("reports a form that can't be loaded and retries the read even when enrollmentContext hides #ecrf-form-load", async () => {
+    vi.mocked(ecrfFormsApi.getForm)
+      .mockRejectedValueOnce(new ApiError("Form service unavailable.", 503))
+      .mockResolvedValueOnce(form() as never);
+    const view = await mountWith({
+      formId: FORM_ID,
+      enrollmentContext: {
+        enrollmentId: "0192f3c4-5e6a-7b8c-9d0e-00000000e001",
+        subjectCode: "017-0001",
+      },
+    });
 
+    expect(view.find("#ecrf-form-load").exists()).toBe(false);
     expect(view.find('[role="alert"]').text()).toContain(
-      "The form could not be loaded: Form does not exist."
+      "The form could not be loaded: Form service unavailable."
     );
+    const retryBtn = view.find("#ecrf-form-retry");
+    expect(retryBtn.exists()).toBe(true);
+
+    await retryBtn.trigger("click");
+    await flushPromises();
+
+    expect(ecrfFormsApi.getForm).toHaveBeenCalledTimes(2);
+    expect(ecrfFormsApi.getForm).toHaveBeenLastCalledWith(FORM_ID);
+    expect(view.find('[data-testid="ecrf-form-id"]').text()).toBe(FORM_ID);
   });
 });
 
@@ -932,6 +948,32 @@ describe("EcrfFormPanel: queries on form values (#5461)", () => {
       })
     );
     expect(view.find("#query-query-a").text()).toContain("Answered");
+  });
+
+  it("retries failed query reads via #ecrf-queries-retry while preserving unsaved item entries", async () => {
+    vi.mocked(ecrfQueriesApi.listForForm)
+      .mockRejectedValueOnce(new ApiError("Query read failed", 503))
+      .mockResolvedValueOnce([formQuery()] as never);
+
+    const view = await mountWith();
+    await view.find("#ecrf-item-DIABP").setValue("84");
+
+    const errorAlert = view.find('#ecrf-form-queries [role="alert"]');
+    expect(errorAlert.text()).toContain("The queries could not be loaded:");
+    const retryBtn = view.find("#ecrf-queries-retry");
+    expect(retryBtn.exists()).toBe(true);
+
+    await retryBtn.trigger("click");
+    await flushPromises();
+
+    expect(ecrfQueriesApi.listForForm).toHaveBeenCalledTimes(2);
+    expect(ecrfQueriesApi.listForForm).toHaveBeenLastCalledWith(FORM_ID);
+    expect(view.find("#ecrf-queries-retry").exists()).toBe(false);
+    expect(view.findAll("#ecrf-form-queries .form-query")).toHaveLength(1);
+    expect(
+      (view.find("#ecrf-item-DIABP").element as HTMLInputElement).value
+    ).toBe("84");
+    expect(view.find("#ecrf-form-save").text()).toBe("Save page (1)");
   });
 });
 
@@ -1545,6 +1587,93 @@ describe("EcrfFormPanel: account-scoped browser drafts", () => {
       `/studies/CAD-101?stage=conduct&form=collection_instance:${FORM_ID}&observation=observation:${OBS_ID}`
     );
   });
+
+  it("flushes pending <500ms debounced drafts on unmount and across form switches or prop resets without deleting saved drafts", async () => {
+    const SECOND_FORM_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000f002";
+    signInUser("crc-1", "tenant-1");
+    const firstKey = scopedKey(
+      { tenantId: "tenant-1", userId: "crc-1" },
+      "ecrf_form_draft",
+      FORM_ID
+    )!;
+    const secondKey = scopedKey(
+      { tenantId: "tenant-1", userId: "crc-1" },
+      "ecrf_form_draft",
+      SECOND_FORM_ID
+    )!;
+
+    vi.mocked(ecrfFormsApi.getForm).mockImplementation(
+      async (requestedId) => form({ form_id: requestedId }) as never
+    );
+
+    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    await flushPromises();
+
+    await wrapper.find("#ecrf-item-DIABP").setValue("86");
+    await nextTick();
+    vi.advanceTimersByTime(100);
+    // Debounce timer has not fired yet.
+    expect(localStorage.getItem(firstKey)).toBeNull();
+
+    // Unmounting before 500ms flushes the pending draft immediately.
+    wrapper.unmount();
+    wrapper = undefined;
+    expect(JSON.parse(localStorage.getItem(firstKey)!)).toEqual({
+      form_id: FORM_ID,
+      items: {
+        DIABP: { text: "86", missing: "", revision: 0 },
+      },
+    });
+
+    // Remounting restores first form's draft; switching formId before 500ms flushes updated draft.
+    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    await flushPromises();
+    expect(
+      (wrapper.find("#ecrf-item-DIABP").element as HTMLInputElement).value
+    ).toBe("86");
+
+    await wrapper.find("#ecrf-item-COMMENT").setValue("switch before timer");
+    await nextTick();
+    vi.advanceTimersByTime(100);
+
+    await wrapper.setProps({ formId: SECOND_FORM_ID });
+    await flushPromises();
+
+    expect(JSON.parse(localStorage.getItem(firstKey)!)).toEqual({
+      form_id: FORM_ID,
+      items: {
+        DIABP: { text: "86", missing: "", revision: 0 },
+        COMMENT: { text: "switch before timer", missing: "", revision: 0 },
+      },
+    });
+
+    // Edit second form and clear formId prop before 500ms: dismiss flushes draft and resets panel without confirm or deletion.
+    const confirmSpy = vi.spyOn(window, "confirm");
+    await wrapper.find("#ecrf-item-SYSBP").setValue("134");
+    await nextTick();
+    vi.advanceTimersByTime(100);
+
+    await wrapper.setProps({ formId: null });
+    await flushPromises();
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(wrapper.find("#ecrf-form-new").exists()).toBe(true);
+    expect(wrapper.emitted("dirty-change")?.at(-1)).toEqual([false]);
+    expect(JSON.parse(localStorage.getItem(secondKey)!)).toEqual({
+      form_id: SECOND_FORM_ID,
+      items: {
+        SYSBP: { text: "134", missing: "", revision: 3 },
+      },
+    });
+    expect(localStorage.getItem(firstKey)).not.toBeNull();
+
+    // Returning to the second form restores its preserved draft.
+    await wrapper.setProps({ formId: SECOND_FORM_ID });
+    await flushPromises();
+    expect(
+      (wrapper.find("#ecrf-item-SYSBP").element as HTMLInputElement).value
+    ).toBe("134");
+  });
 });
 
 describe("EcrfFormPanel: source data verification, lock scopes, and item highlighting", () => {
@@ -1865,5 +1994,23 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
     expect(
       (wrapper.find("#ecrf-item-SYSBP").element as HTMLInputElement).value
     ).toBe("126");
+  });
+
+  it("wraps the six-column items table in a keyboard-focusable accessible horizontal scroll region", async () => {
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
+    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    await flushPromises();
+
+    const scrollRegion = wrapper.find('[data-testid="ecrf-form-items-scroll"]');
+    expect(scrollRegion.exists()).toBe(true);
+    expect(scrollRegion.attributes("role")).toBe("region");
+    expect(scrollRegion.attributes("tabindex")).toBe("0");
+    expect(scrollRegion.attributes("aria-label")).toBe(
+      "Case report form items"
+    );
+    expect(scrollRegion.find('[data-testid="ecrf-form-items"]').exists()).toBe(
+      true
+    );
+    await expect(wrapper.element).toBeAccessible();
   });
 });
