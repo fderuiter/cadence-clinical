@@ -1,6 +1,7 @@
 using System.Text.Json;
 
 using Cadence.Database;
+using Cadence.Ddf;
 using Cadence.Kernel.Api;
 using Cadence.Kernel.Application.Activity;
 using Cadence.Kernel.Application.Authorization;
@@ -16,6 +17,7 @@ using Cadence.Kernel.Persistence.Activity;
 using Cadence.Kernel.Persistence.Navigation;
 using Cadence.Kernel.Persistence.Search;
 using Cadence.Kernel.Persistence.Simulation;
+using Cadence.Kernel.Protocol.Import;
 using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Time;
 using Cadence.Modules.Execution;
@@ -86,6 +88,7 @@ builder.Services.AddScoped<ServiceActorScope>();
 builder.Services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
 builder.Services.AddSingleton<IKernelChangeReason, SignedChangeReason>();
 builder.Services.AddScoped<IKernelReadAccess, KernelReadAccess>();
+builder.Services.AddSingleton<IProtocolDesignImporter, ProtocolDesignImporterService>();
 
 // A reader sees what its grants in effect cover (ADR-2457); everything else is masked in place (ADR-2471). Blinding and
 // the IdentityVault (#4782) are not decided here yet.
@@ -115,7 +118,7 @@ app.MapCadenceHealthAndStatusEndpoints(
     "kernel",
     "Clinical Kernel API health probe.",
     "Returns the Clinical Kernel API's operational status.");
-app.MapKernelApi().MapKernelReads().MapKernelObservations().MapKernelProposals();
+app.MapKernelApi().MapKernelReads().MapKernelStudyImports().MapKernelObservations().MapKernelProposals();
 app.MapIntelligenceModule();
 app.MapExecutionModule();
 app.MapIntelligenceMcp();

@@ -326,6 +326,92 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/studies": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lists visible studies in the caller's tenant. */
+    get: operations["KernelListStudies"];
+    put?: never;
+    /** Registers a new study in the caller's tenant with a signed reason for change (study.register). */
+    post: operations["KernelCreateStudy"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/organizations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lists visible organizations in the caller's tenant. */
+    get: operations["KernelListOrganizations"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/protocol-templates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lists bundled standard CDISC Library eCRF templates available for protocol draft import. */
+    get: operations["KernelListProtocolTemplates"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/protocol-versions/{versionRef}/design-summary": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Returns a viewable summary of a protocol version's forms, ordered items, and import notes. */
+    get: operations["KernelGetProtocolDesignSummary"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/studies/{studyRef}/protocol-imports": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Synchronously imports ODM v1.3.2 XML, USDM v4 JSON, or bundled eCRF templates into a protocol draft. */
+    post: operations["KernelImportProtocolDraft"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/kernel/observations/{observationRef}": {
     parameters: {
       query?: never;
@@ -1317,6 +1403,14 @@ export interface components {
       /** Format: int64 */
       expected_version: number | string;
     };
+    Kernel_KernelCreateStudyRequest: {
+      study_code: string;
+      title: string;
+      phase: string;
+      sponsor_ref?: null | string;
+      sponsor_code?: null | string;
+      sponsor_name?: null | string;
+    };
     Kernel_KernelDecisionResponse: {
       capability: string;
       verb_class: string;
@@ -1361,6 +1455,14 @@ export interface components {
     Kernel_KernelExplanationStepResponse: {
       claim: string;
       evidence: string[];
+    };
+    Kernel_KernelImportProtocolJsonRequest: {
+      format?: null | string;
+      file_name?: null | string;
+      content?: null | string;
+      template_ids?: null | string[];
+      /** @default false */
+      replace_forms: boolean;
     };
     Kernel_KernelLineageEdgeResponse: {
       from: string;
@@ -1430,6 +1532,12 @@ export interface components {
       /** Format: int32 */
       revision: number | string;
     };
+    Kernel_KernelOrganizationSummaryResponse: {
+      ref: string;
+      code: string;
+      name: string;
+      kind: string;
+    };
     Kernel_KernelProposalAffectedResponse: {
       ref: string;
       mask: null | string;
@@ -1481,6 +1589,50 @@ export interface components {
       /** Format: date-time */
       decided_at: null | string;
       decided_by: null | string;
+    };
+    Kernel_KernelProtocolDraftSummaryResponse: {
+      version: components["schemas"]["Kernel_KernelProtocolVersionResponse"];
+      title: string;
+      /** Format: int32 */
+      form_count: number | string;
+      /** Format: int32 */
+      item_count: number | string;
+      forms: components["schemas"]["Kernel_KernelProtocolFormSummaryResponse"][];
+      import_notes: components["schemas"]["Kernel_KernelProtocolImportNoteResponse"][];
+    };
+    Kernel_KernelProtocolFormItemResponse: {
+      id: string;
+      /** Format: int32 */
+      display_order: number | string;
+      prompt: string;
+      concept: string;
+      required: boolean;
+      value_kind: null | string;
+      unit: null | string;
+    };
+    Kernel_KernelProtocolFormSummaryResponse: {
+      id: string;
+      /** Format: int32 */
+      display_order: number | string;
+      name: string;
+      /** Format: int32 */
+      item_count: number | string;
+      /** Format: int32 */
+      required_item_count: number | string;
+      items: components["schemas"]["Kernel_KernelProtocolFormItemResponse"][];
+    };
+    Kernel_KernelProtocolImportNoteResponse: {
+      source: string;
+      message: string;
+    };
+    Kernel_KernelProtocolTemplateResponse: {
+      id: string;
+      category: string;
+      form_oid: string;
+      form_name: string;
+      file_name: string;
+      /** Format: int32 */
+      item_count: number | string;
     };
     Kernel_KernelProtocolVersionResponse: {
       ref: null | string;
@@ -1599,6 +1751,17 @@ export interface components {
       /** Format: int32 */
       window_after: number | string;
       locations: string[];
+    };
+    Kernel_KernelStudySummaryResponse: {
+      ref: string;
+      code: string;
+      title: string;
+      phase: string;
+      sponsor_ref: string;
+      sponsor_code: string;
+      sponsor_name: string;
+      /** Format: int32 */
+      site_count: number | string;
     };
     Kernel_KernelVerifyObservationRequest: {
       enrollment_ref: string;
@@ -2734,6 +2897,331 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelListStudies: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelStudySummaryResponse"][];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelCreateStudy: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json":
+          null | components["schemas"]["Kernel_KernelCreateStudyRequest"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelStudySummaryResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Study.SponsorUnknown`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Study.StudyCodeTaken`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Study.CodeRequired`, `K.Study.TitleRequired`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelListOrganizations: {
+    parameters: {
+      query?: {
+        kind?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelOrganizationSummaryResponse"][];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelListProtocolTemplates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelProtocolTemplateResponse"][];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelGetProtocolDesignSummary: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        versionRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelProtocolDraftSummaryResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelImportProtocolDraft: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        studyRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_KernelImportProtocolJsonRequest"];
+        "multipart/form-data": components["schemas"]["Kernel_KernelImportProtocolJsonRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelProtocolDraftSummaryResponse"];
+        };
+      };
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelProtocolDraftSummaryResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`, `K.Protocol.StudyUnknown`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Protocol.FirstVersionExists`, `K.Protocol.InvalidTransition`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Payload Too Large */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Protocol.AmendmentInvalid`, `K.Protocol.AmendmentNotAllowed`, `K.Protocol.ContentInvalid`, `K.Protocol.ContentRequired`. */
+      422: {
         headers: {
           [name: string]: unknown;
         };

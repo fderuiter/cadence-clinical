@@ -564,6 +564,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2546: Isolate Static Demo Builds with Stateful MSW Handlers](adr/2026-11-19-isolate-static-demo-builds-with-stateful-msw-handlers.md) | Current | - Status: Accepted |
 | [ADR-2817: Caller-Bound Participant Self-Service Wallet and Receipt OCR Capabilities](adr/2026-11-19-caller-bound-participant-self-service-wallet-and-receipt-ocr-capabilities.md) | Current | - Status: Accepted |
 | [ADR-2818: Clinical and Gateway Endpoints Take Time From IClock and Ban TimeProvider](adr/2026-11-20-clinical-and-gateway-endpoints-take-time-from-iclock-and-ban-timeprovider.md) | Current | - Status: Accepted |
+| [ADR-2476: Synchronous CDISC ODM v1.3.2 and USDM v4 Protocol Draft Import and Self-Service Study Registration](adr/2026-11-20-synchronous-odm-usdm-protocol-draft-import.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

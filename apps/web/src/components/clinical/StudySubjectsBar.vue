@@ -11,7 +11,7 @@
       v-model="studyCode"
       type="text"
       autocomplete="off"
-      placeholder="Study code, e.g. CAD-101"
+      placeholder="Study code, e.g. CADENCE-101"
     />
     <button
       id="btn-load-study-subjects"

@@ -1,8 +1,19 @@
 import { ref, computed } from "vue";
+import { describeKernelError, kernelApi } from "../api/kernelApi";
+
+const MAX_SYNC_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 export function useSchemaIngestion(store) {
   const fileInputRef = ref(null);
   const selectedFileName = ref("");
+  const importChangeReason = ref("Import protocol draft into study");
+  const selectedTemplateIds = ref([]);
+  const availableTemplates = ref([]);
+  const importingDraft = ref(false);
+  const importSuccessMessage = ref("");
+  const importErrorMessage = ref("");
+  const importedDraftSummary = ref(null);
+
   const editingItemId = ref(null);
   const editItemValue = ref("");
   const editItemReason = ref("");
@@ -17,25 +28,145 @@ export function useSchemaIngestion(store) {
     ).length;
   });
 
+  function makeIdempotencyKey() {
+    if (typeof globalThis.crypto?.randomUUID === "function") {
+      return globalThis.crypto.randomUUID();
+    }
+    return `schema-import-${Math.random().toString(36).slice(2)}`;
+  }
+
+  function resolveTargetStudyRef() {
+    return (
+      store?.activeStudyId ||
+      store?.currentStudyId ||
+      store?.currentUsdm?.studyId ||
+      "CADENCE-101"
+    );
+  }
+
+  function setFileInputElement(el) {
+    fileInputRef.value = el;
+  }
+
   function triggerFileSelect() {
-    if (fileInputRef.value) {
+    importErrorMessage.value = "";
+    if (fileInputRef.value && typeof fileInputRef.value.click === "function") {
       fileInputRef.value.click();
     }
   }
 
+  async function loadProtocolTemplates() {
+    if (typeof kernelApi?.listProtocolTemplates !== "function") return;
+    try {
+      availableTemplates.value = await kernelApi.listProtocolTemplates();
+    } catch {
+      // Keep file upload available even if template catalog cannot be loaded.
+    }
+  }
+
   async function triggerDocumentUpload(event) {
-    const file = event.target.files[0];
+    const input = event?.target;
+    const file = input?.files?.[0];
     if (!file) return;
 
     selectedFileName.value = file.name;
+    importErrorMessage.value = "";
+    importSuccessMessage.value = "";
+
+    const lowerName = file.name.toLowerCase();
+    const isXmlOrJson =
+      lowerName.endsWith(".xml") ||
+      lowerName.endsWith(".json") ||
+      file.type === "application/xml" ||
+      file.type === "text/xml" ||
+      file.type === "application/json";
+
+    if (!isXmlOrJson) {
+      importErrorMessage.value = `Unsupported file '${file.name}'. Upload an ODM v1.3.2 XML (.xml) or USDM v4 JSON (.json) file.`;
+      if (input) input.value = "";
+      return;
+    }
+
+    if (file.size > MAX_SYNC_UPLOAD_BYTES) {
+      importErrorMessage.value = `File '${file.name}' exceeds the 10 MB synchronous upload limit.`;
+      if (input) input.value = "";
+      return;
+    }
+
+    const reason = importChangeReason.value.trim();
+    if (!reason) {
+      importErrorMessage.value =
+        "Provide a reason for change before importing a protocol file.";
+      return;
+    }
+
+    if (typeof kernelApi?.importProtocolDraft !== "function") {
+      importErrorMessage.value = "Protocol import service is unavailable.";
+      return;
+    }
+
+    importingDraft.value = true;
     try {
-      await store.uploadProtocolDocument(
+      const summary = await kernelApi.importProtocolDraft({
+        studyRef: resolveTargetStudyRef(),
         file,
-        "Uploader triggers protocol ingestion scan."
-      );
-      alert("Protocol Document ingested successfully. Candidate draft loaded.");
+        templateIds: selectedTemplateIds.value,
+        reason,
+        idempotencyKey: makeIdempotencyKey(),
+      });
+      importedDraftSummary.value = summary;
+      const notesCount = summary.import_notes?.length ?? 0;
+      const notesSuffix =
+        notesCount > 0
+          ? ` (${notesCount} import ${notesCount === 1 ? "note" : "notes"} attached)`
+          : "";
+      importSuccessMessage.value = `Imported Draft version ${summary.version.number} with ${summary.form_count} ${summary.form_count === 1 ? "form" : "forms"} and ${summary.item_count} ${summary.item_count === 1 ? "item" : "items"}${notesSuffix}.`;
+      selectedTemplateIds.value = [];
     } catch (err) {
-      alert("Ingestion failed: " + err.message);
+      importErrorMessage.value = describeKernelError(err);
+    } finally {
+      importingDraft.value = false;
+      if (input) input.value = "";
+    }
+  }
+
+  async function importSelectedTemplates() {
+    importErrorMessage.value = "";
+    importSuccessMessage.value = "";
+
+    if (selectedTemplateIds.value.length === 0) {
+      importErrorMessage.value =
+        "Select at least one CDISC Library eCRF template to import.";
+      return;
+    }
+
+    const reason = importChangeReason.value.trim();
+    if (!reason) {
+      importErrorMessage.value =
+        "Provide a reason for change before importing templates.";
+      return;
+    }
+
+    if (typeof kernelApi?.importProtocolDraft !== "function") {
+      importErrorMessage.value = "Protocol import service is unavailable.";
+      return;
+    }
+
+    importingDraft.value = true;
+    try {
+      const summary = await kernelApi.importProtocolDraft({
+        studyRef: resolveTargetStudyRef(),
+        templateIds: selectedTemplateIds.value,
+        reason,
+        idempotencyKey: makeIdempotencyKey(),
+      });
+      importedDraftSummary.value = summary;
+      importSuccessMessage.value = `Added CDISC Library forms to Draft version ${summary.version.number} (${summary.form_count} ${summary.form_count === 1 ? "form" : "forms"}, ${summary.item_count} ${summary.item_count === 1 ? "item" : "items"}).`;
+      selectedTemplateIds.value = [];
+    } catch (err) {
+      importErrorMessage.value = describeKernelError(err);
+    } finally {
+      importingDraft.value = false;
     }
   }
 
@@ -61,7 +192,7 @@ export function useSchemaIngestion(store) {
         "Accepted by clinical reviewer"
       );
     } catch (err) {
-      alert("Transition failed: " + err.message);
+      importErrorMessage.value = "Transition failed: " + err.message;
     }
   }
 
@@ -79,7 +210,8 @@ export function useSchemaIngestion(store) {
 
   async function saveEditItem(itemId) {
     if (!editItemReason.value.trim()) {
-      alert("Change reason justification is mandatory for edits!");
+      importErrorMessage.value =
+        "Change reason justification is mandatory for edits!";
       return;
     }
     const item = store.candidateDraft.items[itemId];
@@ -100,7 +232,7 @@ export function useSchemaIngestion(store) {
       editItemValue.value = "";
       editItemReason.value = "";
     } catch (err) {
-      alert("Transition failed: " + err.message);
+      importErrorMessage.value = "Transition failed: " + err.message;
     }
   }
 
@@ -116,7 +248,8 @@ export function useSchemaIngestion(store) {
 
   async function confirmRejectItem(itemId) {
     if (!rejectItemReason.value.trim()) {
-      alert("Change reason justification is mandatory for rejection!");
+      importErrorMessage.value =
+        "Change reason justification is mandatory for rejection!";
       return;
     }
     try {
@@ -129,7 +262,7 @@ export function useSchemaIngestion(store) {
       rejectingItemId.value = null;
       rejectItemReason.value = "";
     } catch (err) {
-      alert("Transition failed: " + err.message);
+      importErrorMessage.value = "Transition failed: " + err.message;
     }
   }
 
@@ -143,16 +276,24 @@ export function useSchemaIngestion(store) {
         store.candidateDraft.id,
         promoteChangeReason.value
       );
-      alert("Candidate promoted successfully into formal DRAFT version!");
+      importSuccessMessage.value =
+        "Candidate promoted successfully into formal DRAFT version!";
       promoteChangeReason.value = "";
     } catch (err) {
-      alert("Promotion failed: " + err.message);
+      importErrorMessage.value = "Promotion failed: " + err.message;
     }
   }
 
   return {
     fileInputRef,
     selectedFileName,
+    importChangeReason,
+    selectedTemplateIds,
+    availableTemplates,
+    importingDraft,
+    importSuccessMessage,
+    importErrorMessage,
+    importedDraftSummary,
     editingItemId,
     editItemValue,
     editItemReason,
@@ -160,8 +301,11 @@ export function useSchemaIngestion(store) {
     rejectItemReason,
     promoteChangeReason,
     unreviewedCount,
+    setFileInputElement,
+    loadProtocolTemplates,
     triggerFileSelect,
     triggerDocumentUpload,
+    importSelectedTemplates,
     getConfidenceClass,
     getStatusClass,
     acceptItem,
