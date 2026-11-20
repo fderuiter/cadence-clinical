@@ -1,30 +1,70 @@
 import { setupWorker } from "msw/browser";
+import { normalizeMswBasePath, waitForMswController } from "ui/testing";
+import { isDemoBuild } from "../utils/demoMode.js";
 import { gatewayHandlers } from "./handlers.js";
 
-let workerInstance = null;
-if (typeof window !== "undefined" && import.meta.env?.MODE !== "test") {
-  try {
-    workerInstance = setupWorker(...gatewayHandlers);
-  } catch {
-    // Ignored in jsdom/node test environment
-  }
+export function normalizePortalBasePath(
+  baseUrl = import.meta.env?.BASE_URL || "/subject-portal/"
+) {
+  return normalizeMswBasePath(baseUrl, "/subject-portal/");
 }
 
-export const worker = workerInstance;
+export function resolvePortalServiceWorkerOptions(
+  baseUrl = import.meta.env?.BASE_URL
+) {
+  const scope = normalizePortalBasePath(baseUrl);
+  return {
+    url: `${scope}sw.js?msw=1`,
+    options: { scope },
+  };
+}
 
-export async function startMswWorker() {
-  if (typeof window === "undefined" || !worker) return;
-  try {
-    await worker.start({
-      onUnhandledRequest: "bypass",
-      serviceWorker: { url: "/mockServiceWorker.js" },
-    });
-    console.log(
-      "[MSW] Mock Service Worker started for Subject Portal API Gateway simulation."
-    );
-  } catch (err) {
-    if (import.meta.env?.MODE !== "test") {
-      console.warn("[MSW] Subject portal service worker startup warning:", err);
+const portalWorker =
+  typeof window !== "undefined" && import.meta.env?.MODE !== "test"
+    ? (() => {
+        try {
+          return setupWorker(...gatewayHandlers);
+        } catch {
+          return null;
+        }
+      })()
+    : null;
+
+export const worker = portalWorker;
+
+let portalStartTask = null;
+
+export async function startMswWorker(portalOptions = {}) {
+  const targetWorker = portalOptions.worker ?? worker;
+  if (typeof window === "undefined" || !targetWorker) return null;
+  if (portalStartTask && !portalOptions.worker) return portalStartTask;
+
+  const task = (async () => {
+    try {
+      const reg = await targetWorker.start({
+        onUnhandledFrame: isDemoBuild(portalOptions.env) ? "error" : "warn",
+        quiet: Boolean(portalOptions.quiet),
+        serviceWorker: resolvePortalServiceWorkerOptions(portalOptions.baseUrl),
+      });
+      await waitForMswController();
+      console.log(
+        "[MSW] Mock Service Worker started for Subject Portal API Gateway simulation."
+      );
+      return reg;
+    } catch (error) {
+      portalStartTask = null;
+      if (import.meta.env?.MODE !== "test") {
+        console.warn(
+          "[MSW] Subject portal service worker startup warning:",
+          error
+        );
+      }
+      return null;
     }
+  })();
+
+  if (!portalOptions.worker) {
+    portalStartTask = task;
   }
+  return task;
 }

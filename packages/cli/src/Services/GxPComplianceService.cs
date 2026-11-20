@@ -13,11 +13,11 @@ public static class GxPComplianceService
         return Report(SyncGxPService.SyncCompliance(dryRun: dryRun, resultsDir: resultsDir));
     }
 
-    /// <summary><c>gxp snapshot</c>: the integration owner's command that writes and stages the RTM and IQ/OQ/PQ report.</summary>
-    public static int Snapshot(bool commit = false)
+    /// <summary><c>gxp snapshot</c>: the integration owner's command that writes and stages the RTM and IQ/OQ/PQ report (optionally reusing <paramref name="resultsDir"/>).</summary>
+    public static int Snapshot(bool commit = false, string? resultsDir = null)
     {
         AnsiConsole.MarkupLine("[cyan]Taking the GxP snapshot (PRD-SYS-053)...[/]\n");
-        return Report(SyncGxPService.SyncCompliance(commit: commit, snapshot: true));
+        return Report(SyncGxPService.SyncCompliance(commit: commit, snapshot: true, resultsDir: resultsDir));
     }
 
     public static int ValidateCompliance()

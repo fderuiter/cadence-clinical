@@ -40,38 +40,29 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     }
 
     [Fact]
-    public void ActionPinning_AcceptsShaWithVersionComment_AndLocalReusableWorkflows()
+    public void WorkflowSecurityGate_AnswersActionPinningAliases_AndScopesToStagedWorkflowFiles()
     {
+        var gate = QualityGates.Find("workflow-security")!;
+        QualityGates.Find("action-pinning").Should().BeSameAs(gate);
+        QualityGates.Find("check-action-pinning").Should().BeSameAs(gate);
+        gate.TakesFiles.Should().BeTrue();
+
+        Write("README.md", "# Docs change\n");
         Write(".github/workflows/ci.yml",
             """
             name: CI
             on: push
             jobs:
-              call-local:
-                uses: ./.github/workflows/reusable.yml
               build:
                 runs-on: ubuntu-latest
                 steps:
-                  - name: Checkout
-                    uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+                  - uses: actions/checkout@v4
             """);
 
-        ActionPinningValidatorService.ValidateActionPinning(repoRoot: _tempDir).Should().Be(0);
-    }
-
-    [Theory]
-    [InlineData("uses: actions/checkout@v4", "pinned to tag/branch")]
-    [InlineData("uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", "lacks an inline version comment")]
-    [InlineData("uses: actions/checkout", "missing '@<commit-sha>'")]
-    public void ActionPinning_RejectsUnpinnedOrUncommentedThirdPartyActions(string usesLine, string expectedFragment)
-    {
-        string path = Write(".github/workflows/ci.yml",
-            $"name: CI\non: push\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - {usesLine}\n");
-
-        var errors = ActionPinningValidatorService.CheckFile(path, ".github/workflows/ci.yml");
-
-        errors.Should().ContainSingle().Which.Should().Contain(expectedFragment);
-        ActionPinningValidatorService.ValidateActionPinning(repoRoot: _tempDir).Should().Be(1);
+        gate.Run(new GateContext(_tempDir, ["README.md"], PreCommit: true)).Should().BeTrue(
+            "staging non-workflow files must skip untouched workflow files in pre-commit mode");
+        gate.Run(new GateContext(_tempDir, [".github/workflows/ci.yml"], PreCommit: true)).Should().BeFalse(
+            "staging an unpinned workflow file must fail workflow-security in pre-commit mode");
     }
 
     [Fact]
@@ -300,6 +291,51 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         (int noDotnetExit, string noDotnetErr) = RunHook(hookPath, emptyBin, isolatedHome);
         noDotnetExit.Should().Be(1);
         noDotnetErr.Should().Contain("dotnet");
+    }
+
+    [Fact]
+    public void GetStagedFiles_DuringMergeCommit_ExcludesVerbatimUpstreamFilesAndKeepsMergedEdits()
+    {
+        InitGitRepo();
+        Write("shared.txt", "base\n");
+        RunGit("add", ".");
+        RunGit("commit", "-q", "-m", "init");
+
+        RunGit("checkout", "-q", "-b", "feature");
+        Write("feature-only.txt", "feature\n");
+        Write("shared.txt", "feature-change\n");
+        RunGit("add", ".");
+        RunGit("commit", "-q", "-m", "feature work");
+
+        RunGit("checkout", "-q", "main");
+        Write("upstream-only.txt", "upstream\n");
+        Write("shared.txt", "upstream-change\n");
+        RunGit("add", ".");
+        RunGit("commit", "-q", "-m", "upstream work");
+
+        RunGit("checkout", "-q", "feature");
+        var psi = new ProcessStartInfo("git")
+        {
+            WorkingDirectory = _tempDir,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        psi.ArgumentList.Add("merge");
+        psi.ArgumentList.Add("--no-commit");
+        psi.ArgumentList.Add("main");
+        using (var mergeProc = Process.Start(psi)!)
+        {
+            mergeProc.StandardOutput.ReadToEnd();
+            mergeProc.StandardError.ReadToEnd();
+            mergeProc.WaitForExit();
+        }
+
+        Write("shared.txt", "resolved-both-sides\n");
+        RunGit("add", "shared.txt");
+
+        var staged = PreCommitOpenApiService.GetStagedFiles(_tempDir);
+        staged.Should().Equal("shared.txt");
     }
 
     private (int ExitCode, string Stderr) RunHook(string hookPath, string pathEnv, string homeDir)

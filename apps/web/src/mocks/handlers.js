@@ -1,28 +1,40 @@
 import { http, HttpResponse, passthrough } from "msw";
-import { isGatewayApiCall, validateGatewayRequest } from "ui/testing";
+import { evaluateDemoBoundaryRequest } from "ui/testing";
+import { isDemoBuild } from "../utils/demoMode.js";
+import { createWebDemoHandlers } from "./demoHandlers.js";
 
-export const gatewayHandlers = [
-  // Intercept all HTTP methods matching API gateway host or API paths
-  http.all("*", async ({ request }) => {
-    const url = new URL(request.url);
+export function createFailClosedBoundaryHandler(options = {}) {
+  return http.all("*", async ({ request }) => {
+    const demoActive =
+      options.forceDemo !== undefined
+        ? Boolean(options.forceDemo)
+        : isDemoBuild();
 
-    // Only intercept API / service calls targeting gateway or non-asset paths
-    const isApiCall = isGatewayApiCall(url);
+    const outcome = await evaluateDemoBoundaryRequest(request, {
+      demoActive,
+      appLabel: "web demo",
+    });
 
-    if (!isApiCall) {
+    if (outcome.passthrough) {
       return passthrough();
     }
 
-    const validation = await validateGatewayRequest(request);
+    return HttpResponse.json(outcome.body, {
+      status: outcome.status,
+      headers: outcome.headers,
+    });
+  });
+}
 
-    if (!validation.valid) {
-      return HttpResponse.json(validation.body, {
-        status: validation.status,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+export function buildWebGatewayHandlers(options = {}) {
+  const demoActive =
+    options.forceDemo !== undefined
+      ? Boolean(options.forceDemo)
+      : isDemoBuild();
+  const specificHandlers = demoActive
+    ? createWebDemoHandlers(options.store)
+    : [];
+  return [...specificHandlers, createFailClosedBoundaryHandler(options)];
+}
 
-    // Default passthrough for valid gateway requests in live dev/mock mode
-    return passthrough();
-  }),
-];
+export const gatewayHandlers = buildWebGatewayHandlers();

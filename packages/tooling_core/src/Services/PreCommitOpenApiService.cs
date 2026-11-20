@@ -65,30 +65,27 @@ public static class PreCommitOpenApiService
 
     public static List<string> GetStagedFiles(string repoRoot)
     {
-        var psi = new ProcessStartInfo("git")
+        var staged = RunGitLines(repoRoot, "diff", "--cached", "--name-only", "--diff-filter=ACMR");
+        if (staged is null || staged.Count == 0)
         {
-            Arguments = "diff --cached --name-only --diff-filter=ACMR",
-            WorkingDirectory = repoRoot,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false
-        };
-
-        try
-        {
-            using var process = Process.Start(psi);
-            if (process is null) return new List<string>();
-            string output = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
-            if (process.ExitCode != 0) return new List<string>();
-
-            return output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .ToList();
+            return [];
         }
-        catch
+
+        // During a merge commit, `git diff --cached` against HEAD lists every file brought in from MERGE_HEAD even when its
+        // staged content matches MERGE_HEAD verbatim. Keep only paths that also differ from MERGE_HEAD (conflict resolutions
+        // or manual merge edits), matching GxpSnapshotGuardService's merge handling.
+        string? mergeHead = RunGitLines(repoRoot, "rev-parse", "--verify", "-q", "MERGE_HEAD")?.FirstOrDefault();
+        if (!string.IsNullOrEmpty(mergeHead))
         {
-            return new List<string>();
+            var differsFromMergeHead = RunGitLines(repoRoot, "diff", "--cached", "--name-only", "--diff-filter=ACMR", mergeHead);
+            if (differsFromMergeHead is not null)
+            {
+                var differing = new HashSet<string>(differsFromMergeHead, StringComparer.Ordinal);
+                staged = [.. staged.Where(differing.Contains)];
+            }
         }
+
+        return staged;
     }
 
     private static bool IsCsharpFile(string file)

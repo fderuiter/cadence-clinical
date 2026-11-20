@@ -80,12 +80,6 @@ public sealed class QualityGateRegistryTests : IDisposable
         },
         ["prettier"] = () => Context(),
         ["eslint"] = () => Context(),
-        ["action-pinning"] = () =>
-        {
-            Write(".github/workflows/ci.yml",
-                "name: CI\non: push\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n");
-            return Context();
-        },
         ["yaml"] = () =>
         {
             Write(".github/workflows/broken.yml", "name: \"unclosed\njobs:\n\tbad: true\n");
@@ -171,6 +165,55 @@ public sealed class QualityGateRegistryTests : IDisposable
         ["codeowners"] = () =>
         {
             Write(".github/CODEOWNERS", "* @fderuiter\n/nonexistent/path/ @fderuiter\n");
+            return Context();
+        },
+        ["workflow-security"] = () =>
+        {
+            Write(".github/workflows/ci.yml",
+                "name: CI\non: push\npermissions:\n  contents: read\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n");
+            return Context();
+        },
+        ["rulesets"] = () =>
+        {
+            Write(".github/rulesets/main.json", """
+                {
+                  "name": "main-branch-protection",
+                  "target": "branch",
+                  "enforcement": "active",
+                  "conditions": { "ref_name": { "include": ["refs/heads/main"], "exclude": [] } },
+                  "rules": [
+                    { "type": "deletion" },
+                    { "type": "non_fast_forward" },
+                    { "type": "pull_request", "parameters": { "required_approving_review_count": 1, "require_code_owner_review": true } },
+                    { "type": "required_status_checks", "parameters": { "strict_required_status_checks_policy": false, "required_status_checks": [{ "context": "Removed Legacy Check" }] } }
+                  ]
+                }
+                """);
+            Write(".github/rulesets/release_branches.json", """
+                {
+                  "name": "release-branches-protection",
+                  "target": "branch",
+                  "enforcement": "active",
+                  "conditions": { "ref_name": { "include": ["refs/heads/release/*"], "exclude": [] } },
+                  "rules": [
+                    { "type": "deletion" },
+                    { "type": "non_fast_forward" },
+                    { "type": "pull_request", "parameters": { "required_approving_review_count": 1, "require_code_owner_review": true } },
+                    { "type": "required_status_checks", "parameters": { "strict_required_status_checks_policy": true, "required_status_checks": [{ "context": "CI Gate", "integration_id": 15368 }, { "context": "Check for Merge Conflicts", "integration_id": 15368 }] } }
+                  ]
+                }
+                """);
+            Write(".github/rulesets/version_tags.json", """
+                {
+                  "name": "version-tags-protection",
+                  "target": "tag",
+                  "enforcement": "active",
+                  "conditions": { "ref_name": { "include": ["refs/tags/v*"], "exclude": [] } },
+                  "rules": [{ "type": "deletion" }, { "type": "non_fast_forward" }]
+                }
+                """);
+            Write(".github/workflows/ci.yml", "name: CI\non:\n  pull_request:\njobs:\n  unit-tests:\n    name: Unit Tests\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo ok\n  ci-gate:\n    name: CI Gate\n    needs: [unit-tests]\n    if: always()\n    runs-on: ubuntu-latest\n    steps:\n      - env:\n          UNIT_RESULT: ${{ needs.unit-tests.result }}\n        run: |\n          if [ \"$UNIT_RESULT\" != \"success\" ]; then exit 1; fi\n");
+            Write(".github/workflows/conflict-check.yml", "name: Conflict Check\non:\n  pull_request:\njobs:\n  conflict-check:\n    name: Check for Merge Conflicts\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo ok\n");
             return Context();
         },
         ["imports"] = () =>
@@ -265,7 +308,7 @@ public sealed class QualityGateRegistryTests : IDisposable
     [Fact]
     public void EveryGate_HasAFailingFixture()
     {
-        QualityGates.All.Should().HaveCount(34);
+        QualityGates.All.Should().HaveCount(35);
         Fixtures().Keys.Should().BeEquivalentTo(QualityGates.All.Select(g => g.Name));
         FailsClosedOnly.Keys.Should().BeSubsetOf(QualityGates.All.Select(g => g.Name));
     }

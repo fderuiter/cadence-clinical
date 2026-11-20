@@ -24,9 +24,15 @@ public class CliCommandLineTests
     [InlineData("ci")]
     [InlineData("ci", "--job", "dotnet-quality", "--job", "security")]
     [InlineData("ci", "-j", "dotnet-tests", "--allow-skip", "--base", "main", "--list")]
+    [InlineData("rulesets")]
+    [InlineData("rulesets", "--dry-run")]
+    [InlineData("rulesets", "--dry-run", "--repo", "fderuiter/cadence-clinical")]
+    [InlineData("check", "rulesets")]
     [InlineData("gxp", "sync", "--dry-run")]
     [InlineData("gxp", "sync", "--results-dir", "TestResults/gxp")]
     [InlineData("gxp", "snapshot", "--commit")]
+    [InlineData("gxp", "snapshot", "--results-dir", "TestResults/gxp")]
+    [InlineData("gxp", "snapshot", "--commit", "--results-dir", "TestResults/gxp")]
     [InlineData("gxp", "validate")]
     [InlineData("generate-schema-doc", "--validate")]
     [InlineData("generate-rtm", "--validate", "--draft")]
@@ -48,8 +54,12 @@ public class CliCommandLineTests
     [InlineData("check", "--exclude", "--pre-commit")]
     [InlineData("check", "adrs", "--pre-comit")]
     [InlineData("doctor", "--no-such-option")]
+    [InlineData("rulesets", "--no-such-option")]
     [InlineData("no-such-command")]
     [InlineData("gxp")]
+    [InlineData("gxp", "sync", "--results-dir")]
+    [InlineData("gxp", "snapshot", "--results-dir")]
+    [InlineData("gxp", "snapshot", "--results-dir", "--commit")]
     public void Parse_RejectsMissingArgumentsUnknownInputAndBareBranches(params string[] args)
     {
         Root.Parse(args).Errors.Should().NotBeEmpty();

@@ -56,8 +56,8 @@ lint: lint-paths typecheck ## Check lint (no auto-fix)
 format: ## Check formatting only (no auto-fix)
 	dotnet format Cadence.sln --verify-no-changes
 
-action-pinning: ## Validate GitHub Actions commit SHA pinning
-	$(CADENCE_CLI) check action-pinning
+action-pinning: ## Validate GitHub Actions workflow security and SHA pinning
+	$(CADENCE_CLI) check workflow-security
 
 check: ## Run every quality gate (cadence check)
 	$(CADENCE_CLI) check

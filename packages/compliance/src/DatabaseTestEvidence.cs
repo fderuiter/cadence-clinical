@@ -47,7 +47,15 @@ public static class DatabaseTestEvidence
     };
 
     /// <summary>The skipped or not-executed tests from the database assemblies in the TRX files under <paramref name="resultsPath"/>.</summary>
-    public static IReadOnlyList<SkippedDatabaseTest> FindSkipped(string resultsPath)
+    public static IReadOnlyList<SkippedDatabaseTest> FindSkipped(string resultsPath) =>
+        FindSkipped(resultsPath, repoRoot: null);
+
+    /// <summary>
+    /// The skipped or not-executed tests from the database assemblies in the TRX files under <paramref name="resultsPath"/>,
+    /// plus (when <paramref name="repoRoot"/> is supplied) any test declared under <see cref="DatabaseTestDirectories"/>
+    /// that recorded neither a pass nor a failure in those TRX files.
+    /// </summary>
+    public static IReadOnlyList<SkippedDatabaseTest> FindSkipped(string resultsPath, string? repoRoot)
     {
         string[] trxFiles = [];
         if (File.Exists(resultsPath))
@@ -99,7 +107,63 @@ public static class DatabaseTestEvidence
             }
         }
 
+        if (!string.IsNullOrWhiteSpace(repoRoot))
+        {
+            string[] searchDirs = [.. DatabaseTestDirectories.Select(d => d.TrimEnd('/'))];
+            var discovered = RequirementTagScanner.ScanDirectories(repoRoot, searchDirs);
+            if (discovered.Count > 0)
+            {
+                var recordedResults = RtmGeneratorService.ParseTestResults(repoRoot, resultsPath);
+                foreach (var test in discovered)
+                {
+                    if (OptInTests.Contains(test.FullName))
+                    {
+                        continue;
+                    }
+
+                    if (!recordedResults.TryGetValue(test.FullName, out var info)
+                        || info.Status is not (TestStatus.Passed or TestStatus.Failed))
+                    {
+                        string assembly = test.File.Replace('\\', '/').StartsWith("tests/Cadence.E2ETests/", StringComparison.OrdinalIgnoreCase)
+                            ? "Cadence.E2ETests.dll"
+                            : "Cadence.IntegrationTests.dll";
+                        string reason = info is null ? "No TRX result recorded for mandatory database test." : $"Outcome: {info.Status}";
+                        skipped.TryAdd(test.FullName, new SkippedDatabaseTest(test.FullName, assembly, reason));
+                    }
+                }
+            }
+        }
+
         return [.. skipped.Values];
+    }
+
+    /// <summary>
+    /// True when at least one <c>*.database.txt</c> metadata file written by <c>PostgresTestEvidence</c> exists under
+    /// <paramref name="resultsPath"/> with a recorded fixture name and PostgreSQL server version.
+    /// </summary>
+    public static bool HasRecordedEnvironment(string resultsPath)
+    {
+        if (!Directory.Exists(resultsPath))
+        {
+            return false;
+        }
+
+        var files = Directory.GetFiles(resultsPath, "*.database.txt", SearchOption.AllDirectories);
+        if (files.Length == 0)
+        {
+            return false;
+        }
+
+        return files.Any(file =>
+        {
+            var values = File.ReadAllLines(file)
+                .Select(line => line.Split('=', 2))
+                .Where(parts => parts.Length == 2)
+                .GroupBy(parts => parts[0].Trim(), StringComparer.Ordinal)
+                .ToDictionary(g => g.Key, g => g.Last()[1].Trim(), StringComparer.Ordinal);
+            return values.TryGetValue("fixture", out var fixture) && !string.IsNullOrWhiteSpace(fixture)
+                && values.TryGetValue("server_version", out var version) && !string.IsNullOrWhiteSpace(version);
+        });
     }
 
     /// <summary>

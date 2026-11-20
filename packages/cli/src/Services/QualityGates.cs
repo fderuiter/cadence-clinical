@@ -87,10 +87,6 @@ public static class QualityGates
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "lints staged JS, TS and Vue files; fails closed when `pnpm` or `node_modules` is missing",
         },
-        new("action-pinning", ["check-action-pinning"],
-            "Third-party GitHub Actions in `.github/workflows/` are pinned to 40-character commit SHAs with inline version comments",
-            ctx => ActionPinningValidatorService.ValidateActionPinning(ctx.TargetFiles, ctx.RepoRoot, ctx.PreCommit) == 0)
-        { TakesFiles = true },
         new("yaml", ["check-yaml", "validate-yaml"],
             "YAML 1.2 syntax, indentation, quoted scalars, flow brackets and duplicate mapping keys",
             ctx => YamlSyntaxValidatorService.ValidateYaml(ctx.TargetFiles, ctx.RepoRoot, ctx.PreCommit) == 0)
@@ -143,6 +139,13 @@ public static class QualityGates
             ctx => ReadmeValidatorService.ValidateReadmes(ctx.RepoRoot) == 0),
         new("codeowners", ["validate-codeowners"], "Path pattern existence and owner handle syntax in `.github/CODEOWNERS`",
             ctx => CodeownersValidatorService.ValidateCodeowners(ctx.RepoRoot) == 0),
+        new("workflow-security", ["validate-workflow-security", "action-pinning", "check-action-pinning"],
+            "40-hex commit SHAs with version comments, `sha256:` digests on `docker://` refs, `persist-credentials: false` on `actions/checkout`, and least-privilege permissions across `.github/workflows` and `.github/actions`",
+            ctx => WorkflowSecurityValidatorService.ValidateWorkflowSecurity(ctx.Files, ctx.RepoRoot) == 0)
+        { TakesFiles = true },
+        new("rulesets", ["validate-rulesets"],
+            "Branch and tag rulesets in `.github/rulesets/*.json`, strict status check policy, `CI Gate` upstream job coverage, and workflow check parity",
+            ctx => RulesetService.Validate(ctx.RepoRoot) == 0),
         new("imports", ["validate-imports"], "No `using` of another service's namespace across `apps/<service>`",
             ctx => ImportValidatorService.ValidateImports(ctx.RepoRoot) == 0),
         new("security", ["audit-security"], "Hard-coded secret patterns (private keys, AWS secret keys)",
