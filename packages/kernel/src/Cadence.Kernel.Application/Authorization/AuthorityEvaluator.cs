@@ -111,6 +111,9 @@ public interface IAuthorityStore
 /// </param>
 public sealed record KernelAuthorityOptions(IReadOnlySet<string> PlatformOperators)
 {
+    /// <summary>Dedicated service account for self-service trial workspace onboarding.</summary>
+    public static readonly Actor TrialOnboardingOperator = Actor.ServiceAccount("kernel-trial-onboarding");
+
     /// <summary>The capabilities a platform operator holds without a grant.</summary>
     public static readonly FrozenSet<string> PlatformCapabilities = FrozenSet.Create(StringComparer.Ordinal, "tenant.provision", "grant.issue", "role.define");
 }

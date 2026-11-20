@@ -565,6 +565,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2817: Caller-Bound Participant Self-Service Wallet and Receipt OCR Capabilities](adr/2026-11-19-caller-bound-participant-self-service-wallet-and-receipt-ocr-capabilities.md) | Current | - Status: Accepted |
 | [ADR-2818: Clinical and Gateway Endpoints Take Time From IClock and Ban TimeProvider](adr/2026-11-20-clinical-and-gateway-endpoints-take-time-from-iclock-and-ban-timeprovider.md) | Current | - Status: Accepted |
 | [ADR-2550: Co-Host Interactive Demos on GitHub Pages Subpaths](adr/2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.md) | Current | - Status: Accepted |
+| [ADR-2547: Keycloak Self-Registration and Clinical Kernel Trial Bootstrap](adr/2026-11-20-keycloak-self-registration-and-clinical-kernel-trial-bootstrap.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
@@ -717,13 +718,15 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 
 ## Documentation site
 
-`pnpm docs:dev` serves this folder with VitePress; `pnpm docs:build` builds the static site (running the
-quality gates, validating the schema and RTM documents, and regenerating the API reference), and
+`pnpm docs:dev` serves this folder with VitePress; `pnpm docs:build` builds the static site (validating
+`rtm` on every run, plus `openapi`, `schema-doc` and `markdown` when `CADENCE_DOCS_SKIP_CHECKS` is unset), and
 `pnpm docs:stage-demos` stages the interactive staff (`/demo/`) and participant (`/subject-portal/`) demos into
-`docs/.vitepress/dist`. `docs/index.md` serves as the site's home page while the root `README.md` is staged to
-`docs/README.md`.
+`docs/.vitepress/dist`. `docs/index.md` serves as the site's home page, sidebar navigation is synthesized from
+this index (`docs/.vitepress/sidebar.mjs`), and the root guides (`README.md`, `ARCHITECTURE.md`, `AGENTS.md`,
+`CONTEXT.md`, `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md` and `LICENSE`) are staged into `docs/` (with
+`README.md` at `docs/README.md`) so local search indexes them and links to them stay inside the portal.
 
-Write relative links as you would for GitHub. On the site, a link to a file outside `docs/`, to a
-non-Markdown file or to a folder without an `index.md` opens that file on GitHub
-(`docs/.vitepress/repoLinks.mjs`). Any other link to a missing page, including in the nav and sidebar,
-fails the build.
+Write relative links and heading anchors as you would for GitHub. On the site, links to unindexed files
+outside `docs/`, to non-Markdown files or to folders without an `index.md` open on GitHub
+(`docs/.vitepress/repoLinks.mjs`), while headings emit both VitePress and GitHub slugs. Any link to a
+missing page or missing `#anchor` fragment, including in the nav and sidebar, fails the build.

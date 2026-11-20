@@ -17,6 +17,7 @@ namespace Cadence.Kernel.Commands;
 /// </remarks>
 [KernelCapability("attestation.sign", VerbClass.Execute, InCatalogue = false)]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
 public sealed record Attest(
     TenantId TenantId,
     AttestationId AttestationId,
