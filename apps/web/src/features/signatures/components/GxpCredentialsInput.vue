@@ -21,15 +21,29 @@
       <input
         :id="passwordId"
         :value="password"
-        type="password"
+        v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
         :placeholder="passwordPlaceholder"
         :disabled="disabled"
         :class="passwordClass"
         :style="inputStyle"
         :required="passwordRequired"
+        :aria-invalid="passwordReentryRequired ? 'true' : undefined"
+        :aria-describedby="
+          passwordReentryRequired ? `${passwordId}-reentry-cue` : undefined
+        "
         @input="$emit('update:password', $event.target.value)"
         @keyup.enter="$emit('keyup-enter')"
       />
+      <p
+        v-if="passwordReentryRequired"
+        :id="`${passwordId}-reentry-cue`"
+        data-testid="sig-password-reentry-cue"
+        class="password-reentry-cue"
+        role="status"
+        aria-live="polite"
+      >
+        {{ passwordReentryMessage }}
+      </p>
     </div>
 
     <!-- TOTP Field -->
@@ -50,6 +64,8 @@
 </template>
 
 <script setup>
+import { SIGNATURE_PASSWORD_INPUT_ATTRS } from "ui";
+
 defineProps({
   username: {
     type: String,
@@ -127,6 +143,15 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  passwordReentryRequired: {
+    type: Boolean,
+    default: false,
+  },
+  passwordReentryMessage: {
+    type: String,
+    default:
+      "For 21 CFR Part 11 security, your password was cleared. Re-enter your password to retry.",
+  },
   groupStyle: {
     type: [Object, String],
     default: () => ({}),
@@ -179,6 +204,18 @@ input:focus {
 input:focus-visible {
   outline: 3px solid var(--accent, #2563eb) !important;
   outline-offset: 2px !important;
+}
+
+.password-reentry-cue {
+  margin: 6px 0 0;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #fdba74;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
 @media (max-width: 1024px) {

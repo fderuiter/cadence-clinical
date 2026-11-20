@@ -1,7 +1,10 @@
 import { encodeChangeReason } from "./changeReason";
 import createClient, { type Middleware } from "openapi-fetch";
 import type { paths } from "./types";
-import { getBearerToken } from "./authorization.js";
+import {
+  getBearerToken,
+  refreshBearerTokenOnUnauthorized,
+} from "./authorization.js";
 
 declare global {
   interface ImportMeta {
@@ -74,6 +77,42 @@ export function getAuthMiddleware(): Middleware {
 
 const INITIAL_BASE_URL = getBaseUrl();
 
+async function executeWithSingleFlightRetry(
+  input: RequestInfo | URL,
+  init?: RequestInit
+): Promise<Response> {
+  const url = input instanceof Request ? input.url : String(input);
+  const retryClone = input instanceof Request ? input.clone() : null;
+  const response = await globalThis.fetch(input, init);
+  if (response.status !== 401) {
+    return response;
+  }
+  const errBody = await response
+    .clone()
+    .json()
+    .catch(() => null);
+  const freshToken = await refreshBearerTokenOnUnauthorized(url, errBody);
+  if (!freshToken) {
+    return response;
+  }
+  if (retryClone) {
+    const retryHeaders = new Headers(retryClone.headers);
+    if (init?.headers) {
+      new Headers(init.headers).forEach((value, key) => {
+        retryHeaders.set(key, value);
+      });
+    }
+    retryHeaders.set("Authorization", `Bearer ${freshToken}`);
+    return globalThis.fetch(
+      new Request(retryClone, { headers: retryHeaders }),
+      init
+    );
+  }
+  const retryHeaders = new Headers(init?.headers);
+  retryHeaders.set("Authorization", `Bearer ${freshToken}`);
+  return globalThis.fetch(input, { ...init, headers: retryHeaders });
+}
+
 function dispatchOpenApiFetch(input: RequestInfo | URL, init?: RequestInit) {
   const currentBase = getBaseUrl().replace(/\/+$/, "");
   const initialBase = INITIAL_BASE_URL.replace(/\/+$/, "");
@@ -83,9 +122,9 @@ function dispatchOpenApiFetch(input: RequestInfo | URL, init?: RequestInit) {
     input.url.startsWith(`${initialBase}/`)
   ) {
     const rewrittenUrl = `${currentBase}${input.url.slice(initialBase.length)}`;
-    return globalThis.fetch(new Request(rewrittenUrl, input), init);
+    return executeWithSingleFlightRetry(new Request(rewrittenUrl, input), init);
   }
-  return globalThis.fetch(input, init);
+  return executeWithSingleFlightRetry(input, init);
 }
 
 export const openApiClient = createClient<paths>({
@@ -101,7 +140,8 @@ export function createOpenApiClient<T extends {} = paths>(
   // Resolve fetch per call, as openApiClient does, so tests and the MSW worker see the current global.
   const client = createClient<T>({
     baseUrl,
-    fetch: (...args) => globalThis.fetch(...args),
+    fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+      executeWithSingleFlightRetry(input, init),
   });
   client.use(getAuthMiddleware());
   return client;

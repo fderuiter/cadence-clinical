@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { isValidSemanticAction, isValidStepUpAction } from "ui";
 import { webDemoStore } from "./demoStore.js";
 
 const DEFAULT_STUDY_REF = "study:00000000-0000-0000-0000-000000000001"; // deid-ignore
@@ -41,9 +42,25 @@ export function createWebDemoHandlers(store = webDemoStore) {
     ),
     http.post("*/api/v1/auth/signature-verification", async ({ request }) => {
       const body = await readJsonBody(request);
+      if (
+        !isValidStepUpAction(body?.action) ||
+        !isValidSemanticAction(body?.semantic_action)
+      ) {
+        return HttpResponse.json(
+          {
+            title: "Invalid Step-Up Signature Payload",
+            status: 400,
+            code: "INVALID_STEP_UP_PAYLOAD",
+            detail:
+              "Both '/api/v1/...' action and governed snake_case semantic_action are required.",
+          },
+          { status: 400 }
+        );
+      }
       return HttpResponse.json({
         sig_token: `demo_sig_tok_${Date.now()}`,
-        action: body?.action || "demo.sign",
+        action: body.action,
+        semantic_action: body.semantic_action,
         expires_in: 300,
       });
     }),
