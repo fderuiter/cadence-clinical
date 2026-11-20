@@ -431,6 +431,107 @@ function buildDemoClinicalUsdm() {
   };
 }
 
+export function cloneDefaultClinicalUsdm(
+  demo: boolean = isDemoBuild()
+): NormalizedUsdm {
+  return normalizeUsdm(
+    JSON.parse(
+      JSON.stringify(demo ? buildDemoClinicalUsdm() : DEFAULT_CLINICAL_USDM)
+    )
+  );
+}
+
+export interface ZodIssueLike {
+  path?: ReadonlyArray<PropertyKey>;
+  message: string;
+}
+
+export interface ZodErrorLike {
+  issues?: ReadonlyArray<ZodIssueLike>;
+  errors?: ReadonlyArray<ZodIssueLike>;
+}
+
+export function formatZodIssues(
+  errorOrIssues: ZodErrorLike | ReadonlyArray<ZodIssueLike> | null | undefined,
+  fallbackPath: string = "field"
+): string[] {
+  if (!errorOrIssues) return [];
+  const issueList = Array.isArray(errorOrIssues)
+    ? errorOrIssues
+    : (errorOrIssues as ZodErrorLike).issues ||
+      (errorOrIssues as ZodErrorLike).errors ||
+      [];
+  return issueList.map((issue) => {
+    const path = Array.isArray(issue.path)
+      ? issue.path.map(String).join(".")
+      : "";
+    return `${path || fallbackPath}: ${issue.message}`;
+  });
+}
+
+export interface MutationValidationInput {
+  type?: string;
+  id?: string;
+  properties?: Record<string, unknown>;
+}
+
+export function buildMutationValidationPayload(
+  mutation: MutationValidationInput | null | undefined
+): Record<string, unknown> | null {
+  if (!mutation || typeof mutation.type !== "string") {
+    return null;
+  }
+  const props = mutation.properties ?? {};
+  const lower = mutation.type.toLowerCase();
+  if (
+    lower === "arms" ||
+    lower === "arm" ||
+    lower === "epochs" ||
+    lower === "epoch" ||
+    lower === "visits" ||
+    lower === "encounter" ||
+    lower === "procedures" ||
+    lower === "activity"
+  ) {
+    return { id: mutation.id, ...props };
+  }
+  if (lower === "concept" || lower === "code") {
+    return {
+      code: mutation.id,
+      codeSystem: props.codeSystem || "NCI_Thesaurus",
+      codeSystemVersion: props.codeSystemVersion || "24.03d",
+      decode: props.decode || props.preferred_name || "",
+    };
+  }
+  return null;
+}
+
+function assertValidUsdmGraph(
+  state: Pick<ClinicalState, "currentUsdm" | "ecrfFields" | "soaError">,
+  errorPrefix: string
+): void {
+  const graphValidation = validateUsdmGraph(state.currentUsdm, {
+    fields: state.ecrfFields,
+  });
+  if (!graphValidation.valid) {
+    const cycleError = graphValidation.errors.find(
+      (e) => e.code === "CYCLE_DETECTED"
+    );
+    const errorMsg = graphValidation.errors.map((e) => e.message).join("; ");
+    if (
+      cycleError &&
+      typeof window !== "undefined" &&
+      typeof window.alert === "function"
+    ) {
+      window.alert(`Skip-Logic Cycle Alert: ${cycleError.message}`);
+    }
+    const fullMessage = `${errorPrefix}: ${errorMsg}`;
+    console.error(fullMessage);
+    state.soaError = errorMsg;
+    throw new Error(fullMessage);
+  }
+}
+
 export const DEFAULT_DEMO_SUBJECTS: SubjectFixture[] = DEMO_PARTICIPANTS.map(
   (participant, idx) => {
     const isPendingReconsent = idx === 1;
@@ -538,14 +639,9 @@ const useClinicalStoreInner = defineStore("clinical", {
     const demoStudyCode = (demo && DEMO_STUDY.code) || "CADENCE-101";
 
     return {
-      currentUsdm: normalizeUsdm(
-        initial.savedUsdm ||
-          JSON.parse(
-            JSON.stringify(
-              demo ? buildDemoClinicalUsdm() : DEFAULT_CLINICAL_USDM
-            )
-          )
-      ),
+      currentUsdm: initial.savedUsdm
+        ? normalizeUsdm(initial.savedUsdm)
+        : cloneDefaultClinicalUsdm(demo),
       currentCtmsData: {
         milestones: [
           {
@@ -923,14 +1019,9 @@ const useClinicalStoreInner = defineStore("clinical", {
       this.formValues = loaded.savedFormValues || { ...DEFAULT_FORM_VALUES };
       this.formQueries = loaded.savedFormQueries || {};
       this.ledgerBlocks = loaded.savedLedgerBlocks || [];
-      this.currentUsdm = normalizeUsdm(
-        loaded.savedUsdm ||
-          JSON.parse(
-            JSON.stringify(
-              demo ? buildDemoClinicalUsdm() : DEFAULT_CLINICAL_USDM
-            )
-          )
-      );
+      this.currentUsdm = loaded.savedUsdm
+        ? normalizeUsdm(loaded.savedUsdm)
+        : cloneDefaultClinicalUsdm(demo);
 
       this.evaluateRules();
     },
@@ -1009,31 +1100,10 @@ const useClinicalStoreInner = defineStore("clinical", {
       block.synced = false;
 
       // Validate USDM Graph before persisting state to localStorage!
-      const graphValidation = validateUsdmGraph(this.currentUsdm, {
-        fields: this.ecrfFields,
-      });
-      if (!graphValidation.valid) {
-        const cycleError = graphValidation.errors.find(
-          (e) => e.code === "CYCLE_DETECTED"
-        );
-        const errorMsg = graphValidation.errors
-          .map((e) => e.message)
-          .join("; ");
-        if (
-          cycleError &&
-          typeof window !== "undefined" &&
-          typeof window.alert === "function"
-        ) {
-          window.alert(`Skip-Logic Cycle Alert: ${cycleError.message}`);
-        }
-        console.error(
-          `Local storage persistence blocked by USDM Graph Validator: ${errorMsg}`
-        );
-        this.soaError = errorMsg;
-        throw new Error(
-          `Local storage persistence blocked by USDM Graph Validator: ${errorMsg}`
-        );
-      }
+      assertValidUsdmGraph(
+        this,
+        "Local storage persistence blocked by USDM Graph Validator"
+      );
 
       this.ledgerBlocks.push(block);
 
@@ -1303,40 +1373,22 @@ const useClinicalStoreInner = defineStore("clinical", {
       changeReason: string
     ) {
       // Validate prior to local queuing, persistence, or API submission!
-      const validation = this.validateModel(type, { id, ...properties });
+      const payloadToValidate = buildMutationValidationPayload({
+        type,
+        id,
+        properties,
+      }) ?? { id, ...properties };
+      const validation = this.validateModel(type, payloadToValidate);
       if (!validation.success) {
-        const errorMsg = `Local payload mutation rejected. Shared Zod Schema violation: ${validation
-          .error!.issues.map(
-            (e: { path: Array<string | number | symbol>; message: string }) =>
-              `${e.path.join(".") || "field"}: ${e.message}`
-          )
-          .join(", ")}`;
+        const errorMsg = `Local payload mutation rejected. Shared Zod Schema violation: ${formatZodIssues(
+          validation.error
+        ).join(", ")}`;
         console.error(errorMsg);
         this.soaError = errorMsg;
         throw new Error(errorMsg);
       }
 
-      const graphValidation = validateUsdmGraph(this.currentUsdm, {
-        fields: this.ecrfFields,
-      });
-      if (!graphValidation.valid) {
-        const cycleError = graphValidation.errors.find(
-          (e) => e.code === "CYCLE_DETECTED"
-        );
-        const errorMsg = graphValidation.errors
-          .map((e) => e.message)
-          .join("; ");
-        if (
-          cycleError &&
-          typeof window !== "undefined" &&
-          typeof window.alert === "function"
-        ) {
-          window.alert(`Skip-Logic Cycle Alert: ${cycleError.message}`);
-        }
-        console.error(`Graph validation failure: ${errorMsg}`);
-        this.soaError = errorMsg;
-        throw new Error(`Graph validation failure: ${errorMsg}`);
-      }
+      assertValidUsdmGraph(this, "Graph validation failure");
       const opts = {
         changeReason,
       };

@@ -1,10 +1,10 @@
-# ADR-2818: Export Canonical Demo Manifest from Kernel Seed
+# ADR-2819: Export Canonical Demo Manifest from Kernel Seed
 
 - **Status:** Accepted
 - **Date:** 2026-11-20
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter
-- **Relates to:** [ADR-2329](2026-08-04-compile-time-vite-build-mode-for-interactive-public-demo.md), [ADR-2534](2026-10-20-quality-gates-live-in-one-registry-and-each-must-be-able-to-fail.md), [ADR-2543](2026-10-19-the-kernel-host-seeds-the-local-demo-study.md)
+- **Relates to:** [ADR-2329](2026-08-04-compile-time-vite-build-mode-for-interactive-public-demo.md), [ADR-2534](2026-10-20-quality-gates-live-in-one-registry-and-each-must-be-able-to-fail.md), [ADR-2543](2026-10-19-the-kernel-host-seeds-the-local-demo-study.md), [ADR-2546](2026-11-19-isolate-static-demo-builds-with-stateful-msw-handlers.md)
 
 ---
 
@@ -12,7 +12,7 @@
 
 ADR-2543 established `CADENCE-101` (`Cadence demo study: cardiovascular outcomes`, sponsor `CADENCE-PHARMA`, sites `SITE-101` and `SITE-102`, screened participants `SUBJ-101-001`, `SUBJ-101-002`, and `SUBJ-102-001`, fixed valid-time epoch `2026-01-05T09:00:00Z`, RFC 9562 UUIDv8 identifiers, and eight fixed-`sub` accounts in `docker/cadence-realm.json`) as the local stack's shared demo study across the kernel host and Execution seeder.
 
-However, the static public demo builds (`apps/web` and `apps/subject-portal`, ADR-2329) still maintained hand-written mock identifiers (`STUDY-USDM-001`, `CAD-101`, `study_01`, `SITE-001`, `SUBJ-001`, `subject_001`), exposed maintainer personal identifiers in offline demo authentication (`apps/web/src/stores/auth.js`), hashed `new Date().toISOString()` into every Genesis SHA-256 audit ledger block, computed relative task due dates from `Date.now()`, and called unseeded `Math.random()` across simulated telemetry and workflow actions. As a result, staff and participant demo portals showed mismatched trials, leaked maintainer PII into compiled static chunks, and produced non-repeatable cryptographic ledger digests on reload (PRD-SYS-001).
+However, the static public demo builds (`apps/web` and `apps/subject-portal`, ADR-2329, ADR-2546) still maintained hand-written mock identifiers (`STUDY-USDM-001`, `CAD-101`, `study_01`, `SITE-001`, `SUBJ-001`, `subject_001`), exposed maintainer personal identifiers in offline demo authentication (`apps/web/src/stores/auth.js`), hashed `new Date().toISOString()` into every Genesis SHA-256 audit ledger block, computed relative task due dates from `Date.now()`, and called unseeded `Math.random()` across simulated telemetry and workflow actions. As a result, staff and participant demo portals showed mismatched trials, leaked maintainer PII into compiled static chunks, and produced non-repeatable cryptographic ledger digests on reload (PRD-SYS-001).
 
 ## 2. Decision Drivers & Constraints
 
@@ -56,7 +56,7 @@ However, the static public demo builds (`apps/web` and `apps/subject-portal`, AD
 - **CLI generator & quality gate:** `pnpm cadence generate-demo-manifest` (`DemoManifestGeneratorService`) cross-checks `apps/kernel-api/src/DevelopmentDemoData.cs`, `apps/execution/src/Infrastructure/Persistence/ExecutionDbSeeder.cs`, and `docker/cadence-realm.json`, derives RFC 9562 version 8 UUIDs over SHA-256 (`cadence-development-demo:{tenant}:{kind}:{name}`) and fixed `2026-01-05T09:00:00Z` timestamps, and writes byte-identical `packages/demo-fixtures/src/manifest.js` and `manifest.d.ts`. The `demo-manifest` quality gate (`--check`) blocks drift in `pnpm cadence check`.
 - **Production bundle exclusion:** `scripts/vite-strip-demo-fixtures.mjs` (`createDemoFixturesPlugin`) resolves `demo-fixtures` to an inert virtual module during non-demo production Rollup builds (`pnpm --filter web build`, `pnpm --filter subject-portal build`) while resolving to `packages/demo-fixtures/src/index.js` in `build:demo`, `dev`, and Vitest runs.
 - **Synthetic role-based personas:** Demo authentication in `apps/web/src/stores/auth.js` maps coordinator, investigator, monitor, data manager, designer, designer lead, safety, and auditor workspaces to the eight synthetic realm accounts (`crc.site101`, `pi.site101`, `cra.monitor`, `dm.lead`, `designer_demo`, `designer.lead`, `safety.officer`, `auditor.lead`), removing all personal maintainer attributes and the `deid-ignore` override on `auth.js`.
-- **Deterministic demo clock and PRNG:** `demoNowMs`, `demoNowIso`, `createDemoPrng`, `demoRandom`, `demoRandomInt`, and `demoRandomToken` in `demoMode.js` anchor demo-only Genesis SHA-256 ledger blocks, relative task schedules, and simulated telemetry/IDs to `2026-01-05T09:00:00Z` and keyed Mulberry32 streams, while delegating to `Date.now()` and `crypto.getRandomValues` outside demo mode.
+- **Deterministic demo clock and PRNG:** `demoNowMs`, `demoNowIso`, `createDemoPrng`, `demoRandom`, `demoRandomInt`, and `demoRandomToken` in `demoMode.js` anchor demo-only Genesis SHA-256 ledger blocks, relative task schedules, commercial trial entitlements, and simulated telemetry/IDs to `2026-01-05T09:00:00Z` and keyed Mulberry32 streams, while delegating to `Date.now()` and `crypto.getRandomValues` outside demo mode.
 
 ## 5. Consequences & Trade-offs
 

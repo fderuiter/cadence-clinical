@@ -8,9 +8,11 @@ import {
   DEMO_SITES,
   DEMO_SPONSOR,
   DEMO_STUDY,
+  DEMO_TENANT_UUID,
 } from "demo-fixtures";
+import { createWebDemoStore } from "@/mocks/demoStore";
 import { useAuthStore } from "@/stores/auth";
-import { useClinicalStore } from "@/stores/clinical";
+import { cloneDefaultClinicalUsdm, useClinicalStore } from "@/stores/clinical";
 import {
   demoNowIso,
   demoRandom,
@@ -167,5 +169,44 @@ describe("Canonical Demo Manifest & Deterministic Demo Ledger (apps/web)", () =>
     expect(sample).toBeGreaterThanOrEqual(0);
     expect(sample).toBeLessThan(1);
     expect(cryptoSpy).toHaveBeenCalled();
+  });
+
+  it("preserves non-demo USDM template defaults while anchoring demo USDM resets and trial entitlements to the canonical manifest", async () => {
+    const standardUsdm = cloneDefaultClinicalUsdm(false);
+    expect(standardUsdm.studyId).toBe("STUDY-USDM-001");
+
+    const demoUsdm = cloneDefaultClinicalUsdm(true);
+    expect(demoUsdm.studyId).toBe("CADENCE-101");
+    expect(demoUsdm.studyTitle).toBe(DEMO_STUDY.title);
+
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    setActivePinia(createPinia());
+    const auth = useAuthStore();
+    auth.startDemoSession();
+    const entitlements = await auth.loadEntitlements();
+    expect(entitlements?.tenant_ref).toBe(`tenant:${DEMO_TENANT_UUID}`);
+    expect(entitlements?.subscription_ref).toBeNull();
+    expect(entitlements?.tier).toBe("Complete");
+
+    const demoStore = createWebDemoStore();
+    const trialResult = demoStore.bootstrapTrial({ tier: "Select" });
+    expect(trialResult.tenant_ref).toBe(`tenant:${DEMO_TENANT_UUID}`);
+    expect(trialResult.organization_ref).toBe(
+      `organization:${DEMO_TENANT_UUID}`
+    );
+    expect(trialResult.entitlements.tenant_ref).toBe(
+      `tenant:${DEMO_TENANT_UUID}`
+    );
+    expect(trialResult.entitlements.subscription_ref).toBe(
+      "subscription:00000000-0000-0000-0000-000000000011"
+    );
+    expect(trialResult.entitlements.tier).toBe("Select");
+    expect(trialResult.entitlements.status).toBe("Trialing");
+    expect(trialResult.entitlements.started_at).toBe(
+      "2026-01-05T09:00:00.000Z"
+    );
+    expect(trialResult.entitlements.trial_ends_at).toBe(
+      "2026-02-04T09:00:00.000Z"
+    );
   });
 });

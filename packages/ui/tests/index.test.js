@@ -1,5 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
-import { debounce, createClinicalLookupInput } from "../index.js";
+import {
+  debounce,
+  createClinicalLookupInput,
+  EmptyState,
+  useFocusTrap,
+  getFocusableElements,
+  trapTabFocus,
+  useEscapeClose,
+} from "../index.js";
 
 describe("createClinicalLookupInput", () => {
   it("generates correct HTML structure for default status none", () => {
