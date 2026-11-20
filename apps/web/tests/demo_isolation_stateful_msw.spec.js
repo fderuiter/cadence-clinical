@@ -458,6 +458,94 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
       expect(studyQueries[0].site_code).toBe("SITE-101");
       expect(studyQueries[0].subject_code).toBe("SUBJ-1001");
     });
+
+    it("lists participant forms for Clinical Canvas and resolves study_site enrollment children and zoom lineage", async () => {
+      const studyRef = "study:00000000-0000-0000-0000-000000000001";
+      const studyChildrenRes = await fetch(
+        `${origin}/api/v1/kernel/nodes/${encodeURIComponent(studyRef)}/children`,
+        { headers: DEMO_HEADERS }
+      );
+      expect(studyChildrenRes.status).toBe(200);
+      const studyChildren = await studyChildrenRes.json();
+      const site101 = studyChildren.find(
+        (c) => c.node.kind === "study_site" && c.node.code === "SITE-101"
+      );
+      expect(site101).toBeTruthy();
+
+      const siteChildrenRes = await fetch(
+        `${origin}/api/v1/kernel/nodes/${encodeURIComponent(site101.node.ref)}/children`,
+        { headers: DEMO_HEADERS }
+      );
+      expect(siteChildrenRes.status).toBe(200);
+      const siteChildren = await siteChildrenRes.json();
+      const subj1001 = siteChildren.find(
+        (c) => c.node.kind === "enrollment" && c.node.code === "SUBJ-1001"
+      );
+      expect(subj1001?.node.ref).toBe(
+        "enrollment:00000000-0000-0000-0000-000000001001"
+      );
+
+      const zoomPathRes = await fetch(
+        `${origin}/api/v1/kernel/nodes/${encodeURIComponent(subj1001.node.ref)}/path`,
+        { headers: DEMO_HEADERS }
+      );
+      expect(zoomPathRes.status).toBe(200);
+      const zoomSteps = await zoomPathRes.json();
+      expect(zoomSteps.find((s) => s.level === "study_site")?.label).toBe(
+        "SITE-101"
+      );
+      expect(zoomSteps.find((s) => s.level === "enrollment")?.label).toBe(
+        "SUBJ-1001"
+      );
+
+      const missingEnrollmentRes = await fetch(
+        `${origin}/api/v1/execution/forms`,
+        { headers: DEMO_HEADERS }
+      );
+      expect(missingEnrollmentRes.status).toBe(400);
+
+      const enrollmentId = "00000000-0000-0000-0000-000000001001";
+      const listRes = await fetch(
+        `${origin}/api/v1/execution/forms?enrollment_id=${enrollmentId}`,
+        { headers: DEMO_HEADERS }
+      );
+      expect(listRes.status).toBe(200);
+      const initialForms = await listRes.json();
+      expect(initialForms.length).toBe(1);
+      expect(initialForms[0].collection_spec_id).toBe("form-vital-signs");
+      expect(initialForms[0].collection_title).toBe("Vital Signs (CDASH VS)");
+      expect(initialForms[0].item_count).toBe(4);
+      expect(initialForms[0].recorded_count).toBe(4);
+      expect(initialForms[0].complete).toBe(true);
+
+      const openChemRes = await fetch(`${origin}/api/v1/execution/forms`, {
+        method: "POST",
+        headers: {
+          ...DEMO_HEADERS,
+          "X-Change-Reason": "Open chemistry panel in canvas",
+        },
+        body: JSON.stringify({
+          enrollment_id: enrollmentId,
+          collection_spec_id: "form-chem-panel",
+          planned_activity_id: "visit-week4",
+        }),
+      });
+      expect(openChemRes.status).toBe(201);
+
+      const updatedListRes = await fetch(
+        `${origin}/api/v1/execution/forms?enrollment_id=${enrollmentId}`,
+        { headers: DEMO_HEADERS }
+      );
+      const updatedForms = await updatedListRes.json();
+      expect(updatedForms.length).toBe(2);
+      const chemSummary = updatedForms.find(
+        (f) => f.collection_spec_id === "form-chem-panel"
+      );
+      expect(chemSummary?.collection_title).toBe(
+        "Clinical Chemistry Panel (CDASH LB)"
+      );
+      expect(chemSummary?.complete).toBe(false);
+    });
   });
 
   describe("Demo route availability & router guard behavior", () => {

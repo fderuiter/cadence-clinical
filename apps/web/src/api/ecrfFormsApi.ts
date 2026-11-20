@@ -14,6 +14,7 @@ import type { components, paths } from "./generated/kernel";
 type Schemas = components["schemas"];
 
 export type EcrfFormState = Schemas["Kernel_FormStateResponse"];
+export type EcrfFormSummary = Schemas["Kernel_FormSummaryResponse"];
 export type EcrfForm = Schemas["Kernel_FormResponse"];
 export type EcrfFormItem = Schemas["Kernel_FormItemResponse"];
 export type EcrfFormLock = Schemas["Kernel_FormLockResponse"];
@@ -125,6 +126,15 @@ export const ecrfFormsApi = {
           collected_at: collectedAt,
         },
         headers: writeHeaders(reason, idempotencyKey),
+      })
+    );
+  },
+
+  /** Every form opened for an enrollment, oldest first (GET /api/v1/execution/forms?enrollment_id=). */
+  listForEnrollment(enrollmentId: string): Promise<EcrfFormSummary[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/execution/forms", {
+        params: { query: { enrollment_id: enrollmentId } },
       })
     );
   },

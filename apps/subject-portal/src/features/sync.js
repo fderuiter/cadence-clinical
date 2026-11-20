@@ -511,7 +511,7 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
       renderCompliance();
     }
 
-    // Automatic Stipend Wallet Disbursement upon confirmed ePRO sync
+    // Automatic Stipend Wallet Crediting upon confirmed ePRO sync (strictly server-rule driven; zero client amount)
     if (
       confirmedSubs.length > 0 &&
       typeof options.autoDisburse === "boolean" &&
@@ -520,31 +520,39 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
       for (const sub of confirmedSubs) {
         try {
           const targetSubjectId = sub.subject_id || state.session.userId;
-          const disbursePayload = {
-            subject_id: targetSubjectId,
-            study_id: "study_01",
-            site_id: "site_01",
-            sequence_number: sub.sequence_number,
-            assignment_id: sub.assignment_id,
-            diary_id: sub.diary_id,
-            amount: 25.0,
-            idempotency_key: `seq_${sub.sequence_number}_${targetSubjectId}`,
-            disbursement_type: "STIPEND",
-            answers: sub.answers,
+          const idempotencyKey = `seq_${sub.sequence_number}_${targetSubjectId}`;
+          const stipendPayload = {
+            studyId: sub.study_id || state.walletStudyId || undefined,
+            siteId: sub.site_id || state.walletSiteId || undefined,
+            sequenceNumber: sub.sequence_number,
+            assignmentId: sub.assignment_id,
+            diaryId: sub.diary_id,
+            idempotencyKey,
           };
 
-          const disburseRes = await dispatchApi("payments/disburse", {
-            method: "POST",
-            body: JSON.stringify(disbursePayload),
-          });
+          const disburseRes = await dispatchApi(
+            "payments/participant/me/diary-stipend",
+            {
+              method: "POST",
+              body: JSON.stringify(stipendPayload),
+              change_reason:
+                "Credit protocol stipend for synchronized ePRO diary",
+            }
+          );
 
-          if (disburseRes && typeof disburseRes.new_balance === "number") {
-            state.walletBalance = disburseRes.new_balance;
-          } else if (
-            disburseRes &&
-            typeof disburseRes.NewBalance === "number"
-          ) {
-            state.walletBalance = disburseRes.NewBalance;
+          const updatedBalance =
+            disburseRes?.currentBalance ??
+            disburseRes?.current_balance ??
+            disburseRes?.new_balance ??
+            disburseRes?.NewBalance;
+          if (typeof updatedBalance === "number") {
+            state.walletBalance = updatedBalance;
+          }
+
+          const updatedLifetime =
+            disburseRes?.lifetimeStipends ?? disburseRes?.lifetime_stipends;
+          if (typeof updatedLifetime === "number") {
+            state.lifetimeStipends = updatedLifetime;
           }
 
           await logAuditRecord(
@@ -553,10 +561,13 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
               subject_id: targetSubjectId,
               sequence_number: sub.sequence_number,
               stipend_amount:
-                disburseRes?.amount ?? disburseRes?.Amount ?? 25.0,
+                disburseRes?.creditedAmount ??
+                disburseRes?.credited_amount ??
+                disburseRes?.amount ??
+                0,
               new_balance: state.walletBalance,
             },
-            "Instant ePRO survey auto-disbursement"
+            "Server-rule ePRO diary synchronization stipend evaluation"
           );
         } catch (disburseErr) {
           console.warn("Auto-disbursement payment call warning:", disburseErr);

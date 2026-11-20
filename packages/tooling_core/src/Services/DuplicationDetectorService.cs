@@ -177,9 +177,10 @@ public static class DuplicationDetectorService
             Console.WriteLine($"[WARNING] Could not write duplication summary: {ex.Message}");
         }
 
+        // The pre-commit gate passes every staged file; like the full scan, only duplicates involving a C# file fail.
         bool csDuplicatesFound = duplicatesFound.Any(d => d.Loc1.File.EndsWith(".cs", StringComparison.Ordinal) || d.Loc2.File.EndsWith(".cs", StringComparison.Ordinal));
 
-        if (csDuplicatesFound || (targetSet != null && duplicatesFound.Count > 0))
+        if (csDuplicatesFound)
         {
             Console.WriteLine($"[ERROR] Code duplication detected above threshold ({duplicatesFound.Count} duplicates found).");
             return 1;

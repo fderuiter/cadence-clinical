@@ -10,12 +10,12 @@
     <div class="view-header">
       <h2>Participant Financial Wallet &amp; Stipends</h2>
       <p>
-        Review participant stipend status and travel expense reimbursement
-        submissions when enabled for your study.
+        Track verified study stipends, submit travel or meal receipts via OCR,
+        and disburse your available balance to your linked payout method.
       </p>
     </div>
 
-    <!-- User-visible error banner (replaces silent console-only error handling) -->
+    <!-- User-visible error banner -->
     <div
       v-if="walletError"
       id="wallet-error-banner"
@@ -36,23 +36,23 @@
     </div>
 
     <div
-      v-if="!isDemo"
+      v-if="!isWalletEnabled"
       id="wallet-unavailable-card"
       class="card"
       role="status"
       aria-live="polite"
       style="margin-bottom: 20px"
     >
-      <h3 style="margin-top: 0">Participant Wallet Not Available</h3>
+      <h3 style="margin-top: 0">Sign In Required for Participant Wallet</h3>
       <p style="font-size: 14px; color: var(--text-muted); line-height: 1.5">
         Direct participant stipend balances, payout cards, and receipt
-        reimbursements are not enabled in this portal environment. Please
-        contact your study coordinator regarding visit stipends or travel
-        reimbursements.
+        reimbursements require an active authenticated participant session.
+        Please sign in or contact your study coordinator for assistance.
       </p>
     </div>
 
     <template v-else>
+      <!-- Wallet Summary & On-Demand Balance Disbursement Card -->
       <div
         class="card"
         style="
@@ -65,28 +65,211 @@
           color: var(--semantic-color-text-on-solid);
         "
       >
-        <div style="font-size: 14px; font-weight: 600; opacity: 0.9">
-          Demo Sandbox Wallet Balance
-        </div>
         <div
-          id="wallet-balance-amount"
-          style="font-size: 32px; font-weight: 800; margin: 4px 0 0 0"
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 12px;
+          "
         >
-          {{
-            typeof wallet.walletBalance === "number"
-              ? `$${wallet.walletBalance.toFixed(2)} USD`
-              : "Unavailable"
-          }}
+          <div>
+            <div style="font-size: 14px; font-weight: 600">
+              {{
+                isDemo
+                  ? "Demo Sandbox Wallet Balance"
+                  : "Available Wallet Balance"
+              }}
+            </div>
+            <div
+              id="wallet-balance-amount"
+              style="font-size: 32px; font-weight: 800; margin: 4px 0 0 0"
+            >
+              {{ formattedAvailableBalance }}
+            </div>
+          </div>
+
+          <button
+            id="btn-disburse-balance"
+            type="button"
+            class="btn"
+            :disabled="
+              wallet.disbursingBalance || !(Number(wallet.walletBalance) > 0)
+            "
+            :aria-busy="wallet.disbursingBalance ? 'true' : 'false'"
+            style="
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-primary-dark);
+              font-weight: 700;
+              padding: 10px 16px;
+              border-radius: 8px;
+              border: none;
+              cursor: pointer;
+            "
+            @click="handleDisburseBalance"
+          >
+            {{
+              wallet.disbursingBalance
+                ? "Processing Payout..."
+                : "Disburse Available Balance"
+            }}
+          </button>
+        </div>
+
+        <div
+          style="
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid var(--semantic-color-primary-light);
+            font-size: 13px;
+          "
+        >
+          <div>
+            <div style="font-weight: 600">Lifetime Stipends</div>
+            <strong id="wallet-lifetime-stipends" style="font-size: 16px">
+              ${{ Number(wallet.lifetimeStipends || 0).toFixed(2) }}
+            </strong>
+          </div>
+          <div>
+            <div style="font-weight: 600">Lifetime Reimbursements</div>
+            <strong id="wallet-lifetime-reimbursements" style="font-size: 16px">
+              ${{ Number(wallet.lifetimeReimbursements || 0).toFixed(2) }}
+            </strong>
+          </div>
+          <div>
+            <div style="font-weight: 600">Total Paid Out</div>
+            <strong id="wallet-lifetime-disbursements" style="font-size: 16px">
+              ${{ Number(wallet.lifetimeDisbursements || 0).toFixed(2) }}
+            </strong>
+          </div>
+          <div>
+            <div style="font-weight: 600">IRS W-9 Status</div>
+            <strong id="wallet-w9-status" style="font-size: 15px">
+              {{ wallet.w9Status || "NOT_REQUIRED" }}
+            </strong>
+          </div>
         </div>
       </div>
 
+      <!-- On-Demand Payout Confirmation -->
+      <div
+        v-if="wallet.disbursementConfirmation"
+        id="wallet-disbursement-confirmation"
+        role="status"
+        aria-live="polite"
+        style="
+          margin-bottom: 20px;
+          padding: 14px 16px;
+          border-radius: 8px;
+          background: var(--semantic-color-success-bg);
+          border: 1px solid var(--semantic-color-success);
+          color: var(--semantic-color-text);
+        "
+      >
+        <h3
+          style="
+            margin: 0 0 4px 0;
+            font-size: 16px;
+            color: var(--semantic-color-success);
+          "
+        >
+          ✅ Balance Payout Dispatched
+        </h3>
+        <p style="margin: 0; font-size: 14px">
+          Transferred
+          <strong
+            >${{
+              Number(wallet.disbursementConfirmation.amount || 0).toFixed(2)
+            }}</strong
+          >
+          to
+          <strong>{{
+            wallet.disbursementConfirmation.destinationMask ||
+            "linked payout account"
+          }}</strong>
+          (Ref:
+          <code id="wallet-disbursement-ref">{{
+            wallet.disbursementConfirmation.referenceNumber
+          }}</code>).
+        </p>
+      </div>
+
+      <!-- Linked Masked Payout Accounts -->
+      <div
+        v-if="wallet.virtualCardMask || wallet.achAccountMask"
+        id="wallet-payout-methods-card"
+        class="card"
+        style="margin-bottom: 20px"
+      >
+        <h3 style="margin-top: 0; font-size: 16px">
+          Linked Payout Methods (Masked)
+        </h3>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            font-size: 14px;
+          "
+        >
+          <div
+            v-if="wallet.achAccountMask"
+            style="
+              padding: 10px 12px;
+              border-radius: 6px;
+              background: var(--semantic-color-surface-muted);
+              border: 1px solid var(--semantic-color-border);
+            "
+          >
+            <div style="font-weight: 700">Direct ACH Bank Account</div>
+            <div id="wallet-ach-account-mask" style="margin-top: 4px">
+              Account: {{ wallet.achAccountMask }}
+            </div>
+            <div
+              v-if="wallet.achRoutingMask"
+              id="wallet-ach-routing-mask"
+              style="color: var(--text-muted); font-size: 13px"
+            >
+              Routing: {{ wallet.achRoutingMask }}
+            </div>
+          </div>
+
+          <div
+            v-if="wallet.virtualCardMask"
+            style="
+              padding: 10px 12px;
+              border-radius: 6px;
+              background: var(--semantic-color-surface-muted);
+              border: 1px solid var(--semantic-color-border);
+            "
+          >
+            <div style="font-weight: 700">Reloadable Study Card</div>
+            <div id="wallet-virtual-card-mask" style="margin-top: 4px">
+              Card: {{ wallet.virtualCardMask }}
+            </div>
+            <div
+              v-if="wallet.virtualCardExpiry"
+              style="color: var(--text-muted); font-size: 13px"
+            >
+              Expires: {{ wallet.virtualCardExpiry }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Receipt OCR & Expense Claim Card -->
       <div class="card">
         <h3 style="margin-top: 0">
-          📷 Travel Expense Reimbursement Upload (Demo Preview)
+          📷 Travel &amp; Meal Receipt Reimbursement
         </h3>
         <p style="font-size: 14px; color: var(--text-muted)">
-          Upload a sample receipt image in demo mode to preview OCR extraction
-          and policy review states.
+          Upload a receipt photo or PDF to extract merchant, date, category, and
+          amount via OCR. Routine claims under $100.00 (meals up to $75.00) with
+          high scan confidence are auto-approved for direct ACH reimbursement.
         </p>
         <div
           id="receipt-upload-dropzone"
@@ -112,6 +295,13 @@
           <p style="margin: 6px 0 0 0; font-size: 14px; font-weight: 600">
             Upload receipt image for travel reimbursement
           </p>
+          <p
+            v-if="wallet.expenseForm.receiptImageName"
+            id="receipt-selected-filename"
+            style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted)"
+          >
+            Selected: {{ wallet.expenseForm.receiptImageName }}
+          </p>
         </div>
         <small
           id="receipt-upload-hint"
@@ -121,13 +311,13 @@
             text-align: center;
             color: var(--text-muted);
           "
-          >Tap to capture or upload; OCR extraction will automatically detect
-          merchant, date, and amount</small
+          >Tap to capture or upload; OCR extraction detects merchant, date,
+          category, and amount from your receipt image</small
         >
         <input
           id="receipt-file-input"
           type="file"
-          accept="image/*"
+          accept="image/*,application/pdf,.svg"
           class="sr-only"
           style="display: none"
           @change="handleReceiptFileSelected"
@@ -137,6 +327,8 @@
         <div
           v-if="wallet.expenseOcr?.loading"
           id="ocr-loading-spinner"
+          role="status"
+          aria-live="polite"
           style="
             margin-top: 16px;
             text-align: center;
@@ -149,11 +341,31 @@
             style="
               margin: 0;
               font-weight: 600;
-              color: var(--semantic-color-primary);
+              color: var(--semantic-color-primary-dark);
             "
           >
-            🔍 Extracting Receipt Metadata via Mobile OCR...
+            🔍 Extracting Receipt Metadata via OCR...
           </p>
+        </div>
+
+        <!-- Low-Clarity / Unreadable OCR Warning -->
+        <div
+          v-if="wallet.expenseOcr?.warning"
+          id="ocr-warning-banner"
+          role="status"
+          aria-live="polite"
+          style="
+            margin-top: 16px;
+            padding: 12px 14px;
+            border-radius: 8px;
+            background: var(--semantic-color-warning-bg);
+            border: 1px solid var(--semantic-color-warning);
+            color: var(--semantic-color-warning);
+            font-size: 14px;
+            font-weight: 600;
+          "
+        >
+          {{ wallet.expenseOcr.warning }}
         </div>
 
         <!-- OCR Confirmation & Review Card -->
@@ -165,7 +377,7 @@
             padding: 16px;
             border: 1px solid var(--semantic-color-border);
             border-radius: 8px;
-            background: rgba(255, 255, 255, 0.02);
+            background: var(--semantic-color-surface);
           "
         >
           <div
@@ -174,6 +386,8 @@
               justify-content: space-between;
               align-items: center;
               margin-bottom: 12px;
+              gap: 8px;
+              flex-wrap: wrap;
             "
           >
             <h4 style="margin: 0; font-size: 16px">
@@ -189,14 +403,14 @@
             <label for="ocr-category">Expense Category</label>
             <select id="ocr-category" v-model="wallet.expenseForm.category">
               <option value="TRANSIT">
-                TRANSIT (Public Transit / Ride Share)
+                TRANSIT (Public Transit / Ride Share / Cab)
               </option>
-              <option value="MILEAGE">
-                MILEAGE (Gas / Fuel / Personal Auto)
-              </option>
+              <option value="FUEL">FUEL (Gas / Fuel Station)</option>
+              <option value="MILEAGE">MILEAGE (Personal Auto Mileage)</option>
               <option value="PARKING">PARKING (Parking Garage / Lot)</option>
               <option value="MEAL">MEAL (Per-Diem Allowance)</option>
               <option value="LODGING">LODGING (Hotel / Accommodation)</option>
+              <option value="OTHER">OTHER (Study Travel Expense)</option>
             </select>
           </div>
 
@@ -211,7 +425,7 @@
           </div>
 
           <div class="form-group mb-12">
-            <label for="ocr-expense-date">Expense Date</label>
+            <label for="ocr-expense-date">Expense Date (YYYY-MM-DD)</label>
             <input
               id="ocr-expense-date"
               v-model="wallet.expenseForm.expenseDate"
@@ -227,6 +441,7 @@
               v-model.number="wallet.expenseForm.grossAmount"
               type="number"
               step="0.01"
+              min="0"
               required
             />
           </div>
@@ -261,10 +476,15 @@
             id="btn-confirm-reimburse"
             type="button"
             class="btn btn-primary"
+            :disabled="wallet.expenseSubmitting"
             style="width: 100%; margin-top: 12px"
             @click="handleConfirmReimburse"
           >
-            🚀 Confirm &amp; Reimburse
+            {{
+              wallet.expenseSubmitting
+                ? "Submitting Claim..."
+                : "🚀 Confirm & Reimburse"
+            }}
           </button>
         </div>
 
@@ -278,15 +498,18 @@
           <div
             v-if="
               wallet.expenseResult.status === 'AUTO_APPROVED' ||
-              wallet.expenseResult.auto_approved
+              wallet.expenseResult.auto_approved ||
+              wallet.expenseResult.autoApproved
             "
             id="expense-auto-approved-banner"
+            role="status"
+            aria-live="polite"
             style="
               padding: 16px;
               border-radius: 8px;
-              background: rgba(16, 185, 129, 0.1);
+              background: var(--semantic-color-success-bg);
               border: 1px solid var(--semantic-color-success);
-              color: var(--semantic-color-text-dark);
+              color: var(--semantic-color-text);
             "
           >
             <h4
@@ -299,20 +522,23 @@
               ✅ Reimbursement Auto-Approved &amp; Dispatched
             </h4>
             <p style="margin: 0 0 8px 0; font-size: 14px">
-              Direct ACH disbursement dispatched in demo preview.
+              Direct ACH reimbursement has been dispatched to your linked payout
+              account.
             </p>
             <div
               style="
                 font-size: 13px;
                 font-family: monospace;
-                background: rgba(0, 0, 0, 0.1);
+                background: var(--semantic-color-surface);
                 padding: 6px 10px;
                 border-radius: 4px;
+                border: 1px solid var(--semantic-color-border);
               "
             >
               ACH Reference:
               <strong id="ach-disbursement-reference">{{
-                wallet.expenseResult.disbursement_reference
+                wallet.expenseResult.disbursement_reference ||
+                wallet.expenseResult.disbursementReference
               }}</strong>
             </div>
           </div>
@@ -321,18 +547,20 @@
           <div
             v-else
             id="expense-pending-review-banner"
+            role="status"
+            aria-live="polite"
             style="
               padding: 16px;
               border-radius: 8px;
-              background: rgba(245, 158, 11, 0.1);
-              border: 1px solid var(--semantic-color-warning-border-strong);
-              color: var(--semantic-color-text-dark);
+              background: var(--semantic-color-warning-bg);
+              border: 1px solid var(--semantic-color-warning);
+              color: var(--semantic-color-text);
             "
           >
             <h4
               style="
                 margin: 0 0 6px 0;
-                color: var(--semantic-color-warning-text);
+                color: var(--semantic-color-warning);
                 font-size: 16px;
               "
             >
@@ -341,20 +569,75 @@
             <p id="pending-review-notes" style="margin: 0; font-size: 14px">
               {{
                 wallet.expenseResult.review_notes ||
-                "Expense claim exceeds policy threshold and requires study coordinator review."
+                wallet.expenseResult.reviewNotes ||
+                "Expense claim exceeds auto-approval policy and has been routed to your study coordinator."
               }}
             </p>
           </div>
         </div>
+      </div>
+
+      <!-- Recent Ledger Activity -->
+      <div
+        v-if="
+          Array.isArray(wallet.recentTransactions) &&
+          wallet.recentTransactions.length > 0
+        "
+        id="wallet-recent-transactions"
+        class="card"
+        style="margin-top: 20px"
+      >
+        <h3 style="margin-top: 0; font-size: 16px">Recent Wallet Activity</h3>
+        <ul style="list-style: none; padding: 0; margin: 0">
+          <li
+            v-for="tx in wallet.recentTransactions"
+            :key="tx.id || tx.Id"
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 10px 0;
+              border-bottom: 1px solid var(--semantic-color-border);
+              font-size: 14px;
+              gap: 12px;
+            "
+          >
+            <div>
+              <div style="font-weight: 600">
+                {{ tx.description || tx.Description || tx.transactionType }}
+              </div>
+              <div style="font-size: 12px; color: var(--text-muted)">
+                {{ tx.transactionType || tx.TransactionType }}
+              </div>
+            </div>
+            <strong
+              :style="{
+                color:
+                  Number(tx.amount ?? tx.Amount ?? 0) >= 0
+                    ? 'var(--semantic-color-success)'
+                    : 'var(--semantic-color-text)',
+              }"
+            >
+              {{ Number(tx.amount ?? tx.Amount ?? 0) >= 0 ? "+" : "" }}${{
+                Math.abs(Number(tx.amount ?? tx.Amount ?? 0)).toFixed(2)
+              }}
+            </strong>
+          </li>
+        </ul>
       </div>
     </template>
   </section>
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, onMounted, watch } from "vue";
 
-import { extractReceiptOcr, submitExpenseClaim } from "../features/wallet.js";
+import {
+  disburseAvailableBalance,
+  extractReceiptOcr,
+  loadParticipantWallet,
+  submitExpenseClaim,
+} from "../features/wallet.js";
 import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
 import { useWalletStore } from "../stores/wallet.js";
@@ -368,8 +651,48 @@ const isDemo = computed(() => {
   void session.session?.isDemoMode;
   return isDemoModeActive();
 });
+
+const isAuthenticated = computed(() =>
+  Boolean(
+    session.session?.token &&
+    session.session?.userId &&
+    !session.session?.isOfflineMode
+  )
+);
+
+const isWalletEnabled = computed(() => isDemo.value || isAuthenticated.value);
+
+const formattedAvailableBalance = computed(() => {
+  const amount =
+    typeof wallet.walletBalance === "number" ? wallet.walletBalance : 0;
+  return `$${amount.toFixed(2)} ${wallet.currency || "USD"}`;
+});
+
 const walletError = computed(
   () => wallet.expenseOcr?.error || wallet.expenseError || ""
+);
+
+function maybeHydrateWallet() {
+  if (
+    ui.currentView === "view-wallet" &&
+    isAuthenticated.value &&
+    !isDemo.value &&
+    !wallet.walletLoaded &&
+    !wallet.walletLoading
+  ) {
+    loadParticipantWallet().catch(() => {});
+  }
+}
+
+onMounted(() => {
+  maybeHydrateWallet();
+});
+
+watch(
+  () => [ui.currentView, session.session?.token, session.session?.userId],
+  () => {
+    maybeHydrateWallet();
+  }
 );
 
 function triggerReceiptUpload() {
@@ -400,6 +723,17 @@ async function handleConfirmReimburse() {
     const msg =
       err?.message ||
       "Unable to submit travel expense claim right now. Please try again later.";
+    wallet.expenseError = msg;
+  }
+}
+
+async function handleDisburseBalance() {
+  try {
+    await disburseAvailableBalance("DIRECT_ACH");
+  } catch (err) {
+    const msg =
+      err?.message ||
+      "Unable to disburse available wallet balance right now. Please try again later.";
     wallet.expenseError = msg;
   }
 }

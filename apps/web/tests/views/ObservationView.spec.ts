@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
+import { createMemoryHistory, createRouter } from "vue-router";
 import ObservationView from "@/views/ObservationView.vue";
 import { ApiError } from "@/api/client";
 import { kernelApi } from "@/api/kernelApi";
@@ -266,6 +267,155 @@ describe("ObservationView (ADR-2620)", () => {
     expect(
       wrapper.find("#observation-save").attributes("disabled")
     ).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("displays the clinical concept and one-click return navigation when embedded in Clinical Canvas", async () => {
+    vi.spyOn(kernelApi, "getObservation").mockResolvedValue(observation());
+    const zoomSpy = vi.spyOn(kernelApi, "getZoomPath");
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/studies/:studyCode?",
+          name: "study",
+          component: { template: "<div />" },
+        },
+        {
+          path: "/observations/:observationRef",
+          name: "observation",
+          component: ObservationView,
+          props: true,
+        },
+      ],
+    });
+    await router.push("/studies/CAD-101");
+    await router.isReady();
+
+    const wrapper = mount(ObservationView, {
+      props: {
+        observationRef: OBSERVATION,
+        embedded: true,
+        returnTo: "/studies/CAD-101?stage=conduct&participant=participant:p-1",
+        returnLabel: "Back to 017-0001",
+      },
+      global: { plugins: [router] },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    expect(wrapper.find("[data-testid=observation-concept]").text()).toBe(
+      "concept:systolic@1"
+    );
+    const backLink = wrapper.find("#observation-back");
+    expect(backLink.exists()).toBe(true);
+    expect(backLink.text()).toBe("Back to 017-0001");
+    expect(backLink.attributes("href")).toBe(
+      "/studies/CAD-101?stage=conduct&participant=participant:p-1"
+    );
+    expect(zoomSpy).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it("resolves study lineage and redirects authorized standalone observation links into Clinical Canvas", async () => {
+    vi.spyOn(kernelApi, "getObservation").mockResolvedValue(observation());
+    vi.spyOn(kernelApi, "getZoomPath").mockResolvedValue([
+      {
+        level: "study",
+        node: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80",
+        label: "CAD-101",
+        mask: null,
+      },
+      {
+        level: "study_site",
+        node: "study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d81",
+        label: "017",
+        mask: null,
+      },
+      {
+        level: "enrollment",
+        node: ENROLLMENT,
+        label: "017-0001",
+        mask: null,
+      },
+    ]);
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/studies/:studyCode?",
+          name: "study",
+          component: { template: "<div id='canvas-stub'>Canvas</div>" },
+        },
+        {
+          path: "/observations/:observationRef",
+          name: "observation",
+          component: ObservationView,
+          props: true,
+        },
+      ],
+    });
+    await router.push(`/observations/${OBSERVATION}`);
+    await router.isReady();
+
+    const wrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [router] }, attachTo: document.body }
+    );
+    await flushPromises();
+
+    expect(kernelApi.getZoomPath).toHaveBeenCalledWith(ENROLLMENT);
+    expect(router.currentRoute.value.name).toBe("study");
+    expect(router.currentRoute.value.params.studyCode).toBe("CAD-101");
+    expect(router.currentRoute.value.query).toEqual({
+      stage: "conduct",
+      site: "017",
+      observation: OBSERVATION,
+    });
+    wrapper.unmount();
+  });
+
+  it("keeps standalone observation view when scope lineage is masked for the caller", async () => {
+    vi.spyOn(kernelApi, "getObservation").mockResolvedValue(observation());
+    vi.spyOn(kernelApi, "getZoomPath").mockResolvedValue([
+      {
+        level: "study",
+        node: null,
+        label: null,
+        mask: { kind: "study", reason: "unauthorized" },
+      },
+    ]);
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/studies/:studyCode?",
+          name: "study",
+          component: { template: "<div />" },
+        },
+        {
+          path: "/observations/:observationRef",
+          name: "observation",
+          component: ObservationView,
+          props: true,
+        },
+      ],
+    });
+    await router.push(`/observations/${OBSERVATION}`);
+    await router.isReady();
+
+    const wrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [router] }, attachTo: document.body }
+    );
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe("observation");
+    expect(wrapper.find("[data-testid=observation-concept]").text()).toBe(
+      "concept:systolic@1"
+    );
     wrapper.unmount();
   });
 });
