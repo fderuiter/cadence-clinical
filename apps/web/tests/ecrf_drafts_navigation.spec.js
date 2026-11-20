@@ -245,7 +245,6 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
             EcrfFormPanel: true,
             DesignerSchemaPanel: true,
             ReasonModal: true,
-            ConflictResolutionModal: true,
             EhrReconciliationDrawer: true,
             "router-link": true,
           },
@@ -277,7 +276,6 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
             EcrfFormPanel: true,
             DesignerSchemaPanel: true,
             ReasonModal: true,
-            ConflictResolutionModal: true,
             EhrReconciliationDrawer: true,
             "router-link": true,
           },
@@ -321,7 +319,6 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
             EcrfFormPanel: true,
             DesignerSchemaPanel: true,
             ReasonModal: true,
-            ConflictResolutionModal: true,
             EhrReconciliationDrawer: true,
             "router-link": true,
           },
@@ -361,6 +358,34 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
         title: "Submitting the sample form isn't available yet",
       });
       expect(localStorage.getItem(VIEW_DRAFT_KEY)).not.toBeNull();
+    });
+
+    it("registers only beforeunload on window and cleans it up on unmount without online listeners", async () => {
+      const addListenerSpy = vi.spyOn(window, "addEventListener");
+      const removeListenerSpy = vi.spyOn(window, "removeEventListener");
+
+      const wrapper = mountSampleForm();
+      await nextTick();
+
+      const addedEvents = addListenerSpy.mock.calls.map((call) => call[0]);
+      expect(addedEvents).toEqual(["beforeunload"]);
+
+      // Verify beforeunload guard blocks unload while form is dirty
+      const unloadEvent = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(unloadEvent);
+      expect(unloadEvent.defaultPrevented).toBe(true);
+
+      // Reconnecting online dispatches no PIN challenge
+      const pinChallengeSpy = vi.fn();
+      window.addEventListener("pin-challenge-required", pinChallengeSpy);
+      window.dispatchEvent(new Event("online"));
+      expect(pinChallengeSpy).not.toHaveBeenCalled();
+      window.removeEventListener("pin-challenge-required", pinChallengeSpy);
+
+      wrapper.unmount();
+      expect(
+        removeListenerSpy.mock.calls.some((call) => call[0] === "beforeunload")
+      ).toBe(true);
     });
   });
 });

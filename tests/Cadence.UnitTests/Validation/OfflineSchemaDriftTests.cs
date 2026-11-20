@@ -47,20 +47,6 @@ public class OfflineSchemaDriftTests
     }
 
     /// <summary>
-    /// Validate PendingDelta schema compatibility between client and server.
-    /// </summary>
-    [Fact(DisplayName = "PendingDeltaSchemaDrift")]
-    [Trait("Category", "Validation")]
-    public void TestPendingDeltaSchemaDrift()
-    {
-        var repoRoot = GetRepoRoot();
-        var clientFile = Path.Combine(repoRoot, "apps", "web", "src", "utils", "syncEngine.ts");
-
-        // Verify that web client sync engine or database schema definitions exist
-        File.Exists(clientFile).Should().BeTrue("apps/web/src/utils/syncEngine.ts must exist");
-    }
-
-    /// <summary>
     /// Validate submission object compatibility.
     /// </summary>
     [Fact(DisplayName = "SubmissionsSchemaDrift")]
@@ -106,17 +92,5 @@ public class OfflineSchemaDriftTests
         var jsTypeWithSpaces = "  string  ";
         var pyTypeWithSpaces = "  str | None  ";
         AreTypesCompatible(jsTypeWithSpaces, pyTypeWithSpaces).Should().BeTrue();
-    }
-
-    /// <summary>
-    /// Validate committed TypeScript DB schemas existence.
-    /// </summary>
-    [Fact(DisplayName = "CommittedTypescriptSchemaIsUpToDate")]
-    [Trait("Category", "Validation")]
-    public void TestCommittedTypescriptSchemaIsUpToDate()
-    {
-        var repoRoot = GetRepoRoot();
-        var committedFile = Path.Combine(repoRoot, "apps", "web", "src", "types", "db_schemas.ts");
-        File.Exists(committedFile).Should().BeTrue("db_schemas.ts must exist");
     }
 }
