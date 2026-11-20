@@ -63,6 +63,7 @@
         :form-location="formLocation"
         :observation-location="observationLocation"
         @retry-schedule="canvas.retryScheduleOptions(studyCode)"
+        @dirty-change="emit('dirty-change', $event)"
         @form-loaded="emit('form-loaded', $event)"
         @closed="emit('closed')"
       />
@@ -71,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from "vue";
+import { computed, onUnmounted, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import type { EcrfForm } from "../../api/ecrfFormsApi";
 import type { SubjectSummary } from "../../api/executionApi";
@@ -102,11 +103,16 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+  (e: "dirty-change", dirty: boolean): void;
   (e: "form-loaded", loaded: EcrfForm): void;
   (e: "closed"): void;
 }>();
 
 const canvas = useStudyCanvasStore();
+
+onUnmounted(() => {
+  emit("dirty-change", false);
+});
 
 watch(
   () => [props.studyCode, props.formId] as const,
