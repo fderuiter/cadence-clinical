@@ -50,14 +50,17 @@ public sealed class DeidComplianceServiceTests : IDisposable
     [InlineData("const port = 12345;")]
     [InlineData("const version = \"2024-05-01\";")]
     [InlineData("const ratio = 555.0100;")]
+    [InlineData("const tenantRef = \"tenant:00000000-0000-0000-0000-000000000000\";")]
+    [InlineData("const studyId = \"12345678-1234-4321-8765-123456789012\";")]
     public void ScanText_AllowsKnownDevelopmentValues(string line)
     {
-        DeidComplianceService.ScanText("apps/x/Config.ts", line, Detector).Should().BeEmpty();
+        DeidComplianceService.ScanText("apps/web/src/stores/auth.js", line, Detector).Should().BeEmpty();
     }
 
     [Theory]
     [InlineData("const contact = \"jane.roe@hospital.test\";", DetectorCategory.Email)]
     [InlineData("const sneaky = \"clinical@gmail.com\";", DetectorCategory.Email)]
+    [InlineData("const phone = \"+1-415-555-0199\";", DetectorCategory.TelephoneFax)]
     [InlineData("const site = \"https://patient-portal.test/records\";", DetectorCategory.Urls)]
     [InlineData("const unsplash = \"https://images.unsplash.com/photo-1579684385127\";", DetectorCategory.Urls)]
     [InlineData("const badge = \"https://img.shields.io/badge/.NET-10.0-512BD4.svg\";", DetectorCategory.Urls)]

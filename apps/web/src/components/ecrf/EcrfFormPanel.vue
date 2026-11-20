@@ -112,6 +112,15 @@
       <p v-if="loading" role="status">Loading form…</p>
       <p v-if="loadError" class="ecrf-form-error" role="alert">
         The form could not be loaded: {{ loadError }}
+        <button
+          id="ecrf-form-retry"
+          class="btn btn-secondary"
+          type="button"
+          :disabled="loading"
+          @click="retryLoad"
+        >
+          Try again
+        </button>
       </p>
       <p v-if="openError" class="ecrf-form-error" role="alert">
         The form could not be opened: {{ openError }}
@@ -638,6 +647,15 @@
         <p v-if="queries.loading" role="status">Loading queries…</p>
         <p v-else-if="queries.loadError" class="ecrf-form-error" role="alert">
           The queries could not be loaded: {{ queries.loadError }}
+          <button
+            id="ecrf-queries-retry"
+            class="btn btn-secondary"
+            type="button"
+            :disabled="queries.loading"
+            @click="queries.reload"
+          >
+            Try again
+          </button>
         </p>
         <p
           v-else-if="queries.queries.length === 0"
@@ -972,10 +990,12 @@ const {
   isEdited,
   clearDraft,
   load,
+  retryLoad,
   reload,
   open,
   save,
   sign,
+  dismiss,
   close,
 } = useEcrfForm();
 
@@ -1498,9 +1518,9 @@ watch(
       if (form.value?.form_id !== next) {
         void load(next);
       }
-    } else if (prev && form.value) {
-      clearDraft();
-      close();
+    } else if (prev) {
+      reuseId.value = "";
+      dismiss();
     }
   }
 );
@@ -1657,6 +1677,10 @@ watch(dirty, (value) => emit("dirty-change", value));
   color: #b91c1c;
   font-size: 0.8rem;
   margin: 2px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 .ecrf-form-complete {
   color: #166534;

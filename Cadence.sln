@@ -129,6 +129,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cadence.Modules.Intelligenc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cadence.Modules.Execution", "apps\execution\module\Cadence.Modules.Execution.csproj", "{3DC6B050-0EA6-4B74-BCC0-03D6B804E665}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cadence.Kernel.ConsumerTests", "packages\kernel\consumer-tests\Cadence.Kernel.ConsumerTests\Cadence.Kernel.ConsumerTests.csproj", "{6F0BF1AC-B943-4C96-A4CA-97CAA839976D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -787,6 +789,18 @@ Global
 		{3DC6B050-0EA6-4B74-BCC0-03D6B804E665}.Release|x64.Build.0 = Release|Any CPU
 		{3DC6B050-0EA6-4B74-BCC0-03D6B804E665}.Release|x86.ActiveCfg = Release|Any CPU
 		{3DC6B050-0EA6-4B74-BCC0-03D6B804E665}.Release|x86.Build.0 = Release|Any CPU
+		{6F0BF1AC-B943-4C96-A4CA-97CAA839976D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6F0BF1AC-B943-4C96-A4CA-97CAA839976D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6F0BF1AC-B943-4C96-A4CA-97CAA839976D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6F0BF1AC-B943-4C96-A4CA-97CAA839976D}.Debug|x64.Build.0 = Debug|Any CPU
+		{6F0BF1AC-B943-4C96-A4CA-97CAA839976D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6F0BF1AC-B943-4C96-A4CA-97CAA839976D}.Debug|x86.Build.0 = Debug|Any CPU
+		{6F0BF1AC-B943-4C96-A4CA-97CAA839976D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6F0BF1AC-B943-4C96-A4CA-97CAA839976D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6F0BF1AC-B943-4C96-A4CA-97CAA839976D}.Release|x64.ActiveCfg = Release|Any CPU
+		{6F0BF1AC-B943-4C96-A4CA-97CAA839976D}.Release|x64.Build.0 = Release|Any CPU
+		{6F0BF1AC-B943-4C96-A4CA-97CAA839976D}.Release|x86.ActiveCfg = Release|Any CPU
+		{6F0BF1AC-B943-4C96-A4CA-97CAA839976D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -846,5 +860,6 @@ Global
 		{AA2BE4FC-9453-43C7-BA22-71767B9AB796} = {F9DF34EE-B937-4EBE-B5AE-48566FFDFE73}
 		{A9E15785-6026-4F80-B45A-D4B90AEABC26} = {1A8827C4-05A9-4E65-B68C-BE63920F928A}
 		{3DC6B050-0EA6-4B74-BCC0-03D6B804E665} = {1A8827C4-05A9-4E65-B68C-BE63920F928A}
+		{6F0BF1AC-B943-4C96-A4CA-97CAA839976D} = {D0000000-0000-0000-0000-000000000001}
 	EndGlobalSection
 EndGlobal

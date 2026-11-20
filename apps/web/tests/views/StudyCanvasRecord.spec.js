@@ -17,6 +17,7 @@ import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 vi.mock("../../src/api/executionApi", () => ({
   executionApi: {
     listSubjects: vi.fn(),
+    getSubjectDetail: vi.fn(),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
   },
@@ -274,14 +275,146 @@ describe("Clinical Canvas: a participant's data", () => {
     expect(ecrfQueriesApi.listForEnrollment).not.toHaveBeenCalled();
   });
 
-  it("says a participant opened by link isn't loaded instead of guessing its code", async () => {
-    await mountAt(RECORD_URL);
+  it("hydrates a participant opened by cold link, showing a loading message before resolving", async () => {
+    let resolveSubjects;
+    vi.mocked(executionApi.listSubjects).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSubjects = resolve;
+        })
+    );
+
+    await router.push(RECORD_URL);
+    await router.isReady();
+    wrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [pinia, router] }, attachTo: document.body }
+    );
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find("#record-loading").text()).toContain(
+      "Loading participant"
+    );
+    expect(wrapper.find("#record-not-loaded").exists()).toBe(false);
+
+    resolveSubjects({
+      items: [PARTICIPANT],
+      total: 1,
+      limit: 200,
+      offset: 0,
+    });
+    await flushPromises();
+
+    expect(executionApi.listSubjects).toHaveBeenCalledWith({
+      studyId: "CAD-101",
+      limit: 200,
+      offset: 0,
+    });
+    expect(findKernelEnrollmentRef).toHaveBeenCalledWith(
+      "CAD-101",
+      "017",
+      "017-0001"
+    );
+    expect(wrapper.find("#participant-record-title").text()).toBe("017-0001");
+    expect(wrapper.find("#canvas-inspector-title").text()).toBe("017-0001");
+    expect(wrapper.find("#record-not-loaded").exists()).toBe(false);
+  });
+
+  it("says a participant opened by link isn't loaded when absent or forbidden instead of guessing its code", async () => {
+    const unknownId = "0192f3c4-5e6a-7b8c-9d0e-000000000099";
+    await mountAt(
+      `/studies/CAD-101?stage=conduct&participant=participant:${unknownId}`
+    );
 
     expect(wrapper.find("#record-not-loaded").text()).toContain(
       "isn't among those loaded for CAD-101"
     );
     expect(findKernelEnrollmentRef).not.toHaveBeenCalled();
-    expect(executionApi.listSubjects).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+    vi.mocked(executionApi.listSubjects).mockRejectedValueOnce(
+      new ApiError("Forbidden", 403)
+    );
+    await mountAt(
+      `/studies/CAD-102?stage=conduct&participant=participant:${PARTICIPANT_ID}`
+    );
+    expect(wrapper.find("#record-not-loaded").text()).toContain(
+      "isn't among those loaded for CAD-102"
+    );
+  });
+
+  it("hydrates a cold form link via ensureParticipantById", async () => {
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue({
+      form_id: FORM_ID,
+      enrollment_id: ENROLLMENT_ID,
+      participant_id: PARTICIPANT_ID,
+      protocol_version_id: "0192f3c4-5e6a-7b8c-9d0e-00000000b001",
+      collection_spec_id: "VS",
+      collection_title: "Vital Signs",
+      planned_activity_id: "WEEK2",
+      collected_at: "2027-03-14T09:00:00Z",
+      opened_at: "2027-03-14T09:00:00Z",
+      opened_by: "crc1",
+      complete: false,
+      missing_required: [],
+      content_hash: "sha256:abc",
+      version: 1,
+      locks: [],
+      assertions: [],
+      signatures: [],
+      items: [],
+    });
+    vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([]);
+
+    await mountAt(
+      `/studies/CAD-101?stage=conduct&form=collection_instance:${FORM_ID}`
+    );
+
+    expect(wrapper.find("#zoom-participant").text()).toBe("017-0001");
+    expect(wrapper.find("#canvas-form-back").text()).toBe("Back to 017-0001");
+    expect(wrapper.find("#canvas-inspector-title").text()).toBe("017-0001");
+  });
+
+  it("hydrates a cold observation link via resolveParticipantByCode", async () => {
+    vi.mocked(executionApi.getSubjectDetail).mockResolvedValue({
+      subject_id: "017-0001",
+      study_id: "CAD-101",
+      status: "ACTIVE",
+      site_id: "017",
+      treatment_group: null,
+      randomization_seed: null,
+      investigational_product_id: null,
+    });
+    vi.mocked(kernelApi.getObservation).mockResolvedValue({
+      ref: `observation:${OBSERVATION_ID}@1`,
+      enrollment_ref: `enrollment:${ENROLLMENT_ID}`,
+      concept: "concept:systolic@1",
+      value: {
+        type: "quantity",
+        value: 120,
+        unit: "mm[Hg]",
+        comparator: null,
+      },
+      observed_at: "2027-03-14T09:00:00Z",
+      version: 1,
+      locks: [],
+      revisions: [],
+      assertions: [],
+      audit: [],
+    });
+    vi.mocked(kernelApi.getZoomPath).mockResolvedValue([
+      { level: "study_site", mask: null, label: "017" },
+      { level: "enrollment", mask: null, label: "017-0001" },
+    ]);
+
+    await mountAt(
+      `/studies/CAD-101?stage=conduct&observation=observation:${OBSERVATION_ID}`
+    );
+
+    expect(executionApi.getSubjectDetail).toHaveBeenCalledWith("017-0001");
+    expect(wrapper.find("#zoom-participant").text()).toBe("017-0001");
+    expect(wrapper.find("#observation-back").text()).toBe("Back to 017-0001");
+    expect(wrapper.find("#canvas-inspector-title").text()).toBe("017-0001");
   });
 
   describe("queries", () => {
@@ -521,6 +654,195 @@ describe("Clinical Canvas: a participant's data", () => {
       expect(wrapper.find("#record-queries-outcome").text()).toContain(
         "You are not allowed"
       );
+    });
+  });
+
+  describe("dirty form navigation guards and draft preservation", () => {
+    const SECOND_FORM_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000f002";
+
+    function loadedFormFixture(formId = FORM_ID) {
+      return {
+        form_id: formId,
+        enrollment_id: ENROLLMENT_ID,
+        participant_id: PARTICIPANT_ID,
+        protocol_version_id: "0192f3c4-5e6a-7b8c-9d0e-00000000b001",
+        collection_spec_id: "VS",
+        collection_title: "Vital Signs",
+        planned_activity_id: "WEEK2",
+        collected_at: "2027-03-14T09:00:00Z",
+        opened_at: "2027-03-14T09:00:00Z",
+        opened_by: "crc1",
+        complete: false,
+        missing_required: ["DIABP"],
+        content_hash: "sha256:abc",
+        version: 1,
+        locks: [],
+        assertions: [],
+        signatures: [],
+        items: [
+          {
+            item_id: "SYSBP",
+            concept: "concept:systolic@1",
+            unit: "mm[Hg]",
+            value_kind: "Quantity",
+            required: true,
+            value: {
+              type: "quantity",
+              value: 120,
+              unit: "mm[Hg]",
+              comparator: null,
+            },
+            observation_id: OBSERVATION_ID,
+            revision: 1,
+            recorded_by: "crc1",
+            recorded_at: "2027-03-14T09:05:00Z",
+          },
+        ],
+      };
+    }
+
+    beforeEach(() => {
+      localStorage.clear();
+      const auth = useAuthStore();
+      auth.setAuth({
+        authenticated: true,
+        token: "token-crc-1",
+        tokenParsed: {
+          sub: "crc-1",
+          tenant_id: "tenant-1",
+          realm_access: { roles: ["CRC"] },
+        },
+      });
+      vi.mocked(ecrfFormsApi.getForm).mockImplementation(async (id) =>
+        loadedFormFixture(id)
+      );
+      vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([]);
+    });
+
+    afterEach(() => {
+      localStorage.clear();
+    });
+
+    it("guards beforeunload, route leave, and route updates that unmount, clear, or switch a dirty form while preserving drafts", async () => {
+      await openRecord();
+      await wrapper.find(`#record-form-link-${FORM_ID}`).trigger("click");
+      await flushPromises();
+
+      await wrapper.find("#ecrf-item-SYSBP").setValue("136");
+      await flushPromises();
+
+      // beforeunload blocks tab close while dirty.
+      const unloadEvent = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(unloadEvent);
+      expect(unloadEvent.defaultPrevented).toBe(true);
+
+      const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+      // Inspector query changes on the same open form do not prompt.
+      await router.push({
+        name: "study",
+        params: { studyCode: "CAD-101" },
+        query: {
+          ...router.currentRoute.value.query,
+          ask: "Check vitals range",
+        },
+      });
+      await flushPromises();
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(router.currentRoute.value.query.ask).toBe("Check vitals range");
+      await wrapper.find("#verb-details").trigger("click");
+
+      // Navigating to ?form=new (clearing active form) prompts and cancels when rejected.
+      await wrapper.find("#inspector-open-data-entry").trigger("click");
+      await flushPromises();
+      expect(confirmSpy).toHaveBeenCalledTimes(1);
+      expect(router.currentRoute.value.query.form).toBe(
+        `collection_instance:${FORM_ID}`
+      );
+      expect(wrapper.find("#ecrf-item-SYSBP").element.value).toBe("136");
+
+      // Opening an observation (unmounting CanvasFormWorkspace) prompts and cancels when rejected.
+      await wrapper.find("#ecrf-item-observation-SYSBP").trigger("click");
+      await flushPromises();
+      expect(confirmSpy).toHaveBeenCalledTimes(2);
+      expect(router.currentRoute.value.query.observation).toBeUndefined();
+
+      // Switching to another form prompts and cancels when rejected.
+      await router.push(
+        `/studies/CAD-101?stage=conduct&participant=participant:${PARTICIPANT_ID}&form=collection_instance:${SECOND_FORM_ID}`
+      );
+      await flushPromises();
+      expect(confirmSpy).toHaveBeenCalledTimes(3);
+      expect(router.currentRoute.value.query.form).toBe(
+        `collection_instance:${FORM_ID}`
+      );
+
+      // Leaving the route altogether prompts and cancels when rejected.
+      await router.push("/ecrf");
+      await flushPromises();
+      expect(confirmSpy).toHaveBeenCalledTimes(4);
+      expect(router.currentRoute.value.name).toBe("study");
+
+      // Confirming navigation to ?form=new flushes the <500ms draft to localStorage without deleting it and clears dirty state.
+      confirmSpy.mockReturnValue(true);
+      await wrapper.find("#inspector-open-data-entry").trigger("click");
+      await flushPromises();
+      expect(router.currentRoute.value.query.form).toBe("new");
+
+      const cleanUnload = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(cleanUnload);
+      expect(cleanUnload.defaultPrevented).toBe(false);
+
+      // Returning to the form restores the preserved browser draft.
+      await wrapper.find(`#record-form-link-${FORM_ID}`).trigger("click");
+      await flushPromises();
+      expect(wrapper.find("#ecrf-item-SYSBP").element.value).toBe("136");
+    });
+
+    it("skips confirmation when @form-loaded syncs ?form=new to the URL and avoids duplicate prompts on #ecrf-form-close", async () => {
+      vi.mocked(ecrfFormsApi.openForm).mockResolvedValue({ form_id: FORM_ID });
+      // Seed a saved draft so the form is immediately dirty as soon as openForm loads it.
+      localStorage.setItem(
+        `cadence_user:tenant-1:crc-1:ecrf_form_draft:${FORM_ID}`,
+        JSON.stringify({
+          form_id: FORM_ID,
+          items: { SYSBP: { text: "142", missing: "", revision: 1 } },
+        })
+      );
+
+      const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+      await openRecord();
+      await wrapper.find("#record-open-form").trigger("click");
+      await flushPromises();
+      expect(router.currentRoute.value.query.form).toBe("new");
+
+      await wrapper.find("#ecrf-collection-spec").setValue("VS");
+      await wrapper.find("#ecrf-collected-at").setValue("2027-03-14T09:00");
+      await wrapper.find("#ecrf-form-new").trigger("submit");
+      await flushPromises();
+
+      // URL synced to collection_instance:<FORM_ID> without prompting confirm.
+      expect(router.currentRoute.value.query.form).toBe(
+        `collection_instance:${FORM_ID}`
+      );
+      expect(wrapper.find("#ecrf-item-SYSBP").element.value).toBe("142");
+      expect(confirmSpy).not.toHaveBeenCalled();
+
+      // Explicit #ecrf-form-close prompts once in closeForm, deletes draft, and navigates back without a second route guard prompt.
+      await wrapper.find("#ecrf-form-close").trigger("click");
+      await flushPromises();
+
+      expect(confirmSpy).toHaveBeenCalledTimes(1);
+      expect(router.currentRoute.value.query).toEqual({
+        stage: "conduct",
+        participant: `participant:${PARTICIPANT_ID}`,
+      });
+      expect(
+        localStorage.getItem(
+          `cadence_user:tenant-1:crc-1:ecrf_form_draft:${FORM_ID}`
+        )
+      ).toBeNull();
     });
   });
 });

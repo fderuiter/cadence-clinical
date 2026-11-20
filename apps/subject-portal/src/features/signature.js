@@ -1,5 +1,5 @@
 // 21 CFR Part 11 electronic signature modal for ePRO and eConsent.
-import { getFocusableElements, sha256 } from "ui";
+import { getFocusableElements, sha256, trapTabFocus } from "ui";
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
 import {
@@ -15,6 +15,45 @@ import { loadConsentDetails } from "./consent.js";
 import { showView } from "./navigation.js";
 import { syncOfflineQueue } from "./sync.js";
 import { renderTasks } from "./tasks.js";
+
+let signatureTrapBound = false;
+
+function handleSignatureModalKeydown(event) {
+  if (!state.signatureModalOpen) return;
+  const modal =
+    typeof document !== "undefined"
+      ? document.getElementById("portal-sign-modal")
+      : null;
+  if (!modal) return;
+  if (event.key === "Tab") {
+    trapTabFocus(event, modal);
+  } else if (event.key === "Escape" && !event.defaultPrevented) {
+    event.preventDefault();
+    closeSignatureModal();
+  }
+}
+
+function attachSignatureModalTrap() {
+  if (signatureTrapBound) return;
+  if (typeof document !== "undefined") {
+    document.addEventListener("keydown", handleSignatureModalKeydown);
+  }
+  if (typeof window !== "undefined") {
+    window.addEventListener("keydown", handleSignatureModalKeydown);
+  }
+  signatureTrapBound = true;
+}
+
+function detachSignatureModalTrap() {
+  if (!signatureTrapBound) return;
+  if (typeof document !== "undefined") {
+    document.removeEventListener("keydown", handleSignatureModalKeydown);
+  }
+  if (typeof window !== "undefined") {
+    window.removeEventListener("keydown", handleSignatureModalKeydown);
+  }
+  signatureTrapBound = false;
+}
 
 // Submit with 21 CFR PIN signature validation
 export function openSignatureModal(actionType = "epro") {
@@ -65,26 +104,19 @@ export function openSignatureModal(actionType = "epro") {
     modal.setAttribute("aria-modal", "true");
   }
   state.signatureModalOpen = true;
+  attachSignatureModalTrap();
 
-  // Ensure initial focus lands inside the modal even if rendered outside Vue mount
+  // Ensure initial focus lands synchronously inside the modal even if rendered outside Vue mount
   if (modal && !modal.contains(document.activeElement)) {
     const focusableElements = getFocusableElements(modal);
     if (focusableElements.length > 0) {
       focusableElements[0].focus();
-    } else {
-      const rawInputs = Array.from(
-        modal.querySelectorAll(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        )
-      ).filter((el) => !el.disabled);
-      if (rawInputs.length > 0) {
-        rawInputs[0].focus();
-      }
     }
   }
 }
 
 export function closeSignatureModal() {
+  detachSignatureModalTrap();
   // Credential hygiene: clear PIN / password from DOM immediately on cancel or Escape
   const passwordEl = document.getElementById("sign-password");
   if (passwordEl) passwordEl.value = "";

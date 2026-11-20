@@ -431,9 +431,11 @@ public static partial class DeidComplianceService
             || val is "+1234567890" or "+0987654321"
             || digits.Length == 0 || !digits.All(char.IsAsciiDigit)
             || val.Contains('.', StringComparison.Ordinal)
-            || val.Contains("0000000000", StringComparison.Ordinal)
+            || digits.Contains("0000000000", StringComparison.Ordinal)
+            || digits.All(c => c == '0')
             || DecimalNumberRegex().Matches(lineContent).Any(m => m.Value.Replace(".", string.Empty, StringComparison.Ordinal).Contains(val, StringComparison.Ordinal))
-            || HexTokenRegex().Matches(lineContent).Any(m => m.Value.Contains(val, StringComparison.Ordinal));
+            || HexTokenRegex().Matches(lineContent).Any(m => m.Value.Contains(val, StringComparison.Ordinal))
+            || UuidRegex().Matches(lineContent).Any(m => m.Value.Contains(val.Trim(), StringComparison.Ordinal));
     }
 
     private static (int Line, int Column) LineAndColumn(string content, int offset)
@@ -507,4 +509,7 @@ public static partial class DeidComplianceService
 
     [GeneratedRegex(@"[0-9a-fA-F]{32,}")]
     private static partial Regex HexTokenRegex();
+
+    [GeneratedRegex(@"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b")]
+    private static partial Regex UuidRegex();
 }

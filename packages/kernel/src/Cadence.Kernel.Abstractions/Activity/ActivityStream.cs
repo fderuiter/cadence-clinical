@@ -29,6 +29,12 @@ public static class KernelEventFamilies
     {
         ["TenantProvisioned"] = EventFamily.Execution,
         ["OrganizationRegistered"] = EventFamily.Execution,
+        ["PersonRegistered"] = EventFamily.Execution,
+        ["TenantMembershipRegistered"] = EventFamily.Execution,
+        ["SubscriptionProvisioned"] = EventFamily.Execution,
+        ["SubscriptionExpired"] = EventFamily.Execution,
+        ["SubscriptionActivated"] = EventFamily.Execution,
+        ["ProductEntitlementGranted"] = EventFamily.Execution,
         ["StudyRegistered"] = EventFamily.Knowledge,
         ["SiteRegistered"] = EventFamily.Execution,
         ["SiteLinkedToStudy"] = EventFamily.Execution,

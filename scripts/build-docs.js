@@ -4,6 +4,22 @@ const fs = require("fs");
 const path = require("path");
 
 const repoRoot = path.resolve(__dirname, "..");
+const docsRoot = path.join(repoRoot, "docs");
+const rootDocsModulePath = path.join(docsRoot, ".vitepress", "rootDocs.cjs");
+const { STAGED_ROOT_DOCS } = fs.existsSync(rootDocsModulePath)
+  ? require(rootDocsModulePath)
+  : {
+      STAGED_ROOT_DOCS: Object.freeze({
+        "README.md": "index.md",
+        "ARCHITECTURE.md": "ARCHITECTURE.md",
+        "AGENTS.md": "AGENTS.md",
+        "CONTEXT.md": "CONTEXT.md",
+        "CONTRIBUTING.md": "CONTRIBUTING.md",
+        "SECURITY.md": "SECURITY.md",
+        "SUPPORT.md": "SUPPORT.md",
+        LICENSE: "LICENSE.md",
+      }),
+    };
 
 const VITEPRESS_ENV_ALLOWLIST = [
   "PATH",
@@ -40,17 +56,17 @@ function ensureHeapNodeOptions(nodeOptions) {
 }
 
 /**
- * Builds the isolated environment passed strictly to the compliance traceability step (`generate-rtm`),
- * generating ephemeral per-invocation signing secrets when none were supplied by the caller without
- * mutating `process.env`.
+ * Builds the isolated environment passed strictly to the pre-build CLI verification steps
+ * (`check openapi`, `check schema-doc`, `check markdown`, `check rtm`), generating ephemeral
+ * per-invocation signing secrets when none were supplied by the caller without mutating
+ * `process.env` or setting `RTM_DRAFT`.
  * @param {NodeJS.ProcessEnv} [baseEnv=process.env] - Base environment variables.
- * @returns {NodeJS.ProcessEnv} Isolated environment for RTM generation.
+ * @returns {NodeJS.ProcessEnv} Isolated environment for CLI verification steps.
  */
 function buildRtmEnv(baseEnv = process.env) {
   return {
     ...baseEnv,
     NODE_OPTIONS: ensureHeapNodeOptions(baseEnv.NODE_OPTIONS),
-    RTM_DRAFT: baseEnv.RTM_DRAFT || "true",
     AUDIT_LOG_SECRET_KEY:
       baseEnv.AUDIT_LOG_SECRET_KEY || crypto.randomBytes(32).toString("hex"),
     INBOUND_EMAIL_HMAC_SECRET:
@@ -134,7 +150,7 @@ function runPreflightChecks() {
 }
 
 /**
- * Executes a shell command from the application directory.
+ * Executes a shell command from the repository root directory.
  * @param {string} command - The shell command to execute.
  * @param {NodeJS.ProcessEnv} [envOverride] - Optional explicit environment map for the child process.
  */
@@ -156,100 +172,125 @@ function runCommand(command, envOverride) {
   }
 }
 
+function isExternalOrSamePageHref(url) {
+  return (
+    url.startsWith("http://") ||
+    url.startsWith("https://") ||
+    url.startsWith("file://") ||
+    url.startsWith("mailto:") ||
+    url.startsWith("tel:") ||
+    url.startsWith("#") ||
+    url.startsWith("/")
+  );
+}
+
+function splitUrlParts(url) {
+  const hashIdx = url.indexOf("#");
+  const withoutHash = hashIdx === -1 ? url : url.slice(0, hashIdx);
+  const hashPart = hashIdx === -1 ? "" : url.slice(hashIdx);
+  const queryIdx = withoutHash.indexOf("?");
+  const targetPath =
+    queryIdx === -1 ? withoutHash : withoutHash.slice(0, queryIdx);
+  const queryPart = queryIdx === -1 ? "" : withoutHash.slice(queryIdx);
+  return { targetPath, suffix: `${queryPart}${hashPart}` };
+}
+
+function rewriteRootDocHref(cleanUrl) {
+  if (isExternalOrSamePageHref(cleanUrl)) {
+    return cleanUrl;
+  }
+
+  const { targetPath, suffix } = splitUrlParts(cleanUrl);
+  if (!targetPath) {
+    return cleanUrl;
+  }
+
+  const absTarget = path.resolve(repoRoot, decodeURI(targetPath));
+  const relToRepo = path.relative(repoRoot, absTarget).replace(/\\/g, "/");
+
+  if (STAGED_ROOT_DOCS[relToRepo] && fs.existsSync(absTarget)) {
+    return `${STAGED_ROOT_DOCS[relToRepo]}${suffix}`;
+  }
+
+  const relToDocs = path.relative(docsRoot, absTarget).replace(/\\/g, "/");
+  if (!relToDocs.startsWith("..") && !path.isAbsolute(relToDocs)) {
+    return `${relToDocs}${suffix}`;
+  }
+
+  if (fs.existsSync(absTarget)) {
+    return `${relToDocs}${suffix}`;
+  }
+
+  return cleanUrl;
+}
+
+function updateFenceState(line, state) {
+  const m = line.trimStart().match(/^(`{3,}|~{3,})(.*)$/);
+  if (!m) return false;
+  const marker = m[1];
+  const rest = m[2].trim();
+  if (!state.char) {
+    state.char = marker[0];
+    state.len = marker.length;
+    return true;
+  }
+  if (marker[0] === state.char && marker.length >= state.len && rest === "") {
+    state.char = "";
+    state.len = 0;
+    return true;
+  }
+  return false;
+}
+
 /**
- * Rewrites relative links inside staged markdown documents.
- * @param {string} content - The markdown file content.
- * @returns {string} The updated markdown content with corrected links.
+ * Rewrites relative links inside staged root Markdown documents.
+ * @param {string} content - The Markdown file content.
+ * @returns {string} The updated Markdown content with corrected links.
  */
 function rewriteLinks(content) {
   // Inline links [text](link), ignoring fenced and inline code blocks
   let rewritten = content.replace(
-    /```[\s\S]*?```|`[^`\n]+`|(\[(?:[^\]]|\\\])*\]\()([^)]+)(\))/g,
-    (match, prefix, url, suffix) => {
-      if (match.startsWith("```") || match.startsWith("`")) {
+    /(`{3,}|~{3,})[\s\S]*?\1|`[^`\n]+`|(\[(?:[^\]]|\\\])*\]\()([^)]+)(\))/g,
+    (match, _fence, prefix, url, suffix) => {
+      if (!prefix) {
         return match;
       }
-      let cleanUrl = url.trim();
-      // Only modify relative local links. If it starts with http, https, file, mailto, or #, keep it as-is.
-      if (
-        cleanUrl.startsWith("http://") ||
-        cleanUrl.startsWith("https://") ||
-        cleanUrl.startsWith("file://") ||
-        cleanUrl.startsWith("mailto:") ||
-        cleanUrl.startsWith("#")
-      ) {
-        return match;
-      }
-
-      // If the relative link starts with docs/, strip 'docs/' prefix
-      if (cleanUrl.startsWith("docs/")) {
-        cleanUrl = cleanUrl.substring(5); // strip 'docs/'
-      } else if (cleanUrl === "LICENSE") {
-        // If it points to LICENSE, change it to LICENSE.md
-        cleanUrl = "LICENSE.md";
-      } else if (
-        !cleanUrl.startsWith("../") &&
-        fs.existsSync(path.join(repoRoot, withoutAnchor(cleanUrl))) &&
-        !fs.existsSync(path.join(repoRoot, "docs", withoutAnchor(cleanUrl)))
-      ) {
-        cleanUrl = "../" + cleanUrl;
-      }
-
-      return `${prefix}${cleanUrl}${suffix}`;
+      const cleanUrl = url.trim();
+      return `${prefix}${rewriteRootDocHref(cleanUrl)}${suffix}`;
     }
   );
 
-  // Reference links [id]: link
-  rewritten = rewritten.replace(
-    /^(\[[^\]]+\]:\s*)(\S+)/gm,
-    (match, prefix, url) => {
-      let cleanUrl = url.trim();
-      if (
-        cleanUrl.startsWith("http://") ||
-        cleanUrl.startsWith("https://") ||
-        cleanUrl.startsWith("file://") ||
-        cleanUrl.startsWith("mailto:") ||
-        cleanUrl.startsWith("#")
-      ) {
-        return match;
+  // Reference links [id]: link (outside fenced code blocks)
+  const fenceState = { char: "", len: 0 };
+  rewritten = rewritten
+    .split("\n")
+    .map((line) => {
+      if (updateFenceState(line, fenceState) || fenceState.len > 0) {
+        return line;
       }
-
-      if (cleanUrl.startsWith("docs/")) {
-        cleanUrl = cleanUrl.substring(5);
-      } else if (cleanUrl === "LICENSE") {
-        cleanUrl = "LICENSE.md";
-      } else if (
-        !cleanUrl.startsWith("../") &&
-        fs.existsSync(path.join(repoRoot, withoutAnchor(cleanUrl))) &&
-        !fs.existsSync(path.join(repoRoot, "docs", withoutAnchor(cleanUrl)))
-      ) {
-        cleanUrl = "../" + cleanUrl;
-      }
-
-      return `${prefix}${cleanUrl}`;
-    }
-  );
+      return line.replace(/^(\[[^\]]+\]:\s*)(\S+)/, (m, prefix, url) => {
+        return `${prefix}${rewriteRootDocHref(url.trim())}`;
+      });
+    })
+    .join("\n");
 
   return rewritten;
 }
 
-/**
- * Drops a link's `#anchor`, so `CONTRIBUTING.md#3-local-checks` is checked as the file `CONTRIBUTING.md`.
- * @param {string} url - The link target.
- * @returns {string} The target without its anchor.
- */
-function withoutAnchor(url) {
-  return url.split("#")[0];
-}
+const originalFilesMap = new Map();
 
 /**
- * Copies a source markdown file to docs directory with link preprocessing.
+ * Copies a source Markdown file from repo root to docs/ with link preprocessing.
  * @param {string} srcName - The source file name in repo root.
  * @param {string} destName - The destination file name in docs/ folder.
  */
 function copyAndPreprocess(srcName, destName) {
   const srcPath = path.join(repoRoot, srcName);
-  const destPath = path.join(repoRoot, "docs", destName);
+  if (!fs.existsSync(srcPath)) {
+    console.warn(`Root document not found at ${srcPath}, skipping staging.`);
+    return;
+  }
+  const destPath = path.join(docsRoot, destName);
   if (fs.existsSync(destPath) && !originalFilesMap.has(destPath)) {
     originalFilesMap.set(destPath, fs.readFileSync(destPath, "utf8"));
   }
@@ -261,7 +302,79 @@ function copyAndPreprocess(srcName, destName) {
   );
 }
 
-const originalFilesMap = new Map();
+function rewriteDocsHref(cleanUrl, fullPath, docsDir, relToDocs) {
+  if (isExternalOrSamePageHref(cleanUrl)) {
+    return cleanUrl;
+  }
+
+  const { targetPath, suffix } = splitUrlParts(cleanUrl);
+  if (!targetPath) {
+    return cleanUrl;
+  }
+
+  const fileDir = path.dirname(fullPath);
+  const decodedTarget = decodeURI(targetPath);
+
+  let absTarget;
+  let needsRewrite = false;
+
+  if (decodedTarget.startsWith("docs/")) {
+    absTarget = path.resolve(repoRoot, decodedTarget);
+    needsRewrite = true;
+  } else if (decodedTarget === "LICENSE") {
+    absTarget = path.join(repoRoot, "LICENSE");
+    needsRewrite = true;
+  } else {
+    const fromFileDir = path.resolve(fileDir, decodedTarget);
+    const relFromRepo = path
+      .relative(repoRoot, fromFileDir)
+      .replace(/\\/g, "/");
+
+    if (
+      STAGED_ROOT_DOCS[relFromRepo] ||
+      fs.existsSync(fromFileDir) ||
+      fs.existsSync(`${fromFileDir}.md`)
+    ) {
+      absTarget = fromFileDir;
+    } else if (
+      !decodedTarget.startsWith("../") &&
+      (fs.existsSync(path.resolve(repoRoot, decodedTarget)) ||
+        Boolean(STAGED_ROOT_DOCS[decodedTarget]))
+    ) {
+      absTarget = path.resolve(repoRoot, decodedTarget);
+      needsRewrite = true;
+    } else {
+      absTarget = fromFileDir;
+    }
+  }
+
+  const relToRepo = path.relative(repoRoot, absTarget).replace(/\\/g, "/");
+  if (STAGED_ROOT_DOCS[relToRepo] && fs.existsSync(absTarget)) {
+    const stagedAbs = path.join(docsDir, STAGED_ROOT_DOCS[relToRepo]);
+    const relToStaged =
+      path.relative(fileDir, stagedAbs).replace(/\\/g, "/") ||
+      path.basename(stagedAbs);
+    return `${relToStaged}${suffix}`;
+  }
+
+  const resolvedExists =
+    fs.existsSync(absTarget) || fs.existsSync(`${absTarget}.md`);
+  if (!resolvedExists) {
+    console.error(
+      `[ERROR] Broken relative link in ${relToDocs}: '${cleanUrl}' resolves to non-existent file '${absTarget}'`
+    );
+    throw new Error(`Broken relative link in ${relToDocs}: ${cleanUrl}`);
+  }
+
+  if (needsRewrite) {
+    const relPath =
+      path.relative(fileDir, absTarget).replace(/\\/g, "/") ||
+      path.basename(absTarget);
+    return `${relPath}${suffix}`;
+  }
+
+  return cleanUrl;
+}
 
 function sweepAndPreprocessDocs(docsDir) {
   function walkDir(dir) {
@@ -271,7 +384,11 @@ function sweepAndPreprocessDocs(docsDir) {
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (entry.name !== ".vitepress" && entry.name !== "node_modules") {
+        if (
+          entry.name !== ".vitepress" &&
+          entry.name !== "node_modules" &&
+          entry.name !== "runs"
+        ) {
           walkDir(fullPath);
         }
       } else if (entry.isFile() && entry.name.endsWith(".md")) {
@@ -283,74 +400,37 @@ function sweepAndPreprocessDocs(docsDir) {
   function preprocessDocFile(fullPath, docsDir) {
     const content = fs.readFileSync(fullPath, "utf8");
     const relToDocs = path.relative(docsDir, fullPath).replace(/\\/g, "/");
-    const docSubDir = path.dirname(relToDocs);
 
-    const rewritten = content.replace(
-      /```[\s\S]*?```|`[^`\n]+`|(\[(?:[^\]]|\\\])*\]\()([^)]+)(\))/g,
-      (match, prefix, url, suffix) => {
-        if (match.startsWith("```") || match.startsWith("`")) {
+    let rewritten = content.replace(
+      /(`{3,}|~{3,})[\s\S]*?\1|`[^`\n]+`|(\[(?:[^\]]|\\\])*\]\()([^)]+)(\))/g,
+      (match, _fence, prefix, url, suffix) => {
+        if (!prefix) {
           return match;
         }
-        let cleanUrl = url.trim();
-        if (
-          cleanUrl.startsWith("http://") ||
-          cleanUrl.startsWith("https://") ||
-          cleanUrl.startsWith("file://") ||
-          cleanUrl.startsWith("mailto:") ||
-          cleanUrl.startsWith("#")
-        ) {
-          return match;
-        }
-
-        let newUrl = cleanUrl;
-        if (cleanUrl.startsWith("docs/")) {
-          const targetPathInDocs = cleanUrl.substring(5);
-          newUrl = path
-            .relative(docSubDir, targetPathInDocs)
-            .replace(/\\/g, "/");
-        } else if (cleanUrl === "LICENSE") {
-          newUrl = path.relative(docSubDir, "LICENSE.md").replace(/\\/g, "/");
-        }
-
-        const rawTargetClean = cleanUrl.split("#")[0].split("?")[0];
-        if (
-          rawTargetClean &&
-          !cleanUrl.startsWith("../") &&
-          !cleanUrl.startsWith("/") &&
-          fs.existsSync(path.join(repoRoot, rawTargetClean)) &&
-          !fs.existsSync(path.join(path.dirname(fullPath), rawTargetClean))
-        ) {
-          const anchor = cleanUrl.includes("#")
-            ? "#" + cleanUrl.split("#")[1]
-            : "";
-          const relPath = path
-            .relative(
-              path.dirname(fullPath),
-              path.join(repoRoot, rawTargetClean)
-            )
-            .replace(/\\/g, "/");
-          newUrl = relPath + anchor;
-        }
-
-        const targetClean = newUrl.split("#")[0].split("?")[0];
-        if (targetClean) {
-          const resolvedPath = path.resolve(
-            path.dirname(fullPath),
-            targetClean
-          );
-          if (!fs.existsSync(resolvedPath)) {
-            console.error(
-              `[ERROR] Broken relative link in ${relToDocs}: '${cleanUrl}' resolves to non-existent file '${resolvedPath}'`
-            );
-            throw new Error(
-              `Broken relative link in ${relToDocs}: ${cleanUrl}`
-            );
-          }
-        }
-
+        const cleanUrl = url.trim();
+        const newUrl = rewriteDocsHref(cleanUrl, fullPath, docsDir, relToDocs);
         return `${prefix}${newUrl}${suffix}`;
       }
     );
+
+    const fenceState = { char: "", len: 0 };
+    rewritten = rewritten
+      .split("\n")
+      .map((line) => {
+        if (updateFenceState(line, fenceState) || fenceState.len > 0) {
+          return line;
+        }
+        return line.replace(/^(\[[^\]]+\]:\s*)(\S+)/, (m, prefix, url) => {
+          const newUrl = rewriteDocsHref(
+            url.trim(),
+            fullPath,
+            docsDir,
+            relToDocs
+          );
+          return `${prefix}${newUrl}`;
+        });
+      })
+      .join("\n");
 
     if (rewritten !== content) {
       if (!originalFilesMap.has(fullPath)) {
@@ -365,29 +445,37 @@ function sweepAndPreprocessDocs(docsDir) {
 }
 
 /**
- * Stages the root README.md, ARCHITECTURE.md, AGENTS.md and LICENSE into docs/ for VitePress.
- * These copies are generated (gitignored). ARCHITECTURE.md and AGENTS.md are staged before
- * README.md so the README's links to them resolve inside the docs site.
+ * Stages all repository-root guides, policies, and LICENSE into docs/ for VitePress.
+ * These copies are generated (gitignored) and removed after `pnpm docs:build`.
  */
 function prepareRootDocs() {
-  copyAndPreprocess("ARCHITECTURE.md", "ARCHITECTURE.md");
-  copyAndPreprocess("AGENTS.md", "AGENTS.md");
+  const entries = Object.entries(STAGED_ROOT_DOCS);
+  const nonReadmeEntries = entries.filter(([src]) => src !== "README.md");
+  const readmeEntry = entries.find(([src]) => src === "README.md");
 
-  // Convert plain-text LICENSE to docs/LICENSE.md
-  const licenseSrcPath = path.join(repoRoot, "LICENSE");
-  const licenseDestPath = path.join(repoRoot, "docs", "LICENSE.md");
-  if (fs.existsSync(licenseSrcPath)) {
-    const licenseContent = fs.readFileSync(licenseSrcPath, "utf8");
-    const licenseMarkdown = `# Project License\n\n\`\`\`text\n${licenseContent}\n\`\`\`\n`;
-    fs.writeFileSync(licenseDestPath, licenseMarkdown, "utf8");
-    console.log(
-      `Successfully converted plain-text LICENSE to markdown at docs/LICENSE.md`
-    );
-  } else {
-    console.warn(`Plain-text LICENSE file not found at ${licenseSrcPath}`);
+  for (const [srcName, destName] of nonReadmeEntries) {
+    if (srcName === "LICENSE") {
+      const licenseSrcPath = path.join(repoRoot, srcName);
+      const licenseDestPath = path.join(docsRoot, destName);
+      if (fs.existsSync(licenseSrcPath)) {
+        const licenseContent = fs.readFileSync(licenseSrcPath, "utf8");
+        const licenseMarkdown = `# Project License\n\n\`\`\`text\n${licenseContent}\n\`\`\`\n`;
+        fs.writeFileSync(licenseDestPath, licenseMarkdown, "utf8");
+        console.log(
+          `Successfully converted plain-text LICENSE to markdown at docs/${destName}`
+        );
+      } else {
+        console.warn(`Plain-text LICENSE file not found at ${licenseSrcPath}`);
+      }
+      continue;
+    }
+
+    copyAndPreprocess(srcName, destName);
   }
 
-  copyAndPreprocess("README.md", "index.md");
+  if (readmeEntry) {
+    copyAndPreprocess(readmeEntry[0], readmeEntry[1]);
+  }
 }
 
 if (require.main !== module) {
@@ -407,45 +495,33 @@ if (require.main !== module) {
   // Run preflight checks before Step 1
   runPreflightChecks();
 
+  const cliEnv = buildRtmEnv(process.env);
+
   try {
     // 1. Run validation scripts
     console.log("--- Step 1: Pre-Build Validation ---");
-    // `cadence ci` sets CADENCE_DOCS_SKIP_CHECKS=1 when its "Run Cadence quality sentinels" step already passed on
-    // this tree: that step runs the same gates, Markdown included, so running them again here only costs minutes.
+    // `cadence ci` and `deploy-docs.yml` set CADENCE_DOCS_SKIP_CHECKS=1 when quality sentinels already passed on
+    // this tree: that step runs openapi, schema-doc, and markdown, so running them again here only costs minutes.
     if (process.env.CADENCE_DOCS_SKIP_CHECKS === "1") {
       console.log(
-        "Skipping 'cadence check' and 'validate-markdown' (CADENCE_DOCS_SKIP_CHECKS=1: they already passed in this run)."
+        "Skipping 'openapi', 'schema-doc', and 'markdown' checks (CADENCE_DOCS_SKIP_CHECKS=1: they already passed in this run)."
       );
     } else {
-      runCommand("node scripts/run-cli.js check openapi");
-      runCommand("node scripts/run-cli.js validate-markdown");
+      runCommand("node scripts/run-cli.js check openapi", cliEnv);
+      runCommand("node scripts/run-cli.js check schema-doc", cliEnv);
+      runCommand("node scripts/run-cli.js check markdown", cliEnv);
     }
-    runCommand("node scripts/run-cli.js generate-schema-doc");
-    runCommand("node scripts/run-cli.js generate-api-docs");
 
-    // 2. Run compliance compiler with isolated compliance secrets
-    console.log("--- Step 2: Running Compliance Tracer ---");
-    const reportPath = path.join(repoRoot, "report.xml");
-    const hasReport =
-      fs.existsSync(reportPath) && fs.statSync(reportPath).size > 0;
-    const rtmEnv = buildRtmEnv(process.env);
-    const envDraft = process.env.RTM_DRAFT || process.env.GENERATE_RTM_DRAFT;
-    const isEnvDraft =
-      !envDraft ||
-      !["0", "false", "no", "off"].includes(envDraft.toLowerCase());
-
-    if (hasReport && !isEnvDraft) {
-      runCommand("node scripts/run-cli.js generate-rtm", rtmEnv);
-    } else {
-      runCommand("node scripts/run-cli.js generate-rtm --draft", rtmEnv);
-    }
+    // 2. Validate committed GxP snapshot without mutation
+    console.log("--- Step 2: Validating GxP Compliance Snapshot ---");
+    runCommand("node scripts/run-cli.js check rtm", cliEnv);
 
     // 3. Prepare files for VitePress
     console.log("--- Step 3: Preparing Documentation Files ---");
     prepareRootDocs();
 
     // Sweep and preprocess all docs files and subdirectories
-    sweepAndPreprocessDocs(path.join(repoRoot, "docs"));
+    sweepAndPreprocessDocs(docsRoot);
 
     // 4. Build VitePress static portal with a strict non-secret environment allowlist
     console.log("--- Step 4: Compiling VitePress Static Portal ---");
@@ -462,12 +538,11 @@ if (require.main !== module) {
     process.exitCode = 1;
   } finally {
     console.log("--- Cleanup Temporary Docs ---");
-    const tempGeneratedDocs = new Set([
-      path.join(repoRoot, "docs", "index.md"),
-      path.join(repoRoot, "docs", "ARCHITECTURE.md"),
-      path.join(repoRoot, "docs", "AGENTS.md"),
-      path.join(repoRoot, "docs", "LICENSE.md"),
-    ]);
+    const tempGeneratedDocs = new Set(
+      Object.values(STAGED_ROOT_DOCS).map((destName) =>
+        path.join(docsRoot, destName)
+      )
+    );
 
     for (const [fullPath, originalContent] of originalFilesMap.entries()) {
       if (tempGeneratedDocs.has(fullPath)) {
