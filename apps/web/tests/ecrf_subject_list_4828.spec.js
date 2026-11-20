@@ -209,9 +209,10 @@ describe("eCRF subject list from Execution (#4828)", () => {
         .findAll("#ecrf-subject-selector option")
         .map((o) => o.attributes("value"));
       expect(options).toEqual(["CAD-001", "CAD-002"]);
-      expect(
-        wrapper.findComponent(CrcFormRenderer).props("selectedSubjectId")
-      ).toBe("CAD-001");
+      expect(wrapper.findComponent(CrcFormRenderer).exists()).toBe(false);
+      expect(wrapper.find("#ecrf-subject-selector").element.value).toBe(
+        "CAD-001"
+      );
       expect(wrapper.find("#study-subjects-status").text()).toBe("2 subjects.");
     });
 
@@ -225,9 +226,9 @@ describe("eCRF subject list from Execution (#4828)", () => {
       const wrapper = mountView();
       await flushPromises();
 
-      expect(
-        wrapper.findComponent(CrcFormRenderer).props("selectedSubjectId")
-      ).toBe("CAD-002");
+      expect(wrapper.find("#ecrf-subject-selector").element.value).toBe(
+        "CAD-002"
+      );
     });
 
     it("says when only the first page of subjects is shown", async () => {
@@ -279,9 +280,9 @@ describe("eCRF subject list from Execution (#4828)", () => {
       expect(
         wrapper.findComponent(StudySubjectsBar).emitted("loaded")
       ).toHaveLength(1);
-      expect(
-        wrapper.findComponent(CrcFormRenderer).props("selectedSubjectId")
-      ).toBe("CAD-001");
+      expect(wrapper.find("#ecrf-subject-selector").element.value).toBe(
+        "CAD-001"
+      );
       expect(wrapper.find("#study-subjects-status").text()).toBe("1 subject.");
     });
 
