@@ -223,21 +223,28 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
             ct);
         registered.IsSuccess.Should().BeTrue();
 
-        // Upgrade tenant in place to Complete tier (all 8 product families)
-        using (var upgradeReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/entitlements/tier")
+        // Multi-step commercial tier transitions in place: Individual -> Select -> Complete -> Select -> Complete
+        foreach (var (stepKey, targetTier, expectedFamilyCount) in new (string Key, string Tier, int Count)[]
         {
-            Content = JsonContent.Create(new { tier = "Complete" }),
+            ("idem-upgrade-select-1", "Select", 5),
+            ("idem-upgrade-complete-1", "Complete", 8),
+            ("idem-narrow-select-2", "Select", 5),
+            ("idem-upgrade-complete-2", "Complete", 8),
         })
         {
-            upgradeReq.Headers.Add("Idempotency-Key", "idem-upgrade-complete");
-            upgradeReq.Headers.Add("X-Change-Reason", "Evaluate Complete tier entitlements");
+            using var upgradeReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/entitlements/tier")
+            {
+                Content = JsonContent.Create(new { tier = targetTier }),
+            };
+            upgradeReq.Headers.Add("Idempotency-Key", stepKey);
+            upgradeReq.Headers.Add("X-Change-Reason", $"Switch commercial tier to {targetTier}");
             using var upgradeResp = await founderClient.SendAsync(upgradeReq, ct);
             string upgradeBody = await upgradeResp.Content.ReadAsStringAsync(ct);
             upgradeResp.StatusCode.Should().Be(HttpStatusCode.OK, upgradeBody);
             var upgraded = JsonDocument.Parse(upgradeBody).RootElement;
-            upgraded.GetProperty("tier").GetString().Should().Be("Complete");
+            upgraded.GetProperty("tier").GetString().Should().Be(targetTier);
             upgraded.GetProperty("status").GetString().Should().Be("Active");
-            upgraded.GetProperty("product_families").GetArrayLength().Should().Be(8);
+            upgraded.GetProperty("product_families").GetArrayLength().Should().Be(expectedFamilyCount);
         }
 
         // 1. Even in a Complete-tier tenant, a signed-in caller WITHOUT a clinical study Grant cannot see or mutate the study!

@@ -362,6 +362,14 @@ function resolveLinkTarget(href, pageDir, docsDir, repoRoot, currentFile = "") {
   }
 
   if (href.startsWith("/")) {
+    if (isCohostedSubpathLink(href)) {
+      return {
+        rewrittenHref: null,
+        portalTargetFile: null,
+        anchor: "",
+        samePage: false,
+      };
+    }
     const [, rawAnchor] = splitAnchor(href);
     return {
       rewrittenHref: null,
@@ -486,6 +494,23 @@ export function splitAnchor(href) {
   return index === -1 ? [href, ""] : [href.slice(0, index), href.slice(index)];
 }
 
+export const COHOSTED_SUBPATH_PREFIXES = ["/demo/", "/subject-portal/"];
+
+export function isCohostedSubpathLink(
+  link,
+  prefixes = COHOSTED_SUBPATH_PREFIXES
+) {
+  if (!link || !link.startsWith("/")) return false;
+  const cleanPath = splitAnchor(link)[0].split("?")[0];
+  return prefixes.some((prefix) => {
+    const normalizedPrefix = prefix.endsWith("/") ? prefix : `${prefix}/`;
+    const withoutTrailing = normalizedPrefix.slice(0, -1);
+    return (
+      cleanPath === withoutTrailing || cleanPath.startsWith(normalizedPrefix)
+    );
+  });
+}
+
 function decodeAnchorFragment(anchor) {
   if (!anchor || !anchor.startsWith("#")) return "";
   const raw = anchor.slice(1).trim();
@@ -498,19 +523,27 @@ function decodeAnchorFragment(anchor) {
 }
 
 /**
- * Throws when a nav or sidebar entry links to a missing page or a missing heading anchor under `docs/`.
+ * Throws when a nav or sidebar entry links to a missing page or missing heading anchor under `docs/`,
+ * except for declared co-hosted subpath applications staged into the portal bundle.
  *
  * @param {{ nav?: object[], sidebar?: object[] }} themeConfig
  * @param {string} docsDir
+ * @param {{ cohostedSubpaths?: string[] }} [options]
  */
-export function assertThemeLinksExist(themeConfig, docsDir) {
+export function assertThemeLinksExist(themeConfig, docsDir, options = {}) {
+  const cohostedSubpaths =
+    options.cohostedSubpaths ?? COHOSTED_SUBPATH_PREFIXES;
   const missingPages = [];
   const missingAnchors = [];
 
   const visit = (items) => {
     for (const item of items ?? []) {
       const link = item.link;
-      if (link && link.startsWith("/")) {
+      if (
+        link &&
+        link.startsWith("/") &&
+        !isCohostedSubpathLink(link, cohostedSubpaths)
+      ) {
         const filePath = resolveThemePagePath(docsDir, link);
         if (!filePath) {
           missingPages.push(link);
