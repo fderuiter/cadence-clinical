@@ -4,6 +4,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using Cadence.Kernel.Time;
+
 namespace Cadence.Security.Authentication;
 
 /// <summary>Payload claims stored inside a signed biometric liveness token.</summary>
@@ -39,7 +41,7 @@ public static class BiometricLivenessTokenService
         TimeSpan? lifetime = null)
     {
         secret ??= DefaultSecret;
-        DateTimeOffset currentTime = now ?? TimeProvider.System.GetUtcNow();
+        DateTimeOffset currentTime = now ?? SystemClock.Instance.UtcNow;
         TimeSpan ttl = lifetime ?? TimeSpan.FromMinutes(15);
 
         long iat = currentTime.ToUnixTimeSeconds();
@@ -120,7 +122,7 @@ public static class BiometricLivenessTokenService
                 return false;
             }
 
-            DateTimeOffset currentTime = now ?? TimeProvider.System.GetUtcNow();
+            DateTimeOffset currentTime = now ?? SystemClock.Instance.UtcNow;
             long currentUnix = currentTime.ToUnixTimeSeconds();
 
             if (tokenData.ExpiresAtUnix < currentUnix)

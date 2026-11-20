@@ -53,8 +53,8 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build UI package
-        run: pnpm --filter ui build
+      - name: Build frontend workspace
+        run: pnpm build
 
       - name: Run frontend style and lint
         run: |
@@ -127,19 +127,35 @@ jobs:
             exit 1
           fi
 
+      - name: Run installer checksum tests
+        run: bash tests/test_installer_checksums.sh
+
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           global-json-file: global.json
           cache: true
           cache-dependency-path: |
-            Directory.Packages.props
             global.json
+            Directory.Build.props
+            Directory.Packages.props
+            **/*.csproj
+
+      - name: Cache Cadence CLI
+        id: cadence-cli-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ./bin/cadence
+          key: cadence-cli-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'NuGet.Config', 'BannedSymbols.txt', 'packages/cli/src/**', 'packages/engine_core/src/**', 'packages/database/src/**', 'packages/compliance/src/**', 'packages/security/src/**', 'packages/tooling_core/src/**', 'packages/kernel/src/Cadence.Kernel.Abstractions/**', 'packages/core-models/src/**', 'packages/deid/src/**', 'packages/topology/src/**') }}
 
       - name: Run Markdown validation
+        env:
+          CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
         run: node scripts/run-cli.js check markdown
 
       - name: Validate web API clients against OpenAPI types
+        env:
+          CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
         run: node scripts/run-cli.js check api-clients
 
   dotnet-quality:
@@ -162,8 +178,10 @@ jobs:
           global-json-file: global.json
           cache: true
           cache-dependency-path: |
-            Directory.Packages.props
             global.json
+            Directory.Build.props
+            Directory.Packages.props
+            **/*.csproj
 
       - name: Build .NET solution
         run: dotnet build Cadence.sln
@@ -199,8 +217,10 @@ jobs:
           global-json-file: global.json
           cache: true
           cache-dependency-path: |
-            Directory.Packages.props
             global.json
+            Directory.Build.props
+            Directory.Packages.props
+            **/*.csproj
 
       # Warnings are errors, so any trim or AOT warning (IL2xxx/IL3xxx) fails this step (#4794, ADR-2496).
       - name: Publish the CLI as Native AOT
@@ -236,11 +256,21 @@ jobs:
           global-json-file: global.json
           cache: true
           cache-dependency-path: |
-            Directory.Packages.props
             global.json
+            Directory.Build.props
+            Directory.Packages.props
+            **/*.csproj
+
+      - name: Cache Cadence CLI
+        id: cadence-cli-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ./bin/cadence
+          key: cadence-cli-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'NuGet.Config', 'BannedSymbols.txt', 'packages/cli/src/**', 'packages/engine_core/src/**', 'packages/database/src/**', 'packages/compliance/src/**', 'packages/security/src/**', 'packages/tooling_core/src/**', 'packages/kernel/src/Cadence.Kernel.Abstractions/**', 'packages/core-models/src/**', 'packages/deid/src/**', 'packages/topology/src/**') }}
 
       - name: Run documentation compilation
         env:
+          CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
           CADENCE_DOCS_SKIP_CHECKS: "1"
         run: pnpm docs:build
 
@@ -269,8 +299,17 @@ jobs:
           global-json-file: global.json
           cache: true
           cache-dependency-path: |
-            Directory.Packages.props
             global.json
+            Directory.Build.props
+            Directory.Packages.props
+            **/*.csproj
+
+      - name: Cache Cadence CLI
+        id: cadence-cli-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ./bin/cadence
+          key: cadence-cli-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'NuGet.Config', 'BannedSymbols.txt', 'packages/cli/src/**', 'packages/engine_core/src/**', 'packages/database/src/**', 'packages/compliance/src/**', 'packages/security/src/**', 'packages/tooling_core/src/**', 'packages/kernel/src/Cadence.Kernel.Abstractions/**', 'packages/core-models/src/**', 'packages/deid/src/**', 'packages/topology/src/**') }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
@@ -284,11 +323,15 @@ jobs:
       - name: Run static analysis
         id: run_static
         if: always()
+        env:
+          CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
         run: node scripts/run-cli.js check audit-security
 
       - name: Run dependency audit
         id: run_audit
         if: always()
+        env:
+          CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
         run: |
           dotnet restore Cadence.sln
           python3 -m venv "$RUNNER_TEMP/pip-audit-venv"
@@ -299,6 +342,8 @@ jobs:
       - name: Run secret detection
         id: run_secrets
         if: always()
+        env:
+          CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
         run: |
           node scripts/run-cli.js check clean-secrets
           git diff --exit-code .secrets.baseline
@@ -319,6 +364,8 @@ jobs:
       - name: Run DEID compliance scan
         id: run_deid_scan
         if: always()
+        env:
+          CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
         run: |
           git fetch origin main --depth=1 || true
           CHANGED_FILES=""
@@ -436,15 +483,6 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
-        with:
-          global-json-file: global.json
-          cache: true
-          cache-dependency-path: |
-            Directory.Packages.props
-            global.json
-
       - name: Build UI package
         run: pnpm --filter ui build
 
@@ -494,8 +532,10 @@ jobs:
           global-json-file: global.json
           cache: true
           cache-dependency-path: |
-            Directory.Packages.props
             global.json
+            Directory.Build.props
+            Directory.Packages.props
+            **/*.csproj
 
       - name: Restore NuGet Packages
         run: dotnet restore Cadence.sln
@@ -538,8 +578,6 @@ jobs:
 
   accessibility-e2e:
     name: Parallel E2E Accessibility Testing
-    # Playwright browser installs are the most expensive job; run on pushes (main, release/*, v*) only.
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -601,6 +639,10 @@ jobs:
               if pnpm exec playwright install chromium --with-deps; then
                 break
               else
+                if [ "$i" -eq 3 ]; then
+                  echo "::error::Failed to install Playwright browsers after 3 attempts."
+                  exit 1
+                fi
                 echo "Playwright install failed on attempt $i, retrying in 10s..."
                 sleep 10
               fi
@@ -622,8 +664,10 @@ jobs:
           global-json-file: global.json
           cache: true
           cache-dependency-path: |
-            Directory.Packages.props
             global.json
+            Directory.Build.props
+            Directory.Packages.props
+            **/*.csproj
 
       - name: Run Browser-to-Database Correction Integration Test
         run: dotnet test tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj --configuration Release --filter FullyQualifiedName~BrowserCorrectionReachesTheDatabaseWithItsReason
@@ -648,8 +692,17 @@ jobs:
           global-json-file: global.json
           cache: true
           cache-dependency-path: |
-            Directory.Packages.props
             global.json
+            Directory.Build.props
+            Directory.Packages.props
+            **/*.csproj
+
+      - name: Cache Cadence CLI
+        id: cadence-cli-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ./bin/cadence
+          key: cadence-cli-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'NuGet.Config', 'BannedSymbols.txt', 'packages/cli/src/**', 'packages/engine_core/src/**', 'packages/database/src/**', 'packages/compliance/src/**', 'packages/security/src/**', 'packages/tooling_core/src/**', 'packages/kernel/src/Cadence.Kernel.Abstractions/**', 'packages/core-models/src/**', 'packages/deid/src/**', 'packages/topology/src/**') }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
@@ -672,9 +725,13 @@ jobs:
       - name: Generate Compliance Reports
         # A feature branch validates its requirement tags and results and writes a preview; it never changes the
         # committed snapshot (ADR-2532). Snapshot PRs from the integration owner set CADENCE_GXP_SNAPSHOT=1.
+        env:
+          CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
         run: node scripts/run-cli.js gxp sync --results-dir TestResults/gxp
 
       - name: Check GxP Snapshot Policy
+        env:
+          CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
         run: node scripts/run-cli.js check gxp-snapshot
 
   classify:
@@ -763,6 +820,7 @@ jobs:
         container-security,
         unit-tests,
         dotnet-tests,
+        accessibility-e2e,
         compliance,
       ]
     if: >-
@@ -779,6 +837,7 @@ jobs:
       (needs.container-security.result == 'success' || needs.container-security.result == 'skipped') &&
       needs.unit-tests.result == 'success' &&
       needs.dotnet-tests.result == 'success' &&
+      needs.accessibility-e2e.result == 'success' &&
       needs.compliance.result == 'success'
     runs-on: ubuntu-latest
     permissions:

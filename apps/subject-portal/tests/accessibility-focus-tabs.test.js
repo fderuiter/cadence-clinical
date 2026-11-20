@@ -202,6 +202,49 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
     expect(state.reconsentModalOpen).toBe(false);
     expect(state.reconsentForm.password).toBe("");
     expect(document.activeElement).toBe(trigger);
+
+    // Also verify standalone DOM #portal-sign-modal traps Tab and Escape via trapTabFocus when Vue shell is unmounted
+    unmountApp();
+    document.body.innerHTML = `
+      <button id="standalone-trigger" type="button">Sign</button>
+      <div id="portal-sign-modal" style="display: none;">
+        <select id="sign-reason"></select>
+        <textarea id="sign-reason-custom"></textarea>
+        <input id="sign-username" type="text" />
+        <input id="sign-password" type="password" />
+        <button id="btn-modal-cancel" type="button">Cancel</button>
+        <button id="btn-modal-sign" type="submit">Confirm</button>
+      </div>
+    `;
+    const standaloneTrigger = document.getElementById("standalone-trigger");
+    standaloneTrigger.focus();
+    openSignatureModal("epro");
+
+    const standaloneModal = document.getElementById("portal-sign-modal");
+    const standaloneFocusables = getFocusableElements(standaloneModal);
+    expect(document.activeElement).toBe(standaloneFocusables[0]);
+
+    const lastStandalone =
+      standaloneFocusables[standaloneFocusables.length - 1];
+    lastStandalone.focus();
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Tab",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    expect(document.activeElement).toBe(standaloneFocusables[0]);
+
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    expect(state.signatureModalOpen).toBe(false);
+    expect(document.activeElement).toBe(standaloneTrigger);
   });
 
   it("traps focus inside QuestionnaireView cancel confirmation dialog and restores focus on Escape", async () => {

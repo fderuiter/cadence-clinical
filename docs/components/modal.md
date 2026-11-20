@@ -27,9 +27,10 @@ The `ClinicalModal` and `ClinicalDrawer` primitives render accessible modal over
 | `dismissible`     | `Boolean` | `true`    | Locks `Escape`, close button, and backdrop dismissal when `false`.       |
 | `teleport`        | `Boolean` | `true`    | Teleports the drawer overlay to `document.body` when `true`.             |
 
-## Overlay Composables (`useFocusTrap` & `useEscapeClose`)
+## Overlay Composables (`useFocusTrap`, `trapTabFocus` & `useEscapeClose`)
 
-- **`useFocusTrap(targetRef, options)`**: Dynamically activates focus containment whenever conditional (`v-if`) or persistent (`isOpen`) overlays open, traps `Tab` / `Shift+Tab` inside the topmost active overlay, marks background page siblings `inert` and `aria-hidden="true"` while keeping `[data-focus-trap-exempt="true"]` live alert hosts audible and visible, and restores focus before unmounting.
+- **`useFocusTrap(targetRef, options)`**: Dynamically activates focus containment whenever conditional (`v-if`) or persistent (`isOpen`) overlays open, traps `Tab` / `Shift+Tab` inside the topmost active overlay, marks background page siblings `inert` and `aria-hidden="true"` while keeping `[data-focus-trap-exempt="true"]` live alert hosts audible and visible, skips `Escape` events with `defaultPrevented === true` when unlocked, and restores focus before unmounting.
+- **`trapTabFocus(event, container)`**: Imperative helper (paired with `getFocusableElements(container)`) for standalone non-Vue DOM dialogs such as `#portal-sign-modal`, wrapping `Tab` / `Shift+Tab` within `container` while deduplicating `KeyboardEvent` instances via a `WeakSet` across `window` and `document` listeners.
 - **`useEscapeClose(onClose, options)`**: Registers non-trapped inline popovers or anchored tour steps on a shared LIFO stack so pressing `Escape` dismisses only the topmost unlocked overlay.
 
 ## Usage Example

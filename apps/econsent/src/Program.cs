@@ -2,6 +2,7 @@ using Cadence.Apps.Econsent.Endpoints;
 using Cadence.Apps.Econsent.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Database.Signatures;
+using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.FieldProtection;
 using Cadence.Telemetry;
@@ -14,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
+builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 // Signer e-mail addresses are encrypted at rest; FIELD_ENCRYPTION_KEY is required and validated at startup (#4770).
 builder.Services.AddCadenceFieldEncryption();
 builder.AddCadencePostgresDbContext<EconsentDbContext>();
