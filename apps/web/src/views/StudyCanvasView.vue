@@ -227,6 +227,8 @@
               :enrollment-id="activeEnrollmentId"
               :record-loading="canvas.record.loading"
               :form-id="openFormId"
+              :collection-spec-id="initialSpecId || null"
+              :planned-activity-id="initialVisitId || null"
               :form-label="
                 loadedForm && loadedForm.form_id === openFormId
                   ? formatFormLabel(loadedForm)
@@ -236,8 +238,14 @@
               :can-verify-source="canVerify"
               :back-location="formBackLocation"
               :back-label="formBackLabel"
+              :handoff-location="
+                activeFormParticipant
+                  ? ecrfHandoffLocationFor(activeFormParticipant)
+                  : null
+              "
               :form-location="formLocationById"
               :observation-location="observationLocationFromForm"
+              @dirty-change="formDirty = $event"
               @form-loaded="onFormLoaded"
               @closed="onFormClosed"
             />
@@ -250,6 +258,11 @@
               :can-manage="canManage"
               :form-location="formLocationById"
               :new-form-location="newFormLocationFor(recordParticipant)"
+              :new-form-cell-location="
+                (specId, visitId) =>
+                  newFormCellLocationFor(recordParticipant!, specId, visitId)
+              "
+              :handoff-location="ecrfHandoffLocationFor(recordParticipant)"
               :observation-location="observationLocationFromRecord"
               @retry="canvas.loadRecord(recordParticipant)"
             />
@@ -369,6 +382,11 @@
               ? dataEntryLocationFor(inspectedParticipant)
               : null
           "
+          :handoff-location="
+            inspectedParticipant
+              ? ecrfHandoffLocationFor(inspectedParticipant)
+              : null
+          "
           :can-manage-participants="canChangeParticipants"
           :assist-prompt="askText"
         />
@@ -433,8 +451,15 @@ import {
   ref,
   watch,
 } from "vue";
-import { useRoute, useRouter, type LocationQueryRaw } from "vue-router";
+import {
+  onBeforeRouteLeave,
+  onBeforeRouteUpdate,
+  useRoute,
+  useRouter,
+  type LocationQueryRaw,
+} from "vue-router";
 import type { EcrfForm } from "../api/ecrfFormsApi";
+import { confirmDiscardUnsavedForm } from "../composables/useEcrfForm";
 import type { SubjectSummary } from "../api/executionApi";
 import {
   kernelApi,
@@ -504,6 +529,8 @@ interface StudyQuery {
   node?: string;
   participant?: string;
   form?: string;
+  spec?: string;
+  visit?: string;
   observation?: string;
   proposal?: string;
   ask?: string;
@@ -594,9 +621,12 @@ const recordRef = computed(() => participantRef(route.query.participant));
 const formQuery = computed(() => single(route.query.form).trim());
 const isNewForm = computed(() => formQuery.value === "new");
 const openFormId = computed(() => collectionInstanceId(formQuery.value));
+const initialSpecId = computed(() => single(route.query.spec).trim());
+const initialVisitId = computed(() => single(route.query.visit).trim());
 const hasOpenForm = computed(
   () => isNewForm.value || Boolean(openFormId.value)
 );
+const formDirty = ref(false);
 const openObservationRef = computed(
   () => observationNodeRef(route.query.observation) ?? ""
 );
@@ -695,7 +725,15 @@ function formatFormLabel(form: EcrfForm): string {
 }
 
 const zoomFormLabel = computed(() => {
-  if (isNewForm.value) return "Forms";
+  if (isNewForm.value) {
+    if (initialSpecId.value && initialVisitId.value) {
+      return `Forms · ${initialSpecId.value} · ${initialVisitId.value}`;
+    }
+    if (initialSpecId.value) {
+      return `Forms · ${initialSpecId.value}`;
+    }
+    return "Forms";
+  }
   if (loadedForm.value && loadedForm.value.form_id === openFormId.value) {
     return formatFormLabel(loadedForm.value);
   }
@@ -762,6 +800,66 @@ function newFormLocationFor(participant: SubjectSummary) {
   const node = tryNodeRef("participant", participant.id);
   const text = node ? formatNodeRef(node) : "";
   return studyLocation({ stage: "conduct", participant: text, form: "new" });
+}
+
+function newFormCellLocationFor(
+  participant: SubjectSummary,
+  specId: string,
+  visitId?: string | null
+) {
+  const node = tryNodeRef("participant", participant.id);
+  const text = node ? formatNodeRef(node) : "";
+  return studyLocation({
+    stage: "conduct",
+    participant: text,
+    form: "new",
+    spec: specId || undefined,
+    visit: visitId || undefined,
+  });
+}
+
+function ecrfHandoffLocationFor(participant: SubjectSummary) {
+  const query: LocationQueryRaw = {
+    studyId: studyCode.value,
+    subjectId: participant.subject_id,
+  };
+  if (participant.site_id) {
+    query.siteId = participant.site_id;
+  }
+  const enrollmentForParticipant =
+    canvas.record.subjectCode === participant.subject_id
+      ? canvas.record.enrollmentId
+      : loadedForm.value?.participant_id === participant.id
+        ? loadedForm.value.enrollment_id
+        : null;
+  if (enrollmentForParticipant) {
+    query.enrollmentId = enrollmentForParticipant;
+  }
+  const activeParticipantMatch =
+    activeFormParticipant.value?.id === participant.id;
+  if (activeParticipantMatch && openFormId.value) {
+    query.formId = openFormId.value;
+  }
+  const specId =
+    activeParticipantMatch && loadedForm.value?.collection_spec_id
+      ? loadedForm.value.collection_spec_id
+      : activeParticipantMatch && initialSpecId.value
+        ? initialSpecId.value
+        : "";
+  if (specId) {
+    query.collectionSpecId = specId;
+  }
+  const visitId =
+    activeParticipantMatch && loadedForm.value?.planned_activity_id
+      ? loadedForm.value.planned_activity_id
+      : activeParticipantMatch && initialVisitId.value
+        ? initialVisitId.value
+        : "";
+  if (visitId) {
+    query.plannedActivityId = visitId;
+    query.visitId = visitId;
+  }
+  return { name: "ecrf", query };
 }
 
 function dataEntryLocationFor(participant: SubjectSummary) {
@@ -1008,6 +1106,7 @@ function openTypedStudy() {
 watch(
   studyCode,
   (code) => {
+    formDirty.value = false;
     loadedForm.value = null;
     loadedObservation.value = null;
     resolvedLineage.value = null;
@@ -1016,6 +1115,10 @@ watch(
   },
   { immediate: true }
 );
+
+watch(hasOpenForm, (open) => {
+  if (!open) formDirty.value = false;
+});
 
 watch(openFormId, (id) => {
   if (!id) {
@@ -1088,6 +1191,42 @@ watch(
   { immediate: true }
 );
 
+function confirmDiscardFormEdits(): boolean {
+  if (!formDirty.value) return true;
+  const confirmed = confirmDiscardUnsavedForm();
+  if (confirmed) {
+    formDirty.value = false;
+  }
+  return confirmed;
+}
+
+if (typeof onBeforeRouteUpdate === "function") {
+  onBeforeRouteUpdate((to, from) => {
+    if (
+      to.params.studyCode === from.params.studyCode &&
+      to.query.form === from.query.form &&
+      to.query.spec === from.query.spec &&
+      to.query.visit === from.query.visit &&
+      to.query.observation === from.query.observation
+    ) {
+      return;
+    }
+    if (!confirmDiscardFormEdits()) return false;
+  });
+}
+
+if (typeof onBeforeRouteLeave === "function") {
+  onBeforeRouteLeave(() => {
+    if (!confirmDiscardFormEdits()) return false;
+  });
+}
+
+function onBeforeUnload(event: BeforeUnloadEvent) {
+  if (!formDirty.value) return;
+  event.preventDefault();
+  event.returnValue = "";
+}
+
 function onGlobalKeydown(event: KeyboardEvent) {
   if (inAppShell) return;
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -1097,11 +1236,15 @@ function onGlobalKeydown(event: KeyboardEvent) {
 }
 
 onMounted(() => {
+  window.addEventListener("beforeunload", onBeforeUnload);
   if (!inAppShell) {
     document.addEventListener("keydown", onGlobalKeydown);
   }
 });
-onUnmounted(() => document.removeEventListener("keydown", onGlobalKeydown));
+onUnmounted(() => {
+  window.removeEventListener("beforeunload", onBeforeUnload);
+  document.removeEventListener("keydown", onGlobalKeydown);
+});
 </script>
 
 <style scoped>

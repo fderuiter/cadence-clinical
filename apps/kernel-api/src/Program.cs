@@ -115,7 +115,7 @@ app.MapCadenceHealthAndStatusEndpoints(
     "kernel",
     "Clinical Kernel API health probe.",
     "Returns the Clinical Kernel API's operational status.");
-app.MapKernelApi().MapKernelReads().MapKernelObservations().MapKernelProposals();
+app.MapKernelApi().MapKernelReads().MapKernelObservations().MapKernelExecution().MapKernelProposals();
 app.MapIntelligenceModule();
 app.MapExecutionModule();
 app.MapIntelligenceMcp();

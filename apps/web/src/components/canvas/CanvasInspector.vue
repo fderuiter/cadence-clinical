@@ -243,6 +243,15 @@
         >
           Open in data entry
         </router-link>
+        <router-link
+          v-if="handoffLocation"
+          id="inspector-handoff-standalone"
+          data-testid="inspector-ecrf-handoff"
+          class="inspector-link"
+          :to="handoffLocation"
+        >
+          Open standalone form view
+        </router-link>
       </template>
     </template>
 
@@ -316,6 +325,8 @@ const props = defineProps<{
   recordLocation?: RouteLocationRaw | null;
   /** Where the participant's forms workspace opens inside Clinical Canvas; absent when already open. */
   dataEntryLocation?: RouteLocationRaw | null;
+  /** Context handoff location to the standalone /ecrf view forwarding study, participant, enrollment, form, and visit. */
+  handoffLocation?: RouteLocationRaw | null;
   /** Whether to offer changing the participant's state (Execution enforces who may, #4943). */
   canManageParticipants?: boolean;
   /** A question from the palette's Ask entry: opens Assist with it (ADR-2635). */

@@ -25,6 +25,14 @@ export type EcrfFormSignedValue = Schemas["Kernel_FormSignedValueResponse"];
 export type EcrfFormSaved = Schemas["Kernel_FormSavedResponse"];
 export type EcrfFormValue = Schemas["Kernel_FormValueRequest"];
 
+/** Normalizes an OpenAPI integer|string|undefined summary count to a non-negative integer. */
+export function toFormSummaryCount(
+  value: number | string | null | undefined
+): number {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.trunc(n) : 0;
+}
+
 /** The kernel error codes a page save answers with (CollectionErrors). */
 export const REVISION_STALE = "K.Collection.RevisionStale";
 export const VALUES_INVALID = "K.Collection.ValuesInvalid";

@@ -110,6 +110,13 @@ function browserStorage(): Storage | null {
   }
 }
 
+/** Prompts the user before discarding unsaved form edits during navigation. */
+export function confirmDiscardUnsavedForm(
+  message = "You have unsaved changes on this form. Leave without saving?"
+): boolean {
+  return typeof window === "undefined" || window.confirm(message);
+}
+
 /**
  * One eCRF form instance (ADR-2622): open or reuse it, read it, save a page of values, and sign it (#5463).
  *

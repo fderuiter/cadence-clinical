@@ -26,8 +26,12 @@ export type KernelProtocolVersion =
   Schemas["Kernel_KernelProtocolVersionResponse"];
 export type KernelScheduleOfActivities =
   Schemas["Kernel_KernelScheduleOfActivitiesResponse"];
+export type KernelSoaEpoch = Schemas["Kernel_KernelSoaEpochResponse"];
 export type KernelSoaColumn = Schemas["Kernel_KernelSoaColumnResponse"];
 export type KernelSoaRow = Schemas["Kernel_KernelSoaRowResponse"];
+export type KernelSoaFootnote = Schemas["Kernel_KernelSoaFootnoteResponse"];
+export type KernelScreenEnrollmentResult =
+  Schemas["Kernel_KernelEnrollmentStateResponse"];
 export type KernelLineageNode = Schemas["Kernel_KernelLineageNodeResponse"];
 export type KernelLineageEdge = Schemas["Kernel_KernelLineageEdgeResponse"];
 export type KernelLineage = Schemas["Kernel_KernelLineageResponse"];
