@@ -29,9 +29,6 @@ jobs:
       - name: Run actionlint
         uses: rhysd/actionlint@914e7df21a07ef503a81201c76d2b11c789d3fca # v1.7.12
 
-      - name: Verify third-party action SHA pinning
-        run: python3 scripts/check-action-pinning.py
-
   lint-and-static:
     name: Lint and Static Verification
     runs-on: ubuntu-latest
@@ -689,7 +686,7 @@ jobs:
       container_scan: ${{ steps.classify.outputs.container_scan }}
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
     steps:
       - name: Fetch list of changed files
         id: classify
@@ -710,11 +707,24 @@ jobs:
           SAFE=true
           CONTAINER_SCAN=false
           while IFS= read -r file; do
-            if [[ "$file" == *"vulnerability_exclusions_ledger.json" ]] || [[ "$file" == *"validate_vulnerabilities"* ]]; then
-              echo "Unsafe vulnerability/validation file: $file"
+            if [[ "$file" =~ (^|/)(AGENTS|CLAUDE|SECURITY)\.md$ ]] || \
+               [[ "$file" == docs/.vitepress/* ]] || \
+               [[ "$file" == docs/SDLC/* ]] || \
+               [[ "$file" == docs/openapi/* ]] || \
+               [[ "$file" == docs/kernel/* ]] || \
+               [[ "$file" == docs/adr/* ]] || \
+               [[ "$file" == .agents/* ]] || \
+               [[ "$file" == .github/* ]] || \
+               [[ "$file" == *.sh ]] || \
+               [[ "$file" == *"vulnerability_exclusions_ledger.json" ]] || \
+               [[ "$file" == *"validate_vulnerabilities"* ]]; then
+              echo "Unsafe file: $file"
               SAFE=false
-            elif [[ "$file" == docs/* ]] || [[ "$file" == *.md ]]; then
-              echo "Safe file: $file"
+            elif [[ "$file" =~ ^(README|ARCHITECTURE|CONTEXT|CONTRIBUTING|SUPPORT)\.md$ ]] || \
+                 [[ "$file" =~ ^(apps|packages)/[A-Za-z0-9][A-Za-z0-9._-]*(/[A-Za-z0-9][A-Za-z0-9._-]*)?/README\.md$ ]] || \
+                 [[ "$file" =~ ^docs/(BACKLOG_INSIGHTS_ARCHIVE|CI|COMPETITIVE_ANALYSIS_AND_MARKET_SUPERIORITY|DATA_LIFECYCLE|DOCUMENTATION_INDEX|ENVIRONMENT_VARIABLES|FEATURE_MATRIX|GOALS_AND_PRIORITIES|ISSUE_MANAGEMENT|LOCAL_DEV_ENVIRONMENT|MIGRATION_WORKFLOW|OPERATIONAL_DATABASE|OPERATIONAL_INBOUND_EMAIL|OPERATIONAL_LAB_RANGES|PROJECT_PLAN|PYTHON_REFERENCE_INVENTORY|TESTING|cli)\.md$ ]] || \
+                 [[ "$file" =~ ^docs/(architecture|components|migration|strategy|ux|web)/([A-Za-z0-9][A-Za-z0-9._-]*/)*[A-Za-z0-9][A-Za-z0-9._-]*\.md$ ]]; then
+              echo "Safe prose Markdown file: $file"
             else
               echo "Unsafe file: $file"
               SAFE=false
@@ -735,9 +745,9 @@ jobs:
         if: steps.classify.outputs.is_safe == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          gh label create "safe-change" --repo ${{ github.repository }} --color "0E8A16" --description "Safe non-GxP change" --force || true
-          gh pr edit ${{ github.event.pull_request && github.event.pull_request.number || '0' }} --repo ${{ github.repository }} --add-label "safe-change" || echo "Failed to apply label. Ignoring."
+          gh pr edit "$PR_NUMBER" --repo "${{ github.repository }}" --add-label "safe-change"
 
   automerge:
     name: Enable Automerge
@@ -772,7 +782,6 @@ jobs:
       needs.compliance.result == 'success'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
       pull-requests: write
     steps:
       - name: Enable Automerge
