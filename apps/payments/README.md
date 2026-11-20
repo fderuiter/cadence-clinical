@@ -18,7 +18,7 @@ Site and participant payments scaffold. It holds the budget contract, fee schedu
   - `PayableLedger` is integrated with `ClinicalVisitCompletedConsumer` to calculate investigator fee line items, split payee allocations, and holdback retention reserves upon signed visit milestone completion via the transactional outbox.
 - `Infrastructure/Consumers/`: `ClinicalVisitCompletedConsumer` listens for `ClinicalVisitCompleted` domain events and writes `Payable`, `PayableAllocation`, `HoldbackReserve`, and `PaymentAuditLog` entities.
 - `Infrastructure/Persistence/`: `PaymentsDbContext`, a design-time `PaymentsDbContextFactory`, and `Configurations/` (Fluent API mappings).
-- `Infrastructure/Persistence/Migrations/`: `20260924145423_InitialCreate`, `20260925183437_ConvertPaymentPropertiesToDecimal`.
+- `Infrastructure/Persistence/Migrations/`: `20260924145423_InitialCreate`, `20260925183437_ConvertPaymentPropertiesToDecimal`, `20260929203006_StoreProcessorReferencesInsteadOfPaymentSecrets`, `20261001161305_AddParticipantCompensationTables`, `20261006193258_AddDisbursementReferenceToExpenseClaims`, `20261120184308_AddSelfServiceIdempotencyKeys`.
 
 ## HTTP surface
 

@@ -342,7 +342,194 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
     ).toMatch(/^DISB-/);
 
     const balanceEl = document.getElementById("wallet-balance-amount");
-    expect(balanceEl.textContent).toContain("$0.00 USD");
+    expect(balanceEl.textContent).toContain("$0.00");
+    expect(balanceEl.textContent).not.toContain("USD");
+  });
+
+  it("enforces Idempotency-Key deduplication on expense and payout retries and resets the expense form after submission", async () => {
+    const capturedHeaders = [];
+    const origFetch = globalThis.fetch;
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input, init) => {
+        capturedHeaders.push({
+          url: String(input),
+          idempotencyKey:
+            init?.headers?.["Idempotency-Key"] ||
+            init?.headers?.get?.("Idempotency-Key") ||
+            null,
+          body: init?.body ? JSON.parse(init.body) : null,
+        });
+        return origFetch(input, init);
+      });
+
+    state.expenseForm.category = "TRANSIT";
+    state.expenseForm.merchantName = "Metro Rail";
+    state.expenseForm.grossAmount = 24.0;
+    state.expenseForm.expenseDate = "2026-09-10";
+    state.expenseForm.ocrConfidence = 0.96;
+
+    // Simulate network failure before client clears draft -> retry must reuse exact Idempotency-Key
+    fetchSpy.mockImplementationOnce(async (input, init) => {
+      capturedHeaders.push({
+        url: String(input),
+        idempotencyKey: init?.headers?.["Idempotency-Key"] || null,
+      });
+      throw new Error("Transient timeout");
+    });
+
+    await expect(submitExpenseClaim()).rejects.toThrow("Transient timeout");
+    const firstAttemptKey = capturedHeaders[0].idempotencyKey;
+    expect(firstAttemptKey).toMatch(/^exp_/);
+
+    // Retry same draft -> reuses exact Idempotency-Key and resets form on success
+    const claimRes = await submitExpenseClaim();
+    expect(capturedHeaders[1].idempotencyKey).toBe(firstAttemptKey);
+    expect(claimRes.auto_approved).toBe(true);
+    expect(state.expenseForm.merchantName).toBe("");
+    expect(state.expenseForm.grossAmount).toBe(0);
+    expect(state.expenseForm.expenseDate).toBe("");
+    expect(state.expenseManualEntry).toBe(false);
+    expect(state.expenseClaims).toHaveLength(1);
+
+    // Server-side/MSW replay with the same explicit Idempotency-Key returns same claim without extra rows or balance drift
+    const reimbursementsBeforeReplay = state.lifetimeReimbursements;
+    const replayRes = await submitExpenseClaim({
+      category: "TRANSIT",
+      merchantName: "Metro Rail",
+      grossAmount: 24.0,
+      expenseDate: "2026-09-10",
+      ocrConfidence: 0.96,
+      idempotencyKey: firstAttemptKey,
+    });
+    expect(replayRes.claim_id).toBe(claimRes.claim_id);
+    expect(state.expenseClaims).toHaveLength(1);
+    expect(state.lifetimeReimbursements).toBe(reimbursementsBeforeReplay);
+
+    fetchSpy.mockRestore();
+  });
+
+  it("clears receipt file input on selection, opens manual entry with type=date on OCR failure, and supports focus-trapped payout modal, W-9 hold, skeleton, and EUR currency", async () => {
+    state.walletLoading = true;
+    state.walletLoaded = false;
+    state.walletBalance = null;
+    state.currency = "EUR";
+
+    activeApp = createApp(App);
+    activeApp.use(pinia);
+    activeApp.mount("#app");
+    await nextTick();
+
+    state.currentView = "view-wallet";
+    await nextTick();
+
+    // 1. Loading skeleton renders instead of $0.00 USD while walletLoading is true
+    expect(document.getElementById("wallet-loading-skeleton")).not.toBeNull();
+    expect(document.getElementById("wallet-balance-amount")).toBeNull();
+    expect(document.body.textContent).not.toContain("$0.00 USD");
+    expect(
+      document.getElementById("session-wallet-balance")?.textContent
+    ).toContain("Loading");
+
+    // 2. Hydrate EUR wallet with €50.00 balance
+    state.walletLoading = false;
+    state.walletLoaded = true;
+    state.walletBalance = 50.0;
+    state.lifetimeStipends = 120.0;
+    state.lifetimeReimbursements = 30.0;
+    state.lifetimeDisbursements = 100.0;
+    state.taxableYtd = 520.0;
+    state.w9Status = "SUBMITTED";
+    state.expenseClaims = [
+      {
+        id: "claim_hist_01",
+        merchantName: "EuroStar Rail",
+        category: "TRANSIT",
+        expenseDate: "2026-10-01",
+        netAmount: 30.0,
+        status: "APPROVED",
+        approvalDecision: "AUTO_APPROVED",
+        disbursementReference: "DISB-ACH-EUR01",
+      },
+    ];
+    await nextTick();
+
+    expect(
+      document.getElementById("wallet-balance-amount")?.textContent?.trim()
+    ).toBe("€50.00");
+    expect(
+      document.getElementById("session-wallet-balance")?.textContent?.trim()
+    ).toBe("€50.00");
+    expect(
+      document.getElementById("wallet-taxable-ytd")?.textContent?.trim()
+    ).toBe("€520.00");
+    expect(document.getElementById("wallet-w9-warning-banner")).not.toBeNull();
+    expect(
+      document.getElementById("wallet-expense-claims")?.textContent
+    ).toContain("EuroStar Rail");
+    expect(
+      document.getElementById("wallet-expense-claims")?.textContent
+    ).toContain("€30.00");
+
+    // 3. Receipt file input resets target.value on selection and OCR failure reveals manual #ocr-review-card with type="date"
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValueOnce(new Error("OCR Engine 503 Unavailable"));
+
+    const fileInput = document.getElementById("receipt-file-input");
+    const mockTarget = {
+      files: [buildReceiptSvgFile(["BROKEN"], "retry_same.svg")],
+      value: "C:\\fakepath\\retry_same.svg",
+    };
+    const changeEvt = new Event("change");
+    Object.defineProperty(changeEvt, "target", { value: mockTarget });
+    fileInput.dispatchEvent(changeEvt);
+
+    expect(mockTarget.value).toBe("");
+    await new Promise((r) => setTimeout(r, 60));
+    await nextTick();
+
+    const reviewCard = document.getElementById("ocr-review-card");
+    expect(reviewCard).not.toBeNull();
+    const dateInput = document.getElementById("ocr-expense-date");
+    expect(dateInput?.getAttribute("type")).toBe("date");
+    fetchSpy.mockRestore();
+
+    // 4. Clicking #btn-disburse-balance opens accessible confirmation modal instead of firing immediate payout
+    document.getElementById("btn-disburse-balance").click();
+    await nextTick();
+
+    const disburseModal = document.getElementById("wallet-disburse-modal");
+    expect(disburseModal).not.toBeNull();
+    expect(disburseModal.getAttribute("role")).toBe("dialog");
+    expect(disburseModal.getAttribute("aria-modal")).toBe("true");
+
+    // Validate amount > walletBalance is rejected inline
+    state.disburseForm.disbursementType = "VIRTUAL_CARD";
+    state.disburseForm.amount = "75.00";
+    document
+      .getElementById("wallet-disburse-form")
+      .dispatchEvent(new Event("submit", { cancelable: true }));
+    await nextTick();
+    expect(
+      document.getElementById("disburse-modal-error")?.textContent
+    ).toContain("exceeds your available balance");
+
+    // 5. Trigger $600 Form W-9 hold -> banner appears and payout is blocked
+    closeModalAndTriggerW9Hold();
+    await nextTick();
+    expect(document.getElementById("wallet-w9-hold-banner")).not.toBeNull();
+    expect(document.getElementById("btn-disburse-balance").disabled).toBe(true);
+    await expect(disburseAvailableBalance("DIRECT_ACH")).rejects.toThrow(
+      /\$600\.00/
+    );
+
+    function closeModalAndTriggerW9Hold() {
+      state.disburseModalOpen = false;
+      state.taxableYtd = 625.0;
+      state.is1099ThresholdExceeded = true;
+      state.w9Status = "SUBMITTED";
+    }
   });
 
   it("refuses OCR, expense submission, and payout when unauthenticated outside demo mode and shows user-visible error banner", async () => {
