@@ -47,6 +47,7 @@ namespace Cadence.IntegrationTests.Kernel;
 public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>, IDisposable
 {
     private const string Crc = "crc@observation-host.test";
+    private const string Monitor = "cra@observation-host.test";
     private const string Stranger = "stranger@observation-host.test";
     private const string CorrectionReason = "Transcription error – source reads 128";
 
@@ -140,6 +141,95 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
     }
 
     /// <summary>
+    /// A monitor verifies revision 1 of an observation with a mandatory reason, sees a correction move the observation to an
+    /// unverified revision 2 while preserving the append-only assertion on revision 1, verifies revision 2 under a Frozen lock,
+    /// withdraws that verification under Frozen, and is refused with 423 (<c>K.Assertion.Locked</c>) under a Locked assertion.
+    /// </summary>
+    [Fact(DisplayName = "HostVerification_VerifiesRetractsClearsOnCorrection_AndDistinguishesFrozenFromLocked")]
+    public async Task HostVerificationVerifiesRetractsClearsOnCorrectionAndDistinguishesFrozenFromLocked()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (code, tenant, enrollment) = await SeedAsync(grant: true, ct);
+        using var crc = Client(code, Crc);
+        using var monitor = Client(code, Monitor);
+        using var stranger = Client(code, Stranger);
+
+        var recorded = await SendAsync<KernelObservationStateResponse>(crc, HttpMethod.Post, "observations", "Initial entry", new
+        {
+            enrollment_ref = NodeRef.For(enrollment).ToString(),
+            concept = $"{ConceptId.New()}@1",
+            value = Systolic(120),
+            observed_at = Tick().AddHours(-1),
+        }, HttpStatusCode.Created, ct);
+        var observation = NodeRef.Parse(recorded.Ref).Unversioned();
+        var enrollmentRef = NodeRef.For(enrollment).ToString();
+
+        // Mandatory reason and capability checks on verification.
+        (await ProblemAsync(monitor, $"observations/{observation}/verifications", null, new { enrollment_ref = enrollmentRef, revision = 1 }, ct))
+            .Should().Be(((HttpStatusCode)422, KernelErrors.ReasonForChangeRequired.Code));
+        (await ProblemAsync(crc, $"observations/{observation}/verifications", "Coordinator attempted SDV", new { enrollment_ref = enrollmentRef, revision = 1 }, ct))
+            .Should().Be((HttpStatusCode.Forbidden, KernelErrors.AuthorizationDenied.Code));
+        (await ProblemAsync(stranger, $"observations/{observation}/verifications", "Stranger attempted SDV", new { enrollment_ref = enrollmentRef, revision = 1 }, ct))
+            .Should().Be((HttpStatusCode.Forbidden, KernelErrors.AuthorizationDenied.Code));
+
+        // Verify revision 1.
+        var verifiedRev1 = await SendAsync<KernelAssertionStateResponse>(
+            monitor, HttpMethod.Post, $"observations/{observation}/verifications", "Verified against inpatient chart",
+            new { enrollment_ref = enrollmentRef, revision = 1 }, HttpStatusCode.Created, ct);
+        verifiedRev1.Kind.Should().Be("Verified");
+        verifiedRev1.Revision.Should().Be(1);
+        verifiedRev1.AssertedBy.Should().Be(Monitor);
+
+        // Stale revision check when asking to verify a non-current revision.
+        (await ProblemAsync(monitor, $"observations/{observation}/verifications", "Wrong revision", new { enrollment_ref = enrollmentRef, revision = 2 }, ct))
+            .Should().Be((HttpStatusCode.Conflict, AssertionErrors.RevisionStale.Code));
+
+        // Correcting to revision 2 leaves the revision 1 verification intact while revision 2 has no active verification.
+        await SendAsync<KernelObservationStateResponse>(crc, HttpMethod.Post, $"observations/{observation}/corrections", CorrectionReason,
+            Correction(enrollment, 128, 1), HttpStatusCode.OK, ct);
+        var afterCorrection = await SendAsync<KernelObservationResponse>(monitor, HttpMethod.Get, $"observations/{observation}", null, null, HttpStatusCode.OK, ct);
+        afterCorrection.Version.Should().Be(2);
+        afterCorrection.Assertions.Should().ContainSingle(a => a.Kind == AssertionKind.Verified && a.Revision == 1 && a.RetractedAt == null);
+        afterCorrection.Assertions.Should().NotContain(a => a.Kind == AssertionKind.Verified && a.Revision == 2 && a.RetractedAt == null);
+
+        // Frozen blocks data edits (423) while allowing SDV verification and withdrawal!
+        var observations = new KernelObservationScenario(fixture);
+        var study = (await fixture.ObservationRecords.FindAsync(tenant, ObservationId.FromGuid(observation.Id), ct))!.StudyId;
+        var frozen = await _scenario.OkAsync(await observations.LockAsync(tenant, study, NodeRef.For(study), ct, LockKind.Frozen), ct);
+
+        (await ProblemAsync(crc, $"observations/{observation}/corrections", CorrectionReason, Correction(enrollment, 130, 2), ct))
+            .Should().Be(((HttpStatusCode)423, ObservationErrors.Locked.Code));
+
+        var verifiedRev2 = await SendAsync<KernelAssertionStateResponse>(
+            monitor, HttpMethod.Post, $"observations/{observation}/verifications", "Verified corrected value during interim freeze",
+            new { enrollment_ref = enrollmentRef, revision = 2 }, HttpStatusCode.Created, ct);
+        var verifiedRev2Ref = NodeRef.Parse(verifiedRev2.Ref).Unversioned();
+
+        var withdrawal = await SendAsync<KernelAssertionStateResponse>(
+            monitor, HttpMethod.Post, $"assertions/{verifiedRev2Ref}/retraction", "Withdrawn after source addendum spotted",
+            new { enrollment_ref = enrollmentRef }, HttpStatusCode.OK, ct);
+        withdrawal.Kind.Should().Be("Verified");
+        withdrawal.Retracts.Should().Be(verifiedRev2Ref.ToString());
+
+        var afterRetraction = await SendAsync<KernelObservationResponse>(monitor, HttpMethod.Get, $"observations/{observation}", null, null, HttpStatusCode.OK, ct);
+        afterRetraction.Assertions.Single(a => a.AssertionId == AssertionId.FromGuid(verifiedRev2Ref.Id)).RetractedAt.Should().NotBeNull();
+
+        // Release Frozen and apply Locked: Locked refuses both new verifications and verification withdrawals with 423 K.Assertion.Locked.
+        await _scenario.OkAsync(await observations.ReleaseAsync(tenant, study, frozen.LockId, ct), ct);
+        var reVerifiedRev2 = await SendAsync<KernelAssertionStateResponse>(
+            monitor, HttpMethod.Post, $"observations/{observation}/verifications", "Re-verified against source addendum",
+            new { enrollment_ref = enrollmentRef, revision = 2 }, HttpStatusCode.Created, ct);
+        var reVerifiedRef = NodeRef.Parse(reVerifiedRev2.Ref).Unversioned();
+
+        await _scenario.OkAsync(await observations.LockAsync(tenant, study, NodeRef.For(study), ct, LockKind.Locked), ct);
+        (await ProblemAsync(monitor, $"observations/{observation}/verifications", "Attempted SDV while Locked", new { enrollment_ref = enrollmentRef, revision = 2 }, ct))
+            .Should().Be(((HttpStatusCode)423, AssertionErrors.Locked.Code));
+        (await ProblemAsync(monitor, $"assertions/{reVerifiedRef}/retraction", "Attempted withdrawal while Locked", new { enrollment_ref = enrollmentRef }, ct))
+            .Should().Be(((HttpStatusCode)423, AssertionErrors.Locked.Code));
+    }
+
+    /// <summary>
     /// The browser-to-database check (ADR-2620): Chromium opens the real ObservationView on the Vite dev server, the
     /// user corrects the value and gives a reason, and the screen shows the correction as saved with the reason in the
     /// audit trail. The test then reads the revision and the kernel audit entry from PostgreSQL. Keycloak and the
@@ -222,6 +312,14 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
                 await _scenario.OkAsync(
                     new IssueGrant(tenant, GrantId.New(), Actor.Person(Crc), capability, null, AuthorityScope.StudySite(studySite), Tick(), null, false,
                         KernelProtocolScenario.Key(), "Appointed"),
+                    ct);
+            }
+
+            foreach (var capability in new[] { "observation.verify", "assertion.retract" })
+            {
+                await _scenario.OkAsync(
+                    new IssueGrant(tenant, GrantId.New(), Actor.Person(Monitor), capability, null, AuthorityScope.StudySite(studySite), Tick(), null, false,
+                        KernelProtocolScenario.Key(), "Appointed monitor"),
                     ct);
             }
         }

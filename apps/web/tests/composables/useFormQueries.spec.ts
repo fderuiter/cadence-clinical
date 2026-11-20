@@ -18,6 +18,7 @@ vi.mock("../../src/api/ecrfQueriesApi", async (importOriginal) => {
       raise: vi.fn(),
       listForForm: vi.fn(),
       listForEnrollment: vi.fn(),
+      listForStudy: vi.fn(),
       transition: vi.fn(),
     },
   };
@@ -205,5 +206,83 @@ describe("useFormQueries (#5461)", () => {
 
     expect(queries.queries.value).toEqual([]);
     expect(ecrfQueriesApi.listForForm).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads a study's queries with filters and raises on a blank item by itemId", async () => {
+    vi.mocked(ecrfQueriesApi.listForStudy).mockResolvedValue([
+      query({ site_code: "017", subject_code: "017-0001" }),
+    ]);
+    vi.mocked(ecrfQueriesApi.raise).mockResolvedValue(
+      query({ item_id: "DIABP", observation_id: "obs-blank", revision: 1 })
+    );
+    const queries = useFormQueries();
+
+    await queries.load({
+      studyId: "study-1",
+      filters: { status: "open", site: "017", valueChanged: false },
+    });
+    expect(ecrfQueriesApi.listForStudy).toHaveBeenCalledWith("study-1", {
+      status: "open",
+      site: "017",
+      valueChanged: false,
+    });
+
+    expect(
+      await queries.raise(
+        {
+          formId: "form-a",
+          itemId: "DIABP",
+          observationId: null,
+          revision: 0,
+        },
+        "Missing diastolic BP"
+      )
+    ).toBe(true);
+    expect(ecrfQueriesApi.raise).toHaveBeenCalledWith(
+      expect.objectContaining({
+        formId: "form-a",
+        itemId: "DIABP",
+        observationId: null,
+        revision: 0,
+        text: "Missing diastolic BP",
+      })
+    );
+  });
+
+  it("dispatches one independent transition per query in actMany and reports partial failures", async () => {
+    const q1 = query({ query_id: "query-1", status: "answered" });
+    const q2 = query({ query_id: "query-2", status: "answered" });
+    vi.mocked(ecrfQueriesApi.listForStudy).mockResolvedValue([q1, q2]);
+    vi.mocked(ecrfQueriesApi.transition)
+      .mockResolvedValueOnce({ ...q1, status: "closed", version: 2 })
+      .mockRejectedValueOnce(
+        new ApiError("Locked", 423, null, { code: "K.Assertion.Locked" })
+      );
+
+    const queries = useFormQueries();
+    await queries.load({ studyId: "study-1" });
+    const results = await queries.actMany(
+      [q1, q2],
+      "close",
+      "Batch review complete"
+    );
+
+    expect(ecrfQueriesApi.transition).toHaveBeenCalledTimes(2);
+    const [firstCall, secondCall] = vi.mocked(ecrfQueriesApi.transition).mock
+      .calls;
+    expect(firstCall[1].idempotencyKey).not.toBe(secondCall[1].idempotencyKey);
+    expect(results).toHaveLength(2);
+    expect(results[0]).toMatchObject({ queryId: "query-1", ok: true });
+    expect(results[1].queryId).toBe("query-2");
+    expect(results[1].ok).toBe(false);
+    expect(results[1].message).toContain("locked");
+    expect(queries.queries.value.map((q) => q.status)).toEqual([
+      "closed",
+      "answered",
+    ]);
+    expect(queries.outcome.value).toEqual({
+      kind: "failed",
+      message: "Completed 1 of 2 queries; 1 could not be updated.",
+    });
   });
 });

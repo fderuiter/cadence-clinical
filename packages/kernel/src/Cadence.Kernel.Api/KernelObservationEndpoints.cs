@@ -53,6 +53,19 @@ public static class KernelObservationEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesKernelCommand<CorrectObservation>();
 
+        group.MapPost("/{observationRef}/verifications", VerifyAsync)
+            .WithName("KernelVerifyObservation")
+            .WithSummary("Verifies the current revision of an observation against source with the signed reason for change (observation.verify).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesKernelCommand<VerifyObservation>();
+
+        var assertions = kernel.MapGroup("/assertions").AddEndpointFilter<KernelTenantFilter>().WithTags("Kernel observations");
+        assertions.MapPost("/{assertionRef}/retraction", RetractAssertionAsync)
+            .WithName("KernelRetractAssertion")
+            .WithSummary("Retracts a verification, answer or query assertion with the signed reason for change (assertion.retract).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesKernelCommand<RetractAssertion>();
+
         return kernel;
     }
 
@@ -146,6 +159,82 @@ public static class KernelObservationEndpoints
         return result.Value is { } state ? TypedResults.Ok(KernelObservationStateResponse.From(state)) : Problem(result.Error!);
     }
 
+    internal static async Task<Results<Created<KernelAssertionStateResponse>, ProblemHttpResult>> VerifyAsync(
+        string observationRef,
+        KernelVerifyObservationRequest request,
+        HttpContext context,
+        IKernelCommandSender sender,
+        IKernelChangeReason changeReason,
+        CancellationToken cancellationToken)
+    {
+        if (ParseObservation(observationRef) is not { } observation)
+        {
+            return ObservationRefInvalid(observationRef);
+        }
+
+        if (request is null
+            || !NodeRef.TryParse(request.EnrollmentRef, out var enrollment)
+            || enrollment.Kind != NodeKinds.Enrollment
+            || request.Revision < 1)
+        {
+            return KernelProblems.BadRequest(
+                "Invalid verification",
+                "Name the observation's enrollment as an enrollment NodeRef and the revision verified (from 1).");
+        }
+
+        var assertion = request.AssertionId is { } given && given != Guid.Empty ? AssertionId.FromGuid(given) : AssertionId.New();
+        var result = await sender.SendAsync(
+            new VerifyObservation(
+                KernelRequestTenant.Get(context),
+                assertion,
+                EnrollmentId.FromGuid(enrollment.Id),
+                observation,
+                request.Revision,
+                IdempotencyKey(context),
+                changeReason.Read(context) ?? string.Empty),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        return result.Value is { } state
+            ? TypedResults.Created(
+                $"{KernelApiEndpointRouteBuilderExtensions.RoutePrefix}/observations/{NodeRef.For(observation)}",
+                KernelAssertionStateResponse.From(state))
+            : Problem(result.Error!);
+    }
+
+    internal static async Task<Results<Ok<KernelAssertionStateResponse>, ProblemHttpResult>> RetractAssertionAsync(
+        string assertionRef,
+        KernelRetractAssertionRequest request,
+        HttpContext context,
+        IKernelCommandSender sender,
+        IKernelChangeReason changeReason,
+        CancellationToken cancellationToken)
+    {
+        if (ParseAssertion(assertionRef) is not { } retracted)
+        {
+            return AssertionRefInvalid(assertionRef);
+        }
+
+        if (request is null
+            || !NodeRef.TryParse(request.EnrollmentRef, out var enrollment)
+            || enrollment.Kind != NodeKinds.Enrollment)
+        {
+            return KernelProblems.BadRequest(
+                "Invalid retraction",
+                "Name the assertion's enrollment as an enrollment NodeRef.");
+        }
+
+        var assertion = request.AssertionId is { } given && given != Guid.Empty ? AssertionId.FromGuid(given) : AssertionId.New();
+        var result = await sender.SendAsync(
+            new RetractAssertion(
+                KernelRequestTenant.Get(context),
+                assertion,
+                EnrollmentId.FromGuid(enrollment.Id),
+                retracted,
+                IdempotencyKey(context),
+                changeReason.Read(context) ?? string.Empty),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        return result.Value is { } state ? TypedResults.Ok(KernelAssertionStateResponse.From(state)) : Problem(result.Error!);
+    }
+
     /// <summary>A kernel error as RFC 9457 problem details, with its stable code (K-ERR-1) and any field errors.</summary>
     internal static ProblemHttpResult Problem(KernelError error) => KernelErrorEndpoints.Problem(error);
 
@@ -154,8 +243,14 @@ public static class KernelObservationEndpoints
     private static ObservationId? ParseObservation(string text) =>
         NodeRef.TryParse(text, out var node) && node.Kind == NodeKinds.Observation ? ObservationId.FromGuid(node.Id) : null;
 
+    private static AssertionId? ParseAssertion(string text) =>
+        NodeRef.TryParse(text, out var node) && node.Kind == NodeKinds.Assertion && node.Version is null ? AssertionId.FromGuid(node.Id) : null;
+
     private static ProblemHttpResult ObservationRefInvalid(string text) =>
         KernelProblems.BadRequest("Invalid NodeRef", $"'{text}' is not an observation NodeRef (observation:<uuid>).");
+
+    private static ProblemHttpResult AssertionRefInvalid(string text) =>
+        KernelProblems.BadRequest("Invalid NodeRef", $"'{text}' is not an assertion NodeRef (assertion:<uuid>).");
 
     private static bool TryParseConcept(string? text, out ConceptRef concept)
     {
@@ -185,6 +280,45 @@ public sealed record KernelRecordObservationRequest(Guid? ObservationId, string 
 /// <param name="Value">The corrected value.</param>
 /// <param name="ExpectedVersion">The observation version the corrector saw; another version is refused with 409.</param>
 public sealed record KernelCorrectObservationRequest(string EnrollmentRef, ObservationValue? Value, long ExpectedVersion);
+
+/// <summary>Body of <c>POST /observations/{ref}/verifications</c>.</summary>
+/// <param name="EnrollmentRef">The observation's enrollment, as a NodeRef; the verification is authorized against it.</param>
+/// <param name="Revision">The current revision of the observation being verified against source.</param>
+/// <param name="AssertionId">The new assertion's id; the kernel assigns one when absent.</param>
+public sealed record KernelVerifyObservationRequest(string EnrollmentRef, int Revision, Guid? AssertionId = null);
+
+/// <summary>Body of <c>POST /assertions/{ref}/retraction</c>.</summary>
+/// <param name="EnrollmentRef">The assertion's enrollment, as a NodeRef; the retraction is authorized against it.</param>
+/// <param name="AssertionId">The retracting assertion's id; the kernel assigns one when absent.</param>
+public sealed record KernelRetractAssertionRequest(string EnrollmentRef, Guid? AssertionId = null);
+
+/// <summary>An assertion after a verification or retraction command.</summary>
+/// <param name="Ref">The recorded assertion, as a NodeRef.</param>
+/// <param name="Kind">The assertion kind (<c>Verified</c> or the retracted assertion's kind).</param>
+/// <param name="Target">What the assertion targets, as a NodeRef.</param>
+/// <param name="Revision">The observation revision judged, when applicable.</param>
+/// <param name="Retracts">The assertion retracted, as a NodeRef, when this assertion is a retraction.</param>
+/// <param name="AssertedAt">When the assertion was recorded.</param>
+/// <param name="AssertedBy">Who recorded the assertion.</param>
+public sealed record KernelAssertionStateResponse(
+    string Ref,
+    string Kind,
+    string Target,
+    int? Revision,
+    string? Retracts,
+    DateTimeOffset AssertedAt,
+    string AssertedBy)
+{
+    internal static KernelAssertionStateResponse From(AssertionState state) =>
+        new(
+            NodeRef.For(state.AssertionId).ToString(),
+            state.Kind.ToString(),
+            state.Target.ToString(),
+            state.Revision,
+            state.Retracts is { } retracts ? NodeRef.For(retracts).ToString() : null,
+            state.AssertedAt,
+            state.AssertedBy);
+}
 
 /// <summary>An observation's value after a command.</summary>
 /// <param name="Ref">The observation, as a NodeRef at its new version.</param>

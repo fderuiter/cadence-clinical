@@ -8,7 +8,7 @@ export type StageId =
   "design" | "start" | "conduct" | "data" | "analyze" | "submit";
 
 export type SectionId =
-  "protocol-versions" | "site-activation" | "participants";
+  "protocol-versions" | "site-activation" | "participants" | "queries";
 
 export interface Section {
   id: SectionId;
@@ -69,7 +69,13 @@ export const STAGES: readonly Stage[] = [
     label: "Data",
     scope:
       "Collection, queries, external data, reconciliation, standards, validation",
-    sections: [],
+    sections: [
+      {
+        id: "queries",
+        label: "Queries",
+        description: "Data queries across visible enrollments in this study",
+      },
+    ],
   },
   {
     id: "analyze",

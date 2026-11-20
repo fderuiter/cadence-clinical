@@ -45,6 +45,20 @@ export interface FormQueryResponse {
   raised_by: string;
   raised_at: string;
   version: number;
+  study_id?: string | null;
+  study_site_id?: string | null;
+  site_code?: string | null;
+  subject_code?: string | null;
+  collection_spec_id?: string | null;
+  planned_activity_id?: string | null;
+}
+
+/** Optional filters on a study-wide query worklist read (`GET /api/v1/execution/forms/queries?study_id=…`). */
+export interface StudyQueryFilters {
+  status?: FormQueryStatus | "";
+  site?: string;
+  participant?: string;
+  valueChanged?: boolean | null;
 }
 
 /** The kernel and module error codes a query call answers with. */
@@ -81,8 +95,9 @@ interface QueryPaths {
     post: {
       parameters: QueryPathParams;
       requestBody: JsonContent<{
-        observation_id: string;
-        revision: number;
+        observation_id: string | null;
+        revision: number | null;
+        item_id?: string;
         text: string;
         query_id?: string | null;
       }>;
@@ -91,7 +106,16 @@ interface QueryPaths {
   };
   "/api/v1/execution/forms/queries": {
     get: {
-      parameters: { query: { enrollment_id: string } };
+      parameters: {
+        query: {
+          enrollment_id?: string;
+          study_id?: string;
+          status?: string;
+          site?: string;
+          participant?: string;
+          value_changed?: boolean;
+        };
+      };
       responses: { 200: JsonContent<FormQueryResponse[]> };
     };
   };
@@ -111,10 +135,12 @@ interface QueryPaths {
 
 export interface RaiseFormQuery {
   formId: string;
-  /** The value's observation, from the form read. */
-  observationId: string;
-  /** The value's current revision, from the form read; an older one is refused (`M.Execution.Query.RevisionStale`). */
-  revision: number;
+  /** The value's observation, from the form read, or null/omitted when raising on an unasked blank item. */
+  observationId?: string | null;
+  /** The value's current revision, from the form read, or null/omitted when raising on an unasked blank item. */
+  revision?: number | null;
+  /** The form item id when raising a missing-data query on an unasked blank item. */
+  itemId?: string | null;
   text: string;
   /** The new query's id; reuse it when retrying with the same idempotency key. */
   queryId?: string | null;
@@ -160,7 +186,7 @@ export function describeQueryError(error: unknown): string {
     return "Someone changed this query since you loaded it; reload the queries to see where it stands.";
   }
   if (code === ASSERTION_LOCKED || status === 423) {
-    return "The value is locked, so its queries cannot change.";
+    return "The value is locked (Locked), so its queries cannot change until the lock is released.";
   }
   if (code === AUTHORIZATION_DENIED || status === 403) {
     return "You are not allowed to do this on this participant's queries.";
@@ -181,11 +207,12 @@ export function actionTakesText(action: FormQueryAction): boolean {
 }
 
 export const ecrfQueriesApi = {
-  /** Raises a query on one value of a form (POST /api/v1/execution/forms/{formId}/queries). */
+  /** Raises a query on one value or unasked blank item of a form (POST /api/v1/execution/forms/{formId}/queries). */
   raise({
     formId,
     observationId,
     revision,
+    itemId,
     text,
     queryId,
     reason,
@@ -195,8 +222,9 @@ export const ecrfQueriesApi = {
       client.POST("/api/v1/execution/forms/{formId}/queries", {
         params: { path: { formId } },
         body: {
-          observation_id: observationId,
-          revision,
+          observation_id: observationId ?? null,
+          revision: revision ?? null,
+          ...(itemId ? { item_id: itemId } : {}),
           text,
           query_id: queryId ?? null,
         },
@@ -219,6 +247,29 @@ export const ecrfQueriesApi = {
     return unwrapResponse(
       client.GET("/api/v1/execution/forms/queries", {
         params: { query: { enrollment_id: enrollmentId } },
+      })
+    );
+  },
+
+  /** Queries across visible enrollments in a study, with optional server-side filters (GET /api/v1/execution/forms/queries?study_id=). */
+  listForStudy(
+    studyId: string,
+    filters: StudyQueryFilters = {}
+  ): Promise<FormQueryResponse[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/execution/forms/queries", {
+        params: {
+          query: {
+            study_id: studyId,
+            status: filters.status || undefined,
+            site: filters.site?.trim() || undefined,
+            participant: filters.participant?.trim() || undefined,
+            value_changed:
+              typeof filters.valueChanged === "boolean"
+                ? filters.valueChanged
+                : undefined,
+          },
+        },
       })
     );
   },
