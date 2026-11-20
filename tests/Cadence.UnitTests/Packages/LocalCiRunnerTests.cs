@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+using Cadence.Cli.Commands;
 using Cadence.Cli.Services;
 using Cadence.Compliance;
 
@@ -32,7 +33,7 @@ public class LocalCiRunnerTests
             RepoRoot = "/repo",
             Run = (command, extra, variables) =>
             {
-                string name = command.Arguments[0];
+                string name = command.Arguments.Count > 0 ? command.Arguments[0] : command.FileName;
                 _ran.Add(extra.Count == 0 ? name : $"{name} {string.Join(' ', extra)}");
                 _variables[name] = variables;
                 if (_files.ContainsKey("/repo/report.md"))
@@ -109,7 +110,7 @@ public class LocalCiRunnerTests
     }
 
     [Fact]
-    public void AStepWhoseToolIsMissing_IsSkippedWithTheInstallHint_AndDoesNotFailTheJob()
+    public void AStepWhoseToolIsMissing_FailsBeforeRunning_WithoutAllowSkip()
     {
         var jobs = new[]
         {
@@ -120,9 +121,48 @@ public class LocalCiRunnerTests
 
         var results = LocalCiRunner.Run(jobs, Defaults, Environment(tools: tool => tool != "hadolint"));
 
+        results.Select(r => r.Outcome).Should().Equal(CiOutcome.Failed, CiOutcome.NotRun);
+        results[0].Note.Should().Contain("hadolint is not on PATH; install hadolint").And.Contain("--allow-skip");
+        _ran.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void AStepWhoseToolIsMissing_IsSkippedWithTheInstallHint_WithAllowSkip()
+    {
+        var jobs = new[]
+        {
+            Job("a",
+                new CiStep("a", "lint docker") { RequiredTool = "hadolint", ToolHint = "install hadolint", Commands = [Cmd("hadolint")] },
+                new CiStep("a", "next") { Commands = [Cmd("next")] }),
+        };
+
+        var results = LocalCiRunner.Run(jobs, Defaults with { AllowSkip = true }, Environment(tools: tool => tool != "hadolint"));
+
         results.Select(r => r.Outcome).Should().Equal(CiOutcome.Skipped, CiOutcome.Passed);
         results[0].Note.Should().Be("hadolint is not on PATH; install hadolint");
         _ran.Should().Equal("next");
+    }
+
+    [Theory]
+    [InlineData("actionlint", "actionlint")]
+    [InlineData("hadolint", "lint-and-static")]
+    [InlineData("shellcheck", "lint-and-static")]
+    [InlineData("detect-secrets-hook", "security")]
+    public void LocalCiCommand_ExitsOneWhenARequiredToolIsMissing_UnlessAllowSkipIsPassed(string missingTool, string jobKey)
+    {
+        var env = Environment(tools: tool => tool != missingTool, files: ["Dockerfile"]);
+
+        int strictExit = LocalCiCommand.Execute([jobKey], allowSkip: false, baseRef: "origin/main", list: false, environment: env);
+        strictExit.Should().Be(1);
+
+        int skipExit = LocalCiCommand.Execute([jobKey], allowSkip: true, baseRef: "origin/main", list: false, environment: env);
+        skipExit.Should().Be(0);
+
+        var skipResults = LocalCiRunner.Run(CiPlan.Select([jobKey]), Defaults with { AllowSkip = true }, env);
+        skipResults.Should().ContainSingle(r => r.Step.RequiredTool == missingTool)
+            .Which.Should().Match<CiStepResult>(r =>
+                r.Outcome == CiOutcome.Skipped &&
+                r.Note.StartsWith($"{missingTool} is not on PATH; ", StringComparison.Ordinal));
     }
 
     [Fact]
