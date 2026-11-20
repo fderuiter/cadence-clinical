@@ -45,6 +45,8 @@ export const NODE_KINDS = [
   "protocol_element",
   "proposal",
   "form_version_snapshot",
+  "subscription",
+  "product_entitlement",
 ] as const;
 
 export type NodeKind = (typeof NODE_KINDS)[number];

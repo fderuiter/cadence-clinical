@@ -1,4 +1,4 @@
-# ADR-2819: Contextual SOP Specificity Resolution and Audited Support Ticket Escalation
+# ADR-2641: Contextual SOP Specificity Resolution and Audited Support Ticket Escalation
 
 - **Status:** Accepted
 - **Date:** 2026-11-20

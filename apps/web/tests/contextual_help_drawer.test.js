@@ -632,6 +632,7 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
 
       expect(wrapper.find("#contextual-help-drawer").exists()).toBe(true);
       expect(wrapper.text()).toContain("Clinical Guidance & SOPs");
+      wrapper.unmount();
       // Navigating lazily imports the route views, which can exceed the
       // default 5s timeout on a loaded machine.
     }, 20000);
@@ -712,17 +713,19 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
 
       await wrapper.find("#btn-submit-ticket").trigger("click");
       await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+      await vi.waitFor(() => expect(knowledgeStore.isEscalating).toBe(false));
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find("#ticket-escalation-refusal").exists()).toBe(false);
       expect(knowledgeStore.isEscalating).toBe(false);
       expect(knowledgeStore.isOpen).toBe(false);
 
-      const toasts = useToastStore().toasts;
+      const toasts = useToastStore(pinia).toasts;
       expect(toasts.length).toBeGreaterThan(0);
       expect(toasts[0].tone).toBe("success");
       expect(toasts[0].title).toContain("DEV-2026-0104");
       expect(toasts[0].message).toContain("DATA_CAPTURE_ECRF");
+      wrapper.unmount();
     });
 
     it("displays an accessible alert and preserves user input when live ticket submission fails", async () => {
@@ -781,6 +784,7 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       expect(wrapper.find("#ticket-desc").element.value).toBe(
         "Coordinator cannot enter systolic value."
       );
+      wrapper.unmount();
     });
 
     it("retains escalated tickets in session state during demo mode and shows a simulated reference ID", async () => {
@@ -826,9 +830,10 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       expect(storedRaw).toBeTruthy();
       expect(JSON.parse(storedRaw)[0].reference).toBe(savedTicket.reference);
 
-      const toasts = useToastStore().toasts;
+      const toasts = useToastStore(pinia).toasts;
       expect(toasts.length).toBeGreaterThan(0);
       expect(toasts[0].title).toContain(savedTicket.reference);
+      wrapper.unmount();
     });
   });
 });

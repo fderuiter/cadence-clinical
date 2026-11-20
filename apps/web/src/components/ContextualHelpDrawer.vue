@@ -372,6 +372,7 @@ import TicketCreateModal from "./tickets/TicketCreateModal.vue";
 
 const knowledgeStore = useKnowledgeStore();
 const authStore = useAuthStore();
+const toastStore = useToastStore();
 const route = useRoute();
 
 useEscapeClose(() => knowledgeStore.closeDrawer(), {
@@ -450,7 +451,7 @@ function handleTicketCreated(createdTicket) {
       ? ` (${createdTicket.assigned_queue})`
       : "";
     const simulated = isDemoBuild() || String(refId || "").startsWith("SIM-");
-    useToastStore().push({
+    toastStore.push({
       tone: "success",
       title: simulated
         ? `Simulated ticket ${refId} saved in demo session`

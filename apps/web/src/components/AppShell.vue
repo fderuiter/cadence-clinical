@@ -1,8 +1,11 @@
 <template>
-  <div class="app-shell">
+  <div
+    class="app-shell"
+    :style="{ '--shell-header-height': `${headerHeight}px` }"
+  >
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
-    <header class="app-header">
+    <header ref="headerRef" class="app-header">
       <div class="header-left">
         <router-link
           :to="authStore.isAuthenticated ? studiesPath : '/login'"
@@ -33,7 +36,7 @@
           <router-link
             v-if="showDataCollectionNav"
             id="nav-data-collection"
-            to="/ecrf"
+            :to="dataCollectionPath"
             class="primary-nav-link"
             :class="{ active: isDataCollectionRoute }"
             :aria-current="isDataCollectionRoute ? 'page' : undefined"
@@ -55,6 +58,20 @@
 
       <div class="header-controls">
         <template v-if="authStore.isAuthenticated">
+          <router-link
+            v-if="authStore.activePlanBadge"
+            id="shell-plan-badge"
+            to="/plans"
+            class="plan-status-badge"
+            :class="{
+              'is-expired': authStore.isTrialExpired,
+              'is-trial': authStore.subscriptionStatus === 'Trialing',
+            }"
+            :title="PRE_RELEASE_ENVIRONMENT_NOTICE"
+          >
+            {{ authStore.activePlanBadge }}
+          </router-link>
+
           <button
             id="btn-open-palette"
             type="button"
@@ -132,6 +149,22 @@
         </template>
 
         <template v-else>
+          <router-link
+            id="nav-public-plans"
+            to="/plans"
+            class="shell-control-btn"
+          >
+            Plans
+          </router-link>
+          <button
+            v-if="!authStore.isDemoMode"
+            id="btn-register"
+            type="button"
+            class="btn btn-sm btn-secondary"
+            @click="handleRegister"
+          >
+            Start trial
+          </button>
           <button
             id="btn-login"
             type="button"
@@ -173,7 +206,7 @@
         </router-link>
         <router-link
           v-if="showDataCollectionNav"
-          to="/ecrf"
+          :to="dataCollectionPath"
           class="mobile-nav-link"
           @click="isMobileMenuOpen = false"
         >
@@ -218,15 +251,26 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, provide, ref } from "vue";
+import {
+  computed,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  provide,
+  ref,
+  watch,
+} from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
 import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { isScreenAvailable } from "../router/availability";
 import {
+  buildDataCollectionPath,
   canAccessDataCollection,
+  resolveCanvasParticipantContext,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
 import OnboardingTour from "./OnboardingTour.vue";
@@ -245,6 +289,18 @@ const router = useRouter();
 const isCommandPaletteOpen = ref(false);
 const isMobileMenuOpen = ref(false);
 const statusAnnouncement = ref("");
+const headerRef = ref(null);
+const headerHeight = ref(57);
+let headerResizeObserver = null;
+
+function syncHeaderHeight() {
+  const el = headerRef.value;
+  if (!el || typeof el.getBoundingClientRect !== "function") return;
+  const measured = Math.round(el.getBoundingClientRect().height);
+  if (measured > 0) {
+    headerHeight.value = measured;
+  }
+}
 
 const availablePersonas = computed(() => authStore.availablePersonas || []);
 const normalizedRoles = computed(() => authStore.normalizedRoles || []);
@@ -262,6 +318,19 @@ const studiesPath = computed(() =>
     ? `/studies/${encodeURIComponent(activeStudyCode.value)}`
     : "/studies"
 );
+
+const dataCollectionPath = computed(() => {
+  const participantContext = resolveCanvasParticipantContext(
+    activeStudyCode.value,
+    route?.query,
+    canvasStore
+  );
+  return buildDataCollectionPath({
+    studyCode: activeStudyCode.value,
+    subjectCode: participantContext.subjectCode,
+    enrollmentId: participantContext.enrollmentId,
+  });
+});
 
 const showStudiesNav = computed(() => isScreenAvailable("study"));
 const showDataCollectionNav = computed(() =>
@@ -297,6 +366,10 @@ const showOnboardingTour = computed(
     Boolean(authStore.isAuthenticated) &&
     route?.name !== "login" &&
     route?.path !== "/login" &&
+    route?.name !== "plans" &&
+    route?.path !== "/plans" &&
+    route?.name !== "trial-onboarding" &&
+    route?.path !== "/onboarding/trial" &&
     route?.name !== "forbidden" &&
     route?.path !== "/forbidden" &&
     route?.name !== "unavailable" &&
@@ -320,6 +393,17 @@ async function handleLogin() {
   }
 }
 
+async function handleRegister() {
+  if (typeof authStore.register === "function") {
+    const href = router.resolve("/onboarding/trial").href;
+    await authStore.register({
+      redirectUri: new URL(href, window.location.origin).toString(),
+    });
+  } else {
+    router.push("/plans");
+  }
+}
+
 async function handleLogout() {
   await authStore.logout();
 }
@@ -332,12 +416,47 @@ function handleGlobalKeydown(event) {
   }
 }
 
+watch(
+  () => [authStore.isAuthenticated, authStore.identity?.tenantId],
+  ([authenticated]) => {
+    if (authenticated && typeof authStore.loadEntitlements === "function") {
+      authStore.loadEntitlements();
+    }
+  }
+);
+
+watch(
+  () => [
+    authStore.isAuthenticated,
+    authStore.activePlanBadge,
+    isMobileMenuOpen.value,
+  ],
+  () => {
+    nextTick(syncHeaderHeight);
+  }
+);
+
 onMounted(() => {
   window.addEventListener("keydown", handleGlobalKeydown);
+  syncHeaderHeight();
+  if (typeof ResizeObserver !== "undefined" && headerRef.value) {
+    headerResizeObserver = new ResizeObserver(() => syncHeaderHeight());
+    headerResizeObserver.observe(headerRef.value);
+  }
+  if (
+    authStore.isAuthenticated &&
+    typeof authStore.loadEntitlements === "function"
+  ) {
+    authStore.loadEntitlements();
+  }
 });
 
 onUnmounted(() => {
   window.removeEventListener("keydown", handleGlobalKeydown);
+  if (headerResizeObserver) {
+    headerResizeObserver.disconnect();
+    headerResizeObserver = null;
+  }
 });
 </script>
 
@@ -458,6 +577,37 @@ onUnmounted(() => {
   gap: 10px;
 }
 
+.plan-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  white-space: nowrap;
+}
+
+.plan-status-badge:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.plan-status-badge.is-trial {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.plan-status-badge.is-expired {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
 .command-palette-trigger {
   display: inline-flex;
   align-items: center;
@@ -565,6 +715,7 @@ onUnmounted(() => {
 .shell-main.shell-main-canvas {
   max-width: none;
   padding: 0;
+  overflow: visible;
 }
 
 .mobile-menu-toggle {

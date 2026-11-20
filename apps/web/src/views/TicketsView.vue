@@ -607,6 +607,7 @@ import { isDemoBuild } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 
 const knowledgeStore = useKnowledgeStore();
+const toastStore = useToastStore();
 const tickets = ref([]);
 const kpis = reactive({
   active_tickets: 0,
@@ -799,7 +800,7 @@ const fetchTicketsFromApi = async () => {
     }
   } catch (err) {
     if (!isDemoBuild()) {
-      useToastStore().apiError("Loading tickets failed", err);
+      toastStore.apiError("Loading tickets failed", err);
     }
   }
 };
@@ -1064,7 +1065,7 @@ const handleTicketCreated = (createdTicket) => {
 
   const refId = createdTicket.reference || createdTicket.id;
   const simulated = isDemoBuild() || String(refId || "").startsWith("SIM-");
-  useToastStore().push({
+  toastStore.push({
     tone: "success",
     title: simulated
       ? `Simulated ticket ${refId} saved in demo session`
