@@ -302,4 +302,56 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
     expect(optionValues).toEqual(["auditor"]);
     auditWrapper.unmount();
   });
+
+  it("passes studyId, subjectId, and resolved enrollmentId on Data collection links and palette items when navigating from Clinical Canvas", async () => {
+    const { useStudyCanvasStore } =
+      await import("../../src/stores/studyCanvas");
+    const { buildWorkspacePaletteItems } =
+      await import("../../src/canvas/palette");
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Site Investigator"];
+
+    const studyCanvas = useStudyCanvasStore();
+    studyCanvas.studyCode = "CAD-101";
+    studyCanvas.knownParticipants["sub-uuid-1"] = {
+      id: "sub-uuid-1",
+      subject_id: "017-0001",
+      study_id: "CAD-101",
+      site_id: "SITE-01",
+      status: "ENROLLED",
+    };
+    studyCanvas.record.subjectCode = "017-0001";
+    studyCanvas.record.enrollmentId = "0192f3c4-0000-7000-8000-00000000e001";
+
+    await router.push(
+      "/studies/CAD-101?stage=conduct&section=participants&participant=participant%3Asub-uuid-1"
+    );
+    await router.isReady();
+
+    const wrapper = mount(AppShell, {
+      global: { plugins: [router] },
+    });
+
+    expect(wrapper.find("#nav-data-collection").attributes("href")).toBe(
+      "/ecrf?studyId=CAD-101&subjectId=017-0001&enrollmentId=0192f3c4-0000-7000-8000-00000000e001"
+    );
+
+    const paletteItems = buildWorkspacePaletteItems({
+      isAuthenticated: true,
+      normalizedRoles: authStore.normalizedRoles,
+      activeStudyCode: "CAD-101",
+      activeSubjectCode: "017-0001",
+      activeEnrollmentId: "0192f3c4-0000-7000-8000-00000000e001",
+    });
+    const dataCollectionItem = paletteItems.find(
+      (item) => item.key === "workspace:data-collection"
+    );
+    expect(dataCollectionItem?.target.routePath).toBe(
+      "/ecrf?studyId=CAD-101&subjectId=017-0001&enrollmentId=0192f3c4-0000-7000-8000-00000000e001"
+    );
+
+    wrapper.unmount();
+    await router.push("/");
+  });
 });

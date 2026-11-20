@@ -27,6 +27,7 @@ namespace Cadence.Kernel.Commands;
     nameof(TrustErrors.TargetNotSignable),
     nameof(TrustErrors.TargetContentChanged))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
 public sealed record Attest(
     TenantId TenantId,
     AttestationId AttestationId,

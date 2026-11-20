@@ -8,8 +8,9 @@
     <h3 id="ai-assist-title">Assist</h3>
     <p class="assist-scope">
       About
-      <code v-if="nodeRef">{{ nodeRef }}</code
-      ><template v-else>{{ studyCode }}</template
+      <code v-if="nodeRef">{{ nodeRef }}</code><template v-else>{{
+        studyCode
+      }}</template
       >. An agent reads and proposes; a person decides, and nothing changes
       until they do.
     </p>

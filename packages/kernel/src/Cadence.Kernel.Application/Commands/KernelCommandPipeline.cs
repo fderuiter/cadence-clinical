@@ -15,13 +15,16 @@ using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Application.Intelligence;
 using Cadence.Kernel.Application.Knowledge;
 using Cadence.Kernel.Application.Protocol;
+using Cadence.Kernel.Application.Tenancy;
 using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Application.WorkQueues;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
+using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 
 using FluentValidation;
@@ -108,6 +111,12 @@ public sealed class KernelCommandPipeline(
         if (await ReplayAsync<TResult>(transaction, execution, cancellationToken).ConfigureAwait(false) is { } replay)
         {
             return replay;
+        }
+
+        if (!BaselineKernelCommandAttribute.IsBaseline(commandType)
+            && await CheckSubscriptionActiveAsync(transaction, execution, cancellationToken).ConfigureAwait(false) is { } expired)
+        {
+            return expired;
         }
 
         if (execution.Metadata.Proposal is { } proposalId
@@ -224,6 +233,39 @@ public sealed class KernelCommandPipeline(
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(payload)));
     }
 
+    private async Task<KernelError?> CheckSubscriptionActiveAsync(
+        IKernelCommandTransaction transaction, CommandExecution execution, CancellationToken cancellationToken)
+    {
+        if (services.GetService<ITenantEntitlementReader>() is not { } reader)
+        {
+            return null;
+        }
+
+        var snapshot = await reader
+            .GetEntitlementsAsync(execution.Command.TenantId, execution.RecordedAt, cancellationToken)
+            .ConfigureAwait(false);
+        if (!snapshot.IsReadOnly)
+        {
+            return null;
+        }
+
+        var condition = EvaluatedCondition.Unsatisfied(
+            "subscription.active",
+            "Activate or renew the workspace subscription to record new study mutations; regulated reads, exports, electronic signatures, and audit trails remain available.");
+        var refusal = KernelErrors.SubscriptionExpired with
+        {
+            Explanation = new Explanation(
+                NodeRef.For(execution.Command.TenantId),
+                $"{execution.CommandType} is refused because the workspace trial subscription has expired.",
+                "kernel.subscription",
+                [new ExplanationStep(KernelErrors.SubscriptionExpired.Message, [])],
+                [condition],
+                [new NextAction(condition.Description)]),
+        };
+        await transaction.RecordRefusalAsync(refusal, cancellationToken).ConfigureAwait(false);
+        return refusal;
+    }
+
     /// <summary>
     /// The execution link (K-AI-2, ADR-2632): the command runs under an approved proposal only when the proposal exists,
     /// is approved and unexpired, was approved by the acting person, requested the command's capability, and the command
@@ -335,6 +377,9 @@ public static class KernelApplicationServiceCollectionExtensions
         services.TryAddScoped<ConsumerActor>();
         services.AddTransient<ICommandHandler<ProvisionTenant, TenantId>, ProvisionTenantHandler>();
         services.AddTransient<ICommandHandler<RegisterOrganization, OrganizationId>, RegisterOrganizationHandler>();
+        services.AddTransient<ICommandHandler<RegisterPerson, PersonId>, RegisterPersonHandler>();
+        services.AddTransient<ICommandHandler<RegisterTenantMembership, TenantMembershipId>, RegisterTenantMembershipHandler>();
+        services.AddKernelCommercialHandlers();
         services.AddKernelKnowledgeHandlers();
         services.AddKernelProtocolHandlers();
         services.AddKernelTrustHandlers();

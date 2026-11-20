@@ -112,58 +112,74 @@
         </div>
 
         <h3>Revisions</h3>
-        <table
-          class="observation-revisions"
-          data-testid="observation-revisions"
+        <div
+          class="observation-table-scroll"
+          data-testid="observation-revisions-scroll"
+          role="region"
+          aria-label="Observation revisions"
+          tabindex="0"
         >
-          <thead>
-            <tr>
-              <th scope="col">Revision</th>
-              <th scope="col">Value</th>
-              <th scope="col">Reason</th>
-              <th scope="col">Recorded by</th>
-              <th scope="col">Recorded</th>
-              <th scope="col">Superseded</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="revision in observation.revisions"
-              :key="revision.number"
-            >
-              <td>{{ revision.number }}</td>
-              <td>{{ formatObservationValue(revision.value) }}</td>
-              <td>{{ revision.reason_for_change }}</td>
-              <td>{{ revision.recorded_by }}</td>
-              <td>{{ revision.recorded_at }}</td>
-              <td>{{ revision.recorded_until ?? "Current" }}</td>
-            </tr>
-          </tbody>
-        </table>
+          <table
+            class="observation-revisions"
+            data-testid="observation-revisions"
+          >
+            <thead>
+              <tr>
+                <th scope="col">Revision</th>
+                <th scope="col">Value</th>
+                <th scope="col">Reason</th>
+                <th scope="col">Recorded by</th>
+                <th scope="col">Recorded</th>
+                <th scope="col">Superseded</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="revision in observation.revisions"
+                :key="revision.number"
+              >
+                <td>{{ revision.number }}</td>
+                <td>{{ formatObservationValue(revision.value) }}</td>
+                <td>{{ revision.reason_for_change }}</td>
+                <td>{{ revision.recorded_by }}</td>
+                <td>{{ revision.recorded_at }}</td>
+                <td>{{ revision.recorded_until ?? "Current" }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
         <h3>Audit trail</h3>
-        <table class="observation-audit" data-testid="observation-audit">
-          <thead>
-            <tr>
-              <th scope="col">Sequence</th>
-              <th scope="col">When</th>
-              <th scope="col">Who</th>
-              <th scope="col">Action</th>
-              <th scope="col">Version</th>
-              <th scope="col">Reason</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="entry in observation.audit" :key="entry.sequence">
-              <td>{{ entry.sequence }}</td>
-              <td>{{ entry.recorded_at }}</td>
-              <td>{{ entry.actor_id }}</td>
-              <td>{{ entry.action }} {{ entry.subject }}</td>
-              <td>{{ entry.version ?? "" }}</td>
-              <td>{{ entry.reason_for_change }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div
+          class="observation-table-scroll"
+          data-testid="observation-audit-scroll"
+          role="region"
+          aria-label="Observation audit trail"
+          tabindex="0"
+        >
+          <table class="observation-audit" data-testid="observation-audit">
+            <thead>
+              <tr>
+                <th scope="col">Sequence</th>
+                <th scope="col">When</th>
+                <th scope="col">Who</th>
+                <th scope="col">Action</th>
+                <th scope="col">Version</th>
+                <th scope="col">Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="entry in observation.audit" :key="entry.sequence">
+                <td>{{ entry.sequence }}</td>
+                <td>{{ entry.recorded_at }}</td>
+                <td>{{ entry.actor_id }}</td>
+                <td>{{ entry.action }} {{ entry.subject }}</td>
+                <td>{{ entry.version ?? "" }}</td>
+                <td>{{ entry.reason_for_change }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </template>
     </div>
 
@@ -422,16 +438,64 @@ watch(() => props.observationRef, load);
   background: #fef2f2;
   color: #991b1b;
 }
+#section-observation,
+#section-observation > .card {
+  min-width: 0;
+  max-width: 100%;
+}
+.observation-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  margin-bottom: 16px;
+  padding: 2px;
+}
+.observation-table-scroll:focus-visible {
+  outline: 2px solid var(--accent, #2563eb);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 table {
   width: 100%;
+  min-width: 46rem;
   border-collapse: collapse;
-  margin-bottom: 16px;
 }
 th,
 td {
   text-align: left;
   padding: 4px 8px;
   border-bottom: 1px solid #e2e8f0;
+}
+.observation-revisions th:nth-child(1),
+.observation-revisions td:nth-child(1),
+.observation-audit th:nth-child(1),
+.observation-audit td:nth-child(1),
+.observation-audit th:nth-child(5),
+.observation-audit td:nth-child(5) {
+  min-width: 5rem;
+}
+.observation-revisions th:nth-child(2),
+.observation-revisions td:nth-child(2),
+.observation-revisions th:nth-child(4),
+.observation-revisions td:nth-child(4),
+.observation-audit th:nth-child(3),
+.observation-audit td:nth-child(3) {
+  min-width: 7rem;
+}
+.observation-revisions th:nth-child(3),
+.observation-revisions td:nth-child(3),
+.observation-audit th:nth-child(4),
+.observation-audit td:nth-child(4),
+.observation-audit th:nth-child(6),
+.observation-audit td:nth-child(6) {
+  min-width: 9rem;
+}
+.observation-revisions th:nth-child(5),
+.observation-revisions td:nth-child(5),
+.observation-revisions th:nth-child(6),
+.observation-revisions td:nth-child(6),
+.observation-audit th:nth-child(2),
+.observation-audit td:nth-child(2) {
+  min-width: 8.5rem;
 }
 
 table,

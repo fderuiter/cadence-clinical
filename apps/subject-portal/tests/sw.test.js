@@ -315,5 +315,75 @@ describe("Subject Portal Service Worker (sw.js)", () => {
       expect(apiEvent.respondWith).not.toHaveBeenCalled();
       expect(apiEvent.stopImmediatePropagation).not.toHaveBeenCalled();
     });
+
+    it("derives shell cache paths from subpath scope (/cadence-clinical/subject-portal/)", async () => {
+      const subpathListeners = {};
+      const subpathCache = {
+        put: vi.fn().mockResolvedValue(undefined),
+        match: vi.fn().mockResolvedValue(null),
+        addAll: vi.fn().mockResolvedValue(undefined),
+      };
+      const subpathCaches = {
+        open: vi.fn().mockResolvedValue(subpathCache),
+        keys: vi.fn().mockResolvedValue([]),
+        delete: vi.fn().mockResolvedValue(true),
+        match: vi.fn().mockResolvedValue(null),
+      };
+      const subpathSelf = {
+        location: {
+          origin: "https://fderuiter.github.io",
+          pathname: "/cadence-clinical/subject-portal/sw.js",
+          search: "?msw=1",
+        },
+        addEventListener: vi.fn((event, callback) => {
+          subpathListeners[event] = callback;
+        }),
+        skipWaiting: vi.fn(),
+        clients: { claim: vi.fn() },
+      };
+
+      const runSubpathSW = new Function(
+        "self",
+        "caches",
+        "Response",
+        "Request",
+        "setTimeout",
+        "clearTimeout",
+        "importScripts",
+        swCode
+      );
+      runSubpathSW(
+        subpathSelf,
+        subpathCaches,
+        globalThis.Response,
+        globalThis.Request,
+        setTimeout,
+        clearTimeout,
+        vi.fn()
+      );
+
+      await subpathListeners["install"]({ waitUntil: vi.fn((p) => p) });
+      expect(subpathCache.addAll).toHaveBeenCalledWith([
+        "/cadence-clinical/subject-portal/",
+        "/cadence-clinical/subject-portal/index.html",
+        "/cadence-clinical/subject-portal/manifest.json",
+      ]);
+
+      globalThis.fetch = vi
+        .fn()
+        .mockResolvedValue(
+          new globalThis.Response("{}", { status: 200, type: "basic" })
+        );
+      const manifestEvent = {
+        request: new globalThis.Request(
+          "https://fderuiter.github.io/cadence-clinical/subject-portal/manifest.json"
+        ),
+        respondWith: vi.fn(),
+        stopImmediatePropagation: vi.fn(),
+      };
+      await subpathListeners["fetch"](manifestEvent);
+      expect(manifestEvent.respondWith).toHaveBeenCalledTimes(1);
+      expect(manifestEvent.stopImmediatePropagation).toHaveBeenCalledTimes(1);
+    });
   });
 });

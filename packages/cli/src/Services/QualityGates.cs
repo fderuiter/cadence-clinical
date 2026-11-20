@@ -105,6 +105,9 @@ public static class QualityGates
         new("workflow-security", ["validate-workflow-security", "action-pinning"],
             "40-hex commit SHAs with version comments, `sha256:` digests on `docker://` refs, `persist-credentials: false` on `actions/checkout`, and least-privilege permissions across `.github/workflows` and `.github/actions`",
             ctx => WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: ctx.RepoRoot) == 0),
+        new("rulesets", ["validate-rulesets"],
+            "Branch and tag rulesets in `.github/rulesets/*.json`, strict status check policy, `CI Gate` upstream job coverage, and workflow check parity",
+            ctx => RulesetService.Validate(ctx.RepoRoot) == 0),
         new("imports", ["validate-imports"], "No `using` of another service's namespace across `apps/<service>`",
             ctx => ImportValidatorService.ValidateImports(ctx.RepoRoot) == 0),
         new("security", ["audit-security"], "Hard-coded secret patterns (private keys, AWS secret keys)",
@@ -132,7 +135,7 @@ public static class QualityGates
             PreCommitNote = "runs the drift check when staged files include Entity Framework entities, migrations, or configurations, otherwise skips it",
         },
         new("path-patterns", ["validate-path-patterns"],
-            "No `tmp`, `temp`, `scratch` or `old_src` directories, `.vue` files only under `apps/` and `packages/`, `.sh` files only under `scripts/`",
+            "No `tmp`, `temp`, `scratch` or `old_src` directories, `.vue` files only under `apps/`, `packages/` and `docs/.vitepress/`, `.sh` files only under `scripts/`",
             ctx => PathPatternValidatorService.ValidatePathPatterns(ctx.Files, ctx.RepoRoot) == 0)
         { TakesFiles = true },
         new("query-linter", ["query-style-linter"], "No interpolated SQL string passed to `FromSqlRaw` or `ExecuteSqlRaw`, and no comparison with a boolean literal",

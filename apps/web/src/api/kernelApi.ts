@@ -63,6 +63,13 @@ export type StudyExportFormat = "csv" | "odm_xml" | "dataset_json";
 export type StudyExportLockFilter =
   "all" | "locked_only" | "frozen_or_locked" | "unlocked_only";
 export type CasebookExportFormat = "json" | "odm_xml" | "html";
+export type KernelEntitlements = Schemas["Kernel_KernelEntitlementsResponse"];
+export type KernelTrialOnboardingRequest =
+  Schemas["Kernel_KernelTrialOnboardingRequest"];
+export type KernelTrialOnboardingResponse =
+  Schemas["Kernel_KernelTrialOnboardingResponse"];
+export type KernelUpgradeSubscriptionRequest =
+  Schemas["Kernel_KernelUpgradeSubscriptionRequest"];
 export type { KernelObservationValue };
 
 export const ASSERTION_LOCKED = "K.Assertion.Locked";
@@ -70,6 +77,7 @@ export const ASSERTION_ALREADY_LOCKED = "K.Assertion.AlreadyLocked";
 export const ASSERTION_REVISION_STALE = "K.Assertion.RevisionStale";
 export const ASSERTION_ALREADY_RETRACTED = "K.Assertion.AlreadyRetracted";
 export const KERNEL_AUTHORIZATION_DENIED = "K.Authorization.Denied";
+export const KERNEL_SUBSCRIPTION_EXPIRED = "K.Subscription.Expired";
 
 /** Gateway step-up target URL for `POST /api/v1/kernel/locks`. */
 export const LOCK_APPLY_ACTION = "/api/v1/kernel/locks";
@@ -705,6 +713,43 @@ export const kernelApi = {
         throw new Error(`Matrix gap check failed: ${res.statusText}`);
       return res.json();
     });
+  },
+
+  /** Reads the caller's resolved kernel tenant commercial subscription tier and enabled product families. */
+  entitlements(): Promise<KernelEntitlements> {
+    return unwrapResponse(client.GET("/api/v1/kernel/entitlements"));
+  },
+
+  /** Provisions or idempotently replays the authenticated OIDC caller's self-service trial workspace. */
+  bootstrapTrial(
+    request: KernelTrialOnboardingRequest
+  ): Promise<KernelTrialOnboardingResponse> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/onboarding/trial", {
+        body: request,
+      })
+    );
+  },
+
+  /** Activates or upgrades the caller's tenant commercial subscription tier in place. */
+  upgradeSubscriptionTier({
+    tier,
+    idempotencyKey,
+    reason = "Update commercial subscription tier in workspace",
+  }: {
+    tier: string;
+    idempotencyKey: string;
+    reason?: string;
+  }): Promise<KernelEntitlements> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/entitlements/tier", {
+        headers: {
+          "Idempotency-Key": idempotencyKey,
+          "X-Change-Reason": encodeChangeReason(reason),
+        },
+        body: { tier },
+      })
+    );
   },
 
   /** Lists active and historical Frozen and Locked assertions in a study, masked per caller visibility and blinding (GET /api/v1/kernel/studies/{studyRef}/locks). */

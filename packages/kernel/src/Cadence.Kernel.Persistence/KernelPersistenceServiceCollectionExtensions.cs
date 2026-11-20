@@ -87,6 +87,7 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.TryAddSingleton<IKernelExportReader, KernelExportReader>();
         services.TryAddSingleton<ITenantDirectory, KernelTenantDirectory>();
         services.TryAddSingleton<ITenantResidencyReader, KernelTenantResidencyReader>();
+        services.TryAddSingleton<ITenantEntitlementReader, KernelTenantEntitlementReader>();
         services.TryAddSingleton<KernelAuditChainSealer>();
         services.TryAddSingleton<IConceptRegistry, KernelConceptRegistry>();
         services.TryAddSingleton<IWorkQueueDefinitions, KernelWorkQueueDefinitions>();

@@ -11,7 +11,10 @@
 > [!IMPORTANT]
 > **Pre-release.** Cadence is in active initial development and is not validated for use on
 > real clinical trials. Local containers, Keycloak realms and seed data are synthetic and for
-> evaluation only. For pilots or commercial enquiries see [SUPPORT.md](SUPPORT.md).
+> evaluation only. Explore the [documentation portal](https://fderuiter.github.io/cadence-clinical/),
+> [interactive staff demo](https://fderuiter.github.io/cadence-clinical/demo/), and
+> [participant portal demo](https://fderuiter.github.io/cadence-clinical/subject-portal/) directly in
+> your browser with synthetic data, or see [SUPPORT.md](SUPPORT.md) for pilots and commercial enquiries.
 
 ---
 
@@ -122,6 +125,7 @@ pnpm cadence <command>
 | Environment diagnostics                       | `pnpm cadence doctor --auto-fix`                |
 | Validate requirement tags and test results    | `pnpm cadence gxp sync` (writes a preview only) |
 | New ADR                                       | `pnpm cadence scaffold adr "<title>"`           |
+| New engineering blog post                     | `pnpm cadence scaffold post "<title>"`          |
 
 The full, generated command reference is [docs/cli.md](docs/cli.md).
 
@@ -146,6 +150,7 @@ Start at the [documentation index](docs/DOCUMENTATION_INDEX.md). Key entry point
 - [Kernel specification v0.2](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) and its [roadmap](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap)
 - [Architecture](ARCHITECTURE.md) and [domain glossary](CONTEXT.md)
 - [Architecture decision records](docs/adr/index.md)
+- [Engineering blog](docs/blog/index.md)
 - [SDLC and GxP validation documents](docs/SDLC/SDLC_Documentation_Suite.md)
 - [Security policy](SECURITY.md) and [support](SUPPORT.md)
 
