@@ -98,6 +98,7 @@ public static class Program
         var scaffold = AddBranch(root, "scaffold", "Architecture scaffolding tools");
         AddCommand(scaffold, "service", "Scaffolds a new C# Clean Architecture microservice", ScaffoldCommands.ConfigureService);
         AddCommand(scaffold, "adr", "Scaffolds a new Architectural Decision Record (ADR)", ScaffoldCommands.ConfigureAdr);
+        AddCommand(scaffold, "post", "Scaffolds a new engineering blog post in docs/blog/", ScaffoldCommands.ConfigurePost);
 
         var hook = AddBranch(root, "hook", "Agent lifecycle hooks: read the hook payload on stdin, exit 2 to block (PRD-SYS-053)");
         AddCommand(hook, "pre-tool", "Blocks destructive git and shell commands and hand edits to generated GxP documents",

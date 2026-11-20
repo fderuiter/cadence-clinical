@@ -132,7 +132,7 @@ public static class QualityGates
             PreCommitNote = "runs the drift check when staged files include Entity Framework entities, migrations, or configurations, otherwise skips it",
         },
         new("path-patterns", ["validate-path-patterns"],
-            "No `tmp`, `temp`, `scratch` or `old_src` directories, `.vue` files only under `apps/` and `packages/`, `.sh` files only under `scripts/`",
+            "No `tmp`, `temp`, `scratch` or `old_src` directories, `.vue` files only under `apps/`, `packages/` and `docs/.vitepress/`, `.sh` files only under `scripts/`",
             ctx => PathPatternValidatorService.ValidatePathPatterns(ctx.Files, ctx.RepoRoot) == 0)
         { TakesFiles = true },
         new("query-linter", ["query-style-linter"], "No interpolated SQL string passed to `FromSqlRaw` or `ExecuteSqlRaw`, and no comparison with a boolean literal",

@@ -34,6 +34,9 @@ public class CliCommandLineTests
     [InlineData("generate-rtm", "--validate", "--draft")]
     [InlineData("settings", "export", "--check")]
     [InlineData("scaffold", "adr", "Adopt a thing")]
+    [InlineData("scaffold", "post", "Ship Kernel Phase 3")]
+    [InlineData("scaffold", "post", "Ship Kernel Phase 3", "--author", "fderuiter,reviewer", "--tag", "kernel", "--tag", "architecture", "--summary", "Short excerpt", "--publish")]
+    [InlineData("scaffold", "post", "Ship Kernel Phase 3", "--author=@fderuiter", "-t", "kernel")]
     [InlineData("db", "reset")]
     [InlineData("wizard", "onboarding")]
     public void Parse_AcceptsEachDocumentedInvocation(params string[] args)
@@ -46,6 +49,7 @@ public class CliCommandLineTests
 
     [Theory]
     [InlineData("scaffold", "adr")]
+    [InlineData("scaffold", "post")]
     [InlineData("check", "--no-such-option")]
     [InlineData("check", "--exclude", "--pre-commit")]
     [InlineData("check", "adrs", "--pre-comit")]
