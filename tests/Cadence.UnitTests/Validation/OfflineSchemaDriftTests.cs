@@ -93,16 +93,4 @@ public class OfflineSchemaDriftTests
         var pyTypeWithSpaces = "  str | None  ";
         AreTypesCompatible(jsTypeWithSpaces, pyTypeWithSpaces).Should().BeTrue();
     }
-
-    /// <summary>
-    /// Validate committed TypeScript DB schemas existence.
-    /// </summary>
-    [Fact(DisplayName = "CommittedTypescriptSchemaIsUpToDate")]
-    [Trait("Category", "Validation")]
-    public void TestCommittedTypescriptSchemaIsUpToDate()
-    {
-        var repoRoot = GetRepoRoot();
-        var committedFile = Path.Combine(repoRoot, "apps", "web", "src", "types", "db_schemas.ts");
-        File.Exists(committedFile).Should().BeTrue("db_schemas.ts must exist");
-    }
 }

@@ -136,7 +136,7 @@ public static class QualityGates
             ctx => QueryLinterService.LintQueries(ctx.Files, ctx.RepoRoot) == 0)
         { TakesFiles = true },
         new("vulnerabilities", ["validate-vulnerabilities"],
-            "NuGet and npm dependency vulnerabilities not exempted by a valid `docs/SDLC/vulnerability_exclusions_ledger.json` entry",
+            "NuGet, pnpm and Python dependency vulnerabilities not exempted by a valid `docs/SDLC/vulnerability_exclusions_ledger.json` entry (fails closed on missing or broken scanners)",
             ctx => VulnerabilityAuditorService.AuditVulnerabilities(ctx.RepoRoot) == 0),
         new("dependencies", ["validate-dependencies"], "`apps/web/package.json` lists no client-side crypto package (`node-forge`, `elliptic`, `jose`)",
             ctx => DependencyValidatorService.ValidateDependencies(ctx.RepoRoot) == 0),

@@ -290,7 +290,12 @@ public static class CiPlan
         var security = new CiJob("security", "Security and Vulnerability Audit",
         [
             new("security", "Run static analysis") { Always = true, CoveredBy = QualitySentinels, Commands = [NodeCli("check", "audit-security")] },
-            new("security", "Run dependency audit") { Always = true, CoveredBy = QualitySentinels, Commands = [NodeCli("check", "vulnerabilities")] },
+            new("security", "Run dependency audit")
+            {
+                Always = true,
+                CoveredBy = QualitySentinels,
+                Commands = [Dotnet("restore", "Cadence.sln"), NodeCli("check", "vulnerabilities")],
+            },
             new("security", "Run secret detection")
             {
                 Always = true,
