@@ -140,6 +140,17 @@ export const executionApi = {
     );
   },
 
+  /** Full detail for a participant by subject code (GET /api/v1/execution/subjects/{subjectId}). */
+  getSubjectDetail(subjectId: string): Promise<SubjectDetail> {
+    return unwrapResponse(
+      client.GET("/api/v1/execution/subjects/{subjectId}", {
+        params: {
+          path: { subjectId },
+        },
+      })
+    );
+  },
+
   /**
    * Adds a participant to a study in screening (POST /api/v1/execution/subjects). The canvas sends no
    * demographics: identity details are not captured here. A participant is never given an arm at creation;
@@ -309,18 +320,6 @@ export const executionApi = {
         headers: reason
           ? { "X-Change-Reason": encodeChangeReason(reason) }
           : undefined,
-      })
-    );
-  },
-
-  /**
-   * Reads blind-aware subject detail by domain code (GET /api/v1/execution/subjects/{subjectId}).
-   * Reveals `treatment_group` and `investigational_product_id` only when the gateway forwards `X-Unblinded-Access`.
-   */
-  getSubjectDetail(subjectCode: string): Promise<SubjectDetail> {
-    return unwrapResponse(
-      client.GET("/api/v1/execution/subjects/{subjectId}", {
-        params: { path: { subjectId: subjectCode } },
       })
     );
   },
