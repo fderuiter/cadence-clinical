@@ -35,13 +35,15 @@
     {
       "type": "required_status_checks",
       "parameters": {
-        "strict_required_status_checks_policy": false,
+        "strict_required_status_checks_policy": true,
         "required_status_checks": [
           {
-            "context": "Frontend & Backend Unit Tests"
+            "context": "CI Gate",
+            "integration_id": 15368
           },
           {
-            "context": "Style and Lint Verification"
+            "context": "Check for Merge Conflicts",
+            "integration_id": 15368
           }
         ]
       }

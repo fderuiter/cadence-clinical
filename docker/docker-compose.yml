@@ -455,6 +455,10 @@ services:
       # users' grants (ADR-2543); Development only.
       Kernel__DevelopmentTenant__Code: cadence-local
       Kernel__DevelopmentTenant__DemoData: "true"
+      KeycloakAdmin__BaseUrl: http://keycloak:8080
+      KeycloakAdmin__Realm: cadence
+      KeycloakAdmin__AdminUsername: admin
+      KeycloakAdmin__AdminPassword: admin_password # pragma: allowlist secret
     depends_on: *db-depends
 
   dotnet-dev:

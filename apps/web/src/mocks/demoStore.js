@@ -3,6 +3,13 @@ import {
   DEFAULT_MOCK_ARTICLES,
   getFallbackContextualHelp,
 } from "../api/knowledge";
+import {
+  findCommercialTier,
+  PRE_RELEASE_ENVIRONMENT_NOTICE,
+} from "../catalog/productCatalog.js";
+
+const DEMO_TENANT_UUID = "00000000-0000-0000-0000-000000000010"; // deid-ignore
+const DEMO_SUBSCRIPTION_UUID = "00000000-0000-0000-0000-000000000011"; // deid-ignore
 
 const STUDY_UUID = "00000000-0000-0000-0000-000000000001"; // deid-ignore
 const STUDY_REF = `study:${STUDY_UUID}`;
@@ -917,6 +924,25 @@ export function createWebDemoStore() {
         description: "Baseline visit stipend credit",
       },
     ];
+
+    state.entitlements = {
+      tenant_ref: `tenant:${DEMO_TENANT_UUID}`,
+      tenant_id: DEMO_TENANT_UUID,
+      subscription_ref: `subscription:${DEMO_SUBSCRIPTION_UUID}`,
+      tier: "Complete",
+      status: "Active",
+      started_at: new Date().toISOString(),
+      trial_ends_at: null,
+      is_read_only: false,
+      product_families: [...findCommercialTier("Complete").families],
+      baseline_capabilities: [
+        "audit_trail",
+        "electronic_signatures",
+        "authorization",
+        "record_export",
+      ],
+      environment_notice: PRE_RELEASE_ENVIRONMENT_NOTICE,
+    };
   }
 
   seedInitialState();
@@ -2725,6 +2751,66 @@ export function createWebDemoStore() {
         return matched;
       }
       return cloneJson(getFallbackContextualHelp("/ecrf", persona));
+    },
+
+    getEntitlements() {
+      return cloneJson(state.entitlements);
+    },
+
+    upgradeSubscriptionTier(rawTier) {
+      const normalized = ["Individual", "Select", "Complete"].find(
+        (candidate) =>
+          candidate.toLowerCase() ===
+          String(rawTier || "")
+            .trim()
+            .toLowerCase()
+      );
+      if (!normalized) {
+        return null;
+      }
+      state.entitlements = {
+        ...state.entitlements,
+        tier: normalized,
+        status: "Active",
+        is_read_only: false,
+        product_families: [...findCommercialTier(normalized).families],
+      };
+      recordActivity(
+        "subscription.tier_upgraded",
+        "Trust",
+        "subscription",
+        state.entitlements.subscription_ref,
+        "usr-demo-operator"
+      );
+      return cloneJson(state.entitlements);
+    },
+
+    bootstrapTrial(payload = {}) {
+      const requestedTier = payload?.tier || "Individual";
+      const updated =
+        this.upgradeSubscriptionTier(requestedTier) ||
+        this.upgradeSubscriptionTier("Individual");
+      const now = new Date();
+      const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      state.entitlements = {
+        ...updated,
+        status: "Trialing",
+        started_at: now.toISOString(),
+        trial_ends_at: trialEnd.toISOString(),
+      };
+      return {
+        newly_provisioned: true,
+        tenant_code: "demo-trial",
+        tenant_ref: state.entitlements.tenant_ref,
+        organization_ref: `organization:${DEMO_TENANT_UUID}`,
+        person_ref: `person:${DEMO_TENANT_UUID}`,
+        membership_ref: `tenant_membership:${DEMO_TENANT_UUID}`,
+        admin_role_ref: `role:${DEMO_TENANT_UUID}`,
+        admin_grant_ref: `grant:${DEMO_TENANT_UUID}`,
+        assigned_roles: ["Sponsor Admin", "Sponsor Designer"],
+        token_refresh_required: false,
+        entitlements: cloneJson(state.entitlements),
+      };
     },
   };
 }

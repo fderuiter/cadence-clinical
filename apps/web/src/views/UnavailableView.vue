@@ -1,16 +1,52 @@
 <template>
   <div id="section-unavailable" class="dashboard-section active unavailable">
     <div class="card unavailable-card">
+      <div class="unavailable-prerelease-tag" role="status">
+        {{ PRE_RELEASE_ENVIRONMENT_NOTICE }}
+      </div>
+
       <h2>{{ heading }}</h2>
-      <p>
-        Screens come back once the Cadence services serve the API endpoints they
-        need. Each one is waiting on a module of the clinical kernel.
-      </p>
-      <p>
-        <a :href="UNAVAILABLE_SCREENS_ISSUE" target="_blank" rel="noopener">
-          See which screens are waiting and on what
-        </a>
-      </p>
+      <p class="unavailable-summary">{{ metadata.summary }}</p>
+
+      <div class="unavailable-cards-grid">
+        <section
+          id="unavailable-entitlement-card"
+          class="unavailable-info-card"
+          aria-labelledby="heading-unavailable-family"
+        >
+          <span class="info-card-label">Product Family &amp; Entitlement</span>
+          <h3 id="heading-unavailable-family">{{ metadata.family }}</h3>
+          <p v-if="metadata.isBaselineCapability" class="entitlement-status ok">
+            Included in Cadence Core baseline — never gated behind paid add-ons
+          </p>
+          <p v-else-if="isFamilyEntitled" class="entitlement-status ok">
+            Entitled in your {{ authStore.activeTier }} workspace plan
+          </p>
+          <p v-else class="entitlement-status upgrade">
+            Packaged in {{ metadata.minimumTier }} tier (active plan:
+            {{ authStore.activeTier }})
+          </p>
+          <p class="info-card-note">
+            Commercial subscriptions govern product-family packaging; clinical
+            study visibility remains governed separately by kernel Grants.
+          </p>
+        </section>
+
+        <section
+          id="unavailable-roadmap-card"
+          class="unavailable-info-card"
+          aria-labelledby="heading-unavailable-roadmap"
+        >
+          <span class="info-card-label">Pre-release Delivery Status</span>
+          <h3 id="heading-unavailable-roadmap">Roadmap Status</h3>
+          <p class="roadmap-stage">{{ metadata.roadmapStage }}</p>
+          <p class="info-card-note">
+            Core study design, visit eCRF capture, source verification, and site
+            readiness workflows are active today in the Study Workspace.
+          </p>
+        </section>
+      </div>
+
       <div class="unavailable-actions">
         <button
           id="btn-unavailable-study"
@@ -19,6 +55,14 @@
           @click="router.push('/studies')"
         >
           Open study workspace
+        </button>
+        <button
+          id="btn-unavailable-plans"
+          type="button"
+          class="btn btn-secondary"
+          @click="router.push('/plans')"
+        >
+          Compare plans &amp; product families
         </button>
         <button
           id="btn-unavailable-home"
@@ -34,43 +78,133 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { UNAVAILABLE_SCREENS_ISSUE, screenTitle } from "../router/availability";
+import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
+import { screenMetadata, screenTitle } from "../router/availability";
+import { useAuthStore } from "../stores/auth";
 
 const route = useRoute();
 const router = useRouter();
+const authStore = useAuthStore();
+
+onMounted(() => {
+  if (authStore.isAuthenticated) {
+    authStore.loadEntitlements();
+  }
+});
+
+const screenKey = computed(() =>
+  typeof route.query.screen === "string" ? route.query.screen : ""
+);
+
+const metadata = computed(() => screenMetadata(screenKey.value));
+
+const isFamilyEntitled = computed(() => {
+  if (metadata.value.isBaselineCapability) return true;
+  return authStore.entitledFamilies.includes(metadata.value.family);
+});
 
 const heading = computed(() =>
-  route.query.screen
-    ? `${screenTitle(route.query.screen)} isn't available yet`
+  screenKey.value
+    ? `${screenTitle(screenKey.value)} isn't available yet`
     : "This screen isn't available yet"
 );
 </script>
 
 <style scoped>
 .unavailable {
-  max-width: 600px;
-  margin: 40px auto;
-  text-align: center;
+  max-width: 760px;
+  margin: 36px auto;
+  padding: 0 16px;
 }
 
 .unavailable-card {
-  padding: 30px;
+  padding: 28px;
+  text-align: left;
+}
+
+.unavailable-prerelease-tag {
+  background: #fffbeb;
+  border: 1px solid #f59e0b;
+  color: #92400e;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  margin-bottom: 18px;
 }
 
 .unavailable-card h2 {
-  margin-bottom: 12px;
+  margin: 0 0 8px;
 }
 
-.unavailable-card p {
-  margin-bottom: 16px;
+.unavailable-summary {
+  color: #475569;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.unavailable-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.unavailable-info-card {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.info-card-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.unavailable-info-card h3 {
+  font-size: 1.05rem;
+  margin: 0 0 8px;
+  color: #0f172a;
+}
+
+.entitlement-status {
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.entitlement-status.ok {
+  color: #166534;
+}
+
+.entitlement-status.upgrade {
+  color: #b45309;
+}
+
+.roadmap-stage {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1d4ed8;
+  margin: 0 0 8px;
+}
+
+.info-card-note {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.45;
 }
 
 .unavailable-actions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
   gap: 12px;
 }
 </style>

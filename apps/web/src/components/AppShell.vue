@@ -58,6 +58,20 @@
 
       <div class="header-controls">
         <template v-if="authStore.isAuthenticated">
+          <router-link
+            v-if="authStore.activePlanBadge"
+            id="shell-plan-badge"
+            to="/plans"
+            class="plan-status-badge"
+            :class="{
+              'is-expired': authStore.isTrialExpired,
+              'is-trial': authStore.subscriptionStatus === 'Trialing',
+            }"
+            :title="PRE_RELEASE_ENVIRONMENT_NOTICE"
+          >
+            {{ authStore.activePlanBadge }}
+          </router-link>
+
           <button
             id="btn-open-palette"
             type="button"
@@ -135,6 +149,22 @@
         </template>
 
         <template v-else>
+          <router-link
+            id="nav-public-plans"
+            to="/plans"
+            class="shell-control-btn"
+          >
+            Plans
+          </router-link>
+          <button
+            v-if="!authStore.isDemoMode"
+            id="btn-register"
+            type="button"
+            class="btn btn-sm btn-secondary"
+            @click="handleRegister"
+          >
+            Start trial
+          </button>
           <button
             id="btn-login"
             type="button"
@@ -221,8 +251,17 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, provide, ref } from "vue";
+import {
+  computed,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  provide,
+  ref,
+  watch,
+} from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
 import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
@@ -312,6 +351,10 @@ const showOnboardingTour = computed(
     Boolean(authStore.isAuthenticated) &&
     route?.name !== "login" &&
     route?.path !== "/login" &&
+    route?.name !== "plans" &&
+    route?.path !== "/plans" &&
+    route?.name !== "trial-onboarding" &&
+    route?.path !== "/onboarding/trial" &&
     route?.name !== "forbidden" &&
     route?.path !== "/forbidden" &&
     route?.name !== "unavailable" &&
@@ -335,6 +378,17 @@ async function handleLogin() {
   }
 }
 
+async function handleRegister() {
+  if (typeof authStore.register === "function") {
+    const href = router.resolve("/onboarding/trial").href;
+    await authStore.register({
+      redirectUri: new URL(href, window.location.origin).toString(),
+    });
+  } else {
+    router.push("/plans");
+  }
+}
+
 async function handleLogout() {
   await authStore.logout();
 }
@@ -347,12 +401,38 @@ function handleGlobalKeydown(event) {
   }
 }
 
+watch(
+  () => [authStore.isAuthenticated, authStore.identity?.tenantId],
+  ([authenticated]) => {
+    if (authenticated && typeof authStore.loadEntitlements === "function") {
+      authStore.loadEntitlements();
+    }
+  }
+);
+
+watch(
+  () => [
+    authStore.isAuthenticated,
+    authStore.activePlanBadge,
+    isMobileMenuOpen.value,
+  ],
+  () => {
+    nextTick(syncHeaderHeight);
+  }
+);
+
 onMounted(() => {
   window.addEventListener("keydown", handleGlobalKeydown);
   syncHeaderHeight();
   if (typeof ResizeObserver !== "undefined" && headerRef.value) {
     headerResizeObserver = new ResizeObserver(() => syncHeaderHeight());
     headerResizeObserver.observe(headerRef.value);
+  }
+  if (
+    authStore.isAuthenticated &&
+    typeof authStore.loadEntitlements === "function"
+  ) {
+    authStore.loadEntitlements();
   }
 });
 
@@ -480,6 +560,37 @@ onUnmounted(() => {
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.plan-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  white-space: nowrap;
+}
+
+.plan-status-badge:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.plan-status-badge.is-trial {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.plan-status-badge.is-expired {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
 }
 
 .command-palette-trigger {
