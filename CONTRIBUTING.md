@@ -79,9 +79,10 @@ Useful single gates (`pnpm cadence check <gate>`): `adrs`, `markdown`, `readmes`
 `env-vars`, `contracts`, `openapi`, `rtm`, `duplication`, `security`, `deid`, `vulnerabilities`.
 
 **Before merging, run `pnpm cadence ci`** (or `make ci`). GitHub Actions does not run jobs for this repository until
-2027, so this is the check that stands in for CI: it runs the jobs of `.github/workflows/ci.yml` locally with the same
-commands, and fails if the .NET tests have no PostgreSQL rather than letting the database tests skip
-([docs/cli.md](docs/cli.md#cadence-ci)). A full run takes about 20 minutes:
+2027, so this is the check that stands in for CI: it runs the pull-request jobs of `.github/workflows/ci.yml` locally
+(including `actionlint`) with the same commands, and fails when a required binary (`actionlint`, `hadolint`,
+`shellcheck`, `detect-secrets-hook`, `bash`) is missing on `PATH` or the .NET tests have no PostgreSQL unless
+`--allow-skip` is passed ([docs/cli.md](docs/cli.md#cadence-ci)). A full run takes about 20 minutes:
 
 ```bash
 CADENCE_TEST_POSTGRES="Host=localhost;Username=postgres;Password=postgres;Database=postgres" pnpm cadence ci

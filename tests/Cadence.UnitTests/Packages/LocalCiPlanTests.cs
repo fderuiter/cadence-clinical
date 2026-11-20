@@ -20,6 +20,22 @@ public partial class LocalCiPlanTests
 {
     private const string PushOnly = "github.event_name == 'push'";
 
+    private static readonly IReadOnlyDictionary<string, string> UsesCommands = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["rhysd/actionlint"] = "actionlint",
+    };
+
+    private static readonly HashSet<string> SetupAndArtifactActions = new(StringComparer.Ordinal)
+    {
+        "actions/checkout",
+        "actions/setup-dotnet",
+        "actions/setup-node",
+        "pnpm/action-setup",
+        "actions/cache",
+        "actions/upload-artifact",
+        "actions/download-artifact",
+    };
+
     private static readonly IReadOnlyList<WorkflowJob> Workflow = ParseWorkflow(
         File.ReadAllLines(Path.Combine(RepoRoot(), ".github", "workflows", "ci.yml")));
 
@@ -52,7 +68,7 @@ public partial class LocalCiPlanTests
     {
         foreach (var (job, step, workflowStep) in PlanStepsWithWorkflowSteps())
         {
-            bool always = workflowStep.If?.Contains("always()", StringComparison.Ordinal) == true;
+            bool always = workflowStep.If?.Contains("always()", StringComparison.Ordinal) is true;
             step.Always.Should().Be(always, $"'{job.Key} / {step.Name}' has 'if: {workflowStep.If}' in ci.yml");
         }
     }
@@ -71,37 +87,77 @@ public partial class LocalCiPlanTests
             if (step.InProcess is not null)
             {
                 step.InProcessCiText.Should().NotBeNull();
-                run.Should().Contain(Normalize(step.InProcessCiText!));
+            }
+
+            if (step.InProcessCiText is not null)
+            {
+                run.Should().Contain(Normalize(step.InProcessCiText));
             }
         }
     }
 
     /// <summary>
-    /// Each dotnet, pnpm and <c>git diff --exit-code</c> command of a mirrored step is run locally with the same
-    /// arguments. Only shell variables (<c>$CHANGED_FILES</c>, <c>"$RUNNER_TEMP/..."</c>) may follow, and anything
-    /// else only where the local command declares its CI text because it differs on purpose.
+    /// Each checked command (<c>actionlint</c>, <c>dotnet</c>, <c>pnpm</c>, <c>node</c>, <c>bash</c>, <c>python3</c>
+    /// and <c>git diff --exit-code</c>) of a mirrored step is run locally with the same arguments. Only shell variables
+    /// (<c>$CHANGED_FILES</c>, <c>"$RUNNER_TEMP/..."</c>) may follow, and anything else only where the local command
+    /// declares its CI text because it differs on purpose.
     /// </summary>
     [Fact]
     public void EveryDotnetPnpmAndGitDiffCommandInTheWorkflow_IsRunLocallyWithTheSameArguments()
     {
-        foreach (var (job, step, workflowStep) in PlanStepsWithWorkflowSteps().Where(t => t.Step.NotRunLocally is null))
-        {
-            var local = step.Commands.Select(c => (Text: Normalize(c.MatchText), Declared: c.CiText is not null))
-                .Concat(step.InProcessCiText is null ? [] : [(Text: Normalize(step.InProcessCiText), Declared: true)])
-                .ToList();
-            var workflowCommands = (workflowStep.Run ?? "").Split('\n')
-                .Select(line => ShellControl().Split(Normalize(line))[0])
-                .Where(line => line.StartsWith("dotnet ", StringComparison.Ordinal)
-                    || line.StartsWith("pnpm ", StringComparison.Ordinal)
-                    || line.StartsWith("git diff --exit-code", StringComparison.Ordinal));
+        FindUnmappedWorkflowCommands(CiPlan.Jobs, Workflow).Should().BeEmpty();
+    }
 
-            foreach (var line in workflowCommands)
+    [Fact]
+    public void EveryUsesActionInMirroredJobs_IsSetupArtifactOrMappedToALocalCommand()
+    {
+        foreach (var job in CiPlan.Jobs)
+        {
+            foreach (var workflowStep in WorkflowJobFor(job).Steps.Where(s => s.Uses is not null))
             {
-                local.Should().Contain(l => SameCommand(line, l.Text, l.Declared),
-                    $"'{job.Key} / {step.Name}' runs '{line}' in ci.yml, so cadence ci must run it with the same arguments");
+                bool known = SetupAndArtifactActions.Contains(workflowStep.Uses!) || UsesCommands.ContainsKey(workflowStep.Uses!);
+                known.Should().BeTrue($"'{job.Key} / {workflowStep.Name}' uses '{workflowStep.Uses}', which must be mapped in LocalCiPlanTests");
             }
         }
     }
+
+    private static List<string> FindUnmappedWorkflowCommands(IReadOnlyList<CiJob> planJobs, IReadOnlyList<WorkflowJob> workflow)
+    {
+        var unmapped = new List<string>();
+        foreach (var job in planJobs)
+        {
+            var workflowJob = workflow.Single(w => w.Key == job.Key);
+            foreach (var step in job.Steps.Where(s => s.NotRunLocally is null))
+            {
+                var workflowStep = workflowJob.Steps.Single(s => s.Name == step.Name);
+                var local = step.Commands.Select(c => (Text: Normalize(c.MatchText), Declared: c.CiText is not null))
+                    .Concat(step.InProcessCiText is null ? [] : [(Text: Normalize(step.InProcessCiText), Declared: false)])
+                    .ToList();
+                var workflowCommands = (workflowStep.Run ?? "").Split('\n')
+                    .Select(line => ShellControl().Split(Normalize(line))[0])
+                    .Where(IsCheckedWorkflowCommand);
+
+                foreach (var line in workflowCommands.Where(line => !local.Any(l => SameCommand(line, l.Text, l.Declared))))
+                {
+                    unmapped.Add($"'{job.Key} / {step.Name}' runs '{line}' in ci.yml, so cadence ci must run it with the same arguments");
+                }
+            }
+        }
+
+        return unmapped;
+    }
+
+    private static bool IsCheckedWorkflowCommand(string line) =>
+        line == "actionlint"
+        || line.StartsWith("actionlint ", StringComparison.Ordinal)
+        || line.StartsWith("dotnet ", StringComparison.Ordinal)
+        || line.StartsWith("pnpm ", StringComparison.Ordinal)
+        || line.StartsWith("node ", StringComparison.Ordinal)
+        || line.StartsWith("bash ", StringComparison.Ordinal)
+        || (line.StartsWith("python3 ", StringComparison.Ordinal)
+            && !line.StartsWith("python3 -m venv ", StringComparison.Ordinal)
+            && !line.StartsWith("python3 -m pip ", StringComparison.Ordinal))
+        || line.StartsWith("git diff --exit-code", StringComparison.Ordinal);
 
     private static bool SameCommand(string workflowLine, string local, bool declaredDifference)
     {
@@ -122,7 +178,7 @@ public partial class LocalCiPlanTests
 
         foreach (var job in CiPlan.Jobs)
         {
-            bool pushOnly = WorkflowJobFor(job).If?.Contains(PushOnly, StringComparison.Ordinal) == true;
+            bool pushOnly = WorkflowJobFor(job).If?.Contains(PushOnly, StringComparison.Ordinal) is true;
             (job.OnRequestOnly is not null).Should().Be(pushOnly, $"'{job.Key}' runs by default unless CI runs it on push alone");
         }
     }
@@ -156,7 +212,90 @@ public partial class LocalCiPlanTests
     [Fact]
     public void Select_WithoutJobs_RunsEveryJobThatIsNotOnRequestOnly()
     {
-        CiPlan.Select([]).Select(j => j.Key).Should().Equal("lint-and-static", "dotnet-quality", "native-aot-build", "docs-build", "security", "unit-tests", "dotnet-tests", "compliance");
+        CiPlan.Select([]).Select(j => j.Key).Should().Equal(
+            "actionlint",
+            "lint-and-static",
+            "dotnet-quality",
+            "native-aot-build",
+            "docs-build",
+            "security",
+            "unit-tests",
+            "dotnet-tests",
+            "compliance");
+    }
+
+    [Fact]
+    public void ParseWorkflow_ExtractsMultilineNeedsForAutomergeAndSyntheticWorkflows()
+    {
+        Workflow.Single(j => j.Key == "automerge").Needs.Should().Equal(
+            "classify",
+            "actionlint",
+            "lint-and-static",
+            "dotnet-quality",
+            "native-aot-build",
+            "docs-build",
+            "security",
+            "container-security",
+            "unit-tests",
+            "dotnet-tests",
+            "compliance");
+
+        var parsed = ParseWorkflow(
+        [
+            "jobs:",
+            "  automerge:",
+            "    name: Enable Automerge",
+            "    needs:",
+            "      [",
+            "        classify,",
+            "        actionlint,",
+            "        lint-and-static,",
+            "        dotnet-quality,",
+            "        native-aot-build,",
+            "        docs-build,",
+            "        security,",
+            "        unit-tests,",
+            "        dotnet-tests,",
+            "        compliance,",
+            "      ]",
+            "  block-needs:",
+            "    needs:",
+            "      - actionlint",
+            "      - security",
+        ]);
+
+        parsed[0].Needs.Should().HaveCount(10);
+        parsed[1].Needs.Should().Equal("actionlint", "security");
+    }
+
+    [Theory]
+    [InlineData("node scripts/run-cli.js check unknown-gate")]
+    [InlineData("bash scripts/unmapped-gate.sh")]
+    [InlineData("python3 scripts/unmapped-check.py")]
+    public void FindUnmappedWorkflowCommands_RejectsUnmappedNodeBashAndPython3Commands(string driftedCommand)
+    {
+        var parsed = ParseWorkflow(
+        [
+            "jobs:",
+            "  sample:",
+            "    name: Sample",
+            "    steps:",
+            "      - name: Run actionlint",
+            "        uses: rhysd/actionlint@914e7df21a07ef503a81201c76d2b11c789d3fca # v1.7.12",
+            "      - name: Check",
+            $"        run: {driftedCommand}",
+        ]);
+        var plan = new[]
+        {
+            new CiJob("sample", "Sample",
+            [
+                new CiStep("sample", "Run actionlint") { Commands = [new CiCommand("actionlint", [])] },
+                new CiStep("sample", "Check") { Commands = [new CiCommand("dotnet", ["build", "Cadence.sln"])] },
+            ]),
+        };
+
+        FindUnmappedWorkflowCommands(plan, parsed).Should().ContainSingle()
+            .Which.Should().Contain("sample / Check").And.Contain(driftedCommand);
     }
 
     [Fact]
@@ -205,13 +344,14 @@ public partial class LocalCiPlanTests
         return dir;
     }
 
-    private sealed record WorkflowStep(string Name, string? If, string? Run);
+    private sealed record WorkflowStep(string Name, string? If, string? Run, string? Uses = null);
 
     private sealed record WorkflowJob(string Key, string Name, string? If, IReadOnlyList<string> Needs, List<WorkflowStep> Steps);
 
     /// <summary>
-    /// Reads the parts of a GitHub Actions workflow this test needs (job keys, names, <c>if</c>, single-line
-    /// <c>needs</c>, and each step's name, <c>if</c> and <c>run</c>), relying on the two-space indentation ci.yml uses.
+    /// Reads the parts of a GitHub Actions workflow this test needs (job keys, names, <c>if</c>, single-line or
+    /// multiline <c>needs</c>, and each step's name, <c>if</c>, mapped <c>uses</c> and <c>run</c>), relying on the
+    /// two-space indentation ci.yml uses.
     /// </summary>
     private static List<WorkflowJob> ParseWorkflow(string[] lines)
     {
@@ -220,14 +360,14 @@ public partial class LocalCiPlanTests
         string? key = null, name = null, jobIf = null;
         IReadOnlyList<string> needs = [];
         List<WorkflowStep> steps = [];
-        string? stepName = null, stepIf = null, stepRun = null;
+        string? stepName = null, stepIf = null, stepRun = null, stepUses = null;
         bool inStep = false;
 
         void FlushStep()
         {
-            if (inStep && stepName is not null) steps.Add(new WorkflowStep(stepName, stepIf, stepRun));
+            if (inStep && stepName is not null) steps.Add(new WorkflowStep(stepName, stepIf, stepRun, stepUses));
             inStep = false;
-            stepName = stepIf = stepRun = null;
+            stepName = stepIf = stepRun = stepUses = null;
         }
 
         void FlushJob()
@@ -260,23 +400,31 @@ public partial class LocalCiPlanTests
             {
                 // Nothing before the first job key.
             }
-            else if (TryMatch(line, @"^    name: (.+)$", out var jobName))
+            else if (!inStep && TryMatch(line, @"^    name: (.+)$", out var jobName))
             {
                 name = Unquote(jobName);
             }
-            else if (TryMatch(line, @"^    if: (.+)$", out var condition))
+            else if (!inStep && TryMatch(line, @"^    if: (.+)$", out var condition))
             {
-                jobIf = condition;
+                jobIf = ParseScalarOrFolded(condition, lines, ref i, "      ");
             }
-            else if (TryMatch(line, @"^    needs: \[(.*)\]\s*$", out var needList))
+            else if (!inStep && TryMatch(line, @"^    needs:\s*(.*)$", out var rawNeeds))
             {
-                needs = [.. needList.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
+                needs = ParseNeeds(rawNeeds, lines, ref i);
             }
             else if (TryMatch(line, @"^      - (.*)$", out var firstKey))
             {
                 FlushStep();
                 inStep = true;
-                if (TryMatch(firstKey, @"^name: (.+)$", out var dashName)) stepName = Unquote(dashName);
+                if (TryMatch(firstKey, @"^name: (.+)$", out var dashName))
+                {
+                    stepName = Unquote(dashName);
+                }
+                else if (TryMatch(firstKey, @"^uses:\s*([^\s@#]+)", out var dashAction))
+                {
+                    stepUses = dashAction;
+                    if (UsesCommands.TryGetValue(dashAction, out var mappedRun)) stepRun = mappedRun;
+                }
             }
             else if (!inStep)
             {
@@ -289,6 +437,11 @@ public partial class LocalCiPlanTests
             else if (TryMatch(line, @"^        if: (.+)$", out var stepCondition))
             {
                 stepIf = stepCondition;
+            }
+            else if (TryMatch(line, @"^        uses:\s*([^\s@#]+)", out var action))
+            {
+                stepUses = action;
+                if (UsesCommands.TryGetValue(action, out var mappedRun)) stepRun = mappedRun;
             }
             else if (TryMatch(line, @"^        run: (.*)$", out var run))
             {
@@ -312,6 +465,69 @@ public partial class LocalCiPlanTests
 
         FlushJob();
         return jobs;
+    }
+
+    private static string ParseScalarOrFolded(string head, string[] lines, ref int index, string indent)
+    {
+        string trimmed = head.Trim();
+        if (trimmed is not ">-" and not ">")
+        {
+            return head;
+        }
+
+        var parts = new List<string>();
+        while (index < lines.Length && (lines[index].Trim().Length == 0 || lines[index].StartsWith(indent, StringComparison.Ordinal)))
+        {
+            string part = lines[index++].Trim();
+            if (part.Length > 0) parts.Add(part);
+        }
+
+        return string.Join(' ', parts);
+    }
+
+    private static IReadOnlyList<string> ParseNeeds(string rawNeeds, string[] lines, ref int index)
+    {
+        string value = StripInlineComment(rawNeeds).Trim();
+        if (value.Length == 0 && index < lines.Length && lines[index].TrimStart().StartsWith('['))
+        {
+            value = StripInlineComment(lines[index++]).Trim();
+        }
+
+        if (value.StartsWith('['))
+        {
+            var buffer = new List<string> { value };
+            while (!value.Contains(']') && index < lines.Length)
+            {
+                value = StripInlineComment(lines[index++]).Trim();
+                buffer.Add(value);
+            }
+
+            string joined = string.Join(' ', buffer);
+            int open = joined.IndexOf('[');
+            int close = joined.LastIndexOf(']');
+            string inner = open >= 0 && close > open ? joined[(open + 1)..close] : joined.Trim('[', ']');
+            return [.. inner.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(Unquote)];
+        }
+
+        if (value.Length == 0)
+        {
+            var items = new List<string>();
+            while (index < lines.Length && TryMatch(lines[index], @"^      -\s*(.+)$", out var item))
+            {
+                items.Add(Unquote(StripInlineComment(item)));
+                index++;
+            }
+
+            return items;
+        }
+
+        return [Unquote(value)];
+    }
+
+    private static string StripInlineComment(string line)
+    {
+        int hash = line.IndexOf('#');
+        return hash >= 0 ? line[..hash] : line;
     }
 
     private static bool TryMatch(string input, string pattern, out string group)
