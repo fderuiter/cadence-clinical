@@ -26,19 +26,19 @@ This ADR specifically relates to requirements under **PRD-SYS-001**.
 ### Option 1: Ad-hoc local checks in each microservice
 
 - **Overview:** Implement custom dictionaries and role gate validations inside each router individually.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Quick to implement for isolated endpoints.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Leads to duplication, lack of global vocabulary alignment, and susceptibility to authorization bypasses.
 
 ### Option 2: Shared Domain Vocabulary and Centralized Authorization Helpers
 
 - **Overview:** Define shared enums and Pydantic validation structures in core package libraries, accompanied by reusable, dependency-injectable FastAPI role/delegation check utilities.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Absolute consistency across services.
   - ✅ Robust, tested authorization primitives preventing security drifts.
   - ✅ Clean-room consolidation of auditing metadata via `AuditMixin`.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires upfront library structural design and publishing across package boundaries.
 
 ## 4. Decision Outcome

@@ -24,19 +24,18 @@ Additionally, architectural changes made to `packages/security/rbac.py` must hav
 ### Option 1: **Option A (Selected): Use Dynamic Imports via `importlib` at Runtime** - Resolves dependencies dynamically inside files or local functions, avoiding static AST cross-service import detection while preserving functionality and clean type signatures.
 
 - **Overview:** **Option A (Selected): Use Dynamic Imports via `importlib` at Runtime** - Resolves dependencies dynamically inside files or local functions, avoiding static AST cross-service import detection while preserving functionality and clean type signatures.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B: Move shared logic to a separate packages package** - High-risk change that requires restructuring multiple database models and complex logic, possibly introducing subtle GxP regression bugs.
 
 - **Overview:** **Option B: Move shared logic to a separate packages package** - High-risk change that requires restructuring multiple database models and complex logic, possibly introducing subtle GxP regression bugs.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

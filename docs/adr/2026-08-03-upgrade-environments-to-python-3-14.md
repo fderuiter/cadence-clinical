@@ -24,19 +24,19 @@ By standardizing all workspaces, build pipelines, and container execution enviro
 ### Option 1: Maintain multi-version co-existence or older Python versions
 
 - **Overview:** Keep development environments running on Python 3.12 while production runtimes or other pipelines use separate versions, or dynamic runtime discovery.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Less immediate upgrade effort.
-- ***Cons:***
+- _**Cons:**_
   - ❌ High environment divergence, complex dependency matrix, and manual GxP compliance tracking.
 
 ### Option 2: Direct upgrade and standardization on Python 3.14 (Selected)
 
 - **Overview:** Execute a direct, clean upgrade of all workspace definitions, CI/CD pipelines, Ruff/Black formatters, and Docker images to target and enforce Python 3.14.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Completely eliminates runtime parity issues.
   - ✅ Ensures robust compliance reporting (PRD-SYS-001).
   - ✅ Allows leveraging modern type hinting features and ruff-based optimizations.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Demands immediate update of dependencies, tooling files, and developer setups.
 
 ## 4. Decision Outcome

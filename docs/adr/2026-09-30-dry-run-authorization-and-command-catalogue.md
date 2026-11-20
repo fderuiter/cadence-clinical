@@ -97,10 +97,10 @@ CanI(capability, resource) → probe ┘
 
 ### 4.3 Audit tier
 
-| Tier | What | Where | Why |
-| --- | --- | --- | --- |
-| 1: audit chain | Real decisions: a permit is part of the command's audit entry, and a denial is its own audit entry and `DecisionDenied` event with its conditions | Tenant hash chain (§5.3) | K-AUTH-2; 21 CFR 11.10(e) covers actions on records, including refused attempts |
-| 2: access log | Dry runs: tenant, actor, capability, resource, outcome, unmet condition codes | Structured log event `2483 AuthorizationDryRun` (Information), retained with the security logs | Shows who probed what, so repeated probing is visible to security monitoring |
+| Tier           | What                                                                                                                                              | Where                                                                                          | Why                                                                             |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| 1: audit chain | Real decisions: a permit is part of the command's audit entry, and a denial is its own audit entry and `DecisionDenied` event with its conditions | Tenant hash chain (§5.3)                                                                       | K-AUTH-2; 21 CFR 11.10(e) covers actions on records, including refused attempts |
+| 2: access log  | Dry runs: tenant, actor, capability, resource, outcome, unmet condition codes                                                                     | Structured log event `2483 AuthorizationDryRun` (Information), retained with the security logs | Shows who probed what, so repeated probing is visible to security monitoring    |
 
 A dry run satisfies Part 11 at tier 2 for these reasons:
 

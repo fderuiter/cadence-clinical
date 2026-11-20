@@ -38,21 +38,21 @@ This decision implements and traces requirement: **PRD-SYS-001**.
 
 Harden canonical serialization, AST constraint checks, and eConsent template normalizing directly inside `packages/ui` helpers (`signing.js` and `econsent.js`), with automated test suites verifying correctness.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Full compliance with RFC 8785 JSON Canonicalization Scheme (JCS) for Date objects and undefined properties.
   - ✅ Centralized and deterministic ledger block payload generation in `buildLedgerBlock`.
   - ✅ Robust fail-closed validation of AST criteria.
   - ✅ Defensive routing and rendering of incomplete eConsent forms.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires maintaining JS-specific validation behaviors in synchronization with Python-backend logic.
 
 ### Option B: Backend-Only Strict Pre-validation
 
 Reject all slightly incomplete eConsent templates and non-canonical payloads directly at the API Gateway or database boundary.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Keeps client-side libraries extremely thin.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Does not prevent client-side JS runtime crashes from unexpected nested nulls or field omissions.
   - ❌ Does not resolve non-deterministic serialization on the frontend where ledger block hashes are originally generated.
 

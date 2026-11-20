@@ -23,6 +23,7 @@ The payments microservice previously modeled monetary attributes, rates, and tot
 ## 3. Options Considered
 
 ### Option 1: Retain double floating-point types with runtime rounding
+
 - **Overview:** Keep `double` domain properties and apply `Math.Round` at runtime.
 - **Pros:**
   - ✅ No database schema alterations required.
@@ -31,6 +32,7 @@ The payments microservice previously modeled monetary attributes, rates, and tot
   - ❌ Fails GxP audit and IRS 1099 tax accuracy requirements.
 
 ### Option 2: Convert properties to decimal and configure explicit EF Core numeric(18,4) column mappings (Selected)
+
 - **Overview:** Refactor all monetary and rate properties across domain entities in `Cadence.Apps.Payments` to C# `decimal`, configure explicit `.HasColumnType("numeric(18,4)")` mappings in `PaymentConfigurations.cs`, and generate EF Core schema migration script.
 - **Pros:**
   - ✅ Fixed-point exact decimal arithmetic across all financial operations.

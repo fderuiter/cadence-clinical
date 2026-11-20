@@ -24,20 +24,20 @@ To ensure GxP and 21 CFR Part 11 compliance (PRD-SYS-001), clinical library obje
 ### Option 1: Overwriting objects in-place without state machine controls
 
 - **Overview:** Keep library object fields completely mutable at any time, with standard user roles.
-- ***Pros:***
+- _**Pros:**_
   - Simple CRUD operations.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Severe violation of GxP compliance. Retrospective changes invalidate historical trial definitions.
   - ❌ Lacks transition pedigree or workflow tracing.
 
 ### Option 2: Active-study locking, cryptographic sealing, and role-gated state transitions
 
 - **Overview:** Implement a strict transition state machine (DRAFT -> IN_REVIEW -> APPROVED -> PUBLISHED -> ARCHIVED), with a reference-scan lock check rejecting modifications on in-use library objects. Extend RBAC with `"library_object"` resources for actions `"approve"`, `"publish"`, and `"release"`, while sealing published versions with a canonical cryptographic signature.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Full GxP and 21 CFR Part 11 compliance.
   - ✅ High isolation and safety for active trials.
   - ✅ Author self-approval block (four-eyes principle) ensures quality oversight.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Increases API layer complexity with state verification and cryptographic signing.
 
 ## 4. Decision Outcome

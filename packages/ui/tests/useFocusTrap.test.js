@@ -4,6 +4,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { computed, effectScope, nextTick, ref } from "vue";
 import {
   ClinicalModal,
+  ClinicalDrawer,
   FileUploadModal,
   AiSuggestionDrawer,
   useFocusTrap,
@@ -214,13 +215,212 @@ describe("Shared reactive useFocusTrap, useEscapeClose, and reduced-motion token
     globalThis.window = origWindow;
   });
 
-  it("exports useFocusTrap, useEscapeClose, getFocusableElements, andClinicalModal from ui", () => {
+  it("exports useFocusTrap, useEscapeClose, getFocusableElements, ClinicalModal, and ClinicalDrawer from ui", () => {
     expect(useFocusTrap).toBeTypeOf("function");
     expect(useEscapeClose).toBeTypeOf("function");
     expect(getFocusableElements).toBeTypeOf("function");
     expect(ClinicalModal).toBeDefined();
+    expect(ClinicalDrawer).toBeDefined();
     expect(FileUploadModal).toBeDefined();
     expect(AiSuggestionDrawer).toBeDefined();
+  });
+
+  it("marks background siblings inert and aria-hidden while keeping ToastHost live alerts active", async () => {
+    const appShell = dom.body.appendChild(
+      new MockElement("div", { id: "app" })
+    );
+    const openBtn = appShell.appendChild(
+      new MockElement("button", { id: "open-modal-btn" })
+    );
+    const closedDrawer = dom.body.appendChild(
+      new MockElement("aside", {
+        id: "sync-drawer",
+        inert: true,
+        "aria-hidden": "true",
+      })
+    );
+    const toastHost = dom.body.appendChild(
+      new MockElement("div", {
+        class: "toast-host",
+        "data-focus-trap-exempt": "true",
+        "aria-live": "assertive",
+      })
+    );
+    const toastDismiss = toastHost.appendChild(
+      new MockElement("button", { id: "toast-dismiss" })
+    );
+    const modalBackdrop = dom.body.appendChild(
+      new MockElement("div", { class: "clinical-modal-backdrop" })
+    );
+    const modalDialog = modalBackdrop.appendChild(
+      new MockElement("div", { id: "reason-modal", tabindex: "-1" })
+    );
+    const modalInput = modalDialog.appendChild(
+      new MockElement("input", { id: "reason-input", type: "text" })
+    );
+
+    const isOpen = ref(false);
+    const scope = effectScope();
+    activeScopes.push(scope);
+    scope.run(() => {
+      useFocusTrap(ref(modalDialog), {
+        isOpen,
+        onEscape: () => {
+          isOpen.value = false;
+        },
+      });
+    });
+
+    openBtn.focus();
+    isOpen.value = true;
+    await nextTick();
+
+    expect(dom.doc.activeElement).toBe(modalInput);
+    // Background #app is inert + aria-hidden
+    expect(appShell.inert).toBe(true);
+    expect(appShell.getAttribute("aria-hidden")).toBe("true");
+    // ToastHost remains live, audible, and interactive
+    expect(toastHost.inert).toBe(false);
+    expect(toastHost.hasAttribute("aria-hidden")).toBe(false);
+    expect(getFocusableElements(toastHost)).toEqual([toastDismiss]);
+    // Active modal branch is not inert
+    expect(modalBackdrop.inert).toBe(false);
+    expect(modalDialog.inert).toBe(false);
+
+    // Closing restores #app while preserving pre-existing inert state on closedDrawer
+    dom.dispatchKey("Escape");
+    await nextTick();
+
+    expect(isOpen.value).toBe(false);
+    expect(appShell.inert).toBe(false);
+    expect(appShell.hasAttribute("aria-hidden")).toBe(false);
+    expect(closedDrawer.inert).toBe(true);
+    expect(closedDrawer.getAttribute("aria-hidden")).toBe("true");
+    expect(dom.doc.activeElement).toBe(openBtn);
+  });
+
+  it("descends into wrapper ancestors containing exempt live alerts while inerting non-exempt siblings", async () => {
+    const appRoot = dom.body.appendChild(new MockElement("div", { id: "app" }));
+    const mainShell = appRoot.appendChild(
+      new MockElement("div", { id: "main-shell" })
+    );
+    const triggerBtn = mainShell.appendChild(
+      new MockElement("button", { id: "trigger" })
+    );
+    const nestedToast = appRoot.appendChild(
+      new MockElement("div", { class: "toast-host" })
+    );
+    const dialog = dom.body.appendChild(
+      new MockElement("div", { id: "teleported-dialog", tabindex: "-1" })
+    );
+    dialog.appendChild(new MockElement("button", { id: "dialog-ok" }));
+
+    const isOpen = ref(false);
+    const scope = effectScope();
+    activeScopes.push(scope);
+    scope.run(() => {
+      useFocusTrap(ref(dialog), { isOpen });
+    });
+
+    triggerBtn.focus();
+    isOpen.value = true;
+    await nextTick();
+
+    expect(appRoot.inert).toBe(false);
+    expect(mainShell.inert).toBe(true);
+    expect(mainShell.getAttribute("aria-hidden")).toBe("true");
+    expect(nestedToast.inert).toBe(false);
+    expect(nestedToast.hasAttribute("aria-hidden")).toBe(false);
+
+    isOpen.value = false;
+    await nextTick();
+    expect(mainShell.inert).toBe(false);
+    expect(mainShell.hasAttribute("aria-hidden")).toBe(false);
+    expect(dom.doc.activeElement).toBe(triggerBtn);
+  });
+
+  it("dismisses only the topmost unlocked overlay via LIFO useEscapeClose stack and supports custom target/stop()", async () => {
+    const outerOpen = ref(true);
+    const innerOpen = ref(false);
+    const onOuterEscape = vi.fn(() => {
+      outerOpen.value = false;
+    });
+    const onInnerEscape = vi.fn(() => {
+      innerOpen.value = false;
+    });
+
+    const scope = effectScope();
+    activeScopes.push(scope);
+    let customHandle;
+    const customTarget = createMockDom();
+    const onCustomEscape = vi.fn();
+
+    scope.run(() => {
+      useEscapeClose(onOuterEscape, { isOpen: outerOpen });
+      useEscapeClose(onInnerEscape, { isOpen: innerOpen });
+      customHandle = useEscapeClose(onCustomEscape, {
+        isOpen: () => innerOpen.value,
+        target: customTarget.win,
+      });
+    });
+
+    innerOpen.value = true;
+    await nextTick();
+
+    // First Escape closes ONLY the topmost (inner) non-trapped overlay
+    const firstEsc = dom.dispatchKey("Escape");
+    expect(firstEsc.defaultPrevented).toBe(true);
+    expect(onInnerEscape).toHaveBeenCalledTimes(1);
+    expect(onOuterEscape).not.toHaveBeenCalled();
+
+    // Second Escape closes the outer overlay
+    const secondEsc = dom.dispatchKey("Escape");
+    expect(secondEsc.defaultPrevented).toBe(true);
+    expect(onOuterEscape).toHaveBeenCalledTimes(1);
+
+    // Custom target + stop()
+    innerOpen.value = true;
+    await nextTick();
+    customTarget.dispatchKey("Enter");
+    expect(onCustomEscape).not.toHaveBeenCalled();
+    const customEsc = customTarget.dispatchKey("Escape");
+    expect(customEsc.defaultPrevented).toBe(true);
+    expect(onCustomEscape).toHaveBeenCalledTimes(1);
+
+    customHandle.stop();
+    customTarget.dispatchKey("Escape");
+    expect(onCustomEscape).toHaveBeenCalledTimes(1);
+  });
+
+  it("enforces shared primitives across ClinicalDrawer, FileUploadModal, and inline ClinicalQueryPanel", () => {
+    const drawerSrc = fs.readFileSync(
+      path.resolve(__dirname, "../src/components/clinical/ClinicalDrawer.vue"),
+      "utf-8"
+    );
+    expect(drawerSrc).toContain(':role="role"');
+    expect(drawerSrc).toContain('default: "dialog"');
+    expect(drawerSrc).toContain('aria-modal="true"');
+    expect(drawerSrc).toContain("useFocusTrap");
+    expect(drawerSrc).not.toContain("<main");
+    expect(drawerSrc).not.toContain("vuejs-accessibility");
+
+    const uploadSrc = fs.readFileSync(
+      path.resolve(__dirname, "../src/components/FileUploadModal.vue"),
+      "utf-8"
+    );
+    expect(uploadSrc).toContain("<ClinicalModal");
+    expect(uploadSrc).toContain(':dismissible="!isUploadLocked"');
+    expect(uploadSrc).not.toContain("vuejs-accessibility");
+
+    const queryPanelSrc = fs.readFileSync(
+      path.resolve(
+        __dirname,
+        "../src/components/clinical/ClinicalQueryPanel.vue"
+      ),
+      "utf-8"
+    );
+    expect(queryPanelSrc).not.toContain("useFocusTrap");
+    expect(queryPanelSrc).toContain("useEscapeClose");
   });
 
   it("excludes inert, aria-hidden, disabled, and visibility:hidden descendants from getFocusableElements", () => {

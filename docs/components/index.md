@@ -13,11 +13,12 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 ## Component Catalog
 
-| Component                     | Description                                                       | ARIA Landmark / Role          |
-| :---------------------------- | :---------------------------------------------------------------- | :---------------------------- |
-| [`ClinicalModal`](./modal.md) | Accessible modal dialog with focus trap and backdrop blur         | `dialog`, `aria-modal="true"` |
-| `ClinicalLookupInput`         | Real-time terminology lookup field with dynamic status indicators | `combobox`, `aria-live`       |
-| `ClinicalQueryPanel`          | Clinical query discussion thread with Part 11 compliance          | `region`, `list`              |
+| Component                      | Description                                                       | ARIA Landmark / Role          |
+| :----------------------------- | :---------------------------------------------------------------- | :---------------------------- |
+| [`ClinicalModal`](./modal.md)  | Accessible modal dialog with focus trap and backdrop blur         | `dialog`, `aria-modal="true"` |
+| [`ClinicalDrawer`](./modal.md) | Accessible slide-over drawer with reactive focus containment      | `dialog`, `aria-modal="true"` |
+| `ClinicalLookupInput`          | Real-time terminology lookup field with dynamic status indicators | `combobox`, `aria-live`       |
+| `ClinicalQueryPanel`           | Inline clinical query discussion thread with `Escape` dismissal   | `region`, `list`              |
 
 ---
 

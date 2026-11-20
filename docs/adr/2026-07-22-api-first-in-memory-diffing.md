@@ -24,27 +24,27 @@ This decision implements requirements under Trace-7.
 ### Option 1: Direct Database Diffing (Status Quo)
 
 - **Overview:** Retaining the direct Neo4j connection for this single endpoint to compute differences within the database.
-- ***Pros:***
+- _**Pros:**_
   - ✅ No new architecture or algorithm needed.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Violates the API-first separation of concerns.
   - ❌ Creates tight coupling to the database schema and drivers.
 
 ### Option 2: Dedicated Diffing Microservice
 
 - **Overview:** Spinning up an entirely new microservice solely for diffing JSON payloads.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Strong isolation of diffing logic.
-- ***Cons:***
+- _**Cons:**_
   - ❌ High overhead of deploying, maintaining, and monitoring a new service for a lightweight capability.
 
 ### Option 3: Decoupled API-First In-Memory Diffing - Selected
 
 - **Overview:** Asynchronously fetch complete study payloads from an external registry (`STUDY_REGISTRY_URL`) and perform a dynamic, high-performance in-memory comparison by flattening nested payloads.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Decouples the designer service from the database completely.
   - ✅ Extremely fast for standard payload sizes.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Increased memory footprint when comparing very large payloads.
   - ❌ Dependency on external registry uptime and network latency.
 

@@ -20,11 +20,17 @@ benchmark_only_trx='<TestRun><Results>
 <UnitTestResult testName="LineageBenchmarkPostgresTests.BenchmarkTenMillionEdgesTraceLatency" outcome="NotExecuted" />
 </Results></TestRun>'
 
-# new_tree <name> <integration-trx> [e2e-trx]: writes the reports and prints the tree root.
+browser_optin_trx='<TestRun><Results>
+<UnitTestResult testName="BrowserCorrection_ReachesTheDatabaseWithItsReason" outcome="NotExecuted" />
+</Results></TestRun>'
+
+# new_tree <name> <integration-trx> [e2e-trx]: writes non-empty reports and prints the tree root.
 new_tree() {
   local root="$work/$1"
   mkdir -p "$root/tests/Cadence.IntegrationTests/TestResults" "$root/tests/Cadence.E2ETests/TestResults"
-  printf '%s\n' "$2" > "$root/tests/Cadence.IntegrationTests/TestResults/report_dotnet.trx"
+  if [ "${2:-}" != "" ]; then
+    printf '%s\n' "$2" > "$root/tests/Cadence.IntegrationTests/TestResults/report_dotnet.trx"
+  fi
   if [ "${3:-}" != "" ]; then
     printf '%s\n' "$3" > "$root/tests/Cadence.E2ETests/TestResults/report_dotnet.trx"
   fi
@@ -48,6 +54,9 @@ expect() {
 expect "fails on a skipped database test" 1 "$(new_tree skipped "$skipped_trx" "$passing_trx")"
 expect "passes when every database test executed" 0 "$(new_tree passing "$passing_trx" "$passing_trx")"
 expect "ignores the opt-in lineage benchmark" 0 "$(new_tree benchmark "$benchmark_only_trx" "$passing_trx")"
+expect "ignores the opt-in browser correction check" 0 "$(new_tree browser_optin "$browser_optin_trx" "$passing_trx")"
+expect "fails when Cadence.E2ETests produces no TRX report" 1 "$(new_tree missing_e2e "$passing_trx" "")"
+expect "fails when Cadence.IntegrationTests produces no TRX report" 1 "$(new_tree missing_integration "" "$passing_trx")"
 expect "fails when no TRX reports exist" 1 "$(mkdir -p "$work/none/tests/Cadence.IntegrationTests" && echo "$work/none")"
 
 if [ "$failures" -ne 0 ]; then

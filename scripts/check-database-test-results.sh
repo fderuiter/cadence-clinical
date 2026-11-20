@@ -9,17 +9,23 @@ set -euo pipefail
 root="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 cd "$root"
 
-# The opt-in lineage benchmark is skipped by design unless CADENCE_LINEAGE_BENCHMARK=1 (DatabaseTestEvidence.OptInTests).
-optin='BenchmarkTenMillionEdgesTraceLatency'
+# Opt-in tests skipped by design in dotnet-tests unless their dedicated environment flag is set (DatabaseTestEvidence.OptInTests):
+# - BenchmarkTenMillionEdgesTraceLatency (CADENCE_LINEAGE_BENCHMARK=1)
+# - BrowserCorrectionReachesTheDatabaseWithItsReason / BrowserCorrection_ReachesTheDatabaseWithItsReason (CADENCE_TEST_BROWSER=1, run in accessibility-e2e)
+optin='BenchmarkTenMillionEdgesTraceLatency|BrowserCorrection_?ReachesTheDatabaseWithItsReason'
 dirs=(tests/Cadence.IntegrationTests tests/Cadence.E2ETests)
 
-trx_count=$(find "${dirs[@]}" -name '*.trx' 2>/dev/null | wc -l)
-if [ "$trx_count" -eq 0 ]; then
-  echo "::error::No TRX reports found for the integration and E2E tests, so database tests cannot be verified."
-  exit 1
-fi
+trx_count=0
+for dir in "${dirs[@]}"; do
+  dir_trx_count=$(find "$dir" -name '*.trx' 2>/dev/null | wc -l)
+  if [ "$dir_trx_count" -eq 0 ]; then
+    echo "::error::No TRX report found under $dir, so database tests cannot be verified."
+    exit 1
+  fi
+  trx_count=$((trx_count + dir_trx_count))
+done
 
-skipped=$(find "${dirs[@]}" -name '*.trx' -exec grep -h 'outcome="NotExecuted"' {} + 2>/dev/null | grep -vc "$optin" || true)
+skipped=$(find "${dirs[@]}" -name '*.trx' -exec grep -h 'outcome="NotExecuted"' {} + 2>/dev/null | grep -Evc "$optin" || true)
 if [ "$skipped" -gt 0 ]; then
   echo "::error::$skipped PostgreSQL-backed test(s) did not execute. Check that CADENCE_TEST_POSTGRES reaches a PostgreSQL 18 service (docs/CI.md)."
   exit 1

@@ -13,43 +13,42 @@ The previous Digital Data Flow (DDF) compilation process in `apps/execution/tran
 
 ## 2. Decision Drivers & Constraints
 
-* **GxP & CDISC Compliance (PRD-DDF-001, 21 CFR Part 11)**: CDISC USDM protocol specifications and rule conditions must compile deterministically into ODM and OpenRosa XForms with strict audit trail tracking.
-* **Deep Module Design**: The compiler should present a minimal, pure in-memory interface (`DDFCompiler.compile(...)`) hiding complex multi-stage pipeline machinery.
-* **Zero Sibling Database Imports**: `apps/designer` and `apps/execution` must not import each other's persistence models; shared transformation logic belongs in shared platform packages (e.g. `packages.ddf`).
-* **Sub-Second Test Velocity**: Unit testing compilation pipelines must run in-memory without database engines or browser automation overhead (`cadence test --fast`).
+- **GxP & CDISC Compliance (PRD-DDF-001, 21 CFR Part 11)**: CDISC USDM protocol specifications and rule conditions must compile deterministically into ODM and OpenRosa XForms with strict audit trail tracking.
+- **Deep Module Design**: The compiler should present a minimal, pure in-memory interface (`DDFCompiler.compile(...)`) hiding complex multi-stage pipeline machinery.
+- **Zero Sibling Database Imports**: `apps/designer` and `apps/execution` must not import each other's persistence models; shared transformation logic belongs in shared platform packages (e.g. `packages.ddf`).
+- **Sub-Second Test Velocity**: Unit testing compilation pipelines must run in-memory without database engines or browser automation overhead (`cadence test --fast`).
 
 ## 3. Options Considered
 
 ### Option 1: **Option A (Selected)**: Create a shared, zero-database platform package (`packages.ddf`) with an explicit Intermediate Representation (IR), 5 isolated pipeline stages, and an injectable `AccessibilityValidatorPort`. Provide a thin `DDFJobRunner` adapter in `apps/execution` to manage database transactions and audit trails, while consolidating Designer rule ASTs.
 
 - **Overview:** **Option A (Selected)**: Create a shared, zero-database platform package (`packages.ddf`) with an explicit Intermediate Representation (IR), 5 isolated pipeline stages, and an injectable `AccessibilityValidatorPort`. Provide a thin `DDFJobRunner` adapter in `apps/execution` to manage database transactions and audit trails, while consolidating Designer rule ASTs.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B**: Maintain the compiler within `apps/execution` as helper functions, exposing execution HTTP endpoints for Designer preview flows.
 
 - **Overview:** **Option B**: Maintain the compiler within `apps/execution` as helper functions, exposing execution HTTP endpoints for Designer preview flows.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 3: **Option C**: Dynamic DAG middleware engine streaming translation events.
 
 - **Overview:** **Option C**: Dynamic DAG middleware engine streaming translation events.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 
 - **Chosen Option:** **Option A**.
 - **Justification:** Selected as primary architectural approach.
-We extract the DDF compiler into a dedicated package featuring:
+  We extract the DDF compiler into a dedicated package featuring:
 - **Pure In-Memory Interface**: `DDFCompiler.compile(study_id, payload, options) -> DDFCompilationResult`
 - **5 Pipeline Stages**:
   1. `USDMNormalizerStage`: Schema validation, metadata fallback synthesis, USDM version resolution.
@@ -63,17 +62,16 @@ We extract the DDF compiler into a dedicated package featuring:
 
 ## 5. Consequences & Trade-offs
 
-* **Positive**:
+- **Positive**:
   - In-memory sub-millisecond compilation testing without spinning up PostgreSQL or Playwright.
   - Complete elimination of AST/rule parsing duplication between `apps/designer` and `apps/execution`.
   - Zero database transaction leakage into transformation logic.
-* **Negative**:
+- **Negative**:
   - Requires maintaining an explicit Intermediate Representation (IR) layer between USDM and XML layouts.
 
 ## 6. Implementation & Verification
 
-* Package architecture: shared compiler modules (`compiler.py`, `models.py`, `ports.py`, `stages/`, `rules/`, `templates/`).
-* Adapters: `apps/execution/translator.py` facade.
-* Unified Designer rules: `apps/designer/rules.py` and `apps/designer/inverse_mapper.py` utilize canonical AST definitions.
-* Verification: `tests/test_translator.py`, `tests/test_translation_recovery.py`.
-
+- Package architecture: shared compiler modules (`compiler.py`, `models.py`, `ports.py`, `stages/`, `rules/`, `templates/`).
+- Adapters: `apps/execution/translator.py` facade.
+- Unified Designer rules: `apps/designer/rules.py` and `apps/designer/inverse_mapper.py` utilize canonical AST definitions.
+- Verification: `tests/test_translator.py`, `tests/test_translation_recovery.py`.

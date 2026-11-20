@@ -1,7 +1,10 @@
 <template>
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div v-if="isOpen" class="share-drawer-overlay" @click.self="$emit('close')">
+  <div
+    v-if="isOpen"
+    class="share-drawer-overlay"
+    role="presentation"
+    @click.self="$emit('close')"
+  >
     <div
       ref="drawerRef"
       class="share-drawer"
@@ -85,13 +88,15 @@
                   v-if="showUserSuggestions && userSuggestions.length > 0"
                   class="suggestions-dropdown"
                 >
-                  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-                  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                   <div
                     v-for="sugg in userSuggestions"
                     :key="sugg.value"
                     class="suggestion-item"
+                    role="button"
+                    tabindex="0"
                     @click="selectSuggestion(sugg)"
+                    @keydown.enter.prevent="selectSuggestion(sugg)"
+                    @keydown.space.prevent="selectSuggestion(sugg)"
                   >
                     <span class="sugg-label">{{ sugg.label }}</span>
                     <span class="sugg-type">{{ sugg.type }}</span>
@@ -166,11 +171,11 @@
                 />
                 <span>Set Time-Bounded Expiration Date</span>
               </label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 v-if="hasExpiry"
                 v-model="expiresAt"
                 type="datetime-local"
+                aria-label="Delegation expiration date and time"
                 class="form-control expiry-input"
                 required
               />
@@ -287,10 +292,10 @@
               >
             </div>
             <div class="url-copy-box">
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 type="text"
                 :value="generatedGuestUrl"
+                aria-label="Generated guest share link"
                 readonly
                 class="form-control url-input"
               />
@@ -376,12 +381,11 @@
               <strong>{{ grantToRevoke.granted_to_user_id }}</strong>?
             </p>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label required"
+              <label for="revoke-reason-input" class="form-label required"
                 >Revocation Reason (21 CFR Part 11):</label
               >
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
+                id="revoke-reason-input"
                 v-model="revokeReason"
                 type="text"
                 class="form-control"

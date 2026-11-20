@@ -38,9 +38,9 @@ This decision directly addresses the following requirements:
 ### Option 1: Viewport DOM Recycling with Guarded Unmounting (Baseline)
 
 - **Overview:** Dynamically mount/unmount child inputs based on IntersectionObserver callbacks, caching dynamic heights in a central Pinia store to set container placeholders.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Extreme reduction in active DOM node count (<100 nodes).
-- ***Cons:***
+- _**Cons:**_
   - ❌ Completely breaks browser-native keyboard focus and sequential Tab navigation to offscreen elements.
   - ❌ High complexity in preserving and restoring temporary form states (unsaved edits, pristine/dirty flags, focus state).
   - ❌ Continuous DOM insertion/deletion thrashing on the main thread during scrolling.
@@ -48,12 +48,12 @@ This decision directly addresses the following requirements:
 ### Option 2: Browser-Native Layout-Skipping via CSS `content-visibility: auto` (Selected)
 
 - **Overview:** Transition virtualization to browser-native layout-skipping. By applying `content-visibility: auto` and `contain-intrinsic-size` to the field wrapper component (`ClinicalFormField.vue`), the browser natively skips the rendering, layout, and paint computations for offscreen fields. The offscreen fields and their inputs remain fully mounted in the DOM.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Retains all inputs in the DOM tree, enabling native sequential keyboard Tab navigation and screen-reader access to offscreen fields.
   - ✅ Eliminates state restoration complexity, as elements are never unmounted and naturally retain their local state (e.g., cursor position, selection, incomplete edits).
   - ✅ Substantially reduces JS scripting overhead since layout-skipping is handled natively and highly optimized in modern browser engines.
   - ✅ Incorporates dynamic `contain-intrinsic-size: auto [height]` based on measured/cached pixel heights to prevent cumulative layout shifts when elements go offscreen.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Browser support is restricted to modern chromium, webkit, and gecko engines, though older browsers gracefully fallback to standard rendering with no layout-skipping.
 
 ## 4. Decision Outcome

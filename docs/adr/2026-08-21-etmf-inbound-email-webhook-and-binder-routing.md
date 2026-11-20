@@ -26,19 +26,19 @@ This decision implements requirements under PRD-SYS-001.
 ### Option 1: Inline Direct Ingestion Logic in Gateway
 
 - **Overview:** Implement email parsing, HMAC checks, and ingestion logic directly within the API Gateway service.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Centralizes authentication.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Bloats the gateway with service-specific business logic (eTMF taxonomy, file attachments, and direct db transactions).
 
 ### Option 2: Downstream Webhook Endpoint with Path Exemption in Gateway and Middleware (Selected)
 
 - **Overview:** Expose a secure path `/api/v1/etmf/inbound-email` on the eTMF service, exempted from Gateway authentication middleware, relying on dedicated HMAC-SHA256 signature verification local to the service.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Tight encapsulation of business and ingestion logic within the eTMF domain.
   - ✅ Clean service-to-service routing and delegation to the shared ingestion service.
   - ✅ Easy integration with external SMTP parsed multipart webhook providers (e.g., Mailgun, Sendgrid).
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires specific gateway proxy and middleware auth exemptions.
 
 ## 4. Decision Outcome

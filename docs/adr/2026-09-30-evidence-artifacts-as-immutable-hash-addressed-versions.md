@@ -55,7 +55,7 @@ This ADR decides what the kernel stores about an artifact, how versions work, an
 ## 4. Decision Outcome
 
 - **Model.** `Artifact(id, tenant, kind, study?, title)` is an aggregate whose `ArtifactVersion(id, number,
-  content_hash, size_bytes, media_type, storage_ref, recorded_at)` children are numbered from 1. `study` is null for
+content_hash, size_bytes, media_type, storage_ref, recorded_at)` children are numbered from 1. `study` is null for
   tenant-wide evidence such as a lab's range set. `ArtifactContent` describes one version's bytes and validates
   itself: a well-formed `sha256:` hash, at least one byte, a lower-case `type/subtype` media type and a storage
   reference.

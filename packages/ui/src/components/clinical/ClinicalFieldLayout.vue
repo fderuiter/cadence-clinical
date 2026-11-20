@@ -23,7 +23,7 @@
         :error="error"
         :error-id="`validation-error-${id}`"
         :has-error="showError"
-      ></slot>
+      />
 
       <!-- Query Flag -->
       <ClinicalQueryFlag
@@ -35,7 +35,7 @@
     </div>
 
     <!-- Additional markup like lookup status indicators -->
-    <slot name="after-input"></slot>
+    <slot name="after-input" />
 
     <!-- Validation Error -->
     <div

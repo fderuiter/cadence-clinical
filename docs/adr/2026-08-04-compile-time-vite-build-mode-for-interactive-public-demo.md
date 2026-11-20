@@ -26,20 +26,20 @@ Requirements: PRD-SYS-001
 ### Option 1: Runtime Domain / Host Header Bypasses
 
 - **Overview:** Dynamically check the host header or location at runtime and fall back to mock credentials if running on certain public hosting subdomains.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Simplifies build configuration as only one build output is needed.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Severe GxP violation: introduces security bypass code directly into production runtimes.
   - ❌ Increases surface area of vulnerability if hostheaders are spoofed.
 
 ### Option 2: Compile-Time isolated Build Mode for Demo [Selected]
 
 - **Overview:** Build a dedicated bundle using a dedicated Vite compile-time mode (`demo`) which completely isolates the mock seeding and OIDC check bypass.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Standard production builds evaluate `import.meta.env.MODE === "demo"` to false and standard production files are tree-shaken securely.
   - ✅ Interactive sandboxing works instantly without configuring or communicating with an authentication provider.
   - ✅ Allows public hosting of zero-setup interactive sandboxes cleanly.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires maintaining an additional compile command (`build:demo`) in package configs.
 
 ## 4. Decision Outcome
