@@ -63,14 +63,25 @@ jobs:
           global-json-file: global.json
           cache: true
           cache-dependency-path: |
-            Directory.Packages.props
             global.json
+            Directory.Build.props
+            Directory.Packages.props
+            **/*.csproj
+
+      - name: Cache Cadence CLI
+        id: cadence-cli-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ./bin/cadence
+          key: cadence-cli-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'NuGet.Config', 'BannedSymbols.txt', 'packages/cli/src/**', 'packages/engine_core/src/**', 'packages/database/src/**', 'packages/compliance/src/**', 'packages/security/src/**', 'packages/tooling_core/src/**', 'packages/kernel/src/Cadence.Kernel.Abstractions/**', 'packages/core-models/src/**', 'packages/deid/src/**', 'packages/topology/src/**') }}
 
       - name: Restore NuGet Packages
         run: dotnet restore Cadence.sln
 
       # Run GxP Dependency & Vulnerability Audit Gate
       - name: Run GxP Dependency Validation
+        env:
+          CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
         run: |
           python3 -m venv "$RUNNER_TEMP/pip-audit-venv"
           "$RUNNER_TEMP/pip-audit-venv/bin/python" -m pip install --quiet --upgrade pip pip-audit==2.10.1
@@ -92,6 +103,7 @@ jobs:
       # on manual workflow_dispatch without upstream artifacts, run against the fallback PostgreSQL 18 service.
       - name: Generate GxP Reports
         env:
+          CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
           CADENCE_GXP_SNAPSHOT: "1"
         run: |
           rm -f docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md
