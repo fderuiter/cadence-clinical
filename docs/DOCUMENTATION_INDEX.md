@@ -717,9 +717,11 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 
 ## Documentation site
 
-`pnpm docs:dev` serves this folder with VitePress; `pnpm docs:build` builds the static site (it also
-runs the quality gates and regenerates the API, schema and RTM documents). The site's home page is
-generated from the root README.
+`pnpm docs:dev` serves this folder with VitePress; `pnpm docs:build` builds the static site (running the
+quality gates, validating the schema and RTM documents, and regenerating the API reference), and
+`pnpm docs:stage-demos` stages the interactive staff (`/demo/`) and participant (`/subject-portal/`) demos into
+`docs/.vitepress/dist`. `docs/index.md` serves as the site's home page while the root `README.md` is staged to
+`docs/README.md`.
 
 Write relative links as you would for GitHub. On the site, a link to a file outside `docs/`, to a
 non-Markdown file or to a folder without an `index.md` opens that file on GitHub
