@@ -22,6 +22,11 @@ Generated from `docs/openapi/payments_openapi.json` by `pnpm cadence generate-ap
 | `POST` | `/api/v1/payments/participant/expenses` | SubmitExpenseClaim | Submit travel/meal expense claim for coordinator review. |
 | `POST` | `/api/v1/payments/participant/expenses/ocr-extract` | ExtractReceiptOcr | Extract metadata from receipt image/text using rule-based OCR engine. |
 | `POST` | `/api/v1/payments/participant/expenses/{claimId}/review` | ReviewExpenseClaim | Coordinator 1-click review and approval/rejection of expense claim. |
+| `POST` | `/api/v1/payments/participant/me/diary-stipend` | CreditSelfDiaryStipend | Credits protocol stipend for a synchronized participant diary strictly from server rules. |
+| `POST` | `/api/v1/payments/participant/me/disburse` | DisburseSelfWalletBalance | Triggers an on-demand payout of the signed participant's available wallet balance. |
+| `POST` | `/api/v1/payments/participant/me/expenses` | SubmitSelfExpenseClaim | Submits a travel or meal expense claim for the signed participant with policy auto-approval and direct ACH dispatch. |
+| `POST` | `/api/v1/payments/participant/me/expenses/ocr-extract` | ExtractSelfReceiptOcr | Extracts merchant, date, category, and amount from an uploaded receipt image for the signed participant. |
+| `GET` | `/api/v1/payments/participant/me/wallet` | GetSelfParticipantWallet | Retrieves the authenticated participant's own study wallet balances, masks, and ledger activity. |
 | `GET` | `/api/v1/payments/participant/stipend-rules` | ListStipendRules | List SoA protocol visit stipend compensation rules. |
 | `POST` | `/api/v1/payments/participant/stipend-rules` | CreateStipendRule | Configure participant visit compensation rules linked to Schedule of Activities. |
 | `GET` | `/api/v1/payments/participant/transactions` | ListTransactions | List participant wallet transactions ledger. |

@@ -178,11 +178,6 @@ apps/web/src/views/MdrView.vue|dates|4ce4ddfb324c2bbb
 apps/web/src/views/MdrView.vue|dates|4f3b2069bc61e9bf
 apps/web/src/views/MdrView.vue|dates|5da16049140faa3b
 apps/web/src/views/MdrView.vue|dates|c1f1cbe6dc1a914e
-apps/web/src/views/ParticipantWalletView.vue|dates|29a4c3bb283f9b66
-apps/web/src/views/ParticipantWalletView.vue|dates|b85ec6926d655e9b
-apps/web/src/views/ParticipantWalletView.vue|telephone_fax|38c47c22d598e918
-apps/web/src/views/ParticipantWalletView.vue|telephone_fax|38c47c22d598e918
-apps/web/src/views/ParticipantWalletView.vue|telephone_fax|b4d85941e9a0a540
 apps/web/src/views/QualityCockpitView.vue|email|d794d410543dc1db
 apps/web/src/views/QualityCockpitView.vue|zip_geographic|42c0ed4ca665c7d9
 apps/web/src/views/TicketsView.vue|email|0b5dce9c38ac6061

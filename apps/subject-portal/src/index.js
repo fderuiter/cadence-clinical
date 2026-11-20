@@ -83,7 +83,12 @@ import {
   resetSyncRetryInfo,
 } from "./features/sync-status.js";
 import { hydrateDraftPresence, renderTasks } from "./features/tasks.js";
-import { extractReceiptOcr, submitExpenseClaim } from "./features/wallet.js";
+import {
+  disburseAvailableBalance,
+  extractReceiptOcr,
+  loadParticipantWallet,
+  submitExpenseClaim,
+} from "./features/wallet.js";
 import { isScreenAvailable } from "./router/availability.js";
 import { state } from "./stores/state.js";
 import {
@@ -159,6 +164,8 @@ export {
   describeQueuedSync,
   extractReceiptOcr,
   submitExpenseClaim,
+  loadParticipantWallet,
+  disburseAvailableBalance,
   isDemoBuild,
   isDemoModeActive,
   isScreenAvailable,

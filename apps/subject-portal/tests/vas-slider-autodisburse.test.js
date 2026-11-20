@@ -119,8 +119,7 @@ describe("Visual Analog Scale Sliders and Auto-Disbursement Engine", () => {
     expect(queued[0].answers.pain_vas).toBe(75);
   });
 
-  it("automatically triggers stipend payment disburse API upon ePRO sync and updates wallet balance", async () => {
-    // Queue an offline submission
+  it("triggers server-rule diary stipend endpoint without client-supplied amount upon ePRO sync and updates wallet balance", async () => {
     await queueSubmission({
       subject_id: mockUserId,
       diary_id: "inst_daily_diary",
@@ -134,8 +133,8 @@ describe("Visual Analog Scale Sliders and Auto-Disbursement Engine", () => {
     expect(queued).toHaveLength(1);
     const seqNum = queued[0].sequence_number;
 
-    // Mock fetch for ePRO sync and payments disburse
-    globalThis.fetch = vi.fn().mockImplementation((url, options) => {
+    let capturedStipendBody = null;
+    vi.spyOn(globalThis, "fetch").mockImplementation((url, options) => {
       const urlStr = String(url);
       if (urlStr.includes("epro/sync")) {
         return Promise.resolve({
@@ -152,22 +151,20 @@ describe("Visual Analog Scale Sliders and Auto-Disbursement Engine", () => {
             }),
         });
       }
-      if (urlStr.includes("payments/disburse")) {
+      if (urlStr.includes("payments/participant/me/diary-stipend")) {
+        capturedStipendBody = JSON.parse(options.body);
         return Promise.resolve({
           ok: true,
           json: () =>
             Promise.resolve({
-              success: true,
-              id: "disb_12345",
-              wallet_id: "wallet_vas_001",
-              subject_id: mockUserId,
-              amount: 25.0,
-              new_balance: 50.0,
-              currency: "USD",
-              status: "COMPLETED",
-              reference_number: "DISB-REF-12345",
-              idempotency_key: `seq_${seqNum}_${mockUserId}`,
-              dispatched_at: new Date().toISOString(),
+              status: "CREDITED",
+              creditedAmount: 25.0,
+              currentBalance: 50.0,
+              lifetimeStipends: 50.0,
+              walletId: "wallet_vas_001",
+              transactionId: "tx_12345",
+              idempotencyKey: `seq_${seqNum}_${mockUserId}`,
+              subjectId: mockUserId,
             }),
         });
       }
@@ -179,39 +176,65 @@ describe("Visual Analog Scale Sliders and Auto-Disbursement Engine", () => {
 
     await syncOfflineQueue(false, { autoDisburse: true });
 
-    // Verify ePRO sync fetch call
     expect(globalThis.fetch).toHaveBeenCalledWith(
       expect.stringContaining("epro/sync"),
       expect.any(Object)
     );
 
-    // Verify Payments disburse fetch call
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      expect.stringContaining("payments/disburse"),
+      expect.stringContaining("payments/participant/me/diary-stipend"),
       expect.objectContaining({
         method: "POST",
-        body: expect.stringContaining(
-          `"idempotency_key":"seq_${seqNum}_${mockUserId}"`
-        ),
       })
     );
+    expect(capturedStipendBody).toBeDefined();
+    expect(capturedStipendBody.idempotencyKey).toBe(
+      `seq_${seqNum}_${mockUserId}`
+    );
+    expect(capturedStipendBody.diaryId).toBe("inst_daily_diary");
+    expect(capturedStipendBody).not.toHaveProperty("amount");
 
-    // Verify reactive wallet balance updated
     expect(state.walletBalance).toBe(50.0);
   });
 
-  it("handles strict idempotency when disburse endpoint returns duplicate skipped status", async () => {
-    const disburseRes = await dispatchApi("payments/disburse", {
-      method: "POST",
-      body: JSON.stringify({
-        subject_id: mockUserId,
-        sequence_number: 99,
-        amount: 25.0,
-        idempotency_key: `seq_99_${mockUserId}`,
-      }),
-    });
+  it("enforces strict idempotency and rejects client-supplied amount on diary stipend endpoint", async () => {
+    const firstRes = await dispatchApi(
+      "payments/participant/me/diary-stipend",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          sequenceNumber: 99,
+          diaryId: "inst_daily_diary",
+          idempotencyKey: `seq_99_${mockUserId}`,
+        }),
+      }
+    );
+    expect(firstRes).toBeDefined();
+    expect(firstRes.status).toBe("CREDITED");
 
-    expect(disburseRes).toBeDefined();
-    expect(disburseRes.success).toBe(true);
+    const duplicateRes = await dispatchApi(
+      "payments/participant/me/diary-stipend",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          sequenceNumber: 99,
+          diaryId: "inst_daily_diary",
+          idempotencyKey: `seq_99_${mockUserId}`,
+        }),
+      }
+    );
+    expect(duplicateRes.status).toBe("ALREADY_PROCESSED");
+
+    await expect(
+      dispatchApi("payments/participant/me/diary-stipend", {
+        method: "POST",
+        body: JSON.stringify({
+          sequenceNumber: 100,
+          diaryId: "inst_daily_diary",
+          amount: 999.0,
+          idempotencyKey: `seq_100_${mockUserId}`,
+        }),
+      })
+    ).rejects.toThrow(/400|amount/i);
   });
 });

@@ -12202,6 +12202,139 @@
         }
       }
     },
+    "/api/v1/payments/participant/me/wallet": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieves the authenticated participant\u0027s own study wallet balances, masks, and ledger activity.",
+        "operationId": "GetSelfParticipantWallet",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "walletId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studyId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/me/expenses/ocr-extract": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Extracts merchant, date, category, and amount from an uploaded receipt image for the signed participant.",
+        "operationId": "ExtractSelfReceiptOcr",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_OcrExtractRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/me/expenses": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Submits a travel or meal expense claim for the signed participant with policy auto-approval and direct ACH dispatch.",
+        "operationId": "SubmitSelfExpenseClaim",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_SelfServiceSubmitExpenseRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/me/disburse": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Triggers an on-demand payout of the signed participant\u0027s available wallet balance.",
+        "operationId": "DisburseSelfWalletBalance",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_SelfServiceDisburseRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/me/diary-stipend": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Credits protocol stipend for a synchronized participant diary strictly from server rules.",
+        "operationId": "CreditSelfDiaryStipend",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_SelfServiceDiaryStipendRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/payments/participant/transactions": {
       "get": {
         "tags": [
@@ -27300,6 +27433,184 @@
               "string"
             ],
             "format": "double"
+          }
+        }
+      },
+      "Payments_SelfServiceDiaryStipendRequestDto": {
+        "type": "object",
+        "properties": {
+          "diaryId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "assignmentId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sequenceNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "idempotencyKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "studyId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subjectId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "walletId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Payments_SelfServiceDisburseRequestDto": {
+        "type": "object",
+        "properties": {
+          "disbursementType": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "DIRECT_ACH"
+          },
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "walletId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subjectId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "idempotencyKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Payments_SelfServiceSubmitExpenseRequestDto": {
+        "required": [
+          "category",
+          "merchantName",
+          "grossAmount"
+        ],
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "merchantName": {
+            "type": "string"
+          },
+          "grossAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "isMealAllowance": {
+            "type": "boolean",
+            "default": false
+          },
+          "perDiemCap": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "expenseDate": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "receiptImageName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "receiptOcrData": {},
+          "ocrConfidence": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "studyId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subjectId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "walletId": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
