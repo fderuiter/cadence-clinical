@@ -355,4 +355,314 @@ public sealed class RouteAuthorizationTests
             await _inner.HandleAsync(next, context, policy, authorizeResult);
         }
     }
+
+    public static TheoryData<string> StandaloneHosts =>
+        new(ServiceHosts.All.Keys.Where(name => !string.Equals(name, "kernel", StringComparison.Ordinal)));
+
+    [Theory]
+    [MemberData(nameof(StandaloneHosts))]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-CRF-013")]
+    [GxPRequirement("PRD-SYS-192")]
+    public async Task StandaloneRoutes_DeclareExplicitScopeMetadata_AndEnforceTenantStudyAndSiteAdmission(string host)
+    {
+        await using var booted = ServiceHosts.All[host](ProbeResultHandler.Register);
+
+        var missingScopeMetadata = booted.Endpoints
+            .Where(e => e.Metadata.GetMetadata<IAllowAnonymous>() is null)
+            .Where(e => e.Metadata.GetMetadata<EndpointScopeMetadata>() is null)
+            .Select(e => $"{host} {Describe(e)}")
+            .ToList();
+
+        missingScopeMetadata.Should().BeEmpty(
+            "every non-anonymous standalone route must declare explicit EndpointScopeMetadata (RequireTenantScope, RequireCallerStudyScope, RequireCallerStudyAndSiteScope, RequireStudyScope, or RequireSiteScope)");
+
+        var problems = new List<string>();
+        var clientCache = new Dictionary<string, HttpClient>(StringComparer.Ordinal);
+        HttpClient ClientFor(GatewayIdentity id)
+        {
+            string key = $"{id.UserId}|{id.TenantId}|{string.Join(',', id.Roles)}|{string.Join(',', id.StudyIds ?? [])}|{string.Join(',', id.SiteIds ?? [])}";
+            if (!clientCache.TryGetValue(key, out var cached))
+            {
+                cached = booted.CreateSignedClient(id);
+                clientCache[key] = cached;
+            }
+
+            return cached;
+        }
+
+        try
+        {
+            foreach (var endpoint in booted.Endpoints.Where(e => e.Metadata.GetMetadata<IAllowAnonymous>() is null))
+            {
+                string? permission = endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>()
+                    .Select(a => a.Policy)
+                    .Where(p => p is not null && p.StartsWith(PermissionPolicyProvider.PolicyPrefix, StringComparison.Ordinal))
+                    .Select(p => p![PermissionPolicyProvider.PolicyPrefix.Length..])
+                    .FirstOrDefault();
+
+                if (permission is null)
+                {
+                    continue;
+                }
+
+                var route = new PermissionRoute(
+                    endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()?.HttpMethods.FirstOrDefault() ?? HttpMethods.Get,
+                    endpoint.RoutePattern,
+                    permission);
+                var scopeDeclarations = endpoint.Metadata.GetOrderedMetadata<EndpointScopeMetadata>();
+
+                // 1. Fail-closed tenant admission (ADR-2514): signed caller without X-Tenant-Id must get 403 Forbidden.
+                var noTenantOutcome = await SendAsync(ClientFor(CallerHolding(permission) with { TenantId = null }), route);
+                if (noTenantOutcome != Outcome.Forbidden)
+                {
+                    problems.Add($"{host} {route}: caller without X-Tenant-Id got {noTenantOutcome}");
+                }
+
+                // 2. Study-scoped routes must refuse callers with zero study assignments.
+                bool requiresStudy = scopeDeclarations.Any(s =>
+                    s.Kind is EndpointScopeKind.CallerStudy
+                        or EndpointScopeKind.CallerStudyAndSite
+                        or EndpointScopeKind.RouteStudy
+                        or EndpointScopeKind.RouteSite);
+                if (requiresStudy)
+                {
+                    var noStudyOutcome = await SendAsync(ClientFor(CallerHolding(permission) with { StudyIds = [] }), route);
+                    if (noStudyOutcome != Outcome.Forbidden)
+                    {
+                        problems.Add($"{host} {route}: caller with empty StudyIds got {noStudyOutcome}");
+                    }
+                }
+
+                // 3. Route-parameter study/site routes must refuse callers assigned to a different study or site.
+                if (scopeDeclarations.Any(s => s.Kind == EndpointScopeKind.RouteStudy))
+                {
+                    var wrongStudyCaller = CallerHolding(permission) with { StudyIds = ["OTHER-UNASSIGNED-STUDY"] };
+                    var wrongStudyOutcome = await SendAsync(ClientFor(wrongStudyCaller), route);
+                    if (wrongStudyOutcome != Outcome.Forbidden)
+                    {
+                        problems.Add($"{host} {route}: caller assigned to OTHER-UNASSIGNED-STUDY got {wrongStudyOutcome}");
+                    }
+                }
+
+                if (scopeDeclarations.Any(s => s.Kind == EndpointScopeKind.RouteSite))
+                {
+                    var wrongSiteCaller = CallerHolding(permission) with { SiteIds = ["OTHER-UNASSIGNED-SITE"] };
+                    var wrongSiteOutcome = await SendAsync(ClientFor(wrongSiteCaller), route);
+                    if (wrongSiteOutcome != Outcome.Forbidden)
+                    {
+                        problems.Add($"{host} {route}: caller assigned to OTHER-UNASSIGNED-SITE got {wrongSiteOutcome}");
+                    }
+                }
+
+                // 4. Site-scoped routes must refuse site-scoped roles that lack site assignments.
+                bool requiresSite = scopeDeclarations.Any(s =>
+                    s.Kind is EndpointScopeKind.CallerStudyAndSite or EndpointScopeKind.RouteSite);
+                if (requiresSite && PickSiteScopedRoleHolding(permission) is { } siteScopedRole)
+                {
+                    var unassignedSiteCaller = TestSecurityContext.Identity($"unassigned-site-{permission}", siteScopedRole) with
+                    {
+                        SiteIds = [],
+                    };
+                    var noSiteOutcome = await SendAsync(ClientFor(unassignedSiteCaller), route);
+                    if (noSiteOutcome != Outcome.Forbidden)
+                    {
+                        problems.Add($"{host} {route}: unassigned site-scoped role '{siteScopedRole}' got {noSiteOutcome}");
+                    }
+                }
+            }
+        }
+        finally
+        {
+            foreach (var client in clientCache.Values)
+            {
+                client.Dispose();
+            }
+        }
+
+        problems.Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// Executes real handler-level (no <see cref="ProbeResultHandler"/> short-circuit) cross-tenant, cross-study, and
+    /// cross-site denial probes across active standalone clinical hosts so handler body guards (<see cref="ClinicalScopeGuard"/>)
+    /// and tenant resolvers are verified end-to-end with zero false positives.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-CRF-013")]
+    [GxPRequirement("PRD-SYS-192")]
+    public async Task StandaloneHandlers_ExecuteCrossTenantCrossStudyAndCrossSiteDenialProbes_WithoutShortCircuit()
+    {
+        var handlerProbes = new (string Host, string Method, string Path, string? JsonBody, GatewayIdentity CrossStudyCaller, GatewayIdentity? CrossSiteCaller)[]
+        {
+            (
+                "safety",
+                HttpMethods.Post,
+                "/api/v1/safety/dsur/compile",
+                """{"compoundName":"CMP-1","studyId":"STUDY-OTHER","periodStart":"2025-01-01T00:00:00Z","periodEnd":"2025-12-31T00:00:00Z","reasonForChange":"Audit probe"}""",
+                TestSecurityContext.Identity("mm-probe", "Sponsor Medical Monitor") with { StudyIds = ["STUDY-ALLOWED"] },
+                null),
+            (
+                "ctms",
+                HttpMethods.Get,
+                "/api/v1/ctms/monitoring-visits?study_id=STUDY-OTHER&site_id=SITE-OTHER",
+                null,
+                TestSecurityContext.Identity("cra-study-probe", "CRA") with { StudyIds = ["STUDY-ALLOWED"], SiteIds = ["SITE-OTHER"] },
+                TestSecurityContext.Identity("cra-site-probe", "CRA") with { StudyIds = ["STUDY-OTHER"], SiteIds = ["SITE-ALLOWED"] }),
+            (
+                "etmf",
+                HttpMethods.Post,
+                "/api/v1/etmf/documents",
+                """{"study_id":"STUDY-OTHER","site_id":"SITE-OTHER","filename":"protocol.pdf","reason_for_change":"Initial filing for probe"}""",
+                TestSecurityContext.Identity("cra-etmf-study", "CRA") with { StudyIds = ["STUDY-ALLOWED"], SiteIds = ["SITE-OTHER"] },
+                TestSecurityContext.Identity("cra-etmf-site", "CRA") with { StudyIds = ["STUDY-OTHER"], SiteIds = ["SITE-ALLOWED"] }),
+            (
+                "interop",
+                HttpMethods.Post,
+                "/api/v1/interop/esource/ingest",
+                """{"studyId":"STUDY-OTHER","siteId":"SITE-OTHER","subjectId":"SUBJ-1","ehrSystemId":"EPIC","rawFhirBundleJson":"{}"}""",
+                TestSecurityContext.Identity("crc-interop-study", "crc") with { StudyIds = ["STUDY-ALLOWED"], SiteIds = ["SITE-OTHER"] },
+                TestSecurityContext.Identity("crc-interop-site", "crc") with { StudyIds = ["STUDY-OTHER"], SiteIds = ["SITE-ALLOWED"] }),
+            (
+                "imaging",
+                HttpMethods.Post,
+                "/api/v1/imaging/studies?studyId=STUDY-OTHER&siteId=SITE-OTHER&subjectId=SUBJ-1",
+                """{"dummy":"payload"}""",
+                TestSecurityContext.Identity("crc-img-study", "crc") with { StudyIds = ["STUDY-ALLOWED"], SiteIds = ["SITE-OTHER"] },
+                TestSecurityContext.Identity("crc-img-site", "crc") with { StudyIds = ["STUDY-OTHER"], SiteIds = ["SITE-ALLOWED"] }),
+            (
+                "knowledge",
+                HttpMethods.Get,
+                "/api/v1/training/assignments?study_id=STUDY-OTHER&site_id=SITE-OTHER",
+                null,
+                TestSecurityContext.Identity("crc-kn-study", "crc") with { StudyIds = ["STUDY-ALLOWED"], SiteIds = ["SITE-OTHER"] },
+                TestSecurityContext.Identity("crc-kn-site", "crc") with { StudyIds = ["STUDY-OTHER"], SiteIds = ["SITE-ALLOWED"] }),
+            (
+                "econsent",
+                HttpMethods.Post,
+                "/api/v1/econsent/templates/tpl-probe/capture-consent",
+                """{"subject_pseudonym":"SUBJ-1","study_id":"STUDY-OTHER","site_id":"SITE-OTHER","digest_sha256":"a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289","signature_data":"SIG-1","liveness_token":"tok"}""",
+                (TestSecurityContext.Identity("crc-ec-study", "crc") with
+                {
+                    StudyIds = ["STUDY-ALLOWED"],
+                    SiteIds = ["SITE-OTHER"],
+                    SigToken = TestSecurityContext.CreateSigToken("crc-ec-study", "/api/v1/econsent/templates/tpl-probe/capture-consent", "econsent.consent.capture", ["crc"]),
+                }),
+                (TestSecurityContext.Identity("crc-ec-site", "crc") with
+                {
+                    StudyIds = ["STUDY-OTHER"],
+                    SiteIds = ["SITE-ALLOWED"],
+                    SigToken = TestSecurityContext.CreateSigToken("crc-ec-site", "/api/v1/econsent/templates/tpl-probe/capture-consent", "econsent.consent.capture", ["crc"]),
+                })),
+            (
+                "execution",
+                HttpMethods.Get,
+                "/api/v1/execution/subjects?study_id=STUDY-OTHER&site_id=SITE-OTHER",
+                null,
+                TestSecurityContext.Identity("pi-exec-study", "principal_investigator") with { StudyIds = ["STUDY-ALLOWED"], SiteIds = ["SITE-OTHER"] },
+                TestSecurityContext.Identity("pi-exec-site", "principal_investigator") with { StudyIds = ["STUDY-OTHER"], SiteIds = ["SITE-ALLOWED"] }),
+            (
+                "payments",
+                HttpMethods.Post,
+                "/api/v1/payments/participant/expenses",
+                """{"subjectId":"SUBJ-1","studyId":"STUDY-OTHER","siteId":"SITE-OTHER","category":"TRANSIT","merchantName":"Metro","grossAmount":20.00}""",
+                TestSecurityContext.Identity("crc-pay-study", "crc") with { StudyIds = ["STUDY-ALLOWED"], SiteIds = ["SITE-OTHER"] },
+                TestSecurityContext.Identity("crc-pay-site", "crc") with { StudyIds = ["STUDY-OTHER"], SiteIds = ["SITE-ALLOWED"] }),
+            (
+                "designer",
+                HttpMethods.Post,
+                "/api/v1/protocols/compile",
+                """{"usdmJson":"{}","studyId":"STUDY-OTHER"}""",
+                TestSecurityContext.Identity("designer-study", "Study Designer") with { StudyIds = ["STUDY-ALLOWED"] },
+                null),
+        };
+
+        var failures = new List<string>();
+
+        foreach (var probe in handlerProbes)
+        {
+            var tenantResolver = new Cadence.Database.Tenancy.DeterministicTenantCodeResolver();
+            tenantResolver.DeactivateTenant("deactivated-probe-tenant");
+
+            await using var booted = ServiceHosts.All[probe.Host](services =>
+            {
+                Cadence.Database.CadenceDatabaseExtensions.AddCadenceInMemoryTenancy(services, tenantResolver);
+                foreach (var existing in services.Where(d => d.ServiceType == typeof(ISigTokenUseStore)).ToList())
+                {
+                    services.Remove(existing);
+                }
+
+                services.AddSingleton<ISigTokenUseStore, ProbeSigTokenUseStore>();
+            });
+
+            if (booted.Services.GetService<ITenantAccessVerifier>() is not null)
+            {
+                using var inactiveTenantClient = booted.CreateSignedClient(probe.CrossStudyCaller with
+                {
+                    TenantId = "deactivated-probe-tenant",
+                    StudyIds = ["*"],
+                });
+                using var inactiveReq = BuildProbeHttpRequest(probe.Method, probe.Path, probe.JsonBody);
+                using var inactiveResp = await inactiveTenantClient.SendAsync(inactiveReq, Ct);
+                if (inactiveResp.StatusCode != HttpStatusCode.Forbidden)
+                {
+                    failures.Add($"{probe.Host} {probe.Method} {probe.Path}: deactivated tenant got {inactiveResp.StatusCode}");
+                }
+            }
+
+            using var noTenantClient = booted.CreateSignedClient(probe.CrossStudyCaller with
+            {
+                TenantId = null,
+                StudyIds = ["*"],
+            });
+            using var noTenantReq = BuildProbeHttpRequest(probe.Method, probe.Path, probe.JsonBody);
+            using var noTenantResp = await noTenantClient.SendAsync(noTenantReq, Ct);
+            if (noTenantResp.StatusCode != HttpStatusCode.Forbidden)
+            {
+                failures.Add($"{probe.Host} {probe.Method} {probe.Path}: missing tenant got {noTenantResp.StatusCode}");
+            }
+
+            using var crossStudyClient = booted.CreateSignedClient(probe.CrossStudyCaller);
+            using var crossStudyReq = BuildProbeHttpRequest(probe.Method, probe.Path, probe.JsonBody);
+            using var crossStudyResp = await crossStudyClient.SendAsync(crossStudyReq, Ct);
+            if (crossStudyResp.StatusCode != HttpStatusCode.Forbidden)
+            {
+                failures.Add($"{probe.Host} {probe.Method} {probe.Path}: cross-study caller got {crossStudyResp.StatusCode} ({await crossStudyResp.Content.ReadAsStringAsync(Ct)})");
+            }
+
+            if (probe.CrossSiteCaller is not null)
+            {
+                using var crossSiteClient = booted.CreateSignedClient(probe.CrossSiteCaller);
+                using var crossSiteReq = BuildProbeHttpRequest(probe.Method, probe.Path, probe.JsonBody);
+                using var crossSiteResp = await crossSiteClient.SendAsync(crossSiteReq, Ct);
+                if (crossSiteResp.StatusCode != HttpStatusCode.Forbidden)
+                {
+                    failures.Add($"{probe.Host} {probe.Method} {probe.Path}: cross-site caller got {crossSiteResp.StatusCode} ({await crossSiteResp.Content.ReadAsStringAsync(Ct)})");
+                }
+            }
+        }
+
+        failures.Should().BeEmpty();
+    }
+
+    private static HttpRequestMessage BuildProbeHttpRequest(string method, string path, string? jsonBody)
+    {
+        var req = new HttpRequestMessage(new HttpMethod(method), path);
+        if (jsonBody is not null)
+        {
+            req.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
+        }
+
+        return req;
+    }
+
+    private static string? PickSiteScopedRoleHolding(string permission) =>
+        PermissionMatrix.ROLE_PERMISSIONS.Keys
+            .Order(StringComparer.Ordinal)
+            .FirstOrDefault(role =>
+                Holds(role, permission)
+                && SiteAccessEvaluator.SITE_SCOPED_ROLES.Contains(RoleNormalization.NormalizeRole(role)));
+
+    private sealed class ProbeSigTokenUseStore : ReplayCache, IDurableSigTokenUseStore;
 }

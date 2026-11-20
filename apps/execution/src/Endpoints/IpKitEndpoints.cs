@@ -36,7 +36,7 @@ public static class IpKitEndpoints
             var result = await service.ValidateScannedBarcodeAsync(request, ct);
             return Results.Ok(result);
         })
-        .RequirePermission("rtsm_supply:read");
+        .RequirePermission("rtsm_supply:read").RequireCallerStudyAndSiteScope();
 
         group.MapPost("/reconcile-batch", async (
             IpKitBatchReconciliationRequest request,
@@ -60,7 +60,7 @@ public static class IpKitEndpoints
                 return Results.BadRequest(new { detail = ex.Message });
             }
         })
-        .RequirePermission("rtsm_supply:write");
+        .RequirePermission("rtsm_supply:write").RequireCallerStudyAndSiteScope();
 
         group.MapGet("/certificates/{certificateId}", async (
             string certificateId,
@@ -87,7 +87,7 @@ public static class IpKitEndpoints
 
             return Results.Ok(result);
         })
-        .RequirePermission("rtsm_supply:read");
+        .RequirePermission("rtsm_supply:read").RequireCallerStudyAndSiteScope();
 
         group.MapGet("/inventory/{studyId}/{siteId}", async (
             string studyId,
@@ -123,7 +123,7 @@ public static class IpKitEndpoints
             var result = await service.SeedSiteInventoryAsync(request.StudyId, request.SiteId, request.Kits ?? [], ct);
             return Results.Ok(result);
         })
-        .RequirePermission("ip_kit_inventory:seed");
+        .RequirePermission("ip_kit_inventory:seed").RequireCallerStudyAndSiteScope();
 
         return routes;
     }

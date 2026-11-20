@@ -41,7 +41,7 @@ public static class CecEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("cec_adjudication:adjudicate")
+            .RequirePermission("cec_adjudication:adjudicate").RequireCallerStudyScope()
             .RequireElectronicSignature(ChairAdjudicateSemanticAction, ChairAdjudicateActionFor);
 
         group.MapGet("/{id}", GetDossierByIdAsync)
@@ -49,7 +49,7 @@ public static class CecEndpoints
             .Produces<CecDossier>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission("cec_adjudication:read");
+            .RequirePermission("cec_adjudication:read").RequireCallerStudyScope();
 
         return routes;
     }

@@ -12,6 +12,7 @@ using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Compliance;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 using Cadence.Templating;
 
 using Microsoft.AspNetCore.Builder;
@@ -50,7 +51,7 @@ public static class LetterTemplateEndpoints
             .Produces<string>(StatusCodes.Status200OK, "text/plain")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission(RenderPermission);
+            .RequirePermission(RenderPermission).RequireCallerStudyAndSiteScope();
 
         group.MapPost("/letters/compile", CompileAndDispatchLetterAsync)
             .WithName("CompileSiteVisitLetterPdf")
@@ -58,14 +59,15 @@ public static class LetterTemplateEndpoints
             .Produces<VisitLetterCompilationResultDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission(RenderPermission);
+            .RequirePermission(RenderPermission).RequireCallerStudyAndSiteScope();
 
         group.MapGet("/letters/{letterId}/pdf", GetLetterPdfAsync)
             .WithName("GetSiteVisitLetterPdf")
             .WithSummary("Downloads or views the compiled GxP PDF visit letter.")
             .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(RenderPermission);
+            .RequirePermission(RenderPermission).RequireCallerStudyAndSiteScope();
 
         return group;
     }
@@ -76,11 +78,21 @@ public static class LetterTemplateEndpoints
     public static async Task<Results<ContentHttpResult, ProblemHttpResult>> RenderLetterAsync(
         string templateName,
         SiteVisitLetterModel request,
-        ITemplateRenderer renderer)
+        ITemplateRenderer renderer,
+        HttpContext? httpContext = null)
     {
         if (!Catalog.Contains(templateName))
         {
             return UnknownTemplate(Catalog);
+        }
+
+        if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
+            && ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId) is not null)
+        {
+            return TypedResults.Problem(
+                title: "Access denied",
+                detail: "You are not assigned to the requested study or site.",
+                statusCode: StatusCodes.Status403Forbidden);
         }
 
         var model = BuildTemplateModel(request, isSigned: false, signerName: null, signingTimestamp: null, signingPurpose: null, integrityHash: null);
@@ -104,6 +116,12 @@ public static class LetterTemplateEndpoints
         if (!Catalog.Contains(templateName))
         {
             return UnknownTemplate(Catalog);
+        }
+
+        if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
+            && ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId) is { } scopeDenied)
+        {
+            return scopeDenied;
         }
 
         var user = httpContext.User?.Identity?.Name ?? request.CraId;
@@ -210,12 +228,25 @@ public static class LetterTemplateEndpoints
         [FromServices] CtmsDbContext dbContext,
         [FromServices] ITemplateRenderer renderer,
         [FromServices] IClock clock,
-        CancellationToken ct)
+        CancellationToken ct,
+        HttpContext? httpContext = null)
     {
         var letter = await dbContext.CtmsGeneratedLetters.AsNoTracking().FirstOrDefaultAsync(l => l.Id == letterId, ct);
         if (letter is null)
         {
             return TypedResults.NotFound(new { error = $"Letter with ID '{letterId}' not found." });
+        }
+
+        if (httpContext is not null && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null)
+        {
+            var parts = (letter.PdfObjectKey ?? string.Empty).Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 3
+                && string.Equals(parts[0], "letters", StringComparison.Ordinal)
+                && (!ClinicalScopeGuard.CanAccessStudy(httpContext, parts[1])
+                    || !ClinicalScopeGuard.CanAccessSite(httpContext, parts[2])))
+            {
+                return TypedResults.NotFound(new { error = $"Letter with ID '{letterId}' not found." });
+            }
         }
 
         var model = new SiteVisitLetterModel(

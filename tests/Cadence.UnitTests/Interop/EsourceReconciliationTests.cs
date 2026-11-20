@@ -56,6 +56,7 @@ public class EsourceReconciliationTests
             UserId = userName,
             Roles = [role],
             AssignedStudies = studies.Length == 0 ? ["*"] : studies,
+            AssignedSites = string.Equals(role, "crc", StringComparison.OrdinalIgnoreCase) ? ["SITE-01"] : [],
         };
         return context;
     }

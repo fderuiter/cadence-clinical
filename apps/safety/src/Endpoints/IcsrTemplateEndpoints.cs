@@ -13,6 +13,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 
+using Cadence.Security.Rbac;
+
 namespace Cadence.Apps.Safety.Endpoints;
 
 /// <summary>ICH E2B(R3) ICSR rendering from this service's own template, checked against the ICH schema.</summary>
@@ -40,7 +42,7 @@ public static class IcsrTemplateEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status500InternalServerError)
             // A regulatory safety submission: medical monitors and system administrators (#4960, ADR-2511).
-            .RequirePermission(RenderPermission);
+            .RequirePermission(RenderPermission).RequireCallerStudyScope();
 
         return group;
     }
@@ -52,8 +54,19 @@ public static class IcsrTemplateEndpoints
     /// emitted: that is a defect of the template, answered with 500 (#5573, ADR-2464).
     /// </summary>
     public static async Task<Results<ContentHttpResult, ValidationProblem, ProblemHttpResult>> RenderIcsrAsync(
-        IcsrReport request, ITemplateRenderer renderer, IClock clock)
+        IcsrReport request, ITemplateRenderer renderer, IClock clock, HttpContext? httpContext = null)
     {
+        if (request?.Study?.SponsorStudyNumber is { Length: > 0 } sponsorStudy
+            && !string.IsNullOrWhiteSpace(sponsorStudy)
+            && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
+            && !ClinicalScopeGuard.CanAccessStudy(httpContext, sponsorStudy))
+        {
+            return TypedResults.Problem(
+                detail: ClinicalScopeGuard.StudyAccessDeniedDetail,
+                statusCode: StatusCodes.Status403Forbidden,
+                title: "Outside your studies");
+        }
+
         var errors = IcsrConformance.Check(request, clock.UtcNow);
         if (errors.Count > 0)
         {

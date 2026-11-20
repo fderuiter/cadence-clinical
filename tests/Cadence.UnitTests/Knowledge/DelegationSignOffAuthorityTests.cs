@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Knowledge.Domain;
 using Cadence.Apps.Knowledge.Infrastructure.Persistence;
+using Cadence.Database.Tenancy;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Hosting;
@@ -40,7 +41,10 @@ public sealed class DelegationSignOffAuthorityTests(DelegationSignOffAuthorityTe
     private const string Path = "/api/v1/training/delegations/bulk-signoff";
     private const string SemanticAction = "knowledge.delegation.sign_off";
 
-    private static readonly GatewayIdentity Pi = TestSecurityContext.Identity("pi-knowledge", "Principal Investigator");
+    private static readonly GatewayIdentity Pi = TestSecurityContext.Identity("pi-knowledge", "Principal Investigator") with
+    {
+        SiteIds = ["SITE-101"],
+    };
 
     [Fact]
     [GxPRequirement("SRS-SYS-005")]
@@ -198,9 +202,11 @@ public sealed class DelegationSignOffAuthorityTests(DelegationSignOffAuthorityTe
                 var inMemory = new ServiceCollection().AddEntityFrameworkInMemoryDatabase().BuildServiceProvider();
                 services.RemoveAll<DbContextOptions<KnowledgeDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<KnowledgeDbContext>>();
-                services.AddDbContext<KnowledgeDbContext>(options => options
+                services.AddDbContext<KnowledgeDbContext>((sp, options) => options
                     .UseInMemoryDatabase(_databaseName)
-                    .UseInternalServiceProvider(inMemory));
+                    .UseInternalServiceProvider(inMemory)
+                    .UseCadenceStandaloneTenancy(sp.GetService<ICurrentTenantAccessor>(), isRelational: false)
+                    .AddInterceptors(StandaloneTenantSaveChangesInterceptor.Instance));
 
                 // The durable token-use store needs PostgreSQL; this in-memory host keeps uses in process memory.
                 services.RemoveAll<ISigTokenUseStore>();
