@@ -150,6 +150,7 @@ public static class PreCommitOpenApiService
             "imaging" => "imaging",
             "interop" => "interop",
             "kernel-api" or "kernel" or "intelligence" => "kernel",
+            "org" => "kernel",
             "knowledge" => "knowledge",
             "notifications" => "notifications",
             "org" => "org",

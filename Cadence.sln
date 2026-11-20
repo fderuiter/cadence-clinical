@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.35806.99
@@ -45,7 +45,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cadence.Apps.Safety", "apps
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cadence.Apps.Econsent", "apps\econsent\src\Cadence.Apps.Econsent.csproj", "{467ED213-8DEF-40E5-850F-D335BB6FB1F3}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cadence.Apps.Org", "apps\org\src\Cadence.Apps.Org.csproj", "{F4FE2625-6D02-4F65-AA62-D6255BFFA331}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cadence.Modules.Org", "apps\org\src\Cadence.Modules.Org.csproj", "{F4FE2625-6D02-4F65-AA62-D6255BFFA331}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cadence.Apps.Payments", "apps\payments\src\Cadence.Apps.Payments.csproj", "{DF22ADD2-AC0C-46D4-A6B9-C8246C523EAA}"
 EndProject

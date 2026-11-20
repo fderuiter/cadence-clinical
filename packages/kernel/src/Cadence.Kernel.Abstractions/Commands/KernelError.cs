@@ -28,6 +28,9 @@ public sealed record KernelError(string Code, int HttpStatus, string Message)
 
     /// <summary>The same registered error with a message specific to this occurrence.</summary>
     public KernelError WithMessage(string message) => this with { Message = message };
+
+    /// <summary>The same registered error with a structured explanation from the producing component.</summary>
+    public KernelError WithExplanation(Explanation explanation) => this with { Explanation = explanation };
 }
 
 /// <summary>

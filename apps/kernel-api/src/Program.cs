@@ -1,3 +1,5 @@
+using System;
+using System.Security.Cryptography;
 using System.Text.Json;
 
 using Cadence.Database;
@@ -6,6 +8,7 @@ using Cadence.Kernel.Application.Activity;
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Events;
+using Cadence.Kernel.Application.Identity;
 using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Application.Search;
 using Cadence.Kernel.Application.Simulation;
@@ -22,11 +25,13 @@ using Cadence.Modules.Execution;
 using Cadence.Modules.Intelligence;
 using Cadence.Modules.Intelligence.Mcp;
 using Cadence.Modules.Intelligence.Tools;
+using Cadence.Modules.Org;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
@@ -87,9 +92,28 @@ builder.Services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
 builder.Services.AddSingleton<IKernelChangeReason, SignedChangeReason>();
 builder.Services.AddScoped<IKernelReadAccess, KernelReadAccess>();
 
-// A reader sees what its grants in effect cover (ADR-2457); everything else is masked in place (ADR-2471). Blinding and
-// the IdentityVault (#4782) are not decided here yet.
+// A reader sees what its grants in effect cover (ADR-2457); everything else is masked in place (ADR-2471).
 builder.Services.AddKernelGrantVisibility();
+
+// IdentityVault (ADR-2458): configured when IdentityVault:MasterKey or CADENCE_IDENTITY_VAULT_KEY is set. In
+// Development and Testing, a deterministic local-only master key is used when no explicit key is configured; Production
+// never uses a default key.
+string? vaultMasterKey = builder.Configuration["IdentityVault:MasterKey"]
+    ?? builder.Configuration["CADENCE_IDENTITY_VAULT_KEY"];
+string? vaultRegion = builder.Configuration["IdentityVault:Region"]
+    ?? builder.Configuration["CADENCE_IDENTITY_VAULT_REGION"];
+if (string.IsNullOrWhiteSpace(vaultMasterKey)
+    && (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment(OrgModule.TestingEnvironment)))
+{
+    vaultMasterKey = Convert.ToBase64String(SHA256.HashData("cadence-dev-only-identity-vault-key"u8));
+}
+
+if (!string.IsNullOrWhiteSpace(vaultMasterKey))
+{
+    builder.Services
+        .AddKernelIdentityVault()
+        .AddKernelIdentityVaultPersistence(vaultMasterKey, string.IsNullOrWhiteSpace(vaultRegion) ? null : vaultRegion);
+}
 
 // Modules in this host (ADR-2601). The Intelligence module is the governed AI agent runtime (ADR-2630): agents read and
 // propose, a person approves, and AI is never required for clinical work (K-AI-8).
@@ -97,6 +121,9 @@ builder.Services.AddCadenceIntelligenceModule(builder.Configuration, builder.Env
 
 // The Execution module: eCRF forms over kernel form instances (ADR-2622).
 builder.Services.AddCadenceExecutionModule(connectionString);
+
+// The Organization Administration module: OIDC user provisioning, workspace invitations, bounded delegations, and grant revocation (ADR-2610, ADR-2819).
+builder.Services.AddCadenceOrgModule(builder.Configuration, builder.Environment);
 
 // The agents' read tools over the kernel reads above, and the MCP server that serves them to outside agents (ADR-2633).
 builder.Services.AddIntelligenceTools().AddIntelligenceMcp();
@@ -118,6 +145,7 @@ app.MapCadenceHealthAndStatusEndpoints(
 app.MapKernelApi().MapKernelReads().MapKernelObservations().MapKernelProposals();
 app.MapIntelligenceModule();
 app.MapExecutionModule();
+app.MapOrgModule();
 app.MapIntelligenceMcp();
 
 await app.RunAsync();

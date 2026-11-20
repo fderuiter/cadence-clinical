@@ -75,4 +75,7 @@ public interface IIdentityVaultStore
 
     /// <summary>Every participant linked to the person, in id order.</summary>
     Task<IReadOnlyList<ParticipantId>> LinkedParticipantsAsync(TenantId tenant, PersonId person, CancellationToken cancellationToken);
+
+    /// <summary>The unerased subject whose blind index matches <paramref name="blindIndex"/> in <paramref name="layer"/>, or null.</summary>
+    Task<Guid?> FindSubjectByBlindIndexAsync(TenantId tenant, IdentityLayer layer, byte[] blindIndex, CancellationToken cancellationToken);
 }

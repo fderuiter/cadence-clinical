@@ -194,7 +194,8 @@
           (Ref:
           <code id="wallet-disbursement-ref">{{
             wallet.disbursementConfirmation.referenceNumber
-          }}</code>).
+          }}</code
+          >).
         </p>
       </div>
 

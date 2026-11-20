@@ -59,6 +59,17 @@ public sealed partial class KernelAuthorization(
                 EvaluatedCondition.Unsatisfied(ResourceNamedCondition, $"Name the {entry.ResourceKind} to act on")));
         }
 
+        if (command is IssueGrant { Scope: { } grantScope } && grantScope.Problem() is null)
+        {
+            resource = grantScope.Level switch
+            {
+                ScopeLevel.Organization => NodeRef.For(OrganizationId.FromGuid(grantScope.TargetId!.Value)),
+                ScopeLevel.Study or ScopeLevel.StudyCountry => NodeRef.For(StudyId.FromGuid(grantScope.TargetId!.Value)),
+                ScopeLevel.StudySite => NodeRef.For(StudySiteId.FromGuid(grantScope.TargetId!.Value)),
+                _ => resource,
+            };
+        }
+
         return DecideAsync(actor, command.TenantId, entry.Capability, resource, cancellationToken);
     }
 

@@ -186,7 +186,6 @@ if (full)
     Service(builder.AddProject<Projects.Cadence_Apps_Eisf>("eisf"));
     Service(builder.AddProject<Projects.Cadence_Apps_Econsent>("econsent"))
         .WithEnvironment("FIELD_ENCRYPTION_KEY", fieldEncryptionKey);
-    Service(builder.AddProject<Projects.Cadence_Apps_Org>("org"));
     Service(builder.AddProject<Projects.Cadence_Apps_Fileshare>("fileshare"));
     Service(builder.AddProject<Projects.Cadence_Apps_Imaging>("imaging"))
         .WithEnvironment("CADENCE_IMAGING_DEID_SIGNING_KEY", imagingDeidSigningKey)

@@ -39,7 +39,7 @@
     <ProjectReference Include="..\..\apps\interop\src\Cadence.Apps.Interop.csproj" />
     <ProjectReference Include="..\..\apps\knowledge\src\Cadence.Apps.Knowledge.csproj" />
     <ProjectReference Include="..\..\apps\notifications\src\Cadence.Apps.Notifications.csproj" />
-    <ProjectReference Include="..\..\apps\org\src\Cadence.Apps.Org.csproj" />
+    <ProjectReference Include="..\..\apps\org\src\Cadence.Modules.Org.csproj" />
     <ProjectReference Include="..\..\apps\payments\src\Cadence.Apps.Payments.csproj" />
     <ProjectReference Include="..\..\apps\safety\src\Cadence.Apps.Safety.csproj" />
     <ProjectReference Include="..\..\apps\tickets\src\Cadence.Apps.Tickets.csproj" />

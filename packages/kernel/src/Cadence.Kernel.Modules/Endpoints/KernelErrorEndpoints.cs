@@ -88,6 +88,34 @@ public static class KernelErrorEndpoints
             extensions["errors"] = fields;
         }
 
+        if (error.Explanation is { } explanation)
+        {
+            extensions["explanation"] = new
+            {
+                subject = explanation.Subject?.ToString(),
+                claim = explanation.Claim,
+                producer = explanation.Producer,
+                steps = explanation.Steps.Select(s => new
+                {
+                    claim = s.Claim,
+                    evidence = s.Evidence.Select(e => e.ToString()).ToArray(),
+                }).ToArray(),
+                conditions = explanation.Conditions.Select(c => new
+                {
+                    code = c.Code,
+                    description = c.Description,
+                    met = c.Met,
+                    evidence = c.Evidence.Select(e => e.ToString()).ToArray(),
+                }).ToArray(),
+                nextActions = explanation.NextActions.Select(a => new
+                {
+                    description = a.Description,
+                    capability = a.Capability,
+                    target = a.Target?.ToString(),
+                }).ToArray(),
+            };
+        }
+
         return TypedResults.Problem(title: error.Code, detail: error.Message, statusCode: error.HttpStatus, extensions: extensions);
     }
 

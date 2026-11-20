@@ -1,5 +1,6 @@
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
+using Cadence.Apps.Ctms.Infrastructure.Clients;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Kernel.Time;
@@ -16,6 +17,14 @@ using Microsoft.Extensions.DependencyInjection;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
+string kernelServiceUrl = builder.Configuration["KERNEL_SERVICE_URL"]
+    ?? builder.Configuration["Services:Kernel"]
+    ?? "http://localhost:8018";
+builder.Services.AddHttpClient<IKernelDelegationBridge, KernelDelegationBridge>(client =>
+{
+    client.BaseAddress = new Uri(kernelServiceUrl.TrimEnd('/'));
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.AddCadencePostgresDbContext<CtmsDbContext>();
 builder.Services.AddFluidTemplating();

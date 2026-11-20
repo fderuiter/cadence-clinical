@@ -335,6 +335,7 @@ public static class KernelApplicationServiceCollectionExtensions
         services.TryAddScoped<ConsumerActor>();
         services.AddTransient<ICommandHandler<ProvisionTenant, TenantId>, ProvisionTenantHandler>();
         services.AddTransient<ICommandHandler<RegisterOrganization, OrganizationId>, RegisterOrganizationHandler>();
+        services.AddTransient<ICommandHandler<RegisterTenantMember, PersonId>, RegisterTenantMemberHandler>();
         services.AddKernelKnowledgeHandlers();
         services.AddKernelProtocolHandlers();
         services.AddKernelTrustHandlers();

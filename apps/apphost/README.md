@@ -42,7 +42,6 @@ routes answer as the service being down.
 
   | Port | Service   | Port | Service       | Port | Service   |
   | ---- | --------- | ---- | ------------- | ---- | --------- |
-  | 8000 | gateway   | 8006 | notifications | 8012 | org       |
   | 8001 | designer  | 8007 | ctms          | 8013 | fileshare |
   | 8002 | execution | 8008 | safety        | 8014 | imaging   |
   | 8003 | etmf      | 8009 | tickets       | 8015 | knowledge |

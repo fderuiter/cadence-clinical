@@ -189,7 +189,17 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
             }
         }
 
-        return await EvaluateGrantsAsync(request, qualified: true, cancellationToken).ConfigureAwait(false);
+        var evaluation = await EvaluateGrantsAsync(request, qualified: true, cancellationToken).ConfigureAwait(false);
+        if (!evaluation.Permitted && token is "person.register" or "identity.record.person")
+        {
+            var onboarding = await DecideInviteeOnboardingAsync(request, cancellationToken).ConfigureAwait(false);
+            if (onboarding is not null)
+            {
+                return onboarding;
+            }
+        }
+
+        return evaluation;
     }
 
     /// <summary>
@@ -290,6 +300,40 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
         {
             return AuthorizationDecision.Permit(
                 conditions: EvaluatedCondition.Satisfied(DelegatorCondition, "Signed this delegation", request.Resource, NodeRef.For(parent.Id)));
+        }
+
+        return null;
+    }
+
+    private async Task<AuthorizationDecision?> DecideInviteeOnboardingAsync(AuthorizationRequest request, CancellationToken cancellationToken)
+    {
+        if (request.Actor.Kind == ActorKind.ServiceAccount && options.PlatformOperators.Contains(request.Actor.Id))
+        {
+            return AuthorizationDecision.Permit(
+                conditions: EvaluatedCondition.Satisfied(PlatformOperatorCondition, $"{request.Actor.Id} operates the platform"));
+        }
+
+        var held = await store.GrantsHeldAsync(request.Tenant, request.Actor, cancellationToken).ConfigureAwait(false);
+        var roles = await RoleCapabilitiesAsync(request.Tenant, held, cancellationToken).ConfigureAwait(false);
+        foreach (var grant in held.Where(g => g.WithGrantOption || Carries(g, "grant.issue", roles)))
+        {
+            if (await InEffectAsync(request, grant, cancellationToken).ConfigureAwait(false))
+            {
+                var path = await store.PathOfAsync(request.Tenant, request.Resource, cancellationToken).ConfigureAwait(false);
+                EvaluatedCondition[] conditions =
+                [
+                    EvaluatedCondition.Satisfied(
+                        grant.WithGrantOption ? DelegationCondition : GrantCondition,
+                        grant.WithGrantOption
+                            ? $"Holds delegable grant for {grant.Scope} permitting invitee onboarding"
+                            : $"Holds grant.issue for {grant.Scope} permitting invitee onboarding",
+                        NodeRef.For(grant.Id)),
+                    .. await QualificationConditionsAsync(request, path, cancellationToken).ConfigureAwait(false),
+                ];
+                return conditions.FirstOrDefault(c => !c.Met) is { } missing
+                    ? AuthorizationDecision.Deny($"{request.Actor.Id} is not qualified to {request.Capability.Token}: {missing.Description}.", conditions)
+                    : AuthorizationDecision.Permit(conditions: conditions);
+            }
         }
 
         return null;

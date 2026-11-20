@@ -10,7 +10,6 @@ extern alias interop;
 extern alias kernel;
 extern alias knowledge;
 extern alias notifications;
-extern alias org;
 extern alias payments;
 extern alias quality;
 extern alias safety;
@@ -83,7 +82,6 @@ public static class Program
             new("interop", "Interop_", typeof(interop::Cadence.Apps.Interop.Program), Path.Combine(repoRoot, "apps", "interop", "src")),
             new("knowledge", "Knowledge_", typeof(knowledge::Cadence.Apps.Knowledge.Program), Path.Combine(repoRoot, "apps", "knowledge", "src")),
             new("notifications", "Notifications_", typeof(notifications::Cadence.Apps.Notifications.Program), Path.Combine(repoRoot, "apps", "notifications", "src")),
-            new("org", "Org_", typeof(org::Cadence.Apps.Org.Program), Path.Combine(repoRoot, "apps", "org", "src")),
             new("payments", "Payments_", typeof(payments::Cadence.Apps.Payments.Program), Path.Combine(repoRoot, "apps", "payments", "src")),
             new("quality", "Quality_", typeof(quality::Cadence.Apps.Quality.Program), Path.Combine(repoRoot, "apps", "quality", "src")),
             new("safety", "Safety_", typeof(safety::Cadence.Apps.Safety.Program), Path.Combine(repoRoot, "apps", "safety", "src")),

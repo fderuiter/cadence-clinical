@@ -154,7 +154,6 @@ Read by `apps/gateway/src/Program.cs`, one per service in the topology manifest 
 | `TICKETS_SERVICE_URL`       | 8009         |
 | `EISF_SERVICE_URL`          | 8010         |
 | `ECONSENT_SERVICE_URL`      | 8011         |
-| `ORG_SERVICE_URL`           | 8012         |
 | `FILESHARE_SERVICE_URL`     | 8013         |
 | `IMAGING_SERVICE_URL`       | 8014         |
 | `KNOWLEDGE_SERVICE_URL`     | 8015         |

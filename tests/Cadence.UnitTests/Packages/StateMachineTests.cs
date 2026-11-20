@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+
 using Cadence.Core.Domain;
 using Cadence.Testing;
+
 using FluentAssertions;
+
 using Xunit;
 
 namespace Cadence.UnitTests.Packages;

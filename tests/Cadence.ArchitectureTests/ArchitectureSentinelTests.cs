@@ -260,7 +260,6 @@ public class ArchitectureSentinelTests
         typeof(Cadence.Apps.Interop.Program).Assembly,
         typeof(Cadence.Apps.Knowledge.Program).Assembly,
         typeof(Cadence.Apps.Notifications.Program).Assembly,
-        typeof(Cadence.Apps.Org.Program).Assembly,
         typeof(Cadence.Apps.Payments.Program).Assembly,
         typeof(Cadence.Apps.Safety.Program).Assembly,
         typeof(Cadence.Apps.Tickets.Program).Assembly

@@ -113,7 +113,6 @@ function getApiSidebarGroups() {
       items: [
         { text: "EDC Execution (8002)", link: "/api/execution" },
         { text: "CTMS Operations (8007)", link: "/api/ctms" },
-        { text: "Organization Directory (8012)", link: "/api/org" },
         { text: "Clinical Issue Hub (8009)", link: "/api/tickets" },
         { text: "Payments & Grants (8016)", link: "/api/payments" },
       ],

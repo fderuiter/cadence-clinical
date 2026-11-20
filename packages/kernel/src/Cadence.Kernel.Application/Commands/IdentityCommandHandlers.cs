@@ -1,3 +1,6 @@
+using System;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -59,6 +62,46 @@ internal sealed class RegisterOrganizationHandler : ICommandHandler<RegisterOrga
             command.OrganizationId, command.TenantId, command.Code, command.Name, command.Kind, context.Actor.Id, command.ReasonForChange));
         context.Work.Raise(new OrganizationRegistered(command.TenantId, command.OrganizationId, command.Code, command.Name, command.Kind));
         return CommandResult<OrganizationId>.Success(command.OrganizationId);
+    }
+}
+
+/// <summary>Handles <see cref="RegisterTenantMember"/>.</summary>
+internal sealed class RegisterTenantMemberHandler : ICommandHandler<RegisterTenantMember, PersonId>
+{
+    public async Task<CommandResult<PersonId>> HandleAsync(RegisterTenantMember command, ICommandContext context, CancellationToken cancellationToken)
+    {
+        if (command.PersonId == default)
+        {
+            return IdentityErrors.PersonRequired;
+        }
+
+        if (!await context.Work.ExistsAsync<Tenant>(command.TenantId, cancellationToken).ConfigureAwait(false))
+        {
+            return IdentityErrors.TenantUnknown;
+        }
+
+        var existing = await context.Work.ReadAllAsync<TenantMembership>(
+            m => m.TenantId == command.TenantId && m.PersonId == command.PersonId,
+            cancellationToken).ConfigureAwait(false);
+        if (existing.Count > 0)
+        {
+            return CommandResult<PersonId>.Success(command.PersonId);
+        }
+
+        var membershipId = DeterministicMembershipId(command.TenantId, command.PersonId);
+        context.Work.Add(new TenantMembership(membershipId, command.TenantId, command.PersonId, context.Actor.Id, command.ReasonForChange));
+        context.Work.Raise(new TenantMemberRegistered(command.TenantId, command.PersonId));
+        return CommandResult<PersonId>.Success(command.PersonId);
+    }
+
+    private static TenantMembershipId DeterministicMembershipId(TenantId tenantId, PersonId personId)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes($"tenant-membership:{tenantId.Value:D}:{personId.Value:D}"));
+        Span<byte> guidBytes = stackalloc byte[16];
+        hash.AsSpan(0, 16).CopyTo(guidBytes);
+        guidBytes[6] = (byte)((guidBytes[6] & 0x0F) | 0x50);
+        guidBytes[8] = (byte)((guidBytes[8] & 0x3F) | 0x80);
+        return TenantMembershipId.FromGuid(new Guid(guidBytes));
     }
 }
 

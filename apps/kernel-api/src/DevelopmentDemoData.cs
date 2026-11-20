@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Execution;
+using Cadence.Kernel.Identity;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -51,28 +52,30 @@ internal static class DevelopmentDemoData
     internal static readonly (string Code, string Name, string[] Capabilities)[] Roles =
     [
         ("DEMO_CRC", "Clinical research coordinator", ["participant.register", "participant.screen", "enrollment.change_status", "observation.record", "observation.correct", "collection.open", "collection.record", "execution.query.answer"]),
-        ("DEMO_INVESTIGATOR", "Site investigator", ["collection.sign", "execution.query.answer"]),
+        ("DEMO_INVESTIGATOR", "Site investigator", ["participant.register", "participant.screen", "enrollment.change_status", "observation.record", "observation.correct", "collection.open", "collection.record", "collection.sign", "execution.query.answer", "identity.reveal.person"]),
         ("DEMO_MONITOR", "Clinical research associate", ["validation_finding.investigate", "validation_finding.classify", "validation_finding.explain", "observation.verify", "assertion.retract", "collection.record_unasked", "execution.query.raise", "execution.query.manage"]),
         ("DEMO_DATA_MANAGER", "Data manager", ["validation_run.record", "validation_finding.accept", "validation_finding.reopen", "observation.lock", "observation.verify", "assertion.retract", "collection.record_unasked", "execution.query.raise", "execution.query.manage"]),
         ("DEMO_DESIGNER", "Study designer", ["protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.amend"]),
+        ("DEMO_SPONSOR_ADMIN", "Sponsor administrator", ["grant.issue", "grant.revoke", "person.register", "identity.record.person", "identity.reveal.person", "role.define", "protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.amend", "validation_run.record", "validation_finding.investigate", "validation_finding.classify", "validation_finding.explain", "validation_finding.accept", "validation_finding.reopen", "observation.verify", "execution.query.raise", "execution.query.manage"]),
         ("DEMO_SAFETY", "Safety reviewer", ["validation_finding.investigate", "validation_finding.classify"]),
         ("DEMO_AUDITOR", "Auditor", ["validation_finding.investigate"]),
     ];
 
     /// <summary>
-    /// The local realm's users (<c>docker/cadence-realm.json</c>) by their fixed Keycloak subject id, with the role and
-    /// the site they are granted at; a null site grants the role for the whole study.
+    /// The local realm's users (<c>docker/cadence-realm.json</c>) by their fixed Keycloak subject id, with their demo
+    /// profile, role, scope target (<c>"*"</c> for tenant-wide, <c>null</c> for the whole study, or a site code), and
+    /// whether the grant carries <c>WithGrantOption</c>.
     /// </summary>
-    internal static readonly (string Username, string Subject, string Role, string? Site)[] Users =
+    internal static readonly (string Username, string Subject, string GivenName, string FamilyName, string Role, string? Site, bool WithGrantOption)[] Users =
     [
-        ("crc.site101", "1a4345cc-364c-4b8b-881e-93bbea528b0a", "DEMO_CRC", "SITE-101"),
-        ("pi.site101", "cf64a3b4-33cc-4925-8452-75e29ca9526e", "DEMO_INVESTIGATOR", "SITE-101"),
-        ("cra.monitor", "ee2cfdb6-d893-4fb4-a10f-d50830b6728a", "DEMO_MONITOR", "SITE-101"),
-        ("dm.lead", "47a9d88f-73d7-4aca-9fd6-14b8e6e9284f", "DEMO_DATA_MANAGER", null),
-        ("designer_demo", "d0b6257b-57fe-420b-9526-366e83c756aa", "DEMO_DESIGNER", null),
-        ("designer.lead", "8808e058-a472-4f72-9970-a027eddf35bc", "DEMO_DESIGNER", null),
-        ("safety.officer", "3d290711-4167-4da5-b55a-4c75760bd27c", "DEMO_SAFETY", null), // deid-ignore: a demo realm user's fixed subject id, not a telephone number
-        ("auditor.lead", "d43095eb-1912-40dd-a528-fa04335a2342", "DEMO_AUDITOR", null),
+        ("crc.site101", "1a4345cc-364c-4b8b-881e-93bbea528b0a", "Site", "Coordinator", "DEMO_CRC", "SITE-101", false), // deid-ignore: synthetic local demo persona from docker/cadence-realm.json
+        ("pi.site101", "cf64a3b4-33cc-4925-8452-75e29ca9526e", "Principal", "Investigator", "DEMO_INVESTIGATOR", "SITE-101", true), // deid-ignore: synthetic local demo persona from docker/cadence-realm.json
+        ("cra.monitor", "ee2cfdb6-d893-4fb4-a10f-d50830b6728a", "CRA", "Monitor", "DEMO_MONITOR", "SITE-101", false), // deid-ignore: synthetic local demo persona from docker/cadence-realm.json
+        ("dm.lead", "47a9d88f-73d7-4aca-9fd6-14b8e6e9284f", "Data", "Manager", "DEMO_DATA_MANAGER", null, false), // deid-ignore: synthetic local demo persona from docker/cadence-realm.json
+        ("designer_demo", "d0b6257b-57fe-420b-9526-366e83c756aa", "Designer", "Demo", "DEMO_DESIGNER", null, false), // deid-ignore: synthetic local demo persona from docker/cadence-realm.json
+        ("designer.lead", "8808e058-a472-4f72-9970-a027eddf35bc", "Designer", "Lead", "DEMO_SPONSOR_ADMIN", "*", true), // deid-ignore: synthetic local demo persona from docker/cadence-realm.json
+        ("safety.officer", "3d290711-4167-4da5-b55a-4c75760bd27c", "Safety", "Officer", "DEMO_SAFETY", null, false), // deid-ignore: a demo realm user's fixed subject id, not a telephone number
+        ("auditor.lead", "d43095eb-1912-40dd-a528-fa04335a2342", "Auditor", "Lead", "DEMO_AUDITOR", null, false), // deid-ignore: synthetic local demo persona from docker/cadence-realm.json
     ];
 
     /// <summary>
@@ -88,7 +91,7 @@ internal static class DevelopmentDemoData
 
     /// <summary>The capabilities the bootstrap grants itself, tenant-wide, to write the demo study.</summary>
     private static readonly string[] SeederCapabilities =
-        ["organization.register", "study.register", "site.register", "study_site.link", "participant.register", "participant.screen"];
+        ["organization.register", "study.register", "site.register", "study_site.link", "participant.register", "participant.screen", "person.register", "identity.record.person"];
 
     /// <summary>Writes the demo study into <paramref name="tenant"/>, or replays what an earlier start wrote.</summary>
     public static async Task SeedAsync(TenantId tenant, IServiceScopeFactory scopes, CancellationToken cancellationToken)
@@ -149,11 +152,39 @@ internal static class DevelopmentDemoData
                 cancellationToken).ConfigureAwait(false);
         }
 
-        foreach (var (username, subject, role, site) in Users)
+        bool hasVault;
+        await using (var checkScope = scopes.CreateAsyncScope())
         {
-            var scope = site is null ? AuthorityScope.Study(study) : AuthorityScope.StudySite(studySites[site]);
+            hasVault = checkScope.ServiceProvider.GetService<IIdentityVault>() is not null;
+        }
+
+        foreach (var (username, subject, givenName, familyName, role, site, withGrantOption) in Users)
+        {
+            var personId = PersonId.FromGuid(Guid.Parse(subject));
             await seeder.SendAsync(
-                new IssueGrant(tenant, ids.Grant(username), Actor.Person(subject), null, roles[role], scope, Epoch, null, false, Key($"grant:{username}"), Reason),
+                new RegisterTenantMember(tenant, personId, Key($"member:{username}"), Reason),
+                cancellationToken).ConfigureAwait(false);
+            if (hasVault)
+            {
+                string email = string.Concat(username, "@", "example.com"); // deid-ignore: synthetic local demo email domain
+                await seeder.SendAsync(
+                    new RecordPersonIdentity(
+                        tenant,
+                        personId,
+                        new IdentityDetails { GivenName = givenName, FamilyName = familyName, Email = email },
+                        Key($"identity:{username}"),
+                        Reason),
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            var scope = site switch
+            {
+                "*" => AuthorityScope.Tenant(),
+                null => AuthorityScope.Study(study),
+                _ => AuthorityScope.StudySite(studySites[site]),
+            };
+            await seeder.SendAsync(
+                new IssueGrant(tenant, ids.Grant(username), Actor.Person(subject), null, roles[role], scope, Epoch, null, withGrantOption, Key($"grant:{username}"), Reason),
                 cancellationToken).ConfigureAwait(false);
         }
     }

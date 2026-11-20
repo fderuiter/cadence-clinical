@@ -390,6 +390,17 @@ internal sealed class KernelCommandTransaction(
 
             Fault(CommitStage.ModuleWritten);
 
+            if (db.ChangeTracker.Entries<TenantMembership>().SingleOrDefault(e => e.State == EntityState.Added)?.Entity is { } addedMembership)
+            {
+                await db.Database.ExecuteSqlAsync(
+                    $"""
+                    INSERT INTO kernel.people (id, is_active, created_at, created_by, reason_for_change, version_index)
+                    VALUES ({addedMembership.PersonId.Value}, TRUE, {execution.RecordedAt.UtcDateTime}, {execution.Actor.Id}, {Command.ReasonForChange}, 1)
+                    ON CONFLICT (id) DO NOTHING
+                    """,
+                    cancellationToken).ConfigureAwait(false);
+            }
+
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             Fault(CommitStage.Saved);
 

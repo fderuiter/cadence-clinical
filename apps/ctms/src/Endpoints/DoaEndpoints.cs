@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Ctms.Domain;
+using Cadence.Apps.Ctms.Infrastructure.Clients;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Compliance;
 using Cadence.Kernel.Time;
@@ -104,7 +105,7 @@ public static class DoaEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        if (string.IsNullOrWhiteSpace(request.StaffUserId))
+        if ((string.IsNullOrWhiteSpace(resolvedStaffUserId) && string.IsNullOrWhiteSpace(request.StaffEmail)))
         {
             return TypedResults.Problem(
                 title: "Staff User ID required",
@@ -144,10 +145,40 @@ public static class DoaEndpoints
         var now = clock.UtcNow;
         var (user, role) = ResolveCaller(httpContext, "site_coordinator");
 
+        string resolvedStaffUserId = resolvedStaffUserId?.Trim() ?? string.Empty;
+        string? kernelGrantIdsCsv = null;
+        if (!string.IsNullOrWhiteSpace(request.StaffEmail))
+        {
+            var bridgeOutcome = await kernelBridge.DelegateByEmailAsync(
+                httpContext,
+                request.Site,
+                request.StaffEmail.Trim(),
+                request.StaffName,
+                request.TaskCodes,
+                request.StartDate,
+                request.EndDate,
+                reason,
+                ct);
+            if (!bridgeOutcome.Succeeded)
+            {
+                return Results.Content(
+                    bridgeOutcome.ProblemJson ?? "{\"title\":\"Delegation refused\"}",
+                    "application/problem+json",
+                    Encoding.UTF8,
+                    bridgeOutcome.ErrorStatusCode > 0 ? bridgeOutcome.ErrorStatusCode : StatusCodes.Status403Forbidden);
+            }
+
+            resolvedStaffUserId = bridgeOutcome.PersonId.ToString("D");
+            if (bridgeOutcome.GrantIds.Count > 0)
+            {
+                kernelGrantIdsCsv = string.Join(",", bridgeOutcome.GrantIds.Select(g => g.ToString("D")));
+            }
+        }
+
         var delegation = new CtmsDelegation
         {
             SiteId = request.Site.Trim(),
-            StaffUserId = request.StaffUserId.Trim(),
+            StaffUserId = resolvedStaffUserId.Trim(),
             TaskCodes = JsonSerializer.Serialize(request.TaskCodes),
             StartDate = request.StartDate.Trim(),
             EndDate = null,
@@ -219,6 +250,27 @@ public static class DoaEndpoints
 
         var now = clock.UtcNow;
         var (user, role) = ResolveCaller(httpContext, "investigator");
+
+        if (!string.IsNullOrWhiteSpace(delegation.KernelGrantIds))
+        {
+            var grantGuids = delegation.KernelGrantIds
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(s => Guid.TryParse(s, out var g) ? g : Guid.Empty)
+                .Where(g => g != Guid.Empty)
+                .ToArray();
+            if (grantGuids.Length > 0)
+            {
+                var revokeOutcome = await kernelBridge.RevokeGrantsAsync(httpContext, grantGuids, reason, ct);
+                if (!revokeOutcome.Succeeded)
+                {
+                    return Results.Content(
+                        revokeOutcome.ProblemJson ?? "{\"title\":\"Revocation refused\"}",
+                        "application/problem+json",
+                        Encoding.UTF8,
+                        revokeOutcome.ErrorStatusCode > 0 ? revokeOutcome.ErrorStatusCode : StatusCodes.Status403Forbidden);
+                }
+            }
+        }
 
         delegation.IsActive = false;
         delegation.EndDate = now.ToString("yyyy-MM-dd");
@@ -522,10 +574,13 @@ public static class DoaEndpoints
 
 public record DelegationTaskRequest(
     [property: JsonPropertyName("site_id")] string Site,
-    [property: JsonPropertyName("staff_user_id")] string StaffUserId,
+    [property: JsonPropertyName("staff_user_id")] string? StaffUserId,
     [property: JsonPropertyName("task_codes")] List<string> TaskCodes,
     [property: JsonPropertyName("start_date")] string StartDate,
-    [property: JsonPropertyName("reason_for_change")] string? ReasonForChange
+    [property: JsonPropertyName("reason_for_change")] string? ReasonForChange,
+    [property: JsonPropertyName("staff_email")] string? StaffEmail = null,
+    [property: JsonPropertyName("staff_name")] string? StaffName = null,
+    [property: JsonPropertyName("end_date")] string? EndDate = null
 );
 
 public record RevokeDelegationRequest(

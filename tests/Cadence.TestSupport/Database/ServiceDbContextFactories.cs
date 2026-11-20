@@ -21,10 +21,5 @@ public static class ServiceDbContextFactories
         typeof(Cadence.Apps.Interop.Infrastructure.Persistence.InteropDbContextFactory),
         typeof(Cadence.Apps.Knowledge.Infrastructure.Persistence.KnowledgeDbContextFactory),
         typeof(Cadence.Apps.Notifications.Infrastructure.Persistence.NotificationsDbContextFactory),
-        typeof(Cadence.Apps.Org.Infrastructure.Persistence.OrgDbContextFactory),
-        typeof(Cadence.Apps.Payments.Infrastructure.Persistence.PaymentsDbContextFactory),
-        typeof(Cadence.Apps.Quality.Infrastructure.Persistence.QualityDbContextFactory),
-        typeof(Cadence.Apps.Safety.Infrastructure.Persistence.SafetyDbContextFactory),
-        typeof(Cadence.Apps.Tickets.Infrastructure.Persistence.TicketsDbContextFactory),
-    ];
+
 }
