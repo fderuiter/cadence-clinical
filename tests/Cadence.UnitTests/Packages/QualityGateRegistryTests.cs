@@ -138,6 +138,12 @@ public sealed class QualityGateRegistryTests : IDisposable
             Write(".github/CODEOWNERS", "* @fderuiter\n/nonexistent/path/ @fderuiter\n");
             return Context();
         },
+        ["workflow-security"] = () =>
+        {
+            Write(".github/workflows/ci.yml",
+                "name: CI\non: push\npermissions:\n  contents: read\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n");
+            return Context();
+        },
         ["rulesets"] = () =>
         {
             Write(".github/rulesets/main.json", """
@@ -273,7 +279,7 @@ public sealed class QualityGateRegistryTests : IDisposable
     [Fact]
     public void EveryGate_HasAFailingFixture()
     {
-        QualityGates.All.Should().HaveCount(28);
+        QualityGates.All.Should().HaveCount(29);
         Fixtures().Keys.Should().BeEquivalentTo(QualityGates.All.Select(g => g.Name));
         FailsClosedOnly.Keys.Should().BeSubsetOf(QualityGates.All.Select(g => g.Name));
     }

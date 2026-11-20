@@ -873,10 +873,119 @@ public static partial class RulesetService
     }
 
     private static bool IsPushOnlyJob(WorkflowJobInfo job) =>
-        job.IfCondition is not null
-        && job.IfCondition.Contains("github.event_name == 'push'", StringComparison.Ordinal)
-        && !job.IfCondition.Contains("||", StringComparison.Ordinal)
-        && !job.IfCondition.Contains("github.event_name == 'pull_request'", StringComparison.Ordinal);
+        job.IfCondition is not null && RequiresPushEvent(job.IfCondition);
+
+    private static bool RequiresPushEvent(string expression)
+    {
+        string trimmed = UnwrapExpression(expression);
+        if (trimmed.Length == 0)
+        {
+            return false;
+        }
+
+        var orClauses = SplitTopLevelLogical(trimmed, "||");
+        if (orClauses.Count > 1)
+        {
+            return orClauses.All(RequiresPushEvent);
+        }
+
+        var andClauses = SplitTopLevelLogical(trimmed, "&&");
+        if (andClauses.Count > 1)
+        {
+            return andClauses.Any(RequiresPushEvent);
+        }
+
+        string normalized = WhitespaceRegex().Replace(trimmed, " ");
+        return normalized is "github.event_name == 'push'"
+            or "github.event_name == \"push\""
+            or "'push' == github.event_name"
+            or "\"push\" == github.event_name";
+    }
+
+    private static string UnwrapExpression(string expression)
+    {
+        string current = expression.Trim();
+        if (current.StartsWith("${{", StringComparison.Ordinal) && current.EndsWith("}}", StringComparison.Ordinal))
+        {
+            current = current[3..^2].Trim();
+        }
+
+        while (current.Length >= 2 && current[0] == '(' && current[^1] == ')' && HasBalancedOuterParentheses(current))
+        {
+            current = current[1..^1].Trim();
+        }
+
+        return current;
+    }
+
+    private static bool HasBalancedOuterParentheses(string text)
+    {
+        int depth = 0;
+        char quote = '\0';
+        for (int i = 0; i < text.Length; i++)
+        {
+            UpdateQuoteAndDepth(text[i], ref quote, ref depth);
+            if (depth == 0 && i < text.Length - 1)
+            {
+                return false;
+            }
+        }
+
+        return depth == 0 && quote == '\0';
+    }
+
+    private static List<string> SplitTopLevelLogical(string text, string op)
+    {
+        var parts = new List<string>();
+        int depth = 0;
+        char quote = '\0';
+        int start = 0;
+
+        int index = 0;
+        while (index < text.Length)
+        {
+            UpdateQuoteAndDepth(text[index], ref quote, ref depth);
+            if (quote == '\0' && depth == 0 && index + op.Length <= text.Length && text.AsSpan(index, op.Length).SequenceEqual(op))
+            {
+                parts.Add(text[start..index].Trim());
+                index += op.Length;
+                start = index;
+            }
+            else
+            {
+                index++;
+            }
+        }
+
+        parts.Add(text[start..].Trim());
+        return parts;
+    }
+
+    private static void UpdateQuoteAndDepth(char ch, ref char quote, ref int depth)
+    {
+        if (quote != '\0')
+        {
+            if (ch == quote)
+            {
+                quote = '\0';
+            }
+
+            return;
+        }
+
+        if (ch is '\'' or '"')
+        {
+            quote = ch;
+        }
+        else if (ch == '(')
+        {
+            depth++;
+        }
+        else if (ch == ')' && depth > 0)
+        {
+            depth--;
+        }
+    }
 
     private static bool IsAlwaysOnlyCondition(string? condition) =>
         condition is not null && NormalizeCondition(condition) is "always()" or "${{ always() }}";

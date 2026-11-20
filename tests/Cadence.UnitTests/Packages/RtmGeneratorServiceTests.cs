@@ -561,6 +561,76 @@ public sealed class RtmGeneratorServiceTests : IDisposable
         exitCode.Should().Be(1);
     }
 
+    [Fact]
+    public void SyncCompliance_SnapshotWithResultsDir_WritesStampedReportsWithoutReRunningTests()
+    {
+        WriteMinimalRepository();
+        string artifactDir = Path.Combine(_dir, "TestResults", "gxp");
+        Directory.CreateDirectory(artifactDir);
+        WriteDatabaseTrx(
+            Path.Combine(artifactDir, "gxp_dotnet.trx"),
+            ("Sample.FirstTests", "First", "Cadence.IntegrationTests.dll", "Passed"));
+        File.WriteAllText(
+            Path.Combine(artifactDir, "kernel.database.txt"),
+            string.Join("\n",
+                "fixture=kernel",
+                "server_version=18.1",
+                "source=CADENCE_TEST_POSTGRES",
+                "extensions=pgcrypto",
+                "latest_migration=20261001_Initial",
+                "app_role=NOSUPERUSER NOBYPASSRLS"));
+
+        int exitCode = Cadence.ToolingCore.Services.SyncGxPService.SyncCompliance(
+            snapshot: true, repoRoot: _dir, resultsDir: "TestResults/gxp");
+
+        exitCode.Should().Be(0);
+        foreach (var document in new[] { "Requirements_Traceability_Matrix.md", "IQ_OQ_PQ_Execution_Report.md" })
+        {
+            string content = File.ReadAllText(Path.Combine(_dir, "docs", "SDLC", document));
+            GxPSigner.VerifyStamp(content).Should().BeTrue();
+            RtmGeneratorService.IsUnverifiedSnapshot(content).Should().BeFalse();
+            content.Should().Contain("PostgreSQL 18.1 from CADENCE_TEST_POSTGRES");
+        }
+    }
+
+    [Fact]
+    public void SyncCompliance_SnapshotWithResultsDir_FailsWhenDatabaseMetadataFileIsMissing()
+    {
+        WriteMinimalRepository();
+        string artifactDir = Path.Combine(_dir, "TestResults", "gxp");
+        Directory.CreateDirectory(artifactDir);
+        WriteDatabaseTrx(
+            Path.Combine(artifactDir, "gxp_dotnet.trx"),
+            ("Sample.FirstTests", "First", "Cadence.IntegrationTests.dll", "Passed"));
+
+        int exitCode = Cadence.ToolingCore.Services.SyncGxPService.SyncCompliance(
+            snapshot: true, repoRoot: _dir, resultsDir: "TestResults/gxp");
+
+        exitCode.Should().Be(1);
+        File.Exists(Path.Combine(_dir, "docs", "SDLC", "Requirements_Traceability_Matrix.md")).Should().BeFalse();
+    }
+
+    [Fact]
+    public void SyncCompliance_SnapshotWithResultsDir_FailsWhenMandatoryDatabaseTestSkipped()
+    {
+        WriteMinimalRepository();
+        string artifactDir = Path.Combine(_dir, "TestResults", "gxp");
+        Directory.CreateDirectory(artifactDir);
+        WriteDatabaseTrx(
+            Path.Combine(artifactDir, "gxp_dotnet.trx"),
+            ("Sample.FirstTests", "First", "Cadence.UnitTests.dll", "Passed"),
+            ("Cadence.IntegrationTests.Kernel.RlsTests", "IsolatesTenants", "Cadence.IntegrationTests.dll", "NotExecuted"));
+        File.WriteAllText(
+            Path.Combine(artifactDir, "kernel.database.txt"),
+            "fixture=kernel\nserver_version=18.1\nsource=CADENCE_TEST_POSTGRES\n");
+
+        int exitCode = Cadence.ToolingCore.Services.SyncGxPService.SyncCompliance(
+            snapshot: true, repoRoot: _dir, resultsDir: "TestResults/gxp");
+
+        exitCode.Should().Be(1);
+        File.Exists(Path.Combine(_dir, "docs", "SDLC", "Requirements_Traceability_Matrix.md")).Should().BeFalse();
+    }
+
     /// <summary>
     /// Regression for #5324 and #5328: an alias (SRS or Trace ID) used to inherit its parent's tests and show
     /// "Verified via Parent". A parent's evidence no longer qualifies a child with its own acceptance criteria, and a

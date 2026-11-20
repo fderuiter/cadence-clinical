@@ -29,10 +29,6 @@ else
     echo "::warning:: detect-secrets not installed (pip install detect-secrets==1.5.0); secret scan skipped."
 fi
 
-if command -v python3 >/dev/null 2>&1 && [ -f "scripts/check-action-pinning.py" ]; then
-    python3 scripts/check-action-pinning.py
-fi
-
 if command -v pnpm >/dev/null 2>&1; then
     # A pnpm that cannot start is not a formatting failure (#5331).
     if ! pnpm --version >/dev/null 2>&1; then

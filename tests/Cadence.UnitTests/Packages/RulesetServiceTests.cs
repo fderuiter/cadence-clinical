@@ -457,8 +457,13 @@ public sealed class RulesetServiceTests : IDisposable
               release-and-archive:
                 name: Call Production Pipeline
                 needs: [compliance]
-                if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+                if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/tags/v'))
                 uses: ./.github/workflows/production-pipeline.yml
+              deploy-docs:
+                name: Call Deploy Docs
+                needs: [compliance]
+                if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+                uses: ./.github/workflows/deploy-docs.yml
             """);
     }
 
