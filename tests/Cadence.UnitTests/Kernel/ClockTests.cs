@@ -25,6 +25,8 @@ public class ClockTests
         "P:System.DateTime.UtcNow",
         "P:System.DateTimeOffset.Now",
         "P:System.DateTimeOffset.UtcNow",
+        "P:System.TimeProvider.System",
+        "M:System.TimeProvider.GetUtcNow",
     ];
 
     /// <summary>
@@ -36,6 +38,7 @@ public class ClockTests
     {
         // Arrange
         IClock clock = SystemClock.Instance;
+#pragma warning disable RS0030 // SystemClock's unit test brackets UtcNow against the underlying TimeProvider.System reference.
         var before = TimeProvider.System.GetUtcNow();
 
         // Act
@@ -43,6 +46,7 @@ public class ClockTests
 
         // Assert
         var after = TimeProvider.System.GetUtcNow();
+#pragma warning restore RS0030
         now.Offset.Should().Be(TimeSpan.Zero);
         now.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
     }
@@ -111,7 +115,7 @@ public class ClockTests
     }
 
     /// <summary>
-    /// Validates that <c>BannedSymbols.txt</c> bans all four wall-clock properties with doc-comment IDs
+    /// Validates that <c>BannedSymbols.txt</c> bans wall-clock and <see cref="TimeProvider"/> members with doc-comment IDs
     /// that resolve to real members, and that the kernel build opts into the banned-API analyzer.
     /// </summary>
     [Fact(DisplayName = "BannedSymbols_BanWallClock_AndKernelIsWired")]
@@ -135,8 +139,14 @@ public class ClockTests
         {
             var lastDot = id.LastIndexOf('.');
             var type = Type.GetType(id[2..lastDot], throwOnError: true)!;
-            type.GetProperty(id[(lastDot + 1)..], BindingFlags.Public | BindingFlags.Static)
-                .Should().NotBeNull($"{id} must name a real static property");
+            var memberName = id[(lastDot + 1)..];
+            MemberInfo? member = id[0] switch
+            {
+                'P' => type.GetProperty(memberName, BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance),
+                'M' => type.GetMethod(memberName, BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance, Type.EmptyTypes),
+                _ => throw new InvalidOperationException($"Unexpected doc-comment prefix in {id}."),
+            };
+            member.Should().NotBeNull($"{id} must name a real public member");
         }
 
         rootProps.Should().Contain("Microsoft.CodeAnalysis.BannedApiAnalyzers")
