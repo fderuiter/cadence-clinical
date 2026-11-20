@@ -56,6 +56,12 @@ public static class SyncGxPService
                 requireRecordedEvidence: true);
         }
 
+        if (resultsDir is not null && string.IsNullOrWhiteSpace(resultsDir))
+        {
+            Console.WriteLine("[ERROR] --results-dir requires a non-empty directory path.");
+            return 1;
+        }
+
         // Step 1: Tests
         Console.WriteLine("\n============================================================");
         Console.WriteLine("STEP 1 / 3 — Running test suite");
@@ -63,6 +69,7 @@ public static class SyncGxPService
 
         string relativeOrFullResultsDir = string.IsNullOrWhiteSpace(resultsDir) ? RtmGeneratorService.DefaultResultsDir : resultsDir;
         string resolvedResultsDir = Path.GetFullPath(relativeOrFullResultsDir, repoRoot);
+        bool writeToSdlc = snapshot || GxpSnapshotPolicy.IsSnapshotMode();
         int testExitCode = 0;
 
         if (draft)
@@ -71,7 +78,17 @@ public static class SyncGxPService
         }
         else if (!string.IsNullOrWhiteSpace(resultsDir))
         {
+            if (!Directory.Exists(resolvedResultsDir))
+            {
+                Console.WriteLine($"[ERROR] Test results directory not found: {resolvedResultsDir}");
+                return 1;
+            }
+
             Console.WriteLine($"Using existing test results and database evidence from {resultsDir}.");
+            if (writeToSdlc && !VerifyDatabaseEvidence(resolvedResultsDir, relativeOrFullResultsDir, repoRoot))
+            {
+                return 1;
+            }
         }
         else
         {
@@ -99,6 +116,10 @@ public static class SyncGxPService
             {
                 Console.WriteLine("\n[ERROR] Test suite execution failed. The documents are still generated so the failures are visible, but nothing is staged.");
             }
+            else if (writeToSdlc && !VerifyDatabaseEvidence(resolvedResultsDir, relativeOrFullResultsDir, repoRoot))
+            {
+                return 1;
+            }
         }
 
         // Step 2: Generate
@@ -106,7 +127,6 @@ public static class SyncGxPService
         Console.WriteLine("STEP 2 / 3 — Generating GxP compliance docs");
         Console.WriteLine("============================================================");
 
-        bool writeToSdlc = snapshot || GxpSnapshotPolicy.IsSnapshotMode();
         string outputDir = writeToSdlc ? "docs/SDLC" : GxpSnapshotPolicy.PreviewDir;
         var evidence = RtmEvidenceContext.Capture(repoRoot, command, SystemClock.Instance);
         int rtmRes = RtmGeneratorService.GenerateRtm(
@@ -121,22 +141,10 @@ public static class SyncGxPService
             requireCurrentSnapshot: writeToSdlc, requireRecordedEvidence: true);
         if (validation != 0) return validation;
 
-        // A run that skipped database tests never exercised them (#5324, #5325): the documents show the skips, but
-        // they are not evidence.
-        IReadOnlyList<SkippedDatabaseTest> skipped = draft ? [] : DatabaseTestEvidence.FindSkipped(resolvedResultsDir);
-        if (skipped.Count > 0)
+        // A run that skipped database tests or recorded no PostgreSQL fixture metadata never exercised them (#5324, #5325):
+        // the preview documents show the skips, but they are not evidence.
+        if (!draft && !VerifyDatabaseEvidence(resolvedResultsDir, relativeOrFullResultsDir, repoRoot))
         {
-            Console.WriteLine($"\n[ERROR] {skipped.Count} database test(s) did not execute. Set CADENCE_TEST_POSTGRES=<connection string> or CADENCE_TEST_DOCKER=1 (docs/TESTING.md) and run again:");
-            foreach (var test in skipped.Take(20))
-            {
-                Console.WriteLine($"  {test.FullName}: {test.Reason}");
-            }
-
-            if (skipped.Count > 20)
-            {
-                Console.WriteLine($"  ... and {skipped.Count - 20} more");
-            }
-
             return 1;
         }
 
@@ -151,15 +159,22 @@ public static class SyncGxPService
             return 0;
         }
 
-        var psiGit = new ProcessStartInfo("git") { WorkingDirectory = repoRoot, UseShellExecute = false };
-        foreach (string arg in new[] { "add", "--" }.Concat(SnapshotPaths))
+        string[] existingSnapshotPaths = [.. SnapshotPaths.Where(p => File.Exists(Path.Combine(repoRoot, p)) || Directory.Exists(Path.Combine(repoRoot, p)))];
+        if (Directory.Exists(Path.Combine(repoRoot, ".git")) && existingSnapshotPaths.Length > 0)
         {
-            psiGit.ArgumentList.Add(arg);
-        }
+            var psiGit = new ProcessStartInfo("git") { WorkingDirectory = repoRoot, UseShellExecute = false };
+            foreach (string arg in new[] { "add", "--" }.Concat(existingSnapshotPaths))
+            {
+                psiGit.ArgumentList.Add(arg);
+            }
 
-        using (var pGit = Process.Start(psiGit))
-        {
+            using var pGit = Process.Start(psiGit);
             pGit?.WaitForExit();
+            if ((pGit?.ExitCode ?? 1) != 0)
+            {
+                Console.WriteLine("[ERROR] Failed to stage GxP snapshot files with git add.");
+                return 1;
+            }
         }
 
         Console.WriteLine("✔ Files staged.");
@@ -175,6 +190,12 @@ public static class SyncGxPService
             psiCommit.Environment[GxpSnapshotPolicy.SnapshotEnvironmentVariable] = "1";
             using var pCommit = Process.Start(psiCommit);
             pCommit?.WaitForExit();
+            if ((pCommit?.ExitCode ?? 1) != 0)
+            {
+                Console.WriteLine("[ERROR] Failed to commit GxP snapshot.");
+                return 1;
+            }
+
             Console.WriteLine("✔ Committed.");
         }
         else
@@ -186,6 +207,34 @@ public static class SyncGxPService
         Console.WriteLine("✔ GxP snapshot complete.");
         Console.WriteLine("============================================================");
         return 0;
+    }
+
+    private static bool VerifyDatabaseEvidence(string resolvedResultsDir, string displayResultsDir, string repoRoot)
+    {
+        IReadOnlyList<SkippedDatabaseTest> skipped = DatabaseTestEvidence.FindSkipped(resolvedResultsDir, repoRoot);
+        if (skipped.Count > 0)
+        {
+            Console.WriteLine($"\n[ERROR] {skipped.Count} database test(s) did not execute. Set CADENCE_TEST_POSTGRES=<connection string> or CADENCE_TEST_DOCKER=1 (docs/TESTING.md) and run again:");
+            foreach (var test in skipped.Take(20))
+            {
+                Console.WriteLine($"  {test.FullName}: {test.Reason}");
+            }
+
+            if (skipped.Count > 20)
+            {
+                Console.WriteLine($"  ... and {skipped.Count - 20} more");
+            }
+
+            return false;
+        }
+
+        if (!DatabaseTestEvidence.HasRecordedEnvironment(resolvedResultsDir))
+        {
+            Console.WriteLine($"\n[ERROR] No PostgreSQL fixture evidence (*.database.txt) found under {displayResultsDir}. Ensure PostgreSQL 18 tests executed with {DatabaseTestEvidence.DatabaseAssemblies.Count} database assemblies and CADENCE_TEST_EVIDENCE_DIR set.");
+            return false;
+        }
+
+        return true;
     }
 
     private static string FindRepoRoot()

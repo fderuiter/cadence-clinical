@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 
 using Microsoft.AspNetCore.Builder;
@@ -69,7 +70,7 @@ public static partial class SignatureTokenEndpoints
         HttpContext httpContext,
         ICredentialVerifier credentials,
         IOptions<GatewaySigningOptions> signing,
-        TimeProvider timeProvider,
+        IClock clock,
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
@@ -113,7 +114,7 @@ public static partial class SignatureTokenEndpoints
 
         string token = SigTokenIssuer.Issue(
             new SigTokenGrant(subject, username, roles, request.Action!, request.SemanticAction!, NullIfBlank(request.BatchId)),
-            timeProvider.GetUtcNow(),
+            clock.UtcNow,
             signing.Value.GetSecretBytes());
         logger.LogInformation("E-signature token issued to {Subject} for {SemanticAction} on {Action}.", subject, request.SemanticAction, request.Action);
 

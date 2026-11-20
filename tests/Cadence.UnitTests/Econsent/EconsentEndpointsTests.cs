@@ -13,6 +13,7 @@ using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
 using Cadence.Testing;
 using Cadence.Testing.Security;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -118,11 +119,12 @@ public sealed class EconsentEndpointsTests : IDisposable
         string expectedErrorKey)
     {
         using var context = CreateContext();
+        var clock = new FakeClock();
         string? livenessToken = null;
         if (expectedErrorKey != "liveness_token")
         {
             string tokenSubject = string.IsNullOrWhiteSpace(subjectPseudonym) ? "SUBJ-1" : subjectPseudonym;
-            livenessToken = BiometricLivenessTokenService.IssueToken(tokenSubject, 0.95m, true);
+            livenessToken = BiometricLivenessTokenService.IssueToken(tokenSubject, 0.95m, true, now: clock.UtcNow);
         }
 
         var request = new CaptureConsentRequest(
@@ -138,10 +140,10 @@ public sealed class EconsentEndpointsTests : IDisposable
             DigestSha256: digestSha256,
             SignatureData: signatureData,
             LivenessToken: livenessToken,
-            DeviceTimestamp: SystemClock.Instance.UtcNow);
+            DeviceTimestamp: clock.UtcNow);
 
         var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "tpl-001", 1, request, context, Caller(), TimeProvider.System, TestContext.Current.CancellationToken);
+            "tpl-001", 1, request, context, Caller(), clock, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ValidationProblem>();
         var valProblem = (ValidationProblem)result;
@@ -156,9 +158,10 @@ public sealed class EconsentEndpointsTests : IDisposable
     public async Task ProcessCaptureConsentAsync_SpecialCharactersInSignerNameAndReason_SerializesValidJsonManifest()
     {
         using var context = CreateContext();
+        var clock = new FakeClock();
         string signerName = "Jane \"The Doctor\" O'Connor\tSpecialist";
         string meaning = "Reason with \"quotes\", newlines:\nLine 2\ttab and \\backslash.";
-        string livenessToken = BiometricLivenessTokenService.IssueToken("SUBJ-999", 0.98m, true);
+        string livenessToken = BiometricLivenessTokenService.IssueToken("SUBJ-999", 0.98m, true, now: clock.UtcNow);
 
         var request = new CaptureConsentRequest(
             SubjectPseudonym: "SUBJ-999",
@@ -170,13 +173,13 @@ public sealed class EconsentEndpointsTests : IDisposable
             Meaning: meaning,
             SigningReason: null,
             ProtocolVersion: "v2.0",
-            DigestSha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            DigestSha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
             SignatureData: "SIG_BINDING_DATA_001",
             LivenessToken: livenessToken,
-            DeviceTimestamp: SystemClock.Instance.UtcNow);
+            DeviceTimestamp: clock.UtcNow);
 
         var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "tpl-001", 2, request, context, Caller(), TimeProvider.System, TestContext.Current.CancellationToken);
+            "tpl-001", 2, request, context, Caller(), clock, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<Ok<CaptureConsentResponse>>();
 
@@ -191,14 +194,15 @@ public sealed class EconsentEndpointsTests : IDisposable
         doc.RootElement.GetProperty("signer_name").GetString().Should().Be(signerName);
         doc.RootElement.GetProperty("signer_role").GetString().Should().Be("Subject");
         doc.RootElement.GetProperty("meaning").GetString().Should().Be(meaning);
-        doc.RootElement.GetProperty("digest").GetString().Should().Be("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+        doc.RootElement.GetProperty("digest").GetString().Should().Be("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"); // pragma: allowlist secret
     }
 
     [Fact]
     public async Task ProcessCaptureConsentAsync_ValidRequest_PersistsConsentAndSignatureRecords()
     {
         using var context = CreateContext();
-        string livenessToken = BiometricLivenessTokenService.IssueToken("SUBJ-123", 0.98m, true);
+        var clock = new FakeClock();
+        string livenessToken = BiometricLivenessTokenService.IssueToken("SUBJ-123", 0.98m, true, now: clock.UtcNow);
         var request = new CaptureConsentRequest(
             SubjectPseudonym: "SUBJ-123",
             StudyId: "STUDY-101",
@@ -209,13 +213,13 @@ public sealed class EconsentEndpointsTests : IDisposable
             Meaning: "I agree to participate",
             SigningReason: null,
             ProtocolVersion: "v1.0",
-            DigestSha256: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289",
+            DigestSha256: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
             SignatureData: "DATA_BINDING_V1_SUBJ-123",
             LivenessToken: livenessToken,
-            DeviceTimestamp: SystemClock.Instance.UtcNow);
+            DeviceTimestamp: clock.UtcNow);
 
         var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "tpl-001", 1, request, context, Caller(), TimeProvider.System, TestContext.Current.CancellationToken);
+            "tpl-001", 1, request, context, Caller(), clock, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<Ok<CaptureConsentResponse>>();
         var okResult = (Ok<CaptureConsentResponse>)result;
@@ -240,7 +244,8 @@ public sealed class EconsentEndpointsTests : IDisposable
     public async Task ProcessCaptureConsentAsync_ExpiredLivenessToken_ReturnsBadRequestValidationErrors()
     {
         using var context = CreateContext();
-        var past = TimeProvider.System.GetUtcNow().AddMinutes(-30);
+        var clock = new FakeClock();
+        var past = clock.UtcNow.AddMinutes(-30);
         string expiredToken = BiometricLivenessTokenService.IssueToken("SUBJ-EXP", 0.95m, true, now: past);
 
         var request = new CaptureConsentRequest(
@@ -253,13 +258,13 @@ public sealed class EconsentEndpointsTests : IDisposable
             Meaning: "I agree to participate",
             SigningReason: null,
             ProtocolVersion: "v1.0",
-            DigestSha256: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289",
+            DigestSha256: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
             SignatureData: "DATA_BINDING_V1_SUBJ-EXP",
             LivenessToken: expiredToken,
-            DeviceTimestamp: SystemClock.Instance.UtcNow);
+            DeviceTimestamp: clock.UtcNow);
 
         var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "tpl-001", 1, request, context, Caller(), TimeProvider.System, TestContext.Current.CancellationToken);
+            "tpl-001", 1, request, context, Caller(), clock, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ValidationProblem>();
         var valProblem = (ValidationProblem)result;
@@ -282,7 +287,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             Channels: new[] { "SMS", "Mobile Push", "Email" });
 
         var result = await EconsentEndpoints.ProcessPublishTemplateAsync(
-            "tpl-reconsent-01", 1, request, context, publishEndpoint, Caller(), TimeProvider.System, TestContext.Current.CancellationToken);
+            "tpl-reconsent-01", 1, request, context, publishEndpoint, Caller(), new FakeClock(), TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<Ok<PublishTemplateResponse>>();
         var okResult = (Ok<PublishTemplateResponse>)result;
@@ -321,7 +326,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             Channels: null);
 
         var result = await EconsentEndpoints.ProcessPublishTemplateAsync(
-            "tpl-minor-01", 1, request, context, publishEndpoint, Caller(), TimeProvider.System, TestContext.Current.CancellationToken);
+            "tpl-minor-01", 1, request, context, publishEndpoint, Caller(), new FakeClock(), TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<Ok<PublishTemplateResponse>>();
         var okResult = (Ok<PublishTemplateResponse>)result;
@@ -342,12 +347,13 @@ public sealed class EconsentEndpointsTests : IDisposable
     public async Task ProcessCaptureConsentAsync_ForAStudyOutsideTheCallersStudies_IsRefusedAndStoresNothing()
     {
         using var context = CreateContext();
-        string livenessToken = BiometricLivenessTokenService.IssueToken("SUBJ-1", 0.95m, true);
+        var clock = new FakeClock();
+        string livenessToken = BiometricLivenessTokenService.IssueToken("SUBJ-1", 0.95m, true, now: clock.UtcNow);
         var request = new CaptureConsentRequest(
-            "SUBJ-1", "STUDY-1", "SITE-1", "Signer", null, "Subject", "I agree", null, "v1.0", "digest123", "sigdata123", livenessToken, SystemClock.Instance.UtcNow);
+            "SUBJ-1", "STUDY-1", "SITE-1", "Signer", null, "Subject", "I agree", null, "v1.0", "digest123", "sigdata123", livenessToken, clock.UtcNow);
 
         var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "tpl-001", 1, request, context, Caller("STUDY-2"), TimeProvider.System, TestContext.Current.CancellationToken);
+            "tpl-001", 1, request, context, Caller("STUDY-2"), clock, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
         (await context.SubjectConsents.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
@@ -363,7 +369,7 @@ public sealed class EconsentEndpointsTests : IDisposable
         var request = new PublishTemplateRequest("STUDY-101", "v2.0", "Change", "Amendment", true, null);
 
         var result = await EconsentEndpoints.ProcessPublishTemplateAsync(
-            "tpl-outside", 1, request, context, publishEndpoint, Caller("STUDY-2"), TimeProvider.System, TestContext.Current.CancellationToken);
+            "tpl-outside", 1, request, context, publishEndpoint, Caller("STUDY-2"), new FakeClock(), TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
         (await context.ConsentTemplates.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);

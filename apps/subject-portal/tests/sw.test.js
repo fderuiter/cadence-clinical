@@ -213,4 +213,107 @@ describe("Subject Portal Service Worker (sw.js)", () => {
     expect(response).toBe(cachedResponse);
     expect(mockCaches.match).toHaveBeenCalledWith(request);
   });
+
+  describe("Single-scope MSW coordination mode (?msw=1)", () => {
+    let importScriptsSpy;
+
+    beforeEach(() => {
+      listeners = {};
+      importScriptsSpy = vi.fn();
+      globalThis.self = {
+        location: {
+          origin: "http://localhost:5174",
+          pathname: "/subject-portal/sw.js",
+          search: "?msw=1",
+        },
+        addEventListener: vi.fn((event, callback) => {
+          listeners[event] = callback;
+        }),
+        skipWaiting: vi.fn(),
+        clients: {
+          claim: vi.fn(),
+        },
+      };
+
+      const runMswSW = new Function(
+        "self",
+        "caches",
+        "Response",
+        "Request",
+        "setTimeout",
+        "clearTimeout",
+        "importScripts",
+        swCode
+      );
+      runMswSW(
+        globalThis.self,
+        globalThis.caches,
+        globalThis.Response,
+        globalThis.Request,
+        setTimeout,
+        clearTimeout,
+        importScriptsSpy
+      );
+    });
+
+    it("loads mockServiceWorker.js via importScripts and pre-caches compiled DEMO_SHELL_ASSETS", async () => {
+      expect(importScriptsSpy).toHaveBeenCalledWith("./mockServiceWorker.js");
+
+      const mockEvent = { waitUntil: vi.fn((p) => p) };
+      await listeners["install"](mockEvent);
+
+      expect(mockCache.addAll).toHaveBeenCalledWith([
+        "/subject-portal/",
+        "/subject-portal/index.html",
+        "/subject-portal/manifest.json",
+      ]);
+    });
+
+    it("preserves msw:* Cache Storage buckets during activate while deleting stale portal caches", async () => {
+      mockCaches.keys.mockResolvedValue([
+        "old-portal-cache",
+        "portal-cache-v1",
+        "msw:active-clients:http://localhost:5174/subject-portal/",
+      ]);
+
+      const mockEvent = { waitUntil: vi.fn((p) => p) };
+      await listeners["activate"](mockEvent);
+
+      expect(mockCaches.delete).toHaveBeenCalledWith("old-portal-cache");
+      expect(mockCaches.delete).not.toHaveBeenCalledWith("portal-cache-v1");
+      expect(mockCaches.delete).not.toHaveBeenCalledWith(
+        "msw:active-clients:http://localhost:5174/subject-portal/"
+      );
+    });
+
+    it("stops immediate propagation on static shell assets and delegates API calls to MSW", async () => {
+      const shellResponse = new globalThis.Response("<html></html>", {
+        status: 200,
+        type: "basic",
+      });
+      globalThis.fetch = vi.fn().mockResolvedValue(shellResponse);
+
+      const staticEvent = {
+        request: new globalThis.Request(
+          "http://localhost:5174/subject-portal/index.html"
+        ),
+        respondWith: vi.fn(),
+        stopImmediatePropagation: vi.fn(),
+      };
+      await listeners["fetch"](staticEvent);
+      expect(staticEvent.respondWith).toHaveBeenCalledTimes(1);
+      expect(staticEvent.stopImmediatePropagation).toHaveBeenCalledTimes(1);
+
+      const apiEvent = {
+        request: new globalThis.Request(
+          "http://localhost:5174/api/v1/interop/assignments?subject_id=subject_001"
+        ),
+        respondWith: vi.fn(),
+        stopImmediatePropagation: vi.fn(),
+      };
+      await listeners["fetch"](apiEvent);
+      expect(apiEvent.respondWith).not.toHaveBeenCalled();
+      expect(apiEvent.stopImmediatePropagation).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -432,6 +432,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-328: Preservation of CDASH Type Definition Pristine State](2026-09-11-preservation-of-cdash-type-definition-pristine-state.md) (2026-09-11)
 - [ADR-2544: Shared Reactive Focus Containment and Global Reduced-Motion Tokens](2026-11-19-shared-reactive-focus-containment-and-reduced-motion-tokens.md) (2026-11-19)
 - [ADR-2545: Centralize Focus Containment Primitives](2026-11-19-centralize-focus-containment-primitives.md) (2026-11-19)
+- [ADR-2546: Isolate Static Demo Builds with Stateful MSW Handlers](2026-11-19-isolate-static-demo-builds-with-stateful-msw-handlers.md) (2026-11-19)
 
 ### 7. DevOps, Tooling & CI/CD
 
@@ -603,3 +604,4 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2815: Bulk Laboratory Reference Range Import & Persistent Audit Store](2026-10-12-bulk-laboratory-reference-range-import-persistent-audit-store.md) (2026-10-12)
 - [ADR-2816: Retire Orphaned Legacy Web Type Schemas](2026-11-19-retire-orphaned-legacy-web-type-schemas.md) (2026-11-19)
 - [ADR-2817: Caller-Bound Participant Self-Service Wallet and Receipt OCR Capabilities](2026-11-19-caller-bound-participant-self-service-wallet-and-receipt-ocr-capabilities.md) (2026-11-19)
+- [ADR-2818: Clinical and Gateway Endpoints Take Time From IClock and Ban TimeProvider](2026-11-20-clinical-and-gateway-endpoints-take-time-from-iclock-and-ban-timeprovider.md) (2026-11-20)

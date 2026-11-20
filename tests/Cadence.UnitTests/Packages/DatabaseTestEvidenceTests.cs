@@ -79,6 +79,69 @@ public sealed class DatabaseTestEvidenceTests : IDisposable
         DatabaseTestEvidence.FindSkipped(Path.Combine(_dir, "missing")).Should().BeEmpty();
     }
 
+    [Fact]
+    public void FindSkipped_WithRepoRoot_ReportsDiscoveredDatabaseTestsMissingFromTrx()
+    {
+        string repoRoot = Path.Combine(_dir, "repo");
+        string integrationDir = Path.Combine(repoRoot, "tests", "Cadence.IntegrationTests", "Kernel");
+        string e2eDir = Path.Combine(repoRoot, "tests", "Cadence.E2ETests", "E2E");
+        string unitDir = Path.Combine(repoRoot, "tests", "Cadence.UnitTests", "Packages");
+        Directory.CreateDirectory(integrationDir);
+        Directory.CreateDirectory(e2eDir);
+        Directory.CreateDirectory(unitDir);
+
+        File.WriteAllText(Path.Combine(integrationDir, "RlsTests.cs"), string.Join("\n",
+            "namespace Cadence.IntegrationTests.Kernel;",
+            "public class RlsTests",
+            "{",
+            "    [Fact]",
+            "    public void Executed() { }",
+            "    [Fact]",
+            "    public void MissingFromTrx() { }",
+            "}",
+            "public class LineageBenchmarkPostgresTests",
+            "{",
+            "    [Fact]",
+            "    public void BenchmarkTenMillionEdgesTraceLatency() { }",
+            "}"));
+        File.WriteAllText(Path.Combine(e2eDir, "FlowTests.cs"), string.Join("\n",
+            "namespace Cadence.E2ETests.E2E;",
+            "public class FlowTests",
+            "{",
+            "    [Fact]",
+            "    public void NeverRan() { }",
+            "}"));
+        File.WriteAllText(Path.Combine(unitDir, "UnitTests.cs"), string.Join("\n",
+            "namespace Cadence.UnitTests.Packages;",
+            "public class UnitTests",
+            "{",
+            "    [Fact]",
+            "    public void UnitNotInTrx() { }",
+            "}"));
+
+        WriteTrx("run.trx",
+            ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Kernel.RlsTests", "Executed", "Passed"));
+
+        var skipped = DatabaseTestEvidence.FindSkipped(_dir, repoRoot);
+
+        skipped.Should().HaveCount(2);
+        skipped[0].FullName.Should().Be("Cadence.E2ETests.E2E.FlowTests.NeverRan");
+        skipped[1].FullName.Should().Be("Cadence.IntegrationTests.Kernel.RlsTests.MissingFromTrx");
+    }
+
+    [Fact]
+    public void HasRecordedEnvironment_RequiresDatabaseFixtureEvidenceWithFixtureAndServerVersion()
+    {
+        DatabaseTestEvidence.HasRecordedEnvironment(_dir).Should().BeFalse();
+
+        string metadataFile = Path.Combine(_dir, "kernel.database.txt");
+        File.WriteAllText(metadataFile, "fixture=kernel\nsource=CADENCE_TEST_POSTGRES\n"); // pragma: allowlist secret
+        DatabaseTestEvidence.HasRecordedEnvironment(_dir).Should().BeFalse();
+
+        File.WriteAllText(metadataFile, "fixture=kernel\nserver_version=18.1\nsource=CADENCE_TEST_POSTGRES\n");
+        DatabaseTestEvidence.HasRecordedEnvironment(_dir).Should().BeTrue();
+    }
+
     private void WriteTrx(string fileName, params (string Assembly, string ClassName, string Method, string Outcome)[] results)
     {
         XNamespace ns = "http://microsoft.com/schemas/VisualStudio/TeamTest/2010";

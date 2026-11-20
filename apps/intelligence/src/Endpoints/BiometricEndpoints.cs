@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 
@@ -63,7 +64,7 @@ public static class BiometricEndpoints
     /// <summary>Processes video frame payloads for anti-spoofing in temporary memory and generates signed liveness tokens.</summary>
     public static async Task<IResult> VerifyLivenessAsync(
         VerifyLivenessRequest request,
-        TimeProvider timeProvider,
+        IClock clock,
         CancellationToken cancellationToken)
     {
         if (request is null || string.IsNullOrWhiteSpace(request.SubjectPseudonym))
@@ -94,7 +95,7 @@ public static class BiometricEndpoints
         }
 
         bool isLive = score >= 0.80m;
-        DateTimeOffset now = timeProvider.GetUtcNow();
+        DateTimeOffset now = clock.UtcNow;
         DateTimeOffset expiresAt = now.AddMinutes(15);
 
         string mode = isFallback ? "coordinator_fallback" : "camera";
