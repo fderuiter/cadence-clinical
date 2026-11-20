@@ -2,347 +2,376 @@
   <aside
     id="canvas-inspector"
     class="inspector"
+    :class="{ 'inspector--collapsed': isCollapsed }"
+    :data-collapsed="isCollapsed ? 'true' : 'false'"
     aria-labelledby="canvas-inspector-title"
   >
-    <template v-if="hasSelection">
-      <header class="inspector-header">
-        <span class="inspector-kind">{{ headerKind }}</span>
-        <h2 id="canvas-inspector-title" class="inspector-title">
-          {{ headerTitle }}
-        </h2>
-        <details v-if="activeNodeRef" class="inspector-ref-details">
-          <summary class="inspector-ref-summary">Record reference</summary>
-          <div class="inspector-ref-row">
-            <code id="canvas-inspector-ref" class="inspector-ref">{{
-              activeNodeRef
-            }}</code>
-            <button
-              id="btn-copy-inspector-ref"
-              type="button"
-              class="btn-copy-ref"
-              @click="copyInspectorRef"
-            >
-              {{ copiedRef ? "Copied" : "Copy" }}
-            </button>
-          </div>
-        </details>
-      </header>
-
-      <div class="verbs" role="toolbar" aria-label="Verbs">
-        <button
-          id="verb-details"
-          type="button"
-          class="verb"
-          :class="{ 'verb-current': currentVerb === 'details' }"
-          :aria-pressed="currentVerb === 'details'"
-          @click="choose('details')"
-        >
-          Details
-        </button>
-        <template v-for="verb in verbs" :key="verb.id">
-          <button
-            v-if="verb.live"
-            :id="`verb-${verb.id}`"
-            type="button"
-            class="verb"
-            :class="{ 'verb-current': currentVerb === verb.id }"
-            :aria-pressed="currentVerb === verb.id"
-            @click="choose(verb.id)"
-          >
-            {{ verb.label }}
-          </button>
-          <button
-            v-else
-            :id="`verb-${verb.id}`"
-            type="button"
-            class="verb"
-            aria-disabled="true"
-            :aria-describedby="shownVerb === verb.id ? 'verb-note' : undefined"
-            @click="shownVerb = verb.id"
-          >
-            {{ verb.label }}
-          </button>
-        </template>
-      </div>
-      <p v-if="shownVerbNote" id="verb-note" class="verb-note" role="status">
-        {{ shownVerbNote }}
-      </p>
-
-      <AssistPanel
-        v-if="currentVerb === 'assist' && kernelRef && aiEnabled"
-        :study-code="studyCode"
-        :node-ref="kernelRef"
-        :prefill="assistPrompt"
-        @act="choose('act')"
-      />
-
-      <KernelActPanel
-        v-else-if="currentVerb === 'act' && kernelRef"
-        :node-ref="kernelRef"
-        @explain="explainCommand"
-      />
-
-      <KernelLineagePanel
-        v-else-if="
-          (currentVerb === 'trace' || currentVerb === 'impact') && kernelRef
-        "
-        :node-ref="kernelRef"
-        :mode="lineageMode"
-      />
-
-      <section
-        v-else-if="currentVerb === 'explain' && kernelRef"
-        id="kernel-explain"
-        class="sdv"
-        aria-labelledby="kernel-explain-title"
+    <div class="inspector-rail">
+      <button
+        id="btn-toggle-inspector"
+        type="button"
+        class="inspector-toggle"
+        :aria-expanded="!isCollapsed"
+        aria-controls="canvas-inspector-body"
+        :aria-label="isCollapsed ? 'Expand inspector' : 'Collapse inspector'"
+        :title="isCollapsed ? 'Expand inspector' : 'Collapse inspector'"
+        @click="toggleCollapsed"
       >
-        <h3 id="kernel-explain-title">
-          {{
-            explained
-              ? `Why: ${formatCommandTitle(explained.command)}`
-              : "Explain"
-          }}
-        </h3>
-        <KernelExplanation
-          v-if="explained"
-          :explanation="explained.decision.explanation"
-        />
-        <p v-else id="kernel-explain-empty" class="inspector-empty">
-          Choose Explain beside an action under Act to see why it is permitted
-          or blocked.
-        </p>
-      </section>
+        <span aria-hidden="true">{{ isCollapsed ? "◂" : "▸" }}</span>
+      </button>
+    </div>
 
-      <section
-        v-else-if="currentVerb === 'simulate' && kernelRef"
-        id="kernel-simulate"
-        class="sdv"
-        aria-labelledby="kernel-simulate-title"
-      >
-        <h3 id="kernel-simulate-title">Schedule gap check</h3>
-        <p v-if="simulationLoading" class="inspector-empty">
-          Checking schedule matrix and visit windows…
-        </p>
-        <div v-else-if="simulationError" class="inspector-empty" role="alert">
-          <p class="sdv-status">Schedule check couldn't be completed.</p>
-          <SupportDetails :detail="simulationError" />
-        </div>
-        <div v-else-if="simulationResult" class="simulation-details">
-          <h4 style="margin-top: 4px; margin-bottom: 6px">Schedule findings</h4>
-          <div
-            v-if="
-              simulationResult.matrix_gaps &&
-              simulationResult.matrix_gaps.length
-            "
-            class="gaps-list"
-          >
-            <div
-              v-for="(gap, idx) in simulationResult.matrix_gaps"
-              :key="idx"
-              class="gap-card reasoning-modal-s-2"
-            >
-              <div style="font-weight: 600; font-size: 0.85rem">
-                <span class="gap-badge">{{ gap.severity }}</span>
-                {{ formatCommandTitle(String(gap.kind || "Finding")) }}
-                <span v-if="gap.json_pointer_path">
-                  ({{ formatFieldPath(String(gap.json_pointer_path)) }})
-                </span>
-              </div>
-              <div style="font-size: 0.8rem; margin-top: 2px">
-                {{ gap.description }}
-              </div>
-              <div
-                v-if="gap.recommendation"
-                style="font-size: 0.75rem; color: #555; margin-top: 2px"
+    <div
+      id="canvas-inspector-body"
+      v-show="!isCollapsed"
+      class="inspector-body"
+    >
+      <template v-if="hasSelection">
+        <header class="inspector-header">
+          <span class="inspector-kind">{{ headerKind }}</span>
+          <h2 id="canvas-inspector-title" class="inspector-title">
+            {{ headerTitle }}
+          </h2>
+          <details v-if="activeNodeRef" class="inspector-ref-details">
+            <summary class="inspector-ref-summary">Record reference</summary>
+            <div class="inspector-ref-row">
+              <code id="canvas-inspector-ref" class="inspector-ref">{{
+                activeNodeRef
+              }}</code>
+              <button
+                id="btn-copy-inspector-ref"
+                type="button"
+                class="btn-copy-ref"
+                @click="copyInspectorRef"
               >
-                <em>Recommended next step: {{ gap.recommendation }}</em>
-              </div>
-            </div>
-          </div>
-          <p v-else style="font-size: 0.85rem; color: #28a745">
-            ✓ No schedule matrix gaps detected.
-          </p>
-          <details
-            v-if="simulationResult.input_hash || simulationResult.result_hash"
-            class="inspector-ref-details"
-          >
-            <summary class="inspector-ref-summary">
-              Verification checksums
-            </summary>
-            <div class="reasoning-modal-s-1">
-              <div v-if="simulationResult.input_hash">
-                <strong>Input digest:</strong>
-                {{ simulationResult.input_hash }}
-              </div>
-              <div v-if="simulationResult.result_hash">
-                <strong>Result digest:</strong>
-                {{ simulationResult.result_hash }}
-              </div>
+                {{ copiedRef ? "Copied" : "Copy" }}
+              </button>
             </div>
           </details>
+        </header>
+
+        <div class="verbs" role="toolbar" aria-label="Verbs">
+          <button
+            id="verb-details"
+            type="button"
+            class="verb"
+            :class="{ 'verb-current': currentVerb === 'details' }"
+            :aria-pressed="currentVerb === 'details'"
+            @click="choose('details')"
+          >
+            Details
+          </button>
+          <template v-for="verb in verbs" :key="verb.id">
+            <button
+              v-if="verb.live"
+              :id="`verb-${verb.id}`"
+              type="button"
+              class="verb"
+              :class="{ 'verb-current': currentVerb === verb.id }"
+              :aria-pressed="currentVerb === verb.id"
+              @click="choose(verb.id)"
+            >
+              {{ verb.label }}
+            </button>
+            <button
+              v-else
+              :id="`verb-${verb.id}`"
+              type="button"
+              class="verb"
+              aria-disabled="true"
+              :aria-describedby="
+                shownVerb === verb.id ? 'verb-note' : undefined
+              "
+              @click="shownVerb = verb.id"
+            >
+              {{ verb.label }}
+            </button>
+          </template>
         </div>
-      </section>
+        <p v-if="shownVerbNote" id="verb-note" class="verb-note" role="status">
+          {{ shownVerbNote }}
+        </p>
 
-      <dl v-else-if="protocolVersion" id="inspector-version" class="details">
-        <dt>Status</dt>
-        <dd id="inspector-version-status">
-          {{ protocolVersion.status }}
-        </dd>
-        <dt>Amends</dt>
-        <dd>
-          <NodeRefChip
-            v-if="protocolVersion.parent_version"
-            :node-ref="protocolVersion.parent_version"
-          />
-          <template v-else>Nothing: this is the study's first version</template>
-        </dd>
-        <dt>Amendment intent</dt>
-        <dd>{{ protocolVersion.amendment_intent || "None recorded" }}</dd>
-        <template v-if="protocolVersion.approval_attestation">
-          <dt>Approved by</dt>
-          <dd>
-            <NodeRefChip :node-ref="protocolVersion.approval_attestation" />
-          </dd>
-        </template>
-        <template v-if="protocolVersion.withdrawal_reason">
-          <dt>Withdrawn because</dt>
-          <dd>{{ protocolVersion.withdrawal_reason }}</dd>
-        </template>
-        <dt>Verification</dt>
-        <dd>
-          <details
-            v-if="protocolVersion.content_hash"
-            class="inspector-ref-details"
-          >
-            <summary class="inspector-ref-summary">Content digest</summary>
-            <code class="inspector-ref">{{
-              protocolVersion.content_hash
-            }}</code>
-          </details>
-          <template v-else>Not sealed yet</template>
-        </dd>
-      </dl>
-
-      <template v-else-if="participant">
-        <dl class="details">
-          <dt>State</dt>
-          <dd id="inspector-state">
-            {{ participantStateLabel(participant.status) }}
-          </dd>
-          <dt>Study</dt>
-          <dd>{{ participant.study_id }}</dd>
-          <dt>Site</dt>
-          <dd id="inspector-site">
-            {{ participant.site_id || "Not assigned" }}
-          </dd>
-          <dt>Protocol version</dt>
-          <dd>{{ participant.active_protocol_version || "Not recorded" }}</dd>
-          <dt>Enrollment number</dt>
-          <dd class="numeric">
-            {{ participant.enrollment_index }}
-          </dd>
-        </dl>
-
-        <ParticipantStateChange
-          v-if="canManageParticipants"
-          :participant="participant"
+        <AssistPanel
+          v-if="currentVerb === 'assist' && kernelRef && aiEnabled"
+          :study-code="studyCode"
+          :node-ref="kernelRef"
+          :prefill="assistPrompt"
+          @act="choose('act')"
         />
 
-        <router-link
-          v-if="recordLocation"
-          id="inspector-open-record"
-          class="inspector-link"
-          :to="recordLocation"
-        >
-          Open participant's data
-        </router-link>
-        <router-link
-          v-if="dataEntryLocation"
-          id="inspector-open-data-entry"
-          class="inspector-link"
-          :to="dataEntryLocation"
-        >
-          Open in data entry
-        </router-link>
-      </template>
+        <KernelActPanel
+          v-else-if="currentVerb === 'act' && kernelRef"
+          :node-ref="kernelRef"
+          @explain="explainCommand"
+        />
 
-      <template v-else-if="genericDisplay">
-        <p
-          v-if="genericNodeLoading"
-          id="inspector-generic-loading"
-          class="inspector-empty"
-          role="status"
+        <KernelLineagePanel
+          v-else-if="
+            (currentVerb === 'trace' || currentVerb === 'impact') && kernelRef
+          "
+          :node-ref="kernelRef"
+          :mode="lineageMode"
+        />
+
+        <section
+          v-else-if="currentVerb === 'explain' && kernelRef"
+          id="kernel-explain"
+          class="sdv"
+          aria-labelledby="kernel-explain-title"
         >
-          Loading record details…
-        </p>
-        <p
-          v-else-if="genericDisplay.masked"
-          id="inspector-generic-masked"
-          class="inspector-empty"
+          <h3 id="kernel-explain-title">
+            {{
+              explained
+                ? `Why: ${formatCommandTitle(explained.command)}`
+                : "Explain"
+            }}
+          </h3>
+          <KernelExplanation
+            v-if="explained"
+            :explanation="explained.decision.explanation"
+          />
+          <p v-else id="kernel-explain-empty" class="inspector-empty">
+            Choose Explain beside an action under Act to see why it is permitted
+            or blocked.
+          </p>
+        </section>
+
+        <section
+          v-else-if="currentVerb === 'simulate' && kernelRef"
+          id="kernel-simulate"
+          class="sdv"
+          aria-labelledby="kernel-simulate-title"
         >
-          Details for this {{ genericDisplay.kindLabel.toLowerCase() }} are
-          hidden ({{ genericDisplay.maskReason }}).
-        </p>
-        <dl v-else id="inspector-generic" class="details">
-          <dt>Record type</dt>
-          <dd id="inspector-generic-kind">{{ genericDisplay.kindLabel }}</dd>
-          <template v-if="genericDisplay.code">
-            <dt>Code</dt>
-            <dd id="inspector-generic-code">{{ genericDisplay.code }}</dd>
+          <h3 id="kernel-simulate-title">Schedule gap check</h3>
+          <p v-if="simulationLoading" class="inspector-empty">
+            Checking schedule matrix and visit windows…
+          </p>
+          <div v-else-if="simulationError" class="inspector-empty" role="alert">
+            <p class="sdv-status">Schedule check couldn't be completed.</p>
+            <SupportDetails :detail="simulationError" />
+          </div>
+          <div v-else-if="simulationResult" class="simulation-details">
+            <h4 style="margin-top: 4px; margin-bottom: 6px">
+              Schedule findings
+            </h4>
+            <div
+              v-if="
+                simulationResult.matrix_gaps &&
+                simulationResult.matrix_gaps.length
+              "
+              class="gaps-list"
+            >
+              <div
+                v-for="(gap, idx) in simulationResult.matrix_gaps"
+                :key="idx"
+                class="gap-card reasoning-modal-s-2"
+              >
+                <div style="font-weight: 600; font-size: 0.85rem">
+                  <span class="gap-badge">{{ gap.severity }}</span>
+                  {{ formatCommandTitle(String(gap.kind || "Finding")) }}
+                  <span v-if="gap.json_pointer_path">
+                    ({{ formatFieldPath(String(gap.json_pointer_path)) }})
+                  </span>
+                </div>
+                <div style="font-size: 0.8rem; margin-top: 2px">
+                  {{ gap.description }}
+                </div>
+                <div
+                  v-if="gap.recommendation"
+                  style="font-size: 0.75rem; color: #555; margin-top: 2px"
+                >
+                  <em>Recommended next step: {{ gap.recommendation }}</em>
+                </div>
+              </div>
+            </div>
+            <p v-else style="font-size: 0.85rem; color: #28a745">
+              ✓ No schedule matrix gaps detected.
+            </p>
+            <details
+              v-if="simulationResult.input_hash || simulationResult.result_hash"
+              class="inspector-ref-details"
+            >
+              <summary class="inspector-ref-summary">
+                Verification checksums
+              </summary>
+              <div class="reasoning-modal-s-1">
+                <div v-if="simulationResult.input_hash">
+                  <strong>Input digest:</strong>
+                  {{ simulationResult.input_hash }}
+                </div>
+                <div v-if="simulationResult.result_hash">
+                  <strong>Result digest:</strong>
+                  {{ simulationResult.result_hash }}
+                </div>
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <dl v-else-if="protocolVersion" id="inspector-version" class="details">
+          <dt>Status</dt>
+          <dd id="inspector-version-status">
+            {{ protocolVersion.status }}
+          </dd>
+          <dt>Amends</dt>
+          <dd>
+            <NodeRefChip
+              v-if="protocolVersion.parent_version"
+              :node-ref="protocolVersion.parent_version"
+            />
+            <template v-else
+              >Nothing: this is the study's first version</template
+            >
+          </dd>
+          <dt>Amendment intent</dt>
+          <dd>{{ protocolVersion.amendment_intent || "None recorded" }}</dd>
+          <template v-if="protocolVersion.approval_attestation">
+            <dt>Approved by</dt>
+            <dd>
+              <NodeRefChip :node-ref="protocolVersion.approval_attestation" />
+            </dd>
           </template>
-          <template
-            v-if="
-              genericDisplay.title &&
-              genericDisplay.title !== genericDisplay.code
-            "
-          >
-            <dt>Title</dt>
-            <dd id="inspector-generic-title">{{ genericDisplay.title }}</dd>
+          <template v-if="protocolVersion.withdrawal_reason">
+            <dt>Withdrawn because</dt>
+            <dd>{{ protocolVersion.withdrawal_reason }}</dd>
           </template>
-          <template v-if="genericDisplay.status">
-            <dt>Status</dt>
-            <dd id="inspector-generic-status">{{ genericDisplay.status }}</dd>
-          </template>
-          <dt>Study</dt>
-          <dd>{{ studyCode }}</dd>
+          <dt>Verification</dt>
+          <dd>
+            <details
+              v-if="protocolVersion.content_hash"
+              class="inspector-ref-details"
+            >
+              <summary class="inspector-ref-summary">Content digest</summary>
+              <code class="inspector-ref">{{
+                protocolVersion.content_hash
+              }}</code>
+            </details>
+            <template v-else>Not sealed yet</template>
+          </dd>
         </dl>
+
+        <template v-else-if="participant">
+          <dl class="details">
+            <dt>State</dt>
+            <dd id="inspector-state">
+              {{ participantStateLabel(participant.status) }}
+            </dd>
+            <dt>Study</dt>
+            <dd>{{ participant.study_id }}</dd>
+            <dt>Site</dt>
+            <dd id="inspector-site">
+              {{ participant.site_id || "Not assigned" }}
+            </dd>
+            <dt>Protocol version</dt>
+            <dd>{{ participant.active_protocol_version || "Not recorded" }}</dd>
+            <dt>Enrollment number</dt>
+            <dd class="numeric">
+              {{ participant.enrollment_index }}
+            </dd>
+          </dl>
+
+          <ParticipantStateChange
+            v-if="canManageParticipants"
+            :participant="participant"
+          />
+
+          <router-link
+            v-if="recordLocation"
+            id="inspector-open-record"
+            class="inspector-link"
+            :to="recordLocation"
+          >
+            Open participant's data
+          </router-link>
+          <router-link
+            v-if="dataEntryLocation"
+            id="inspector-open-data-entry"
+            class="inspector-link"
+            :to="dataEntryLocation"
+          >
+            Open in data entry
+          </router-link>
+        </template>
+
+        <template v-else-if="genericDisplay">
+          <p
+            v-if="genericNodeLoading"
+            id="inspector-generic-loading"
+            class="inspector-empty"
+            role="status"
+          >
+            Loading record details…
+          </p>
+          <p
+            v-else-if="genericDisplay.masked"
+            id="inspector-generic-masked"
+            class="inspector-empty"
+          >
+            Details for this {{ genericDisplay.kindLabel.toLowerCase() }} are
+            hidden ({{ genericDisplay.maskReason }}).
+          </p>
+          <dl v-else id="inspector-generic" class="details">
+            <dt>Record type</dt>
+            <dd id="inspector-generic-kind">{{ genericDisplay.kindLabel }}</dd>
+            <template v-if="genericDisplay.code">
+              <dt>Code</dt>
+              <dd id="inspector-generic-code">{{ genericDisplay.code }}</dd>
+            </template>
+            <template
+              v-if="
+                genericDisplay.title &&
+                genericDisplay.title !== genericDisplay.code
+              "
+            >
+              <dt>Title</dt>
+              <dd id="inspector-generic-title">{{ genericDisplay.title }}</dd>
+            </template>
+            <template v-if="genericDisplay.status">
+              <dt>Status</dt>
+              <dd id="inspector-generic-status">{{ genericDisplay.status }}</dd>
+            </template>
+            <dt>Study</dt>
+            <dd>{{ studyCode }}</dd>
+          </dl>
+        </template>
       </template>
-    </template>
 
-    <template v-else-if="protocolVersionError">
-      <h2 id="canvas-inspector-title" class="inspector-title">
-        Protocol version
-      </h2>
-      <div id="inspector-version-error" class="inspector-empty" role="alert">
-        <p class="sdv-status">
-          This protocol version couldn't be loaded. Check that it exists and is
-          visible to your account.
+      <template v-else-if="protocolVersionError">
+        <h2 id="canvas-inspector-title" class="inspector-title">
+          Protocol version
+        </h2>
+        <div id="inspector-version-error" class="inspector-empty" role="alert">
+          <p class="sdv-status">
+            This protocol version couldn't be loaded. Check that it exists and
+            is visible to your account.
+          </p>
+          <SupportDetails :detail="protocolVersionError" />
+        </div>
+      </template>
+
+      <template v-else-if="missing">
+        <h2 id="canvas-inspector-title" class="inspector-title">
+          Participant not loaded
+        </h2>
+        <p class="inspector-empty">
+          This participant isn't among those loaded for {{ studyCode }}. Find it
+          in Participants to see its details.
         </p>
-        <SupportDetails :detail="protocolVersionError" />
-      </div>
-    </template>
+      </template>
 
-    <template v-else-if="missing">
-      <h2 id="canvas-inspector-title" class="inspector-title">
-        Participant not loaded
-      </h2>
-      <p class="inspector-empty">
-        This participant isn't among those loaded for {{ studyCode }}. Find it
-        in Participants to see its details.
-      </p>
-    </template>
-
-    <template v-else>
-      <h2 id="canvas-inspector-title" class="inspector-title">Inspector</h2>
-      <p class="inspector-empty">
-        Select a participant or study record to see its details here.
-      </p>
-      <AssistPanel
-        v-if="assistPrompt && aiEnabled"
-        :study-code="studyCode"
-        :prefill="assistPrompt"
-      />
-    </template>
+      <template v-else>
+        <h2 id="canvas-inspector-title" class="inspector-title">Inspector</h2>
+        <p class="inspector-empty">
+          Select a participant or study record to see its details here.
+        </p>
+        <AssistPanel
+          v-if="assistPrompt && aiEnabled"
+          :study-code="studyCode"
+          :prefill="assistPrompt"
+        />
+      </template>
+    </div>
   </aside>
 </template>
 
@@ -404,6 +433,10 @@ const props = defineProps<{
   assistPrompt?: string;
 }>();
 
+const emit = defineEmits<{
+  (e: "update:collapsed", collapsed: boolean): void;
+}>();
+
 const { enabled: aiEnabled } = useAiAssistance();
 
 const genericDisplay = computed(() => {
@@ -430,6 +463,7 @@ const headerTitle = computed(() => {
 const activeNodeRef = computed(() => {
   if (props.participant) return props.nodeRef;
   if (props.protocolVersion?.ref) return props.protocolVersion.ref;
+  if (props.genericNode?.ref) return props.genericNode.ref;
   return genericDisplay.value?.ref ?? "";
 });
 
@@ -446,6 +480,30 @@ async function copyInspectorRef() {
     copiedRef.value = false;
   }
 }
+
+const hasActiveContent = computed(() =>
+  Boolean(
+    hasSelection.value ||
+    props.protocolVersionError ||
+    props.missing ||
+    (props.assistPrompt && aiEnabled.value)
+  )
+);
+
+const manualCollapsed = ref<boolean | null>(null);
+const isCollapsed = computed(
+  () => manualCollapsed.value ?? !hasActiveContent.value
+);
+
+function toggleCollapsed() {
+  manualCollapsed.value = !isCollapsed.value;
+}
+
+function expand() {
+  manualCollapsed.value = false;
+}
+
+defineExpose({ expand });
 
 const NO_RECORD_REF =
   "this selection doesn't have a linked study reference yet.";
@@ -599,6 +657,30 @@ watch(
   { immediate: true }
 );
 
+watch(
+  () => [
+    props.nodeRef,
+    props.participant?.id ?? "",
+    props.protocolVersion?.ref ?? "",
+    props.protocolVersionError ?? "",
+    props.genericNodeRef ?? "",
+    props.missing,
+    props.assistPrompt ?? "",
+    aiEnabled.value,
+  ],
+  () => {
+    manualCollapsed.value = null;
+  }
+);
+
+watch(
+  isCollapsed,
+  (collapsed) => {
+    emit("update:collapsed", collapsed);
+  },
+  { immediate: true }
+);
+
 // Turning AI assistance off closes Assist.
 watch(aiEnabled, (on) => {
   if (!on && currentVerb.value === "assist") choose("details");
@@ -624,8 +706,51 @@ watch(aiEnabled, (on) => {
 .inspector {
   display: flex;
   flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px 16px;
+  min-width: 0;
+}
+
+.inspector.inspector--collapsed {
+  padding: 8px 6px;
+  align-items: center;
+}
+
+.inspector-rail {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.inspector.inspector--collapsed .inspector-rail {
+  justify-content: center;
+}
+
+.inspector-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--neutral-dark);
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.inspector-toggle:hover {
+  background: var(--neutral-light, #f1f5f9);
+  color: var(--primary);
+}
+
+.inspector-body {
+  display: flex;
+  flex-direction: column;
   gap: 14px;
-  padding: 16px;
   min-width: 0;
 }
 

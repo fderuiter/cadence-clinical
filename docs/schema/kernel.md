@@ -40,6 +40,7 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.outbox_messages`](#kerneloutbox_messages) | `OutboxMessageRecord` | 10 |
 | [`kernel.participants`](#kernelparticipants) | `Participant` | 6 |
 | [`kernel.people`](#kernelpeople) | `Person` | 6 |
+| [`kernel.product_entitlements`](#kernelproduct_entitlements) | `ProductEntitlement` | 10 |
 | [`kernel.proposals`](#kernelproposals) | `Proposal` | 33 |
 | [`kernel.protocol_versions`](#kernelprotocol_versions) | `ProtocolVersion` | 16 |
 | [`kernel.provenance_activities`](#kernelprovenance_activities) | `ProvenanceActivityRecord` | 16 |
@@ -57,6 +58,7 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.studies`](#kernelstudies) | `Study` | 11 |
 | [`kernel.study_sites`](#kernelstudy_sites) | `StudySite` | 10 |
 | [`kernel.study_standards_profiles`](#kernelstudy_standards_profiles) | `StudyStandardsProfile` | 11 |
+| [`kernel.subscriptions`](#kernelsubscriptions) | `Subscription` | 11 |
 | [`kernel.tenant_memberships`](#kerneltenant_memberships) | `TenantMembership` | 8 |
 | [`kernel.tenants`](#kerneltenants) | `Tenant` | 9 |
 | [`kernel.validation_detections`](#kernelvalidation_detections) | `ValidationDetectionRecord` | 17 |
@@ -1004,6 +1006,34 @@ Entity: `Person`
 | `reason_for_change` | `character varying(1000)` | no |  |  |
 | `version_index` | `bigint` | no |  |  |
 
+## kernel.product_entitlements
+
+Entity: `ProductEntitlement`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `family` | `character varying(32)` | no |  |  |
+| `granted_at` | `timestamp with time zone` | no |  |  |
+| `is_enabled` | `boolean` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `subscription_id` | `uuid` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_product_entitlements_subscriptions_tenant_id_subscription_id`: (`tenant_id`, `subscription_id`) references `kernel.subscriptions` (`tenant_id`, `id`), on delete restrict
+- `FK_product_entitlements_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_product_entitlements_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_product_entitlements_tenant_id_family`: unique (`tenant_id`, `family`)
+- `IX_product_entitlements_tenant_id_subscription_id`: (`tenant_id`, `subscription_id`)
+
 ## kernel.proposals
 
 Entity: `Proposal`
@@ -1525,6 +1555,33 @@ Indexes:
 
 - `AK_study_standards_profiles_tenant_id_id`: unique constraint (`tenant_id`, `id`)
 - `IX_study_standards_profiles_tenant_id_study_id`: unique (`tenant_id`, `study_id`)
+
+## kernel.subscriptions
+
+Entity: `Subscription`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `expired_at` | `timestamp with time zone` | yes |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `started_at` | `timestamp with time zone` | no |  |  |
+| `status` | `character varying(32)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `tier` | `character varying(32)` | no |  |  |
+| `trial_ends_at` | `timestamp with time zone` | yes |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_subscriptions_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_subscriptions_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_subscriptions_tenant_id`: unique (`tenant_id`)
 
 ## kernel.tenant_memberships
 

@@ -82,7 +82,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
+import { getActivePinia } from "pinia";
 import { useFocusTrap } from "ui";
 import { kernelApi, type KernelSearchHit } from "../../api/kernelApi";
 import { STAGES, participantStateLabel } from "../../canvas/lifecycle";
@@ -92,6 +93,7 @@ import type {
   WorkspacePaletteOption,
 } from "../../canvas/palette";
 import { useAiAssistance } from "../../ai/aiAssistance";
+import { useStudyCanvasStore } from "../../stores/studyCanvas";
 
 /**
  * The unified global ⌘K command palette (docs/ux/CLINICAL_CANVAS.md §2.5):
@@ -146,8 +148,10 @@ const { enabled: aiEnabled } = useAiAssistance();
 
 const kernelHits = ref<KernelSearchHit[]>([]);
 const kernelNote = ref("");
+const resolvedParticipant = ref<SubjectSummary | null>(null);
 let searchTimer: ReturnType<typeof setTimeout> | undefined;
 let latestSearch = 0;
+let latestParticipantLookup = 0;
 
 async function searchKernel(text: string) {
   const request = ++latestSearch;
@@ -167,19 +171,55 @@ async function searchKernel(text: string) {
   }
 }
 
-watch(query, (value) => {
+watch([query, () => props.studyCode], ([value, study]) => {
   clearTimeout(searchTimer);
   latestSearch++;
+  const lookupRequest = ++latestParticipantLookup;
   const text = value.trim();
   kernelHits.value = [];
+  resolvedParticipant.value = null;
   if (text.length < MIN_SEARCH_LENGTH || text.length > MAX_STUDY_CODE) {
     kernelNote.value = "";
     return;
   }
   searchTimer = setTimeout(() => searchKernel(text), SEARCH_DELAY_MS);
+
+  const activePinia = getActivePinia();
+  const canvasStore = activePinia ? useStudyCanvasStore(activePinia) : null;
+  if (
+    canvasStore &&
+    study &&
+    !/\s/.test(text) &&
+    text !== study &&
+    !props.participants.some(
+      (participant) =>
+        participant.subject_id.toLowerCase() === text.toLowerCase()
+    )
+  ) {
+    void canvasStore.resolveParticipantByCode(text, study).then((matched) => {
+      if (lookupRequest === latestParticipantLookup && matched) {
+        resolvedParticipant.value = matched;
+      }
+    });
+  }
 });
 
-onBeforeUnmount(() => clearTimeout(searchTimer));
+onBeforeUnmount(() => {
+  clearTimeout(searchTimer);
+  latestParticipantLookup++;
+});
+
+const allParticipants = computed<SubjectSummary[]>(() => {
+  const extra = resolvedParticipant.value;
+  if (
+    !extra ||
+    (extra.study_id && extra.study_id !== props.studyCode) ||
+    props.participants.some((participant) => participant.id === extra.id)
+  ) {
+    return props.participants;
+  }
+  return [...props.participants, extra];
+});
 
 // A study hit opens the study it names by its code; one without a code has nowhere to open.
 const studyHits = computed<PaletteItem[]>(() =>
@@ -222,7 +262,7 @@ const items = computed<PaletteItem[]>(() => {
         });
       }
     }
-    for (const participant of props.participants) {
+    for (const participant of allParticipants.value) {
       list.push({
         key: `participant:${participant.id}`,
         group: "Participant",
@@ -273,11 +313,15 @@ const results = computed<PaletteItem[]>(() => {
       target: { studyCode: props.studyCode, ask: text },
     });
   }
+  const matchesParticipantCode = allParticipants.value.some(
+    (participant) => participant.subject_id.toLowerCase() === needle
+  );
   if (
     text &&
     !/\s/.test(text) &&
     text.length <= MAX_STUDY_CODE &&
     text !== props.studyCode &&
+    !matchesParticipantCode &&
     !studyHits.value.some((item) => item.target.studyCode === text)
   ) {
     shown.push({
@@ -298,6 +342,14 @@ function choose(item: PaletteItem) {
   emit("go", item.target);
 }
 
+function scrollActiveIntoView() {
+  nextTick(() =>
+    dialogRef.value
+      ?.querySelector<HTMLElement>(`#canvas-palette-item-${active.value}`)
+      ?.scrollIntoView?.({ block: "nearest" })
+  );
+}
+
 function onKeydown(event: KeyboardEvent) {
   const count = results.value.length;
   if (event.key === "Escape") {
@@ -306,9 +358,11 @@ function onKeydown(event: KeyboardEvent) {
   } else if (event.key === "ArrowDown" && count) {
     event.preventDefault();
     active.value = (active.value + 1) % count;
+    scrollActiveIntoView();
   } else if (event.key === "ArrowUp" && count) {
     event.preventDefault();
     active.value = (active.value - 1 + count) % count;
+    scrollActiveIntoView();
   } else if (event.key === "Enter" && count) {
     event.preventDefault();
     choose(results.value[active.value]);

@@ -143,6 +143,14 @@ describe("Client node resolution and plain clinical formatting", () => {
     expect(formatMaskedNode("consent", "Blinded")).toBe(
       "Hidden consent (blinded)"
     );
+    expect(
+      formatKindTitle("subscription:01960000-0000-7000-8000-000000000009")
+    ).toBe("Subscription");
+    expect(
+      formatKindTitle(
+        "product_entitlement:01960000-0000-7000-8000-00000000000a"
+      )
+    ).toBe("Product entitlement");
     expect(formatKindTitle(null)).toBe("Record");
   });
 

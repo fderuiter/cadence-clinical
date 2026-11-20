@@ -103,8 +103,9 @@
     </div>
 
     <p v-if="!props.studyCode" class="unavailable-note">
-      Milestones, monitoring visits, delegation logs, financials, start-up, and
-      randomization workflows aren't available in this workspace yet.
+      Milestones, monitoring visits, delegation, financials, start-up and RTSM
+      aren't available yet in this pre-release environment (Orbit and Allocate
+      roadmap). See <a href="/plans">plans &amp; product-family roadmap</a>.
     </p>
   </section>
 </template>

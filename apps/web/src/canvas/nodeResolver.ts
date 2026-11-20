@@ -244,6 +244,10 @@ const KIND_LABELS: Record<string, string> = {
   grant: "Role grant",
   role: "Role",
   query: "Query",
+  protocol_element: "Protocol element",
+  form_version_snapshot: "Form snapshot",
+  subscription: "Subscription",
+  product_entitlement: "Product entitlement",
 };
 
 /** Human-readable singular noun phrase for a `NodeRef` kind (`study_site` -> `"Study site"`). */
@@ -302,7 +306,9 @@ function buildHumanLabel(
 
   if (kind === "study_site" && cleanCode) {
     const prefix = /^site\b/i.test(cleanCode) ? cleanCode : `Site ${cleanCode}`;
-    return cleanTitle && cleanTitle !== cleanCode
+    return cleanTitle &&
+      cleanTitle !== cleanCode &&
+      cleanTitle.toLowerCase() !== prefix.toLowerCase()
       ? `${prefix} · ${cleanTitle}`
       : prefix;
   }

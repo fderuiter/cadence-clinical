@@ -107,6 +107,7 @@ must make it fail.
 | `readmes`             | `validate-readmes`                             |                 | Runs                                                                                                                                   |
 | `codeowners`          | `validate-codeowners`                          |                 | Runs                                                                                                                                   |
 | `workflow-security`   | `validate-workflow-security`, `action-pinning` |                 | Runs                                                                                                                                   |
+| `rulesets`            | `validate-rulesets`                            |                 | Runs                                                                                                                                   |
 | `imports`             | `validate-imports`                             |                 | Runs                                                                                                                                   |
 | `security`            | `audit-security`                               | yes             | Runs on the staged files                                                                                                               |
 | `deid`                | `deid-compliance-scan`                         | yes             | Runs on the staged files                                                                                                               |
@@ -162,19 +163,19 @@ Runs the jobs of `.github/workflows/ci.yml` on this machine, because GitHub Acti
 repository until 2027 (#5017). Each step runs the same command as in CI, in the same order, from the repository root.
 
 ```bash
-pnpm cadence ci                         # lint-and-static, dotnet-quality, native-aot-build, docs-build, security, unit-tests, dotnet-tests, accessibility-e2e and compliance
+pnpm cadence ci                         # actionlint, lint-and-static, dotnet-quality, native-aot-build, docs-build, security, unit-tests, dotnet-tests, accessibility-e2e and compliance
 pnpm cadence ci --job dotnet-tests      # one job (repeat --job for more)
 pnpm cadence ci --job compliance        # a job and the jobs it needs (unit-tests, dotnet-tests)
 pnpm cadence ci --job accessibility-e2e # the Playwright E2E and browser-to-database job alone
 pnpm cadence ci --list                  # what each step runs locally, without running it
 ```
 
-| Option            | Description                                                                                                                                                                                    |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `-j\|--job <job>` | Runs this job and the jobs it needs. Jobs: `lint-and-static`, `dotnet-quality`, `native-aot-build`, `docs-build`, `security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`. |
-| `--allow-skip`    | Accepts a run whose database tests did not execute: without PostgreSQL, or with skips in the integration and E2E results.                                                                      |
-| `--base <ref>`    | The ref that changed files are compared with, for the duplication, DEID and detect-secrets steps. Default: `origin/main`.                                                                      |
-| `--list`          | Prints each step and what it runs locally, then exits `0`.                                                                                                                                     |
+| Option            | Description                                                                                                                                                                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `-j\|--job <job>` | Runs this job and the jobs it needs. Jobs: `actionlint`, `lint-and-static`, `dotnet-quality`, `native-aot-build`, `docs-build`, `security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`.                                           |
+| `--allow-skip`    | Skips steps whose required binary (`actionlint`, `hadolint`, `shellcheck`, `detect-secrets-hook`, `bash`) is missing on `PATH` with the install hint, and accepts a run whose database tests did not execute (without PostgreSQL or with skipped TRX). |
+| `--base <ref>`    | The ref that changed files are compared with, for the duplication, DEID and detect-secrets steps. Default: `origin/main`.                                                                                                                              |
+| `--list`          | Prints each step and what it runs locally, then exits `0`.                                                                                                                                                                                             |
 
 It follows the workflow's rules: inside a job, a failed step stops the later steps unless CI gives them `if: always()`,
 and the compliance job runs only when the frontend and .NET test steps passed. The run itself never stops early. It
@@ -195,11 +196,10 @@ Where it differs from CI:
   `security` whose gate already ran inside `Run Cadence quality sentinels` (the static security audit, secrets and DEID)
   are reported as _covered_ when `Run Cadence quality sentinels` passed; if that step failed, each runs on its own so
   the summary shows which gate failed. The Node install and UI build in later jobs are covered by earlier jobs.
-  The documentation build (`pnpm docs:build`) also starts with `cadence check` and Markdown validation; after that step
-  passed it runs with `CADENCE_DOCS_SKIP_CHECKS=1`, which skips them and saves about two and a half minutes.
-- **The docs build leaves the reports alone.** `pnpm docs:build` regenerates the RTM and IQ/OQ/PQ report as drafts;
-  `cadence ci` puts back the committed copies of both after the step, pass or fail, so the compliance job compares its
-  own regenerated reports with what is committed.
+  The documentation build (`pnpm docs:build`) also runs the read-only `openapi`, `schema-doc`, `markdown` and `rtm`
+  checks; after `Run Cadence quality sentinels` passed it runs with `CADENCE_DOCS_SKIP_CHECKS=1`, which skips the
+  duplicate `openapi`, `schema-doc` and `markdown` gates while keeping `check rtm`, saving several minutes without
+  touching `docs/SDLC` or `docs/schema`.
 - **The tests run once.** The .NET test step writes its TRX files to `TestResults/gxp`, and the compliance job's
   `Generate Compliance Reports` step builds the RTM and IQ/OQ/PQ report from them instead of running `gxp sync`, which
   would run every test again. It writes them to `TestResults/gxp/preview/` (to `docs/SDLC` only with
@@ -207,10 +207,12 @@ Where it differs from CI:
   `Check GxP Snapshot Policy` (`cadence check gxp-snapshot`) then fails if the branch changed the committed reports. With
   `CADENCE_GXP_SNAPSHOT=1` it runs `cadence gxp diff` instead, which fails if the regenerated reports differ from the
   committed ones outside their evidence block, and puts the committed copies back when they match.
-- **Tools are not installed for you.** Hadolint, ShellCheck and detect-secrets run when they are on `PATH` and are
-  reported as skipped, with the install command, when they are not.
-- **Not run:** the Playwright browser install, and the jobs that act on GitHub or container registries (`actionlint`,
-  `container-security`, `classify`, `automerge`, `release-and-archive`, `deploy-docs`).
+- **Required binaries must be on `PATH`.** `actionlint` (`rhysd/actionlint` in CI), Hadolint, ShellCheck,
+  `detect-secrets-hook` and `bash` are not installed for you: when any required binary is missing on `PATH`, the step
+  fails with the install hint so an incomplete environment cannot report green. Pass `--allow-skip` to record missing
+  tool steps as skipped, with the install hint, instead of failing.
+- **Not run:** the Playwright browser install, and the jobs that act on GitHub or container registries
+  (`container-security`, `ci-gate`, `classify`, `automerge`, `release-and-archive`, `deploy-docs`).
 - **Commit first.** CI checks out the commit, so run `cadence ci` on committed work: gates that list files with git (the
   full DEID scan, for example) do not see untracked files, and a changed-files step falls back to the working tree only
   when the branch has no commits over the base.
@@ -219,6 +221,33 @@ Where it differs from CI:
 
 `tests/Cadence.UnitTests/Packages/LocalCiPlanTests.cs` reads `ci.yml` and fails when a job or step is added, renamed or
 removed, or runs a different command, until `packages/cli/src/Services/CiPlan.cs` follows.
+
+### `cadence rulesets`
+
+Validates the declarative GitHub Repository Rulesets in `.github/rulesets/*.json` (`main.json`, `release_branches.json`,
+`version_tags.json`) against `.github/workflows/*.yml` and reconciles them to GitHub via `gh api`.
+
+```bash
+pnpm cadence rulesets --dry-run                       # validate locally and preview planned gh api operations
+pnpm cadence rulesets                                 # reconcile .github/rulesets/*.json to GitHub via gh api
+pnpm cadence rulesets --repo fderuiter/cadence-clinical # target an explicit owner/repo
+```
+
+| Option                | Description                                                                                                                             |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `--dry-run`           | Validates `.github/rulesets/*.json` and workflow parity, prints the planned `gh api` reconciliation, and exits without mutating GitHub. |
+| `--repo <owner/repo>` | Target GitHub repository (`owner/repo`). Defaults to `GITHUB_REPOSITORY`, then `git remote get-url origin`.                             |
+
+Before making any API request, `cadence rulesets` runs the `rulesets` quality gate (`RulesetService.Validate`): every
+branch ruleset must set `strict_required_status_checks_policy: true`, pin required status checks to GitHub Actions
+(`integration_id: 15368`), require `CI Gate` and `Check for Merge Conflicts`, and match active pull-request workflow
+jobs (`CI Gate` in `.github/workflows/ci.yml` must use `if: always()` and evaluate every pull-request validation job).
+
+Without `--dry-run`, it fetches `gh api --paginate repos/<owner>/<repo>/rulesets?per_page=100`, updates existing
+rulesets by `name` (`PUT repos/<owner>/<repo>/rulesets/<id> --input <file>`), and creates missing ones
+(`POST repos/<owner>/<repo>/rulesets --input <file>`). Requires `gh` authenticated with `Administration: write` on the
+target repository, and exits `1` whenever validation fails or any `gh api` call returns a non-zero exit code or invalid
+JSON.
 
 ### `cadence dev`
 

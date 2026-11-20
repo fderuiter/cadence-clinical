@@ -78,7 +78,7 @@ describe("CTMS site activation (Execution)", () => {
     expect(
       wrapper.find("#btn-check-site-compliance").attributes()
     ).toHaveProperty("disabled");
-    expect(wrapper.text()).toContain("aren't available in this workspace yet");
+    expect(wrapper.text()).toContain("aren't available yet");
     expect(wrapper.text()).not.toContain("#4829");
   });
 
