@@ -7,6 +7,9 @@ export function showToast(message) {
     toast = document.createElement("div");
     toast.id = "toast-container";
     toast.className = "toast-notification";
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+    toast.setAttribute("data-focus-trap-exempt", "true");
     document.body.appendChild(toast);
   }
   toast.textContent = message;

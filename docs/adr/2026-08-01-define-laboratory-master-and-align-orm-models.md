@@ -23,19 +23,18 @@ The `LabReferenceRange` class had a duplicated block of GxP audit fields which c
 ### Option 1: **Option A (Selected):** Remove the duplicate GxP audit block on `LabReferenceRange` keeping a single canonical declaration. Align `LabUnitConversion`'s `version_index` constraint to be non-nullable (`nullable=False`) with a default of 1.
 
 - **Overview:** **Option A (Selected):** Remove the duplicate GxP audit block on `LabReferenceRange` keeping a single canonical declaration. Align `LabUnitConversion`'s `version_index` constraint to be non-nullable (`nullable=False`) with a default of 1.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B (Legacy Fallback):** Retain loose constraints and nullable types across legacy helper classes, risking audit log index gaps.
 
 - **Overview:** **Option B (Legacy Fallback):** Retain loose constraints and nullable types across legacy helper classes, risking audit log index gaps.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

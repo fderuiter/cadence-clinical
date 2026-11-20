@@ -28,14 +28,14 @@ This decision directly implements requirements under **PRD-SYS-001** and **PRD-S
 ### Option 1: Legacy Mock Fallback
 
 - **Overview:** Maintain the previous behavior where missing JUnit results are automatically assumed to have passed with mock duration.
-- ***Pros:*** Does not break any local generation scripts.
-- ***Cons:*** Violates core regulatory requirements by fabricating test proof, presenting a massive audit liability.
+- _**Pros:**_ Does not break any local generation scripts.
+- _**Cons:**_ Violates core regulatory requirements by fabricating test proof, presenting a massive audit liability.
 
 ### Option 2: Strict Unconditional Fail-Fast
 
 - **Overview:** Immediately terminate execution of `generate_rtm.py` and fail the pipeline whenever `report.xml` is missing or empty.
-- ***Pros:*** Completely prevents unverified compliance document generation.
-- ***Cons:*** Blocks developer previews and fast PR validation workflows, requiring full, time-consuming test executions even for trivial layout or documentation changes.
+- _**Pros:**_ Completely prevents unverified compliance document generation.
+- _**Cons:**_ Blocks developer previews and fast PR validation workflows, requiring full, time-consuming test executions even for trivial layout or documentation changes.
 
 ### Option 3: Strict Default Fail-Fast with Visual Draft Bypass (Chosen Option)
 
@@ -44,11 +44,11 @@ This decision directly implements requirements under **PRD-SYS-001** and **PRD-S
   - A prominent, warning markdown banner (`DRAFT_BANNER`) is prepended to the top of all generated documents.
   - All test outcomes missing from the report are mapped to `UNVERIFIED` (marked as `⚪ (UNVERIFIED)` or `⚪ UNVERIFIED`) and overall requirement status to `⚠️ **Unverified**`.
   - Durations are strictly set to `N/A`.
-- ***Pros:***
+- _**Pros:**_
   - Prevents accidental generation of final verified files.
   - Highly visible draft/unverified badges.
   - Seamless PR integration (the synchronization orchestrator automatically appends `--draft` for dry-run validation checks, verifying layout and links without full execution).
-- ***Cons:*** Draft files could theoretically be committed if not blocked (mitigated by dry-run blocking of uncommitted files).
+- _**Cons:**_ Draft files could theoretically be committed if not blocked (mitigated by dry-run blocking of uncommitted files).
 
 ## 4. Decision Outcome
 

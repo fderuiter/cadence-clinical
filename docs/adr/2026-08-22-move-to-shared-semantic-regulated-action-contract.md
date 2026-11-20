@@ -29,12 +29,12 @@ This ADR resolves these issues by implementing a unified, shared semantic regula
 
 ### Option 1: Inline body parsing at both gateway and downstream middlewares
 
-- ***Pros:*** Highly decoupled.
-- ***Cons:*** Leads to massive code duplication and drift between gateway and downstream services.
+- _**Pros:**_ Highly decoupled.
+- _**Cons:**_ Leads to massive code duplication and drift between gateway and downstream services.
 
 ### Option 2: Unified Shared Semantic Regulated-Action Contract (Chosen)
 
-- ***Pros:***
+- _**Pros:**_
   - Defines stableNamespaces / String constants (e.g., `quality.capa.close`, `quality.capa.cancel`, `ctms.grant.approve`).
   - Concentrates all detection logic (HTTP method, path pattern/regex, and body conditions) in a single module `packages/security/regulated_actions.py`.
   - Centralizes signature token verification in a reusable `verify_sig_token` helper.

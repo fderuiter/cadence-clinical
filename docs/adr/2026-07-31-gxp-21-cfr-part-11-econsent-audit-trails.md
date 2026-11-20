@@ -24,19 +24,18 @@ Traced requirement: PRD-SYS-001.
 ### Option 1: **Database and SQLAlchemy Event-Level Immutability (Chosen)**: Register event listeners on models `ConsentFormRecord` and `ConsentSignature` in `apps/execution/database/models.py` to block updates/deletes before flush, coupled with a dedicated `EConsentService` to manage state changes safely.
 
 - **Overview:** **Database and SQLAlchemy Event-Level Immutability (Chosen)**: Register event listeners on models `ConsentFormRecord` and `ConsentSignature` in `apps/execution/database/models.py` to block updates/deletes before flush, coupled with a dedicated `EConsentService` to manage state changes safely.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **REST API Gateway Validation Only**: Enforce compliance solely at the API gateway or endpoint level. This option is less secure because direct service calls or downstream code modifications could bypass verification.
 
 - **Overview:** **REST API Gateway Validation Only**: Enforce compliance solely at the API gateway or endpoint level. This option is less secure because direct service calls or downstream code modifications could bypass verification.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

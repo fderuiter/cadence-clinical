@@ -28,20 +28,20 @@ This decision implements requirements under **PRD-SYS-001**.
 ### Option 1: Separate SQLAlchemy Declarative Models and Pydantic Schemas
 
 - **Overview:** Declare database schemas using SQLAlchemy DeclarativeBase and map them manually to separate Pydantic v2 schemas for API serialization.
-- ***Pros:***
+- _**Pros:**_
   - ✅ No new package dependencies.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Severe code duplication (fields are declared once for database and once for Pydantic).
   - ❌ High risk of schema drift or serialization mismatches as fields evolve.
 
 ### Option 2: Introduce SQLModel Dependency
 
 - **Overview:** Introduce SQLModel as a core dependency to allow defining unified models that serve as both SQLAlchemy tables and Pydantic schemas.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Zero duplication: fields are defined once and inherited for database mapping and serialization.
   - ✅ Native support for both Pydantic v2 validation and SQLAlchemy ORM operations.
   - ✅ Perfect alignment with FastAPI's native response model serialization.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Adds one extra lightweight library dependency (`sqlmodel`).
 
 ## 4. Decision Outcome

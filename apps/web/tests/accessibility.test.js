@@ -1,8 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { ref, defineComponent, nextTick } from "vue";
-import { useFocusTrap } from "../src/composables/useFocusTrap";
-import { useEscapeClose } from "../src/composables/useEscapeClose";
 import {
   createClinicalLookupInput,
   createSoaBuilderMatrix,
@@ -10,6 +8,8 @@ import {
   createConditionRowHTML,
   ClinicalQueryPanel,
   ClinicalInput,
+  useFocusTrap,
+  useEscapeClose,
 } from "ui";
 
 // Helper component for testing useFocusTrap directly

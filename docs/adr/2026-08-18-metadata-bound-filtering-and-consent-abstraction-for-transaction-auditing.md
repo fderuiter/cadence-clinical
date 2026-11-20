@@ -15,28 +15,27 @@ Transaction auditing in the execution microservice previously lacked strict meta
 
 ## 2. Decision Drivers & Constraints
 
-* GxP 21 CFR Part 11 audit logging requirement (PRD-SYS-001) for execution entities.
-* Microservice boundary isolation: execution audit handlers must inspect `AuditedModel` metadata rather than assuming all session-attached entities are execution audited models.
-* Need for a decoupled, injectable `IConsentVerificationClient` port interface for subject consent status verification.
+- GxP 21 CFR Part 11 audit logging requirement (PRD-SYS-001) for execution entities.
+- Microservice boundary isolation: execution audit handlers must inspect `AuditedModel` metadata rather than assuming all session-attached entities are execution audited models.
+- Need for a decoupled, injectable `IConsentVerificationClient` port interface for subject consent status verification.
 
 ## 3. Options Considered
 
 ### Option 1: Metadata-bound entity filtering in transaction audit triggers + Abstract consent verification client port (Selected)
 
 - **Overview:** Metadata-bound entity filtering in transaction audit triggers + Abstract consent verification client port (Selected)
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: Direct class-name checks without metadata inspection + concrete client coupling
 
 - **Overview:** Direct class-name checks without metadata inspection + concrete client coupling
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 
@@ -51,5 +50,5 @@ Transaction auditing in the execution microservice previously lacked strict meta
 
 ## 6. Implementation & Verification
 
-* Modified `apps/execution/database/audit.py`, `apps/execution/econsent_client.py`, `apps/execution/domain/ports.py`, and `apps/execution/application/ports.py`.
-* Verification tests added under `apps/execution/tests/test_audit_metadata_filtering.py`.
+- Modified `apps/execution/database/audit.py`, `apps/execution/econsent_client.py`, `apps/execution/domain/ports.py`, and `apps/execution/application/ports.py`.
+- Verification tests added under `apps/execution/tests/test_audit_metadata_filtering.py`.

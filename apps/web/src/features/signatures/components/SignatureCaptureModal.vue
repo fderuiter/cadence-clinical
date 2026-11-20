@@ -115,8 +115,7 @@ export const SHARED_SIGNATURE_MODAL_PROPS = {
 
 <script setup>
 import { computed, ref, watch, inject } from "vue";
-import { ModalErrorAlert } from "ui";
-import { useFocusTrap } from "@/composables/useFocusTrap";
+import { ModalErrorAlert, useFocusTrap } from "ui";
 import GxpCredentialsInput from "./GxpCredentialsInput.vue";
 
 const props = defineProps({

@@ -124,13 +124,13 @@ Runs are ordered by their recording time, then by ID.
 
 `ValidationFinding` is the decisions record, created by the first decision. The commands are:
 
-| Command | Capability | Verb | Allowed from | Attestation |
-| --- | --- | --- | --- | --- |
-| `InvestigateFinding` | `validation_finding.investigate` | Execute | Open | None |
-| `ClassifyFinding` | `validation_finding.classify` | Execute | Any status except Resolved | None |
-| `AcceptFinding` | `validation_finding.accept` | Approve | Open or Investigating | `Responsibility` |
-| `ExplainFinding` | `validation_finding.explain` | Approve | Open or Investigating | `Approved` |
-| `ReopenFinding` | `validation_finding.reopen` | Execute | Investigating, Accepted or Explained | None |
+| Command              | Capability                       | Verb    | Allowed from                         | Attestation      |
+| -------------------- | -------------------------------- | ------- | ------------------------------------ | ---------------- |
+| `InvestigateFinding` | `validation_finding.investigate` | Execute | Open                                 | None             |
+| `ClassifyFinding`    | `validation_finding.classify`    | Execute | Any status except Resolved           | None             |
+| `AcceptFinding`      | `validation_finding.accept`      | Approve | Open or Investigating                | `Responsibility` |
+| `ExplainFinding`     | `validation_finding.explain`     | Approve | Open or Investigating                | `Approved`       |
+| `ReopenFinding`      | `validation_finding.reopen`      | Execute | Investigating, Accepted or Explained | None             |
 
 What is signed for an acceptance or explanation:
 

@@ -590,18 +590,28 @@
     <!-- ==================================================================== -->
     <!-- BATCH APPROVE CLUSTERS MODAL -->
     <!-- ==================================================================== -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -- backdrop click is a mouse shortcut; the dialog's own close control is the keyboard path -->
     <div
       v-if="isApproveClusterModalOpen"
       class="modal-overlay"
+      role="presentation"
       @click.self="isApproveClusterModalOpen = false"
     >
-      <div class="modal batch-dialog-card">
+      <div
+        ref="approveClusterModalRef"
+        class="modal batch-dialog-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="approve-cluster-modal-title"
+        tabindex="-1"
+      >
         <div class="modal-header">
-          <h3>⚡ Batch Approve Verbatim Cluster(s)</h3>
+          <h3 id="approve-cluster-modal-title">
+            ⚡ Batch Approve Verbatim Cluster(s)
+          </h3>
           <button
             type="button"
             class="btn-close"
+            aria-label="Close"
             @click="isApproveClusterModalOpen = false"
           >
             ✕
@@ -672,18 +682,28 @@
     <!-- ==================================================================== -->
     <!-- BATCH CODE CLUSTERS MODAL -->
     <!-- ==================================================================== -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -- backdrop click is a mouse shortcut; the dialog's own close control is the keyboard path -->
     <div
       v-if="isBatchClusterModalOpen"
       class="modal-overlay"
+      role="presentation"
       @click.self="isBatchClusterModalOpen = false"
     >
-      <div class="modal batch-dialog-card">
+      <div
+        ref="batchClusterModalRef"
+        class="modal batch-dialog-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="batch-cluster-modal-title"
+        tabindex="-1"
+      >
         <div class="modal-header">
-          <h3>🏷️ Batch Code Verbatim Cluster(s)</h3>
+          <h3 id="batch-cluster-modal-title">
+            🏷️ Batch Code Verbatim Cluster(s)
+          </h3>
           <button
             type="button"
             class="btn-close"
+            aria-label="Close"
             @click="isBatchClusterModalOpen = false"
           >
             ✕
@@ -771,18 +791,26 @@
     <!-- ==================================================================== -->
     <!-- DISCREPANCY QUERY MODAL -->
     <!-- ==================================================================== -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -- backdrop click is a mouse shortcut; the dialog's own close control is the keyboard path -->
     <div
       v-if="isQueryModalOpen"
       class="modal-overlay"
+      role="presentation"
       @click.self="isQueryModalOpen = false"
     >
-      <div class="modal query-dialog-card">
+      <div
+        ref="queryModalRef"
+        class="modal query-dialog-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="coding-query-modal-title"
+        tabindex="-1"
+      >
         <div class="modal-header">
-          <h3>Raise Clinical Coding Query</h3>
+          <h3 id="coding-query-modal-title">Raise Clinical Coding Query</h3>
           <button
             type="button"
             class="btn-close"
+            aria-label="Close"
             @click="isQueryModalOpen = false"
           >
             ✕
@@ -841,18 +869,26 @@
     <!-- ==================================================================== -->
     <!-- INDIVIDUAL BATCH CODE MODAL -->
     <!-- ==================================================================== -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -- backdrop click is a mouse shortcut; the dialog's own close control is the keyboard path -->
     <div
       v-if="isBatchModalOpen"
       class="modal-overlay"
+      role="presentation"
       @click.self="isBatchModalOpen = false"
     >
-      <div class="modal batch-dialog-card">
+      <div
+        ref="batchModalRef"
+        class="modal batch-dialog-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="batch-items-modal-title"
+        tabindex="-1"
+      >
         <div class="modal-header">
-          <h3>Batch Code Selected Items</h3>
+          <h3 id="batch-items-modal-title">Batch Code Selected Items</h3>
           <button
             type="button"
             class="btn-close"
+            aria-label="Close"
             @click="isBatchModalOpen = false"
           >
             ✕
@@ -931,6 +967,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { useFocusTrap } from "ui";
 import { useCodingStore } from "../stores/coding";
 import { use2DGrid } from "../composables/use2DGrid";
 import SkeletonLoader from "./common/SkeletonLoader.vue";
@@ -1137,6 +1174,39 @@ const batchCode = ref("");
 const batchTerm = ref("");
 const batchReason = ref("");
 const isSubmittingBatch = ref(false);
+
+const approveClusterModalRef = ref(null);
+const batchClusterModalRef = ref(null);
+const queryModalRef = ref(null);
+const batchModalRef = ref(null);
+
+useFocusTrap(approveClusterModalRef, {
+  isOpen: () => isApproveClusterModalOpen.value,
+  onEscape: () => {
+    isApproveClusterModalOpen.value = false;
+  },
+});
+
+useFocusTrap(batchClusterModalRef, {
+  isOpen: () => isBatchClusterModalOpen.value,
+  onEscape: () => {
+    isBatchClusterModalOpen.value = false;
+  },
+});
+
+useFocusTrap(queryModalRef, {
+  isOpen: () => isQueryModalOpen.value,
+  onEscape: () => {
+    isQueryModalOpen.value = false;
+  },
+});
+
+useFocusTrap(batchModalRef, {
+  isOpen: () => isBatchModalOpen.value,
+  onEscape: () => {
+    isBatchModalOpen.value = false;
+  },
+});
 
 function copyCodingCellValue(rIndex, cIndex, item) {
   if (!item) return;

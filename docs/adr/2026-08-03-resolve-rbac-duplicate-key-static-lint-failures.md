@@ -21,19 +21,19 @@ During standard linting and formatting quality checks (specifically when running
 ### Option 1: Ignore the Ruff lint rule (no-qa / skip)
 
 - **Overview:** Add local disable comments to ignore the duplicate key warnings.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Quickest to implement.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Leaves duplicate keys in the codebase, leading to confusion and potential hidden bugs.
   - ❌ Fails strict static analysis standards.
 
 ### Option 2: Clean up and deduplicate key definitions [Selected]
 
 - **Overview:** Resolve the duplicate `"soa"` keys in `rbac.py` by merging permissions correctly.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Clear, readable code without duplicate entries.
   - ✅ 100% compliance with static analysis.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires editing security-sensitive files.
 
 ## 4. Decision Outcome

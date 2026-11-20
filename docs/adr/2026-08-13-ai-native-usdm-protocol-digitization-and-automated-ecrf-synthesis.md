@@ -25,27 +25,26 @@ To achieve Cadence's automated Digital Data Flow (DDF) vision, we need an automa
 ### Option 1: **Integrated Multi-Stage LLM & Heuristic Extraction Pipeline (Selected):** Ingests document bytes using PyMuPDF and python-docx, uses structured Pydantic v2 schemas for LLM extraction with deterministic heuristic fallback, populates Neo4j graph nodes and relationships atomically, and synthesizes CDASH eCRFs and interactive Schedule of Activities.
 
 - **Overview:** **Integrated Multi-Stage LLM & Heuristic Extraction Pipeline (Selected):** Ingests document bytes using PyMuPDF and python-docx, uses structured Pydantic v2 schemas for LLM extraction with deterministic heuristic fallback, populates Neo4j graph nodes and relationships atomically, and synthesizes CDASH eCRFs and interactive Schedule of Activities.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Pure Manual Form Authoring in MDR:** Requires study teams to transcribe protocol parameters manually into the UI. High friction and time to study launch.
 
 - **Overview:** **Pure Manual Form Authoring in MDR:** Requires study teams to transcribe protocol parameters manually into the UI. High friction and time to study launch.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 3: **Unstructured Vector RAG without Schema Enforcement:** Ingests protocol chunks into a vector database without strict USDM ontology mapping, leading to non-deterministic schemas and broken EDC form generation.
 
 - **Overview:** **Unstructured Vector RAG without Schema Enforcement:** Ingests protocol chunks into a vector database without strict USDM ontology mapping, leading to non-deterministic schemas and broken EDC form generation.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

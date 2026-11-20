@@ -5,6 +5,7 @@
     :title="store.activeRequest.title"
     :size="store.activeRequest.size || 'md'"
     role="alertdialog"
+    initial-focus=".btn-confirm"
     @close="handleCancel"
   >
     <div
@@ -49,13 +50,12 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, onUnmounted } from "vue";
+import { ref } from "vue";
 import { ClinicalModal } from "ui";
 import { useConfirmStore } from "../stores/confirm.js";
 
 const store = useConfirmStore();
 const hostContentRef = ref(null);
-const triggerElement = ref(null);
 
 const handleConfirm = () => {
   store.resolveConfirm();
@@ -64,109 +64,6 @@ const handleConfirm = () => {
 const handleCancel = () => {
   store.cancelConfirm();
 };
-
-const FOCUSABLE_SELECTOR =
-  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-const isVisible = (el) => {
-  if (typeof window === "undefined") return true;
-  const style = window.getComputedStyle(el);
-  if (style.display === "none" || style.visibility === "hidden") {
-    return false;
-  }
-  const isJsDom =
-    navigator.userAgent.includes("jsdom") ||
-    navigator.userAgent.includes("Node.js") ||
-    typeof window.happyDOM !== "undefined";
-  if (isJsDom) {
-    return true;
-  }
-  return el.offsetWidth > 0 || el.offsetHeight > 0;
-};
-
-const handleKeyDown = (e) => {
-  if (!store.activeRequest) return;
-
-  if (e.key === "Escape") {
-    e.preventDefault();
-    handleCancel();
-    return;
-  }
-
-  if (e.key === "Tab") {
-    const modalEl = document.querySelector(".clinical-modal-dialog");
-    if (!modalEl) return;
-
-    const focusables = Array.from(
-      modalEl.querySelectorAll(FOCUSABLE_SELECTOR)
-    ).filter(isVisible);
-
-    if (focusables.length === 0) {
-      e.preventDefault();
-      return;
-    }
-
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-
-    if (e.shiftKey) {
-      if (
-        document.activeElement === first ||
-        !modalEl.contains(document.activeElement)
-      ) {
-        e.preventDefault();
-        last.focus();
-      }
-    } else {
-      if (
-        document.activeElement === last ||
-        !modalEl.contains(document.activeElement)
-      ) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-  }
-};
-
-watch(
-  () => !!store.activeRequest,
-  async (isOpen) => {
-    if (isOpen) {
-      triggerElement.value = document.activeElement;
-      if (typeof window !== "undefined") {
-        window.addEventListener("keydown", handleKeyDown, true);
-      }
-      await nextTick();
-      const modalEl = document.querySelector(".clinical-modal-dialog");
-      if (modalEl) {
-        const confirmBtn =
-          modalEl.querySelector(".btn-confirm") ||
-          modalEl.querySelector(".btn-cancel");
-        if (confirmBtn) {
-          confirmBtn.focus();
-        }
-      }
-    } else {
-      if (typeof window !== "undefined") {
-        window.removeEventListener("keydown", handleKeyDown, true);
-      }
-      if (
-        triggerElement.value &&
-        typeof triggerElement.value.focus === "function"
-      ) {
-        triggerElement.value.focus();
-        triggerElement.value = null;
-      }
-    }
-  }
-);
-
-onUnmounted(() => {
-  if (typeof window !== "undefined") {
-    window.removeEventListener("keydown", handleKeyDown, true);
-  }
-});
 </script>
 
 <style scoped>

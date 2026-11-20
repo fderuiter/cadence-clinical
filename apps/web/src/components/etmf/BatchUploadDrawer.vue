@@ -1,7 +1,11 @@
 <!-- apps/web/src/components/etmf/BatchUploadDrawer.vue -->
 <template>
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -- backdrop click is a mouse shortcut; the dialog's own close control is the keyboard path -->
-  <div v-if="isOpen" class="batch-drawer-overlay" @click.self="handleClose">
+  <div
+    v-if="isOpen"
+    class="batch-drawer-overlay"
+    role="presentation"
+    @click.self="handleClose"
+  >
     <div
       ref="drawerRef"
       class="batch-drawer"
@@ -283,10 +287,10 @@
     </div>
 
     <!-- Inspection Modal Drawer for Individual Batch Item -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -- backdrop click is a mouse shortcut; the dialog's own close control is the keyboard path -->
     <div
       v-if="inspectedItem"
       class="item-inspection-overlay"
+      role="presentation"
       @click.self="inspectedItem = null"
     >
       <div
@@ -309,7 +313,9 @@
             AI Classification Preview: {{ inspectedItem.file.name }}
           </h4>
           <button
+            type="button"
             class="btn btn-secondary btn-xs"
+            aria-label="Close classification preview"
             @click="inspectedItem = null"
           >
             ✕

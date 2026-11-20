@@ -58,16 +58,16 @@ Option 2. It is kernel decision **K033**.
 
 A `Proposal` is a kernel object in a study (NodeRef kind `proposal`, a lineage node). It holds:
 
-| Field | Meaning |
-| --- | --- |
-| `Intent` | What the proposal would achieve, in one to 2,000 characters |
-| `Plan` | The artifact version that holds the plan and its reasoning (an Evidence artifact of the same study or tenant-wide) |
-| `Affected` | The objects it would change or depends on, 0 to 200 `NodeRef`s |
-| `SimulatedImpact` | Optional: the result hash of the simulation run over it (ADR-2480) |
-| `RequestedCapabilities` | 1 to 20 capability tokens a person would use to execute it, each a known `Execute` or `Approve` command |
-| `ExpiresAt` | After this it can no longer be approved; at most 90 days after it is proposed |
-| `ProposedBy` | The actor who proposed it, a person or an automation agent |
-| `ModelId` | The model that produced it, required when `ProposedBy` is an agent and refused otherwise (K-PROV-3) |
+| Field                   | Meaning                                                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `Intent`                | What the proposal would achieve, in one to 2,000 characters                                                        |
+| `Plan`                  | The artifact version that holds the plan and its reasoning (an Evidence artifact of the same study or tenant-wide) |
+| `Affected`              | The objects it would change or depends on, 0 to 200 `NodeRef`s                                                     |
+| `SimulatedImpact`       | Optional: the result hash of the simulation run over it (ADR-2480)                                                 |
+| `RequestedCapabilities` | 1 to 20 capability tokens a person would use to execute it, each a known `Execute` or `Approve` command            |
+| `ExpiresAt`             | After this it can no longer be approved; at most 90 days after it is proposed                                      |
+| `ProposedBy`            | The actor who proposed it, a person or an automation agent                                                         |
+| `ModelId`               | The model that produced it, required when `ProposedBy` is an agent and refused otherwise (K-PROV-3)                |
 
 - Its content hash covers every field above, so an approval signs exactly what was proposed.
 - A proposal never changes once proposed. Only its status changes.
@@ -79,12 +79,12 @@ A `Proposal` is a kernel object in a study (NodeRef kind `proposal`, a lineage n
 `Open` → `Approved` | `Rejected` | `Withdrawn`. An open proposal past `ExpiresAt` reads as `Expired`. Expiry is
 derived on read, so it needs no scheduled job.
 
-| Command | Capability | Rule |
-| --- | --- | --- |
-| `Propose` | `proposal.create`, Propose | The plan artifact version exists and belongs to the study or the tenant; the capabilities are known Execute or Approve commands; an agent names its model |
-| `ApproveProposal` | `proposal.approve`, Approve | The proposal is open and not expired; an `Approved` attestation by the acting person signs its content hash; the approver did not propose it |
-| `RejectProposal` | `proposal.reject`, Approve | The proposal is open; a reason is required (the command's reason for change) |
-| `WithdrawProposal` | `proposal.withdraw`, Propose | The proposal is open, and only its proposer may withdraw it |
+| Command            | Capability                   | Rule                                                                                                                                                      |
+| ------------------ | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Propose`          | `proposal.create`, Propose   | The plan artifact version exists and belongs to the study or the tenant; the capabilities are known Execute or Approve commands; an agent names its model |
+| `ApproveProposal`  | `proposal.approve`, Approve  | The proposal is open and not expired; an `Approved` attestation by the acting person signs its content hash; the approver did not propose it              |
+| `RejectProposal`   | `proposal.reject`, Approve   | The proposal is open; a reason is required (the command's reason for change)                                                                              |
+| `WithdrawProposal` | `proposal.withdraw`, Propose | The proposal is open, and only its proposer may withdraw it                                                                                               |
 
 - Each raises an event: `ProposalCreated`, `ProposalApproved`, `ProposalRejected` or `ProposalWithdrawn`, in the
   Intelligence family.

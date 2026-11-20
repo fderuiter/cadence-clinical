@@ -77,13 +77,13 @@ The fix therefore sets the storage rule before any feature starts filling the co
 
 - **Chosen Option:** Option 3, applied per field according to what the platform needs:
 
-| Field | Need | Stored as |
-| --- | --- | --- |
-| `VirtualCardToken` | processor handles the card | replaced by `VirtualCardProcessorReference`, encrypted; `VirtualCardMask` for display |
-| `AchRoutingNumber` | processor holds bank details | not stored; `AchProcessorReference` (encrypted) plus `AchRoutingMask` (last four digits) |
-| `DeviceToken` (4 tables) | match a presented token | `DeviceTokenHash`, HMAC-SHA256 via `DeviceTokenHasher`, indexed; no encrypted copy because nothing reads the raw token back |
-| `SignerEmail` | contact the signer | encrypted in place (moves to the Identity Vault, ADR-2253, when it exists) |
-| `SignatureData` | prove which capture signed which content | not stored; `SignatureBindingSha256` = SHA-256 of `cadence.econsent.signature-binding.v1\n<DigestSha256>\n<capture>` (`ConsentSignatureBinding`) |
+| Field                    | Need                                     | Stored as                                                                                                                                        |
+| ------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `VirtualCardToken`       | processor handles the card               | replaced by `VirtualCardProcessorReference`, encrypted; `VirtualCardMask` for display                                                            |
+| `AchRoutingNumber`       | processor holds bank details             | not stored; `AchProcessorReference` (encrypted) plus `AchRoutingMask` (last four digits)                                                         |
+| `DeviceToken` (4 tables) | match a presented token                  | `DeviceTokenHash`, HMAC-SHA256 via `DeviceTokenHasher`, indexed; no encrypted copy because nothing reads the raw token back                      |
+| `SignerEmail`            | contact the signer                       | encrypted in place (moves to the Identity Vault, ADR-2253, when it exists)                                                                       |
+| `SignatureData`          | prove which capture signed which content | not stored; `SignatureBindingSha256` = SHA-256 of `cadence.econsent.signature-binding.v1\n<DigestSha256>\n<capture>` (`ConsentSignatureBinding`) |
 
 - **Justification:** Option 3 is the only option that keeps keys out of the database, has no implicit fallback key
   and covers both reversible and lookup-only secrets with one tested implementation.
@@ -94,11 +94,11 @@ The fix therefore sets the storage rule before any feature starts filling the co
 
 ### Existing rows (migrations)
 
-| Migration | Transformed | Cleared |
-| --- | --- | --- |
-| payments `StoreProcessorReferencesInsteadOfPaymentSecrets` | routing number → `AchRoutingMask` (`*****` + last four digits) | `VirtualCardToken`, `AchRoutingNumber` (processor references start empty and are re-linked from the processor) |
-| interop `HashDeviceTokensAtRest` | none | `DeviceToken` in all four tables; `DeviceTokenHash` is `''` until the device is re-registered. Clinical content of every row is kept. |
-| econsent `ProtectSignerEmailAndBindSignatureData` | `SignatureData` → `SignatureBindingSha256` in SQL (same expression as `ConsentSignatureBinding.Compute`) | `SignatureData`; plaintext `SignerEmail` (contact data, not part of the Part 11 manifest, which keeps printed name, time and meaning) |
+| Migration                                                  | Transformed                                                                                              | Cleared                                                                                                                               |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| payments `StoreProcessorReferencesInsteadOfPaymentSecrets` | routing number → `AchRoutingMask` (`*****` + last four digits)                                           | `VirtualCardToken`, `AchRoutingNumber` (processor references start empty and are re-linked from the processor)                        |
+| interop `HashDeviceTokensAtRest`                           | none                                                                                                     | `DeviceToken` in all four tables; `DeviceTokenHash` is `''` until the device is re-registered. Clinical content of every row is kept. |
+| econsent `ProtectSignerEmailAndBindSignatureData`          | `SignatureData` → `SignatureBindingSha256` in SQL (same expression as `ConsentSignatureBinding.Compute`) | `SignatureData`; plaintext `SignerEmail` (contact data, not part of the Part 11 manifest, which keeps printed name, time and meaning) |
 
 Rationale for clearing instead of transforming: encryption and HMAC need the keys, which SQL migrations must not
 have; an unkeyed hash of a token would be brute-forceable and could not be matched by the application; and plaintext

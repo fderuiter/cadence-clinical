@@ -1,9 +1,9 @@
 <template>
   <!-- Global Floating Sync Drawer -->
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div
     class="global-drawer-overlay"
     :class="{ active: sync.isSyncDrawerOpen }"
+    role="presentation"
     aria-hidden="true"
     :inert="!sync.isSyncDrawerOpen || undefined"
     @click="toggleSyncDrawer"

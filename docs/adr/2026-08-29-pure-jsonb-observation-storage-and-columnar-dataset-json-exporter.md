@@ -36,28 +36,27 @@ This decision resolves requirements under `@req:PRD-CRF-001`, `@req:PRD-SYS-125`
 ### Option 1: **Option A (Selected): Pure JSONB Storage with Columnar DDF Transformation**
 
 - **Overview:** - Observations stored as flexible JSONB documents on a unified table with indexed query columns.
-   - Columnar extraction in memory provides sub-100ms analytical transformation.
-- ***Pros:***
+  - Columnar extraction in memory provides sub-100ms analytical transformation.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B: Dynamic Physical SQL Table Generation per Form Definition**
 
 - **Overview:** - _Rejected_: Leads to database lock contention, schema drift, and brittle multi-tenant deployments.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 3: **Option C: Entity-Attribute-Value (EAV) Relational Triples**
 
 - **Overview:** - _Rejected_: Requires massive recursive SQL joins, resulting in 10x-50x slower extraction latency and prohibitive CPU costs.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

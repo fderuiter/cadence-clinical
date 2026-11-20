@@ -37,17 +37,17 @@ Furthermore, we must establish clear authorization boundaries, deterministic pse
 
 ### Option 1: Apply Flat 365-day Date Shift
 
-- ***Pros:*** Simpler to implement.
-- ***Cons:*** Insufficient anonymity because all subjects are shifted by the same static amount, making it vulnerable to pattern matching.
+- _**Pros:**_ Simpler to implement.
+- _**Cons:**_ Insufficient anonymity because all subjects are shifted by the same static amount, making it vulnerable to pattern matching.
 
 ### Option 2: Apply Random Date Shift per Subject (Regenerated Each Call)
 
-- ***Pros:*** High entropy.
-- ***Cons:*** Breaks reproducibility and referential integrity across separate export calls or independent domain requests (e.g., if DM is exported now and AE is exported later, they would have mismatching shifted dates).
+- _**Pros:**_ High entropy.
+- _**Cons:**_ Breaks reproducibility and referential integrity across separate export calls or independent domain requests (e.g., if DM is exported now and AE is exported later, they would have mismatching shifted dates).
 
 ### Option 3: Deterministic Per-Subject Date Shifting & Pseudonymization (Selected)
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ **Deterministic Date Shifting:** We derive a stable per-subject offset from the record's original `USUBJID` via HMAC-SHA256 keyed by the export salt, mapped to a bounded range `[-365, +365]` days. This ensures that the same subject gets the exact same offset across all domains, datasets, and separate export calls.
   - ✅ **Stable Pseudonymization:** `USUBJID`, `SUBJID`, and `SITEID` are pseudonymized deterministically using the export salt via HMAC-SHA256, outputting a 64-character hex string.
   - ✅ **Age Capping:** Numeric `AGE` fields are capped at `89` (values > 89 set to 89).

@@ -33,7 +33,7 @@ validation (SDTM, SEND, ADaM, Define-XML) is absent. This must be traceable unde
 ### Option 1: Versioned rule packs over one AST, evaluator behind a port, Rust runtime as a later seam (Selected)
 
 - **Overview:** `Rule(id, version, authority, source citation, applicability, expression AST, severity,
-  explanation, remediation, effective period)` grouped into attested `RulePack`s (CDISC SDTM/SEND/ADaM/Define-XML;
+explanation, remediation, effective period)` grouped into attested `RulePack`s (CDISC SDTM/SEND/ADaM/Define-XML;
   FDA, PMDA, NMPA; sponsor; study). A `ValidationRun` evaluates packs at a lifecycle stage and yields
   `ValidationFinding`s with stable identity across runs. The evaluator is `IRuleEvaluator`; the .NET
   implementation evolves from `AstEditCheckEngine`. A Rust runtime (CLI, server, WASM) may replace it behind

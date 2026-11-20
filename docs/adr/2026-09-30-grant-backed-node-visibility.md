@@ -21,7 +21,7 @@ sees. Blinding (K-AUTH-4) and the identity layer (#4782) are separate conditions
 ## 2. Decision Drivers & Constraints
 
 - **Spec §9.3:** authority is computed from grants over the scope path `tenant / organization / study / country /
-  study_site`. Visibility must use the same grants and paths, not a second model.
+study_site`. Visibility must use the same grants and paths, not a second model.
 - **K-AUTH-3:** a delegation counts only while every grant above it is in effect.
 - **ADR-2471:** masked objects stay in the result, so a trace or count never depends on the reader.
 - **Least surprise for site staff:** people working at a study site need the study and its protocol versions. They
