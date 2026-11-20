@@ -279,11 +279,7 @@ public static class CiPlan
             new("security", "Run dependency audit")
             {
                 Always = true,
-                Commands =
-                [
-                    Dotnet("restore", "Cadence.sln"),
-                    NodeCli("check", "vulnerabilities"),
-                ],
+                Commands = [Dotnet("restore", "Cadence.sln"), NodeCli("check", "vulnerabilities")],
             },
             new("security", "Run secret detection")
             {
