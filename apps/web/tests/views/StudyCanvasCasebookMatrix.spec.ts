@@ -317,11 +317,13 @@ function mockKernelProtocolAndStudy() {
 
 describe("Casebook matrix, inline form workspace, context handoff, and monitor read-only observation view", () => {
   beforeEach(() => {
+    localStorage.clear();
     setActivePinia(createPinia());
     vi.restoreAllMocks();
   });
 
   afterEach(() => {
+    localStorage.clear();
     vi.restoreAllMocks();
   });
 
@@ -353,8 +355,15 @@ describe("Casebook matrix, inline form workspace, context handoff, and monitor r
     const pinia = createPinia();
     setActivePinia(pinia);
     const auth = useAuthStore();
-    auth.isAuthenticated = true;
-    auth.rawRoles = ["crc"];
+    auth.setAuth({
+      authenticated: true,
+      token: "token-crc-1",
+      tokenParsed: {
+        sub: "crc-1",
+        tenant_id: "tenant-1",
+        realm_access: { roles: ["crc"] },
+      },
+    });
 
     mockKernelProtocolAndStudy();
     vi.spyOn(kernelApi, "listProposals").mockResolvedValue([]);
@@ -577,6 +586,16 @@ describe("Casebook matrix, inline form workspace, context handoff, and monitor r
     await wrapper.find("#canvas-form-back").trigger("click");
     await flushPromises();
     expect(router.currentRoute.value.query.form).toBeUndefined();
+    expect(kernelApi.getScheduleOfActivities).toHaveBeenCalledTimes(1);
+
+    await wrapper
+      .find(`[id="record-form-link-${FORM_REPEAT_1_ID}"]`)
+      .trigger("click");
+    await flushPromises();
+    expect(
+      (wrapper.find("#ecrf-item-diastolic_bp").element as HTMLInputElement)
+        .value
+    ).toBe("80");
 
     wrapper.unmount();
   });

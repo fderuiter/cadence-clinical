@@ -14,10 +14,10 @@ namespace Cadence.UnitTests.Packages;
 
 public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
 {
-    private const string ValidCheckoutSha = "3d3c42e5aac5ba805825da76410c181273ba90b1"; // pragma: allowlist secret
-    private const string ValidSetupNodeSha = "949feb2413d6458794dcd2491c4babbbce0c15c1"; // pragma: allowlist secret
-    private const string ValidGithubScriptSha = "3a2844b7e9c422d3c10d287c895573f7108da1b3"; // pragma: allowlist secret
-    private const string ValidDockerDigest = "10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5"; // pragma: allowlist secret
+    private const string ValidCheckoutSha = "3d3c42e5aac5ba805825da76410c181273ba90b1";
+    private const string ValidSetupNodeSha = "949feb2413d6458794dcd2491c4babbbce0c15c1";
+    private const string ValidGithubScriptSha = "3a2844b7e9c422d3c10d287c895573f7108da1b3";
+    private const string ValidDockerDigest = "10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5";
 
     private readonly string _root = Directory.CreateDirectory(
         Path.Combine(Path.GetTempPath(), "workflow-security-" + Guid.NewGuid().ToString("N"))).FullName;

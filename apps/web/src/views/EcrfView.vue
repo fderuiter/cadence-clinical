@@ -127,6 +127,8 @@
               : activeUserRole === 'cra'
           "
           @dirty-change="formPanelDirty = $event"
+          @form-loaded="onFormPanelLoaded"
+          @closed="onFormPanelClosed"
         />
 
         <CrcFormRenderer
@@ -308,7 +310,7 @@
 
 <script setup>
 import { ref, reactive, watch, onMounted, onUnmounted, computed } from "vue";
-import { useRoute, onBeforeRouteLeave } from "vue-router";
+import * as VueRouter from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { useToastStore } from "../stores/toasts.js";
@@ -334,21 +336,64 @@ import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { canManageQueries, canVerifySource } from "../canvas/authority";
 
+const { useRoute, onBeforeRouteLeave } = VueRouter;
+const useRouter = "useRouter" in VueRouter ? VueRouter.useRouter : undefined;
+const onBeforeRouteUpdate =
+  "onBeforeRouteUpdate" in VueRouter
+    ? VueRouter.onBeforeRouteUpdate
+    : undefined;
+
 const store = useClinicalStore();
 const authStore = useAuthStore();
 const toastStore = useToastStore();
 const route = useRoute();
+const router = typeof useRouter === "function" ? useRouter() : null;
 const demoBuild = isDemoBuild();
 
 const showEhrReconciliationDrawer = ref(false);
 
 // Whether the case report form has entries that are not saved yet.
 const formPanelDirty = ref(false);
+const loadedFormId = ref(null);
 
 /** One route query value as a string, or null. */
-function routeQuery(name) {
-  const value = route?.query?.[name];
+function routeQuery(name, targetRoute = route) {
+  const value = targetRoute?.query?.[name];
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+watch(
+  () => routeQuery("formId"),
+  (next) => {
+    if (!next) {
+      loadedFormId.value = null;
+    }
+  }
+);
+
+function onFormPanelLoaded(loaded) {
+  const nextId = loaded?.form_id || null;
+  loadedFormId.value = nextId;
+  if (!nextId || routeQuery("formId") === nextId) return;
+  if (typeof router?.replace === "function") {
+    void router.replace({
+      query: {
+        ...(route?.query || {}),
+        formId: nextId,
+      },
+    });
+  }
+}
+
+function onFormPanelClosed() {
+  formPanelDirty.value = false;
+  loadedFormId.value = null;
+  if (!routeQuery("formId")) return;
+  if (typeof router?.replace === "function") {
+    const nextQuery = { ...(route?.query || {}) };
+    delete nextQuery.formId;
+    void router.replace({ query: nextQuery });
+  }
 }
 
 // Selected Subject & Visit State
@@ -660,6 +705,23 @@ if (typeof onBeforeRouteLeave === "function") {
         "You have unsaved eCRF draft changes. Are you sure you want to leave?"
       );
       if (!confirmLeave) {
+        return false;
+      }
+    }
+  });
+}
+
+if (typeof onBeforeRouteUpdate === "function") {
+  onBeforeRouteUpdate((to, from) => {
+    if (!formPanelDirty.value) return;
+    const nextFormId = routeQuery("formId", to);
+    const currentFormId =
+      loadedFormId.value ?? routeQuery("formId", from ?? route);
+    if (nextFormId !== currentFormId) {
+      const confirmSwitch = window.confirm(
+        "You have unsaved eCRF draft changes. Are you sure you want to leave?"
+      );
+      if (!confirmSwitch) {
         return false;
       }
     }

@@ -110,13 +110,6 @@ function browserStorage(): Storage | null {
   }
 }
 
-/** Prompts the user before discarding unsaved form edits during navigation. */
-export function confirmDiscardUnsavedForm(
-  message = "You have unsaved changes on this form. Leave without saving?"
-): boolean {
-  return typeof window === "undefined" || window.confirm(message);
-}
-
 /**
  * One eCRF form instance (ADR-2622): open or reuse it, read it, save a page of values, and sign it (#5463).
  *
@@ -151,7 +144,12 @@ export function useEcrfForm(
     key: string;
   } | null = null;
   let draftTimer: ReturnType<typeof setTimeout> | null = null;
+  let pendingDraft: { formId: string; key: string } | null = null;
+  let loadedScopeKey: string | null = null;
+  let draftCleared = false;
   let draftSaved = false;
+  let lastRequestedFormId: string | null = null;
+  let loadRequest = 0;
 
   const items = computed<EcrfFormItem[]>(() => form.value?.items ?? []);
   const locked = computed(() => (form.value?.locks.length ?? 0) > 0);
@@ -185,6 +183,7 @@ export function useEcrfForm(
       clearTimeout(draftTimer);
       draftTimer = null;
     }
+    pendingDraft = null;
   }
 
   function removeDraftKey(key: string) {
@@ -201,6 +200,7 @@ export function useEcrfForm(
   function clearDraft(formId: string | null | undefined = form.value?.form_id) {
     cancelDraftSave();
     draftSaved = false;
+    draftCleared = true;
     const key = getDraftStorageKey(formId);
     if (!key) return;
     removeDraftKey(key);
@@ -352,6 +352,44 @@ export function useEcrfForm(
     }
   }
 
+  function applyScheduledDraft(scheduledFormId: string, scheduledKey: string) {
+    if (
+      !form.value ||
+      form.value.form_id !== scheduledFormId ||
+      getDraftStorageKey(form.value.form_id) !== scheduledKey
+    ) {
+      return;
+    }
+    if (dirty.value && !locked.value) {
+      persistDraft(scheduledFormId, scheduledKey);
+    } else {
+      removeDraftKey(scheduledKey);
+      draftSaved = false;
+    }
+  }
+
+  /** Immediately persists or cleans up any pending debounced browser draft for the active form. */
+  function flushDraft() {
+    if (draftTimer !== null && pendingDraft !== null) {
+      const { formId: scheduledFormId, key: scheduledKey } = pendingDraft;
+      cancelDraftSave();
+      applyScheduledDraft(scheduledFormId, scheduledKey);
+      return;
+    }
+    cancelDraftSave();
+    const current = form.value;
+    if (!current || locked.value || !dirty.value || draftCleared) return;
+    if (
+      !loadedScopeKey ||
+      scopedKey(currentScope(), ECRF_FORM_DRAFT_NAMESPACE) !== loadedScopeKey
+    ) {
+      return;
+    }
+    const key = getDraftStorageKey(current.form_id);
+    if (!key) return;
+    persistDraft(current.form_id, key);
+  }
+
   function scheduleDraftSave() {
     cancelDraftSave();
     const current = form.value;
@@ -360,22 +398,12 @@ export function useEcrfForm(
     if (!scheduledKey) return;
     if (!dirty.value && !draftSaved) return;
     const scheduledFormId = current.form_id;
+    pendingDraft = { formId: scheduledFormId, key: scheduledKey };
 
     draftTimer = setTimeout(() => {
       draftTimer = null;
-      if (
-        !form.value ||
-        form.value.form_id !== scheduledFormId ||
-        getDraftStorageKey(form.value.form_id) !== scheduledKey
-      ) {
-        return;
-      }
-      if (dirty.value && !locked.value) {
-        persistDraft(scheduledFormId, scheduledKey);
-      } else {
-        removeDraftKey(scheduledKey);
-        draftSaved = false;
-      }
+      pendingDraft = null;
+      applyScheduledDraft(scheduledFormId, scheduledKey);
     }, DRAFT_DEBOUNCE_MS);
   }
 
@@ -383,6 +411,7 @@ export function useEcrfForm(
     () => scopedKey(currentScope(), ECRF_FORM_DRAFT_NAMESPACE),
     () => {
       cancelDraftSave();
+      loadedScopeKey = null;
       draftSaved = false;
     }
   );
@@ -390,13 +419,14 @@ export function useEcrfForm(
   watch(
     entries,
     () => {
+      draftCleared = false;
       scheduleDraftSave();
     },
     { deep: true }
   );
 
   if (getCurrentInstance()) {
-    onUnmounted(cancelDraftSave);
+    onUnmounted(flushDraft);
   }
 
   /** A form can be signed as read: it has values (a content hash) and no unsaved entries. */
@@ -413,25 +443,45 @@ export function useEcrfForm(
     restoreFromStorage: boolean
   ): Promise<void> {
     cancelDraftSave();
+    lastRequestedFormId = formId;
+    const request = ++loadRequest;
     loading.value = true;
     loadError.value = null;
     try {
       const loaded = await ecrfFormsApi.getForm(formId);
+      if (request !== loadRequest) return;
+      loadedScopeKey = scopedKey(currentScope(), ECRF_FORM_DRAFT_NAMESPACE);
+      draftCleared = false;
       form.value = loaded;
       resetEntries();
       if (restoreFromStorage) {
         restoreDraft(loaded);
       }
     } catch (error) {
+      if (request !== loadRequest) return;
+      loadedScopeKey = null;
       form.value = null;
+      clearRecord(entries);
+      clearRecord(itemErrors);
       loadError.value = messageOf(error);
     } finally {
-      loading.value = false;
+      if (request === loadRequest) {
+        loading.value = false;
+      }
     }
   }
 
   async function load(formId: string): Promise<void> {
+    if (form.value && form.value.form_id !== formId) {
+      flushDraft();
+    }
     await loadInternal(formId, true);
+  }
+
+  /** Repeats the last requested form read after a load failure. */
+  async function retryLoad(): Promise<void> {
+    if (!lastRequestedFormId || loading.value) return;
+    await load(lastRequestedFormId);
   }
 
   /** Reloads the form from the kernel, keeping non-stale edits whose revision did not change and resetting conflicts. */
@@ -694,10 +744,11 @@ export function useEcrfForm(
     return signOutcome.value;
   }
 
-  /** Closes the form on screen, discarding unsaved entries and clearing any saved draft. */
-  function close() {
-    clearDraft(form.value?.form_id);
+  function resetState() {
+    loadRequest++;
+    loadedScopeKey = null;
     form.value = null;
+    loading.value = false;
     loadError.value = null;
     outcome.value = null;
     signOutcome.value = null;
@@ -705,6 +756,20 @@ export function useEcrfForm(
     pendingSave = null;
     clearRecord(entries);
     clearRecord(itemErrors);
+  }
+
+  /** Flushes any pending browser draft and clears in-memory state without deleting saved browser drafts. */
+  function dismiss() {
+    flushDraft();
+    lastRequestedFormId = null;
+    resetState();
+  }
+
+  /** Closes the form on screen, discarding unsaved entries and clearing any saved draft. */
+  function close() {
+    clearDraft(form.value?.form_id);
+    lastRequestedFormId = null;
+    resetState();
   }
 
   return {
@@ -727,12 +792,15 @@ export function useEcrfForm(
     editedItems,
     isEdited,
     getDraftStorageKey,
+    flushDraft,
     clearDraft,
     load,
+    retryLoad,
     reload,
     open,
     save,
     sign,
+    dismiss,
     close,
   };
 }

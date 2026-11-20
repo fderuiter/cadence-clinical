@@ -53,12 +53,20 @@ export type KernelProposal = Schemas["Kernel_KernelProposalResponse"];
 export type KernelProposalState = Schemas["Kernel_KernelProposalStateResponse"];
 export type KernelAssertionState =
   Schemas["Kernel_KernelAssertionStateResponse"];
+export type KernelEntitlements = Schemas["Kernel_KernelEntitlementsResponse"];
+export type KernelTrialOnboardingRequest =
+  Schemas["Kernel_KernelTrialOnboardingRequest"];
+export type KernelTrialOnboardingResponse =
+  Schemas["Kernel_KernelTrialOnboardingResponse"];
+export type KernelUpgradeSubscriptionRequest =
+  Schemas["Kernel_KernelUpgradeSubscriptionRequest"];
 export type { KernelObservationValue };
 
 export const ASSERTION_LOCKED = "K.Assertion.Locked";
 export const ASSERTION_REVISION_STALE = "K.Assertion.RevisionStale";
 export const ASSERTION_ALREADY_RETRACTED = "K.Assertion.AlreadyRetracted";
 export const KERNEL_AUTHORIZATION_DENIED = "K.Authorization.Denied";
+export const KERNEL_SUBSCRIPTION_EXPIRED = "K.Subscription.Expired";
 
 /** Source data verification of one observation's current revision (`VerifyObservation`). */
 export interface KernelObservationVerification {
@@ -540,5 +548,42 @@ export const kernelApi = {
         throw new Error(`Matrix gap check failed: ${res.statusText}`);
       return res.json();
     });
+  },
+
+  /** Reads the caller's resolved kernel tenant commercial subscription tier and enabled product families. */
+  entitlements(): Promise<KernelEntitlements> {
+    return unwrapResponse(client.GET("/api/v1/kernel/entitlements"));
+  },
+
+  /** Provisions or idempotently replays the authenticated OIDC caller's self-service trial workspace. */
+  bootstrapTrial(
+    request: KernelTrialOnboardingRequest
+  ): Promise<KernelTrialOnboardingResponse> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/onboarding/trial", {
+        body: request,
+      })
+    );
+  },
+
+  /** Activates or upgrades the caller's tenant commercial subscription tier in place. */
+  upgradeSubscriptionTier({
+    tier,
+    idempotencyKey,
+    reason = "Update commercial subscription tier in workspace",
+  }: {
+    tier: string;
+    idempotencyKey: string;
+    reason?: string;
+  }): Promise<KernelEntitlements> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/entitlements/tier", {
+        headers: {
+          "Idempotency-Key": idempotencyKey,
+          "X-Change-Reason": encodeChangeReason(reason),
+        },
+        body: { tier },
+      })
+    );
   },
 };

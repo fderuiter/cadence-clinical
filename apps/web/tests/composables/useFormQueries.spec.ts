@@ -285,4 +285,54 @@ describe("useFormQueries (#5461)", () => {
       message: "Completed 1 of 2 queries; 1 could not be updated.",
     });
   });
+
+  it("separates initial loading from same-scope refreshing and keeps existing queries if a refresh fails", async () => {
+    let resolveInitial!: (rows: FormQueryResponse[]) => void;
+    let resolveRefresh!: (rows: FormQueryResponse[]) => void;
+    vi.mocked(ecrfQueriesApi.listForStudy)
+      .mockImplementationOnce(
+        () => new Promise((resolve) => (resolveInitial = resolve))
+      )
+      .mockImplementationOnce(
+        () => new Promise((resolve) => (resolveRefresh = resolve))
+      )
+      .mockRejectedValueOnce(new TypeError("Network glitch"));
+
+    const queries = useFormQueries();
+    const initialLoad = queries.load({ studyId: "study-1" });
+    expect(queries.loading.value).toBe(true);
+    expect(queries.refreshing.value).toBe(false);
+
+    resolveInitial([query({ query_id: "query-initial" })]);
+    await initialLoad;
+    expect(queries.loading.value).toBe(false);
+    expect(queries.refreshing.value).toBe(false);
+    expect(queries.queries.value.map((q) => q.query_id)).toEqual([
+      "query-initial",
+    ]);
+
+    const filterRefresh = queries.load({
+      studyId: "study-1",
+      filters: { site: "017" },
+    });
+    expect(queries.loading.value).toBe(false);
+    expect(queries.refreshing.value).toBe(true);
+    expect(queries.queries.value.map((q) => q.query_id)).toEqual([
+      "query-initial",
+    ]);
+
+    resolveRefresh([query({ query_id: "query-filtered" })]);
+    await filterRefresh;
+    expect(queries.refreshing.value).toBe(false);
+    expect(queries.queries.value.map((q) => q.query_id)).toEqual([
+      "query-filtered",
+    ]);
+
+    await queries.load({ studyId: "study-1", filters: { site: "022" } });
+    expect(queries.refreshing.value).toBe(false);
+    expect(queries.queries.value.map((q) => q.query_id)).toEqual([
+      "query-filtered",
+    ]);
+    expect(queries.loadError.value).toContain("Network glitch");
+  });
 });

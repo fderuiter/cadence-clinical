@@ -498,10 +498,10 @@ import {
   type EcrfFormSummary,
 } from "../../api/ecrfFormsApi";
 import {
-  findStudyScheduleOptions,
   type StudyScheduleOptions,
   type StudyScheduleRow,
 } from "../../canvas/kernelStudy";
+import { useStudyCanvasStore } from "../../stores/studyCanvas";
 
 interface LifecycleBadge {
   key: string;
@@ -538,15 +538,18 @@ const props = defineProps<{
   handoffLocation?: RouteLocationRaw | null;
 }>();
 
+const canvas = useStudyCanvasStore();
 const forms = ref<EcrfFormSummary[]>([]);
-const loadedSchedule = ref<StudyScheduleOptions | null>(null);
 const loading = ref(false);
 const loadError = ref("");
 let requestSeq = 0;
 
-const activeSchedule = computed<StudyScheduleOptions | null>(
-  () => props.schedule ?? loadedSchedule.value
-);
+const activeSchedule = computed<StudyScheduleOptions | null>(() => {
+  if (props.schedule !== undefined) return props.schedule;
+  const code = props.studyCode?.trim() ?? "";
+  if (!code) return null;
+  return canvas.scheduleOptionsByStudy[code] ?? null;
+});
 
 const matrixActive = computed(() => {
   const sched = activeSchedule.value;
@@ -554,6 +557,10 @@ const matrixActive = computed(() => {
     props.enrollmentId &&
     props.newFormCellLocation &&
     sched &&
+    Array.isArray(sched.columns) &&
+    Array.isArray(sched.scheduledRows) &&
+    Array.isArray(sched.unscheduledRows) &&
+    Array.isArray(sched.epochs) &&
     (sched.columns.length > 0 || sched.unscheduledRows.length > 0)
   );
 });
@@ -751,7 +758,13 @@ const numberedUnscheduledForms = computed(() => {
 
 const unmappedScheduledForms = computed(() => {
   const sched = activeSchedule.value;
-  if (!sched) return [];
+  if (
+    !sched ||
+    !Array.isArray(sched.scheduledRows) ||
+    !Array.isArray(sched.columns)
+  ) {
+    return [];
+  }
   const knownSpecs = new Set(
     sched.scheduledRows.map((r) => r.collectionSpecId)
   );
@@ -766,7 +779,7 @@ const unmappedScheduledForms = computed(() => {
 
 const totalScheduledCells = computed(() => {
   const sched = activeSchedule.value;
-  if (!sched) return 0;
+  if (!sched || !Array.isArray(sched.scheduledRows)) return 0;
   return sched.scheduledRows.reduce(
     (sum, row) => sum + row.columnIndices.length,
     0
@@ -775,7 +788,13 @@ const totalScheduledCells = computed(() => {
 
 const scheduledCompleteCells = computed(() => {
   const sched = activeSchedule.value;
-  if (!sched) return 0;
+  if (
+    !sched ||
+    !Array.isArray(sched.scheduledRows) ||
+    !Array.isArray(sched.columns)
+  ) {
+    return 0;
+  }
   let count = 0;
   for (const row of sched.scheduledRows) {
     for (const colIdx of row.columnIndices) {
@@ -818,10 +837,16 @@ async function loadFormsAndSchedule() {
   const enrollmentId = props.enrollmentId;
   if (!enrollmentId) {
     forms.value = [];
-    loadedSchedule.value = null;
     loading.value = false;
     loadError.value = "";
     return;
+  }
+  if (
+    props.schedule === undefined &&
+    props.studyCode &&
+    props.newFormCellLocation
+  ) {
+    void canvas.loadScheduleOptions(props.studyCode);
   }
   if (typeof ecrfFormsApi?.listForEnrollment !== "function") {
     forms.value = [];
@@ -831,21 +856,9 @@ async function loadFormsAndSchedule() {
   loading.value = true;
   loadError.value = "";
   try {
-    const schedulePromise =
-      !props.schedule &&
-      props.studyCode &&
-      props.newFormCellLocation &&
-      typeof findStudyScheduleOptions === "function"
-        ? findStudyScheduleOptions(props.studyCode).catch(() => null)
-        : Promise.resolve(null);
-
-    const [result, fetchedSchedule] = await Promise.all([
-      ecrfFormsApi.listForEnrollment(enrollmentId),
-      schedulePromise,
-    ]);
+    const result = await ecrfFormsApi.listForEnrollment(enrollmentId);
     if (seq === requestSeq) {
       forms.value = result ?? [];
-      loadedSchedule.value = fetchedSchedule;
     }
   } catch (err) {
     if (seq === requestSeq) {

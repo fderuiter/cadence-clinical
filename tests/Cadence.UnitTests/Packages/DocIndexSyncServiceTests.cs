@@ -60,7 +60,18 @@ public sealed class DocIndexSyncServiceTests : IDisposable
 
         File.WriteAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"), "# Index\n");
         File.WriteAllText(Path.Combine(docsDir, "empty.md"), ""); // Empty file
-        foreach (string stagedPage in new[] { "AGENTS.md", "ARCHITECTURE.md", "LICENSE.md", "index.md" })
+        foreach (string stagedPage in new[]
+                 {
+                     "AGENTS.md",
+                     "ARCHITECTURE.md",
+                     "CONTEXT.md",
+                     "CONTRIBUTING.md",
+                     "LICENSE.md",
+                     "README.md",
+                     "SECURITY.md",
+                     "SUPPORT.md",
+                     "index.md"
+                 })
         {
             File.WriteAllText(Path.Combine(docsDir, stagedPage), "# Staged VitePress page\n");
         }
@@ -166,5 +177,20 @@ public sealed class DocIndexSyncServiceTests : IDisposable
         string updatedIndex = File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"));
         updatedIndex.Should().Contain("docb.md");
         updatedIndex.Should().Contain("Doc B");
+    }
+
+    [Fact]
+    public void ScanMarkdownFiles_ExcludesStagedReadmePage()
+    {
+        string docsDir = Path.Combine(_tempDir, "docs");
+        Directory.CreateDirectory(docsDir);
+
+        File.WriteAllText(Path.Combine(docsDir, "README.md"), "# Staged Root README\n");
+        File.WriteAllText(Path.Combine(docsDir, "index.md"), "# Guided Landing Page\n");
+        File.WriteAllText(Path.Combine(docsDir, "LOCAL_DEV_ENVIRONMENT.md"), "# Local Dev\nDetails\n");
+
+        var files = DocIndexSyncService.ScanMarkdownFiles(docsDir);
+
+        files.Should().ContainSingle(f => f.RelativePath == "LOCAL_DEV_ENVIRONMENT.md");
     }
 }

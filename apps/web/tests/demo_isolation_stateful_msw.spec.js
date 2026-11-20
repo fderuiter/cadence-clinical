@@ -15,7 +15,7 @@ import {
   DEMO_AVAILABLE_SCREENS,
   isScreenAvailable,
 } from "../src/router/availability.js";
-import { router } from "../src/router";
+import { createAppHistory, router } from "../src/router";
 import { useAuthStore } from "../src/stores/auth.js";
 
 const DEMO_HEADERS = {
@@ -45,6 +45,27 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
         url: "/mockServiceWorker.js",
         options: { scope: "/" },
       });
+      expect(resolveWebServiceWorkerOptions("/cadence-clinical/demo/")).toEqual(
+        {
+          url: "/cadence-clinical/demo/mockServiceWorker.js",
+          options: { scope: "/cadence-clinical/demo/" },
+        }
+      );
+    });
+
+    it("uses hash history in demo builds for subpath deep-link safety and web history in standard builds", () => {
+      const demoHistory = createAppHistory(
+        { MODE: "demo" },
+        "/cadence-clinical/demo/"
+      );
+      expect(demoHistory.base).toContain("#");
+      expect(demoHistory.base).toContain("/cadence-clinical/demo/");
+
+      const prodHistory = createAppHistory(
+        { MODE: "production", VITE_DEMO_MODE: "false" },
+        "/cadence-clinical/"
+      );
+      expect(prodHistory.base).not.toContain("#");
     });
 
     it("awaits worker.start with error unhandled-frame mode in demo builds", async () => {
@@ -582,6 +603,53 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
         "Clinical Chemistry Panel (CDASH LB)"
       );
       expect(chemSummary?.complete).toBe(false);
+    });
+
+    it("serves stateful kernel entitlements and in-place tier upgrades without hitting 501 boundary", async () => {
+      const initialRes = await fetch(`${origin}/api/v1/kernel/entitlements`, {
+        headers: DEMO_HEADERS,
+      });
+      expect(initialRes.status).toBe(200);
+      const initialEntitlements = await initialRes.json();
+      expect(initialEntitlements.tier).toBe("Complete");
+
+      const upgradeRes = await fetch(
+        `${origin}/api/v1/kernel/entitlements/tier`,
+        {
+          method: "POST",
+          headers: {
+            ...DEMO_HEADERS,
+            "Idempotency-Key": "demo-tier-select-1",
+            "X-Change-Reason": "Evaluate Select tier in demo",
+          },
+          body: JSON.stringify({ tier: "Select" }),
+        }
+      );
+      expect(upgradeRes.status).toBe(200);
+      const upgraded = await upgradeRes.json();
+      expect(upgraded.tier).toBe("Select");
+      expect(upgraded.product_families).toEqual([
+        "Blueprint",
+        "Capture",
+        "Orbit",
+        "Engage",
+        "Allocate",
+      ]);
+
+      const subsequentRes = await fetch(
+        `${origin}/api/v1/kernel/entitlements`,
+        { headers: DEMO_HEADERS }
+      );
+      const subsequent = await subsequentRes.json();
+      expect(subsequent.tier).toBe("Select");
+
+      setActivePinia(createPinia());
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      const authStore = useAuthStore();
+      authStore.startDemoSession();
+      const loaded = await authStore.loadEntitlements({ force: true });
+      expect(loaded?.tier).toBe("Select");
+      expect(authStore.entitlements?.tier).toBe("Select");
     });
   });
 

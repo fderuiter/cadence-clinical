@@ -135,7 +135,7 @@ public sealed class DatabaseTestEvidenceTests : IDisposable
         DatabaseTestEvidence.HasRecordedEnvironment(_dir).Should().BeFalse();
 
         string metadataFile = Path.Combine(_dir, "kernel.database.txt");
-        File.WriteAllText(metadataFile, "fixture=kernel\nsource=CADENCE_TEST_POSTGRES\n"); // pragma: allowlist secret
+        File.WriteAllText(metadataFile, "fixture=kernel\nsource=CADENCE_TEST_POSTGRES\n");
         DatabaseTestEvidence.HasRecordedEnvironment(_dir).Should().BeFalse();
 
         File.WriteAllText(metadataFile, "fixture=kernel\nserver_version=18.1\nsource=CADENCE_TEST_POSTGRES\n");

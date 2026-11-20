@@ -1,7 +1,12 @@
-import { createRouter, createWebHistory } from "vue-router";
+import {
+  createRouter,
+  createWebHashHistory,
+  createWebHistory,
+} from "vue-router";
 import { TOKEN_MIN_VALIDITY_SECONDS } from "../api/authorization.js";
 import { useAuthStore, ROLE_ALIASES } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding.js";
+import { isDemoBuild } from "../utils/demoMode.js";
 import { AVAILABLE_SCREENS, isScreenAvailable } from "./availability";
 
 /**
@@ -42,6 +47,9 @@ const routes = [
       if (!authStore.isAuthenticated) {
         return "/login";
       }
+      if (authStore.needsTrialOnboarding) {
+        return { name: "trial-onboarding" };
+      }
       const onboardingStore = useOnboardingStore();
       if (!onboardingStore.bypassOverview) {
         return { name: "overview" };
@@ -74,6 +82,18 @@ const routes = [
     path: "/overview",
     name: "overview",
     component: () => import("../views/OverviewView.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/plans",
+    name: "plans",
+    component: () => import("../views/PlansView.vue"),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: "/onboarding/trial",
+    name: "trial-onboarding",
+    component: () => import("../views/TrialSetupView.vue"),
     meta: { requiresAuth: true },
   },
   {
@@ -559,9 +579,16 @@ const routes = [
   },
 ];
 
+export function createAppHistory(
+  env = import.meta.env,
+  base = env?.BASE_URL || "/cadence-clinical/"
+) {
+  return isDemoBuild(env) ? createWebHashHistory(base) : createWebHistory(base);
+}
+
 export const router = createRouter({
-  // Use a GitHub Pages-compatible history mode resolving from the configured Pages base path
-  history: createWebHistory(import.meta.env.BASE_URL || "/cadence-clinical/"),
+  // Use hash history for static subpath demo builds and web history for Keycloak OIDC deployments
+  history: createAppHistory(),
   routes,
 });
 
@@ -584,6 +611,10 @@ router.beforeEach(async (to) => {
 
     if (!authStore.isAuthenticated) {
       return { path: "/login", query: { redirect: to.fullPath } };
+    }
+
+    if (authStore.needsTrialOnboarding && to.name !== "trial-onboarding") {
+      return { name: "trial-onboarding" };
     }
 
     // Role-based authorization guard

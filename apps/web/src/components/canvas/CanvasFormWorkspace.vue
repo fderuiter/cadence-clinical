@@ -29,6 +29,18 @@
       <p id="canvas-form-loading-enrollment" class="status-line" role="status">
         Loading {{ participant?.subject_id || "participant" }}'s enrollment…
       </p>
+      <div
+        v-if="canvas.scheduleLoading"
+        id="ecrf-schedule-skeleton"
+        data-testid="ecrf-schedule-skeleton"
+      >
+        <SkeletonLoader
+          type="row"
+          :count="3"
+          :columns="2"
+          aria-label="Loading protocol schedule options…"
+        />
+      </div>
     </template>
 
     <template v-else-if="!formId && !enrollmentId">
@@ -53,10 +65,13 @@
         :collection-spec-id="collectionSpecId"
         :planned-activity-id="plannedActivityId"
         :enrollment-context="enrollmentContext"
+        :schedule-loading="!formId && canvas.scheduleLoading"
+        :schedule-error="!formId ? canvas.scheduleError : null"
         :can-manage-queries="canManageQueries"
         :can-verify-source="canVerifySource"
         :form-location="formLocation"
         :observation-location="observationLocation"
+        @retry-schedule="canvas.retryScheduleOptions(studyCode)"
         @dirty-change="emit('dirty-change', $event)"
         @form-loaded="emit('form-loaded', $event)"
         @closed="emit('closed')"
@@ -66,14 +81,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onUnmounted, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import type { EcrfForm } from "../../api/ecrfFormsApi";
 import type { SubjectSummary } from "../../api/executionApi";
-import {
-  findStudyScheduleOptions,
-  type StudyScheduleOptions,
-} from "../../canvas/kernelStudy";
+import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import SkeletonLoader from "../common/SkeletonLoader.vue";
 import EcrfFormPanel, {
   type CanvasFormEnrollmentContext,
 } from "../ecrf/EcrfFormPanel.vue";
@@ -107,20 +120,17 @@ const emit = defineEmits<{
   (e: "closed"): void;
 }>();
 
-const scheduleOptions = ref<StudyScheduleOptions | null>(null);
-let scheduleReq = 0;
+const canvas = useStudyCanvasStore();
+
+onUnmounted(() => {
+  emit("dirty-change", false);
+});
 
 watch(
-  () => props.studyCode,
-  async (code) => {
-    const req = ++scheduleReq;
-    scheduleOptions.value = null;
-    if (!code) return;
-    try {
-      const loaded = await findStudyScheduleOptions(code);
-      if (req === scheduleReq) scheduleOptions.value = loaded;
-    } catch {
-      if (req === scheduleReq) scheduleOptions.value = null;
+  () => [props.studyCode, props.formId] as const,
+  ([code, formId]) => {
+    if (code && !formId) {
+      void canvas.loadScheduleOptions(code);
     }
   },
   { immediate: true }
@@ -131,13 +141,24 @@ const workspaceTitle = computed(() => {
   return props.formId ? "Case report form" : "Forms";
 });
 
+const scheduleForStudy = computed(() =>
+  Object.prototype.hasOwnProperty.call(
+    canvas.scheduleOptionsByStudy,
+    props.studyCode
+  )
+    ? canvas.scheduleOptionsByStudy[props.studyCode]
+    : canvas.scheduleOptions
+);
+
 const enrollmentContext = computed<CanvasFormEnrollmentContext | null>(() => {
   if (!props.enrollmentId) return null;
   return {
     enrollmentId: props.enrollmentId,
     subjectCode: props.participant?.subject_id,
-    collectionSpecs: scheduleOptions.value?.collectionSpecs ?? [],
-    plannedActivities: scheduleOptions.value?.plannedActivities ?? [],
+    collectionSpecs: scheduleForStudy.value?.collectionSpecs ?? [],
+    plannedActivities: scheduleForStudy.value?.plannedActivities ?? [],
+    scheduleLoading: !props.formId && canvas.scheduleLoading,
+    scheduleError: !props.formId ? canvas.scheduleError : null,
   };
 });
 </script>

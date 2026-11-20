@@ -387,7 +387,7 @@ public static partial class WorkflowSecurityValidatorService
     {
         if (!DockerSha256DigestRegex().IsMatch(dockerRef))
         {
-            errors.Add($"{relativePath}:{lineNumber}: Container reference '{dockerRef}' must be pinned to an immutable 'sha256:<64-hex>' digest (e.g. 'docker://image:tag@sha256:...')."); // pragma: allowlist secret
+            errors.Add($"{relativePath}:{lineNumber}: Container reference '{dockerRef}' must be pinned to an immutable 'sha256:<64-hex>' digest (e.g. 'docker://image:tag@sha256:...').");
         }
     }
 

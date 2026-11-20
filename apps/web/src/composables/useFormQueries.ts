@@ -79,13 +79,21 @@ function newKey(): string {
  * answer, reopen, close or cancel one or several. Each write carries its text as the reason for change and an
  * idempotency key; multi-query actions dispatch one independent command per query rather than an atomic batch.
  */
+function scopeIdentity(target: FormQueryScope): string {
+  if ("formId" in target) return `form:${target.formId}`;
+  if ("enrollmentId" in target) return `enrollment:${target.enrollmentId}`;
+  return `study:${target.studyId}`;
+}
+
 export function useFormQueries() {
   const queries = ref<FormQueryResponse[]>([]);
   const loading = ref(false);
+  const refreshing = ref(false);
   const loadError = ref<string | null>(null);
   const busy = ref(false);
   const outcome = ref<FormQueryOutcome | null>(null);
   let scope: FormQueryScope | null = null;
+  let loadedScopeKey: string | null = null;
   let loadRequest = 0;
   let pending: { request: string; key: string; queryId: string } | null = null;
 
@@ -100,8 +108,16 @@ export function useFormQueries() {
 
   async function load(next: FormQueryScope): Promise<void> {
     scope = next;
+    const nextKey = scopeIdentity(next);
+    const isRefresh = loadedScopeKey === nextKey;
     const request = ++loadRequest;
-    loading.value = true;
+    if (isRefresh) {
+      refreshing.value = true;
+      loading.value = false;
+    } else {
+      loading.value = true;
+      refreshing.value = false;
+    }
     loadError.value = null;
     try {
       let list: FormQueryResponse[];
@@ -114,12 +130,18 @@ export function useFormQueries() {
       }
       if (request !== loadRequest) return;
       queries.value = list;
+      loadedScopeKey = nextKey;
     } catch (error) {
       if (request !== loadRequest) return;
-      queries.value = [];
+      if (!isRefresh) {
+        queries.value = [];
+      }
       loadError.value = describeQueryError(error);
     } finally {
-      if (request === loadRequest) loading.value = false;
+      if (request === loadRequest) {
+        loading.value = false;
+        refreshing.value = false;
+      }
     }
   }
 
@@ -130,9 +152,11 @@ export function useFormQueries() {
   /** Forgets the list, for example when the form closes. */
   function clear() {
     scope = null;
+    loadedScopeKey = null;
     loadRequest++;
     queries.value = [];
     loading.value = false;
+    refreshing.value = false;
     loadError.value = null;
     outcome.value = null;
     pending = null;
@@ -286,6 +310,7 @@ export function useFormQueries() {
   return {
     queries,
     loading,
+    refreshing,
     loadError,
     busy,
     outcome,
