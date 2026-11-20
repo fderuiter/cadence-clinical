@@ -127,7 +127,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2540: Kernel API Host and Read Endpoints for the Clinical Canvas](2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md) (2026-09-30)
 - [ADR-2542: The Kernel Host Provisions the Development Tenant](2026-10-19-the-kernel-host-provisions-the-development-tenant.md) (2026-10-19)
 - [ADR-2543: The Kernel Host Seeds the Local Demo Study](2026-10-19-the-kernel-host-seeds-the-local-demo-study.md) (2026-10-19)
-- [ADR-2546: Keycloak Self-Registration and Clinical Kernel Trial Bootstrap](2026-11-20-keycloak-self-registration-and-clinical-kernel-trial-bootstrap.md) (2026-11-20)
+- [ADR-2547: Keycloak Self-Registration and Clinical Kernel Trial Bootstrap](2026-11-20-keycloak-self-registration-and-clinical-kernel-trial-bootstrap.md) (2026-11-20)
 - [ADR-2600: Modules Write Through the Kernel Command Path](2026-10-19-modules-write-through-the-kernel-command-path.md) (2026-10-19)
 - [ADR-2601: One Composition Host for the Kernel and Its Modules](2026-10-19-one-composition-host-for-the-kernel-and-its-modules.md) (2026-10-19)
 - [ADR-2602: Multi-Repository Ownership and Kernel Package Boundaries](2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md) (2026-10-28) _(Partially superseded by ADR-2603)_
@@ -433,6 +433,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-328: Preservation of CDASH Type Definition Pristine State](2026-09-11-preservation-of-cdash-type-definition-pristine-state.md) (2026-09-11)
 - [ADR-2544: Shared Reactive Focus Containment and Global Reduced-Motion Tokens](2026-11-19-shared-reactive-focus-containment-and-reduced-motion-tokens.md) (2026-11-19)
 - [ADR-2545: Centralize Focus Containment Primitives](2026-11-19-centralize-focus-containment-primitives.md) (2026-11-19)
+- [ADR-2546: Isolate Static Demo Builds with Stateful MSW Handlers](2026-11-19-isolate-static-demo-builds-with-stateful-msw-handlers.md) (2026-11-19)
 
 ### 7. DevOps, Tooling & CI/CD
 
@@ -604,3 +605,4 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2815: Bulk Laboratory Reference Range Import & Persistent Audit Store](2026-10-12-bulk-laboratory-reference-range-import-persistent-audit-store.md) (2026-10-12)
 - [ADR-2816: Retire Orphaned Legacy Web Type Schemas](2026-11-19-retire-orphaned-legacy-web-type-schemas.md) (2026-11-19)
 - [ADR-2817: Caller-Bound Participant Self-Service Wallet and Receipt OCR Capabilities](2026-11-19-caller-bound-participant-self-service-wallet-and-receipt-ocr-capabilities.md) (2026-11-19)
+- [ADR-2818: Clinical and Gateway Endpoints Take Time From IClock and Ban TimeProvider](2026-11-20-clinical-and-gateway-endpoints-take-time-from-iclock-and-ban-timeprovider.md) (2026-11-20)

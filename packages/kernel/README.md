@@ -924,9 +924,9 @@ decide anything else, and approving it does not run its plan (K-SIM-5).
 - **Not yet:** standing grants for agents (K-AI-7, ADR-2632 §4.3), the `QueryStatus.DraftAi` migration and a proposals
   work-queue source (ADR-2489 §4.5).
 
-## Commercial subscriptions and entitlements (ADR-2546)
+## Commercial subscriptions and entitlements (ADR-2547)
 
-`Subscription` (`kernel.subscriptions`) and `ProductEntitlement` (`kernel.product_entitlements`) track commercial workspace packaging (`Individual`, `Select`, `Complete` and product families `Blueprint`, `Capture`, `Orbit`, `Engage`, `Allocate`, `Vigil`, `Lens`, `Assure`) separately from `Tenant` and clinical `Grant`s ([ADR-2546](../../docs/adr/2026-11-20-keycloak-self-registration-and-clinical-kernel-trial-bootstrap.md)). Commercial state never confers clinical visibility or bypasses `AuthorityEvaluator`. When a trial subscription expires, `KernelCommandPipeline` refuses non-baseline workspace mutations with `403 K.Subscription.Expired` while keeping `[BaselineKernelCommand]` commands (`Attest`, authority governance, IdentityVault privacy actions, commercial lifecycle) and all reads and exports unrestricted.
+`Subscription` (`kernel.subscriptions`) and `ProductEntitlement` (`kernel.product_entitlements`) track commercial workspace packaging (`Individual`, `Select`, `Complete` and product families `Blueprint`, `Capture`, `Orbit`, `Engage`, `Allocate`, `Vigil`, `Lens`, `Assure`) separately from `Tenant` and clinical `Grant`s ([ADR-2547](../../docs/adr/2026-11-20-keycloak-self-registration-and-clinical-kernel-trial-bootstrap.md)). Commercial state never confers clinical visibility or bypasses `AuthorityEvaluator`. When a trial subscription expires, `KernelCommandPipeline` refuses non-baseline workspace mutations with `403 K.Subscription.Expired` while keeping `[BaselineKernelCommand]` commands (`Attest`, authority governance, IdentityVault privacy actions, commercial lifecycle) and all reads and exports unrestricted.
 
 ## Migrations
 

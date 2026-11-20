@@ -1,4 +1,4 @@
-# ADR-2546: Keycloak Self-Registration and Clinical Kernel Trial Bootstrap
+# ADR-2547: Keycloak Self-Registration and Clinical Kernel Trial Bootstrap
 
 - **Status:** Accepted
 - **Date:** 2026-11-20

@@ -476,7 +476,6 @@ K-XS-1|Cadence.Contracts|Cadence.Contracts.SubjectSummaryDto.SiteId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Randomization.SubjectAllocationRequest.SiteId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Randomization.SubjectAllocationRequest.StudyId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Randomization.SubjectAllocationResult.StudyId
-K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Rules.RuleDefinition.StudyId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Supply.DTPDispatchAuthorization.SiteId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Supply.DTPDispatchAuthorization.StudyId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Supply.DemandForecastParameters.SiteId
