@@ -29,6 +29,16 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [Issue management](ISSUE_MANAGEMENT.md) | Current | Canonical issue taxonomy, readiness, horizon caps, and maintenance cadence |
 | [Backlog insights archive](BACKLOG_INSIGHTS_ARCHIVE.md) | Historical | Source-to-owner provenance and constraints preserved during the November 2026 reset |
 
+## Engineering blog
+
+| Document | Status | What it is |
+| --- | --- | --- |
+| [Cadence Engineering Blog](blog/index.md) | Current | Curated architectural milestones, platform engineering narratives, and governance updates |
+| [Clinical Kernel v0.2: One Canonical Body of Clinical Truth](blog/2026-09-29-clinical-kernel-v02-ontology-and-invariants.md) | Current | Why Cadence inverted the multi-product eClinical stack around one PostgreSQL clinical kernel, six domain engines, bit... |
+| [From Python Microservices to .NET 10 and Disciplined Python Retirement](blog/2026-09-30-dotnet-10-modernization-and-python-retirement.md) | Current | How we migrated Cadence's backend and developer tooling to .NET 10 / C# 14 with Native AOT quality gates and retired ... |
+| [Governed AI in Clinical Research: Proposals, Grounding, and Human Attestation](blog/2026-10-20-governed-ai-proposals-in-one-runtime.md) | Current | How ADR-2630 (K037) embeds AI agents across clinical workflows through one governed runtime where every output is a c... |
+| [Keeping Cadence in One Repository: Consolidating on a Modular Monolith](blog/2026-11-19-keeping-cadence-in-one-repository.md) | Current | Why ADR-2603 ended our multi-repository split plan so kernel contracts, application modules, and end-to-end GxP evide... |
+
 ## Kernel and roadmap
 
 | Document | Status | What it is |
