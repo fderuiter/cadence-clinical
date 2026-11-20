@@ -24,6 +24,15 @@ public sealed class KeycloakRealmTenantTests
     }
 
     [Fact]
+    public void Realm_AllowsSelfRegistrationAndEmailSignIn()
+    {
+        var realm = Realm();
+
+        realm.GetProperty("registrationAllowed").GetBoolean().Should().BeTrue();
+        realm.GetProperty("loginWithEmailAllowed").GetBoolean().Should().BeTrue();
+    }
+
+    [Fact]
     public void WebClient_MapsTheTenantAttributeIntoTheAccessToken()
     {
         var web = Realm().GetProperty("clients").EnumerateArray().Single(c => c.GetProperty("clientId").GetString() == "cadence-web");

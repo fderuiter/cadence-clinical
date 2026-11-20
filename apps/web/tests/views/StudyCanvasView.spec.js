@@ -524,8 +524,9 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       "No part of Analyze has a service yet."
     );
     expect(wrapper.find("#stage-empty a").attributes("href")).toContain(
-      "/issues/4829"
+      "/plans"
     );
+    expect(wrapper.html()).not.toContain("4829");
     expect(executionApi.listSubjects).not.toHaveBeenCalled();
   });
 
