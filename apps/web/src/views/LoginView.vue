@@ -4,10 +4,29 @@
     class="dashboard-section active"
     style="max-width: 600px; margin: 40px auto; font-family: sans-serif"
   >
+    <div
+      id="login-prerelease-banner"
+      role="status"
+      style="
+        background: #fffbeb;
+        border: 1px solid #f59e0b;
+        color: #92400e;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 0.86rem;
+        line-height: 1.45;
+        margin-bottom: 20px;
+      "
+    >
+      <strong>Pre-release notice:</strong>
+      {{ PRE_RELEASE_ENVIRONMENT_NOTICE }}
+    </div>
+
     <div class="section-header" style="text-align: center; margin-bottom: 24px">
-      <h2>Sign in</h2>
+      <h2>Sign in or start a trial workspace</h2>
       <p style="color: #64748b">
-        Access is governed by 21 CFR Part 11. Sign in with your Cadence account.
+        Access is governed by 21 CFR Part 11. Sign in with your Cadence account
+        or register a self-service evaluation workspace.
       </p>
     </div>
 
@@ -59,7 +78,11 @@
               style="padding: 10px 24px; font-weight: 600; cursor: pointer"
               @click="goToLanding"
             >
-              Go to My Workspace
+              {{
+                authStore.needsTrialOnboarding
+                  ? "Complete Trial Setup"
+                  : "Go to My Workspace"
+              }}
             </button>
             <button
               class="btn btn-secondary btn-logout"
@@ -111,22 +134,65 @@
           >
             Enter the demo (offline sample data)
           </button>
-          <button
+          <div
             v-else
-            class="btn btn-primary btn-login-keycloak"
             style="
-              width: 100%;
-              max-width: 320px;
-              padding: 12px;
-              font-weight: 600;
-              cursor: pointer;
-              border-radius: 4px;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 12px;
             "
-            :disabled="isRedirecting"
-            @click="signIn"
           >
-            {{ isRedirecting ? "Redirecting…" : "Sign in with Keycloak" }}
-          </button>
+            <button
+              class="btn btn-primary btn-login-keycloak"
+              style="
+                width: 100%;
+                max-width: 320px;
+                padding: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                border-radius: 4px;
+              "
+              :disabled="isRedirecting"
+              @click="signIn"
+            >
+              {{ isRedirecting ? "Redirecting…" : "Sign in with Keycloak" }}
+            </button>
+            <button
+              id="btn-login-register"
+              type="button"
+              class="btn btn-secondary btn-register-keycloak"
+              style="
+                width: 100%;
+                max-width: 320px;
+                padding: 11px 12px;
+                font-weight: 600;
+                cursor: pointer;
+                border-radius: 4px;
+              "
+              :disabled="isRedirecting"
+              @click="startRegistration"
+            >
+              Create trial account
+            </button>
+          </div>
+
+          <div
+            style="
+              margin-top: 18px;
+              padding-top: 16px;
+              border-top: 1px solid #e2e8f0;
+              font-size: 0.9rem;
+            "
+          >
+            <router-link
+              id="link-login-plans"
+              to="/plans"
+              style="color: #1d4ed8; font-weight: 600; text-decoration: none"
+            >
+              Compare Individual, Select, and Complete plans &rarr;
+            </router-link>
+          </div>
         </div>
       </div>
     </div>
@@ -136,6 +202,7 @@
 <script setup>
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
 
 const authStore = useAuthStore();
@@ -180,6 +247,20 @@ async function signIn() {
   }
 }
 
+async function startRegistration() {
+  signInError.value = "";
+  isRedirecting.value = true;
+  try {
+    const href = router.resolve("/onboarding/trial").href;
+    await authStore.register({
+      redirectUri: new URL(href, window.location.origin).toString(),
+    });
+  } catch (err) {
+    signInError.value = err?.message || "Registration failed.";
+    isRedirecting.value = false;
+  }
+}
+
 async function signOut() {
   await authStore.logout({
     redirectUri: new URL(
@@ -194,6 +275,10 @@ function retry() {
 }
 
 function goToLanding() {
+  if (authStore.needsTrialOnboarding) {
+    router.push("/onboarding/trial");
+    return;
+  }
   router.push(redirectTarget());
 }
 </script>

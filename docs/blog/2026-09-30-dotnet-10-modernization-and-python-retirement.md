@@ -45,4 +45,4 @@ Every surviving file is cataloged in [docs/PYTHON_REFERENCE_INVENTORY.md](../PYT
 
 ## Native AOT Developer Tooling
 
-Alongside the service port, we consolidated repository automation into the Native AOT `cadence` CLI documented in [docs/cli.md](../cli.md). Running `pnpm cadence check` executes 28 deterministic quality gates—spanning formatting, architecture boundaries, OpenAPI and EF Core schema drift, de-identification scanning, requirement traceability, and documentation index parity—ensuring legacy shims never creep back into the codebase.
+Alongside the service port, we consolidated repository automation into the Native AOT `cadence` CLI documented in [docs/cli.md](../cli.md). Running `pnpm cadence check` executes 29 deterministic quality gates—spanning formatting, architecture boundaries, workflow and ruleset parity, OpenAPI and EF Core schema drift, de-identification scanning, requirement traceability, and documentation index parity—ensuring legacy shims never creep back into the codebase.

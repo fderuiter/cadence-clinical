@@ -10,6 +10,7 @@ namespace Cadence.Kernel.Commands;
 /// </summary>
 [KernelCapability("tenant.provision", VerbClass.Execute, InCatalogue = false)]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
 public sealed record ProvisionTenant(
     TenantId TenantId,
     string Code,
@@ -23,6 +24,7 @@ public sealed record ProvisionTenant(
 /// </summary>
 [KernelCapability("organization.register", VerbClass.Execute)]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
 public sealed record RegisterOrganization(
     TenantId TenantId,
     OrganizationId OrganizationId,
@@ -31,6 +33,33 @@ public sealed record RegisterOrganization(
     OrganizationKind Kind,
     string IdempotencyKey,
     string ReasonForChange) : ICommand<OrganizationId>;
+
+/// <summary>
+/// Registers a pseudonymous person in <c>kernel.people</c> (spec §3, K-ID-4). Direct human identifiers (names,
+/// emails, usernames) are never accepted here; they belong exclusively to the IdentityVault when recorded.
+/// </summary>
+[KernelCapability("person.register", VerbClass.Execute)]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
+public sealed record RegisterPerson(
+    TenantId TenantId,
+    PersonId PersonId,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<PersonId>;
+
+/// <summary>
+/// Enrolls a pseudonymous person as a member of a tenant (<c>kernel.tenant_memberships</c>, K-ID-4), making the
+/// person visible within that tenant under Row-Level Security.
+/// </summary>
+[KernelCapability("tenant.enroll_member", VerbClass.Execute)]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
+public sealed record RegisterTenantMembership(
+    TenantId TenantId,
+    TenantMembershipId TenantMembershipId,
+    PersonId PersonId,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<TenantMembershipId>;
 
 /// <summary>Validation errors raised by the identity commands.</summary>
 public static class IdentityErrors
@@ -46,4 +75,10 @@ public static class IdentityErrors
 
     public static readonly KernelError TenantUnknown =
         new("K.Identity.TenantUnknown", 404, "The tenant does not exist.");
+
+    public static readonly KernelError PersonRequired =
+        new("K.Identity.PersonRequired", 422, "A pseudonymous person identifier is required.");
+
+    public static readonly KernelError MembershipRequired =
+        new("K.Identity.MembershipRequired", 422, "A tenant membership identifier is required.");
 }

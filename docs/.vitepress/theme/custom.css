@@ -92,6 +92,11 @@
   transform: scale(0.95);
 }
 
+/* Offset secondary GitHub-compatible heading alias anchors below the sticky navbar */
+.heading-alias-anchor {
+  scroll-margin-top: calc(var(--vp-nav-height, 64px) + 24px);
+}
+
 /* Engineering Blog Styles */
 .blog-index {
   margin-top: 20px;

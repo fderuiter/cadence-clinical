@@ -16,6 +16,7 @@ namespace Cadence.Kernel.Commands;
 /// </remarks>
 [KernelCapability("role.define", VerbClass.Approve)]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
 public sealed record DefineRole(
     TenantId TenantId,
     RoleId RoleId,
@@ -36,6 +37,7 @@ public sealed record DefineRole(
 /// </remarks>
 [KernelCapability("grant.issue", VerbClass.Approve)]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
 public sealed record IssueGrant(
     TenantId TenantId,
     GrantId GrantId,
@@ -56,6 +58,7 @@ public sealed record IssueGrant(
 /// </summary>
 [KernelCapability("grant.delegate", VerbClass.Execute, Resource = nameof(ParentGrantId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
 public sealed record DelegateGrant(
     TenantId TenantId,
     GrantId GrantId,
@@ -77,6 +80,7 @@ public sealed record DelegateGrant(
 /// </summary>
 [KernelCapability("grant.revoke", VerbClass.Approve, Resource = nameof(GrantId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
 public sealed record RevokeGrant(
     TenantId TenantId,
     GrantId GrantId,

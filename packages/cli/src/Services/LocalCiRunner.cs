@@ -20,7 +20,7 @@ public enum CiOutcome
     /// <summary>A command exited non-zero, or the step could not start (for example, no PostgreSQL).</summary>
     Failed,
 
-    /// <summary>The step was not run: a tool is missing or the step only runs on GitHub.</summary>
+    /// <summary>The step was not run: <c>--allow-skip</c> skipped a missing tool, or the step only runs on GitHub.</summary>
     Skipped,
 
     /// <summary>Another step that runs the same check passed earlier in this run.</summary>
@@ -43,7 +43,7 @@ public sealed record CiStepResult(CiStep Step, CiOutcome Outcome, TimeSpan Durat
 public sealed record CiPostgresStatus(bool Available, string Message);
 
 /// <summary>The choices given on the command line.</summary>
-/// <param name="AllowSkip">Run the .NET tests without PostgreSQL, so its tests report as skipped.</param>
+/// <param name="AllowSkip">Skip steps whose required tool is missing on <c>PATH</c> and allow .NET tests to run without PostgreSQL.</param>
 /// <param name="BaseRef">The ref that "changed files" are compared with, as <c>origin/main</c> is in CI.</param>
 public sealed record LocalCiOptions(bool AllowSkip, string BaseRef);
 
@@ -304,7 +304,9 @@ public static class LocalCiRunner
                 }
                 else if (step.RequiredTool is not null && !environment.IsToolOnPath(step.RequiredTool))
                 {
-                    result = new(step, CiOutcome.Skipped, TimeSpan.Zero, $"{step.RequiredTool} is not on PATH; {step.ToolHint}");
+                    result = options.AllowSkip
+                        ? new(step, CiOutcome.Skipped, TimeSpan.Zero, $"{step.RequiredTool} is not on PATH; {step.ToolHint}")
+                        : new(step, CiOutcome.Failed, TimeSpan.Zero, $"{step.RequiredTool} is not on PATH; {step.ToolHint} (or pass --allow-skip to skip)");
                 }
                 else
                 {
