@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, useAttrs, useId, useSlots } from "vue";
 import { useFocusTrap } from "../../composables/useFocusTrap.js";
+import { clinicalOverlayProps } from "./sharedProps.js";
 
 defineOptions({
   inheritAttrs: false,
@@ -59,34 +60,11 @@ const props = defineProps({
     type: String,
     default: "right",
   },
-  size: {
-    type: String,
-    default: "md",
-  },
   role: {
     type: String,
     default: "dialog",
   },
-  dismissible: {
-    type: Boolean,
-    default: true,
-  },
-  closeOnBackdrop: {
-    type: Boolean,
-    default: true,
-  },
-  teleport: {
-    type: [Boolean, String],
-    default: "body",
-  },
-  initialFocus: {
-    type: [String, Object, Function],
-    default: null,
-  },
-  restoreFocus: {
-    type: [Boolean, Function],
-    default: true,
-  },
+  ...clinicalOverlayProps,
   closeLabel: {
     type: String,
     default: "Close drawer",

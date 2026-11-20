@@ -1547,7 +1547,7 @@ onMounted(() => {
   flex-direction: column;
   gap: 20px;
   width: 100%;
-  color: var(--text-primary);
+  color: var(--semantic-color-text);
 }
 
 /* Header */
@@ -1557,7 +1557,7 @@ onMounted(() => {
   align-items: flex-start;
   gap: 24px;
   padding: 24px;
-  background: var(--surface);
+  background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
 }
@@ -1602,7 +1602,7 @@ onMounted(() => {
 }
 
 .badge-neutral {
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
   color: var(--text-muted);
 }
 
@@ -1630,7 +1630,7 @@ onMounted(() => {
   margin: 0 0 6px;
   font-size: 24px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--semantic-color-text);
 }
 
 .sce-subtitle {
@@ -1652,7 +1652,7 @@ onMounted(() => {
   gap: 10px;
   padding: 8px 14px;
   border-radius: var(--radius-md);
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
   border: 1px solid var(--border);
 }
 
@@ -1712,7 +1712,7 @@ onMounted(() => {
 
 /* Common Card */
 .card {
-  background: var(--surface);
+  background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
@@ -1762,7 +1762,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 12px 20px;
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
   border-bottom: 1px solid var(--border);
 }
 
@@ -1777,7 +1777,7 @@ onMounted(() => {
   font-weight: 700;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface);
+  background: var(--semantic-color-surface);
   cursor: pointer;
   min-height: 38px;
 }
@@ -1824,8 +1824,8 @@ onMounted(() => {
   font-size: 13px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text-primary);
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   min-height: 44px;
 }
 
@@ -1863,7 +1863,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 14px 20px;
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
 }
 
 /* Runner Card */
@@ -1883,7 +1883,7 @@ onMounted(() => {
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1931,7 +1931,7 @@ onMounted(() => {
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface);
+  background: var(--semantic-color-surface);
 }
 
 .bounds-title {
@@ -1996,15 +1996,15 @@ onMounted(() => {
 }
 
 .btn-secondary {
-  background: var(--surface);
+  background: var(--semantic-color-surface);
   border-color: var(--border);
-  color: var(--text-primary);
+  color: var(--semantic-color-text);
 }
 
 .btn-outline {
   background: transparent;
   border-color: var(--border);
-  color: var(--text-primary);
+  color: var(--semantic-color-text);
 }
 
 .btn-danger {
@@ -2030,7 +2030,7 @@ onMounted(() => {
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -2111,6 +2111,7 @@ onMounted(() => {
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .data-table th,
@@ -2121,7 +2122,7 @@ onMounted(() => {
 }
 
 .data-table th {
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -2149,7 +2150,7 @@ onMounted(() => {
 .digest-pill {
   font-family: var(--font-mono);
   font-size: 11px;
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
   padding: 2px 6px;
   border-radius: var(--radius-sm);
 }
@@ -2173,7 +2174,7 @@ onMounted(() => {
 
 .version-pill {
   font-size: 11px;
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
   padding: 2px 6px;
   border-radius: var(--radius-sm);
 }
@@ -2188,7 +2189,7 @@ onMounted(() => {
 }
 
 .badge-blinded-tag {
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
   color: var(--text-muted);
   font-size: 10px;
   padding: 2px 6px;
@@ -2229,7 +2230,7 @@ onMounted(() => {
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -2304,7 +2305,7 @@ onMounted(() => {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 12px;
-  background: var(--surface);
+  background: var(--semantic-color-surface);
 }
 
 .art-header {
@@ -2336,7 +2337,7 @@ onMounted(() => {
 .art-preview-box {
   margin-top: 8px;
   padding: 8px;
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
   border-radius: var(--radius-sm);
   overflow-x: auto;
 }
@@ -2424,7 +2425,7 @@ onMounted(() => {
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface);
+  background: var(--semantic-color-surface);
 }
 
 .pkg-header {
@@ -2465,7 +2466,7 @@ onMounted(() => {
 .modal-dialog {
   width: 90%;
   max-width: 580px;
-  background: var(--surface);
+  background: var(--semantic-color-surface);
 }
 
 .modal-header {
@@ -2495,6 +2496,6 @@ onMounted(() => {
   gap: 10px;
   padding: 16px 20px;
   border-top: 1px solid var(--border);
-  background: var(--surface-muted);
+  background: var(--semantic-color-surface-muted);
 }
 </style>

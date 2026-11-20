@@ -84,7 +84,7 @@ public sealed class ChangeReasonEncodingTests(ExecutionPostgresApiFactory factor
             await db.SaveChangesAsync(Ct);
         }
 
-        var caller = TestSecurityContext.Identity($"coordinator-{_run}", "crc");
+        var caller = TestSecurityContext.Identity($"coordinator-{_run}", "crc") with { SiteIds = ["SITE-01"] };
         using var client = factory.CreateSignedClient(caller);
         using var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/v1/execution/subjects/{subject}/state")
         {

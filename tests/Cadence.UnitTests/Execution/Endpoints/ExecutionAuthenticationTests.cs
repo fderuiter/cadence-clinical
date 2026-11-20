@@ -26,7 +26,7 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
 {
     private const string ReviewQueuePath = "/api/v1/execution/labs/toxicity/review-queue";
 
-    private static readonly GatewayIdentity Cra = TestSecurityContext.Identity("cra-01", "CRA");
+    private static readonly GatewayIdentity Cra = TestSecurityContext.Identity("cra-01", "CRA") with { SiteIds = ["SITE-01"] };
 
     [Fact]
     [Trait("Category", "GxP_OQ")]

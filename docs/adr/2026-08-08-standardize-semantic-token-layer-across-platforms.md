@@ -55,10 +55,11 @@ Each app continues to maintain local mappings to base variables, using compile-t
 ## 6. Implementation & Verification
 
 - **Affected Files:**
-  - `packages/ui/tokens.css` (centralized token contract & shared component styles)
-  - `apps/web/src/style.css` (eliminated duplicated classes)
-  - `apps/subject-portal/src/style.css` (eliminated duplicated classes)
+  - `packages/ui/tokens.css` (centralized light & `[data-theme="dark"]` semantic token contract, >= 4.5:1 WCAG 2.1 AA contrast pairs, `tabular-nums`, and 48px touch targets)
+  - `packages/ui/index.js` & `packages/ui/index.d.ts` (complete root export surface for all 19 shared Vue components and keyboard interaction helpers)
+  - `apps/web/src/style.css` (standardized `:root` semantic aliases, AA-compliant designer badges, and deduplicated shared controls)
+  - `apps/subject-portal/src/style.css` (standardized `:root` semantic aliases and AA-compliant `.sync-badge`)
 - **Verification Plan:**
-  - Run local formatting: `pnpm -r format`
+  - Run design system harmony & coverage tests: `pnpm --filter ui test` (`packages/ui/tests/design_system_harmony.test.js` and `packages/ui/tests/shared_components.test.js`)
   - Run local linting: `pnpm -r lint`
-  - Execute local ADR and schema checks: `uv run python scripts/validate_adrs.py`
+  - Execute ADR and markdown sentinels: `pnpm cadence check adrs` and `pnpm cadence check markdown`

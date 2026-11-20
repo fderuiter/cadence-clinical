@@ -2600,4 +2600,10 @@ onMounted(() => {
   background-color: var(--semantic-color-surface-muted, #f8fafc);
   border-top: 1px solid var(--semantic-color-border, #e2e8f0);
 }
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
+}
 </style>

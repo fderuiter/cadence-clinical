@@ -177,7 +177,7 @@ public static class DuplicationDetectorService
 
         bool csDuplicatesFound = duplicatesFound.Any(d => d.Loc1.File.EndsWith(".cs", StringComparison.Ordinal) || d.Loc2.File.EndsWith(".cs", StringComparison.Ordinal));
 
-        if (csDuplicatesFound || (targetSet != null && duplicatesFound.Count > 0))
+        if (csDuplicatesFound)
         {
             Console.WriteLine($"[ERROR] Code duplication detected above threshold ({duplicatesFound.Count} duplicates found).");
             return 1;

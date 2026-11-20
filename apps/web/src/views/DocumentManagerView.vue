@@ -91,7 +91,13 @@
             <h4 class="section-heading">21 CFR Part 11 Audit Record</h4>
             <div class="reason-box">
               <strong>Mandatory Reason for Change:</strong>
-              <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text)">
+              <p
+                style="
+                  margin: 4px 0 0 0;
+                  font-size: 12px;
+                  color: var(--semantic-color-text);
+                "
+              >
                 {{
                   inspectedDoc.reason_for_change ||
                   inspectedDoc.reason ||

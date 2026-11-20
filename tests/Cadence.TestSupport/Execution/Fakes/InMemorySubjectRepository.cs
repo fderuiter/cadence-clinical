@@ -77,6 +77,7 @@ public sealed class InMemorySubjectRepository : ISubjectRepository
         var matches = _store.Values
             .Where(s => s.StudyCode == criteria.StudyCode)
             .Where(s => criteria.SiteCode is null || s.SiteCode == criteria.SiteCode)
+            .Where(s => criteria.AllowedSites is null || (s.SiteCode is { } siteCode && criteria.AllowedSites.Contains(siteCode)))
             .Where(s => criteria.Status is null || s.Status == criteria.Status)
             .OrderBy(s => s.EnrollmentIndex)
             .ThenBy(s => s.SubjectCode.Value, StringComparer.Ordinal)

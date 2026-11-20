@@ -119,17 +119,32 @@ public static class DeviceEndpoints
         return routes;
     }
 
-    private static IResult ParseUdi(UdiParseRequest request, IDeviceApplicationService deviceService)
+    private static IResult ParseUdi(
+        UdiParseRequest request,
+        HttpContext httpContext,
+        IDeviceApplicationService deviceService)
     {
+        if ((ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
+             ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } denied)
+        {
+            return denied;
+        }
+
         var result = deviceService.ParseUdi(request);
         return TypedResults.Ok(result);
     }
 
     private static async Task<IResult> RegisterInventoryAsync(
         DeviceInventoryCreateRequest request,
+        HttpContext httpContext,
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
+        if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is { } denied)
+        {
+            return denied;
+        }
+
         var result = await deviceService.RegisterInventoryAsync(request, ct).ConfigureAwait(false);
         return TypedResults.Created("/api/v1/execution/devices/inventory", result);
     }
@@ -141,18 +156,30 @@ public static class DeviceEndpoints
         string? udi_di,
         string? lot_number,
         string? serial_number,
+        HttpContext httpContext,
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
-        var result = await deviceService.ListInventoryAsync(study_id, site_id, status, udi_di, lot_number, serial_number, ct).ConfigureAwait(false);
-        return TypedResults.Ok(result);
+        if (ExecutionScopeGuard.RequireStudyAndResolveSiteFilter(httpContext, study_id, site_id, out var siteFilter, out var effectiveSiteId) is { } denied)
+        {
+            return denied;
+        }
+
+        var result = await deviceService.ListInventoryAsync(study_id, effectiveSiteId, status, udi_di, lot_number, serial_number, ct).ConfigureAwait(false);
+        return TypedResults.Ok(ExecutionScopeGuard.ApplyFilters(result, null, x => x.StudyId, siteFilter, x => x.SiteId));
     }
 
     private static async Task<IResult> DispenseDeviceAsync(
         DeviceDispensationRequest request,
+        HttpContext httpContext,
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
+        if (await GuardDeviceMutationAsync(httpContext, deviceService, request.StudyId, request.SiteId, request.DeviceInventoryId, request.ScannedBarcode, ct) is { } denied)
+        {
+            return denied;
+        }
+
         try
         {
             var result = await deviceService.DispenseDeviceAsync(request, ct).ConfigureAwait(false);
@@ -170,9 +197,15 @@ public static class DeviceEndpoints
 
     private static async Task<IResult> LogDeficiencyAsync(
         DeviceDeficiencyCreateRequest request,
+        HttpContext httpContext,
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
+        if (await GuardDeviceMutationAsync(httpContext, deviceService, request.StudyId, request.SiteId, request.DeviceInventoryId, null, ct) is { } denied)
+        {
+            return denied;
+        }
+
         var result = await deviceService.LogDeficiencyAsync(request, ct).ConfigureAwait(false);
         return TypedResults.Created($"/api/v1/execution/devices/deficiencies/{result.Id}", result);
     }
@@ -181,18 +214,31 @@ public static class DeviceEndpoints
         string study_id,
         string? site_id,
         string? status,
+        HttpContext httpContext,
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
-        var result = await deviceService.ListDeficienciesAsync(study_id, site_id, status, ct).ConfigureAwait(false);
-        return TypedResults.Ok(result);
+        if (ExecutionScopeGuard.RequireStudyAndResolveSiteFilter(httpContext, study_id, site_id, out var siteFilter, out var effectiveSiteId) is { } denied)
+        {
+            return denied;
+        }
+
+        var result = await deviceService.ListDeficienciesAsync(study_id, effectiveSiteId, status, ct).ConfigureAwait(false);
+        return TypedResults.Ok(ExecutionScopeGuard.ApplyFilters(result, null, x => x.StudyId, siteFilter, x => x.SiteId));
     }
 
     private static async Task<IResult> GetDeficiencyByIdAsync(
         string deficiency_id,
+        HttpContext httpContext,
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
+        if ((ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
+             ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } callerDenied)
+        {
+            return callerDenied;
+        }
+
         if (!Guid.TryParse(deficiency_id, out var devGuid))
         {
             return TypedResults.NotFound(new { code = "DEFICIENCY_NOT_FOUND", detail = $"Deficiency '{deficiency_id}' not found." });
@@ -204,14 +250,25 @@ public static class DeviceEndpoints
             return TypedResults.NotFound(new { code = "DEFICIENCY_NOT_FOUND", detail = $"Deficiency '{deficiency_id}' not found." });
         }
 
+        if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, result.StudyId, result.SiteId) is { } recordDenied)
+        {
+            return recordDenied;
+        }
+
         return TypedResults.Ok(result);
     }
 
     private static async Task<IResult> InitiateQuarantineAsync(
         DeviceQuarantineCreateRequest request,
+        HttpContext httpContext,
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
+        if (await GuardDeviceMutationAsync(httpContext, deviceService, request.StudyId, request.SiteId, request.DeviceInventoryId, null, ct) is { } denied)
+        {
+            return denied;
+        }
+
         var result = await deviceService.InitiateQuarantineAsync(request, ct).ConfigureAwait(false);
         return TypedResults.Created("/api/v1/execution/devices/quarantine", result);
     }
@@ -220,18 +277,38 @@ public static class DeviceEndpoints
         string study_id,
         string? site_id,
         string? status,
+        HttpContext httpContext,
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
-        var result = await deviceService.ListQuarantinesAsync(study_id, site_id, status, ct).ConfigureAwait(false);
-        return TypedResults.Ok(result);
+        if (ExecutionScopeGuard.RequireStudyAndResolveSiteFilter(httpContext, study_id, site_id, out var siteFilter, out var effectiveSiteId) is { } denied)
+        {
+            return denied;
+        }
+
+        var result = await deviceService.ListQuarantinesAsync(study_id, effectiveSiteId, status, ct).ConfigureAwait(false);
+        return TypedResults.Ok(ExecutionScopeGuard.ApplyFilters(result, null, x => x.StudyId, siteFilter, x => x.SiteId));
     }
 
     private static async Task<IResult> ReleaseQuarantineAsync(
         DeviceQuarantineReleaseRequest request,
+        HttpContext httpContext,
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
+        if ((ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
+             ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } callerDenied)
+        {
+            return callerDenied;
+        }
+
+        if (Guid.TryParse(request.QuarantineId, out var qGuid)
+            && await deviceService.GetQuarantineByIdAsync(qGuid, ct).ConfigureAwait(false) is { } quarantine
+            && ExecutionScopeGuard.RequireStudyAndSite(httpContext, quarantine.StudyId, quarantine.SiteId) is { } recordDenied)
+        {
+            return recordDenied;
+        }
+
         try
         {
             var result = await deviceService.ReleaseQuarantineAsync(request, ct).ConfigureAwait(false);
@@ -245,10 +322,39 @@ public static class DeviceEndpoints
 
     private static async Task<IResult> GetInvestigationSummaryAsync(
         string study_id,
+        HttpContext httpContext,
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
-        var result = await deviceService.GetInvestigationSummaryAsync(study_id, ct).ConfigureAwait(false);
+        if (ExecutionScopeGuard.RequireStudyAndResolveSiteFilter(httpContext, study_id, null, out var siteFilter, out _) is { } denied)
+        {
+            return denied;
+        }
+
+        var result = siteFilter is null
+            ? await deviceService.GetInvestigationSummaryAsync(study_id, ct).ConfigureAwait(false)
+            : await deviceService.GetInvestigationSummaryAsync(study_id, siteFilter, ct).ConfigureAwait(false)
+              ?? await deviceService.GetInvestigationSummaryAsync(study_id, ct).ConfigureAwait(false);
         return TypedResults.Ok(result);
+    }
+
+    private static async Task<IResult?> GuardDeviceMutationAsync(
+        HttpContext httpContext,
+        IDeviceApplicationService deviceService,
+        string studyId,
+        string siteId,
+        string? deviceInventoryId,
+        string? scannedBarcode,
+        CancellationToken ct)
+    {
+        if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId) is { } requestDenied)
+        {
+            return requestDenied;
+        }
+
+        var storedScope = await deviceService.GetInventoryScopeAsync(studyId, deviceInventoryId, scannedBarcode, ct).ConfigureAwait(false);
+        return storedScope is { } s
+            ? ExecutionScopeGuard.RequireStudyAndSite(httpContext, s.StudyId, s.SiteId)
+            : null;
     }
 }

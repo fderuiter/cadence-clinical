@@ -7,18 +7,25 @@
   --primary: var(--semantic-color-primary);
   --primary-dark: var(--semantic-color-primary-dark);
   --primary-light: var(--semantic-color-primary-light);
+  --accent: var(--semantic-color-accent);
+  --accent-light: var(--semantic-color-accent-light);
+  --accent-bg: var(--semantic-color-accent-bg);
   --text-main: var(--semantic-color-text);
   --text-muted: var(--semantic-color-text-muted);
   --bg-main: var(--semantic-color-surface-muted);
   --bg-card: var(--semantic-color-surface);
+  --neutral-dark: var(--semantic-color-text-muted);
+  --neutral-light: var(--semantic-color-surface-muted);
   --border: var(--semantic-color-border);
   --success: var(--semantic-color-success);
   --success-bg: var(--semantic-color-success-bg);
   --warning: var(--semantic-color-warning);
   --warning-bg: var(--semantic-color-warning-bg);
+  --error: var(--semantic-color-error);
+  --error-bg: var(--semantic-color-error-bg);
   --danger: var(--semantic-color-error);
   --danger-bg: var(--semantic-color-error-bg);
-  --accent: var(--semantic-color-accent);
+  --font: var(--semantic-font-family);
 }
 
 * {
@@ -350,7 +357,7 @@ body {
 
 .btn-primary {
   background-color: var(--primary);
-  color: white;
+  color: var(--semantic-color-text-on-primary);
 }
 
 .can-hover .btn-primary:hover {
@@ -484,6 +491,7 @@ body {
   border-collapse: collapse;
   text-align: left;
   font-size: 14px;
+  font-variant-numeric: tabular-nums;
 }
 
 .compliance-history-table th {
@@ -798,8 +806,8 @@ a:focus-visible,
 
 .btn-sync-status.has-queued {
   background-color: var(--warning-bg, #fffbeb);
-  color: #b45309;
-  border-color: #f59e0b;
+  color: var(--warning);
+  border-color: var(--semantic-color-warning-border-strong);
   animation: sync-pulse 1.8s infinite;
 }
 
@@ -823,8 +831,8 @@ a:focus-visible,
 }
 
 .sync-badge {
-  background-color: #d97706;
-  color: white;
+  background-color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-text-on-solid);
   font-size: 11px;
   font-weight: 700;
   padding: 2px 6px;

@@ -304,4 +304,23 @@ public sealed class IpKitApplicationService(
         await _dbContext.SaveChangesAsync(ct);
         return results;
     }
+
+    public async Task<IReadOnlyList<string>> GetExistingKitSitesAsync(
+        string studyId,
+        IEnumerable<string> kitNumbers,
+        CancellationToken ct = default)
+    {
+        var numbers = kitNumbers.Where(k => !string.IsNullOrWhiteSpace(k)).Distinct().ToList();
+        if (numbers.Count == 0)
+        {
+            return [];
+        }
+
+        return await _dbContext.IpKitInventoryItems
+            .AsNoTracking()
+            .Where(x => x.StudyId == studyId && numbers.Contains(x.KitNumber))
+            .Select(x => x.SiteId)
+            .Distinct()
+            .ToListAsync(ct);
+    }
 }

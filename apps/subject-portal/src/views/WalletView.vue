@@ -59,10 +59,10 @@
           margin-bottom: 20px;
           background: linear-gradient(
             135deg,
-            var(--semantic-color-primary-dark) 0%,
-            var(--semantic-color-primary) 100%
+            var(--semantic-color-wallet-start) 0%,
+            var(--semantic-color-wallet-end) 100%
           );
-          color: var(--semantic-color-surface);
+          color: var(--semantic-color-text-on-solid);
         "
       >
         <div

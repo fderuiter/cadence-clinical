@@ -2961,4 +2961,10 @@ export default {
     grid-column: 1 / -1;
   }
 }
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
+}
 </style>

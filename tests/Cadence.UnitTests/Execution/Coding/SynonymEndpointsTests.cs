@@ -28,7 +28,7 @@ public sealed class SynonymEndpointsTests
     {
         return new DefaultHttpContext
         {
-            User = TestSecurityContext.CreatePrincipal("test_user_dm", role)
+            User = TestSecurityContext.CreateScopedPrincipal("test_user_dm", TestSecurityContext.AllStudies, [], role)
         };
     }
 
@@ -112,7 +112,8 @@ public sealed class SynonymEndpointsTests
         service.GetActiveSynonymRulesAsync("STUDY-101", Arg.Any<CancellationToken>())
             .Returns(expectedRules);
 
-        var result = await SynonymEndpoints.GetActiveSynonymRulesAsync(service, "STUDY-101", null, TestContext.Current.CancellationToken);
+        var result = await SynonymEndpoints.GetActiveSynonymRulesAsync(
+            service, "STUDY-101", null, TestContext.Current.CancellationToken, CreateHttpContext());
 
         result.Should().BeOfType<Ok<IReadOnlyList<SynonymRuleResponse>>>();
         var ok = (Ok<IReadOnlyList<SynonymRuleResponse>>)result;

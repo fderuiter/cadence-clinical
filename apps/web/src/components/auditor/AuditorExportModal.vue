@@ -21,7 +21,7 @@
     <div
       class="modal-content card"
       style="
-        background: var(--card-bg);
+        background: var(--semantic-color-surface);
         width: 450px;
         padding: 24px;
         border-radius: 8px;
@@ -46,7 +46,7 @@
             border: none;
             font-size: 20px;
             cursor: pointer;
-            color: var(--text);
+            color: var(--semantic-color-text);
           "
           @click="$emit('close')"
         >
@@ -165,8 +165,8 @@
                 padding: 8px;
                 border-radius: 4px;
                 border: 1px solid var(--border);
-                background: var(--bg);
-                color: var(--text);
+                background: var(--semantic-color-surface-muted);
+                color: var(--semantic-color-text);
                 font-size: 13px;
               "
             />
@@ -192,8 +192,8 @@
                 padding: 8px;
                 border-radius: 4px;
                 border: 1px solid var(--border);
-                background: var(--bg);
-                color: var(--text);
+                background: var(--semantic-color-surface-muted);
+                color: var(--semantic-color-text);
                 font-size: 13px;
               "
             />
