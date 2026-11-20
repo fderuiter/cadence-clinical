@@ -59,4 +59,14 @@ public static class SubjectErrors
     public static DomainError SignedConsentDateRequired() =>
         DomainError.Validation("ICF_SIGNED_DATE_REQUIRED",
             "icf_signed_date is required when icf_signed is true and no signed date is on file for this consent version.");
+
+    /// <summary>The supplied BYOD activation code is unknown, revoked, already redeemed, or past its 30-day window.</summary>
+    public static DomainError ActivationCodeInvalidOrExpired() =>
+        DomainError.Validation("ACTIVATION_CODE_INVALID_OR_EXPIRED",
+            "Activation code is invalid, revoked, already redeemed, or expired.");
+
+    /// <summary>No redeemed participant activation code is bound to the signed-in caller principal.</summary>
+    public static DomainError ActivationBindingNotFound() =>
+        DomainError.NotFound("ACTIVATION_BINDING_NOT_FOUND",
+            "No redeemed participant activation code is bound to this account.");
 }

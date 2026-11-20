@@ -18,6 +18,7 @@ public static class GatewayHeaders
     public const string Roles = "X-User-Roles";
     public const string SiteId = "X-Site-Id";
     public const string StudyIds = "X-Study-Ids";
+    public const string SubjectCode = "X-Subject-Code";
     public const string SponsorId = "X-Sponsor-Id";
     public const string UnblindedAccess = "X-Unblinded-Access";
     public const string TenantId = "X-Tenant-Id";
@@ -32,7 +33,7 @@ public static class GatewayHeaders
     /// </summary>
     public static IReadOnlyList<string> GatewayAsserted { get; } =
     [
-        UserId, Roles, SiteId, StudyIds, SponsorId, UnblindedAccess, TenantId, Timestamp, Signature,
+        UserId, Roles, SiteId, StudyIds, SubjectCode, SponsorId, UnblindedAccess, TenantId, Timestamp, Signature,
         "X-User-Role", "X-User-Site", "X-Reason-For-Change",
     ];
 }
@@ -50,7 +51,8 @@ public sealed record GatewayIdentity(
     string? TenantId = null,
     string? ChangeReason = null,
     string? SigToken = null,
-    IReadOnlyList<string>? StudyIds = null)
+    IReadOnlyList<string>? StudyIds = null,
+    string? SubjectCode = null)
 {
     // ChangeReason is the decoded text the user typed, never its header encoding (see ChangeReasonHeader).
     // TenantId is the tenant code the sign-in token names, or null when it names none: there is no fallback tenant
@@ -74,6 +76,7 @@ public sealed record GatewayIdentity(
         string rolesHeader = RolesHeader;
         string? siteIdsHeader = NullIfBlank(SiteIdsHeader);
         string? studyIdsHeader = NullIfBlank(StudyIdsHeader);
+        string? subjectCode = NullIfBlank(SubjectCode);
         string? sponsorId = NullIfBlank(SponsorId);
         string? tenantId = NullIfBlank(TenantId);
         string? changeReason = NullIfBlank(ChangeReason);
@@ -90,9 +93,10 @@ public sealed record GatewayIdentity(
             sponsorId: sponsorId,
             unblindedAccess: UnblindedAccess,
             tenantId: tenantId,
-            sigToken: sigToken);
+            sigToken: sigToken,
+            subjectCode: subjectCode);
 
-        var headers = new Dictionary<string, string>(capacity: 11, StringComparer.OrdinalIgnoreCase)
+        var headers = new Dictionary<string, string>(capacity: 12, StringComparer.OrdinalIgnoreCase)
         {
             [GatewayHeaders.UserId] = UserId,
             [GatewayHeaders.Roles] = rolesHeader,
@@ -104,6 +108,7 @@ public sealed record GatewayIdentity(
         AddIfPresent(headers, GatewayHeaders.TenantId, tenantId);
         AddIfPresent(headers, GatewayHeaders.SiteId, siteIdsHeader);
         AddIfPresent(headers, GatewayHeaders.StudyIds, studyIdsHeader);
+        AddIfPresent(headers, GatewayHeaders.SubjectCode, subjectCode);
         AddIfPresent(headers, GatewayHeaders.SponsorId, sponsorId);
         // The signature covers the reason as typed; the header carries it in its ASCII wire form (ADR-2495).
         if (changeReason is not null)

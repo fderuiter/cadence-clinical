@@ -115,7 +115,7 @@ different keys. See [ADR-2494](adr/2026-09-30-field-level-encryption-and-keyed-l
 | Key                                         | Read by                                                                                                                                                                                          | Default | Required                                                                                                                                                                                                                                                                                                                            |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `FIELD_ENCRYPTION_KEY`                      | `packages/security/src/FieldProtection/FieldProtectionServiceCollectionExtensions.cs` (`AddCadenceFieldEncryption`), called by `apps/payments/src/Program.cs` and `apps/econsent/src/Program.cs` | none    | yes (payments, econsent); the service refuses to start without a valid key. Rotating it makes existing ciphertext unreadable                                                                                                                                                                                                        |
-| `FIELD_LOOKUP_HASH_KEY`                     | same file (`AddCadenceLookupHashing`), called by `apps/interop/src/Program.cs`                                                                                                                   | none    | yes (interop); the service refuses to start without a valid key. Rotating it orphans stored device-token hashes                                                                                                                                                                                                                     |
+| `FIELD_LOOKUP_HASH_KEY`                     | same file (`AddCadenceLookupHashing`), called by `apps/interop/src/Program.cs` and `apps/execution/src/Program.cs`                                                                               | none    | yes (interop, execution); the service refuses to start without a valid key. Rotating it orphans stored device-token and participant activation-code hashes                                                                                                                                                                          |
 | `CADENCE_SCE_SIGNING_KEY`                   | `apps/interop/src/Infrastructure/Security/SceTokenSigner.cs` (`AddSceSigning`), called by `apps/interop/src/Program.cs`                                                                          | none    | yes (interop); base64 of 32 bytes. The service refuses to start without a valid key. Rotating it invalidates outstanding SCE database-lock tokens (ADR-2515)                                                                                                                                                                        |
 | `SmartSigningKeys__<ref>`                   | `apps/interop/src/Infrastructure/Security/SmartSigningKeys.cs` (`ConfigurationSmartSigningKeys`), used by `POST /api/v1/interop/esource/smart/assertion` and `/smart/verify`                     | none    | only for an EHR endpoint registered with `SigningKeyRef: <ref>`; the PEM RSA private key (at least 2048 bits) that signs that endpoint's SMART client assertions, fed from a secret store. `<ref>` is letters, digits and underscores. A missing or invalid key answers `422` and signs nothing; requests never carry a key (#5436) |
 | `CADENCE_IMAGING_DEID_SIGNING_KEY`          | `apps/imaging/src/Infrastructure/Security/DeidentificationKeys.cs` (`AddImagingDeidentification`), called by `apps/imaging/src/Program.cs`                                                       | none    | yes (imaging); base64 of 32 bytes. Signs de-identification certificates and batch manifests. The service refuses to start without a valid key (#5399). Rotating it makes stored certificates report an invalid signature                                                                                                            |
@@ -141,25 +141,25 @@ a service that does fails at startup when a required key is missing.
 
 Read by `apps/gateway/src/Program.cs`, one per service in the topology manifest (`packages/topology`). In Development each defaults to `http://localhost:<port>`; in any other environment each is required and the gateway refuses to start without it. A value that is not an absolute http or https URL fails startup in every environment.
 
-| Key                         | Default port |
-| --------------------------- | ------------ |
-| `DESIGNER_SERVICE_URL`      | 8001         |
-| `EXECUTION_SERVICE_URL`     | 8002         |
-| `ETMF_SERVICE_URL`          | 8003         |
-| `INTEROP_SERVICE_URL`       | 8004         |
-| `QUALITY_SERVICE_URL`       | 8005         |
-| `NOTIFICATIONS_SERVICE_URL` | 8006         |
-| `CTMS_SERVICE_URL`          | 8007         |
-| `SAFETY_SERVICE_URL`        | 8008         |
-| `TICKETS_SERVICE_URL`       | 8009         |
-| `EISF_SERVICE_URL`          | 8010         |
-| `ECONSENT_SERVICE_URL`      | 8011         |
-| `ORG_SERVICE_URL`           | 8012         |
-| `FILESHARE_SERVICE_URL`     | 8013         |
-| `IMAGING_SERVICE_URL`       | 8014         |
-| `KNOWLEDGE_SERVICE_URL`     | 8015         |
-| `PAYMENTS_SERVICE_URL`      | 8016         |
-| `KERNEL_SERVICE_URL`        | 8018         |
+| Key                         | Default port                                                                                                                                                                                    |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DESIGNER_SERVICE_URL`      | 8001                                                                                                                                                                                            |
+| `EXECUTION_SERVICE_URL`     | 8002 (`apps/interop/src/Application/Services/ActivationBindingResolver.cs` also resolves redeemed BYOD activation-code bindings from `/api/v1/execution/subjects/activation-codes/me` when set) |
+| `ETMF_SERVICE_URL`          | 8003                                                                                                                                                                                            |
+| `INTEROP_SERVICE_URL`       | 8004                                                                                                                                                                                            |
+| `QUALITY_SERVICE_URL`       | 8005                                                                                                                                                                                            |
+| `NOTIFICATIONS_SERVICE_URL` | 8006                                                                                                                                                                                            |
+| `CTMS_SERVICE_URL`          | 8007                                                                                                                                                                                            |
+| `SAFETY_SERVICE_URL`        | 8008                                                                                                                                                                                            |
+| `TICKETS_SERVICE_URL`       | 8009                                                                                                                                                                                            |
+| `EISF_SERVICE_URL`          | 8010                                                                                                                                                                                            |
+| `ECONSENT_SERVICE_URL`      | 8011                                                                                                                                                                                            |
+| `ORG_SERVICE_URL`           | 8012                                                                                                                                                                                            |
+| `FILESHARE_SERVICE_URL`     | 8013                                                                                                                                                                                            |
+| `IMAGING_SERVICE_URL`       | 8014                                                                                                                                                                                            |
+| `KNOWLEDGE_SERVICE_URL`     | 8015                                                                                                                                                                                            |
+| `PAYMENTS_SERVICE_URL`      | 8016                                                                                                                                                                                            |
+| `KERNEL_SERVICE_URL`        | 8018 (`apps/interop/src/Application/Services/CanonicalObservationForwarder.cs` also forwards resolved ePRO diary answers to `/api/v1/kernel/observations` when set)                             |
 
 Timeouts and health checks for every route, read by `apps/gateway/src/GatewayClusters.cs` (ADR-2451). Each must be a positive number of seconds; the gateway refuses to start otherwise.
 

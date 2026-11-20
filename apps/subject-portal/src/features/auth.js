@@ -1,6 +1,7 @@
 // Participant identity: cached user, PIN-gated session state, Keycloak sign-in, logout.
 import { watch } from "vue";
 
+import { dispatchApi } from "../api/client.js";
 import { state } from "../stores/state.js";
 import {
   clearInMemoryKey,
@@ -12,11 +13,27 @@ import {
   setActiveUserId,
 } from "../sync-queue.js";
 import { isDemoBuild, isDemoModeActive } from "../utils/demoMode.js";
-import { renderCompliance } from "./compliance.js";
-import { renderInbox } from "./inbox.js";
+import { loadCompliance, renderCompliance } from "./compliance.js";
+import { loadNotifications, renderInbox } from "./inbox.js";
 import { checkPINWrapper } from "./pin.js";
 import { checkOnline } from "./sync-status.js";
-import { renderTasks } from "./tasks.js";
+import {
+  loadAssignedInstruments,
+  loadAssignedTasks,
+  renderTasks,
+} from "./tasks.js";
+
+function extractTokenSubjectCode(keycloak) {
+  const accessClaim = keycloak?.tokenParsed?.subject_code;
+  if (typeof accessClaim === "string" && accessClaim.trim()) {
+    return accessClaim.trim();
+  }
+  const idClaim = keycloak?.idTokenParsed?.subject_code;
+  if (typeof idClaim === "string" && idClaim.trim()) {
+    return idClaim.trim();
+  }
+  return null;
+}
 
 // Restores the cached user identity without persisting or pre-populating unwrapped keys in production.
 export async function restoreSession() {
@@ -104,14 +121,36 @@ export async function signIn() {
         });
 
         if (keycloak.authenticated && keycloak.token) {
-          const authenticatedUserId =
-            keycloak.subject ||
-            keycloak.tokenParsed?.preferred_username ||
-            null;
-          state.session.userId = authenticatedUserId;
           state.session.token = keycloak.token;
           state.session.isOfflineMode = false;
           state.session.isDemoMode = false;
+
+          let authenticatedUserId = extractTokenSubjectCode(keycloak);
+          if (!authenticatedUserId) {
+            try {
+              const binding = await dispatchApi(
+                "api/v1/execution/subjects/activation-codes/me"
+              );
+              if (
+                binding &&
+                typeof binding.subject_id === "string" &&
+                binding.subject_id.trim()
+              ) {
+                authenticatedUserId = binding.subject_id.trim();
+              }
+            } catch {
+              // Fall back to standard OIDC subject claim when no activation code was redeemed.
+            }
+          }
+
+          if (!authenticatedUserId) {
+            authenticatedUserId =
+              keycloak.subject ||
+              keycloak.tokenParsed?.preferred_username ||
+              null;
+          }
+
+          state.session.userId = authenticatedUserId;
           setActiveUserId(authenticatedUserId);
 
           if (authenticatedUserId) {
@@ -323,4 +362,53 @@ export async function logout() {
       console.warn("Keycloak logout failed:", err);
     }
   }
+}
+
+// Redeems a 30-day BYOD activation code against Execution and binds the authenticated session to the study SubjectCode.
+export async function redeemActivationCode(
+  activationCode,
+  reason = "Participant redeemed 30-day BYOD ePRO activation code"
+) {
+  const normalizedCode =
+    typeof activationCode === "string" ? activationCode.trim() : "";
+  if (!normalizedCode) {
+    throw new Error("Please enter a valid activation code.");
+  }
+
+  const effectiveReason =
+    typeof reason === "string" && reason.trim()
+      ? reason.trim()
+      : "Participant redeemed 30-day BYOD ePRO activation code";
+
+  const redeemed = await dispatchApi(
+    "api/v1/execution/subjects/activation-codes/redeem",
+    {
+      method: "POST",
+      change_reason: effectiveReason,
+      body: JSON.stringify({ activation_code: normalizedCode }),
+    }
+  );
+
+  const boundSubjectId = redeemed?.subject_id?.trim?.() || null;
+  if (!boundSubjectId) {
+    throw new Error("Activation code response did not contain a subject_id.");
+  }
+
+  state.session.userId = boundSubjectId;
+  setActiveUserId(boundSubjectId);
+  try {
+    localStorage.setItem("oidc_user_id", boundSubjectId);
+  } catch (err) {
+    console.warn("Failed to persist redeemed subject_id:", err);
+  }
+
+  await loadAssignedTasks(boundSubjectId);
+  await loadAssignedInstruments(boundSubjectId);
+  await loadCompliance(boundSubjectId);
+  await loadNotifications(boundSubjectId);
+  renderTasks();
+  renderCompliance();
+  renderInbox();
+
+  return redeemed;
 }

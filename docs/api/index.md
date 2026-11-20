@@ -11,10 +11,10 @@ Each page lists the operations a .NET service serves. The specs come from the se
 | [econsent](econsent.md) | 6 |
 | [eisf](eisf.md) | 2 |
 | [etmf](etmf.md) | 14 |
-| [execution](execution.md) | 63 |
+| [execution](execution.md) | 66 |
 | [fileshare](fileshare.md) | 2 |
 | [imaging](imaging.md) | 11 |
-| [interop](interop.md) | 28 |
+| [interop](interop.md) | 36 |
 | [kernel](kernel.md) | 49 |
 | [knowledge](knowledge.md) | 9 |
 | [notifications](notifications.md) | 3 |

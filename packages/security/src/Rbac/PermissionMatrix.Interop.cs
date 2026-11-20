@@ -41,5 +41,16 @@ public static partial class PermissionMatrix
         {
             Grant(role, Candidate, "query");
         }
+
+        // Participant ePRO notification read/acknowledge grants for site staff and read-only oversight roles.
+        foreach (string role in new[] { RoleNormalization.ROLE_SYSADMIN, RoleNormalization.ROLE_INVESTIGATOR, RoleNormalization.ROLE_CRC })
+        {
+            Grant(role, "ecoa_notification", "read", "acknowledge");
+        }
+
+        foreach (string role in new[] { RoleNormalization.ROLE_SPONSOR_DM, RoleNormalization.ROLE_CRA_CANONICAL, "monitor", RoleNormalization.ROLE_AUDITOR_CANONICAL })
+        {
+            Grant(role, "ecoa_notification", "read");
+        }
     }
 }

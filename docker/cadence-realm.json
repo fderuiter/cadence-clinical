@@ -136,6 +136,20 @@
             "id.token.claim": "false",
             "userinfo.token.claim": "false"
           }
+        },
+        {
+          "name": "subject code",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "subject_code",
+            "claim.name": "subject_code",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
         }
       ]
     },
@@ -301,6 +315,28 @@
       ],
       "realmRoles": ["Auditor", "Sponsor Admin"],
       "attributes": { "tenant_id": ["cadence-local"], "study_ids": ["*"] }
+    },
+    {
+      "id": "7b8f9e10-2c4d-4f6a-9a1b-010100100001",
+      "username": "subj.101.001",
+      "enabled": true,
+      "email": "subj.101.001@example.com",
+      "firstName": "Participant",
+      "lastName": "SUBJ-101-001",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["Subject"],
+      "attributes": {
+        "tenant_id": ["cadence-local"],
+        "study_ids": ["CADENCE-101"],
+        "site_id": ["SITE-101"],
+        "subject_code": ["SUBJ-101-001"]
+      }
     }
   ]
 }

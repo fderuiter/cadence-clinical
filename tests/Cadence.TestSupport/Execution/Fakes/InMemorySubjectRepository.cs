@@ -35,6 +35,10 @@ namespace Cadence.TestSupport.Execution.Fakes;
 public sealed class InMemorySubjectRepository : ISubjectRepository
 {
     private readonly ConcurrentDictionary<SubjectId, ClinicalSubject> _store = new();
+    private readonly ConcurrentDictionary<Guid, SubjectActivationToken> _tokens = new();
+
+    public System.Collections.Generic.IReadOnlyCollection<SubjectActivationToken> ActivationTokens =>
+        _tokens.Values.ToList();
 
     /// <summary>Runs the unit of work directly: the fake has no transactions to open.</summary>
     public Task<TResult> ExecuteInTransactionAsync<TResult>(
@@ -94,4 +98,29 @@ public sealed class InMemorySubjectRepository : ISubjectRepository
     }
 
     public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task RevokePendingActivationTokensAsync(SubjectCode subjectCode, CancellationToken cancellationToken)
+    {
+        foreach (var token in _tokens.Values.Where(t => t.SubjectCode == subjectCode && t.RedeemedAt is null && !t.IsRevoked))
+        {
+            token.Revoke();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task AddActivationTokenAsync(SubjectActivationToken token, CancellationToken cancellationToken)
+    {
+        _tokens[token.Id] = token;
+        return Task.CompletedTask;
+    }
+
+    public Task<SubjectActivationToken?> GetActivationTokenByHashAsync(string tokenHash, CancellationToken cancellationToken) =>
+        Task.FromResult(_tokens.Values.FirstOrDefault(t => string.Equals(t.TokenHash, tokenHash, StringComparison.Ordinal)));
+
+    public Task<SubjectActivationToken?> GetRedeemedActivationByPrincipalHashAsync(string principalHash, CancellationToken cancellationToken) =>
+        Task.FromResult(_tokens.Values
+            .Where(t => string.Equals(t.RedeemedByPrincipalHash, principalHash, StringComparison.Ordinal))
+            .OrderByDescending(t => t.RedeemedAt)
+            .FirstOrDefault());
 }

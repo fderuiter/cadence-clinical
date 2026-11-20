@@ -56,4 +56,16 @@ public interface ISubjectApplicationService
     /// <summary>Evaluates screening eligibility and transitions to <c>ScreenFailed</c>/<c>Enrolled</c>
     /// (SCN-005/SCN-007). Implemented by MIG-SUBJ-019.</summary>
     Task<Result<SubjectResponse>> EvaluateAndTransitionScreeningAsync(string subjectId, CancellationToken ct);
+
+    /// <summary>Issues a single-use 30-day BYOD activation code for a participant, storing only its keyed HMAC digest.</summary>
+    Task<Result<SubjectActivationCodeIssueResponse>> IssueActivationCodeAsync(string subjectIdOrCode, string changeReason, CancellationToken ct = default) =>
+        throw new System.NotSupportedException();
+
+    /// <summary>Redeems a 30-day BYOD activation code against its keyed HMAC digest and binds the caller's hashed principal.</summary>
+    Task<Result<SubjectActivationCodeRedeemResponse>> RedeemActivationCodeAsync(string activationCode, string callerPrincipalId, string changeReason, CancellationToken ct = default) =>
+        throw new System.NotSupportedException();
+
+    /// <summary>Resolves the participant code bound to the caller's hashed principal from a previously redeemed activation code.</summary>
+    Task<Result<SubjectActivationCodeRedeemResponse>> GetRedeemedActivationAsync(string callerPrincipalId, CancellationToken ct = default) =>
+        throw new System.NotSupportedException();
 }

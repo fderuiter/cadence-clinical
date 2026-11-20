@@ -150,6 +150,54 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/subjects/{subjectId}/activation-code": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["IssueSubjectActivationCode"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/subjects/activation-codes/redeem": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["RedeemSubjectActivationCode"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/subjects/activation-codes/me": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["GetMyRedeemedActivationCode"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/execution/randomization/schemes": {
     parameters: {
       query?: never;
@@ -2124,6 +2172,30 @@ export interface components {
       created_at: null | string;
     };
     Execution_StudyCode: string;
+    Execution_SubjectActivationCodeIssueResponse: {
+      subject_id: components["schemas"]["Execution_SubjectCode"];
+      study_id: components["schemas"]["Execution_StudyCode"];
+      site_id: null | components["schemas"]["Execution_SiteCode"];
+      activation_code: string;
+      /** Format: date-time */
+      issued_at: string;
+      /** Format: date-time */
+      expires_at: string;
+      /** Format: int32 */
+      expires_in_days: number | string;
+    };
+    Execution_SubjectActivationCodeRedeemRequest: {
+      activation_code: string;
+    };
+    Execution_SubjectActivationCodeRedeemResponse: {
+      subject_id: components["schemas"]["Execution_SubjectCode"];
+      study_id: components["schemas"]["Execution_StudyCode"];
+      site_id: null | components["schemas"]["Execution_SiteCode"];
+      /** Format: date-time */
+      redeemed_at: string;
+      /** Format: date-time */
+      expires_at: string;
+    };
     Execution_SubjectCode: string;
     Execution_SubjectConsentId: string;
     Execution_SubjectConsentRequest: {
@@ -2684,6 +2756,144 @@ export interface operations {
     responses: {
       /** @description Forbidden */
       403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  IssueSubjectActivationCode: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        subjectId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_SubjectActivationCodeIssueResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  RedeemSubjectActivationCode: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_SubjectActivationCodeRedeemRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_SubjectActivationCodeRedeemResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_HttpValidationProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetMyRedeemedActivationCode: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_SubjectActivationCodeRedeemResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };

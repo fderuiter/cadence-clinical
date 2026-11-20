@@ -298,7 +298,9 @@ public static partial class PermissionMatrix
         {
             ["ecoa_schedule"] = ["read"],
             ["ecoa_diary"] = ["read"],
-            ["ecoa_submission"] = ["create", "read"]
+            ["ecoa_submission"] = ["create", "read"],
+            ["ecoa_notification"] = ["read", "acknowledge"],
+            ["ecoa_activation"] = ["redeem"]
         };
 
         // auditor

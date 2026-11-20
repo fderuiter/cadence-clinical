@@ -136,7 +136,7 @@ IResourceBuilder<ProjectResource> Service(IResourceBuilder<ProjectResource> proj
     return project;
 }
 
-Service(builder.AddProject<Projects.Cadence_Apps_Execution>("execution"))
+var execution = Service(builder.AddProject<Projects.Cadence_Apps_Execution>("execution"))
     .WithEnvironment("DemographicsEncryption__KeyBase64", demographicsEncryptionKey)
     .WithEnvironment("RANDOMIZATION_ALLOCATION_KEY", randomizationAllocationKey);
 // The local realm's users sign in with tenant code cadence-local (ADR-2514); the kernel host provisions that tenant on
@@ -157,6 +157,7 @@ if (full)
     // interop hashes device-token lookups with the lookup hash key. Both are base64 of 32 random bytes.
     var fieldEncryptionKey = builder.AddParameter("field-encryption-key", secret: true);
     var fieldLookupHashKey = builder.AddParameter("field-lookup-hash-key", secret: true);
+    execution.WithEnvironment("FIELD_LOOKUP_HASH_KEY", fieldLookupHashKey);
     var sceSigningKey = builder.AddParameter("sce-signing-key", secret: true);
     // Imaging signs de-identification certificates with one key and pseudonymizes DICOM UIDs with another (#5399).
     var imagingDeidSigningKey = builder.AddParameter("imaging-deid-signing-key", secret: true);
@@ -177,7 +178,9 @@ if (full)
     Service(builder.AddProject<Projects.Cadence_Apps_Etmf>("etmf"));
     Service(builder.AddProject<Projects.Cadence_Apps_Interop>("interop"))
         .WithEnvironment("FIELD_LOOKUP_HASH_KEY", fieldLookupHashKey)
-        .WithEnvironment("CADENCE_SCE_SIGNING_KEY", sceSigningKey);
+        .WithEnvironment("CADENCE_SCE_SIGNING_KEY", sceSigningKey)
+        .WithEnvironment("EXECUTION_SERVICE_URL", execution.GetEndpoint("http"))
+        .WithEnvironment("KERNEL_SERVICE_URL", kernel.GetEndpoint("http"));
     Service(builder.AddProject<Projects.Cadence_Apps_Quality>("quality"));
     Service(builder.AddProject<Projects.Cadence_Apps_Notifications>("notifications"));
     Service(builder.AddProject<Projects.Cadence_Apps_Ctms>("ctms"));

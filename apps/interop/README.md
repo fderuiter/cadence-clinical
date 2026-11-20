@@ -1,6 +1,6 @@
 # Interoperability service
 
-Interoperability scaffold. It holds the ePRO submission, instrument, subject assignment, EHR endpoint and reconciliation, and device/sensor telemetry model. It maps the eSource (EHR) routes under `/api/v1/interop/esource` and the statistical computing environment under `/api/v1/interop/sce`; ePRO, instrument and device telemetry have no endpoints yet.
+Interoperability service. It holds the participant ePRO / eCOA endpoints, instrument and subject assignment model, EHR endpoint and reconciliation, statistical computing environment, and device/sensor telemetry model. It maps participant ePRO routes under `/api/v1/interop`, eSource (EHR) routes under `/api/v1/interop/esource`, and the statistical computing environment under `/api/v1/interop/sce`.
 
 **Status:** a standalone ASP.NET Core 10 scaffold service. Under [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and the [clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map, §15 roadmap) it becomes an application module over the clinical kernel. The disposition of the scaffold services is tracked in issue #4787.
 
@@ -19,6 +19,7 @@ Interoperability scaffold. It holds the ePRO submission, instrument, subject ass
 
 - `GET /healthz`, `GET /healthz/live`, `GET /healthz/ready` (anonymous; mapped by `MapCadenceHealthAndStatusEndpoints` and `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready` checks `InteropDbContext`.
 - `GET /api/v1/interop/status` (anonymous status payload).
+- Participant ePRO & eCOA (`Endpoints/EproEndpoints.cs`, `/api/v1/interop`): assignments (`/assignments/subject/{subjectId}`), assigned instruments (`/subjects/{subjectId}/instruments`), instrument detail (`/instruments/{id}`), compliance (`/subjects/{subjectId}/compliance`), notifications (`/subjects/{subjectId}/notifications`), notification acknowledgement (`POST /notifications/{notificationId}/acknowledge`), single diary submission (`POST /epro/submit`) and offline queue sync (`POST /epro/sync`) with sequence idempotency, conflict archival (`EproSubmissionDefeated`), stale-version quarantine (`EproSubmissionQuarantine`), fail-closed `Subject` caller ownership enforcement (`X-Subject-Code`) and canonical EDC/Kernel observation forwarding (`CanonicalObservationForwarder`, `K-TRUTH-1`).
 - eSource (`Endpoints/EsourceEndpoints.cs`, `/api/v1/interop/esource`): EHR endpoint list and registration
   (`/endpoints`), SMART client assertion signing and verification (`/smart/assertion`, `/smart/verify`), polling a
   hospital EHR and ingesting a FHIR bundle (`/poll`, `/ingest`), reconciliation candidates (`/candidates`,
@@ -88,6 +89,7 @@ public key alone is `422` and signs nothing. Neither route, nor polling, accepts
 | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `FIELD_LOOKUP_HASH_KEY`   | **Required.** Base64 HMAC-SHA256 key (`openssl rand -base64 32`) for device-token lookup hashes. The service refuses to start without a valid key; there is no default.                               |
 | `CADENCE_SCE_SIGNING_KEY` | **Required.** Base64 HMAC-SHA256 key (`openssl rand -base64 32`) that signs SCE database-lock tokens and run signature blocks. The service refuses to start without a valid key; there is no default. |
+| `KERNEL_SERVICE_URL`      | Optional base URL of the Kernel API host (`http://kernel-api:8080` in compose). When set, `CanonicalObservationForwarder` posts resolved ePRO diary items to `POST /api/v1/kernel/observations`.      |
 
 Wearable/sensor device tokens are never stored (#4770). `device_registrations`, `sensor_telemetry_streams`,
 `sensor_daily_summaries` and `sensor_safety_alerts` each keep an indexed `DeviceTokenHash`: the keyed HMAC-SHA256

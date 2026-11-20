@@ -1,4 +1,6 @@
 using System;
+using System.Security.Cryptography;
+using System.Text;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Cec;
@@ -42,6 +44,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -123,6 +126,27 @@ builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.Services.AddSingleton<IDemographicsEncryptionService, AesGcmDemographicsEncryptionService>();
 builder.Services.AddSingleton<IDemographicsNormalizationService, DemographicsNormalizationService>();
 builder.Services.AddSingleton<IUcumNormalizationService, UcumNormalizationService>();
+builder.Services.AddSingleton<ILookupHasher>(sp =>
+{
+    string? configuredKey = builder.Configuration[LookupHashOptions.ConfigurationKey];
+    if (!string.IsNullOrWhiteSpace(configuredKey))
+    {
+        return new HmacLookupHasher(configuredKey);
+    }
+
+    var gatewayOptions = sp.GetRequiredService<IOptionsMonitor<GatewayAuthenticationOptions>>()
+        .Get(GatewayAuthenticationHandler.SchemeName);
+    byte[] secretBytes = Encoding.UTF8.GetBytes(gatewayOptions.GatewaySecret ?? string.Empty);
+    byte[] derived = HKDF.DeriveKey(
+        HashAlgorithmName.SHA256,
+        secretBytes,
+        FieldProtectionKey.KeySizeBytes,
+        info: Encoding.UTF8.GetBytes("cadence.execution.subject-activation-code.hmac.v1"));
+    string derivedBase64 = Convert.ToBase64String(derived);
+    CryptographicOperations.ZeroMemory(secretBytes);
+    CryptographicOperations.ZeroMemory(derived);
+    return new HmacLookupHasher(derivedBase64);
+});
 
 // ExecutionDbContext (Scoped, the EF Core default `AddDbContext` lifetime) -- the connection string mirrors
 // ExecutionDbContextFactory's own design-time convention exactly (same POSTGRES_CONNECTION_STRING

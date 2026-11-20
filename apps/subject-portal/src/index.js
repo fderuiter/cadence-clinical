@@ -21,7 +21,7 @@ import {
   fetchNotifications,
   isAuthenticatedSession,
 } from "./api/client.js";
-import { login, logout } from "./features/auth.js";
+import { login, logout, redeemActivationCode } from "./features/auth.js";
 import { renderCompliance } from "./features/compliance.js";
 import {
   loadConsentDetails,
@@ -144,6 +144,7 @@ export {
   markFieldInvalid,
   login,
   logout,
+  redeemActivationCode,
   refreshSubmissionsState,
   checkPINWrapper,
   handlePINSetupSubmit,

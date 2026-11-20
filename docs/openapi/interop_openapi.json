@@ -1161,6 +1161,417 @@
           }
         }
       }
+    },
+    "/api/v1/interop/assignments/subject/{subjectId}": {
+      "get": {
+        "tags": [
+          "Participant ePRO \u0026 eCOA"
+        ],
+        "operationId": "ListSubjectAssignments",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Interop_EproAssignmentDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/subjects/{subjectId}/instruments": {
+      "get": {
+        "tags": [
+          "Participant ePRO \u0026 eCOA"
+        ],
+        "operationId": "ListSubjectInstruments",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Interop_EproInstrumentDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/instruments/{id}": {
+      "get": {
+        "tags": [
+          "Participant ePRO \u0026 eCOA"
+        ],
+        "operationId": "GetEproInstrument",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EproInstrumentDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/subjects/{subjectId}/compliance": {
+      "get": {
+        "tags": [
+          "Participant ePRO \u0026 eCOA"
+        ],
+        "operationId": "GetSubjectCompliance",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EproComplianceResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/subjects/{subjectId}/notifications": {
+      "get": {
+        "tags": [
+          "Participant ePRO \u0026 eCOA"
+        ],
+        "operationId": "ListSubjectNotifications",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Interop_EproNotificationDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/notifications/{notificationId}/acknowledge": {
+      "post": {
+        "tags": [
+          "Participant ePRO \u0026 eCOA"
+        ],
+        "operationId": "AcknowledgeSubjectNotification",
+        "parameters": [
+          {
+            "name": "notificationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EproNotificationDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/epro/submit": {
+      "post": {
+        "tags": [
+          "Participant ePRO \u0026 eCOA"
+        ],
+        "operationId": "SubmitEproDiary",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Interop_EproSubmitRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EproReconciliationResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/epro/sync": {
+      "post": {
+        "tags": [
+          "Participant ePRO \u0026 eCOA"
+        ],
+        "operationId": "SyncEproBatch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Interop_EproSyncBatchRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EproSyncBatchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1990,6 +2401,454 @@
           }
         }
       },
+      "Interop_EproAssignmentDto": {
+        "required": [
+          "id",
+          "subject_id",
+          "instrument_id",
+          "instrument_name",
+          "start_date",
+          "end_date",
+          "recurrence_pattern",
+          "due_at",
+          "submitted_at",
+          "status",
+          "version_index"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "instrument_id": {
+            "type": "string"
+          },
+          "instrument_name": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "recurrence_pattern": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "due_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "submitted_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Interop_EproComplianceAssignmentItem": {
+        "required": [
+          "id",
+          "instrument_id",
+          "instrument_name",
+          "due_at",
+          "end_date",
+          "submitted_at",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "instrument_id": {
+            "type": "string"
+          },
+          "instrument_name": {
+            "type": "string"
+          },
+          "due_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "submitted_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "Interop_EproComplianceResponse": {
+        "required": [
+          "subject_id",
+          "compliance_rate",
+          "completed_count",
+          "pending_count",
+          "overdue_count",
+          "total_count",
+          "assignments"
+        ],
+        "type": "object",
+        "properties": {
+          "subject_id": {
+            "type": "string"
+          },
+          "compliance_rate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "completed_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pending_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "overdue_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "assignments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_EproComplianceAssignmentItem"
+            }
+          }
+        }
+      },
+      "Interop_EproInstrumentDto": {
+        "required": [
+          "id",
+          "name",
+          "description",
+          "items",
+          "response_types",
+          "scoring_metadata",
+          "version_index"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "items": {
+            "$ref": "#/components/schemas/Interop_JsonElement"
+          },
+          "response_types": {
+            "$ref": "#/components/schemas/Interop_JsonElement"
+          },
+          "scoring_metadata": {
+            "$ref": "#/components/schemas/Interop_JsonElement"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Interop_EproNotificationDto": {
+        "required": [
+          "id",
+          "subject_id",
+          "assignment_id",
+          "message",
+          "message_content",
+          "due_at",
+          "channel",
+          "delivery_status",
+          "is_read",
+          "read_at",
+          "version_index"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "assignment_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "message_content": {
+            "type": "string"
+          },
+          "due_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "delivery_status": {
+            "type": "string"
+          },
+          "is_read": {
+            "type": "boolean"
+          },
+          "read_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Interop_EproOfflineSyncMarkersDto": {
+        "type": "object",
+        "properties": {
+          "sequence_number": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "client_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "conflict_strategy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_EproReconciliationResultDto": {
+        "required": [
+          "id",
+          "subject_id",
+          "diary_id",
+          "status",
+          "answers",
+          "offline_sync_markers"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "diary_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "answers": {
+            "$ref": "#/components/schemas/Interop_JsonElement"
+          },
+          "offline_sync_markers": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Interop_EproOfflineSyncMarkersDto"
+              }
+            ]
+          },
+          "duplicate_sequence_ignored": {
+            "type": "boolean",
+            "default": false
+          },
+          "canonical_observations_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          }
+        }
+      },
+      "Interop_EproSubmitRequest": {
+        "required": [
+          "subject_id",
+          "diary_id",
+          "version_index",
+          "device_timestamp",
+          "answers"
+        ],
+        "type": "object",
+        "properties": {
+          "subject_id": {
+            "type": "string"
+          },
+          "diary_id": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "device_timestamp": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "answers": {
+            "$ref": "#/components/schemas/Interop_JsonElement"
+          },
+          "offline_sync_markers": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Interop_EproOfflineSyncMarkersDto"
+              }
+            ]
+          },
+          "enrollment_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_EproSyncBatchRequest": {
+        "required": [
+          "submissions"
+        ],
+        "type": "object",
+        "properties": {
+          "submissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_EproSubmitRequest"
+            }
+          }
+        }
+      },
+      "Interop_EproSyncBatchResponse": {
+        "required": [
+          "status",
+          "results"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_EproReconciliationResultDto"
+            }
+          }
+        }
+      },
       "Interop_ExecuteProgramRequestDto": {
         "required": [
           "study_id",
@@ -2225,6 +3084,7 @@
           }
         }
       },
+      "Interop_JsonElement": {},
       "Interop_ProblemDetails": {
         "type": "object",
         "properties": {
@@ -2386,6 +3246,9 @@
     },
     {
       "name": "eSource Reconciliation \u0026 SMART on FHIR"
+    },
+    {
+      "name": "Participant ePRO \u0026 eCOA"
     }
   ]
 }

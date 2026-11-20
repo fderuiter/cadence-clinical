@@ -75,4 +75,20 @@ public interface ISubjectRepository
     /// </summary>
     Task<TResult> ExecuteInTransactionAsync<TResult>(
         System.Func<CancellationToken, Task<TResult>> unitOfWork, CancellationToken cancellationToken);
+
+    /// <summary>Revokes unredeemed activation tokens for <paramref name="subjectCode"/> before issuing a new one.</summary>
+    Task RevokePendingActivationTokensAsync(SubjectCode subjectCode, CancellationToken cancellationToken) =>
+        throw new System.NotSupportedException();
+
+    /// <summary>Stages a newly issued <see cref="SubjectActivationToken"/> for insertion.</summary>
+    Task AddActivationTokenAsync(SubjectActivationToken token, CancellationToken cancellationToken) =>
+        throw new System.NotSupportedException();
+
+    /// <summary>Looks up a tracked <see cref="SubjectActivationToken"/> by its keyed HMAC-SHA256 digest.</summary>
+    Task<SubjectActivationToken?> GetActivationTokenByHashAsync(string tokenHash, CancellationToken cancellationToken) =>
+        throw new System.NotSupportedException();
+
+    /// <summary>Looks up the latest redeemed <see cref="SubjectActivationToken"/> bound to a caller principal HMAC digest.</summary>
+    Task<SubjectActivationToken?> GetRedeemedActivationByPrincipalHashAsync(string principalHash, CancellationToken cancellationToken) =>
+        throw new System.NotSupportedException();
 }

@@ -126,6 +126,7 @@ public static class GatewayIdentityForwarding
             .ToList();
         // The tenant comes from the sign-in token alone; a token without one forwards no tenant (#5038).
         string? tenant = user.FindFirst(CadenceClaimTypes.TenantId)?.Value is { } t && !string.IsNullOrWhiteSpace(t) ? t : null;
+        string? subjectCode = user.FindFirst(CadenceClaimTypes.SubjectCode)?.Value is { } sc && !string.IsNullOrWhiteSpace(sc) ? sc.Trim() : null;
         bool unblinded = string.Equals(user.FindFirst(CadenceClaimTypes.UnblindedAccess)?.Value, "true", StringComparison.OrdinalIgnoreCase);
 
         string? changeReason = null;
@@ -148,7 +149,8 @@ public static class GatewayIdentityForwarding
             TenantId: tenant,
             ChangeReason: changeReason,
             SigToken: httpContext.Request.Headers[GatewayHeaders.SigToken].ToString(),
-            StudyIds: studies);
+            StudyIds: studies,
+            SubjectCode: subjectCode);
     }
 
     /// <summary>

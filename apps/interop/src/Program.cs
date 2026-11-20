@@ -1,3 +1,6 @@
+using System;
+using System.Linq;
+
 using Cadence.Apps.Interop.Application.Services;
 using Cadence.Apps.Interop.Endpoints;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
@@ -23,6 +26,10 @@ builder.Services.AddSingleton<ILockfileValidatorService, LockfileValidatorServic
 builder.Services.AddSingleton<ISceDockerEngineDriver, SceDockerEngineDriver>();
 // SMART client assertions are signed with server-side keys named per endpoint, never keys from a request (#5436).
 builder.Services.AddSingleton<ISmartSigningKeys, ConfigurationSmartSigningKeys>();
+builder.Services.AddHttpClient(CanonicalObservationForwarder.HttpClientName);
+builder.Services.AddSingleton<ICanonicalObservationForwarder, CanonicalObservationForwarder>();
+builder.Services.AddHttpClient(ActivationBindingResolver.HttpClientName);
+builder.Services.AddSingleton<IActivationBindingResolver, ActivationBindingResolver>();
 builder.AddCadencePostgresDbContext<InteropDbContext>();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 
@@ -37,6 +44,17 @@ app.MapCadenceHealthAndStatusEndpoints(
 
 app.MapEsourceEndpoints();
 app.MapSceEndpoints();
+app.MapEproEndpoints();
+
+if (args.Contains("--seed"))
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<InteropDbContext>();
+    var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+    await InteropDbSeeder.SeedAsync(dbContext, clock);
+    Console.WriteLine("[SUCCESS] InteropDbContext seeded successfully.");
+    return;
+}
 
 await app.RunAsync();
 

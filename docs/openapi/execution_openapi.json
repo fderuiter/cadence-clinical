@@ -630,6 +630,166 @@
         }
       }
     },
+    "/api/v1/execution/subjects/{subjectId}/activation-code": {
+      "post": {
+        "tags": [
+          "Subjects"
+        ],
+        "operationId": "IssueSubjectActivationCode",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_SubjectActivationCodeIssueResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/subjects/activation-codes/redeem": {
+      "post": {
+        "tags": [
+          "Subjects"
+        ],
+        "operationId": "RedeemSubjectActivationCode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_SubjectActivationCodeRedeemRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_SubjectActivationCodeRedeemResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/subjects/activation-codes/me": {
+      "get": {
+        "tags": [
+          "Subjects"
+        ],
+        "operationId": "GetMyRedeemedActivationCode",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_SubjectActivationCodeRedeemResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/randomization/schemes": {
       "post": {
         "tags": [
@@ -6481,6 +6641,102 @@
       },
       "Execution_StudyCode": {
         "type": "string"
+      },
+      "Execution_SubjectActivationCodeIssueResponse": {
+        "required": [
+          "subject_id",
+          "study_id",
+          "site_id",
+          "activation_code",
+          "issued_at",
+          "expires_at",
+          "expires_in_days"
+        ],
+        "type": "object",
+        "properties": {
+          "subject_id": {
+            "$ref": "#/components/schemas/Execution_SubjectCode"
+          },
+          "study_id": {
+            "$ref": "#/components/schemas/Execution_StudyCode"
+          },
+          "site_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Execution_SiteCode"
+              }
+            ]
+          },
+          "activation_code": {
+            "type": "string"
+          },
+          "issued_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_in_days": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Execution_SubjectActivationCodeRedeemRequest": {
+        "required": [
+          "activation_code"
+        ],
+        "type": "object",
+        "properties": {
+          "activation_code": {
+            "type": "string"
+          }
+        }
+      },
+      "Execution_SubjectActivationCodeRedeemResponse": {
+        "required": [
+          "subject_id",
+          "study_id",
+          "site_id",
+          "redeemed_at",
+          "expires_at"
+        ],
+        "type": "object",
+        "properties": {
+          "subject_id": {
+            "$ref": "#/components/schemas/Execution_SubjectCode"
+          },
+          "study_id": {
+            "$ref": "#/components/schemas/Execution_StudyCode"
+          },
+          "site_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Execution_SiteCode"
+              }
+            ]
+          },
+          "redeemed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       },
       "Execution_SubjectCode": {
         "type": "string"

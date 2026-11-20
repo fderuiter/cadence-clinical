@@ -137,7 +137,7 @@ export async function initializeApp() {
     "serviceWorker" in navigator &&
     !window.__MOCK_TEST_ENV__
   ) {
-    window.addEventListener("load", () => {
+    const registerServiceWorker = () => {
       navigator.serviceWorker
         .register("/subject-portal/sw.js")
         .then((reg) => {
@@ -146,7 +146,13 @@ export async function initializeApp() {
         .catch((err) => {
           console.error("Service Worker registration failed:", err);
         });
-    });
+    };
+
+    if (typeof document !== "undefined" && document.readyState === "complete") {
+      registerServiceWorker();
+    } else {
+      window.addEventListener("load", registerServiceWorker, { once: true });
+    }
   }
 
   // Initial sync & sync queue rendering (stipend evaluation runs for authenticated or demo sessions)

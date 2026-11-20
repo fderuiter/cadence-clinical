@@ -239,6 +239,8 @@ services:
       DemographicsEncryption__KeyBase64: Y2FkZW5jZS1sb2NhbC1kZXYtZGVtb2dyYXBoaWNzISE= # pragma: allowlist secret
       # Local-only randomisation key (#5607), different from the demographics key.
       RANDOMIZATION_ALLOCATION_KEY: Y2FkZW5jZS1sb2NhbC1kZXYtcmFuZG9taXphdGlvbiE= # pragma: allowlist secret
+      # Local-only HMAC key for 30-day participant BYOD activation code digests; generate a real one with `openssl rand -base64 32`.
+      FIELD_LOOKUP_HASH_KEY: bG9jYWwtZGV2LW9ubHktbG9va3VwLWhhc2gta2V5MDA= # pragma: allowlist secret
     depends_on: *db-depends
 
   etmf:
@@ -270,6 +272,8 @@ services:
       FIELD_LOOKUP_HASH_KEY: bG9jYWwtZGV2LW9ubHktbG9va3VwLWhhc2gta2V5MDA= # pragma: allowlist secret
       # Local-only HMAC key for SCE database-lock tokens and run signatures (#5382); generate a real one the same way.
       CADENCE_SCE_SIGNING_KEY: bG9jYWwtZGV2LW9ubHktc2NlLXNpZ25pbmcta2V5LTE= # pragma: allowlist secret
+      EXECUTION_SERVICE_URL: http://execution:8080
+      KERNEL_SERVICE_URL: http://kernel:8080
     depends_on: *db-depends
 
   quality:

@@ -105,10 +105,20 @@ self.addEventListener("fetch", (event) => {
             if (cachedResponse) {
               return cachedResponse;
             }
-            // If even cache fails (e.g., first time visiting a non-cached asset while offline)
-            if (event.request.mode === "navigate") {
-              return caches.match("/subject-portal/index.html");
-            }
+            return caches.match(url.pathname).then((pathMatchedResponse) => {
+              if (pathMatchedResponse) {
+                return pathMatchedResponse;
+              }
+              // If even cache fails (e.g., first time visiting a non-cached route while offline)
+              if (event.request.mode === "navigate") {
+                return caches
+                  .match("/subject-portal/index.html")
+                  .then(
+                    (shellResponse) =>
+                      shellResponse || caches.match("/subject-portal/")
+                  );
+              }
+            });
           });
         })
     );
