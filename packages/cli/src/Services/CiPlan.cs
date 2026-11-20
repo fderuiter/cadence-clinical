@@ -153,8 +153,6 @@ public static class CiPlan
     private const string QualitySentinels = "dotnet-quality/Run Cadence quality sentinels";
     private const string StyleNodeInstall = "lint-and-static/Install Node dependencies";
     private const string StyleFrontendBuild = "lint-and-static/Build frontend workspace";
-    private const string RtmReport = "docs/SDLC/Requirements_Traceability_Matrix.md";
-    private const string IqReport = "docs/SDLC/IQ_OQ_PQ_Execution_Report.md";
     private const string E2eJob = "accessibility-e2e"; // deid-ignore: the ci.yml job key, not an account number
 
     /// <summary>
@@ -273,10 +271,9 @@ public static class CiPlan
             {
                 Commands = [Pnpm("docs:build")],
 
-                // scripts/build-docs.js runs the full 'cadence check' again before building; it skips that when the
-                // same gates already passed in this run (#5028). It also rewrites the RTM as a draft.
+                // scripts/build-docs.js runs openapi, schema-doc, and markdown checks before building; it skips those
+                // duplicate gates when they already passed in this run (#5028), while still running 'check rtm'.
                 EnvironmentIfPassed = [new(QualitySentinels, "CADENCE_DOCS_SKIP_CHECKS", "1")],
-                RestoreFiles = [RtmReport, IqReport],
             },
         ]);
 
