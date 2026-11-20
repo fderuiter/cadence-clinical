@@ -1,7 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import { useClinicalStore } from "../src/stores/clinical";
+import {
+  DEFAULT_CLINICAL_USDM,
+  useClinicalStore,
+} from "../src/stores/clinical";
 import { useAuthStore } from "../src/stores/auth.js";
 import { useToastStore } from "../src/stores/toasts.js";
 import MdrView from "../src/views/MdrView.vue";
@@ -104,6 +107,164 @@ describe("MdrView confirmMutation API failure handling (#4523)", () => {
 
     expect(store.currentUsdm.arms.map((a) => a.arm_id)).toContain("ARM-4523");
     expect(useToastStore().toasts).toHaveLength(0);
+  });
+
+  it("resets currentUsdm via #btn-reset-usdm with NormalizedUsdm aliases and isolated deep clones", async () => {
+    const wrapper = mount(MdrView, { global: { plugins: [pinia] } });
+    await flushPromises();
+    const ledgerSpy = vi
+      .spyOn(store, "addLedgerBlock")
+      .mockResolvedValue({ hash: "mock-reset-hash" });
+    vi.spyOn(store, "pushSoAMutation").mockResolvedValue(undefined);
+
+    // Mutate currentUsdm away from baseline first
+    store.currentUsdm = {
+      studyId: "CUSTOM-STUDY-999",
+      studyTitle: "Custom Modified Study",
+      arms: [{ arm_id: "ARM-CUSTOM", arm_name: "Custom Arm" }],
+      epochs: [],
+      encounters: [],
+      rows: [],
+    };
+
+    wrapper.vm.showUsdmJson = true;
+    await wrapper.vm.$nextTick();
+
+    const resetBtn = wrapper.find("#btn-reset-usdm");
+    expect(resetBtn.exists()).toBe(true);
+    await resetBtn.trigger("click");
+    await flushPromises();
+
+    expect(store.currentUsdm.studyId).toBe(DEFAULT_CLINICAL_USDM.studyId);
+    expect(store.currentUsdm.forms).toEqual([]);
+    expect(store.currentUsdm.crossovers).toEqual([]);
+    expect(store.currentUsdm.arms[0].armId).toBe("ARM-A");
+    expect(store.currentUsdm.arms[0].armName).toBe("Arm A: Active 10mg daily");
+    expect(store.currentUsdm.epochs[0].epochId).toBe("EP-SCR");
+    expect(store.currentUsdm.encounters[0].encounterId).toBe("V-SCR");
+    expect(store.currentUsdm.rows[0].activityId).toBe("ACT-DEM");
+    expect(store.currentUsdm.rows[0].cells[0].isApplicable).toBe(true);
+    expect(Object.keys(store.currentUsdm.arms[0])).not.toContain("armId");
+    expect(ledgerSpy).toHaveBeenCalledWith(
+      "USDM_RESET",
+      { studyId: "STUDY-USDM-001" },
+      "User reset study protocol schema back to default USDM v3.0 specs."
+    );
+
+    // Subsequent in-place local mutations must not mutate DEFAULT_CLINICAL_USDM
+    wrapper.vm.pendingMutation = {
+      type: "arms",
+      id: "ARM-POST-RESET",
+      properties: { name: "Post Reset Arm" },
+    };
+    await wrapper.vm.confirmMutation("Add arm after reset");
+
+    expect(store.currentUsdm.arms.map((a) => a.arm_id)).toContain(
+      "ARM-POST-RESET"
+    );
+    expect(DEFAULT_CLINICAL_USDM.arms.map((a) => a.arm_id)).toEqual([
+      "ARM-A",
+      "ARM-B",
+    ]);
+  });
+
+  it("computes differences against DEFAULT_CLINICAL_USDM baseline IDs and clears them on reset", async () => {
+    const wrapper = mount(MdrView, { global: { plugins: [pinia] } });
+    await flushPromises();
+    vi.spyOn(store, "pushSoAMutation").mockResolvedValue(undefined);
+    vi.spyOn(store, "addLedgerBlock").mockResolvedValue({
+      hash: "mock-reset-hash",
+    });
+
+    expect(wrapper.vm.differences).toEqual([]);
+
+    const mutations = [
+      {
+        type: "arms",
+        id: "ARM-DIFF",
+        properties: { name: "Amendment Arm" },
+      },
+      {
+        type: "epochs",
+        id: "EP-DIFF",
+        properties: { name: "Follow-Up", sequence: 3 },
+      },
+      {
+        type: "visits",
+        id: "V-DIFF",
+        properties: { name: "Week 8", epoch_id: "EP-DIFF", sequence: 5 },
+      },
+      {
+        type: "procedures",
+        id: "ACT-DIFF",
+        properties: { name: "ECG Check" },
+      },
+    ];
+
+    for (const mut of mutations) {
+      wrapper.vm.pendingMutation = mut;
+      await wrapper.vm.confirmMutation("Protocol amendment");
+    }
+
+    expect(wrapper.vm.differences.map((d) => `${d.category}:${d.id}`)).toEqual([
+      "arms:ARM-DIFF",
+      "epochs:EP-DIFF",
+      "encounters:V-DIFF",
+      "rows:ACT-DIFF",
+    ]);
+
+    wrapper.vm.showUsdmJson = true;
+    await wrapper.vm.$nextTick();
+    await wrapper.find("#btn-reset-usdm").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.vm.differences).toEqual([]);
+  });
+
+  it("alerts before logging when queueMutation fails schema validation and preserves concept mapping", async () => {
+    const wrapper = mount(MdrView, { global: { plugins: [pinia] } });
+    await flushPromises();
+
+    const callOrder = [];
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation((msg) => {
+      callOrder.push(`alert:${msg}`);
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation((msg) => {
+      callOrder.push(`error:${msg}`);
+    });
+
+    wrapper.vm.queueMutation({
+      type: "arms",
+      id: "ARM-BAD",
+      properties: { armType: 123 },
+    });
+
+    expect(wrapper.vm.showReasonModal).toBe(false);
+    expect(wrapper.vm.pendingMutation).toBeNull();
+    expect(callOrder.at(-2)).toContain(
+      "alert:Instant Schema Validation Error:"
+    );
+    expect(callOrder.at(-1)).toContain(
+      "error:Instant Schema Validation Error:"
+    );
+
+    wrapper.vm.queueMutation({
+      type: "concept",
+      id: "C12345",
+      properties: {
+        preferred_name: "Systolic Blood Pressure",
+        definition: "Arterial pressure",
+      },
+    });
+
+    expect(wrapper.vm.showReasonModal).toBe(true);
+    expect(wrapper.vm.pendingMutation).toMatchObject({
+      type: "concept",
+      id: "C12345",
+    });
+
+    alertSpy.mockRestore();
+    errorSpy.mockRestore();
   });
 });
 

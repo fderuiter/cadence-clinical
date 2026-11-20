@@ -26,28 +26,48 @@ const authStore = useAuthStore(pinia);
 // Every gateway-bound fetch carries the Keycloak bearer token (ADR-2250).
 installAuthorizedFetch(window);
 
-// Sign-in is Keycloak only (authorization code + PKCE). The router is added
-// after the SSO check so the first navigation guard sees the real session.
-// A demo build has no identity provider: it signs in the offline demo identity
-// instead (ADR-2329, #4523).
-const signedIn = isDemoBuild()
-  ? Promise.resolve(authStore.startDemoSession())
-  : initKeycloakAuth({
-      authStore,
-      Keycloak,
-      onSessionEnded: () => {
-        const current = router.currentRoute.value;
-        if (current.matched.some((record) => record.meta.requiresAuth)) {
-          router.replace({
-            path: "/login",
-            query: { redirect: current.fullPath },
-          });
-        }
-      },
-    });
+// Dynamic Hover Pointer Capability Detection
+initHoverDetection();
 
-signedIn
-  .then(() => {
+async function bootstrapApp() {
+  // The MSW mock gateway runs only in a demo build, or when explicitly enabled for local UI work; it must never
+  // answer in place of the real API unannounced, and in demo builds it must be ready before any view mounts (ADR-2329).
+  if (
+    import.meta.env.MODE === "demo" ||
+    import.meta.env.VITE_DEMO_MODE === "true" ||
+    import.meta.env.VITE_ENABLE_MSW === "true"
+  ) {
+    try {
+      const { startMswWorker } = await import("./mocks/browser.js");
+      await startMswWorker();
+    } catch (err) {
+      console.warn("[MSW] Failed to initialize worker:", err);
+    }
+  }
+
+  // Sign-in is Keycloak only (authorization code + PKCE). The router is added
+  // after the SSO check so the first navigation guard sees the real session.
+  // A demo build has no identity provider: it signs in the offline demo identity
+  // instead (ADR-2329, #4523).
+  try {
+    if (isDemoBuild()) {
+      authStore.startDemoSession();
+    } else {
+      await initKeycloakAuth({
+        authStore,
+        Keycloak,
+        onSessionEnded: () => {
+          const current = router.currentRoute.value;
+          if (current.matched.some((record) => record.meta.requiresAuth)) {
+            router.replace({
+              path: "/login",
+              query: { redirect: current.fullPath },
+            });
+          }
+        },
+      });
+    }
+
     // keycloak-js strips the OIDC callback parameters from the URL during
     // init. Start the router on the cleaned URL, not the snapshot it took at
     // import, so the one-time authorization code never returns to history.
@@ -56,20 +76,12 @@ signedIn
     const path = pathname.startsWith(base)
       ? pathname.slice(base.length)
       : pathname;
-    return router.replace(`${path || "/"}${search}${hash}`);
-  })
-  .finally(() => {
+    await router.replace(`${path || "/"}${search}${hash}`);
+  } finally {
     app.use(router);
+    await router.isReady();
     app.mount("#app");
-  });
-
-// The MSW mock gateway runs only in a demo build, or when explicitly enabled for local UI work; it must never
-// answer in place of the real API unannounced.
-if (isDemoBuild() || import.meta.env.VITE_ENABLE_MSW === "true") {
-  import("./mocks/browser.js")
-    .then(({ startMswWorker }) => startMswWorker())
-    .catch((err) => console.warn("[MSW] Failed to initialize worker:", err));
+  }
 }
 
-// Dynamic Hover Pointer Capability Detection
-initHoverDetection();
+bootstrapApp();

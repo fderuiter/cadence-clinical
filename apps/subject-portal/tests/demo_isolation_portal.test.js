@@ -1,0 +1,197 @@
+import "fake-indexeddb/auto";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setupServer } from "msw/node";
+import { getApiBaseUrl } from "../src/api/client.js";
+import { login, logout } from "../src/features/auth.js";
+import {
+  normalizePortalBasePath,
+  resolvePortalServiceWorkerOptions,
+  startMswWorker,
+} from "../src/mocks/browser.js";
+import { createPortalDemoStore } from "../src/mocks/demoHandlers.js";
+import { buildPortalGatewayHandlers } from "../src/mocks/handlers.js";
+import { state } from "../src/stores/state.js";
+
+const PORTAL_HEADERS = {
+  Authorization: "Bearer demo-portal-token",
+  "Content-Type": "application/json",
+};
+
+describe("Subject Portal Demo Isolation & Stateful MSW Handlers", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it("activates local demo participant in login() without contacting Keycloak in demo builds", async () => {
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    logout();
+    expect(state.session.userId).toBeNull();
+
+    await login();
+
+    expect(state.session.userId).toBe("subject_001");
+    expect(state.session.isOfflineMode).toBe(true);
+    expect(state.session.isDemoMode).toBe(true);
+    expect(state.session.token).toBeNull();
+
+    const keycloakCalls = fetchSpy.mock.calls.filter(([url]) =>
+      String(url).includes("8080")
+    );
+    expect(keycloakCalls).toEqual([]);
+  });
+
+  it("resolves same-origin API base URL in demo builds and localhost:8000 in standard builds", () => {
+    vi.stubEnv("VITE_API_BASE_URL", "");
+    vi.stubEnv("VITE_DEMO_MODE", "false");
+    expect(getApiBaseUrl()).toBe("http://localhost:8000");
+
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    expect(getApiBaseUrl()).toBe(window.location.origin);
+    expect(getApiBaseUrl()).not.toContain("localhost:8000");
+  });
+
+  it("resolves single-scope unified service worker options (/subject-portal/sw.js?msw=1)", async () => {
+    expect(normalizePortalBasePath("/subject-portal/")).toBe(
+      "/subject-portal/"
+    );
+    expect(normalizePortalBasePath("subject-portal")).toBe("/subject-portal/");
+    expect(resolvePortalServiceWorkerOptions("/subject-portal/")).toEqual({
+      url: "/subject-portal/sw.js?msw=1",
+      options: { scope: "/subject-portal/" },
+    });
+
+    const fakeWorker = {
+      start: vi.fn().mockResolvedValue({ scope: "/subject-portal/" }),
+    };
+    const registration = await startMswWorker({
+      worker: fakeWorker,
+      baseUrl: "/subject-portal/",
+      env: { MODE: "demo" },
+      quiet: true,
+    });
+
+    expect(registration).toEqual({ scope: "/subject-portal/" });
+    expect(fakeWorker.start).toHaveBeenCalledWith({
+      onUnhandledFrame: "error",
+      quiet: true,
+      serviceWorker: {
+        url: "/subject-portal/sw.js?msw=1",
+        options: { scope: "/subject-portal/" },
+      },
+    });
+  });
+
+  describe("Fail-closed portal boundary & stateful session persistence", () => {
+    let store;
+    let server;
+    const origin = window.location.origin;
+
+    beforeEach(() => {
+      store = createPortalDemoStore();
+      server = setupServer(
+        ...buildPortalGatewayHandlers({ forceDemo: true, store })
+      );
+      server.listen({ onUnhandledRequest: "error" });
+    });
+
+    afterEach(() => {
+      server.close();
+    });
+
+    it("fails closed on unmocked portal API routes (501) and off-origin requests (503)", async () => {
+      const unmockedRes = await fetch(
+        `${origin}/api/v1/interop/unknown-demo-route`,
+        { headers: PORTAL_HEADERS }
+      );
+      expect(unmockedRes.status).toBe(501);
+      const unmockedBody = await unmockedRes.json();
+      expect(unmockedBody.error).toBe("DEMO_UNMOCKED_ENDPOINT");
+
+      const offOriginRes = await fetch("http://localhost:8080/realms/cadence");
+      expect(offOriginRes.status).toBe(503);
+      const offOriginBody = await offOriginRes.json();
+      expect(offOriginBody.error).toBe("DEMO_OFF_ORIGIN_BLOCKED");
+    });
+
+    it("persists notification acknowledgements, ePRO submissions, and re-consent completion", async () => {
+      const ackRes = await fetch(
+        `${origin}/api/v1/interop/notifications/notif_01/acknowledge`,
+        {
+          method: "POST",
+          headers: {
+            ...PORTAL_HEADERS,
+            "X-Change-Reason": "Participant read reminder",
+          },
+          body: JSON.stringify({}),
+        }
+      );
+      expect(ackRes.status).toBe(200);
+
+      const notifsRes = await fetch(
+        `${origin}/api/v1/interop/subjects/subject_001/notifications`,
+        { headers: PORTAL_HEADERS }
+      );
+      expect(notifsRes.status).toBe(200);
+      const notifs = await notifsRes.json();
+      expect(notifs.find((n) => n.id === "notif_01")?.is_read).toBe(true);
+
+      const submitRes = await fetch(`${origin}/api/v1/interop/epro/submit`, {
+        method: "POST",
+        headers: {
+          ...PORTAL_HEADERS,
+          "X-Change-Reason": "Daily diary submission",
+        },
+        body: JSON.stringify({
+          assignment_id: "assign_01",
+          subject_id: "subject_001",
+          responses: { vssbp: 120, vsdpb: 78, vshr: 68, pain_scale: 2 },
+        }),
+      });
+      expect(submitRes.status).toBe(200);
+
+      const assignRes = await fetch(
+        `${origin}/api/v1/interop/assignments/subject/subject_001`,
+        { headers: PORTAL_HEADERS }
+      );
+      expect(assignRes.status).toBe(200);
+      const assignments = await assignRes.json();
+      expect(assignments.find((a) => a.id === "assign_01")?.status).toBe(
+        "COMPLETED"
+      );
+
+      const pendingBefore = await (
+        await fetch(
+          `${origin}/api/v1/econsent/reconsent/pending/STUDY-01?subject_pseudonym=subject_001`,
+          { headers: PORTAL_HEADERS }
+        )
+      ).json();
+      expect(pendingBefore.length).toBe(1);
+
+      const completeRes = await fetch(
+        `${origin}/api/v1/econsent/reconsent/complete/${pendingBefore[0].id}`,
+        {
+          method: "POST",
+          headers: {
+            ...PORTAL_HEADERS,
+            "X-Change-Reason": "Protocol Amendment Re-Consent Acknowledgment",
+          },
+          body: JSON.stringify({
+            subject_pseudonym: "subject_001",
+          }),
+        }
+      );
+      expect(completeRes.status).toBe(200);
+
+      const pendingAfter = await (
+        await fetch(
+          `${origin}/api/v1/econsent/reconsent/pending/STUDY-01?subject_pseudonym=subject_001`,
+          { headers: PORTAL_HEADERS }
+        )
+      ).json();
+      expect(pendingAfter).toEqual([]);
+    });
+  });
+});

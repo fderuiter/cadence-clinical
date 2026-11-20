@@ -1,4 +1,4 @@
-# ADR-2818: Forward Verified CI GxP Evidence to Releases and Synchronize Service Migration Snapshots
+# ADR-2535: Forward Verified CI GxP Evidence to Releases and Synchronize Service Migration Snapshots
 
 - **Status:** Accepted
 - **Date:** 2026-11-20
