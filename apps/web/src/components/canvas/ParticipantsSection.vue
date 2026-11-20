@@ -7,6 +7,16 @@
   >
     <header class="participants-header">
       <h2 id="participants-title">Participants</h2>
+      <label for="participants-search">Search</label>
+      <input
+        id="participants-search"
+        :value="searchInput"
+        type="search"
+        autocomplete="off"
+        placeholder="Subject code…"
+        @input="onSearchInput"
+        @keydown.enter.prevent="flushSearch"
+      />
       <label for="participants-status">State</label>
       <select id="participants-status" :value="status" @change="onStatusChange">
         <option value="">Any state</option>
@@ -18,13 +28,26 @@
           {{ state.label }}
         </option>
       </select>
+      <label for="participants-site">Site</label>
+      <select id="participants-site" :value="siteId" @change="onSiteChange">
+        <option value="">All sites</option>
+        <option v-for="site in siteOptions" :key="site.code" :value="site.code">
+          {{ site.title }}
+        </option>
+      </select>
       <span v-if="siteId" id="participants-site-filter" class="filter-chip">
         Site {{ siteId }}
         <button
           id="btn-clear-site-filter"
           type="button"
           :aria-label="`Show participants at every site, not only ${siteId}`"
-          @click="emit('filter', { status, siteId: '' })"
+          @click="
+            emit('filter', {
+              status,
+              siteId: '',
+              q: searchInput.trim(),
+            })
+          "
         >
           ×
         </button>
@@ -102,8 +125,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import type { SubjectSummary } from "../../api/executionApi";
+import { findStudySites, type StudySiteOption } from "../../canvas/kernelStudy";
 import {
   PARTICIPANT_STATES,
   participantStateLabel,
@@ -112,23 +136,83 @@ import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import AddParticipantForm from "./AddParticipantForm.vue";
 
 /**
- * The study's participants in enrollment order, from Execution, filtered by state and site. The filter lives
- * in the canvas URL, so the parent owns it; selecting a participant fills the inspector.
+ * The study's participants in enrollment order, from Execution, filtered by search text, state, and site. The filter
+ * lives in the canvas URL, so the parent owns it; selecting a participant fills the inspector.
  */
-const props = defineProps<{
-  status: string;
-  siteId: string;
-  selectedId: string;
-  /** Whether to offer adding participants (Execution enforces who may, #4943). */
-  canManageParticipants?: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    status: string;
+    siteId: string;
+    search?: string;
+    selectedId: string;
+    /** Whether to offer adding participants (Execution enforces who may, #4943). */
+    canManageParticipants?: boolean;
+  }>(),
+  {
+    search: "",
+  }
+);
 const emit = defineEmits<{
   select: [participant: SubjectSummary];
-  filter: [filter: { status: string; siteId: string }];
+  filter: [filter: { status: string; siteId: string; q?: string }];
 }>();
+
+const SEARCH_DEBOUNCE_MS = 180;
 
 const canvas = useStudyCanvasStore();
 const adding = ref(false);
+const searchInput = ref(props.search);
+const studySites = ref<StudySiteOption[]>([]);
+let searchTimer: ReturnType<typeof setTimeout> | undefined;
+let sitesRequest = 0;
+
+watch(
+  () => props.search,
+  (next) => {
+    clearTimeout(searchTimer);
+    if (searchInput.value !== next) {
+      searchInput.value = next;
+    }
+  }
+);
+
+watch(
+  () => canvas.studyCode,
+  async (code) => {
+    const request = ++sitesRequest;
+    studySites.value = [];
+    if (!code) return;
+    try {
+      const sites = await findStudySites(code);
+      if (request === sitesRequest) {
+        studySites.value = sites;
+      }
+    } catch {
+      if (request === sitesRequest) {
+        studySites.value = [];
+      }
+    }
+  },
+  { immediate: true }
+);
+
+onBeforeUnmount(() => {
+  clearTimeout(searchTimer);
+  sitesRequest++;
+});
+
+const siteOptions = computed<StudySiteOption[]>(() => {
+  if (
+    props.siteId &&
+    !studySites.value.some((site) => site.code === props.siteId)
+  ) {
+    return [
+      ...studySites.value,
+      { code: props.siteId, title: `Site ${props.siteId}` },
+    ];
+  }
+  return studySites.value;
+});
 
 /** Closes the form and selects the new participant when the list could place it. */
 function onAdded(participant: SubjectSummary | null) {
@@ -143,7 +227,7 @@ const statusLine = computed(() => {
   if (canvas.participantsError) return "Participants couldn't be loaded.";
   const total = canvas.participantsTotal;
   if (total === 0) {
-    return props.status || props.siteId
+    return props.status || props.siteId || props.search
       ? "No participants match these filters."
       : `No participants in ${canvas.studyCode} yet.`;
   }
@@ -154,9 +238,42 @@ const statusLine = computed(() => {
     : `${total} ${noun}.`;
 });
 
+function emitFilter(next: { status?: string; siteId?: string; q?: string }) {
+  emit("filter", {
+    status: next.status ?? props.status,
+    siteId: next.siteId ?? props.siteId,
+    q: (next.q ?? searchInput.value).trim(),
+  });
+}
+
+function flushSearch() {
+  clearTimeout(searchTimer);
+  emitFilter({ q: searchInput.value });
+}
+
+function onSearchInput(event: Event) {
+  const value = (event.target as HTMLInputElement).value;
+  searchInput.value = value;
+  clearTimeout(searchTimer);
+  if (!value.trim()) {
+    emitFilter({ q: "" });
+    return;
+  }
+  searchTimer = setTimeout(() => {
+    emitFilter({ q: searchInput.value });
+  }, SEARCH_DEBOUNCE_MS);
+}
+
 function onStatusChange(event: Event) {
   const value = (event.target as HTMLSelectElement).value;
-  emit("filter", { status: value, siteId: props.siteId });
+  clearTimeout(searchTimer);
+  emitFilter({ status: value });
+}
+
+function onSiteChange(event: Event) {
+  const value = (event.target as HTMLSelectElement).value;
+  clearTimeout(searchTimer);
+  emitFilter({ siteId: value });
 }
 </script>
 
@@ -179,6 +296,7 @@ function onStatusChange(event: Event) {
   font-size: 1rem;
 }
 
+.participants-header input[type="search"],
 .participants-header select {
   padding: 6px;
   border: 1px solid var(--border);

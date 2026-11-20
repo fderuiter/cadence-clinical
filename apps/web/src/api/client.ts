@@ -74,18 +74,44 @@ export function getAuthMiddleware(): Middleware {
 
 const INITIAL_BASE_URL = getBaseUrl();
 
-function dispatchOpenApiFetch(input: RequestInfo | URL, init?: RequestInit) {
+function rewriteRequestBaseUrl(
+  initialBaseUrl: string,
+  input: RequestInfo | URL
+): RequestInfo | URL {
   const currentBase = getBaseUrl().replace(/\/+$/, "");
-  const initialBase = INITIAL_BASE_URL.replace(/\/+$/, "");
-  if (
-    currentBase !== initialBase &&
-    input instanceof Request &&
-    input.url.startsWith(`${initialBase}/`)
-  ) {
+  const initialBase = initialBaseUrl.replace(/\/+$/, "");
+  if (currentBase === initialBase) return input;
+
+  if (input instanceof Request && input.url.startsWith(`${initialBase}/`)) {
     const rewrittenUrl = `${currentBase}${input.url.slice(initialBase.length)}`;
-    return globalThis.fetch(new Request(rewrittenUrl, input), init);
+    const hasBody = input.method !== "GET" && input.method !== "HEAD";
+    return new Request(rewrittenUrl, {
+      method: input.method,
+      headers: new Headers(input.headers),
+      body: hasBody ? input.body : undefined,
+      credentials: input.credentials,
+      mode: input.mode,
+      cache: input.cache,
+      redirect: input.redirect,
+      referrer: input.referrer,
+      referrerPolicy: input.referrerPolicy,
+      integrity: input.integrity,
+      keepalive: input.keepalive,
+      signal: input.signal,
+      ...(hasBody ? ({ duplex: "half" } as RequestInit) : {}),
+    });
   }
-  return globalThis.fetch(input, init);
+  if (typeof input === "string" && input.startsWith(`${initialBase}/`)) {
+    return `${currentBase}${input.slice(initialBase.length)}`;
+  }
+  if (input instanceof URL && input.href.startsWith(`${initialBase}/`)) {
+    return new URL(`${currentBase}${input.href.slice(initialBase.length)}`);
+  }
+  return input;
+}
+
+function dispatchOpenApiFetch(input: RequestInfo | URL, init?: RequestInit) {
+  return globalThis.fetch(rewriteRequestBaseUrl(INITIAL_BASE_URL, input), init);
 }
 
 export const openApiClient = createClient<paths>({
@@ -95,13 +121,18 @@ export const openApiClient = createClient<paths>({
 
 openApiClient.use(getAuthMiddleware());
 
-export function createOpenApiClient<T extends {} = paths>(
-  baseUrl: string = getBaseUrl()
-) {
-  // Resolve fetch per call, as openApiClient does, so tests and the MSW worker see the current global.
+export function createOpenApiClient<T extends {} = paths>(baseUrl?: string) {
+  const initialBase = baseUrl ?? getBaseUrl();
+  // Resolve fetch and dynamic getBaseUrl() per call, as openApiClient does, so tests and the MSW worker see the current global and env base URL.
   const client = createClient<T>({
-    baseUrl,
-    fetch: (...args) => globalThis.fetch(...args),
+    baseUrl: initialBase,
+    fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+      globalThis.fetch(
+        baseUrl === undefined
+          ? rewriteRequestBaseUrl(initialBase, input)
+          : input,
+        init
+      ),
   });
   client.use(getAuthMiddleware());
   return client;

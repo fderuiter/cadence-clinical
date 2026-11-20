@@ -18,10 +18,11 @@ using Xunit;
 namespace Cadence.UnitTests.Execution.Subjects;
 
 /// <summary>
-/// `MIG-SUBJ-019` coverage for <see cref="SubjectApplicationService.GetDetailAsync"/>: the RTSM blinding
-/// (the service never returns an arm, #5607), the single-lookup-by-domain-code-only contract (raise
-/// site #13's not-found, deliberately not the shared dual-lookup helper), and the full-population contract
-/// (the response reflects the aggregate's real current state).
+/// Coverage for <see cref="SubjectApplicationService.GetDetailAsync"/>: the RTSM blinding
+/// (the service never returns an arm, #5607), the shared <c>ResolveSubjectAsync</c> dual-lookup contract
+/// (surrogate UUID PK first, then domain subject code), and the full-population contract
+/// (the response reflects the aggregate's real current state including <c>Id</c>, <c>ActiveProtocolVersion</c>,
+/// and <c>EnrollmentIndex</c>).
 /// </summary>
 public class SubjectApplicationServiceDetailTests
 {
@@ -43,10 +44,10 @@ public class SubjectApplicationServiceDetailTests
     private static readonly StudyCode Study = new("STUDY-001");
 
     private static async Task<ClinicalSubject> SeedSubjectAsync(InMemorySubjectRepository subjects, string subjectCode,
-        SiteCode? siteCode = null, SubjectState status = SubjectState.Screening)
+        SiteCode? siteCode = null, SubjectState status = SubjectState.Screening, int enrollmentIndex = 0)
     {
         var subject = ClinicalSubject.Create(new SubjectCode(subjectCode), Study, siteCode,
-            enrollmentIndex: 0, encryptedDemographics: null, stratFactors: null);
+            enrollmentIndex: enrollmentIndex, encryptedDemographics: null, stratFactors: null);
         if (status != SubjectState.Screening)
         {
             subject.TransitionTo(status).IsSuccess.Should().BeTrue(
@@ -62,29 +63,35 @@ public class SubjectApplicationServiceDetailTests
     {
         var harness = new Harness();
 
-        var result = await harness.Service.GetDetailAsync("SUBJ-DOES-NOT-EXIST",
+        var byCode = await harness.Service.GetDetailAsync("SUBJ-DOES-NOT-EXIST",
+            TestContext.Current.CancellationToken);
+        var byUuid = await harness.Service.GetDetailAsync("0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d79",
             TestContext.Current.CancellationToken);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error!.Code.Should().Be("SUBJECT_NOT_FOUND");
+        byCode.IsFailure.Should().BeTrue();
+        byCode.Error!.Code.Should().Be("SUBJECT_NOT_FOUND");
+        byUuid.IsFailure.Should().BeTrue();
+        byUuid.Error!.Code.Should().Be("SUBJECT_NOT_FOUND");
     }
 
     [Fact]
-    public async Task GetDetailAsync_ResolvesSubjectByDomainCode_NotSurrogateId()
+    public async Task GetDetailAsync_ResolvesSubjectBySurrogateIdAndDomainCode()
     {
-        // Deliberately not the dual-lookup helper -- every fixture route for this endpoint passes a domain
-        // code (e.g. "SUBJ-DOES-NOT-EXIST"), so a surrogate GUID must NOT resolve here.
         var harness = new Harness();
-        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001");
+        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001", enrollmentIndex: 4);
 
         var byId = await harness.Service.GetDetailAsync(subject.Id.ToString(),
             TestContext.Current.CancellationToken);
         var byCode = await harness.Service.GetDetailAsync(subject.SubjectCode.Value,
             TestContext.Current.CancellationToken);
 
-        byId.IsFailure.Should().BeTrue("this method's single lookup is by domain code only, not the surrogate id");
-        byId.Error!.Code.Should().Be("SUBJECT_NOT_FOUND");
+        byId.IsSuccess.Should().BeTrue("participant deep links address subjects by surrogate UUID");
+        byId.Value!.Id.Should().Be(subject.Id);
+        byId.Value.SubjectId.Should().Be(subject.SubjectCode);
+        byId.Value.ActiveProtocolVersion.Should().Be(subject.ActiveProtocolVersion);
+        byId.Value.EnrollmentIndex.Should().Be(4);
         byCode.IsSuccess.Should().BeTrue();
+        byCode.Value.Should().Be(byId.Value);
     }
 
     [Fact]
@@ -92,16 +99,19 @@ public class SubjectApplicationServiceDetailTests
     {
         var siteCode = new SiteCode("SITE-042");
         var harness = new Harness();
-        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001", siteCode, SubjectState.Enrolled);
+        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001", siteCode, SubjectState.Enrolled, enrollmentIndex: 7);
 
         var result = await harness.Service.GetDetailAsync(subject.SubjectCode.Value,
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value!.SubjectId.Should().Be(subject.SubjectCode);
+        result.Value!.Id.Should().Be(subject.Id);
+        result.Value.SubjectId.Should().Be(subject.SubjectCode);
         result.Value.StudyId.Should().Be(subject.StudyCode);
         result.Value.Status.Should().Be("ENROLLED", "responses reflect the real current status");
         result.Value.SiteId.Should().Be(siteCode);
+        result.Value.ActiveProtocolVersion.Should().Be(subject.ActiveProtocolVersion);
+        result.Value.EnrollmentIndex.Should().Be(7);
     }
 
     // -- RTSM blinding (#5607) ------------------------------------------------------------------

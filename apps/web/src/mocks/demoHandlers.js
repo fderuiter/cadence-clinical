@@ -303,6 +303,7 @@ export function createWebDemoHandlers(store = webDemoStore) {
           studyId: url.searchParams.get("study_id") || undefined,
           siteId: url.searchParams.get("site_id") || undefined,
           status: url.searchParams.get("status") || undefined,
+          q: url.searchParams.get("q") || undefined,
           limit: url.searchParams.get("limit") || 50,
           offset: url.searchParams.get("offset") || 0,
         })

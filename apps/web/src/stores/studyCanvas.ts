@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import {
   executionApi,
+  type SubjectDetail,
   type SubjectList,
   type SubjectSummary,
 } from "../api/executionApi";
@@ -17,6 +18,7 @@ export const PARTICIPANT_LOOKUP_PAGE_SIZE = 200;
 export interface ParticipantFilter {
   status?: string;
   siteId?: string;
+  q?: string;
 }
 
 export interface PulseCount {
@@ -34,6 +36,22 @@ const sortByEnrollment = (
   Object.values(known).sort(
     (a, b) => toCount(a.enrollment_index) - toCount(b.enrollment_index)
   );
+
+function detailToSummary(
+  detail: SubjectDetail | null | undefined
+): SubjectSummary | null {
+  if (!detail || typeof detail !== "object") return null;
+  if (typeof detail.id !== "string" || !detail.id) return null;
+  return {
+    id: detail.id,
+    subject_id: detail.subject_id,
+    study_id: detail.study_id,
+    site_id: detail.site_id ?? null,
+    status: detail.status,
+    active_protocol_version: detail.active_protocol_version ?? "",
+    enrollment_index: toCount(detail.enrollment_index ?? 0),
+  };
+}
 
 let participantsRequest = 0;
 let pulseRequest = 0;
@@ -189,8 +207,8 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     },
 
     /**
-     * Resolves a participant UUID for cold record, form, or inspector links by paging Execution's 200-row
-     * subject list (since GetSubjectDetail accepts only subject codes).
+     * Resolves a participant UUID for cold record, form, or inspector links via GetSubjectDetail in O(1),
+     * falling back to paging Execution's 200-row subject list only when GetSubjectDetail is unavailable.
      */
     async ensureParticipantById(
       participantId: string
@@ -220,6 +238,28 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       const run = (async (): Promise<SubjectSummary | null> => {
         let offset = this.paletteLoaded ? this.unfilteredLoadedCount : 0;
         try {
+          if (typeof executionApi.getSubjectDetail === "function") {
+            const detail = await executionApi.getSubjectDetail(participantId);
+            if (epoch !== lookupEpoch || this.studyCode !== studyId) {
+              return null;
+            }
+            if (detail === null) {
+              this.failedParticipantIds[participantId] = true;
+              return null;
+            }
+            if (detail && typeof detail === "object") {
+              if (detail.study_id && detail.study_id !== studyId) {
+                this.failedParticipantIds[participantId] = true;
+                return null;
+              }
+              const summary = detailToSummary(detail);
+              if (summary) {
+                this.rememberParticipants([summary]);
+                return summary;
+              }
+            }
+          }
+
           while (true) {
             const page = await fetchStudyPage(studyId, epoch, offset);
             if (epoch !== lookupEpoch || this.studyCode !== studyId) {
@@ -325,6 +365,11 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
                 if (detail.study_id && detail.study_id !== studyId) {
                   return null;
                 }
+                const summary = detailToSummary(detail);
+                if (summary) {
+                  this.rememberParticipants([summary]);
+                  return summary;
+                }
                 filterSiteId = detail.site_id || undefined;
                 filterStatus = detail.status || undefined;
               }
@@ -415,6 +460,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
           studyId,
           status: filter.status,
           siteId: filter.siteId,
+          ...(filter.q ? { q: filter.q } : {}),
           limit: PARTICIPANT_PAGE_SIZE,
           offset,
         });
@@ -425,7 +471,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
         const total = toCount(page.total);
         this.participantsTotal = total;
         this.rememberParticipants(page.items);
-        if (!filter.status && !filter.siteId) {
+        if (!filter.status && !filter.siteId && !filter.q) {
           this.unfilteredLoadedCount = Math.max(
             this.unfilteredLoadedCount,
             this.participants.length

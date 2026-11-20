@@ -19,6 +19,7 @@ export function findKernelStudyRef(code: string): Promise<string | null> {
         kinds: ["study"],
         limit: 5,
       });
+      if (!Array.isArray(hits)) return null;
       return hits.find((hit) => hit.exact_code)?.ref ?? null;
     } finally {
       inFlight.delete(code);
@@ -61,6 +62,48 @@ export async function findKernelEnrollmentRef(
   if (enrollments.length !== 1) return null;
   const ref = parseNodeRef(enrollments[0].node.ref);
   return ref?.kind === "enrollment" ? ref : null;
+}
+
+export interface StudySiteOption {
+  code: string;
+  title: string;
+}
+
+/**
+ * Visible study sites for a study from the kernel's zoom children, ordered by site code.
+ */
+export async function findStudySites(
+  studyCode: string
+): Promise<StudySiteOption[]> {
+  if (
+    !studyCode ||
+    typeof kernelApi.search !== "function" ||
+    typeof kernelApi.getChildren !== "function"
+  ) {
+    return [];
+  }
+  const studyRef = await findKernelStudyRef(studyCode);
+  if (!studyRef) return [];
+  const children = await kernelApi.getChildren(studyRef);
+  if (!Array.isArray(children)) return [];
+  const byCode = new Map<string, StudySiteOption>();
+  for (const child of children) {
+    const node = child?.node;
+    if (
+      node?.kind !== "study_site" ||
+      node.mask !== null ||
+      !node.code ||
+      byCode.has(node.code)
+    ) {
+      continue;
+    }
+    const title =
+      node.title && node.title !== node.code
+        ? `${node.code} — ${node.title}`
+        : `Site ${node.code}`;
+    byCode.set(node.code, { code: node.code, title });
+  }
+  return [...byCode.values()].sort((a, b) => a.code.localeCompare(b.code));
 }
 
 export interface StudyCollectionSpecOption {

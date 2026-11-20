@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { kernelApi } from "../../src/api/kernelApi";
-import { findKernelEnrollmentRef } from "../../src/canvas/kernelStudy";
+import {
+  findKernelEnrollmentRef,
+  findStudySites,
+} from "../../src/canvas/kernelStudy";
 
 vi.mock("../../src/api/kernelApi", () => ({
   kernelApi: { search: vi.fn(), getChildren: vi.fn() },
@@ -89,5 +92,65 @@ describe("findKernelEnrollmentRef (#5461)", () => {
     expect(
       await findKernelEnrollmentRef("CAD-999", "017", "017-0001")
     ).toBeNull();
+  });
+});
+
+describe("findStudySites", () => {
+  beforeEach(() => {
+    vi.mocked(kernelApi.search).mockReset();
+    vi.mocked(kernelApi.getChildren).mockReset();
+  });
+
+  it("returns visible deduplicated study sites sorted by site code and omits masked sites", async () => {
+    vi.mocked(kernelApi.search).mockResolvedValue([
+      {
+        ref: STUDY_REF,
+        kind: "study",
+        title: "Study",
+        code: "CAD-101",
+        detail: null,
+        exact_code: true,
+        rank: 1,
+      },
+    ]);
+    vi.mocked(kernelApi.getChildren).mockResolvedValue([
+      {
+        node: {
+          ref: SITE_B,
+          kind: "study_site",
+          title: "Chicago Medical Center",
+          code: "SITE-22",
+          status: null,
+          mask: null,
+        },
+        child_count: 3,
+        group: null,
+      },
+      child("study_site", SITE_A, "SITE-17"),
+      child("study_site", SITE_A, "SITE-17"),
+      {
+        node: {
+          ref: null,
+          kind: "study_site",
+          title: null,
+          code: "SITE-99",
+          status: null,
+          mask: "NotPermitted",
+        },
+        child_count: null,
+        group: null,
+      },
+      child("protocol_version", "protocol_version:v1", "1.0"),
+    ]);
+
+    await expect(findStudySites("CAD-101")).resolves.toEqual([
+      { code: "SITE-17", title: "Site SITE-17" },
+      { code: "SITE-22", title: "SITE-22 — Chicago Medical Center" },
+    ]);
+  });
+
+  it("returns an empty list when the study is unknown", async () => {
+    vi.mocked(kernelApi.search).mockResolvedValue([]);
+    await expect(findStudySites("CAD-404")).resolves.toEqual([]);
   });
 });

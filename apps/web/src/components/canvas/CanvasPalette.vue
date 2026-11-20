@@ -86,7 +86,7 @@ import { getActivePinia } from "pinia";
 import { useFocusTrap } from "ui";
 import { kernelApi, type KernelSearchHit } from "../../api/kernelApi";
 import { STAGES, participantStateLabel } from "../../canvas/lifecycle";
-import type { SubjectSummary } from "../../api/executionApi";
+import { executionApi, type SubjectSummary } from "../../api/executionApi";
 import type {
   PaletteTarget,
   WorkspacePaletteOption,
@@ -147,26 +147,68 @@ const { enabled: aiEnabled } = useAiAssistance();
 
 const kernelHits = ref<KernelSearchHit[]>([]);
 const kernelNote = ref("");
+const remoteParticipants = ref<SubjectSummary[]>([]);
 const resolvedParticipant = ref<SubjectSummary | null>(null);
 let searchTimer: ReturnType<typeof setTimeout> | undefined;
 let latestSearch = 0;
 let latestParticipantLookup = 0;
 
-async function searchKernel(text: string) {
+function searchKernel(text: string) {
   const request = ++latestSearch;
-  try {
-    const hits = await kernelApi.search({
+  const study = props.studyCode;
+  const activePinia = getActivePinia();
+  const canvasStore = activePinia ? useStudyCanvasStore(activePinia) : null;
+  const allStudyParticipantsLoaded = Boolean(
+    canvasStore &&
+    canvasStore.studyCode === study &&
+    canvasStore.paletteLoaded &&
+    canvasStore.unfilteredLoadedCount >= canvasStore.paletteTotal
+  );
+
+  void kernelApi
+    .search({
       text,
       kinds: ["study"],
       limit: MAX_KERNEL_HITS,
-    });
-    if (request !== latestSearch) return;
-    kernelHits.value = hits;
-    kernelNote.value = "";
-  } catch (e) {
-    if (request !== latestSearch) return;
-    kernelHits.value = [];
-    kernelNote.value = `Studies can't be searched right now: ${e instanceof Error ? e.message : String(e)}`;
+    })
+    .then(
+      (hits) => {
+        if (request !== latestSearch) return;
+        kernelHits.value = hits;
+        kernelNote.value = "";
+      },
+      (e) => {
+        if (request !== latestSearch) return;
+        kernelHits.value = [];
+        kernelNote.value = `Studies can't be searched right now: ${e instanceof Error ? e.message : String(e)}`;
+      }
+    );
+
+  if (
+    study &&
+    typeof executionApi.listSubjects === "function" &&
+    !allStudyParticipantsLoaded
+  ) {
+    void executionApi
+      .listSubjects({
+        studyId: study,
+        q: text,
+        limit: MAX_KERNEL_HITS,
+      })
+      .then(
+        (page) => {
+          if (request !== latestSearch) return;
+          const items = Array.isArray(page?.items) ? page.items : [];
+          remoteParticipants.value = items;
+          if (canvasStore && canvasStore.studyCode === study && items.length) {
+            canvasStore.rememberParticipants(items);
+          }
+        },
+        () => {
+          if (request !== latestSearch) return;
+          remoteParticipants.value = [];
+        }
+      );
   }
 }
 
@@ -176,6 +218,7 @@ watch([query, () => props.studyCode], ([value, study]) => {
   const lookupRequest = ++latestParticipantLookup;
   const text = value.trim();
   kernelHits.value = [];
+  remoteParticipants.value = [];
   resolvedParticipant.value = null;
   if (text.length < MIN_SEARCH_LENGTH || text.length > MAX_STUDY_CODE) {
     kernelNote.value = "";
@@ -209,15 +252,21 @@ onBeforeUnmount(() => {
 });
 
 const allParticipants = computed<SubjectSummary[]>(() => {
-  const extra = resolvedParticipant.value;
-  if (
-    !extra ||
-    (extra.study_id && extra.study_id !== props.studyCode) ||
-    props.participants.some((participant) => participant.id === extra.id)
-  ) {
-    return props.participants;
+  const seen = new Set<string>();
+  const merged: SubjectSummary[] = [];
+  for (const participant of [
+    ...props.participants,
+    ...remoteParticipants.value,
+    ...(resolvedParticipant.value ? [resolvedParticipant.value] : []),
+  ]) {
+    if (participant.study_id && participant.study_id !== props.studyCode) {
+      continue;
+    }
+    if (seen.has(participant.id)) continue;
+    seen.add(participant.id);
+    merged.push(participant);
   }
-  return [...props.participants, extra];
+  return merged;
 });
 
 // A study hit opens the study it names by its code; one without a code has nowhere to open.

@@ -2250,6 +2250,13 @@
               ],
               "format": "int32"
             }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -19881,16 +19888,22 @@
       },
       "Execution_SubjectDetailResponse": {
         "required": [
+          "id",
           "subject_id",
           "study_id",
           "status",
           "site_id",
+          "active_protocol_version",
+          "enrollment_index",
           "treatment_group",
           "randomization_seed",
           "investigational_product_id"
         ],
         "type": "object",
         "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Execution_SubjectId"
+          },
           "subject_id": {
             "$ref": "#/components/schemas/Execution_SubjectCode"
           },
@@ -19909,6 +19922,17 @@
                 "$ref": "#/components/schemas/Execution_SiteCode"
               }
             ]
+          },
+          "active_protocol_version": {
+            "type": "string"
+          },
+          "enrollment_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           },
           "treatment_group": {
             "type": [
