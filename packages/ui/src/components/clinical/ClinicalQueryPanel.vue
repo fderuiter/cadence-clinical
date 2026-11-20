@@ -9,10 +9,11 @@
     <div class="query-panel-header">
       <span class="query-panel-title">Query Manager - {{ id }}</span>
       <button
+        ref="closeBtnRef"
         type="button"
         class="btn-close-panel"
         aria-label="Close query panel"
-        @click="$emit('close-panel')"
+        @click="closePanel"
       >
         ×
       </button>
@@ -161,8 +162,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
-import { useFocusTrap } from "../../composables/useFocusTrap";
+import { ref, computed, nextTick, onMounted, watch } from "vue";
 import { useEscapeClose } from "../../composables/useEscapeClose";
 
 const props = defineProps({
@@ -193,9 +193,40 @@ const emit = defineEmits([
 ]);
 
 const panelRef = ref(null);
+const closeBtnRef = ref(null);
+let triggerElement = null;
 
-useFocusTrap(panelRef);
-useEscapeClose(() => emit("close-panel"));
+onMounted(() => {
+  if (typeof document !== "undefined") {
+    triggerElement = document.activeElement;
+  }
+  nextTick(() => {
+    if (closeBtnRef.value && typeof closeBtnRef.value.focus === "function") {
+      closeBtnRef.value.focus();
+    }
+  });
+});
+
+function closePanel() {
+  const target =
+    triggerElement ||
+    (typeof document !== "undefined"
+      ? document.getElementById(`query-flag-${props.id}`)
+      : null);
+  emit("close-panel");
+  nextTick(() => {
+    if (
+      target &&
+      typeof target.focus === "function" &&
+      typeof document !== "undefined" &&
+      document.contains(target)
+    ) {
+      target.focus();
+    }
+  });
+}
+
+useEscapeClose(closePanel);
 
 const messageInput = ref("");
 const responseInput = ref("");

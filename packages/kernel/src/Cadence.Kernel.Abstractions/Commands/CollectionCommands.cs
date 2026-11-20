@@ -102,6 +102,32 @@ public sealed record SignCollectionInstance(
     string IdempotencyKey,
     string ReasonForChange) : ICommand<AttestationId>;
 
+/// <summary>
+/// Records an unasked (<see cref="NullFlavor.NotAsked"/>) placeholder observation for an item of a form instance that has
+/// no value yet, so a missing-data query can target a kernel <c>(ObservationId, Revision)</c> without marking a required
+/// item complete. Idempotent when the item already has an observation on the form. Refused when a
+/// <see cref="LockKind.Locked"/> lock covers the form; <see cref="LockKind.Frozen"/> locks allow missing-data queries.
+/// </summary>
+/// <param name="TenantId">The tenant.</param>
+/// <param name="CollectionInstanceId">The form instance.</param>
+/// <param name="EnrollmentId">The form instance's enrollment; the command is authorized against it.</param>
+/// <param name="ItemId">The CollectionSpec item to ensure has an observation.</param>
+/// <param name="ObservationId">The observation id to use when recording a new unasked value; assigned when null.</param>
+/// <param name="IdempotencyKey">The client's idempotency key (K-TX-3).</param>
+/// <param name="ReasonForChange">Why the unasked item is recorded.</param>
+[KernelCapability("collection.record_unasked", VerbClass.Execute, Resource = nameof(RecordUnaskedCollectionItem.EnrollmentId))]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(typeof(CollectionErrors), nameof(CollectionErrors.ValuesInvalid))]
+[RaisesKernelErrors(typeof(AssertionErrors), nameof(AssertionErrors.Locked))]
+public sealed record RecordUnaskedCollectionItem(
+    TenantId TenantId,
+    CollectionInstanceId CollectionInstanceId,
+    EnrollmentId EnrollmentId,
+    string ItemId,
+    ObservationId? ObservationId,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<CollectedValueState>;
+
 /// <summary>One value of a form page save.</summary>
 /// <param name="ItemId">The CollectionSpec item the value is collected for; the observation records the item's concept.</param>
 /// <param name="Value">The value as entered (ADR-2623).</param>

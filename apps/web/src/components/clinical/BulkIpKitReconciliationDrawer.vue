@@ -118,6 +118,7 @@
           <button
             type="button"
             class="btn-alert-dismiss"
+            aria-label="Dismiss warning"
             @click="warningMessage = ''"
           >
             ✕
@@ -186,7 +187,7 @@
       </div>
 
       <!-- Main Drawer Body: Scanned Kits Buffer Table -->
-      <main class="drawer-body">
+      <div class="drawer-body">
         <div v-if="scannedItems.length === 0" class="empty-state-box">
           <div class="empty-icon">📦</div>
           <h3>Scan Buffer Empty</h3>
@@ -370,7 +371,7 @@
             </div>
           </div>
         </section>
-      </main>
+      </div>
 
       <!-- Drawer Footer Action Bar -->
       <footer class="drawer-footer">
@@ -430,13 +431,14 @@
             <button
               type="button"
               class="btn-close"
+              aria-label="Close certificate dialog"
               @click="showCertificateModal = false"
             >
               ✕
             </button>
           </header>
 
-          <main class="cert-body">
+          <div class="cert-body">
             <div class="cert-header-grid">
               <div class="cert-meta-item">
                 <span class="lbl">Certificate ID:</span>
@@ -492,7 +494,7 @@
                 certificateData.digital_signature
               }}</code>
             </div>
-          </main>
+          </div>
 
           <footer class="cert-modal-footer">
             <button

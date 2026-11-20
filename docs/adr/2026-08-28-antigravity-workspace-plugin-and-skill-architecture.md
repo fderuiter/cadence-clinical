@@ -15,29 +15,28 @@ Reference system requirement: `PRD-SYS-053`.
 
 ## 2. Decision Drivers & Constraints
 
-* **Antigravity Customization Architecture**: Support progressive disclosure, native subagent dispatch (`invoke_subagent`), session artifacts (`<appDataDir>/brain/<conversation-id>/...`), and lifecycle hooks (`hooks.json`).
-* **Cadence Platform Stack**: Deeply integrate Python 3.14 (PEP 695 generics, Pydantic v2 domain models), PostgreSQL / SQLModel (`apps/execution`), Neo4j async graph models (`apps/designer`), and Vue 3 vanilla CSS tokens.
-* **GxP 21 CFR Part 11 Compliance**: Enforce requirement docstring tags (`@req:PRD-SYS-053`), automated RTM synchronization (`scripts/sync_gxp.py`), and architectural sentinel checks (`uv run cadence check`).
-* **Developer Experience**: Unified CLI commands (`uv run cadence ...`) eliminating tool trial-and-error.
+- **Antigravity Customization Architecture**: Support progressive disclosure, native subagent dispatch (`invoke_subagent`), session artifacts (`<appDataDir>/brain/<conversation-id>/...`), and lifecycle hooks (`hooks.json`).
+- **Cadence Platform Stack**: Deeply integrate Python 3.14 (PEP 695 generics, Pydantic v2 domain models), PostgreSQL / SQLModel (`apps/execution`), Neo4j async graph models (`apps/designer`), and Vue 3 vanilla CSS tokens.
+- **GxP 21 CFR Part 11 Compliance**: Enforce requirement docstring tags (`@req:PRD-SYS-053`), automated RTM synchronization (`scripts/sync_gxp.py`), and architectural sentinel checks (`uv run cadence check`).
+- **Developer Experience**: Unified CLI commands (`uv run cadence ...`) eliminating tool trial-and-error.
 
 ## 3. Options Considered
 
 ### Option 1: **Option A (Selected): Encapsulated Antigravity Workspace Plugin (`.agents/plugins/cadence-core`)**:
 
 - **Overview:** Bundle curated skills, rules (`.agents/plugins/cadence-core/rules/AGENTS.md`), and lifecycle hooks (`.agents/plugins/cadence-core/hooks.json`) into a single structured plugin. Prune incompatible external skills, introduce Cadence domain skills (`cadence-router`, `cadence-gxp-sync`, `cadence-adr`, `usdm-protocol-designer`), and standardize subagent and artifact patterns across all skills.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B: Flat Top-Level Customizations with Claude Compatibility**:
 
 - **Overview:** Maintain loose skills under `.agents` and adapt prompts with runtime environment conditional branches.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 
@@ -46,18 +45,17 @@ Reference system requirement: `PRD-SYS-053`.
 
 ## 5. Consequences & Trade-offs
 
-* **Positive**:
-  * **Progressive Disclosure**: High-precision YAML frontmatter descriptions prevent prompt bloat while ensuring accurate on-demand skill activation.
-  * **Artifact-First Deliverables**: Rich reports (two-axis reviews, deep module scans, research dossiers) are written to Antigravity session artifacts with Mermaid diagrams and clickable `file:///` links, keeping conversation history uncluttered.
-  * **Reactive Subagent Dispatch**: Multi-agent workflows (`code-review`, `research`, `improve-codebase-architecture`) utilize `invoke_subagent` without polling loops.
-  * **GxP Automated Gates**: Standardized development loop incorporates `cadence fix --all`, `cadence test --fast`, and `scripts/sync_gxp.py`.
-* **Negative / Trade-offs**:
-  * Legacy Claude-specific hook configurations (`.claude/`) are deprecated in favor of Antigravity native `.agents/plugins/cadence-core/hooks.json`.
+- **Positive**:
+  - **Progressive Disclosure**: High-precision YAML frontmatter descriptions prevent prompt bloat while ensuring accurate on-demand skill activation.
+  - **Artifact-First Deliverables**: Rich reports (two-axis reviews, deep module scans, research dossiers) are written to Antigravity session artifacts with Mermaid diagrams and clickable `file:///` links, keeping conversation history uncluttered.
+  - **Reactive Subagent Dispatch**: Multi-agent workflows (`code-review`, `research`, `improve-codebase-architecture`) utilize `invoke_subagent` without polling loops.
+  - **GxP Automated Gates**: Standardized development loop incorporates `cadence fix --all`, `cadence test --fast`, and `scripts/sync_gxp.py`.
+- **Negative / Trade-offs**:
+  - Legacy Claude-specific hook configurations (`.claude/`) are deprecated in favor of Antigravity native `.agents/plugins/cadence-core/hooks.json`.
 
 ## 6. Implementation & Verification
 
-* Created `.agents/plugins/cadence-core/plugin.json` and `.agents/plugins/cadence-core/hooks.json`.
-* Authored and migrated 31 curated skills under `.agents/plugins/cadence-core/skills/`.
-* Updated `CONTEXT.md` with domain definitions.
-* Validated via `uv run cadence check --parallel`, `uv run cadence test --fast`, and `uv run python scripts/sync_gxp.py`.
-
+- Created `.agents/plugins/cadence-core/plugin.json` and `.agents/plugins/cadence-core/hooks.json`.
+- Authored and migrated 31 curated skills under `.agents/plugins/cadence-core/skills/`.
+- Updated `CONTEXT.md` with domain definitions.
+- Validated via `uv run cadence check --parallel`, `uv run cadence test --fast`, and `uv run python scripts/sync_gxp.py`.

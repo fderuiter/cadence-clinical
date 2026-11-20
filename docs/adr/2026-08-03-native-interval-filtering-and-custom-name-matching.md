@@ -22,20 +22,20 @@ The previous implementation of the HIPAA redactor inside Cadence Clinical suffer
 ### Option 1: Integrate SpaCy / Pre-trained NER Transformer Models
 
 - **Overview:** Use deep learning/NLP packages for overlap resolution and name matching.
-- ***Pros:***
+- _**Pros:**_
   - ✅ High accuracy on generic entities.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Adds massive external dependencies and runtime overhead.
   - ❌ Violates the project's zero-dependency lightweight constraint.
 
 ### Option 2: Coordinate-based Interval Filtering and Word Boundary Matching (Selected)
 
 - **Overview:** Build a native greedy coordinate sorting and interval-resolution algorithm to filter out subordinate, nested, or overlapping match spans before performing Right-to-Left (reversed) replacement slicing. Automatically compile literal names to regexes wrapped in word boundaries (`\b`).
-- ***Pros:***
+- _**Pros:**_
   - ✅ Zero external dependencies, pure lightweight Python implementation.
   - ✅ Eliminates character corruption and offset drift through reversed slicing.
   - ✅ Centralizes custom literal term lists and structured patterns.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires manual maintenance of literal word list boundaries.
 
 ## 4. Decision Outcome

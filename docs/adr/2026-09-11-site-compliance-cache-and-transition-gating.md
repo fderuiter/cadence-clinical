@@ -26,18 +26,18 @@ This implements the requirements under PRD-CTMS-001.
 ### Option 1: Dynamic Querying of eTMF
 
 - **Overview:** Query the eTMF database directly on every transition check.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Real-time data consistency.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Heavy database load and increased latency during milestone transitions.
 
 ### Option 2: Event-Driven Site Compliance Cache (Selected)
 
 - **Overview:** Cache the compliance status of sites and update the cache based on eTMF document approval events.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Fast retrieval times.
   - ✅ Reduced system coupling and direct isolation of execution microservice database operations.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires a mechanism to keep the cache in sync.
 
 ## 4. Decision Outcome

@@ -1,6 +1,10 @@
 <template>
-  <!-- eslint-disable vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div v-if="isOpen" class="drawer-backdrop" @click.self="$emit('close')">
+  <div
+    v-if="isOpen"
+    class="drawer-backdrop"
+    role="presentation"
+    @click.self="$emit('close')"
+  >
     <aside
       ref="drawerRef"
       class="quiz-template-drawer"
@@ -149,11 +153,12 @@
             @keydown.space.prevent="toggleSelect(tmpl.id)"
           >
             <div class="template-card-header">
-              <label class="checkbox-wrapper" @click.stop>
+              <label class="checkbox-wrapper">
                 <input
                   type="checkbox"
                   class="checkbox-template-select"
                   :checked="isSelected(tmpl.id)"
+                  @click.stop
                   @change="toggleSelect(tmpl.id)"
                 />
                 <span class="sr-only">Select question: {{ tmpl.text }}</span>

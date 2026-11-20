@@ -469,6 +469,118 @@ internal static class CollectionStates
     }
 }
 
+/// <summary>
+/// Handles <see cref="RecordUnaskedCollectionItem"/>: ensures a blank item of a form instance holds a
+/// <see cref="NullFlavor.NotAsked"/> observation at revision 1 so a missing-data query targets a kernel observation.
+/// Refused under <see cref="LockKind.Locked"/> scopes while allowed under <see cref="LockKind.Frozen"/> scopes.
+/// </summary>
+internal sealed class RecordUnaskedCollectionItemHandler : ICommandHandler<RecordUnaskedCollectionItem, CollectedValueState>
+{
+    public async Task<CommandResult<CollectedValueState>> HandleAsync(
+        RecordUnaskedCollectionItem command, ICommandContext context, CancellationToken cancellationToken)
+    {
+        var work = context.Work;
+        await work.LockCollectionAsync(command.CollectionInstanceId, cancellationToken).ConfigureAwait(false);
+        if (await work.FindAsync<CollectionInstance>(command.CollectionInstanceId, cancellationToken).ConfigureAwait(false) is not { } instance
+            || instance.EnrollmentId != command.EnrollmentId)
+        {
+            return KernelErrors.NotFound;
+        }
+
+        var version = await work.ReadAsync<ProtocolVersion>(instance.ProtocolVersionId, cancellationToken).ConfigureAwait(false);
+        var spec = version is null ? null : CollectionSpecs.Of(version, instance.CollectionSpecId);
+        if (spec is null)
+        {
+            throw new InvalidOperationException($"Form instance {instance.Id} names CollectionSpec {instance.CollectionSpecId}, which its protocol version does not have.");
+        }
+
+        if (spec.Items.FirstOrDefault(i => string.Equals(i.Id, command.ItemId, StringComparison.Ordinal)) is not { } item)
+        {
+            return CollectionErrors.ValuesInvalid with
+            {
+                Errors = new Dictionary<string, string[]>(StringComparer.Ordinal)
+                {
+                    [command.ItemId] = [$"CollectionSpec {spec.Id} has no item {command.ItemId}."],
+                },
+            };
+        }
+
+        if (instance.MemberFor(command.ItemId) is { } existingMember)
+        {
+            var existing = await work.FindAsync<Observation>(existingMember.ObservationId, cancellationToken).ConfigureAwait(false)
+                ?? throw new InvalidOperationException($"Member observation {existingMember.ObservationId} of {instance.Id} does not exist.");
+            if (await LocksInForce.AnyAsync(
+                work,
+                LockScopes.Covering(instance.StudyId, instance.StudySiteId, instance.EnrollmentId, existing.Id, instance.Id),
+                LocksInForce.DenyingAssertions,
+                cancellationToken).ConfigureAwait(false))
+            {
+                return AssertionErrors.Locked;
+            }
+
+            return CommandResult<CollectedValueState>.Success(
+                new CollectedValueState(command.ItemId, existing.Id, existing.Value, existing.Revision, Changed: false));
+        }
+
+        if (await LocksInForce.AnyAsync(
+            work,
+            LockScopes.Covering(instance.StudyId, instance.StudySiteId, instance.EnrollmentId, instance.Id, []),
+            LocksInForce.DenyingAssertions,
+            cancellationToken).ConfigureAwait(false))
+        {
+            return AssertionErrors.Locked;
+        }
+
+        if (command.ObservationId is { } chosen && await work.ExistsAsync<Observation>(chosen, cancellationToken).ConfigureAwait(false))
+        {
+            return KernelErrors.AlreadyExists.WithMessage($"Observation {chosen} already exists; choose another id for the value of {command.ItemId}.");
+        }
+
+        var recorded = Observation.Record(
+            command.ObservationId ?? ObservationId.New(),
+            instance.TenantId,
+            instance.EnrollmentId,
+            instance.ParticipantId,
+            instance.StudyId,
+            item.Concept,
+            new MissingValue(NullFlavor.NotAsked),
+            instance.CollectedAt,
+            command.ReasonForChange,
+            context.Actor.Id,
+            context.RecordedAt);
+        if (recorded.Value is not { } added)
+        {
+            return recorded.Error!;
+        }
+
+        work.Add(added);
+        instance.Join(command.ItemId, added.Id, context.RecordedAt);
+        instance.Saved(context.RecordedAt);
+        var instanceVersion = instance.VersionIndex + 1;
+        work.LinkInput(NodeRef.For(version!.Id, version.VersionIndex), LineageEdgeKind.GovernedBy, instance.CollectedAt);
+        work.Raise(
+            new ObservationRecorded(
+                added.TenantId, added.Id, added.EnrollmentId, added.ParticipantId, added.StudyId, added.Concept, added.Value, added.ObservedAt),
+            added.ObservedAt);
+        work.Raise(new CollectedValuesSaved(
+            instance.TenantId, instance.Id, instance.EnrollmentId, instance.StudyId, instance.ProtocolVersionId, instance.CollectionSpecId,
+            instanceVersion, [new CollectedValueChange(command.ItemId, added.Id, 1, null)]));
+        return CommandResult<CollectedValueState>.Success(
+            new CollectedValueState(command.ItemId, added.Id, added.Value, 1, Changed: true));
+    }
+}
+
+/// <summary>Checks the shape of <see cref="RecordUnaskedCollectionItem"/>.</summary>
+internal sealed class RecordUnaskedCollectionItemValidator : AbstractValidator<RecordUnaskedCollectionItem>
+{
+    public RecordUnaskedCollectionItemValidator()
+    {
+        RuleFor(c => c.CollectionInstanceId).Must(id => !id.IsEmpty);
+        RuleFor(c => c.EnrollmentId).Must(id => !id.IsEmpty);
+        RuleFor(c => c.ItemId).NotEmpty().MaximumLength(CollectionInstance.ElementIdMaxLength);
+    }
+}
+
 /// <summary>Registers the form instance command handlers (K-FACT-6, ADR-2622).</summary>
 public static class CollectionServiceCollectionExtensions
 {
@@ -477,9 +589,11 @@ public static class CollectionServiceCollectionExtensions
     {
         services.AddTransient<ICommandHandler<OpenCollectionInstance, CollectionInstanceState>, OpenCollectionInstanceHandler>();
         services.AddTransient<ICommandHandler<RecordCollectedValues, CollectedValuesState>, RecordCollectedValuesHandler>();
+        services.AddTransient<ICommandHandler<RecordUnaskedCollectionItem, CollectedValueState>, RecordUnaskedCollectionItemHandler>();
         services.AddTransient<ICommandHandler<SignCollectionInstance, AttestationId>, SignCollectionInstanceHandler>();
         services.AddCommandValidator<OpenCollectionInstance, OpenCollectionInstanceValidator>();
         services.AddCommandValidator<RecordCollectedValues, RecordCollectedValuesValidator>();
+        services.AddCommandValidator<RecordUnaskedCollectionItem, RecordUnaskedCollectionItemValidator>();
         return services;
     }
 }

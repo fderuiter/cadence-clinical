@@ -1,6 +1,7 @@
 <template>
   <div
     class="toast-host"
+    data-focus-trap-exempt="true"
     aria-live="assertive"
     role="region"
     aria-label="Alerts"
@@ -41,7 +42,7 @@ const toastStore = useToastStore();
   position: fixed;
   right: 16px;
   bottom: 16px;
-  z-index: 1000;
+  z-index: calc(9999 + 51);
   display: flex;
   flex-direction: column;
   gap: 8px;

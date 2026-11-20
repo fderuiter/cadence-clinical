@@ -27,20 +27,20 @@ This decision implements requirements under PRD-SYS-001.
 
 Directly mutate settings with a single administrator signature and log the event.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Simpler codebase footprint.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Violates 21 CFR Part 11 multi-approver requirements.
 
 ### Option 2: Structured Compliance Change Request Workflow
 
 Implement dual-approver `ComplianceChangeRequest` and `ChangeApprovalSignature` models.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Enforces multi-approver threshold before settings are applied.
   - ✅ Preserves unique cryptographic/electronic signature tokens.
   - ✅ Generates automated impact assessments.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Higher database schema complexity.
 
 ## 4. Decision Outcome

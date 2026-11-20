@@ -23,19 +23,18 @@ Requirements: PRD-SYS-001
 ### Option 1: Option A (Selected): Extend `ROLE_PERMISSIONS` in `packages/security/rbac.py` with `medical_coding` resource permissions (`create`, `read`, `update`) for authorized roles (`sysadmin`, `sponsor_dm`, `terminology_manager`, `cra`).
 
 - **Overview:** Option A (Selected): Extend `ROLE_PERMISSIONS` in `packages/security/rbac.py` with `medical_coding` resource permissions (`create`, `read`, `update`) for authorized roles (`sysadmin`, `sponsor_dm`, `terminology_manager`, `cra`).
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: Option B (Alternative): Ad-hoc inline role checks in FastAPI endpoint handlers.
 
 - **Overview:** Option B (Alternative): Ad-hoc inline role checks in FastAPI endpoint handlers.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

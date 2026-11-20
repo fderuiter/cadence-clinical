@@ -1,9 +1,8 @@
 <template>
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div
     v-if="codingStore.impactAnalysis.isOpen"
     class="drawer-overlay"
+    role="presentation"
     @click.self="close"
   >
     <div
@@ -25,7 +24,14 @@
             migrating active study dictionary versions.
           </p>
         </div>
-        <button type="button" class="btn-close" @click="close">✕</button>
+        <button
+          type="button"
+          class="btn-close"
+          aria-label="Close impact analysis drawer"
+          @click="close"
+        >
+          ✕
+        </button>
       </div>
 
       <!-- Drawer Content -->

@@ -5,12 +5,10 @@
     style="position: relative; z-index: 1000"
   >
     <!-- Translucent backdrop only on unanchored modal steps to highlight onboarding introduction/completion without blocking interaction during edits -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
-      v-if="
-        currentStep === 1 || currentStep === totalSteps || !hasTargetElement
-      "
+      v-if="isModalStep"
       class="onboarding-backdrop"
+      role="presentation"
       style="
         position: fixed;
         top: 0;
@@ -25,8 +23,13 @@
 
     <!-- The Popover Box -->
     <div
+      ref="popoverRef"
       :style="popoverStyle"
       class="onboarding-popover-card"
+      role="dialog"
+      :aria-modal="isModalStep ? 'true' : undefined"
+      aria-labelledby="onboarding-tour-title"
+      tabindex="-1"
       style="
         background-color: var(--semantic-color-surface);
         color: var(--semantic-color-text);
@@ -67,6 +70,7 @@
         "
       >
         <h4
+          id="onboarding-tour-title"
           style="
             font-weight: 700;
             color: var(--semantic-color-interactive-primary);
@@ -220,6 +224,7 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
+import { useFocusTrap, useEscapeClose } from "ui";
 import {
   isTourRouteAuthorized,
   useOnboardingStore,
@@ -325,6 +330,27 @@ const stepTargetDescription = computed(
 );
 
 const hasTargetElement = ref(false);
+const popoverRef = ref(null);
+
+const isTourOpen = computed(() =>
+  Boolean(onboardingStore.isActive && !onboardingStore.disabled)
+);
+const isModalStep = computed(
+  () =>
+    isTourOpen.value &&
+    (currentStep.value === 1 ||
+      currentStep.value === totalSteps.value ||
+      !hasTargetElement.value)
+);
+
+useFocusTrap(popoverRef, {
+  isOpen: isModalStep,
+  onEscape: () => onboardingStore.dismissTour(),
+});
+
+useEscapeClose(() => onboardingStore.dismissTour(), {
+  isOpen: () => isTourOpen.value && !isModalStep.value,
+});
 
 const popoverStyle = ref({
   position: "fixed",

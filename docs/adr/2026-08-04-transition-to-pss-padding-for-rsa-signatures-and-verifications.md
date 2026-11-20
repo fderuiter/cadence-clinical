@@ -24,20 +24,20 @@ In the Cadence Clinical platform, digital signatures must comply with strict GxP
 ### Option 1: Continue Using PKCS#1 v1.5 Padding
 
 - **Overview:** Retain the legacy PKCS1v15 signature padding scheme.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Simplest approach; requires no changes to existing signing code.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Susceptible to a wider class of padding oracle attacks.
   - ❌ Does not align with the modern cryptographic standards recommended by NIST and FDA.
 
 ### Option 2: Transition to RSA-PSS (Probabilistic Signature Scheme) Padding
 
 - **Overview:** Transition all RSA digital signatures and verifications to the modern PSS padding scheme, combined with SHA-256 and Mask Generation Function 1 (MGF1).
-- ***Pros:***
+- _**Pros:**_
   - ✅ Offers provable security under the random oracle model.
   - ✅ Recommended by NIST, FDA, and major cryptographic bodies as the modern standard for RSA signatures.
   - ✅ High resistance to forgery and side-channel leakage.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires updating the cryptographic signing and verification utilities under `packages/security/`.
 
 ## 4. Decision Outcome

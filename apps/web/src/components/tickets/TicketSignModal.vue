@@ -1,7 +1,10 @@
 <template>
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div v-if="isOpen" class="modal-backdrop" @click.self="close">
+  <div
+    v-if="isOpen"
+    class="modal-backdrop"
+    role="presentation"
+    @click.self="close"
+  >
     <div
       ref="modalRef"
       class="modal-dialog ticket-sign-modal"
@@ -39,10 +42,11 @@
         </div>
 
         <div class="form-group">
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-          <label class="form-label">Signer Identity</label>
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+          <label for="ticket-signer-identity" class="form-label"
+            >Signer Identity</label
+          >
           <input
+            id="ticket-signer-identity"
             type="text"
             class="form-control"
             :value="currentUser"
@@ -52,10 +56,9 @@
         </div>
 
         <div class="form-group">
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-          <label class="form-label">Active Role</label>
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+          <label for="ticket-signer-role" class="form-label">Active Role</label>
           <input
+            id="ticket-signer-role"
             type="text"
             class="form-control"
             :value="currentRole"

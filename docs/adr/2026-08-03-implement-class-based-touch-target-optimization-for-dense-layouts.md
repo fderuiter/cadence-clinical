@@ -26,20 +26,20 @@ To resolve this, we have moved from global, element-level overrides to an opt-in
 ### Option 1: Global Element-Level CSS Overrides
 
 - **Overview:** Enforce `min-height: 44px` globally across all native tags (`button`, `select`, `textarea`, `input`) across all viewports.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Simplest implementation with 100% automatic touch target compliance on all screens.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Causes layout inflation and excessive vertical scrolling on desktop screens.
   - ❌ Severe negative impact on administrative and clinical coordination workflows on desktop.
 
 ### Option 2: Opt-In Helper Class Model with Dynamic Viewport Toggling (Selected)
 
 - **Overview:** Remove global overrides and implement explicit touch target utility classes (such as `.touch-target`, `.min-touch-target`, and `.touch-target-interactive`) leveraging the CSS custom property `--touch-target-min: 44px`. Combine this with dynamic viewport-based Vue class bindings (e.g. `:class="{ 'touch-target-interactive': designerStore.viewport !== 'desktop' }"`) to activate optimization classes only on mobile and tablet viewports.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Guarantees 100% compact, high-density structures on desktop screens.
   - ✅ Dynamically scales touch targets to a fully compliant `44px` on simulated mobile/tablet viewports.
   - ✅ Zero external design library or CSS utility framework overhead.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires explicit class bindings on interactive input widgets.
 
 ## 4. Decision Outcome

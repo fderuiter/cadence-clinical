@@ -1,17 +1,20 @@
 <template>
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div
     v-if="isOpen"
-    id="re-auth-modal"
-    ref="modalRef"
     class="modal-backdrop"
-    role="dialog"
-    aria-modal="true"
-    :aria-labelledby="'reauth-modal-title'"
+    role="presentation"
     @click.self="handleCancel"
   >
-    <div class="modal-card reauth-modal-card" @contextmenu.prevent>
+    <div
+      id="re-auth-modal"
+      ref="modalRef"
+      class="modal-card reauth-modal-card"
+      role="dialog"
+      aria-modal="true"
+      :aria-labelledby="'reauth-modal-title'"
+      tabindex="-1"
+      @contextmenu.prevent
+    >
       <div class="modal-header">
         <h3 id="reauth-modal-title">
           <span class="lock-icon" aria-hidden="true">🔐</span>
@@ -117,8 +120,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { ModalErrorAlert } from "ui";
-import { useFocusTrap } from "@/composables/useFocusTrap";
+import { ModalErrorAlert, useFocusTrap } from "ui";
 
 const props = defineProps({
   isOpen: {

@@ -1,7 +1,10 @@
 <template>
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div v-if="isOpen" class="activity-feed-overlay" @click.self="$emit('close')">
+  <div
+    v-if="isOpen"
+    class="activity-feed-overlay"
+    role="presentation"
+    @click.self="$emit('close')"
+  >
     <div
       ref="drawerRef"
       class="activity-feed-drawer"

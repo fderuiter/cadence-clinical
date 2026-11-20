@@ -1,9 +1,8 @@
 <template>
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div
     v-if="codingStore.browserModal.isOpen"
     class="modal-overlay"
+    role="presentation"
     @click.self="close"
   >
     <div
@@ -30,7 +29,14 @@
             <span v-if="targetSourceField"> ({{ targetSourceField }})</span>
           </span>
         </div>
-        <button type="button" class="btn-close" @click="close">✕</button>
+        <button
+          type="button"
+          class="btn-close"
+          aria-label="Close dictionary browser"
+          @click="close"
+        >
+          ✕
+        </button>
       </div>
 
       <!-- Modal Body -->
@@ -150,8 +156,6 @@
 
             <!-- Results List -->
             <div v-else class="results-list">
-              <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-              <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
               <div
                 v-for="(match, idx) in codingStore.dictionarySearchResults"
                 :key="idx"
@@ -159,7 +163,12 @@
                 :class="{
                   'active-result': isMatchSelected(match, idx),
                 }"
+                role="button"
+                tabindex="0"
+                :aria-pressed="isMatchSelected(match, idx)"
                 @click="selectMatch(match, idx)"
+                @keydown.enter.prevent="selectMatch(match, idx)"
+                @keydown.space.prevent="selectMatch(match, idx)"
               >
                 <div class="result-card-header">
                   <div class="result-term-name">
@@ -635,9 +644,15 @@ useFocusTrap(modalRef, {
   background-color: var(--semantic-color-surface);
 }
 
-.result-item-card:hover {
+.result-item-card:hover,
+.result-item-card:focus-visible {
   border-color: var(--accent);
   background-color: rgba(2, 101, 151, 0.03);
+}
+
+.result-item-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .active-result {

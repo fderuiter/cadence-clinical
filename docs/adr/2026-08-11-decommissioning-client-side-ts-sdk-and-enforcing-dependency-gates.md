@@ -24,20 +24,20 @@ Historically, a client-side TypeScript Wrapper SDK (`packages/ui/src/index.ts`) 
 ### Option 1: Keep Client-Side TS SDK with Strict Review Guidelines
 
 - **Overview:** Maintain `packages/ui/src/index.ts` and rely on code review processes to ensure that developers do not introduce client-side verification vulnerabilities or local bypass logic.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Keeps a unified frontend utility class for developers.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Violates regulatory compliance requirements by allowing signature validation logic to exist in the JS runtime.
   - ❌ Highly prone to human error and difficult to audit.
 
 ### Option 2: Decommission Client-Side TS SDK and Implement Dependency Linter
 
 - **Overview:** Completely delete the frontend TS SDK Wrapper and its corresponding tests, and implement a custom workspace dependency analyzer (`scripts/validate_dependencies.py`) that scans all `package.json` configurations in the monorepo and rejects forbidden asymmetric cryptographic npm packages.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Guarantees that all cryptographic verification occurs on the secure backend.
   - ✅ Fail-fast CI/CD gates automatically block the introduction of untrusted client-side crypto packages.
   - ✅ Ensures strict GxP and Part 11 compliance.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires client code to interface directly with secure backend signature endpoints rather than a helper class.
 
 ## 4. Decision Outcome

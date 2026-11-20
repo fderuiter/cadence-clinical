@@ -1,23 +1,17 @@
 <template>
   <div>
-    <!-- Overlay Backdrop -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <div
-      v-if="onboardingStore.isDrawerOpen"
-      id="onboarding-checklist-drawer-overlay"
-      class="drawer-overlay"
-      @click.self="onboardingStore.closeDrawer()"
+    <ClinicalDrawer
+      :is-open="onboardingStore.isDrawerOpen"
+      :teleport="false"
+      id="onboarding-checklist-drawer"
+      overlay-id="onboarding-checklist-drawer-overlay"
+      overlay-class="drawer-overlay"
+      panel-class="drawer-panel"
+      body-class="drawer-body"
+      aria-labelledby="checklist-drawer-title"
+      @close="onboardingStore.closeDrawer()"
     >
-      <!-- Sliding Drawer Panel -->
-      <div
-        id="onboarding-checklist-drawer"
-        ref="drawerRef"
-        class="drawer-panel"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="checklist-drawer-title"
-        tabindex="-1"
-      >
+      <template #header>
         <!-- Header -->
         <div class="drawer-header">
           <div class="header-main-row">
@@ -74,59 +68,59 @@
             </div>
           </div>
         </div>
+      </template>
 
-        <!-- Body Content / Task List -->
-        <div class="drawer-body">
-          <div class="task-list-container">
-            <div
-              v-for="task in onboardingStore.visibleTasks"
-              :key="task.id"
-              class="task-card"
-              :class="{ completed: task.completed }"
-            >
-              <div class="task-header-row">
-                <div class="task-check-wrapper">
-                  <input
-                    :id="'task-check-' + task.id"
-                    type="checkbox"
-                    class="task-checkbox"
-                    :checked="task.completed"
-                    :aria-label="'Mark ' + task.title + ' as completed'"
-                    @change="
-                      onboardingStore.toggleTask(task.id, $event.target.checked)
-                    "
-                  />
-                  <label :for="'task-check-' + task.id" class="task-title">
-                    {{ task.title }}
-                  </label>
-                </div>
-                <span
-                  class="task-status-badge"
-                  :class="task.completed ? 'status-complete' : 'status-pending'"
-                >
-                  {{ task.completed ? "✓ Done" : "Pending" }}
-                </span>
-              </div>
-
-              <p class="task-desc">
-                {{ task.description }}
-              </p>
-
-              <div class="task-footer">
-                <button
-                  type="button"
-                  class="btn btn-sm btn-navigate-task"
-                  :aria-label="'Go to Task — ' + task.title"
-                  @click="navigateToTask(task)"
-                >
-                  Go to Task ↗
-                </button>
-              </div>
+      <!-- Body Content / Task List -->
+      <div class="task-list-container">
+        <div
+          v-for="task in onboardingStore.visibleTasks"
+          :key="task.id"
+          class="task-card"
+          :class="{ completed: task.completed }"
+        >
+          <div class="task-header-row">
+            <div class="task-check-wrapper">
+              <input
+                :id="'task-check-' + task.id"
+                type="checkbox"
+                class="task-checkbox"
+                :checked="task.completed"
+                :aria-label="'Mark ' + task.title + ' as completed'"
+                @change="
+                  onboardingStore.toggleTask(task.id, $event.target.checked)
+                "
+              />
+              <label :for="'task-check-' + task.id" class="task-title">
+                {{ task.title }}
+              </label>
             </div>
+            <span
+              class="task-status-badge"
+              :class="task.completed ? 'status-complete' : 'status-pending'"
+            >
+              {{ task.completed ? "✓ Done" : "Pending" }}
+            </span>
+          </div>
+
+          <p class="task-desc">
+            {{ task.description }}
+          </p>
+
+          <div class="task-footer">
+            <button
+              type="button"
+              class="btn btn-sm btn-navigate-task"
+              :aria-label="'Go to Task — ' + task.title"
+              @click="navigateToTask(task)"
+            >
+              Go to Task ↗
+            </button>
           </div>
         </div>
+      </div>
 
-        <!-- Drawer Footer Controls -->
+      <!-- Drawer Footer Controls -->
+      <template #footer>
         <div class="drawer-footer">
           <div class="footer-actions">
             <button
@@ -162,15 +156,15 @@
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </template>
+    </ClinicalDrawer>
   </div>
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import { useRouter } from "vue-router";
-import { useFocusTrap } from "../composables/useFocusTrap";
+import { ClinicalDrawer, useEscapeClose } from "ui";
 import {
   resolveAuthorizedTaskRoute,
   useOnboardingStore,
@@ -179,14 +173,12 @@ import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
 
-const drawerRef = ref(null);
 const onboardingStore = useOnboardingStore();
 const authStore = useAuthStore();
 const router = useRouter();
 
-useFocusTrap(drawerRef, {
+useEscapeClose(() => onboardingStore.closeDrawer(), {
   isOpen: () => onboardingStore.isDrawerOpen,
-  onEscape: () => onboardingStore.closeDrawer(),
 });
 
 const effectiveRoles = computed(() => {
@@ -249,7 +241,7 @@ function startGuidedTour() {
 </script>
 
 <style scoped>
-.drawer-overlay {
+:deep(.drawer-overlay) {
   position: fixed;
   top: 0;
   left: 0;
@@ -262,7 +254,7 @@ function startGuidedTour() {
   justify-content: flex-end;
 }
 
-.drawer-panel {
+:deep(.drawer-panel) {
   width: 420px;
   max-width: 100vw;
   height: 100%;
@@ -391,7 +383,7 @@ function startGuidedTour() {
   text-align: center;
 }
 
-.drawer-body {
+:deep(.drawer-body) {
   flex: 1;
   overflow-y: auto;
   padding: 16px 20px;
@@ -502,6 +494,11 @@ function startGuidedTour() {
   background-color: var(--semantic-color-interactive-primary);
   color: var(--semantic-color-surface);
   border-color: var(--semantic-color-interactive-primary);
+}
+
+:deep(.clinical-drawer-footer) {
+  padding: 0;
+  border-top: none;
 }
 
 .drawer-footer {

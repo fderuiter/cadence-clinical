@@ -886,14 +886,24 @@
     </div>
 
     <!-- 4-Step Guided Upversioning Wizard Modal -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <div v-if="showCreateModal" class="modal-overlay" @click.self="closeWizard">
-      <div class="modal-card wizard-modal-card">
+    <div
+      v-if="showCreateModal"
+      class="modal-overlay"
+      role="presentation"
+      @click.self="closeWizard"
+    >
+      <div
+        ref="createWizardModalRef"
+        class="modal-card wizard-modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="amendment-wizard-title"
+        tabindex="-1"
+      >
         <!-- Wizard Header & Stepper -->
         <div class="modal-header wizard-header">
           <div>
-            <h3 class="modal-title">
+            <h3 id="amendment-wizard-title" class="modal-title">
               Protocol Upversioning &amp; Amendment Wizard
             </h3>
             <p class="modal-subtitle">
@@ -901,50 +911,65 @@
               target rules.
             </p>
           </div>
-          <button class="modal-close" @click="closeWizard">&times;</button>
+          <button
+            type="button"
+            class="modal-close"
+            aria-label="Close wizard"
+            @click="closeWizard"
+          >
+            &times;
+          </button>
         </div>
 
         <!-- Wizard Stepper Indicators -->
         <div class="wizard-stepper">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
             class="step-item"
+            role="button"
+            tabindex="0"
             :class="{ active: wizardStep === 1, completed: wizardStep > 1 }"
             @click="wizardStep = 1"
+            @keydown.enter.prevent="wizardStep = 1"
+            @keydown.space.prevent="wizardStep = 1"
           >
             <div class="step-number">1</div>
             <div class="step-label">Classification</div>
           </div>
           <div class="step-divider" />
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
             class="step-item"
+            role="button"
+            tabindex="0"
             :class="{ active: wizardStep === 2, completed: wizardStep > 2 }"
             @click="wizardStep = 2"
+            @keydown.enter.prevent="wizardStep = 2"
+            @keydown.space.prevent="wizardStep = 2"
           >
             <div class="step-number">2</div>
             <div class="step-label">Target Version</div>
           </div>
           <div class="step-divider" />
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
             class="step-item"
+            role="button"
+            tabindex="0"
             :class="{ active: wizardStep === 3, completed: wizardStep > 3 }"
             @click="goToWizardStep(3)"
+            @keydown.enter.prevent="goToWizardStep(3)"
+            @keydown.space.prevent="goToWizardStep(3)"
           >
             <div class="step-number">3</div>
             <div class="step-label">Impact Preview</div>
           </div>
           <div class="step-divider" />
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
             class="step-item"
+            role="button"
+            tabindex="0"
             :class="{ active: wizardStep === 4, completed: wizardStep > 4 }"
             @click="goToWizardStep(4)"
+            @keydown.enter.prevent="goToWizardStep(4)"
+            @keydown.space.prevent="goToWizardStep(4)"
           >
             <div class="step-number">4</div>
             <div class="step-label">Schema Mapping</div>
@@ -961,10 +986,14 @@
             </p>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Amendment Classification Type:</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <select v-model="newAmendment.amendment_type" class="form-select">
+              <label for="amendment-classification-select" class="form-label"
+                >Amendment Classification Type:</label
+              >
+              <select
+                id="amendment-classification-select"
+                v-model="newAmendment.amendment_type"
+                class="form-select"
+              >
                 <option value="major">
                   Major Amendment (Structural / Safety / Visit Schedule Changes)
                 </option>
@@ -996,6 +1025,8 @@
             <div
               v-if="newAmendment.requires_reconsent"
               class="form-group notification-channels-config"
+              role="group"
+              aria-labelledby="amendment-channels-label"
               style="
                 margin-top: 12px;
                 padding: 12px;
@@ -1004,8 +1035,8 @@
                 border-radius: 6px;
               "
             >
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label
+              <div
+                id="amendment-channels-label"
                 class="form-label"
                 style="
                   font-size: 0.85rem;
@@ -1014,7 +1045,7 @@
                 "
               >
                 Automated Re-Consent Notification Channels:
-              </label>
+              </div>
               <ReconsentChannelPicker
                 style="margin-top: 6px"
                 v-model="newAmendment.notification_channels"
@@ -1023,12 +1054,11 @@
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label"
+              <label for="amendment-change-reason" class="form-label"
                 >GxP Justification &amp; Change Reason:</label
               >
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <textarea
+                id="amendment-change-reason"
                 v-model="newAmendment.change_reason"
                 class="form-control text-area"
                 placeholder="e.g. Protocol Amendment 2.0 introducing optional PK visit and updating dosing cohort safety rules..."
@@ -1046,10 +1076,11 @@
             </p>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Target Study ID:</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="amendment-target-study-id" class="form-label"
+                >Target Study ID:</label
+              >
               <input
+                id="amendment-target-study-id"
                 v-model="selectedStudyId"
                 type="text"
                 class="form-control"
@@ -1058,10 +1089,11 @@
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Base Frozen Version:</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="amendment-base-frozen-version" class="form-label"
+                >Base Frozen Version:</label
+              >
               <input
+                id="amendment-base-frozen-version"
                 type="text"
                 class="form-control"
                 value="v1.0.0 (Approved / Locked Snapshot)"
@@ -1070,10 +1102,11 @@
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">New Target Version Tag:</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="amendment-new-target-version" class="form-label"
+                >New Target Version Tag:</label
+              >
               <input
+                id="amendment-new-target-version"
                 v-model="newAmendment.target_version"
                 type="text"
                 class="form-control"
@@ -1214,20 +1247,31 @@
     </div>
 
     <!-- 21 CFR Part 11 Bulk Signature Modal -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       v-if="showBulkReconsentModal"
       id="bulk-reconsent-modal"
       class="modal-overlay"
+      role="presentation"
       @click.self="showBulkReconsentModal = false"
     >
-      <div class="modal-card bulk-reconsent-card">
+      <div
+        ref="bulkReconsentModalRef"
+        class="modal-card bulk-reconsent-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bulk-reconsent-modal-title"
+        tabindex="-1"
+      >
         <div class="modal-header">
-          <h3 class="modal-title">
+          <h3 id="bulk-reconsent-modal-title" class="modal-title">
             Authorize Bulk Re-Consent Signatures (21 CFR Part 11)
           </h3>
-          <button class="modal-close" @click="showBulkReconsentModal = false">
+          <button
+            type="button"
+            class="modal-close"
+            aria-label="Close bulk re-consent modal"
+            @click="showBulkReconsentModal = false"
+          >
             &times;
           </button>
         </div>
@@ -1242,26 +1286,42 @@
           </p>
 
           <div class="reconsent-options">
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <div
               class="option-card"
+              role="button"
+              tabindex="0"
+              :aria-pressed="bulkReconsentForm.signature_type === 'ECONSENT'"
               :class="{
                 selected: bulkReconsentForm.signature_type === 'ECONSENT',
               }"
               @click="bulkReconsentForm.signature_type = 'ECONSENT'"
+              @keydown.enter.prevent="
+                bulkReconsentForm.signature_type = 'ECONSENT'
+              "
+              @keydown.space.prevent="
+                bulkReconsentForm.signature_type = 'ECONSENT'
+              "
             >
               <h4>✍️ Electronic Consent (eConsent)</h4>
               <p>Cryptographic 21 CFR Part 11 electronic signature record.</p>
             </div>
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <div
               class="option-card"
+              role="button"
+              tabindex="0"
+              :aria-pressed="
+                bulkReconsentForm.signature_type === 'PAPER_UPLOAD'
+              "
               :class="{
                 selected: bulkReconsentForm.signature_type === 'PAPER_UPLOAD',
               }"
               @click="bulkReconsentForm.signature_type = 'PAPER_UPLOAD'"
+              @keydown.enter.prevent="
+                bulkReconsentForm.signature_type = 'PAPER_UPLOAD'
+              "
+              @keydown.space.prevent="
+                bulkReconsentForm.signature_type = 'PAPER_UPLOAD'
+              "
             >
               <h4>📄 Verified Paper ICF Upload</h4>
               <p>
@@ -1272,10 +1332,11 @@
           </div>
 
           <div class="form-group margin-top-md">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label">Site Staff Signer Name / User ID:</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="bulk-signer-name" class="form-label"
+              >Site Staff Signer Name / User ID:</label
+            >
             <input
+              id="bulk-signer-name"
               v-model="bulkReconsentForm.signer_name"
               type="text"
               class="form-control"
@@ -1284,10 +1345,11 @@
           </div>
 
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label">Re-authentication Password / PIN:</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="bulk-signer-pin" class="form-label"
+              >Re-authentication Password / PIN:</label
+            >
             <input
+              id="bulk-signer-pin"
               v-model="bulkReconsentForm.signer_pin"
               type="password"
               class="form-control"
@@ -1296,12 +1358,11 @@
           </div>
 
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label"
+            <label for="bulk-reason-for-change" class="form-label"
               >GxP Audit Justification &amp; Change Reason:</label
             >
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
+              id="bulk-reason-for-change"
               v-model="bulkReconsentForm.reason_for_change"
               type="text"
               class="form-control"
@@ -1312,6 +1373,7 @@
 
         <div class="modal-footer">
           <button
+            type="button"
             class="btn btn-secondary"
             @click="showBulkReconsentModal = false"
           >
@@ -1319,6 +1381,7 @@
           </button>
           <button
             id="btn-submit-bulk-signature"
+            type="button"
             class="btn btn-primary"
             :disabled="!bulkReconsentForm.signer_name.trim() || isSubmitting"
             @click="executeBulkReconsent"
@@ -1334,19 +1397,30 @@
     </div>
 
     <!-- Single Subject Re-Consent Resolution Modal -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       v-if="showReconsentModal"
       class="modal-overlay"
+      role="presentation"
       @click.self="showReconsentModal = false"
     >
-      <div class="modal-card">
+      <div
+        ref="singleReconsentModalRef"
+        class="modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="single-reconsent-modal-title"
+        tabindex="-1"
+      >
         <div class="modal-header">
-          <h3 class="modal-title">
+          <h3 id="single-reconsent-modal-title" class="modal-title">
             Clear Subject Re-Consent Gate (PRD-SUB-007)
           </h3>
-          <button class="modal-close" @click="showReconsentModal = false">
+          <button
+            type="button"
+            class="modal-close"
+            aria-label="Close re-consent modal"
+            @click="showReconsentModal = false"
+          >
             &times;
           </button>
         </div>
@@ -1358,12 +1432,15 @@
             >.
           </p>
           <div class="reconsent-options">
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <div
               class="option-card"
+              role="button"
+              tabindex="0"
+              :aria-pressed="reconsentMode === 'ECONSENT'"
               :class="{ selected: reconsentMode === 'ECONSENT' }"
               @click="reconsentMode = 'ECONSENT'"
+              @keydown.enter.prevent="reconsentMode = 'ECONSENT'"
+              @keydown.space.prevent="reconsentMode = 'ECONSENT'"
             >
               <h4>✍️ Execute eConsent</h4>
               <p>
@@ -1371,12 +1448,15 @@
                 cryptographic seal.
               </p>
             </div>
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <div
               class="option-card"
+              role="button"
+              tabindex="0"
+              :aria-pressed="reconsentMode === 'PAPER'"
               :class="{ selected: reconsentMode === 'PAPER' }"
               @click="reconsentMode = 'PAPER'"
+              @keydown.enter.prevent="reconsentMode = 'PAPER'"
+              @keydown.space.prevent="reconsentMode = 'PAPER'"
             >
               <h4>📄 Upload Signed Paper ICF</h4>
               <p>
@@ -1387,10 +1467,15 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showReconsentModal = false">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="showReconsentModal = false"
+          >
             Cancel
           </button>
           <button
+            type="button"
             class="btn btn-primary"
             :disabled="isSubmitting"
             @click="submitReconsent"
@@ -1410,6 +1495,7 @@
 <script setup>
 import ReconsentChannelPicker from "../components/econsent/ReconsentChannelPicker.vue";
 import { ref, computed, onMounted } from "vue";
+import { useFocusTrap } from "ui";
 import { apiClient } from "../api/apiClient";
 import { designerService } from "../api/designer";
 import { useClinicalStore } from "../stores/clinical";
@@ -1477,6 +1563,29 @@ const bulkReconsentForm = ref({
 const showReconsentModal = ref(false);
 const reconsentMode = ref("ECONSENT");
 const activeModalSubject = ref(null);
+
+const createWizardModalRef = ref(null);
+const bulkReconsentModalRef = ref(null);
+const singleReconsentModalRef = ref(null);
+
+useFocusTrap(createWizardModalRef, {
+  isOpen: () => showCreateModal.value,
+  onEscape: () => closeWizard(),
+});
+
+useFocusTrap(bulkReconsentModalRef, {
+  isOpen: () => showBulkReconsentModal.value,
+  onEscape: () => {
+    showBulkReconsentModal.value = false;
+  },
+});
+
+useFocusTrap(singleReconsentModalRef, {
+  isOpen: () => showReconsentModal.value,
+  onEscape: () => {
+    showReconsentModal.value = false;
+  },
+});
 
 // Cohort Subjects Data
 const subjectsList = computed(() => store.subjects);

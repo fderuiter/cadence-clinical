@@ -24,21 +24,21 @@ The system previously utilized a shared package, `packages/core-models`, contain
 
 Move all domain models to their respective service domains (e.g., `apps/<service>/domain/`). All inter-service communication occurs via authenticated REST HTTP endpoints using HMAC-SHA256 V2 gateway signatures. Consumer services deserialize incoming JSON payloads directly into local, consumer-owned Pydantic DTOs defined under `apps/<service>/domain/acl/`.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Complete microservice decoupling and autonomy.
   - ✅ Individual database schemas can evolve independently.
   - ✅ Satisfies PRD-SYS-001 and strict GxP regulatory requirements.
   - ✅ Cascading build and deployment bottlenecks are eliminated.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Some duplicate schema definition/boilerplate code across consumer ACL DTOs.
 
 ### Option B: Centralized Shared API Contracts Package
 
 Maintain a shared schemas or contracts package containing centralized JSON Schema or Pydantic DTO definitions.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Less boilerplate code duplication across consuming services.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Retains a centralized dependency that couples the release cycles of all services.
   - ❌ Changes to centralized contracts can still cause cascading build failures.
 

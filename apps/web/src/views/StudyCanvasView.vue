@@ -231,6 +231,18 @@
             :study-code="studyCode"
           />
 
+          <QueriesSection
+            v-else-if="section?.id === 'queries'"
+            :key="`queries-${studyCode}`"
+            :study-code="studyCode"
+            :can-manage="canManage"
+            :status="queryStatusFilter"
+            :site="siteFilter"
+            :participant="queryParticipantFilter"
+            :changed="queryChangedFilter"
+            @filter="applyStudyQueryFilter"
+          />
+
           <section
             v-else
             id="stage-overview"
@@ -370,6 +382,9 @@ import CanvasPalette from "../components/canvas/CanvasPalette.vue";
 import ParticipantRecord from "../components/canvas/ParticipantRecord.vue";
 import ParticipantsSection from "../components/canvas/ParticipantsSection.vue";
 import ProtocolVersionsSection from "../components/canvas/ProtocolVersionsSection.vue";
+import QueriesSection, {
+  type StudyQueriesFilterState,
+} from "../components/canvas/QueriesSection.vue";
 import StudyActivity from "../components/canvas/StudyActivity.vue";
 import StudyPulse from "../components/canvas/StudyPulse.vue";
 import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue";
@@ -393,6 +408,8 @@ interface StudyQuery {
   section?: string;
   status?: string;
   site?: string;
+  subject?: string;
+  changed?: string;
   node?: string;
   participant?: string;
   proposal?: string;
@@ -422,7 +439,20 @@ const statusFilter = computed(() => {
   const status = single(route.query.status);
   return isParticipantState(status) ? status : "";
 });
+const queryStatusFilter = computed(() => {
+  const status = single(route.query.status).toLowerCase();
+  return ["open", "answered", "closed", "cancelled"].includes(status)
+    ? status
+    : "";
+});
 const siteFilter = computed(() => single(route.query.site).trim());
+const queryParticipantFilter = computed(() =>
+  single(route.query.subject).trim()
+);
+const queryChangedFilter = computed(() => {
+  const changed = single(route.query.changed).toLowerCase();
+  return changed === "true" || changed === "false" ? changed : "";
+});
 const selectedNode = computed<NodeRef | null>(() => {
   const node = parseNodeRef(route.query.node);
   return node?.kind === "participant" ? node : null;
@@ -575,6 +605,19 @@ function applyParticipantFilter(filter: { status: string; siteId: string }) {
       status: filter.status,
       site: filter.siteId,
       node: single(route.query.node),
+    })
+  );
+}
+
+function applyStudyQueryFilter(filter: StudyQueriesFilterState) {
+  router.push(
+    studyLocation({
+      stage: "data",
+      section: "queries",
+      status: filter.status,
+      site: filter.site,
+      subject: filter.participant,
+      changed: filter.changed,
     })
   );
 }

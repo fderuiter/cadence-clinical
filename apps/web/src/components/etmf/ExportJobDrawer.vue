@@ -1,7 +1,11 @@
 <!-- apps/web/src/components/etmf/ExportJobDrawer.vue -->
 <template>
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div v-if="isOpen" class="export-drawer-overlay" @click.self="handleClose">
+  <div
+    v-if="isOpen"
+    class="export-drawer-overlay"
+    role="presentation"
+    @click.self="handleClose"
+  >
     <div
       ref="drawerRef"
       class="export-drawer"

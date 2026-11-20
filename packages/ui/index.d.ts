@@ -163,12 +163,68 @@ export const ModalErrorAlert: DefineComponent<
   any
 >;
 
+export const EmptyState: DefineComponent<
+  {
+    icon?: string;
+    title?: string;
+    message?: string;
+    actionText?: string;
+  },
+  {},
+  any
+>;
+
 export const ClinicalModal: DefineComponent<
   {
     modelValue?: boolean;
     title?: string;
     size?: "sm" | "md" | "lg" | "xl" | string;
     role?: "dialog" | "alertdialog" | string;
+    dismissible?: boolean;
+    closeOnBackdrop?: boolean;
+    initialFocus?:
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string
+      | null;
+    restoreFocus?: boolean | (() => HTMLElement | null);
+    teleport?: boolean | string;
+    id?: string;
+    dialogClass?: string | any[] | Record<string, boolean>;
+    backdropClass?: string | any[] | Record<string, boolean>;
+    closeLabel?: string;
+  },
+  {},
+  any
+>;
+
+export const ClinicalDrawer: DefineComponent<
+  {
+    modelValue?: boolean;
+    isOpen?: boolean;
+    title?: string;
+    subtitle?: string;
+    ariaLabel?: string;
+    ariaLabelledby?: string;
+    id?: string;
+    overlayId?: string;
+    overlayClass?: string | any[] | Record<string, boolean>;
+    panelClass?: string | any[] | Record<string, boolean>;
+    bodyClass?: string | any[] | Record<string, boolean>;
+    position?: "right" | "left" | string;
+    size?: "sm" | "md" | "lg" | "xl" | string;
+    role?: "dialog" | "alertdialog" | string;
+    dismissible?: boolean;
+    closeOnBackdrop?: boolean;
+    teleport?: boolean | string;
+    initialFocus?:
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string
+      | null;
+    restoreFocus?: boolean | (() => HTMLElement | null);
+    closeLabel?: string;
+    showHeader?: boolean;
   },
   {},
   any
@@ -176,6 +232,7 @@ export const ClinicalModal: DefineComponent<
 
 export interface FocusTrapOptions {
   isOpen?: import("vue").Ref<boolean> | (() => boolean) | boolean;
+  modal?: import("vue").Ref<boolean> | (() => boolean) | boolean;
   onEscape?: (event: KeyboardEvent) => void;
   escapeDeactivates?: import("vue").Ref<boolean> | (() => boolean) | boolean;
   initialFocus?:

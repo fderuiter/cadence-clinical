@@ -35,7 +35,7 @@ export default defineConfig({
       testMatch: /web-accessibility\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
-        baseURL: "http://localhost:3100/cadence-clinical/",
+        baseURL: "http://localhost:3001/cadence-clinical/",
       },
     },
   ],
@@ -47,8 +47,9 @@ export default defineConfig({
       timeout: 120000,
     },
     {
-      command: "pnpm --filter web exec vite --mode demo --port 3100",
-      url: "http://localhost:3100/cadence-clinical/",
+      command:
+        "pnpm --filter web build:demo && pnpm --filter web exec vite preview --port 3001 --strictPort",
+      url: "http://localhost:3001/cadence-clinical/",
       reuseExistingServer: !process.env.CI,
       timeout: 120000,
     },

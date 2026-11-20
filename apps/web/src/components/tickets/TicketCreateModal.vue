@@ -1,6 +1,10 @@
 <template>
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div v-if="isOpen" class="modal-backdrop" @click.self="close">
+  <div
+    v-if="isOpen"
+    class="modal-backdrop"
+    role="presentation"
+    @click.self="close"
+  >
     <div
       ref="modalRef"
       class="modal-dialog ticket-create-modal"

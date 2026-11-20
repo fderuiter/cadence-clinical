@@ -82,6 +82,56 @@ describe("ecrfQueriesApi (#5461)", () => {
     expect(url.searchParams.get("enrollment_id")).toBe("enrollment-a");
   });
 
+  it("raises a missing-data query on a blank item by item_id without observation_id", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse(201, QUERY));
+
+    await ecrfQueriesApi.raise({
+      formId: "form-a",
+      observationId: null,
+      revision: 0,
+      itemId: "DIABP",
+      text: "Diastolic BP is missing on source",
+      queryId: "query-blank",
+      reason: "Diastolic BP is missing on source",
+      idempotencyKey: "raise-blank-1",
+    });
+
+    const request = lastRequest();
+    expect(new URL(request.url).pathname).toBe(
+      "/api/v1/execution/forms/form-a/queries"
+    );
+    expect(await request.json()).toEqual({
+      observation_id: null,
+      revision: 0,
+      item_id: "DIABP",
+      text: "Diastolic BP is missing on source",
+      query_id: "query-blank",
+    });
+  });
+
+  it("lists study-wide queries with status, site, participant, and value_changed filters", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, [QUERY]));
+
+    expect(
+      await ecrfQueriesApi.listForStudy("study-1", {
+        status: "open",
+        site: "017",
+        participant: "017-0001",
+        valueChanged: true,
+      })
+    ).toEqual([QUERY]);
+
+    const url = new URL(lastRequest().url);
+    expect(url.pathname).toBe("/api/v1/execution/forms/queries");
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      study_id: "study-1",
+      status: "open",
+      site: "017",
+      participant: "017-0001",
+      value_changed: "true",
+    });
+  });
+
   it.each([
     ["answer", { text: "Confirmed" }],
     ["reopen", { text: "Still differs from source" }],

@@ -27,31 +27,31 @@ This decision implements requirements under Trace-3.
 ### Option 1: Optimistic Concurrency Control (OCC)
 
 - **Overview:** Rely on a version number or updated timestamp check on write. If a collision is detected, reject the transaction and return a 409 conflict.
-- ***Pros:***
+- _**Pros:**_
   - ✅ High performance under low conflict.
   - ✅ Simplistic lockless design.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Demands client application error-handling logic to catch and retry upon 409 conflict, violating the "No client contract changes" constraint.
   - ❌ Risk of high abort rates under heavy overlapping automated operations.
 
 ### Option 2: Application-Layer Distributed Locks (e.g., Redis/Redlock)
 
 - **Overview:** Use a distributed lock manager such as Redis to synchronize write access per study ID in the application memory space before hitting the database.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Moves collision resolution outside of DB transaction failures.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Introduces a new system dependency (Redis), violating minimalistic infrastructure guidelines.
   - ❌ Adds complexity in handling network partitioning, lock expiration, and lease renewals.
 
 ### Option 3: Database-Native Pessimistic Locking with Transient Retry (Selected)
 
 - **Overview:** Utilize Neo4j transaction-level write locks by executing a write action (`SET node._lock = true`) on the root study or library object node immediately upon beginning the transaction. Combine this lock with a Python-level decorator (`@with_transaction_retry()`) that intercepts transient locking/deadlock conflicts and automatically retries with exponential backoff.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Purely native database locking, leveraging Neo4j's transactional concurrency manager.
   - ✅ Limits lock range strictly to the target root nodes, ensuring scalable database performance.
   - ✅ Requires no external dependencies or horizontal scaling limitations.
   - ✅ Offers 100% transparent serialization and automatic transaction retry, shielding the REST API and web client from transient failures.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Lock acquisition incurs milliseconds of latency for overlapping operations.
 
 ---

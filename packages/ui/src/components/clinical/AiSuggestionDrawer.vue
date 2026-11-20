@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, watch } from "vue";
+import ClinicalDrawer from "./ClinicalDrawer.vue";
 import ConfidenceBadge from "./ConfidenceBadge.vue";
-import { useFocusTrap } from "../../composables/useFocusTrap.js";
 
 const props = defineProps({
   modelValue: {
@@ -77,7 +77,6 @@ const drawerOpen = computed({
   },
 });
 
-const drawerRef = ref(null);
 const isEditing = ref(false);
 const reasonForChange = ref("");
 const validationError = ref("");
@@ -112,16 +111,12 @@ const closeDrawer = () => {
   reasonForChange.value = "";
 };
 
+// ClinicalDrawer delegates Escape dismissal via handleKeyDown
 const handleKeyDown = (e) => {
   if (!e || e.key === "Escape") {
     closeDrawer();
   }
 };
-
-useFocusTrap(drawerRef, {
-  isOpen: drawerOpen,
-  onEscape: handleKeyDown,
-});
 
 const getParsedFinalValue = () => {
   if (!isEditing.value) {
@@ -187,173 +182,158 @@ const toggleEdit = () => {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="drawerOpen"
-      class="ai-drawer-backdrop"
-      role="presentation"
-      @click.self="closeDrawer"
-    >
-      <aside
-        ref="drawerRef"
-        class="ai-drawer-panel"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="title"
-        tabindex="-1"
-      >
-        <!-- Header -->
-        <header class="ai-drawer-header">
-          <div class="ai-drawer-title-group">
-            <div class="ai-header-badge-row">
-              <span class="ai-drawer-sparkle" aria-hidden="true">✨</span>
-              <h2 class="ai-drawer-title">
-                {{ title }}
-              </h2>
-              <ConfidenceBadge
-                v-if="confidenceScore !== null && confidenceScore !== undefined"
-                :score="confidenceScore"
-                size="sm"
-              />
-            </div>
-            <p v-if="entityName || fieldLabel" class="ai-drawer-subtitle">
-              Target:
-              <strong
-                >{{ entityName ? `${entityName} › ` : ""
-                }}{{ fieldLabel || "Clinical Field" }}</strong
-              >
-            </p>
-          </div>
-          <button
-            type="button"
-            class="ai-drawer-close-btn"
-            aria-label="Close AI suggestion drawer"
-            @click="closeDrawer"
-          >
-            ✕
-          </button>
-        </header>
-
-        <!-- Provenance Info Banner -->
-        <div
-          v-if="modelIdentifier || promptSummary"
-          class="ai-provenance-banner"
-        >
-          <div v-if="modelIdentifier" class="ai-provenance-item">
-            <span class="ai-provenance-label">Model:</span>
-            <code class="ai-provenance-val">{{ modelIdentifier }}</code>
-          </div>
-          <div v-if="promptSummary" class="ai-provenance-item">
-            <span class="ai-provenance-label">Rationale:</span>
-            <span class="ai-provenance-val">{{ promptSummary }}</span>
-          </div>
-        </div>
-
-        <!-- Main Diff Content -->
-        <main class="ai-drawer-body">
-          <div class="ai-diff-container">
-            <!-- Original Section -->
-            <div class="ai-diff-box ai-diff-original">
-              <div class="ai-diff-header">
-                <span class="ai-diff-tag">Original Baseline</span>
-              </div>
-              <div class="ai-diff-content">
-                <pre class="ai-diff-pre">{{
-                  formatDisplayValue(originalValue)
-                }}</pre>
-              </div>
-            </div>
-
-            <!-- AI Suggested Section -->
-            <div
-              class="ai-diff-box ai-diff-suggested"
-              :class="{ 'is-editing': isEditing }"
-            >
-              <div class="ai-diff-header">
-                <span class="ai-diff-tag ai-tag-ai">AI Proposed</span>
-                <button
-                  type="button"
-                  class="ai-edit-toggle-btn"
-                  @click="toggleEdit"
-                >
-                  {{ isEditing ? "👁 View Structured" : "✏️ Edit Suggestion" }}
-                </button>
-              </div>
-              <div class="ai-diff-content">
-                <textarea
-                  v-if="isEditing"
-                  v-model="editedValueText"
-                  class="ai-edit-textarea"
-                  aria-label="Edit AI proposed value"
-                  rows="6"
-                ></textarea>
-                <pre v-else class="ai-diff-pre ai-pre-highlight">{{
-                  formatDisplayValue(suggestedValue)
-                }}</pre>
-              </div>
-            </div>
-          </div>
-
-          <!-- 21 CFR Part 11 Reason for Change Input -->
-          <div class="ai-compliance-section">
-            <label for="ai-reason-for-change" class="ai-reason-label">
-              Reason for Change (21 CFR Part 11 Audit Justification)
-              <span v-if="requireReason" class="ai-required-star">*</span>
-            </label>
-            <input
-              id="ai-reason-for-change"
-              v-model="reasonForChange"
-              type="text"
-              class="ai-reason-input"
-              :class="{ 'has-error': validationError }"
-              placeholder="e.g., Confirmed AI coding suggestion against MedDRA LLT v27.0"
-              aria-required="true"
-              @input="validationError = ''"
+  <ClinicalDrawer
+    :model-value="drawerOpen"
+    :aria-label="title"
+    role="dialog"
+    aria-modal="true"
+    size="lg"
+    overlay-class="ai-drawer-backdrop"
+    panel-class="ai-drawer-panel"
+    body-class="ai-drawer-body"
+    close-label="Close AI suggestion drawer"
+    @close="handleKeyDown"
+  >
+    <template #header>
+      <header class="ai-drawer-header">
+        <div class="ai-drawer-title-group">
+          <div class="ai-header-badge-row">
+            <span class="ai-drawer-sparkle" aria-hidden="true">✨</span>
+            <h2 class="ai-drawer-title">
+              {{ title }}
+            </h2>
+            <ConfidenceBadge
+              v-if="confidenceScore !== null && confidenceScore !== undefined"
+              :score="confidenceScore"
+              size="sm"
             />
-            <p v-if="validationError" class="ai-validation-error" role="alert">
-              {{ validationError }}
-            </p>
           </div>
-        </main>
+          <p v-if="entityName || fieldLabel" class="ai-drawer-subtitle">
+            Target:
+            <strong
+              >{{ entityName ? `${entityName} › ` : ""
+              }}{{ fieldLabel || "Clinical Field" }}</strong
+            >
+          </p>
+        </div>
+        <button
+          type="button"
+          class="ai-drawer-close-btn"
+          aria-label="Close AI suggestion drawer"
+          @click="closeDrawer"
+        >
+          ✕
+        </button>
+      </header>
+    </template>
 
-        <!-- Footer Actions -->
-        <footer class="ai-drawer-footer">
+    <template #subheader>
+      <!-- Provenance Info Banner -->
+      <div v-if="modelIdentifier || promptSummary" class="ai-provenance-banner">
+        <div v-if="modelIdentifier" class="ai-provenance-item">
+          <span class="ai-provenance-label">Model:</span>
+          <code class="ai-provenance-val">{{ modelIdentifier }}</code>
+        </div>
+        <div v-if="promptSummary" class="ai-provenance-item">
+          <span class="ai-provenance-label">Rationale:</span>
+          <span class="ai-provenance-val">{{ promptSummary }}</span>
+        </div>
+      </div>
+    </template>
+
+    <!-- Diff Content (div inside ClinicalDrawer body, avoiding nested main landmarks) -->
+    <div class="ai-diff-container">
+      <!-- Original Section -->
+      <div class="ai-diff-box ai-diff-original">
+        <div class="ai-diff-header">
+          <span class="ai-diff-tag">Original Baseline</span>
+        </div>
+        <div class="ai-diff-content">
+          <pre class="ai-diff-pre">{{ formatDisplayValue(originalValue) }}</pre>
+        </div>
+      </div>
+
+      <!-- AI Suggested Section -->
+      <div
+        class="ai-diff-box ai-diff-suggested"
+        :class="{ 'is-editing': isEditing }"
+      >
+        <div class="ai-diff-header">
+          <span class="ai-diff-tag ai-tag-ai">AI Proposed</span>
+          <button type="button" class="ai-edit-toggle-btn" @click="toggleEdit">
+            {{ isEditing ? "👁 View Structured" : "✏️ Edit Suggestion" }}
+          </button>
+        </div>
+        <div class="ai-diff-content">
+          <textarea
+            v-if="isEditing"
+            v-model="editedValueText"
+            class="ai-edit-textarea"
+            aria-label="Edit AI proposed value"
+            rows="6"
+          ></textarea>
+          <pre v-else class="ai-diff-pre ai-pre-highlight">{{
+            formatDisplayValue(suggestedValue)
+          }}</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- 21 CFR Part 11 Reason for Change Input -->
+    <div class="ai-compliance-section">
+      <label for="ai-reason-for-change" class="ai-reason-label">
+        Reason for Change (21 CFR Part 11 Audit Justification)
+        <span v-if="requireReason" class="ai-required-star">*</span>
+      </label>
+      <input
+        id="ai-reason-for-change"
+        v-model="reasonForChange"
+        type="text"
+        class="ai-reason-input"
+        :class="{ 'has-error': validationError }"
+        placeholder="e.g., Confirmed AI coding suggestion against MedDRA LLT v27.0"
+        aria-required="true"
+        @input="validationError = ''"
+      />
+      <p v-if="validationError" class="ai-validation-error" role="alert">
+        {{ validationError }}
+      </p>
+    </div>
+
+    <!-- Footer Actions -->
+    <template #footer>
+      <div class="ai-drawer-footer-inner">
+        <button
+          type="button"
+          class="btn btn-dismiss"
+          :disabled="isApproving || isRejecting"
+          @click="handleDismiss"
+        >
+          Dismiss / Reject
+        </button>
+        <div class="ai-footer-right">
+          <button type="button" class="btn btn-secondary" @click="closeDrawer">
+            Cancel
+          </button>
           <button
             type="button"
-            class="btn btn-dismiss"
+            class="btn btn-accept"
             :disabled="isApproving || isRejecting"
-            @click="handleDismiss"
+            @click="handleAccept"
           >
-            Dismiss / Reject
+            <span v-if="isApproving" class="ai-spinner" aria-hidden="true"
+              >⏳</span
+            >
+            <span v-else>Accept & Apply</span>
           </button>
-          <div class="ai-footer-right">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="closeDrawer"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              class="btn btn-accept"
-              :disabled="isApproving || isRejecting"
-              @click="handleAccept"
-            >
-              <span v-if="isApproving" class="ai-spinner" aria-hidden="true"
-                >⏳</span
-              >
-              <span v-else>Accept & Apply</span>
-            </button>
-          </div>
-        </footer>
-      </aside>
-    </div>
-  </Teleport>
+        </div>
+      </div>
+    </template>
+  </ClinicalDrawer>
 </template>
 
 <style scoped>
-.ai-drawer-backdrop {
+:deep(.ai-drawer-backdrop) {
   position: fixed;
   top: 0;
   left: 0;
@@ -366,7 +346,7 @@ const toggleEdit = () => {
   justify-content: flex-end;
 }
 
-.ai-drawer-panel {
+:deep(.ai-drawer-panel) {
   width: var(
     --semantic-drawer-width-lg,
     var(--drawer-width-lg, min(100vw, 640px))
@@ -476,7 +456,7 @@ code.ai-provenance-val {
 }
 
 /* Body */
-.ai-drawer-body {
+:deep(.ai-drawer-body) {
   flex: 1;
   padding: 20px 24px;
   overflow-y: auto;
@@ -615,13 +595,11 @@ code.ai-provenance-val {
 }
 
 /* Footer */
-.ai-drawer-footer {
+.ai-drawer-footer-inner {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
-  border-top: 1px solid var(--color-border);
-  background: var(--color-surface-muted);
+  width: 100%;
 }
 
 .ai-footer-right {

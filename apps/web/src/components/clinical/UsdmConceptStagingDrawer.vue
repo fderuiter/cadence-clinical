@@ -1,6 +1,10 @@
 <template>
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -- backdrop click is a mouse shortcut; the dialog's own close control is the keyboard path -->
-  <div v-if="isOpen" class="drawer-backdrop" @click.self="closeDrawer">
+  <div
+    v-if="isOpen"
+    class="drawer-backdrop"
+    role="presentation"
+    @click.self="closeDrawer"
+  >
     <div
       ref="drawerRef"
       class="usdm-concept-staging-drawer card"

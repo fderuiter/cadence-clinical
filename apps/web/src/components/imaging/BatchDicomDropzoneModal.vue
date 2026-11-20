@@ -1,6 +1,5 @@
 <template>
   <Teleport to="body">
-    <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -- Esc closes the dialog; role="dialog" is the correct role for the container -->
     <div
       v-if="isOpen"
       ref="modalRef"
@@ -88,9 +87,9 @@
 
           <!-- Step 1: Dropzone State -->
           <div v-if="!ingestionResult && !isUploading">
-            <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -- drag-and-drop is a mouse shortcut; the folder and file buttons inside are the keyboard path -->
             <div
               class="dropzone-area"
+              role="presentation"
               :class="{ 'is-dragging': isDragging }"
               @dragover.prevent="isDragging = true"
               @dragleave.prevent="isDragging = false"
@@ -562,6 +561,7 @@ function handleClose() {
 useFocusTrap(modalRef, {
   isOpen: () => props.isOpen,
   onEscape: handleClose,
+  escapeLock: () => isUploading.value,
 });
 
 function completeAndClose() {

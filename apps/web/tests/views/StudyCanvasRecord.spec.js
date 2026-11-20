@@ -219,6 +219,11 @@ describe("Clinical Canvas: a participant's data", () => {
       expect(item.text()).toContain("SYSBP, revision 1");
       expect(item.text()).toContain("form form-a");
       expect(item.text()).toContain("Value differs from the source note");
+      expect(
+        wrapper.find(`#query-open-form-${QUERY_ID}`).attributes("href")
+      ).toBe(
+        "/ecrf?studyId=CAD-101&subjectId=017-0001&formId=form-a&itemId=SYSBP"
+      );
     });
 
     it("lets a site user answer an open query, and nothing more", async () => {

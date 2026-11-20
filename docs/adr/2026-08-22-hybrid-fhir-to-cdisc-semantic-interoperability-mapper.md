@@ -9,6 +9,7 @@ Accepted
 Electronic Health Record (EHR) data ingested from diverse hospital and clinical site networks into Cadence Clinical's Interoperability Gateway (`apps/interop/`) arrives in HL7 FHIR format (Resources: `Patient`, `Observation`, `Condition`, `MedicationStatement`, `Procedure`, `DocumentReference`). To support automated Digital Data Flow (DDF) and pre-fill electronic Case Report Forms (eCRFs) adhering to CDISC standards (CDASH / SDTM / USDM), incoming clinical items must be translated into standardized domain variables (`eCRF.<DOMAIN>.<VARIABLE>`).
 
 However, clinical EHR data exhibits significant heterogeneity:
+
 1. Standardized clinical records contain standard ontology codes (LOINC, SNOMED CT, RxNorm) that can be mapped with 100% precision via deterministic lookup tables.
 2. Variant or non-standard terms (e.g. local lab test names, clinical verbatims, synonyms) cannot be mapped with simple string equality, but match cleanly when using vector embeddings and cosine similarity against curated CDISC concept definitions.
 3. Unstructured narrative notes (e.g. clinical consultation summaries, physician progress notes, complex diagnostic histories) require LLM semantic extraction and reasoning with strict de-identification air-gaps to isolate and structure clinical variables.

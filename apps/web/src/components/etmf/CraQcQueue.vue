@@ -223,14 +223,24 @@
     </div>
 
     <!-- Batch Accept Modal -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -- backdrop click is a mouse shortcut; the dialog's own close control is the keyboard path -->
     <div
       v-if="showBatchModal"
       class="qc-modal-overlay"
+      role="presentation"
       @click.self="showBatchModal = false"
     >
-      <div class="qc-modal">
-        <h4 style="margin: 0 0 8px 0; font-size: 16px">
+      <div
+        ref="batchModalRef"
+        class="qc-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="qc-batch-modal-title"
+        tabindex="-1"
+      >
+        <h4
+          id="qc-batch-modal-title"
+          style="margin: 0 0 8px 0; font-size: 16px"
+        >
           Batch Accept AI Classifications
         </h4>
         <p
@@ -281,13 +291,20 @@
     </div>
 
     <!-- Single Item Inspection & Override Modal Drawer -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -- backdrop click is a mouse shortcut; the dialog's own close control is the keyboard path -->
     <div
       v-if="inspectedItem"
       class="qc-modal-overlay"
+      role="presentation"
       @click.self="inspectedItem = null"
     >
-      <div class="qc-modal qc-modal-lg">
+      <div
+        ref="inspectModalRef"
+        class="qc-modal qc-modal-lg"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="qc-inspect-modal-title"
+        tabindex="-1"
+      >
         <div
           style="
             display: flex;
@@ -298,11 +315,16 @@
             padding-bottom: 8px;
           "
         >
-          <h4 style="margin: 0; font-size: 15px; font-weight: 700">
+          <h4
+            id="qc-inspect-modal-title"
+            style="margin: 0; font-size: 15px; font-weight: 700"
+          >
             CRA Quality Control Review: {{ inspectedItem.filename }}
           </h4>
           <button
+            type="button"
             class="btn btn-secondary btn-xs"
+            aria-label="Close"
             @click="inspectedItem = null"
           >
             ✕
@@ -484,6 +506,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { useFocusTrap } from "ui";
 import { useEtmfStore } from "../../stores/etmf.js";
 import { useToastStore } from "../../stores/toasts.js";
 
@@ -499,6 +522,22 @@ const batchReason = ref(
 const inspectedItem = ref(null);
 const reviewReason = ref("CRA QC review verified taxonomy metadata");
 const overrideArtifactCode = ref("");
+const batchModalRef = ref(null);
+const inspectModalRef = ref(null);
+
+useFocusTrap(batchModalRef, {
+  isOpen: () => showBatchModal.value,
+  onEscape: () => {
+    showBatchModal.value = false;
+  },
+});
+
+useFocusTrap(inspectModalRef, {
+  isOpen: () => Boolean(inspectedItem.value),
+  onEscape: () => {
+    inspectedItem.value = null;
+  },
+});
 
 const queueItems = computed(() => etmfStore.qcQueue || []);
 

@@ -10,8 +10,9 @@
 ## 1. Context & Problem Statement
 
 Clinical research software under 21 CFR Part 11 and ICH GCP E6(R2) operates on contestable clinical facts where the system must answer two distinct questions:
+
 1. **What was true in the physical clinical trial at time $t$?** (Valid Time, e.g., when was an amendment effective at Site A? What was the subject's blood pressure during Visit 2?)
-2. **What did Cadence know at transaction time $t_{\text{rec}}$?** (Recorded Time, e.g., when an investigator corrected a typo in an observation three weeks later, what was the data state when the DSMB interim report was generated?)
+2. **What did Cadence know at transaction time $t\_{\text{rec}}$?** (Recorded Time, e.g., when an investigator corrected a typo in an observation three weeks later, what was the data state when the DSMB interim report was generated?)
 
 Standard relational models use simple `created_at` / `updated_at` columns or overwrite records, destroying historical contestability. While event sourcing replays streams, it incurs severe read-path complexity for regulated tabular extractions (SDTM/ADaM). A native bitemporal model is required to satisfy regulatory audit reproduction requirements under 21 CFR Part 11 (PRD-SYS-053).
 

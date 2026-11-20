@@ -1,7 +1,10 @@
 <template>
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div v-if="isOpen" class="drawer-backdrop" @click.self="closeDrawer">
+  <div
+    v-if="isOpen"
+    class="drawer-backdrop"
+    role="presentation"
+    @click.self="closeDrawer"
+  >
     <aside
       ref="drawerRef"
       class="ehr-reconciliation-drawer"
@@ -197,7 +200,7 @@
       </div>
 
       <!-- Main Split-Screen Reconciliation View -->
-      <main class="drawer-body">
+      <div class="drawer-body">
         <div v-if="isLoading" class="state-container">
           <SkeletonLoader type="card" :count="3" />
         </div>
@@ -443,14 +446,13 @@
             </footer>
           </article>
         </div>
-      </main>
+      </div>
 
       <!-- MODAL 1: Reject with Reason Dialog -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         v-if="showRejectModal"
         class="modal-backdrop"
+        role="presentation"
         @click.self="closeRejectModal"
       >
         <div
@@ -459,10 +461,16 @@
           role="dialog"
           aria-modal="true"
           aria-labelledby="reject-modal-title"
+          tabindex="-1"
         >
           <div class="modal-header">
             <h3 id="reject-modal-title">Reject EHR Candidate Data</h3>
-            <button type="button" class="btn-close" @click="closeRejectModal">
+            <button
+              type="button"
+              class="btn-close"
+              aria-label="Close reject dialog"
+              @click="closeRejectModal"
+            >
               ✕
             </button>
           </div>
@@ -512,11 +520,10 @@
       </div>
 
       <!-- MODAL 2: Raise Clinical Query Dialog -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         v-if="showQueryModal"
         class="modal-backdrop"
+        role="presentation"
         @click.self="closeQueryModal"
       >
         <div
@@ -525,10 +532,16 @@
           role="dialog"
           aria-modal="true"
           aria-labelledby="query-modal-title"
+          tabindex="-1"
         >
           <div class="modal-header">
             <h3 id="query-modal-title">Raise GxP Discrepancy Query</h3>
-            <button type="button" class="btn-close" @click="closeQueryModal">
+            <button
+              type="button"
+              class="btn-close"
+              aria-label="Close query dialog"
+              @click="closeQueryModal"
+            >
               ✕
             </button>
           </div>
@@ -580,11 +593,10 @@
       </div>
 
       <!-- MODAL 3: Source Provenance & Part 11 Audit Trail Viewer -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         v-if="showProvenanceModal"
         class="modal-backdrop"
+        role="presentation"
         @click.self="closeProvenanceModal"
       >
         <div
@@ -593,6 +605,7 @@
           role="dialog"
           aria-modal="true"
           aria-labelledby="prov-modal-title"
+          tabindex="-1"
         >
           <div class="modal-header">
             <h3 id="prov-modal-title">
@@ -601,6 +614,7 @@
             <button
               type="button"
               class="btn-close"
+              aria-label="Close provenance dialog"
               @click="closeProvenanceModal"
             >
               ✕
@@ -654,11 +668,10 @@
       </div>
 
       <!-- MODAL 4: Batch Reject Dialog -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         v-if="showBatchRejectModal"
         class="modal-backdrop"
+        role="presentation"
         @click.self="closeBatchRejectModal"
       >
         <div
@@ -667,6 +680,7 @@
           role="dialog"
           aria-modal="true"
           aria-labelledby="batch-reject-modal-title"
+          tabindex="-1"
         >
           <div class="modal-header">
             <h3 id="batch-reject-modal-title">
@@ -675,6 +689,7 @@
             <button
               type="button"
               class="btn-close"
+              aria-label="Close batch reject dialog"
               @click="closeBatchRejectModal"
             >
               ✕

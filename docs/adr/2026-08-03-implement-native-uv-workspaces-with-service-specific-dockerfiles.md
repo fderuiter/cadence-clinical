@@ -24,19 +24,18 @@ We need to transition the monorepo architecture of our Python services to use na
 ### Option 1: **Option A (Selected): Native `uv` workspaces with multi-stage, service-specific Dockerfiles.**
 
 - **Overview:** **Option A (Selected): Native `uv` workspaces with multi-stage, service-specific Dockerfiles.**
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B: Monolithic Docker image containing all services and packages.**
 
 - **Overview:** **Option B: Monolithic Docker image containing all services and packages.**
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 
