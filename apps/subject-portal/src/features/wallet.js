@@ -4,10 +4,83 @@ import { state } from "../stores/state.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 import { logAuditRecord } from "./audit.js";
 
+const EXPENSE_IDEM_STORAGE_KEY = "cadence.wallet.expenseIdempotency";
+const DISBURSE_IDEM_STORAGE_KEY = "cadence.wallet.disburseIdempotency";
+
+function generateIdempotencyKey(prefix = "idem") {
+  const randomPart =
+    typeof globalThis.crypto?.randomUUID === "function"
+      ? globalThis.crypto.randomUUID()
+      : `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  return `${prefix}_${randomPart}`;
+}
+
+function readStoredIdempotencyRecord(storageKey) {
+  try {
+    const raw = globalThis.sessionStorage?.getItem(storageKey);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.key === "string" && parsed.key.trim()) {
+      return parsed;
+    }
+  } catch {
+    // Ignore storage read errors in restricted contexts
+  }
+  return null;
+}
+
+function writeStoredIdempotencyRecord(storageKey, fingerprint, key) {
+  try {
+    globalThis.sessionStorage?.setItem(
+      storageKey,
+      JSON.stringify({ fingerprint, key })
+    );
+  } catch {
+    // Ignore storage write errors in restricted contexts
+  }
+}
+
+function clearStoredIdempotencyRecord(storageKey) {
+  try {
+    globalThis.sessionStorage?.removeItem(storageKey);
+  } catch {
+    // Ignore storage removal errors
+  }
+}
+
+function resolveIdempotencyKey({
+  storageKey,
+  prefix,
+  fingerprint,
+  explicitKey,
+}) {
+  if (typeof explicitKey === "string" && explicitKey.trim()) {
+    return explicitKey.trim();
+  }
+  const stored = readStoredIdempotencyRecord(storageKey);
+  if (stored && stored.fingerprint === fingerprint) {
+    return stored.key;
+  }
+  const nextKey = generateIdempotencyKey(prefix);
+  writeStoredIdempotencyRecord(storageKey, fingerprint, nextKey);
+  return nextKey;
+}
+
 export function isWalletActionAllowed() {
   return Boolean(
     isDemoModeActive() || (isAuthenticatedSession() && state.session?.userId)
   );
+}
+
+export function isWalletW9HoldActive() {
+  const thresholdExceeded =
+    Boolean(state.is1099ThresholdExceeded) ||
+    Number(state.taxableYtd || 0) >= 600;
+  const w9Verified =
+    String(state.w9Status || "")
+      .trim()
+      .toUpperCase() === "VERIFIED";
+  return thresholdExceeded && !w9Verified;
 }
 
 function bytesToBase64(uint8) {
@@ -194,6 +267,81 @@ function applyWalletProjection(summaryOrWallet) {
   state.walletLoaded = true;
 }
 
+export function resetExpenseClaimForm() {
+  clearStoredIdempotencyRecord(EXPENSE_IDEM_STORAGE_KEY);
+  state.expenseManualEntry = false;
+  state.expenseOcr = {
+    loading: false,
+    error: null,
+    warning: null,
+    data: null,
+    previewUrl: null,
+  };
+  state.expenseForm = {
+    subjectId: state.session?.userId || null,
+    studyId: state.walletStudyId || "study_001",
+    siteId: state.walletSiteId || "site_001",
+    category: "TRANSIT",
+    merchantName: "",
+    grossAmount: 0.0,
+    isMealAllowance: false,
+    perDiemCap: 75.0,
+    expenseDate: "",
+    ocrConfidence: 0.0,
+    receiptImageName: "",
+    idempotencyKey: null,
+  };
+  if (typeof document !== "undefined") {
+    const fileInput = document.getElementById("receipt-file-input");
+    if (fileInput && "value" in fileInput) {
+      try {
+        fileInput.value = "";
+      } catch {
+        // Ignore read-only mock file inputs
+      }
+    }
+  }
+}
+
+export function openManualExpenseEntry() {
+  state.expenseError = null;
+  state.expenseResult = null;
+  state.expenseManualEntry = true;
+  if (state.expenseForm) {
+    state.expenseForm.ocrConfidence = 0.0;
+    state.expenseForm.idempotencyKey = null;
+  }
+}
+
+export function openDisburseModal(initiatingEl = null) {
+  if (typeof document !== "undefined") {
+    state.initiatingButton = initiatingEl || document.activeElement || null;
+  }
+  const available =
+    typeof state.walletBalance === "number" && state.walletBalance > 0
+      ? Number(state.walletBalance).toFixed(2)
+      : "";
+  const defaultMethod = state.achAccountMask
+    ? "DIRECT_ACH"
+    : state.virtualCardMask
+      ? "VIRTUAL_CARD"
+      : "DIRECT_ACH";
+  state.disburseForm = {
+    disbursementType: defaultMethod,
+    amount: available,
+    error: null,
+    idempotencyKey: null,
+  };
+  state.disburseModalOpen = true;
+}
+
+export function closeDisburseModal() {
+  state.disburseModalOpen = false;
+  if (state.disburseForm) {
+    state.disburseForm.error = null;
+  }
+}
+
 export async function loadParticipantWallet() {
   if (!isWalletActionAllowed()) {
     return null;
@@ -219,6 +367,7 @@ export async function loadParticipantWallet() {
 
 export async function extractReceiptOcr(fileOrText) {
   state.expenseError = null;
+  state.expenseResult = null;
   state.expenseOcr.error = null;
   state.expenseOcr.warning = null;
 
@@ -232,6 +381,10 @@ export async function extractReceiptOcr(fileOrText) {
   }
 
   state.expenseOcr.loading = true;
+  clearStoredIdempotencyRecord(EXPENSE_IDEM_STORAGE_KEY);
+  if (state.expenseForm) {
+    state.expenseForm.idempotencyKey = null;
+  }
 
   const { rawText, imageBase64, fileName } =
     await readReceiptPayload(fileOrText);
@@ -302,6 +455,7 @@ export async function extractReceiptOcr(fileOrText) {
         ? "We could not read legible receipt text from this image. Please upload a clearer photo or enter the receipt details manually below."
         : null);
 
+    state.expenseManualEntry = !ocrReadable;
     state.expenseForm.merchantName = merchantName;
     state.expenseForm.expenseDate = expenseDate;
     state.expenseForm.grossAmount = ocrReadable ? grossAmount : 0;
@@ -326,7 +480,11 @@ export async function extractReceiptOcr(fileOrText) {
   } catch (err) {
     const msg = err?.message || String(err);
     state.expenseOcr.error = msg;
+    state.expenseOcr.warning =
+      "Automatic receipt scan was unavailable. You can enter your receipt details manually below or retry uploading the receipt image.";
     state.expenseError = msg;
+    state.expenseManualEntry = true;
+    state.expenseForm.ocrConfidence = 0;
     state.expenseOcr.loading = false;
     throw err;
   }
@@ -345,21 +503,45 @@ export async function submitExpenseClaim(customFormData = null) {
   const form = customFormData || state.expenseForm;
   const grossAmount = Number(form.grossAmount) || 0;
   const category = form.category || "TRANSIT";
+  const merchantName = (form.merchantName || "").trim();
+  const expenseDate = (form.expenseDate || "").trim();
+  const receiptImageName = form.receiptImageName || "";
   const isMealAllowance = Boolean(form.isMealAllowance || category === "MEAL");
   const perDiemCap = form.perDiemCap ? Number(form.perDiemCap) : 75.0;
   const ocrConfidence =
     typeof form.ocrConfidence === "number" ? Number(form.ocrConfidence) : 0;
 
+  const fingerprint = [
+    state.session?.userId || "",
+    category,
+    merchantName,
+    grossAmount.toFixed(2),
+    expenseDate,
+    receiptImageName,
+  ].join("|");
+
+  const idempotencyKey = resolveIdempotencyKey({
+    storageKey: EXPENSE_IDEM_STORAGE_KEY,
+    prefix: "exp",
+    fingerprint,
+    explicitKey: form.idempotencyKey,
+  });
+
+  if (!customFormData && state.expenseForm) {
+    state.expenseForm.idempotencyKey = idempotencyKey;
+  }
+
   const payload = {
     category,
-    merchantName: form.merchantName || "",
+    merchantName,
     grossAmount,
     isMealAllowance,
     perDiemCap,
-    expenseDate: form.expenseDate || "",
-    receiptImageName: form.receiptImageName || "",
+    expenseDate,
+    receiptImageName,
     ocrConfidence,
     receiptOcrData: state.expenseOcr.data || null,
+    idempotencyKey,
     studyId: form.studyId || state.walletStudyId || undefined,
     siteId: form.siteId || state.walletSiteId || undefined,
     walletId: state.walletId || undefined,
@@ -371,6 +553,9 @@ export async function submitExpenseClaim(customFormData = null) {
       "api/v1/payments/participant/me/expenses",
       {
         method: "POST",
+        headers: {
+          "Idempotency-Key": idempotencyKey,
+        },
         body: JSON.stringify(payload),
         change_reason: "Submit participant expense claim",
       }
@@ -385,14 +570,18 @@ export async function submitExpenseClaim(customFormData = null) {
     const disbursementReference =
       rawRes.disbursementReference ?? rawRes.disbursement_reference ?? null;
     const reviewNotes = rawRes.reviewNotes ?? rawRes.review_notes ?? null;
-    const claimId = rawRes.id ?? rawRes.claim_id ?? null;
+    const claimId = rawRes.id ?? rawRes.claim_id ?? `claim_${idempotencyKey}`;
     const netAmount = Number(
       rawRes.netAmount ?? rawRes.net_amount ?? grossAmount
     );
 
     const normalized = {
       ...rawRes,
+      id: claimId,
       claim_id: claimId,
+      category: rawRes.category || category,
+      merchantName: rawRes.merchantName ?? rawRes.merchant_name ?? merchantName,
+      expenseDate: rawRes.expenseDate ?? rawRes.expense_date ?? expenseDate,
       status: autoApproved
         ? "AUTO_APPROVED"
         : rawRes.status || "PENDING_REVIEW",
@@ -404,28 +593,54 @@ export async function submitExpenseClaim(customFormData = null) {
       disbursement_reference: disbursementReference,
       reviewNotes,
       review_notes: reviewNotes,
+      grossAmount,
       gross_amount: grossAmount,
+      netAmount,
       net_amount: netAmount,
+      createdAt:
+        rawRes.createdAt ?? rawRes.created_at ?? new Date().toISOString(),
     };
 
     state.expenseResult = normalized;
 
+    const existingClaims = Array.isArray(state.expenseClaims)
+      ? [...state.expenseClaims]
+      : [];
+    const existingIdx = existingClaims.findIndex(
+      (c) => (c.id || c.Id || c.claim_id) === claimId
+    );
+    if (existingIdx >= 0) {
+      existingClaims[existingIdx] = {
+        ...existingClaims[existingIdx],
+        ...normalized,
+      };
+      state.expenseClaims = existingClaims;
+    } else {
+      state.expenseClaims = [normalized, ...existingClaims];
+    }
+
     if (typeof rawRes.lifetimeReimbursements === "number") {
       state.lifetimeReimbursements = rawRes.lifetimeReimbursements;
-    } else if (autoApproved) {
+    } else if (autoApproved && existingIdx < 0) {
       state.lifetimeReimbursements =
         (Number(state.lifetimeReimbursements) || 0) + netAmount;
     }
 
     if (typeof rawRes.lifetimeDisbursements === "number") {
       state.lifetimeDisbursements = rawRes.lifetimeDisbursements;
-    } else if (autoApproved) {
+    } else if (autoApproved && existingIdx < 0) {
       state.lifetimeDisbursements =
         (Number(state.lifetimeDisbursements) || 0) + netAmount;
     }
 
     if (typeof rawRes.walletCurrentBalance === "number") {
       state.walletBalance = rawRes.walletCurrentBalance;
+    }
+
+    if (!customFormData) {
+      resetExpenseClaimForm();
+    } else {
+      clearStoredIdempotencyRecord(EXPENSE_IDEM_STORAGE_KEY);
     }
 
     if (autoApproved) {
@@ -467,7 +682,8 @@ export async function submitExpenseClaim(customFormData = null) {
 }
 
 export async function disburseAvailableBalance(
-  disbursementType = "DIRECT_ACH"
+  disbursementType = "DIRECT_ACH",
+  options = {}
 ) {
   if (state.disbursingBalance) {
     return null;
@@ -475,6 +691,9 @@ export async function disburseAvailableBalance(
 
   state.expenseError = null;
   state.disbursementConfirmation = null;
+  if (state.disburseForm) {
+    state.disburseForm.error = null;
+  }
 
   if (!isWalletActionAllowed()) {
     const msg =
@@ -483,28 +702,114 @@ export async function disburseAvailableBalance(
     throw new Error(msg);
   }
 
+  if (isWalletW9HoldActive()) {
+    const holdMsg =
+      "Annual taxable payments have reached $600.00 without a verified Form W-9. Automated payouts are halted until your Form W-9 is verified by site staff.";
+    state.expenseError = holdMsg;
+    if (state.disburseForm) {
+      state.disburseForm.error = holdMsg;
+    }
+    throw new Error(holdMsg);
+  }
+
+  const normalizedType =
+    String(disbursementType || "DIRECT_ACH").toUpperCase() === "VIRTUAL_CARD"
+      ? "VIRTUAL_CARD"
+      : "DIRECT_ACH";
+
+  const hasExplicitAmount =
+    options &&
+    options.amount !== undefined &&
+    options.amount !== null &&
+    options.amount !== "";
+
+  let requestedAmount = null;
+  if (hasExplicitAmount) {
+    const parsedAmount = Number(options.amount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      const msg = "Please enter a payout amount greater than zero.";
+      state.expenseError = msg;
+      if (state.disburseForm) {
+        state.disburseForm.error = msg;
+      }
+      throw new Error(msg);
+    }
+    const rounded = Math.round(parsedAmount * 100) / 100;
+    if (
+      typeof state.walletBalance === "number" &&
+      rounded > state.walletBalance + 0.0001
+    ) {
+      const msg = "Requested payout amount exceeds available wallet balance.";
+      state.expenseError = msg;
+      if (state.disburseForm) {
+        state.disburseForm.error = msg;
+      }
+      throw new Error(msg);
+    }
+    requestedAmount = rounded;
+  }
+
+  const amountFingerprint =
+    requestedAmount !== null
+      ? requestedAmount.toFixed(2)
+      : typeof state.walletBalance === "number"
+        ? Number(state.walletBalance).toFixed(2)
+        : "FULL";
+
+  const fingerprint = [
+    state.session?.userId || "",
+    state.walletId || "",
+    normalizedType,
+    amountFingerprint,
+  ].join("|");
+
+  const idempotencyKey = resolveIdempotencyKey({
+    storageKey: DISBURSE_IDEM_STORAGE_KEY,
+    prefix: "disb",
+    fingerprint,
+    explicitKey: options?.idempotencyKey || state.disburseForm?.idempotencyKey,
+  });
+
+  if (state.disburseForm) {
+    state.disburseForm.idempotencyKey = idempotencyKey;
+  }
+
   state.disbursingBalance = true;
   try {
+    const bodyPayload = {
+      disbursementType: normalizedType,
+      walletId: state.walletId || undefined,
+      idempotencyKey,
+    };
+    if (requestedAmount !== null) {
+      bodyPayload.amount = requestedAmount;
+    }
+
     const res = await dispatchApi("api/v1/payments/participant/me/disburse", {
       method: "POST",
-      body: JSON.stringify({
-        disbursementType,
-        walletId: state.walletId || undefined,
-      }),
+      headers: {
+        "Idempotency-Key": idempotencyKey,
+      },
+      body: JSON.stringify(bodyPayload),
       change_reason: "Participant on-demand available balance payout",
     });
 
-    const amount = Number(res.amount ?? res.Amount ?? 0);
+    const amount = Number(res.amount ?? res.Amount ?? requestedAmount ?? 0);
     const remaining = Number(
       res.currentBalance ?? res.current_balance ?? res.new_balance ?? 0
     );
     const refNum =
-      res.referenceNumber ?? res.reference_number ?? "DISB-ACH-CONFIRMED";
+      res.referenceNumber ??
+      res.reference_number ??
+      (normalizedType === "VIRTUAL_CARD"
+        ? "DISB-VCARD-CONFIRMED"
+        : "DISB-ACH-CONFIRMED");
+    const fallbackMask =
+      normalizedType === "VIRTUAL_CARD"
+        ? state.virtualCardMask || "Reloadable Study Card"
+        : state.achAccountMask || "Linked Bank Account";
     const destination =
-      res.destinationMask ??
-      res.destination_mask ??
-      state.achAccountMask ??
-      "Linked Bank Account";
+      res.destinationMask ?? res.destination_mask ?? fallbackMask;
 
     state.walletBalance = remaining;
     if (typeof res.lifetimeDisbursements === "number") {
@@ -513,14 +818,26 @@ export async function disburseAvailableBalance(
       state.lifetimeDisbursements =
         (Number(state.lifetimeDisbursements) || 0) + amount;
     }
+    if (res.currency || res.Currency) {
+      state.currency = res.currency || res.Currency;
+    }
 
     state.disbursementConfirmation = {
+      id: res.id ?? res.Id ?? null,
       amount,
       remainingBalance: remaining,
       referenceNumber: refNum,
       destinationMask: destination,
-      disbursementType: res.disbursementType ?? disbursementType,
+      disbursementType: res.disbursementType ?? normalizedType,
+      currency: res.currency || state.currency || "USD",
     };
+
+    clearStoredIdempotencyRecord(DISBURSE_IDEM_STORAGE_KEY);
+    if (state.disburseForm) {
+      state.disburseForm.idempotencyKey = null;
+      state.disburseForm.error = null;
+    }
+    state.disburseModalOpen = false;
 
     await logAuditRecord(
       "DIGITAL_DISBURSEMENT_DISPATCHED",
@@ -528,7 +845,7 @@ export async function disburseAvailableBalance(
         disbursement_reference: refNum,
         amount,
         remaining_balance: remaining,
-        method: disbursementType,
+        method: normalizedType,
       },
       "On-demand participant wallet balance disbursed"
     );
@@ -538,6 +855,9 @@ export async function disburseAvailableBalance(
     const msg =
       err?.message || "Unable to disburse available wallet balance right now.";
     state.expenseError = msg;
+    if (state.disburseForm) {
+      state.disburseForm.error = msg;
+    }
     throw err;
   } finally {
     state.disbursingBalance = false;

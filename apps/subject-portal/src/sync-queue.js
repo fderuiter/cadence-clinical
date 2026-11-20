@@ -1,5 +1,6 @@
 import { deriveSessionKey, encryptAESGCM, decryptAESGCM } from "ui";
 import { validateEproPayload } from "usdm-schemas";
+import { showToast } from "./widgets/toast.js";
 
 let inMemorySessionKey = null;
 
@@ -176,14 +177,10 @@ export function openDatabase(userId) {
           }
         } catch (upgradeErr) {
           console.error("IndexedDB upgrade error:", upgradeErr);
-          if (
-            typeof window !== "undefined" &&
-            typeof window.alert === "function"
-          ) {
-            window.alert(
-              "Database upgrade failed. Please ensure you have sufficient disk space."
-            );
-          }
+          showToast(
+            "Database upgrade failed. Please ensure you have sufficient disk space.",
+            { variant: "error" }
+          );
         }
       };
       /* v8 ignore stop */
@@ -202,18 +199,10 @@ export function openDatabase(userId) {
           "IndexedDB open failed (disk limits, private window, or quota exceeded):",
           err
         );
-        if (
-          typeof window !== "undefined" &&
-          typeof window.alert === "function"
-        ) {
-          window.alert(
-            "Offline storage initialization failed. Please check your disk space or privacy settings."
-          );
-        } else if (typeof alert === "function") {
-          alert(
-            "Offline storage initialization failed. Please check your disk space or privacy settings."
-          );
-        }
+        showToast(
+          "Offline storage initialization failed. Please check your disk space or privacy settings.",
+          { variant: "error" }
+        );
         reject(err);
       };
       /* v8 ignore stop */
@@ -223,11 +212,10 @@ export function openDatabase(userId) {
         "Failed to call indexedDB.open due to a critical error:",
         err
       );
-      if (typeof window !== "undefined" && typeof window.alert === "function") {
-        window.alert(
-          "Offline storage initialization failed due to a critical browser error."
-        );
-      }
+      showToast(
+        "Offline storage initialization failed due to a critical browser error.",
+        { variant: "error" }
+      );
       reject(err);
       /* v8 ignore stop */
     }

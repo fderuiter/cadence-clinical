@@ -20,6 +20,22 @@
 
     <div class="card questionnaire-card">
       <form id="questionnaire-form" @submit.prevent="submitActiveQuestionnaire">
+        <div
+          id="questionnaire-form-error"
+          role="alert"
+          aria-live="assertive"
+          style="
+            display: none;
+            margin-bottom: 16px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: var(--semantic-color-error-bg);
+            border: 1px solid var(--semantic-color-error);
+            color: var(--semantic-color-error);
+            font-size: 14px;
+            font-weight: 600;
+          "
+        />
         <div id="questionnaire-form-container">
           <!-- Dynamically compiled CDASH-inputs go here -->
         </div>

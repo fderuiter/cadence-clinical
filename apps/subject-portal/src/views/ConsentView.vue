@@ -36,11 +36,14 @@
         <select
           id="consent-lang-selector"
           style="
-            padding: 6px 12px;
-            border-radius: 4px;
+            min-height: var(--touch-target-min);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: 6px;
             border: 1px solid var(--semantic-color-border);
             background: var(--semantic-color-surface);
             color: var(--semantic-color-text);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
           "
         >
           <option value="en">English (en)</option>

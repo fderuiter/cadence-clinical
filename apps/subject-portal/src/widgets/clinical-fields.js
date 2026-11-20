@@ -27,13 +27,13 @@ export function createClinicalSlider(
   <label for="${id}" class="vas-slider-label" style="font-weight: 600; display: block; margin-bottom: 8px;">
     ${label}
   </label>
-  <div class="vas-slider-wrapper" style="background: #f8fafc; padding: 16px; border: 1px solid var(--border-color, #cbd5e1); border-radius: 8px;">
+  <div class="vas-slider-wrapper" style="background: var(--semantic-color-surface-muted); padding: 16px; border: 1px solid var(--semantic-color-border); border-radius: 8px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-      <span class="vas-min-label" style="font-size: 12px; color: #64748b; font-weight: 500;">${minLabel}</span>
-      <span class="vas-value-badge" id="${id}_display" style="background: #2563eb; color: white; padding: 2px 10px; border-radius: 12px; font-weight: bold; font-size: 14px;">
+      <span class="vas-min-label" style="font-size: 12px; color: var(--semantic-color-text-muted); font-weight: 500;">${minLabel}</span>
+      <span class="vas-value-badge" id="${id}_display" style="background: var(--semantic-color-interactive-primary); color: var(--semantic-color-text-on-primary); padding: 2px 10px; border-radius: 12px; font-weight: bold; font-size: 14px;">
         Value: ${initialValue}
       </span>
-      <span class="vas-max-label" style="font-size: 12px; color: #64748b; font-weight: 500;">${maxLabel}</span>
+      <span class="vas-max-label" style="font-size: 12px; color: var(--semantic-color-text-muted); font-weight: 500;">${maxLabel}</span>
     </div>
     <div class="input-wrapper" style="position: relative;">
       <input
@@ -46,7 +46,7 @@ export function createClinicalSlider(
         value="${initialValue}"
         data-touched="${initialTouched}"
         class="vas-slider-input"
-        style="width: 100%; cursor: pointer; accent-color: #2563eb; height: 8px;"
+        style="width: 100%; cursor: pointer; accent-color: var(--semantic-color-interactive-primary); min-height: var(--touch-target-min); height: var(--touch-target-min);"
         oninput="this.setAttribute('data-touched', 'true'); const disp = document.getElementById('${id}_display'); if (disp) disp.textContent = 'Value: ' + this.value;"
       />
       ${queryFlagHTML}
@@ -108,10 +108,10 @@ export function createClinicalRadioGrid(
       const isChecked = optVal === selectedValue ? " checked" : "";
       const optionId = `${id}_option_${idx}`;
       return `
-      <div class="radio-option">
+      <label class="radio-option" for="${optionId}">
         <input type="radio" id="${optionId}" name="${id}" value="${optVal}"${isChecked} />
-        <label for="${optionId}">${optLabel}</label>
-      </div>
+        <span class="radio-option-label">${optLabel}</span>
+      </label>
       `.trim();
     })
     .join("\n");
