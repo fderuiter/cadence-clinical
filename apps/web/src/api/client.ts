@@ -13,8 +13,8 @@ export function getBaseUrl(): string {
   const configured = import.meta.env?.VITE_API_BASE_URL;
   if (configured) return configured;
   const isDemo =
-    import.meta.env.MODE === "demo" ||
-    import.meta.env.VITE_DEMO_MODE === "true";
+    import.meta.env?.MODE === "demo" ||
+    import.meta.env?.VITE_DEMO_MODE === "true";
   if (
     isDemo &&
     typeof globalThis.location?.origin === "string" &&
@@ -72,36 +72,40 @@ export function getAuthMiddleware(): Middleware {
   };
 }
 
-const INITIAL_BASE_URL = getBaseUrl();
-
-function dispatchOpenApiFetch(input: RequestInfo | URL, init?: RequestInit) {
-  const currentBase = getBaseUrl().replace(/\/+$/, "");
-  const initialBase = INITIAL_BASE_URL.replace(/\/+$/, "");
-  if (
-    currentBase !== initialBase &&
-    input instanceof Request &&
-    input.url.startsWith(`${initialBase}/`)
-  ) {
-    const rewrittenUrl = `${currentBase}${input.url.slice(initialBase.length)}`;
-    return globalThis.fetch(new Request(rewrittenUrl, input), init);
-  }
-  return globalThis.fetch(input, init);
+function createDynamicBaseFetch(seedBaseUrl: string) {
+  const normalizedSeed = seedBaseUrl.replace(/\/+$/, "");
+  return (input: RequestInfo | URL, init?: RequestInit) => {
+    const currentBase = getBaseUrl().replace(/\/+$/, "");
+    if (
+      currentBase !== normalizedSeed &&
+      input instanceof Request &&
+      input.url.startsWith(`${normalizedSeed}/`)
+    ) {
+      const rewrittenUrl = `${currentBase}${input.url.slice(normalizedSeed.length)}`;
+      return globalThis.fetch(new Request(rewrittenUrl, input), init);
+    }
+    return globalThis.fetch(input, init);
+  };
 }
+
+const INITIAL_BASE_URL = getBaseUrl();
 
 export const openApiClient = createClient<paths>({
   baseUrl: INITIAL_BASE_URL,
-  fetch: dispatchOpenApiFetch,
+  fetch: createDynamicBaseFetch(INITIAL_BASE_URL),
 });
 
 openApiClient.use(getAuthMiddleware());
 
-export function createOpenApiClient<T extends {} = paths>(
-  baseUrl: string = getBaseUrl()
-) {
-  // Resolve fetch per call, as openApiClient does, so tests and the MSW worker see the current global.
+export function createOpenApiClient<T extends {} = paths>(baseUrl?: string) {
+  const resolvedSeed = baseUrl ?? getBaseUrl();
+  // Resolve fetch per call, as openApiClient does, so tests, Vite dev proxy, and the MSW worker see the current global and env.
   const client = createClient<T>({
-    baseUrl,
-    fetch: (...args) => globalThis.fetch(...args),
+    baseUrl: resolvedSeed,
+    fetch:
+      baseUrl === undefined
+        ? createDynamicBaseFetch(resolvedSeed)
+        : (...args) => globalThis.fetch(...args),
   });
   client.use(getAuthMiddleware());
   return client;

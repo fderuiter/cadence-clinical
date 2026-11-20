@@ -294,6 +294,43 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
       expect(sbpAfter.value.value).toBe("122");
       expect(sbpAfter.revision).toBe(2);
       expect(reread.signatures.length).toBe(1);
+
+      const listRes = await fetch(
+        `${origin}/api/v1/execution/forms?enrollment_id=00000000-0000-0000-0000-000000001001`, // deid-ignore
+        { headers: DEMO_HEADERS }
+      );
+      expect(listRes.status).toBe(200);
+      const summaries = await listRes.json();
+      const baselineSummary = summaries.find(
+        (s) => s.form_id === opened.form_id
+      );
+      expect(baselineSummary).toMatchObject({
+        complete: true,
+        missing_required_count: 0,
+        open_query_count: 1,
+        answered_query_count: 1,
+        signed: true,
+        signature_superseded: false,
+        signature_count: 1,
+      });
+
+      const unscheduledRes = await fetch(`${origin}/api/v1/execution/forms`, {
+        method: "POST",
+        headers: {
+          ...DEMO_HEADERS,
+          "X-Change-Reason": "Open unscheduled adverse event form",
+        },
+        body: JSON.stringify({
+          enrollment_id: "00000000-0000-0000-0000-000000001001", // deid-ignore
+          collection_spec_id: "form-adverse-event",
+          planned_activity_id: null,
+          collected_at: "2026-08-05T14:00:00Z", // deid-ignore
+        }),
+      });
+      expect(unscheduledRes.status).toBe(201);
+      const unscheduled = await unscheduledRes.json();
+      expect(unscheduled.planned_activity_id).toBeNull();
+      expect(unscheduled.collection_title).toBe("Adverse Event (CDASH AE)");
     });
 
     it("persists kernel observation corrections and enforces expected_version conflict checks", async () => {
