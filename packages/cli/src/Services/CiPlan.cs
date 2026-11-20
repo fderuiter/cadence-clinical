@@ -152,8 +152,7 @@ public static class CiPlan
     private const string Cli = "packages/cli/src/Cadence.Cli.csproj";
     private const string QualitySentinels = "dotnet-quality/Run Cadence quality sentinels";
     private const string StyleNodeInstall = "lint-and-static/Install Node dependencies";
-    private const string StyleUiBuild = "lint-and-static/Build UI package";
-    private const string PushOnly = "CI runs it only on a push to main";
+    private const string StyleFrontendBuild = "lint-and-static/Build frontend workspace";
     private const string RtmReport = "docs/SDLC/Requirements_Traceability_Matrix.md";
     private const string IqReport = "docs/SDLC/IQ_OQ_PQ_Execution_Report.md";
     private const string E2eJob = "accessibility-e2e"; // deid-ignore: the ci.yml job key, not an account number
@@ -207,7 +206,7 @@ public static class CiPlan
         var lintAndStatic = new CiJob("lint-and-static", "Lint and Static Verification",
         [
             new("lint-and-static", "Install Node dependencies") { Commands = [Pnpm("install", "--frozen-lockfile")] },
-            new("lint-and-static", "Build UI package") { Commands = [Pnpm("--filter", "ui", "build")] },
+            new("lint-and-static", "Build frontend workspace") { Commands = [Pnpm("build")] },
             new("lint-and-static", "Run frontend style and lint")
             {
                 Commands =
@@ -229,6 +228,12 @@ public static class CiPlan
                 ToolHint = "install ShellCheck (CI runs 'apt-get install shellcheck')",
                 Files = CiFileSource.ShellScripts,
                 Commands = [new CiCommand("shellcheck", [])],
+            },
+            new("lint-and-static", "Run installer checksum tests")
+            {
+                RequiredTool = "bash",
+                ToolHint = "install bash (Git for Windows includes it)",
+                Commands = [new CiCommand("bash", ["tests/test_installer_checksums.sh"])],
             },
             new("lint-and-static", "Run Markdown validation") { Commands = [NodeCli("check", "markdown")] },
             new("lint-and-static", "Validate web API clients against OpenAPI types") { Commands = [NodeCli("check", "api-clients")] },
@@ -315,7 +320,7 @@ public static class CiPlan
         var frontend = new CiJob("unit-tests", "Frontend Unit Tests",
         [
             new("unit-tests", "Install Node dependencies") { CoveredBy = StyleNodeInstall, Commands = [Pnpm("install", "--frozen-lockfile")] },
-            new("unit-tests", "Build UI package") { CoveredBy = StyleUiBuild, Commands = [Pnpm("--filter", "ui", "build")] },
+            new("unit-tests", "Build UI package") { CoveredBy = StyleFrontendBuild, Commands = [Pnpm("--filter", "ui", "build")] },
             new("unit-tests", "Run frontend unit tests") { Always = true, Commands = [Pnpm("-r", "test")] },
         ]);
 
@@ -354,7 +359,7 @@ public static class CiPlan
             {
                 NotRunLocally = "cadence ci does not download browsers; run 'pnpm exec playwright install chromium' once yourself",
             },
-            new(E2eJob, "Build UI package") { CoveredBy = StyleUiBuild, Commands = [Pnpm("--filter", "ui", "build")] },
+            new(E2eJob, "Build UI package") { CoveredBy = StyleFrontendBuild, Commands = [Pnpm("--filter", "ui", "build")] },
             new(E2eJob, "Run Subject Portal E2E Accessibility Tests") { Commands = [Pnpm("--filter", "subject-portal", "test:e2e")] },
             new(E2eJob, "Run Web Application E2E Accessibility Tests") { Commands = [Pnpm("--filter", "web", "test:e2e")] },
             new(E2eJob, "Run Browser-to-Database Correction Integration Test")
@@ -367,10 +372,7 @@ public static class CiPlan
                         "--filter", "FullyQualifiedName~BrowserCorrectionReachesTheDatabaseWithItsReason"),
                 ],
             },
-        ])
-        {
-            OnRequestOnly = $"{PushOnly}; run it with '--job {E2eJob}'",
-        };
+        ]);
 
         var compliance = new CiJob("compliance", "GxP Compliance & Qualification Reporting",
         [
