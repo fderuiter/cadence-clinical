@@ -563,6 +563,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2816: Retire Orphaned Legacy Web Type Schemas](adr/2026-11-19-retire-orphaned-legacy-web-type-schemas.md) | Current | - Status: Accepted |
 | [ADR-2546: Isolate Static Demo Builds with Stateful MSW Handlers](adr/2026-11-19-isolate-static-demo-builds-with-stateful-msw-handlers.md) | Current | - Status: Accepted |
 | [ADR-2817: Caller-Bound Participant Self-Service Wallet and Receipt OCR Capabilities](adr/2026-11-19-caller-bound-participant-self-service-wallet-and-receipt-ocr-capabilities.md) | Current | - Status: Accepted |
+| [ADR-2818: Clinical and Gateway Endpoints Take Time From IClock and Ban TimeProvider](adr/2026-11-20-clinical-and-gateway-endpoints-take-time-from-iclock-and-ban-timeprovider.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
@@ -716,10 +717,11 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 ## Documentation site
 
 `pnpm docs:dev` serves this folder with VitePress; `pnpm docs:build` builds the static site (validating
-OpenAPI, schema, RTM and Markdown gates when `CADENCE_DOCS_SKIP_CHECKS` is unset). Sidebar navigation is
-synthesized from this index (`docs/.vitepress/sidebar.mjs`), and the root guides (`README.md`,
-`ARCHITECTURE.md`, `AGENTS.md`, `CONTEXT.md`, `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md` and
-`LICENSE`) are staged into `docs/` so local search indexes them and links to them stay inside the portal.
+`rtm` on every run, plus `openapi`, `schema-doc` and `markdown` when `CADENCE_DOCS_SKIP_CHECKS` is unset).
+Sidebar navigation is synthesized from this index (`docs/.vitepress/sidebar.mjs`), and the root guides
+(`README.md`, `ARCHITECTURE.md`, `AGENTS.md`, `CONTEXT.md`, `CONTRIBUTING.md`, `SECURITY.md`,
+`SUPPORT.md` and `LICENSE`) are staged into `docs/` so local search indexes them and links to them stay
+inside the portal.
 
 Write relative links and heading anchors as you would for GitHub. On the site, links to unindexed files
 outside `docs/`, to non-Markdown files or to folders without an `index.md` open on GitHub

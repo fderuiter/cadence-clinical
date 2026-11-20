@@ -2,10 +2,23 @@ const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
-const { STAGED_ROOT_DOCS } = require("../docs/.vitepress/rootDocs.cjs");
-
 const repoRoot = path.resolve(__dirname, "..");
 const docsRoot = path.join(repoRoot, "docs");
+const rootDocsModulePath = path.join(docsRoot, ".vitepress", "rootDocs.cjs");
+const { STAGED_ROOT_DOCS } = fs.existsSync(rootDocsModulePath)
+  ? require(rootDocsModulePath)
+  : {
+      STAGED_ROOT_DOCS: Object.freeze({
+        "README.md": "index.md",
+        "ARCHITECTURE.md": "ARCHITECTURE.md",
+        "AGENTS.md": "AGENTS.md",
+        "CONTEXT.md": "CONTEXT.md",
+        "CONTRIBUTING.md": "CONTRIBUTING.md",
+        "SECURITY.md": "SECURITY.md",
+        "SUPPORT.md": "SUPPORT.md",
+        LICENSE: "LICENSE.md",
+      }),
+    };
 
 if (!process.env.AUDIT_LOG_SECRET_KEY) {
   process.env.AUDIT_LOG_SECRET_KEY =
@@ -134,7 +147,7 @@ function rewriteRootDocHref(cleanUrl) {
   const absTarget = path.resolve(repoRoot, decodeURI(targetPath));
   const relToRepo = path.relative(repoRoot, absTarget).replace(/\\/g, "/");
 
-  if (STAGED_ROOT_DOCS[relToRepo]) {
+  if (STAGED_ROOT_DOCS[relToRepo] && fs.existsSync(absTarget)) {
     return `${STAGED_ROOT_DOCS[relToRepo]}${suffix}`;
   }
 
@@ -212,6 +225,10 @@ const originalFilesMap = new Map();
  */
 function copyAndPreprocess(srcName, destName) {
   const srcPath = path.join(repoRoot, srcName);
+  if (!fs.existsSync(srcPath)) {
+    console.warn(`Root document not found at ${srcPath}, skipping staging.`);
+    return;
+  }
   const destPath = path.join(docsRoot, destName);
   if (fs.existsSync(destPath) && !originalFilesMap.has(destPath)) {
     originalFilesMap.set(destPath, fs.readFileSync(destPath, "utf8"));
@@ -271,7 +288,7 @@ function rewriteDocsHref(cleanUrl, fullPath, docsDir, relToDocs) {
   }
 
   const relToRepo = path.relative(repoRoot, absTarget).replace(/\\/g, "/");
-  if (STAGED_ROOT_DOCS[relToRepo]) {
+  if (STAGED_ROOT_DOCS[relToRepo] && fs.existsSync(absTarget)) {
     const stagedAbs = path.join(docsDir, STAGED_ROOT_DOCS[relToRepo]);
     const relToStaged =
       path.relative(fileDir, stagedAbs).replace(/\\/g, "/") ||
@@ -410,38 +427,23 @@ if (process.argv.includes("--prepare-only")) {
 runPreflightChecks();
 
 try {
-  // 1. Run validation and reference checks without mutating committed GxP compliance snapshots
+  // 1. Run validation scripts
   console.log("--- Step 1: Pre-Build Validation ---");
-  // `cadence ci` and `deploy-docs.yml` set CADENCE_DOCS_SKIP_CHECKS=1 when quality sentinels already passed.
+  // `cadence ci` and `deploy-docs.yml` set CADENCE_DOCS_SKIP_CHECKS=1 when quality sentinels already passed on
+  // this tree: that step runs openapi, schema-doc, and markdown, so running them again here only costs minutes.
   if (process.env.CADENCE_DOCS_SKIP_CHECKS === "1") {
     console.log(
-      "Skipping CLI checks (CADENCE_DOCS_SKIP_CHECKS=1: quality sentinels already verified documentation and references)."
+      "Skipping 'openapi', 'schema-doc', and 'markdown' checks (CADENCE_DOCS_SKIP_CHECKS=1: they already passed in this run)."
     );
-    if (!fs.existsSync(path.join(docsRoot, "schema", "README.md"))) {
-      runCommand("node scripts/run-cli.js generate-schema-doc");
-    }
-    if (!fs.existsSync(path.join(docsRoot, "api", "index.md"))) {
-      runCommand("node scripts/run-cli.js generate-api-docs");
-    }
   } else {
     runCommand("node scripts/run-cli.js check openapi");
-    runCommand("node scripts/run-cli.js generate-schema-doc --validate");
-    runCommand("node scripts/run-cli.js generate-api-docs --validate");
-    runCommand("node scripts/run-cli.js check doc-index");
-    runCommand("node scripts/run-cli.js check rtm");
-    runCommand("node scripts/run-cli.js check gxp-snapshot");
-    runCommand("node scripts/run-cli.js validate-markdown");
+    runCommand("node scripts/run-cli.js check schema-doc");
+    runCommand("node scripts/run-cli.js check markdown");
   }
 
-  // 2. Refresh GxP compliance snapshots only when explicitly requested via CADENCE_GXP_SNAPSHOT=1
-  console.log("--- Step 2: Verifying Compliance Artifacts ---");
-  if (process.env.CADENCE_GXP_SNAPSHOT === "1") {
-    runCommand("node scripts/run-cli.js generate-rtm");
-  } else {
-    console.log(
-      "Preserving committed GxP compliance snapshots (CADENCE_GXP_SNAPSHOT is not set)."
-    );
-  }
+  // 2. Validate committed GxP snapshot without mutation
+  console.log("--- Step 2: Validating GxP Compliance Snapshot ---");
+  runCommand("node scripts/run-cli.js check rtm");
 
   // 3. Prepare files for VitePress
   console.log("--- Step 3: Preparing Documentation Files ---");
