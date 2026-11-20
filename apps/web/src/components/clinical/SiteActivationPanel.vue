@@ -104,10 +104,8 @@
 
     <p v-if="!props.studyCode" class="unavailable-note">
       Milestones, monitoring visits, delegation, financials, start-up and RTSM
-      aren't available yet: no Cadence service serves them. See
-      <a :href="UNAVAILABLE_SCREENS_ISSUE" target="_blank" rel="noopener"
-        >#4829</a
-      >.
+      aren't available yet in this pre-release environment (Orbit and Allocate
+      roadmap). See <a href="/plans">plans &amp; product-family roadmap</a>.
     </p>
   </section>
 </template>
@@ -117,7 +115,6 @@ import { computed, onMounted, ref, watch } from "vue";
 import { executionApi } from "../../api/executionApi";
 import { useClinicalStore } from "../../stores/clinical";
 import { useToastStore } from "../../stores/toasts.js";
-import { UNAVAILABLE_SCREENS_ISSUE } from "../../router/availability.js";
 
 /**
  * Site activation against Execution: the site's eTMF completeness for SITE_ACTIVATION, and activation once

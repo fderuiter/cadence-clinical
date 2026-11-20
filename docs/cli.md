@@ -170,19 +170,19 @@ Runs the jobs of `.github/workflows/ci.yml` on this machine, because GitHub Acti
 repository until 2027 (#5017). Each step runs the same command as in CI, in the same order, from the repository root.
 
 ```bash
-pnpm cadence ci                         # lint-and-static, dotnet-quality, native-aot-build, docs-build, security, unit-tests, dotnet-tests, accessibility-e2e and compliance
+pnpm cadence ci                         # actionlint, lint-and-static, dotnet-quality, native-aot-build, docs-build, security, unit-tests, dotnet-tests, accessibility-e2e and compliance
 pnpm cadence ci --job dotnet-tests      # one job (repeat --job for more)
 pnpm cadence ci --job compliance        # a job and the jobs it needs (unit-tests, dotnet-tests)
 pnpm cadence ci --job accessibility-e2e # the Playwright E2E and browser-to-database job alone
 pnpm cadence ci --list                  # what each step runs locally, without running it
 ```
 
-| Option            | Description                                                                                                                                                                                    |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `-j\|--job <job>` | Runs this job and the jobs it needs. Jobs: `lint-and-static`, `dotnet-quality`, `native-aot-build`, `docs-build`, `security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`. |
-| `--allow-skip`    | Accepts a run whose database tests did not execute: without PostgreSQL, or with skips in the integration and E2E results.                                                                      |
-| `--base <ref>`    | The ref that changed files are compared with, for the duplication, DEID and detect-secrets steps. Default: `origin/main`.                                                                      |
-| `--list`          | Prints each step and what it runs locally, then exits `0`.                                                                                                                                     |
+| Option            | Description                                                                                                                                                                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `-j\|--job <job>` | Runs this job and the jobs it needs. Jobs: `actionlint`, `lint-and-static`, `dotnet-quality`, `native-aot-build`, `docs-build`, `security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`.                                           |
+| `--allow-skip`    | Skips steps whose required binary (`actionlint`, `hadolint`, `shellcheck`, `detect-secrets-hook`, `bash`) is missing on `PATH` with the install hint, and accepts a run whose database tests did not execute (without PostgreSQL or with skipped TRX). |
+| `--base <ref>`    | The ref that changed files are compared with, for the duplication, DEID and detect-secrets steps. Default: `origin/main`.                                                                                                                              |
+| `--list`          | Prints each step and what it runs locally, then exits `0`.                                                                                                                                                                                             |
 
 It follows the workflow's rules: inside a job, a failed step stops the later steps unless CI gives them `if: always()`,
 and the compliance job runs only when the frontend and .NET test steps passed. The run itself never stops early. It
@@ -215,10 +215,12 @@ Where it differs from CI:
   `Check GxP Snapshot Policy` (`cadence check gxp-snapshot`) then fails if the branch changed the committed reports. With
   `CADENCE_GXP_SNAPSHOT=1` it runs `cadence gxp diff` instead, which fails if the regenerated reports differ from the
   committed ones outside their evidence block, and puts the committed copies back when they match.
-- **Tools are not installed for you.** Hadolint, ShellCheck and detect-secrets run when they are on `PATH` and are
-  reported as skipped, with the install command, when they are not.
-- **Not run:** the Playwright browser install, and the jobs that act on GitHub or container registries (`actionlint`,
-  `container-security`, `ci-gate`, `classify`, `automerge`, `release-and-archive`, `deploy-docs`).
+- **Required binaries must be available.** `actionlint` (`rhysd/actionlint` in CI), Hadolint, ShellCheck,
+  `detect-secrets-hook` (resolved from `.cadence/venv`, `.venv`, or `PATH`) and `bash` are not installed for you: when
+  any required binary is missing, the step fails with the install hint so an incomplete environment cannot report green.
+  Pass `--allow-skip` to record missing tool steps as skipped, with the install hint, instead of failing.
+- **Not run:** the Playwright browser install, and the jobs that act on GitHub or container registries
+  (`container-security`, `ci-gate`, `classify`, `automerge`, `release-and-archive`, `deploy-docs`).
 - **Commit first.** CI checks out the commit, so run `cadence ci` on committed work: gates that list files with git (the
   full DEID scan, for example) do not see untracked files, and a changed-files step falls back to the working tree only
   when the branch has no commits over the base.

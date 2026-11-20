@@ -336,6 +336,23 @@ public sealed class PreCommitGuardrailsTests : IDisposable
 
         var staged = PreCommitOpenApiService.GetStagedFiles(_tempDir);
         staged.Should().Equal("shared.txt");
+
+        var changedSinceBase = PreCommitOpenApiService.TryGetChangedFilesSinceBase(_tempDir, "main");
+        changedSinceBase.Should().Equal("feature-only.txt", "shared.txt");
+    }
+
+    [Fact]
+    public void CanonicalExcludePattern_ExcludesGeneratedEfMigrationMetadata_WhileScanningMigrationCode()
+    {
+        SecretsBaselineCleanerService.IsExcludedFile(
+            "packages/kernel/src/Cadence.Kernel.Persistence/Migrations/20261120152149_CommercialSubscriptionsAndEntitlements.Designer.cs")
+            .Should().BeTrue();
+        SecretsBaselineCleanerService.IsExcludedFile(
+            "packages/kernel/src/Cadence.Kernel.Persistence/Migrations/idempotent_migration.sql")
+            .Should().BeTrue();
+        SecretsBaselineCleanerService.IsExcludedFile(
+            "packages/kernel/src/Cadence.Kernel.Persistence/Migrations/20261120152149_CommercialSubscriptionsAndEntitlements.cs")
+            .Should().BeFalse();
     }
 
     private (int ExitCode, string Stderr) RunHook(string hookPath, string pathEnv, string homeDir)

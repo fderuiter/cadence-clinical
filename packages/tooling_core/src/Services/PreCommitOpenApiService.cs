@@ -181,19 +181,27 @@ public static class PreCommitOpenApiService
             return null;
         }
 
-        string? mergeBase = RunGitLines(repoRoot, "merge-base", baseRef, "HEAD")?.FirstOrDefault();
-        if (string.IsNullOrEmpty(mergeBase))
+        string? compareBase = null;
+        string? mergeHead = RunGitLines(repoRoot, "rev-parse", "--verify", "-q", "MERGE_HEAD")?.FirstOrDefault();
+        if (!string.IsNullOrEmpty(mergeHead) &&
+            RunGitLines(repoRoot, "merge-base", "--is-ancestor", baseRef, mergeHead) is not null)
+        {
+            compareBase = RunGitLines(repoRoot, "rev-parse", "--verify", "-q", baseRef)?.FirstOrDefault();
+        }
+
+        compareBase ??= RunGitLines(repoRoot, "merge-base", baseRef, "HEAD")?.FirstOrDefault();
+        if (string.IsNullOrEmpty(compareBase))
         {
             return null;
         }
 
         var changed = new SortedSet<string>(StringComparer.Ordinal);
-        foreach (string file in RunGitLines(repoRoot, "diff", "--name-only", "--diff-filter=d", mergeBase) ?? [])
+        foreach (string file in RunGitLines(repoRoot, "diff", "--name-only", "--diff-filter=d", compareBase) ?? [])
         {
             changed.Add(file);
         }
 
-        foreach (string file in RunGitLines(repoRoot, "diff", "--cached", "--name-only", "--diff-filter=d") ?? [])
+        foreach (string file in RunGitLines(repoRoot, "diff", "--cached", "--name-only", "--diff-filter=d", compareBase) ?? [])
         {
             changed.Add(file);
         }

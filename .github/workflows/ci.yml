@@ -369,7 +369,7 @@ jobs:
           mapfile -d '' -t CHANGED_FILES < <(git diff --name-only --diff-filter=ACMR -z "$DIFF_RANGE")
           if [ "${#CHANGED_FILES[@]}" -gt 0 ]; then
             rc=0
-            detect-secrets-hook --baseline .secrets.baseline --exclude-files '(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|uv\.lock|docs/CDISC/|docs/NCI/|docs/openapi/|docs/schema/|docs/SDLC/runs/|report.*\.xml|coverage.*\.xml|\.cadence/|dist/|\.(pdf|xlsx|xls|docx|doc|png|jpg|jpeg|gif|svg|ico|woff|woff2|eot|ttf|otf|mp4|webm|mp3|wav|zip|tar\.gz|gz|sqlite|db)$)' "${CHANGED_FILES[@]}" || rc=$?
+            detect-secrets-hook --baseline .secrets.baseline --exclude-files '(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|uv\.lock|docs/CDISC/|docs/NCI/|docs/openapi/|docs/schema/|docs/SDLC/runs/|Migrations/[^/]+\.Designer\.cs$|Migrations/idempotent_migration\.sql$|report.*\.xml|coverage.*\.xml|\.cadence/|dist/|\.(pdf|xlsx|xls|docx|doc|png|jpg|jpeg|gif|svg|ico|woff|woff2|eot|ttf|otf|mp4|webm|mp3|wav|zip|tar\.gz|gz|sqlite|db)$)' "${CHANGED_FILES[@]}" || rc=$?
             git checkout -- .secrets.baseline
             if [ "$rc" -ne 0 ] && [ "$rc" -ne 3 ]; then
               exit "$rc"

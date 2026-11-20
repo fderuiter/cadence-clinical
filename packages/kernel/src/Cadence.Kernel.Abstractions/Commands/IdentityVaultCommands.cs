@@ -46,6 +46,7 @@ public sealed record RecordSiteLocalIdentity(
 /// </summary>
 [KernelCapability("identity.reveal.person", VerbClass.Execute, Resource = nameof(PersonId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
 public sealed record RevealPersonIdentity(
     TenantId TenantId,
     PersonId PersonId,
@@ -64,6 +65,7 @@ public sealed record RevealPersonIdentity(
 /// <summary>Audits the disclosure of a participant's site-local identifier (K-IDN-1), as <see cref="RevealPersonIdentity"/>.</summary>
 [KernelCapability("identity.reveal.site_local", VerbClass.Execute, Resource = nameof(ParticipantId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
 public sealed record RevealSiteLocalIdentity(
     TenantId TenantId,
     ParticipantId ParticipantId,
@@ -85,6 +87,7 @@ public sealed record RevealSiteLocalIdentity(
 /// </summary>
 [KernelCapability("identity.erase.person", VerbClass.Approve, Resource = nameof(PersonId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
 public sealed record ErasePersonIdentity(
     TenantId TenantId,
     PersonId PersonId,
@@ -94,6 +97,7 @@ public sealed record ErasePersonIdentity(
 /// <summary>Erases a participant's site-local identifier by crypto-shredding, as <see cref="ErasePersonIdentity"/>.</summary>
 [KernelCapability("identity.erase.site_local", VerbClass.Approve, Resource = nameof(ParticipantId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
 public sealed record EraseSiteLocalIdentity(
     TenantId TenantId,
     ParticipantId ParticipantId,
@@ -120,6 +124,7 @@ public sealed record LinkParticipantToPerson(
 /// </summary>
 [KernelCapability("identity.reveal.links", VerbClass.Execute, Resource = nameof(PersonId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
 public sealed record RevealPersonLinks(
     TenantId TenantId,
     PersonId PersonId,

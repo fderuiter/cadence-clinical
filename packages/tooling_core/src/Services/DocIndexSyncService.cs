@@ -32,7 +32,11 @@ public static partial class DocIndexSyncService
     {
         "AGENTS.md",
         "ARCHITECTURE.md",
+        "CONTEXT.md",
+        "CONTRIBUTING.md",
         "LICENSE.md",
+        "SECURITY.md",
+        "SUPPORT.md",
         "index.md"
     };
 
