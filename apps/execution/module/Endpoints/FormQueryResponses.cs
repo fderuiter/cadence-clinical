@@ -8,16 +8,26 @@ using Cadence.Modules.Execution.Domain;
 
 namespace Cadence.Modules.Execution.Endpoints;
 
-/// <summary>A query to raise on one of a form's values, at the revision the form read showed.</summary>
-/// <param name="ObservationId">The kernel observation holding the value.</param>
-/// <param name="Revision">The value's current revision.</param>
+/// <summary>A query to raise on one of a form's values at the revision the form read showed, or on a blank item by item id.</summary>
+/// <param name="ObservationId">The kernel observation holding the value; omit or pass empty when raising on a blank item by <paramref name="ItemId"/>.</param>
+/// <param name="Revision">The value's current revision when <paramref name="ObservationId"/> is supplied.</param>
 /// <param name="Text">The question.</param>
 /// <param name="QueryId">The query's id, when the client chooses it; otherwise the server does.</param>
-public sealed record RaiseFormQueryRequest(Guid ObservationId, int Revision, string Text, Guid? QueryId);
+/// <param name="ItemId">The CollectionSpec item id when raising a missing-data query on a blank item.</param>
+public sealed record RaiseFormQueryRequest(Guid? ObservationId, int? Revision, string Text, Guid? QueryId = null, string? ItemId = null);
 
 /// <summary>An answer to a query, or why it is reopened.</summary>
 /// <param name="Text">The text.</param>
 public sealed record FormQueryTextRequest(string Text);
+
+/// <summary>Study, site, participant and form metadata attached to a query response when resolved.</summary>
+internal sealed record FormQueryContext(
+    Guid? StudyId = null,
+    Guid? StudySiteId = null,
+    string? SiteCode = null,
+    string? SubjectCode = null,
+    string? CollectionSpecId = null,
+    string? PlannedActivityId = null);
 
 /// <summary>A data query about one revision of one eCRF value (#5461).</summary>
 /// <param name="QueryId">The query.</param>
@@ -34,6 +44,12 @@ public sealed record FormQueryTextRequest(string Text);
 /// <param name="RaisedBy">Who raised it.</param>
 /// <param name="RaisedAt">When it was raised.</param>
 /// <param name="Version">The query's version, 1 when raised.</param>
+/// <param name="StudyId">The study the form belongs to, when resolved.</param>
+/// <param name="StudySiteId">The study site of the enrollment, when resolved.</param>
+/// <param name="SiteCode">The human-facing site code, when resolved.</param>
+/// <param name="SubjectCode">The participant's subject code in the study, when resolved.</param>
+/// <param name="CollectionSpecId">The CollectionSpec of the form, when resolved.</param>
+/// <param name="PlannedActivityId">The visit of the form, when resolved.</param>
 public sealed record FormQueryResponse(
     Guid QueryId,
     Guid FormId,
@@ -48,14 +64,20 @@ public sealed record FormQueryResponse(
     IReadOnlyList<FormQueryMessageResponse> Messages,
     string RaisedBy,
     DateTimeOffset RaisedAt,
-    long Version)
+    long Version,
+    Guid? StudyId = null,
+    Guid? StudySiteId = null,
+    string? SiteCode = null,
+    string? SubjectCode = null,
+    string? CollectionSpecId = null,
+    string? PlannedActivityId = null)
 {
     /// <summary>A stored query, with the current revisions of its form's values.</summary>
-    internal static FormQueryResponse From(FormQuery query, IReadOnlyDictionary<ObservationId, int> revisions) =>
-        From(FormQueryState.Of(query, query.VersionIndex), revisions);
+    internal static FormQueryResponse From(FormQuery query, IReadOnlyDictionary<ObservationId, int> revisions, FormQueryContext? context = null) =>
+        From(FormQueryState.Of(query, query.VersionIndex), revisions, context);
 
     /// <summary>A query after a command, with the current revisions of its form's values.</summary>
-    internal static FormQueryResponse From(FormQueryState state, IReadOnlyDictionary<ObservationId, int> revisions)
+    internal static FormQueryResponse From(FormQueryState state, IReadOnlyDictionary<ObservationId, int> revisions, FormQueryContext? context = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(revisions);
@@ -76,7 +98,13 @@ public sealed record FormQueryResponse(
             [.. state.Messages.Select(m => new FormQueryMessageResponse(Lower(m.Kind), m.Text, m.By, m.At))],
             raised.By,
             raised.At,
-            state.Version);
+            state.Version,
+            context?.StudyId,
+            context?.StudySiteId,
+            context?.SiteCode,
+            context?.SubjectCode,
+            context?.CollectionSpecId,
+            context?.PlannedActivityId);
     }
 
     private static string Lower<T>(T value)

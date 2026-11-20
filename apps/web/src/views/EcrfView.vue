@@ -113,7 +113,17 @@
           :enrollment-id="routeQuery('enrollmentId')"
           :collection-spec-id="routeQuery('collectionSpecId')"
           :planned-activity-id="routeQuery('plannedActivityId')"
-          :can-manage-queries="canManageQueries(authStore)"
+          :highlight-item-id="routeQuery('itemId')"
+          :can-manage-queries="
+            authStore.isAuthenticated
+              ? canManageQueries(authStore)
+              : activeUserRole === 'cra'
+          "
+          :can-verify-source="
+            authStore.isAuthenticated
+              ? canVerifySource(authStore)
+              : activeUserRole === 'cra'
+          "
           @dirty-change="formPanelDirty = $event"
         />
 
@@ -320,7 +330,7 @@ import { useSchemaIngestion } from "../composables/useSchemaIngestion";
 import { useEcrfDrafts } from "../composables/useEcrfDrafts";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { isDemoBuild } from "../utils/demoMode.js";
-import { canManageQueries } from "../canvas/authority";
+import { canManageQueries, canVerifySource } from "../canvas/authority";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
