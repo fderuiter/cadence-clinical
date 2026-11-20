@@ -63,6 +63,45 @@ describe("executionApi.listSubjects (#4828)", () => {
     expect(error.status).toBe(400);
     expect(error.message).toBe("study_id is required.");
   });
+
+  it("reads full subject detail by subject code via GET /api/v1/execution/subjects/{subjectId}", async () => {
+    const detail = {
+      subject_id: "017-0001",
+      study_id: "CAD-101",
+      status: "ACTIVE",
+      site_id: "017",
+      treatment_group: null,
+      randomization_seed: null,
+      investigational_product_id: null,
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, detail));
+
+    const result = await executionApi.getSubjectDetail("017-0001");
+
+    expect(result).toEqual(detail);
+    const request = fetchSpy.mock.calls[0][0];
+    const url = new URL(request.url);
+    expect(request.method).toBe("GET");
+    expect(url.pathname).toBe("/api/v1/execution/subjects/017-0001");
+  });
+
+  it("raises a 404 ApiError when GetSubjectDetail finds no matching subject code", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse(
+        404,
+        { title: "Not Found", detail: "Subject 'SUBJ-404' was not found." },
+        "application/problem+json"
+      )
+    );
+
+    const error = await executionApi
+      .getSubjectDetail("SUBJ-404")
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.status).toBe(404);
+    expect(error.message).toBe("Subject 'SUBJ-404' was not found.");
+  });
 });
 
 describe("executionApi site activation", () => {

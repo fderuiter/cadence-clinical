@@ -17,6 +17,7 @@ import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 vi.mock("../../src/api/executionApi", () => ({
   executionApi: {
     listSubjects: vi.fn(),
+    getSubjectDetail: vi.fn(),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
   },
@@ -274,14 +275,146 @@ describe("Clinical Canvas: a participant's data", () => {
     expect(ecrfQueriesApi.listForEnrollment).not.toHaveBeenCalled();
   });
 
-  it("says a participant opened by link isn't loaded instead of guessing its code", async () => {
-    await mountAt(RECORD_URL);
+  it("hydrates a participant opened by cold link, showing a loading message before resolving", async () => {
+    let resolveSubjects;
+    vi.mocked(executionApi.listSubjects).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSubjects = resolve;
+        })
+    );
+
+    await router.push(RECORD_URL);
+    await router.isReady();
+    wrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [pinia, router] }, attachTo: document.body }
+    );
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find("#record-loading").text()).toContain(
+      "Loading participant"
+    );
+    expect(wrapper.find("#record-not-loaded").exists()).toBe(false);
+
+    resolveSubjects({
+      items: [PARTICIPANT],
+      total: 1,
+      limit: 200,
+      offset: 0,
+    });
+    await flushPromises();
+
+    expect(executionApi.listSubjects).toHaveBeenCalledWith({
+      studyId: "CAD-101",
+      limit: 200,
+      offset: 0,
+    });
+    expect(findKernelEnrollmentRef).toHaveBeenCalledWith(
+      "CAD-101",
+      "017",
+      "017-0001"
+    );
+    expect(wrapper.find("#participant-record-title").text()).toBe("017-0001");
+    expect(wrapper.find("#canvas-inspector-title").text()).toBe("017-0001");
+    expect(wrapper.find("#record-not-loaded").exists()).toBe(false);
+  });
+
+  it("says a participant opened by link isn't loaded when absent or forbidden instead of guessing its code", async () => {
+    const unknownId = "0192f3c4-5e6a-7b8c-9d0e-000000000099";
+    await mountAt(
+      `/studies/CAD-101?stage=conduct&participant=participant:${unknownId}`
+    );
 
     expect(wrapper.find("#record-not-loaded").text()).toContain(
       "isn't among those loaded for CAD-101"
     );
     expect(findKernelEnrollmentRef).not.toHaveBeenCalled();
-    expect(executionApi.listSubjects).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+    vi.mocked(executionApi.listSubjects).mockRejectedValueOnce(
+      new ApiError("Forbidden", 403)
+    );
+    await mountAt(
+      `/studies/CAD-102?stage=conduct&participant=participant:${PARTICIPANT_ID}`
+    );
+    expect(wrapper.find("#record-not-loaded").text()).toContain(
+      "isn't among those loaded for CAD-102"
+    );
+  });
+
+  it("hydrates a cold form link via ensureParticipantById", async () => {
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue({
+      form_id: FORM_ID,
+      enrollment_id: ENROLLMENT_ID,
+      participant_id: PARTICIPANT_ID,
+      protocol_version_id: "0192f3c4-5e6a-7b8c-9d0e-00000000b001",
+      collection_spec_id: "VS",
+      collection_title: "Vital Signs",
+      planned_activity_id: "WEEK2",
+      collected_at: "2027-03-14T09:00:00Z",
+      opened_at: "2027-03-14T09:00:00Z",
+      opened_by: "crc1",
+      complete: false,
+      missing_required: [],
+      content_hash: "sha256:abc",
+      version: 1,
+      locks: [],
+      assertions: [],
+      signatures: [],
+      items: [],
+    });
+    vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([]);
+
+    await mountAt(
+      `/studies/CAD-101?stage=conduct&form=collection_instance:${FORM_ID}`
+    );
+
+    expect(wrapper.find("#zoom-participant").text()).toBe("017-0001");
+    expect(wrapper.find("#canvas-form-back").text()).toBe("Back to 017-0001");
+    expect(wrapper.find("#canvas-inspector-title").text()).toBe("017-0001");
+  });
+
+  it("hydrates a cold observation link via resolveParticipantByCode", async () => {
+    vi.mocked(executionApi.getSubjectDetail).mockResolvedValue({
+      subject_id: "017-0001",
+      study_id: "CAD-101",
+      status: "ACTIVE",
+      site_id: "017",
+      treatment_group: null,
+      randomization_seed: null,
+      investigational_product_id: null,
+    });
+    vi.mocked(kernelApi.getObservation).mockResolvedValue({
+      ref: `observation:${OBSERVATION_ID}@1`,
+      enrollment_ref: `enrollment:${ENROLLMENT_ID}`,
+      concept: "concept:systolic@1",
+      value: {
+        type: "quantity",
+        value: 120,
+        unit: "mm[Hg]",
+        comparator: null,
+      },
+      observed_at: "2027-03-14T09:00:00Z",
+      version: 1,
+      locks: [],
+      revisions: [],
+      assertions: [],
+      audit: [],
+    });
+    vi.mocked(kernelApi.getZoomPath).mockResolvedValue([
+      { level: "study_site", mask: null, label: "017" },
+      { level: "enrollment", mask: null, label: "017-0001" },
+    ]);
+
+    await mountAt(
+      `/studies/CAD-101?stage=conduct&observation=observation:${OBSERVATION_ID}`
+    );
+
+    expect(executionApi.getSubjectDetail).toHaveBeenCalledWith("017-0001");
+    expect(wrapper.find("#zoom-participant").text()).toBe("017-0001");
+    expect(wrapper.find("#observation-back").text()).toBe("Back to 017-0001");
+    expect(wrapper.find("#canvas-inspector-title").text()).toBe("017-0001");
   });
 
   describe("queries", () => {
