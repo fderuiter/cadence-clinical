@@ -10,6 +10,7 @@ import { ApiError } from "../../src/api/client";
 import {
   findKernelEnrollmentRef,
   findStudyScheduleOptions,
+  findStudySites,
 } from "../../src/canvas/kernelStudy";
 import { useAuthStore } from "../../src/stores/auth";
 import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
@@ -17,6 +18,7 @@ import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 vi.mock("../../src/api/executionApi", () => ({
   executionApi: {
     listSubjects: vi.fn(),
+    getSubject: vi.fn(),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
   },
@@ -65,6 +67,7 @@ vi.mock("../../src/canvas/kernelStudy", async (importOriginal) => {
     ...actual,
     findKernelEnrollmentRef: vi.fn(),
     findStudyScheduleOptions: vi.fn(async () => null),
+    findStudySites: vi.fn(async () => []),
   };
 });
 
@@ -158,6 +161,11 @@ describe("Clinical Canvas: a participant's data", () => {
       limit: 50,
       offset: 0,
     });
+    vi.mocked(executionApi.getSubject).mockRejectedValue(
+      new ApiError("Subject not found", 404)
+    );
+    vi.mocked(findStudySites).mockReset();
+    vi.mocked(findStudySites).mockResolvedValue([]);
     for (const fn of Object.values(ecrfFormsApi)) vi.mocked(fn).mockReset();
     vi.mocked(ecrfFormsApi.listForEnrollment).mockResolvedValue([
       formSummary(),
@@ -277,11 +285,111 @@ describe("Clinical Canvas: a participant's data", () => {
   it("says a participant opened by link isn't loaded instead of guessing its code", async () => {
     await mountAt(RECORD_URL);
 
+    expect(executionApi.getSubject).toHaveBeenCalledWith(PARTICIPANT_ID);
     expect(wrapper.find("#record-not-loaded").text()).toContain(
       "isn't among those loaded for CAD-101"
     );
     expect(findKernelEnrollmentRef).not.toHaveBeenCalled();
     expect(executionApi.listSubjects).not.toHaveBeenCalled();
+  });
+
+  it("resolves a deep-linked participant record on fresh reload via executionApi.getSubject", async () => {
+    vi.mocked(executionApi.getSubject).mockResolvedValue(PARTICIPANT);
+
+    await mountAt(RECORD_URL);
+
+    expect(executionApi.getSubject).toHaveBeenCalledWith(PARTICIPANT_ID);
+    expect(findKernelEnrollmentRef).toHaveBeenCalledWith(
+      "CAD-101",
+      "017",
+      PARTICIPANT.subject_id
+    );
+    expect(wrapper.find("#record-not-loaded").exists()).toBe(false);
+    expect(wrapper.find("#record-forms").text()).toContain("Vital Signs");
+    expect(wrapper.find("#zoom-participant").attributes("aria-current")).toBe(
+      "page"
+    );
+    expect(wrapper.find("#canvas-inspector-title").text()).toBe(
+      PARTICIPANT.subject_id
+    );
+  });
+
+  it("resolves a deep-linked ?node=participant:<id> selection in the inspector even when off the first page", async () => {
+    vi.mocked(executionApi.listSubjects).mockResolvedValue({
+      items: [],
+      total: 0,
+      limit: 50,
+      offset: 0,
+    });
+    vi.mocked(executionApi.getSubject).mockResolvedValue(PARTICIPANT);
+
+    await mountAt(
+      `/studies/CAD-101?section=participants&node=participant:${PARTICIPANT_ID}`
+    );
+
+    expect(executionApi.getSubject).toHaveBeenCalledWith(PARTICIPANT_ID);
+    expect(wrapper.find("#canvas-inspector-title").text()).toBe(
+      PARTICIPANT.subject_id
+    );
+  });
+
+  it("shows #record-not-loaded when executionApi.getSubject returns a subject from another study", async () => {
+    vi.mocked(executionApi.getSubject).mockResolvedValue({
+      ...PARTICIPANT,
+      study_id: "OTHER-STUDY",
+    });
+
+    await mountAt(RECORD_URL);
+
+    expect(wrapper.find("#record-not-loaded").exists()).toBe(true);
+    expect(findKernelEnrollmentRef).not.toHaveBeenCalled();
+  });
+
+  it("filters participants by search query and site dropdown while syncing URL query parameters", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.mocked(findStudySites).mockResolvedValue([
+        { code: "017", title: "Site 017", ref: "study_site:s1" },
+        { code: "022", title: "Boston General", ref: "study_site:s2" },
+      ]);
+
+      await mountAt("/studies/CAD-101?section=participants");
+
+      const siteSelect = wrapper.find("#participants-site");
+      expect(siteSelect.exists()).toBe(true);
+      expect(siteSelect.text()).toContain("022 — Boston General");
+
+      await siteSelect.setValue("022");
+      await flushPromises();
+      expect(router.currentRoute.value.query).toMatchObject({
+        stage: "conduct",
+        section: "participants",
+        site: "022",
+      });
+
+      const searchInput = wrapper.find("#participants-search");
+      expect(searchInput.exists()).toBe(true);
+      await searchInput.setValue("SUBJ-9");
+      await vi.advanceTimersByTimeAsync(300);
+      await flushPromises();
+
+      expect(router.currentRoute.value.query).toMatchObject({
+        stage: "conduct",
+        section: "participants",
+        site: "022",
+        q: "SUBJ-9",
+      });
+      expect(executionApi.listSubjects).toHaveBeenLastCalledWith({
+        studyId: "CAD-101",
+        siteId: "022",
+        status: undefined,
+        q: "SUBJ-9",
+        limit: 50,
+        offset: 0,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   describe("queries", () => {

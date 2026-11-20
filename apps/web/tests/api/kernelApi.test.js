@@ -6,6 +6,7 @@ import {
   kernelApi,
 } from "../../src/api/kernelApi";
 import { ApiError } from "../../src/api/client";
+import { useAuthStore } from "../../src/stores/auth";
 
 const STUDY = "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e@3";
 const VERSION = "protocol_version:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6f";
@@ -458,5 +459,103 @@ describe("isMasked", () => {
       true
     );
     expect(isMasked({ kind: "study", ref: STUDY, mask: null })).toBe(false);
+  });
+});
+
+describe("kernelApi simulation and matrix gap check", () => {
+  let fetchSpy;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    fetchSpy = vi.spyOn(globalThis, "fetch");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    fetchSpy.mockRestore();
+  });
+
+  it("simulates a stored protocol version through the authenticated OpenAPI client and configured base URL", async () => {
+    vi.stubEnv("VITE_API_BASE_URL", "https://api.cadence.example");
+    const auth = useAuthStore();
+    vi.spyOn(auth, "ensureFreshToken").mockResolvedValue("jwt-sim-token");
+
+    const simPayload = {
+      input_hash: "sha256:in-hash",
+      result_hash: "sha256:out-hash",
+      matrix_gaps: [
+        {
+          element_id: "act-vs",
+          kind: 1,
+          severity: 2,
+          json_pointer_path: "/schedule/activities/0",
+          description: "Item SYSBP has no mapped unit in VS",
+          recommendation: "Bind mm[Hg]",
+        },
+      ],
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, simPayload));
+
+    const result = await kernelApi.simulate({ storedVersionRef: VERSION });
+
+    expect(result).toEqual(simPayload);
+    const request = fetchSpy.mock.calls.at(-1)[0];
+    expect(request.method).toBe("POST");
+    expect(request.url).toBe(
+      "https://api.cadence.example/api/v1/kernel/simulation/simulate"
+    );
+    expect(request.headers.get("Authorization")).toBe("Bearer jwt-sim-token");
+    expect(await request.json()).toEqual({
+      base_version_ref: null,
+      stored_version_ref: VERSION,
+      candidate_content: null,
+      valid_at: null,
+      known_at: null,
+    });
+  });
+
+  it("checks matrix gaps through the authenticated OpenAPI client and raises problem details as ApiError", async () => {
+    const auth = useAuthStore();
+    vi.spyOn(auth, "ensureFreshToken").mockResolvedValue("jwt-gap-token");
+
+    const gaps = [
+      {
+        element_id: "act-lb",
+        kind: 2,
+        severity: 1,
+        json_pointer_path: "/schedule/activities/1",
+        description: "Planned activity WEEK4 has no collection spec",
+        recommendation: null,
+      },
+    ];
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, gaps));
+
+    await expect(
+      kernelApi.checkMatrixGaps('{"study":"CAD-101"}')
+    ).resolves.toEqual(gaps);
+
+    const request = fetchSpy.mock.calls.at(-1)[0];
+    expect(request.method).toBe("POST");
+    expect(new URL(request.url).pathname).toBe(
+      "/api/v1/kernel/protocols/matrix-gap-check"
+    );
+    expect(request.headers.get("Authorization")).toBe("Bearer jwt-gap-token");
+    expect(await request.json()).toEqual({
+      protocol_content: '{"study":"CAD-101"}',
+    });
+
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse(
+        422,
+        { title: "Invalid USDM", detail: "Malformed schedule JSON." },
+        "application/problem+json"
+      )
+    );
+    const error = await kernelApi
+      .simulate({ candidateContent: "not-json" })
+      .catch((e) => e);
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.status).toBe(422);
+    expect(error.message).toBe("Malformed schedule JSON.");
   });
 });

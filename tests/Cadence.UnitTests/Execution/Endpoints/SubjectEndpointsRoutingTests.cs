@@ -260,11 +260,11 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     public async Task ListSubjects_PassesQueryParametersThroughAndReturnsThePage()
     {
         var response = await _client.GetAsync(
-            "/api/v1/execution/subjects?study_id=STUDY-001&site_id=SITE-001&status=ENROLLED&limit=10&offset=20",
+            "/api/v1/execution/subjects?study_id=STUDY-001&site_id=SITE-001&status=ENROLLED&q=SUBJ-00&limit=10&offset=20",
             TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        _factory.Service.LastListArguments.Should().Be(((string?, string?, string?, int?, int?)?)("STUDY-001", "SITE-001", "ENROLLED", 10, 20));
+        _factory.Service.LastListArguments.Should().Be(((string?, string?, string?, string?, int?, int?)?)("STUDY-001", "SITE-001", "ENROLLED", "SUBJ-00", 10, 20));
         var body = await response.Content.ReadFromJsonAsync<SubjectListResponse>(JsonOptions, TestContext.Current.CancellationToken);
         body!.Total.Should().Be(1);
         body.Items.Should().ContainSingle().Which.SubjectId_.Value.Should().Be("SUBJ-001");
@@ -671,17 +671,26 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
                 return Task.FromResult(overridden);
             }
 
-            var body = new SubjectDetailResponse(new SubjectCode(subjectId), new StudyCode("STUDY-001"), "RANDOMIZED",
-                new SiteCode("SITE-001"), TreatmentGroup: null, RandomizationSeed: null, InvestigationalProductId: null);
+            var body = new SubjectDetailResponse(
+                SubjectId.New(),
+                new SubjectCode(subjectId),
+                new StudyCode("STUDY-001"),
+                "RANDOMIZED",
+                new SiteCode("SITE-001"),
+                ActiveProtocolVersion: "1.0.0",
+                EnrollmentIndex: 0,
+                TreatmentGroup: null,
+                RandomizationSeed: null,
+                InvestigationalProductId: null);
             return Task.FromResult(Result<SubjectDetailResponse>.Success(body));
         }
 
-        public (string? StudyId, string? SiteId, string? Status, int? Limit, int? Offset)? LastListArguments { get; private set; }
+        public (string? StudyId, string? SiteId, string? Status, string? Query, int? Limit, int? Offset)? LastListArguments { get; private set; }
 
         public Task<Result<SubjectListResponse>> ListAsync(string? studyId, string? siteId, string? status, int? limit,
-            int? offset, CancellationToken ct, IReadOnlyCollection<string>? allowedSiteIds = null)
+            int? offset, CancellationToken ct, IReadOnlyCollection<string>? allowedSiteIds = null, string? query = null)
         {
-            LastListArguments = (studyId, siteId, status, limit, offset);
+            LastListArguments = (studyId, siteId, status, query, limit, offset);
             ct.ThrowIfCancellationRequested();
             var item = new SubjectSummaryResponse(SubjectId.New(), new SubjectCode("SUBJ-001"), new StudyCode("STUDY-001"),
                 new SiteCode("SITE-001"), "ENROLLED", "1.0.0", 0);

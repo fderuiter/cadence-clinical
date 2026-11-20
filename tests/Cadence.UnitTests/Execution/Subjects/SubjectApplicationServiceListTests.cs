@@ -74,6 +74,21 @@ public class SubjectApplicationServiceListTests
     }
 
     [Fact]
+    public async Task ListAsync_FiltersBySubjectCodeQueryCaseInsensitively()
+    {
+        await SeedAsync("017-ALPHA-01", "STUDY-001", "SITE-001", 0);
+        await SeedAsync("017-BETA-02", "STUDY-001", "SITE-001", 1);
+        await SeedAsync("022-alpha-03", "STUDY-001", "SITE-002", 2);
+
+        var result = await CreateService().ListAsync("STUDY-001", null, null, null, null,
+            TestContext.Current.CancellationToken, query: " alpha ");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Items.Select(s => s.SubjectId_.Value).Should().Equal("017-ALPHA-01", "022-alpha-03");
+        result.Value.Total.Should().Be(2);
+    }
+
+    [Fact]
     public async Task ListAsync_PagesAndReportsTheTotalAcrossPages()
     {
         for (int i = 0; i < 5; i++)

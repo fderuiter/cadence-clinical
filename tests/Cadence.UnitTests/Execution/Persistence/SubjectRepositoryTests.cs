@@ -415,4 +415,48 @@ public class SubjectRepositoryTests
             DeleteDbFileBestEffort(path);
         }
     }
+
+    // ---- ListAsync: case-insensitive SubjectCode query filtering & LIKE wildcard escaping -------------
+
+    [Fact]
+    public async Task ListAsync_GivenQuery_FiltersSubjectCodesCaseInsensitivelyAndEscapesLikeWildcards()
+    {
+        string path = await CreateSchemaAsync();
+        try
+        {
+            await using (var seed = new ExecutionDbContext(FileOptions(path)))
+            {
+                seed.ClinicalSubjects.AddRange(
+                    ClinicalSubject.Create(new SubjectCode("017-ALPHA-01"), StudyA, new SiteCode("017"), 0, null, null),
+                    ClinicalSubject.Create(new SubjectCode("022-alpha-02"), StudyA, new SiteCode("022"), 1, null, null),
+                    ClinicalSubject.Create(new SubjectCode("017-A_PHA-03"), StudyA, new SiteCode("017"), 2, null, null),
+                    ClinicalSubject.Create(new SubjectCode("017-100%-04"), StudyA, new SiteCode("017"), 3, null, null));
+                await seed.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            var repository = CreateRepository(path);
+
+            var caseInsensitive = await repository.ListAsync(
+                new SubjectListCriteria(StudyA, null, null, 50, 0, Query: "AlPhA"),
+                TestContext.Current.CancellationToken);
+            caseInsensitive.Total.Should().Be(2);
+            caseInsensitive.Items.Select(s => s.SubjectCode.Value).Should().Equal("017-ALPHA-01", "022-alpha-02");
+
+            var escapedUnderscore = await repository.ListAsync(
+                new SubjectListCriteria(StudyA, null, null, 50, 0, Query: "A_PHA"),
+                TestContext.Current.CancellationToken);
+            escapedUnderscore.Total.Should().Be(1);
+            escapedUnderscore.Items.Single().SubjectCode.Value.Should().Be("017-A_PHA-03");
+
+            var escapedPercent = await repository.ListAsync(
+                new SubjectListCriteria(StudyA, null, null, 50, 0, Query: "100%"),
+                TestContext.Current.CancellationToken);
+            escapedPercent.Total.Should().Be(1);
+            escapedPercent.Items.Single().SubjectCode.Value.Should().Be("017-100%-04");
+        }
+        finally
+        {
+            DeleteDbFileBestEffort(path);
+        }
+    }
 }

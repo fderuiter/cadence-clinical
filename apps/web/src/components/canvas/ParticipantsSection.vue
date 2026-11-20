@@ -7,6 +7,26 @@
   >
     <header class="participants-header">
       <h2 id="participants-title">Participants</h2>
+      <label for="participants-search">Search</label>
+      <input
+        id="participants-search"
+        :value="searchInput"
+        type="search"
+        autocomplete="off"
+        placeholder="Participant code"
+        @input="onSearchInput"
+      />
+      <label for="participants-site">Site</label>
+      <select id="participants-site" :value="siteId" @change="onSiteChange">
+        <option value="">All sites</option>
+        <option
+          v-for="option in siteOptions"
+          :key="option.code"
+          :value="option.code"
+        >
+          {{ option.label }}
+        </option>
+      </select>
       <label for="participants-status">State</label>
       <select id="participants-status" :value="status" @change="onStatusChange">
         <option value="">Any state</option>
@@ -24,7 +44,7 @@
           id="btn-clear-site-filter"
           type="button"
           :aria-label="`Show participants at every site, not only ${siteId}`"
-          @click="emit('filter', { status, siteId: '' })"
+          @click="emit('filter', { status, siteId: '', q: search })"
         >
           ×
         </button>
@@ -102,8 +122,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import type { SubjectSummary } from "../../api/executionApi";
+import { findStudySites, type StudySiteOption } from "../../canvas/kernelStudy";
 import {
   PARTICIPANT_STATES,
   participantStateLabel,
@@ -112,23 +133,86 @@ import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import AddParticipantForm from "./AddParticipantForm.vue";
 
 /**
- * The study's participants in enrollment order, from Execution, filtered by state and site. The filter lives
- * in the canvas URL, so the parent owns it; selecting a participant fills the inspector.
+ * The study's participants in enrollment order, from Execution, filtered by search text, site, and state.
+ * The filter lives in the canvas URL, so the parent owns it; selecting a participant fills the inspector.
  */
-const props = defineProps<{
-  status: string;
-  siteId: string;
-  selectedId: string;
-  /** Whether to offer adding participants (Execution enforces who may, #4943). */
-  canManageParticipants?: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    status: string;
+    siteId: string;
+    search?: string;
+    selectedId: string;
+    /** Whether to offer adding participants (Execution enforces who may, #4943). */
+    canManageParticipants?: boolean;
+  }>(),
+  {
+    search: "",
+  }
+);
 const emit = defineEmits<{
   select: [participant: SubjectSummary];
-  filter: [filter: { status: string; siteId: string }];
+  filter: [filter: { status: string; siteId: string; q?: string }];
 }>();
 
 const canvas = useStudyCanvasStore();
 const adding = ref(false);
+const searchInput = ref(props.search);
+const kernelSites = ref<StudySiteOption[]>([]);
+let sitesLookup = 0;
+
+watch(
+  () => props.search,
+  (next) => {
+    if (next !== searchInput.value.trim()) {
+      searchInput.value = next;
+    }
+  }
+);
+
+watch(
+  () => canvas.studyCode,
+  async (studyCode) => {
+    const request = ++sitesLookup;
+    kernelSites.value = [];
+    if (!studyCode) return;
+    try {
+      const sites = await findStudySites(studyCode);
+      if (request === sitesLookup) {
+        kernelSites.value = sites;
+      }
+    } catch {
+      if (request === sitesLookup) {
+        kernelSites.value = [];
+      }
+    }
+  },
+  { immediate: true }
+);
+
+const siteOptions = computed(() => {
+  const byCode = new Map<string, string>();
+  for (const site of kernelSites.value) {
+    const label =
+      site.title && site.title !== site.code
+        ? `${site.code} — ${site.title}`
+        : `Site ${site.code}`;
+    byCode.set(site.code, label);
+  }
+  for (const participant of [
+    ...canvas.participants,
+    ...Object.values(canvas.knownParticipants),
+  ]) {
+    if (participant.site_id && !byCode.has(participant.site_id)) {
+      byCode.set(participant.site_id, `Site ${participant.site_id}`);
+    }
+  }
+  if (props.siteId && !byCode.has(props.siteId)) {
+    byCode.set(props.siteId, `Site ${props.siteId}`);
+  }
+  return [...byCode.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([code, label]) => ({ code, label }));
+});
 
 /** Closes the form and selects the new participant when the list could place it. */
 function onAdded(participant: SubjectSummary | null) {
@@ -143,7 +227,7 @@ const statusLine = computed(() => {
   if (canvas.participantsError) return "Participants couldn't be loaded.";
   const total = canvas.participantsTotal;
   if (total === 0) {
-    return props.status || props.siteId
+    return props.status || props.siteId || props.search
       ? "No participants match these filters."
       : `No participants in ${canvas.studyCode} yet.`;
   }
@@ -154,9 +238,32 @@ const statusLine = computed(() => {
     : `${total} ${noun}.`;
 });
 
+function onSearchInput(event: Event) {
+  const raw = (event.target as HTMLInputElement).value;
+  searchInput.value = raw;
+  emit("filter", {
+    status: props.status,
+    siteId: props.siteId,
+    q: raw.trim(),
+  });
+}
+
+function onSiteChange(event: Event) {
+  const value = (event.target as HTMLSelectElement).value;
+  emit("filter", {
+    status: props.status,
+    siteId: value,
+    q: props.search,
+  });
+}
+
 function onStatusChange(event: Event) {
   const value = (event.target as HTMLSelectElement).value;
-  emit("filter", { status: value, siteId: props.siteId });
+  emit("filter", {
+    status: value,
+    siteId: props.siteId,
+    q: props.search,
+  });
 }
 </script>
 
@@ -179,6 +286,7 @@ function onStatusChange(event: Event) {
   font-size: 1rem;
 }
 
+.participants-header input,
 .participants-header select {
   padding: 6px;
   border: 1px solid var(--border);

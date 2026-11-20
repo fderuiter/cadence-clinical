@@ -85,7 +85,7 @@ import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useFocusTrap } from "ui";
 import { kernelApi, type KernelSearchHit } from "../../api/kernelApi";
 import { STAGES, participantStateLabel } from "../../canvas/lifecycle";
-import type { SubjectSummary } from "../../api/executionApi";
+import { executionApi, type SubjectSummary } from "../../api/executionApi";
 import type {
   PaletteTarget,
   WorkspacePaletteOption,
@@ -144,33 +144,65 @@ const MIN_ASK_WORDS = 3;
 const { enabled: aiEnabled } = useAiAssistance();
 
 const kernelHits = ref<KernelSearchHit[]>([]);
+const remoteParticipants = ref<SubjectSummary[]>([]);
 const kernelNote = ref("");
 let searchTimer: ReturnType<typeof setTimeout> | undefined;
 let latestSearch = 0;
 
-async function searchKernel(text: string) {
+function searchKernel(text: string) {
   const request = ++latestSearch;
-  try {
-    const hits = await kernelApi.search({
+  const study = props.studyCode;
+
+  void kernelApi
+    .search({
       text,
       kinds: ["study"],
       limit: MAX_KERNEL_HITS,
+    })
+    .then((hits) => {
+      if (request !== latestSearch) return;
+      kernelHits.value = Array.isArray(hits) ? hits : [];
+      kernelNote.value = "";
+    })
+    .catch((e) => {
+      if (request !== latestSearch) return;
+      kernelHits.value = [];
+      kernelNote.value = `Studies can't be searched right now: ${e instanceof Error ? e.message : String(e)}`;
     });
-    if (request !== latestSearch) return;
-    kernelHits.value = hits;
-    kernelNote.value = "";
-  } catch (e) {
-    if (request !== latestSearch) return;
-    kernelHits.value = [];
-    kernelNote.value = `Studies can't be searched right now: ${e instanceof Error ? e.message : String(e)}`;
+
+  if (study && typeof executionApi.listSubjects === "function") {
+    void executionApi
+      .listSubjects({
+        studyId: study,
+        q: text,
+        limit: MAX_KERNEL_HITS,
+      })
+      .then((page) => {
+        if (request !== latestSearch) return;
+        remoteParticipants.value = Array.isArray(page?.items) ? page.items : [];
+      })
+      .catch(() => {
+        if (request !== latestSearch) return;
+        remoteParticipants.value = [];
+      });
   }
 }
+
+watch(
+  () => props.studyCode,
+  () => {
+    clearTimeout(searchTimer);
+    latestSearch++;
+    remoteParticipants.value = [];
+  }
+);
 
 watch(query, (value) => {
   clearTimeout(searchTimer);
   latestSearch++;
   const text = value.trim();
   kernelHits.value = [];
+  remoteParticipants.value = [];
   if (text.length < MIN_SEARCH_LENGTH || text.length > MAX_STUDY_CODE) {
     kernelNote.value = "";
     return;
@@ -179,6 +211,19 @@ watch(query, (value) => {
 });
 
 onBeforeUnmount(() => clearTimeout(searchTimer));
+
+const allParticipants = computed<SubjectSummary[]>(() => {
+  const merged = new Map<string, SubjectSummary>();
+  for (const participant of props.participants) {
+    merged.set(participant.id, participant);
+  }
+  for (const participant of remoteParticipants.value) {
+    if (!props.studyCode || participant.study_id === props.studyCode) {
+      merged.set(participant.id, participant);
+    }
+  }
+  return Array.from(merged.values());
+});
 
 // A study hit opens the study it names by its code; one without a code has nowhere to open.
 const studyHits = computed<PaletteItem[]>(() =>
@@ -221,7 +266,7 @@ const items = computed<PaletteItem[]>(() => {
         });
       }
     }
-    for (const participant of props.participants) {
+    for (const participant of allParticipants.value) {
       list.push({
         key: `participant:${participant.id}`,
         group: "Participant",
@@ -272,11 +317,15 @@ const results = computed<PaletteItem[]>(() => {
       target: { studyCode: props.studyCode, ask: text },
     });
   }
+  const matchesParticipantCode = allParticipants.value.some(
+    (participant) => participant.subject_id.toLowerCase() === needle
+  );
   if (
     text &&
     !/\s/.test(text) &&
     text.length <= MAX_STUDY_CODE &&
     text !== props.studyCode &&
+    !matchesParticipantCode &&
     !studyHits.value.some((item) => item.target.studyCode === text)
   ) {
     shown.push({

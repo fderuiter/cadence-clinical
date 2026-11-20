@@ -207,7 +207,15 @@
 
           <template v-else-if="hasOpenForm">
             <p
-              v-if="isNewForm && recordRef && !recordParticipant"
+              v-if="isNewForm && recordRef && isRecordParticipantLoading"
+              id="record-loading"
+              class="stage-empty"
+              role="status"
+            >
+              Loading participant…
+            </p>
+            <p
+              v-else-if="isNewForm && recordRef && !recordParticipant"
               id="record-not-loaded"
               class="stage-empty"
             >
@@ -253,6 +261,14 @@
               :observation-location="observationLocationFromRecord"
               @retry="canvas.loadRecord(recordParticipant)"
             />
+            <p
+              v-else-if="isRecordParticipantLoading"
+              id="record-loading"
+              class="stage-empty"
+              role="status"
+            >
+              Loading participant…
+            </p>
             <p v-else id="record-not-loaded" class="stage-empty">
               This participant isn't among those loaded for {{ studyCode }}.
               <router-link
@@ -278,6 +294,7 @@
             v-else-if="section?.id === 'participants'"
             :status="statusFilter"
             :site-id="siteFilter"
+            :search="participantSearchFilter"
             :selected-id="selectedNode?.id ?? ''"
             :can-manage-participants="canChangeParticipants"
             @select="selectParticipant"
@@ -352,7 +369,11 @@
           :study-code="studyCode"
           :participant="inspectedParticipant"
           :node-ref="inspectedNodeText"
-          :missing="Boolean(selectedNode) && !selectedParticipant"
+          :missing="
+            Boolean(selectedNode) &&
+            !selectedParticipant &&
+            !isSelectedParticipantLoading
+          "
           :protocol-version="inspectedVersion"
           :protocol-version-error="inspectedVersionError"
           :record-location="
@@ -416,7 +437,7 @@
     <CanvasPalette
       v-if="!inAppShell && paletteOpen"
       :study-code="studyCode"
-      :participants="canvas.participants"
+      :participants="paletteParticipants"
       @close="paletteOpen = false"
       @go="goToPaletteTarget"
     />
@@ -499,6 +520,7 @@ interface StudyQuery {
   section?: string;
   status?: string;
   site?: string;
+  q?: string;
   subject?: string;
   changed?: string;
   node?: string;
@@ -539,6 +561,7 @@ const queryStatusFilter = computed(() => {
     : "";
 });
 const siteFilter = computed(() => single(route.query.site).trim());
+const participantSearchFilter = computed(() => single(route.query.q).trim());
 const queryParticipantFilter = computed(() =>
   single(route.query.subject).trim()
 );
@@ -621,6 +644,33 @@ let lineageRequest = 0;
 const loadedFormParticipant = computed<SubjectSummary | null>(() => {
   const pid = loadedForm.value?.participant_id;
   return pid ? (canvas.knownParticipants[pid] ?? null) : null;
+});
+const resolvingParticipantIds = ref<Record<string, boolean>>({});
+let participantLookupSession = 0;
+
+const isRecordParticipantLoading = computed(() =>
+  Boolean(
+    recordRef.value &&
+    !recordParticipant.value &&
+    resolvingParticipantIds.value[recordRef.value.id]
+  )
+);
+const isSelectedParticipantLoading = computed(() =>
+  Boolean(
+    selectedNode.value &&
+    !selectedParticipant.value &&
+    resolvingParticipantIds.value[selectedNode.value.id]
+  )
+);
+const paletteParticipants = computed<SubjectSummary[]>(() => {
+  const byId = new Map<string, SubjectSummary>();
+  for (const participant of Object.values(canvas.knownParticipants)) {
+    byId.set(participant.id, participant);
+  }
+  for (const participant of canvas.participants) {
+    byId.set(participant.id, participant);
+  }
+  return [...byId.values()];
 });
 const activeFormParticipant = computed<SubjectSummary | null>(
   () => recordParticipant.value ?? loadedFormParticipant.value
@@ -740,6 +790,7 @@ function selectParticipant(participant: SubjectSummary) {
       section: "participants",
       status: statusFilter.value,
       site: siteFilter.value,
+      q: participantSearchFilter.value,
       node: formatNodeRef(node),
     })
   );
@@ -942,13 +993,18 @@ function selectVersion(version: KernelProtocolVersion) {
   );
 }
 
-function applyParticipantFilter(filter: { status: string; siteId: string }) {
+function applyParticipantFilter(filter: {
+  status: string;
+  siteId: string;
+  q?: string;
+}) {
   router.push(
     studyLocation({
       stage: "conduct",
       section: "participants",
       status: filter.status,
       site: filter.siteId,
+      q: filter.q,
       node: single(route.query.node),
     })
   );
@@ -984,6 +1040,13 @@ function goToPaletteTarget(target: PaletteTarget) {
     });
     return;
   }
+  if (target.participant) {
+    const targetStudy = target.studyCode || studyCode.value;
+    if (targetStudy) {
+      canvas.openStudy(targetStudy);
+      canvas.knownParticipants[target.participant.id] = target.participant;
+    }
+  }
   const node = target.participant
     ? tryNodeRef("participant", target.participant.id)
     : null;
@@ -1011,8 +1074,45 @@ watch(
     loadedForm.value = null;
     loadedObservation.value = null;
     resolvedLineage.value = null;
+    resolvingParticipantIds.value = {};
+    participantLookupSession++;
     lineageRequest++;
     canvas.openStudy(code);
+  },
+  { immediate: true }
+);
+
+// Resolve deep-linked `?participant=` or `?node=` participants on cache miss.
+watch(
+  [
+    studyCode,
+    () => recordRef.value?.id,
+    () => selectedNode.value?.id,
+    () => loadedForm.value?.participant_id,
+  ],
+  ([code, recordId, nodeId, formParticipantId]) => {
+    if (!code) return;
+    const session = participantLookupSession;
+    const candidateIds = new Set(
+      [recordId, nodeId, formParticipantId].filter((id): id is string =>
+        Boolean(id)
+      )
+    );
+    for (const id of candidateIds) {
+      if (canvas.knownParticipants[id] || resolvingParticipantIds.value[id]) {
+        continue;
+      }
+      resolvingParticipantIds.value = {
+        ...resolvingParticipantIds.value,
+        [id]: true,
+      };
+      void canvas.loadParticipantById(id).finally(() => {
+        if (session !== participantLookupSession) return;
+        const next = { ...resolvingParticipantIds.value };
+        delete next[id];
+        resolvingParticipantIds.value = next;
+      });
+    }
   },
   { immediate: true }
 );
@@ -1057,6 +1157,7 @@ watch(
     () => section.value?.id,
     statusFilter,
     siteFilter,
+    participantSearchFilter,
   ],
   () => {
     if (
@@ -1071,17 +1172,23 @@ watch(
       return;
     }
     if (section.value?.id !== "participants") return;
-    const filter = { status: statusFilter.value, siteId: siteFilter.value };
+    const filter = {
+      status: statusFilter.value,
+      siteId: siteFilter.value,
+      q: participantSearchFilter.value,
+    };
     const loaded = canvas.participantsFilter;
     const sameFilter =
       (loaded.status ?? "") === filter.status &&
-      (loaded.siteId ?? "") === filter.siteId;
+      (loaded.siteId ?? "") === filter.siteId &&
+      (loaded.q ?? "") === filter.q;
     const hasPage =
       canvas.participants.length > 0 || canvas.participantsTotal > 0;
     if (!sameFilter || (!hasPage && !canvas.participantsLoading)) {
       canvas.loadParticipants({
         status: filter.status || undefined,
         siteId: filter.siteId || undefined,
+        ...(filter.q ? { q: filter.q } : {}),
       });
     }
   },

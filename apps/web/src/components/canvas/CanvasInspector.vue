@@ -117,13 +117,18 @@
         </p>
         <p
           v-else-if="simulationError"
+          id="kernel-simulate-error"
           class="inspector-empty"
+          role="alert"
           style="color: var(--danger, #dc3545)"
         >
           {{ simulationError }}
         </p>
         <div v-else-if="simulationResult" class="simulation-details">
-          <div class="seal-container reasoning-modal-s-1">
+          <div
+            id="kernel-simulate-hashes"
+            class="seal-container reasoning-modal-s-1"
+          >
             <div>
               <strong>Input Hash Seal:</strong>
               {{ simulationResult.input_hash }}
@@ -142,6 +147,7 @@
               simulationResult.matrix_gaps &&
               simulationResult.matrix_gaps.length
             "
+            id="kernel-simulate-gaps"
             class="gaps-list"
           >
             <div
@@ -288,7 +294,12 @@ import ParticipantStateChange from "./ParticipantStateChange.vue";
 import KernelActPanel from "./KernelActPanel.vue";
 import KernelExplanation from "./KernelExplanation.vue";
 import KernelLineagePanel from "./KernelLineagePanel.vue";
-import type { KernelCommand, KernelProtocolVersion } from "../../api/kernelApi";
+import {
+  kernelApi,
+  type KernelCommand,
+  type KernelProtocolVersion,
+  type KernelSimulationResult,
+} from "../../api/kernelApi";
 import { parseNodeRef } from "../../canvas/nodeRef";
 import { useAiAssistance } from "../../ai/aiAssistance";
 import AssistPanel from "../ai/AssistPanel.vue";
@@ -335,6 +346,14 @@ const kernelRef = computed(() => {
   return version && parseNodeRef(version) ? version : "";
 });
 
+/** Simulate is supported by the kernel simulation engine for stored `protocol_version` NodeRefs (UX-5). */
+const canSimulate = computed(
+  () =>
+    !props.participant &&
+    Boolean(props.protocolVersion) &&
+    parseNodeRef(kernelRef.value)?.kind === "protocol_version"
+);
+
 /** Impact on an amendment is the amendment's impact (K-PROT-2); on anything else, what depends on it. */
 const lineageMode = computed(() => {
   if (currentVerb.value === "trace") return "trace";
@@ -372,8 +391,10 @@ const verbs = computed<Verb[]>(() => [
   {
     id: "simulate",
     label: "Simulate",
-    live: false,
-    note: "Simulate waits on engine simulation endpoints (#4888).",
+    live: canSimulate.value,
+    note: props.participant
+      ? "Simulate runs on protocol versions only, not participant records (#4888)."
+      : `Simulate evaluates a protocol version in memory (#4888), but ${NO_KERNEL_REF}`,
   },
   {
     id: "act",
@@ -400,22 +421,30 @@ const currentVerb = ref<VerbId>("details");
 const explained = ref<KernelCommand | null>(null);
 const shownVerb = ref<string | null>(null);
 
-const simulationResult = ref<any>(null);
+const simulationResult = ref<KernelSimulationResult | null>(null);
 const simulationLoading = ref(false);
 const simulationError = ref("");
+let simulationRequest = 0;
 
 async function runSimulation() {
-  if (!kernelRef.value) return;
+  const targetRef = kernelRef.value;
+  if (!targetRef || !canSimulate.value) return;
+  const request = ++simulationRequest;
   simulationLoading.value = true;
   simulationError.value = "";
   try {
-    simulationResult.value = await kernelApi.simulate({
-      storedVersionRef: kernelRef.value,
+    const result = await kernelApi.simulate({
+      storedVersionRef: targetRef,
     });
-  } catch (e: any) {
-    simulationError.value = e.message || String(e);
+    if (request !== simulationRequest) return;
+    simulationResult.value = result;
+  } catch (e: unknown) {
+    if (request !== simulationRequest) return;
+    simulationError.value = e instanceof Error ? e.message : String(e);
   } finally {
-    simulationLoading.value = false;
+    if (request === simulationRequest) {
+      simulationLoading.value = false;
+    }
   }
 }
 
@@ -445,9 +474,13 @@ function explainCommand(command: KernelCommand) {
 watch(
   () => [props.nodeRef, props.protocolVersion?.ref],
   () => {
+    simulationRequest++;
     shownVerb.value = null;
     currentVerb.value = "details";
     explained.value = null;
+    simulationResult.value = null;
+    simulationError.value = "";
+    simulationLoading.value = false;
   }
 );
 

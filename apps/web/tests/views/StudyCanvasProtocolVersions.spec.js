@@ -25,6 +25,7 @@ vi.mock("../../src/api/kernelApi", () => ({
     trace: vi.fn(),
     dependents: vi.fn(),
     amendmentImpact: vi.fn(),
+    simulate: vi.fn(),
   },
   isMasked: (object) => object.mask !== null,
 }));
@@ -296,5 +297,82 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
     expect(wrapper.find("#inspector-version-error").text()).toBe(
       `The kernel couldn't answer: ${V2} does not exist in your tenant.`
     );
+  });
+
+  it("runs Simulate on a protocol version, renders hashes and matrix gaps, and resets simulation state on selection change", async () => {
+    vi.mocked(kernelApi.simulate).mockResolvedValue({
+      input_hash: "sha256:sim-input",
+      result_hash: "sha256:sim-output",
+      matrix_gaps: [
+        {
+          element_id: "act-vs",
+          kind: 1,
+          severity: 2,
+          json_pointer_path: "/schedule/activities/0",
+          description: "Systolic BP unit missing from schedule binding",
+          recommendation: "Bind mm[Hg]",
+        },
+      ],
+    });
+
+    await open(`/studies/CAD-101?section=protocol-versions&node=${V2}`);
+
+    const simulateBtn = wrapper.find("#verb-simulate");
+    expect(simulateBtn.exists()).toBe(true);
+    expect(simulateBtn.attributes("disabled")).toBeUndefined();
+
+    await simulateBtn.trigger("click");
+    await flushPromises();
+
+    expect(kernelApi.simulate).toHaveBeenCalledWith({ storedVersionRef: V2 });
+    const panel = wrapper.find("#kernel-simulate");
+    expect(panel.exists()).toBe(true);
+    expect(wrapper.find("#kernel-simulate-hashes").text()).toContain(
+      "sha256:sim-input"
+    );
+    expect(wrapper.find("#kernel-simulate-hashes").text()).toContain(
+      "sha256:sim-output"
+    );
+    expect(wrapper.find("#kernel-simulate-gaps").text()).toContain(
+      "/schedule/activities/0"
+    );
+    expect(wrapper.find("#kernel-simulate-gaps").text()).toContain(
+      "Systolic BP unit missing from schedule binding"
+    );
+
+    // Selecting another protocol version clears the previous simulation output.
+    await wrapper.find("#protocol-version-1").trigger("click");
+    await router.isReady();
+    await flushPromises();
+
+    expect(wrapper.find("#kernel-simulate").exists()).toBe(false);
+    expect(wrapper.find("#kernel-simulate-error").exists()).toBe(false);
+  });
+
+  it("drops a stale Simulate response when the user selects another version while simulation is in flight", async () => {
+    let resolveStale;
+    vi.mocked(kernelApi.simulate).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveStale = resolve;
+        })
+    );
+
+    await open(`/studies/CAD-101?section=protocol-versions&node=${V2}`);
+    await wrapper.find("#verb-simulate").trigger("click");
+    await flushPromises();
+
+    await wrapper.find("#protocol-version-1").trigger("click");
+    await router.isReady();
+    await flushPromises();
+
+    resolveStale({
+      input_hash: "sha256:stale-in",
+      result_hash: "sha256:stale-out",
+      matrix_gaps: [],
+    });
+    await flushPromises();
+
+    expect(wrapper.find("#kernel-simulate").exists()).toBe(false);
   });
 });

@@ -63,6 +63,85 @@ describe("executionApi.listSubjects (#4828)", () => {
     expect(error.status).toBe(400);
     expect(error.message).toBe("study_id is required.");
   });
+
+  it("forwards q and status filters when searching subjects", async () => {
+    const page = { items: [], total: 0, limit: 10, offset: 0 };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, page));
+
+    await executionApi.listSubjects({
+      studyId: "CAD-101",
+      siteId: "SITE-7",
+      status: "ACTIVE",
+      q: "SUBJ-01",
+      limit: 10,
+      offset: 0,
+    });
+
+    const request = fetchSpy.mock.calls[0][0];
+    const url = new URL(request.url);
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      study_id: "CAD-101",
+      site_id: "SITE-7",
+      status: "ACTIVE",
+      q: "SUBJ-01",
+      limit: "10",
+      offset: "0",
+    });
+  });
+});
+
+describe("executionApi.getSubject", () => {
+  let fetchSpy;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    fetchSpy = vi.spyOn(globalThis, "fetch");
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+  });
+
+  it("reads a subject's detail by surrogate id", async () => {
+    const subjectUuid = "0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d01";
+    const detail = {
+      id: subjectUuid,
+      subject_id: "SUBJ-01",
+      study_id: "CAD-101",
+      site_id: "SITE-7",
+      status: "ACTIVE",
+      active_protocol_version: "3.0",
+      enrollment_index: 4,
+      demographics: null,
+      randomization: null,
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, detail));
+
+    const result = await executionApi.getSubject(subjectUuid);
+
+    expect(result).toEqual(detail);
+    const request = fetchSpy.mock.calls[0][0];
+    expect(request.method).toBe("GET");
+    expect(new URL(request.url).pathname).toBe(
+      `/api/v1/execution/subjects/${subjectUuid}`
+    );
+  });
+
+  it("raises a 404 problem detail as an ApiError when the subject does not exist", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse(
+        404,
+        { title: "Not Found", detail: "Subject missing-id not found." },
+        "application/problem+json"
+      )
+    );
+
+    const error = await executionApi.getSubject("missing-id").catch((e) => e);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.status).toBe(404);
+    expect(error.message).toBe("Subject missing-id not found.");
+  });
 });
 
 describe("executionApi site activation", () => {

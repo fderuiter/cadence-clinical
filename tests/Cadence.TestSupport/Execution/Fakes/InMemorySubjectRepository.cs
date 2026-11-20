@@ -74,11 +74,13 @@ public sealed class InMemorySubjectRepository : ISubjectRepository
 
     public Task<SubjectPage> ListAsync(SubjectListCriteria criteria, CancellationToken cancellationToken)
     {
+        string? queryText = string.IsNullOrWhiteSpace(criteria.Query) ? null : criteria.Query.Trim();
         var matches = _store.Values
             .Where(s => s.StudyCode == criteria.StudyCode)
             .Where(s => criteria.SiteCode is null || s.SiteCode == criteria.SiteCode)
             .Where(s => criteria.AllowedSites is null || (s.SiteCode is { } siteCode && criteria.AllowedSites.Contains(siteCode)))
             .Where(s => criteria.Status is null || s.Status == criteria.Status)
+            .Where(s => queryText is null || s.SubjectCode.Value.Contains(queryText, StringComparison.OrdinalIgnoreCase))
             .OrderBy(s => s.EnrollmentIndex)
             .ThenBy(s => s.SubjectCode.Value, StringComparer.Ordinal)
             .ToList();

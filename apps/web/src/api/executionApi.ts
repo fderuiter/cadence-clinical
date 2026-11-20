@@ -14,6 +14,7 @@ type Schemas = components["schemas"];
 export type SubjectSummary = Schemas["Execution_SubjectSummaryResponse"];
 export type SubjectList = Schemas["Execution_SubjectListResponse"];
 export type Subject = Schemas["Execution_SubjectResponse"];
+export type SubjectDetail = Schemas["Execution_SubjectDetailResponse"];
 export type ComplianceStatus = Schemas["Execution_ComplianceStatusResponse"];
 export type OperationEnvelope = Schemas["Execution_OperationEnvelopeResponse"];
 
@@ -28,6 +29,7 @@ export interface ListSubjectsQuery {
   studyId: string;
   siteId?: string;
   status?: string;
+  q?: string;
   limit?: number;
   offset?: number;
 }
@@ -44,10 +46,20 @@ export const executionApi = {
             study_id: query.studyId,
             site_id: query.siteId,
             status: query.status,
+            q: query.q,
             limit: query.limit,
             offset: query.offset,
           },
         },
+      })
+    );
+  },
+
+  /** One participant's detail by surrogate UUID or subject code (GET /api/v1/execution/subjects/{subjectId}). */
+  getSubject(subjectId: string): Promise<SubjectDetail> {
+    return unwrapResponse(
+      client.GET("/api/v1/execution/subjects/{subjectId}", {
+        params: { path: { subjectId } },
       })
     );
   },

@@ -2,7 +2,7 @@
   <CanvasPalette
     v-if="isOpen"
     :study-code="activeStudyCode"
-    :participants="canvasStore.participants"
+    :participants="knownStudyParticipants"
     :workspace-items="workspaceItems"
     @close="emit('close')"
     @go="handleGo"
@@ -23,6 +23,7 @@ import { useAuthStore } from "../stores/auth";
 import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import type { SubjectSummary } from "../api/executionApi";
 
 defineProps<{
   isOpen?: boolean;
@@ -45,6 +46,25 @@ const activeStudyCode = computed(() => {
     return fromRoute.trim();
   }
   return canvasStore.studyCode || "";
+});
+
+const knownStudyParticipants = computed<SubjectSummary[]>(() => {
+  const code = activeStudyCode.value;
+  if (!code || (canvasStore.studyCode && canvasStore.studyCode !== code)) {
+    return [];
+  }
+  const byId = new Map<string, SubjectSummary>();
+  for (const participant of Object.values(canvasStore.knownParticipants)) {
+    if (!participant.study_id || participant.study_id === code) {
+      byId.set(participant.id, participant);
+    }
+  }
+  for (const participant of canvasStore.participants) {
+    if (!participant.study_id || participant.study_id === code) {
+      byId.set(participant.id, participant);
+    }
+  }
+  return [...byId.values()];
 });
 
 const workspaceItems = computed(() =>
@@ -70,6 +90,13 @@ function handleAction(action: PaletteWorkspaceAction) {
 
 function handleGo(target: PaletteTarget) {
   emit("close");
+  if (target.participant) {
+    const studyCode = target.studyCode || activeStudyCode.value;
+    if (studyCode) {
+      canvasStore.openStudy(studyCode);
+      canvasStore.knownParticipants[target.participant.id] = target.participant;
+    }
+  }
   executePaletteTarget(target, {
     router,
     currentRouteName: route?.name,

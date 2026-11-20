@@ -7,6 +7,8 @@ import CommandPaletteOverlay from "../../src/components/CommandPaletteOverlay.vu
 import { useAuthStore } from "../../src/stores/auth";
 import { useKnowledgeStore } from "../../src/stores/knowledge";
 import { useOnboardingStore } from "../../src/stores/onboarding";
+import { useStudyCanvasStore } from "../../src/stores/studyCanvas";
+import { executionApi } from "../../src/api/executionApi";
 import { kernelApi } from "../../src/api/kernelApi";
 
 const DummyView = { template: "<div>Dummy</div>" };
@@ -234,5 +236,155 @@ describe("CommandPaletteOverlay.vue - Unified Global Command Palette", () => {
       .trigger("keydown", { key: "Escape" });
     expect(wrapperAttached.emitted("close")).toHaveLength(1);
     wrapperAttached.unmount();
+  });
+
+  it("queries executionApi.listSubjects for the active study from any screen, suppresses Open study for matched subject codes, and opens the participant", async () => {
+    vi.useFakeTimers();
+    const subjectUuid = "0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d02";
+    const remoteParticipant = {
+      id: subjectUuid,
+      subject_id: "SUBJ-02",
+      study_id: "CAD-101",
+      site_id: "022",
+      status: "ACTIVE",
+      active_protocol_version: "3.0",
+      enrollment_index: 52,
+    };
+    const searchSpy = vi.spyOn(kernelApi, "search").mockResolvedValue([]);
+    const listSpy = vi.spyOn(executionApi, "listSubjects").mockResolvedValue({
+      items: [remoteParticipant],
+      total: 1,
+      limit: 5,
+      offset: 0,
+    });
+
+    try {
+      const authStore = useAuthStore();
+      authStore.isAuthenticated = true;
+      authStore.rawRoles = ["CRC"];
+
+      const studyCanvas = useStudyCanvasStore();
+      studyCanvas.openStudy("CAD-101");
+      await router.push("/ecrf");
+
+      const wrapper = mount(CommandPaletteOverlay, {
+        props: { isOpen: true },
+        global: { plugins: [pinia, router] },
+      });
+
+      const input = wrapper.find("#canvas-palette-input");
+      await input.setValue("SUBJ-02");
+      await vi.advanceTimersByTimeAsync(300);
+      await flushPromises();
+
+      expect(listSpy).toHaveBeenCalledWith({
+        studyId: "CAD-101",
+        q: "SUBJ-02",
+        limit: 5,
+      });
+
+      const options = wrapper.findAll("[role='option']");
+      const groups = options.map((opt) => opt.find(".palette-group").text());
+      expect(groups).toContain("Participant");
+      expect(groups).not.toContain("Open study");
+
+      const participantOption = options.find(
+        (opt) => opt.find(".palette-label").text() === "SUBJ-02"
+      );
+      await participantOption.trigger("click");
+      await flushPromises();
+
+      expect(studyCanvas.knownParticipants[subjectUuid]).toEqual(
+        remoteParticipant
+      );
+      expect(router.currentRoute.value.path).toBe("/studies/CAD-101");
+      expect(router.currentRoute.value.query).toEqual({
+        stage: "conduct",
+        section: "participants",
+        node: `participant:${subjectUuid}`,
+      });
+    } finally {
+      searchSpy.mockRestore();
+      listSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("drops stale out-of-order subject search responses when the query changes", async () => {
+    vi.useFakeTimers();
+    let resolveFirst;
+    const firstPromise = new Promise((resolve) => {
+      resolveFirst = resolve;
+    });
+    const staleUuid = "0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d03";
+    const freshUuid = "0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d04";
+    const searchSpy = vi.spyOn(kernelApi, "search").mockResolvedValue([]);
+    const listSpy = vi
+      .spyOn(executionApi, "listSubjects")
+      .mockImplementation(({ q }) => {
+        if (q === "SUBJ-OLD") return firstPromise;
+        return Promise.resolve({
+          items: [
+            {
+              id: freshUuid,
+              subject_id: "SUBJ-NEW",
+              study_id: "CAD-101",
+              site_id: "017",
+              status: "ACTIVE",
+              active_protocol_version: "3.0",
+              enrollment_index: 9,
+            },
+          ],
+          total: 1,
+          limit: 5,
+          offset: 0,
+        });
+      });
+
+    try {
+      const authStore = useAuthStore();
+      authStore.isAuthenticated = true;
+      authStore.rawRoles = ["CRC"];
+      await router.push("/studies/CAD-101");
+
+      const wrapper = mount(CommandPaletteOverlay, {
+        props: { isOpen: true },
+        global: { plugins: [pinia, router] },
+      });
+
+      const input = wrapper.find("#canvas-palette-input");
+      await input.setValue("SUBJ-OLD");
+      await vi.advanceTimersByTimeAsync(300);
+
+      await input.setValue("SUBJ-NEW");
+      await vi.advanceTimersByTimeAsync(300);
+      await flushPromises();
+
+      resolveFirst({
+        items: [
+          {
+            id: staleUuid,
+            subject_id: "SUBJ-NEW-STALE",
+            study_id: "CAD-101",
+            site_id: "017",
+            status: "SCREENING",
+            active_protocol_version: "3.0",
+            enrollment_index: 8,
+          },
+        ],
+        total: 1,
+        limit: 5,
+        offset: 0,
+      });
+      await flushPromises();
+
+      const labels = wrapper.findAll(".palette-label").map((el) => el.text());
+      expect(labels).toContain("SUBJ-NEW");
+      expect(labels).not.toContain("SUBJ-NEW-STALE");
+    } finally {
+      searchSpy.mockRestore();
+      listSpy.mockRestore();
+      vi.useRealTimers();
+    }
   });
 });

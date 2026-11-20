@@ -49,6 +49,8 @@ export type KernelProposal = Schemas["Kernel_KernelProposalResponse"];
 export type KernelProposalState = Schemas["Kernel_KernelProposalStateResponse"];
 export type KernelAssertionState =
   Schemas["Kernel_KernelAssertionStateResponse"];
+export type KernelSimulationResult = Schemas["Kernel_SimulationResult"];
+export type KernelMatrixGapFinding = Schemas["Kernel_MatrixGapFinding"];
 export type { KernelObservationValue };
 
 export const ASSERTION_LOCKED = "K.Assertion.Locked";
@@ -508,33 +510,26 @@ export const kernelApi = {
     candidateContent?: string;
     validAt?: string;
     knownAt?: string;
-  }): Promise<any> {
-    return fetch("/api/v1/kernel/simulation/simulate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        base_version_ref: request.baseVersionRef,
-        stored_version_ref: request.storedVersionRef,
-        candidate_content: request.candidateContent,
-        valid_at: request.validAt,
-        known_at: request.knownAt,
-      }),
-    }).then((res) => {
-      if (!res.ok) throw new Error(`Simulation failed: ${res.statusText}`);
-      return res.json();
-    });
+  }): Promise<KernelSimulationResult> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/simulation/simulate", {
+        body: {
+          base_version_ref: request.baseVersionRef ?? null,
+          stored_version_ref: request.storedVersionRef ?? null,
+          candidate_content: request.candidateContent ?? null,
+          valid_at: request.validAt ?? null,
+          known_at: request.knownAt ?? null,
+        },
+      })
+    );
   },
 
   /** Performs real-time schedule matrix gap check over a protocol design document. */
-  checkMatrixGaps(protocolContent: string): Promise<any[]> {
-    return fetch("/api/v1/kernel/protocols/matrix-gap-check", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ protocol_content: protocolContent }),
-    }).then((res) => {
-      if (!res.ok)
-        throw new Error(`Matrix gap check failed: ${res.statusText}`);
-      return res.json();
-    });
+  checkMatrixGaps(protocolContent: string): Promise<KernelMatrixGapFinding[]> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/protocols/matrix-gap-check", {
+        body: { protocol_content: protocolContent },
+      })
+    );
   },
 };

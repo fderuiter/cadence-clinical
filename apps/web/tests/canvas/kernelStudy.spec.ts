@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { kernelApi } from "../../src/api/kernelApi";
-import { findKernelEnrollmentRef } from "../../src/canvas/kernelStudy";
+import {
+  findKernelEnrollmentRef,
+  findStudySites,
+} from "../../src/canvas/kernelStudy";
 
 vi.mock("../../src/api/kernelApi", () => ({
   kernelApi: { search: vi.fn(), getChildren: vi.fn() },
@@ -89,5 +92,69 @@ describe("findKernelEnrollmentRef (#5461)", () => {
     expect(
       await findKernelEnrollmentRef("CAD-999", "017", "017-0001")
     ).toBeNull();
+  });
+});
+
+describe("findStudySites", () => {
+  beforeEach(() => {
+    vi.mocked(kernelApi.search).mockReset();
+    vi.mocked(kernelApi.getChildren).mockReset();
+  });
+
+  it("returns visible study sites sorted by code and excludes masked or non-site children", async () => {
+    vi.mocked(kernelApi.search).mockResolvedValue([
+      {
+        ref: STUDY_REF,
+        kind: "study",
+        title: "Study",
+        code: "CAD-101",
+        detail: null,
+        exact_code: true,
+        rank: 1,
+      },
+    ]);
+    vi.mocked(kernelApi.getChildren).mockResolvedValue([
+      {
+        node: {
+          ref: SITE_B,
+          kind: "study_site",
+          title: "Boston General",
+          code: "022",
+          status: "Active",
+          mask: null,
+        },
+        child_count: 4,
+        group: null,
+      },
+      {
+        node: {
+          ref: null,
+          kind: "study_site",
+          title: null,
+          code: "099",
+          status: null,
+          mask: "NotPermitted",
+        },
+        child_count: null,
+        group: null,
+      },
+      {
+        node: {
+          ref: SITE_A,
+          kind: "study_site",
+          title: "Site 017",
+          code: "017",
+          status: "Active",
+          mask: null,
+        },
+        child_count: 2,
+        group: null,
+      },
+    ]);
+
+    await expect(findStudySites("CAD-101")).resolves.toEqual([
+      { code: "017", title: "Site 017", ref: SITE_A },
+      { code: "022", title: "Boston General", ref: SITE_B },
+    ]);
   });
 });

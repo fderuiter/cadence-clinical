@@ -10,6 +10,7 @@ export const PARTICIPANT_PAGE_SIZE = 50;
 export interface ParticipantFilter {
   status?: string;
   siteId?: string;
+  q?: string;
 }
 
 export interface PulseCount {
@@ -24,6 +25,8 @@ const toCount = (value: number | string): number => Number(value) || 0;
 let participantsRequest = 0;
 let pulseRequest = 0;
 let recordRequest = 0;
+let studySession = 0;
+const inFlightParticipants = new Map<string, Promise<SubjectSummary | null>>();
 
 /**
  * Data behind the Clinical Canvas for one study, read from Execution (#4833). The canvas shows only what
@@ -65,6 +68,8 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       participantsRequest++;
       pulseRequest++;
       recordRequest++;
+      studySession++;
+      inFlightParticipants.clear();
       this.$reset();
       this.studyCode = studyCode;
     },
@@ -90,6 +95,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
           studyId,
           status: filter.status,
           siteId: filter.siteId,
+          ...(filter.q ? { q: filter.q } : {}),
           limit: PARTICIPANT_PAGE_SIZE,
           offset,
         });
@@ -110,6 +116,62 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       } finally {
         if (request === participantsRequest) this.participantsLoading = false;
       }
+    },
+
+    /**
+     * Resolves a single participant by surrogate UUID or subject code from Execution (`GET /subjects/{id}`),
+     * verifying it belongs to the active `studyCode` before caching its `SubjectSummary` in `knownParticipants`.
+     */
+    async loadParticipantById(
+      participantId: string
+    ): Promise<SubjectSummary | null> {
+      const studyId = this.studyCode;
+      if (
+        !studyId ||
+        !participantId ||
+        typeof executionApi.getSubject !== "function"
+      ) {
+        return null;
+      }
+      const cached = this.knownParticipants[participantId];
+      if (cached && cached.study_id === studyId) {
+        return cached;
+      }
+      const key = `${studySession}:${studyId}:${participantId}`;
+      const pending = inFlightParticipants.get(key);
+      if (pending) return pending;
+      const session = studySession;
+      const lookup = (async () => {
+        try {
+          const detail = await executionApi.getSubject(participantId);
+          if (
+            session !== studySession ||
+            this.studyCode !== studyId ||
+            !detail ||
+            detail.study_id !== studyId ||
+            !detail.id
+          ) {
+            return null;
+          }
+          const summary: SubjectSummary = {
+            id: detail.id,
+            subject_id: detail.subject_id,
+            study_id: detail.study_id,
+            site_id: detail.site_id ?? null,
+            status: detail.status,
+            active_protocol_version: detail.active_protocol_version,
+            enrollment_index: detail.enrollment_index,
+          };
+          this.knownParticipants[summary.id] = summary;
+          return summary;
+        } catch {
+          return null;
+        } finally {
+          inFlightParticipants.delete(key);
+        }
+      })();
+      inFlightParticipants.set(key, lookup);
+      return lookup;
     },
 
     /**

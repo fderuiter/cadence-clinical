@@ -74,7 +74,33 @@ export function getAuthMiddleware(): Middleware {
 
 const INITIAL_BASE_URL = getBaseUrl();
 
-function dispatchOpenApiFetch(input: RequestInfo | URL, init?: RequestInit) {
+async function rewriteRequestBaseUrl(
+  input: Request,
+  configuredBase: string,
+  currentBase: string
+): Promise<Request> {
+  const rewrittenUrl = `${currentBase}${input.url.slice(configuredBase.length)}`;
+  const hasBody = input.method !== "GET" && input.method !== "HEAD";
+  const body = hasBody ? await input.clone().arrayBuffer() : undefined;
+  return new Request(rewrittenUrl, {
+    method: input.method,
+    headers: input.headers,
+    body: body && body.byteLength > 0 ? body : undefined,
+    credentials: input.credentials,
+    mode: input.mode,
+    redirect: input.redirect,
+    referrer: input.referrer,
+    referrerPolicy: input.referrerPolicy,
+    integrity: input.integrity,
+    keepalive: input.keepalive,
+    signal: input.signal,
+  });
+}
+
+async function dispatchOpenApiFetch(
+  input: RequestInfo | URL,
+  init?: RequestInit
+) {
   const currentBase = getBaseUrl().replace(/\/+$/, "");
   const initialBase = INITIAL_BASE_URL.replace(/\/+$/, "");
   if (
@@ -82,8 +108,12 @@ function dispatchOpenApiFetch(input: RequestInfo | URL, init?: RequestInit) {
     input instanceof Request &&
     input.url.startsWith(`${initialBase}/`)
   ) {
-    const rewrittenUrl = `${currentBase}${input.url.slice(initialBase.length)}`;
-    return globalThis.fetch(new Request(rewrittenUrl, input), init);
+    const rewritten = await rewriteRequestBaseUrl(
+      input,
+      initialBase,
+      currentBase
+    );
+    return globalThis.fetch(rewritten, init);
   }
   return globalThis.fetch(input, init);
 }
@@ -95,13 +125,31 @@ export const openApiClient = createClient<paths>({
 
 openApiClient.use(getAuthMiddleware());
 
-export function createOpenApiClient<T extends {} = paths>(
-  baseUrl: string = getBaseUrl()
-) {
-  // Resolve fetch per call, as openApiClient does, so tests and the MSW worker see the current global.
+export function createOpenApiClient<T extends {} = paths>(baseUrl?: string) {
+  const initialBaseUrl = baseUrl ?? getBaseUrl();
+  const usesDynamicBaseUrl = baseUrl === undefined;
+  // Resolve fetch (and dynamic getBaseUrl when baseUrl was omitted) per call, as openApiClient does,
+  // so tests, Vite env overrides, and the MSW worker see the current global.
   const client = createClient<T>({
-    baseUrl,
-    fetch: (...args) => globalThis.fetch(...args),
+    baseUrl: initialBaseUrl,
+    fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (usesDynamicBaseUrl && input instanceof Request) {
+        const currentBase = getBaseUrl().replace(/\/+$/, "");
+        const configuredBase = initialBaseUrl.replace(/\/+$/, "");
+        if (
+          currentBase !== configuredBase &&
+          input.url.startsWith(`${configuredBase}/`)
+        ) {
+          const rewritten = await rewriteRequestBaseUrl(
+            input,
+            configuredBase,
+            currentBase
+          );
+          return globalThis.fetch(rewritten, init);
+        }
+      }
+      return globalThis.fetch(input, init);
+    },
   });
   client.use(getAuthMiddleware());
   return client;
