@@ -5,8 +5,12 @@
         <span>{{ icon }}</span>
       </slot>
     </div>
-    <h3 class="empty-state-title">{{ title }}</h3>
-    <p v-if="message" class="empty-state-message">{{ message }}</p>
+    <h3 class="empty-state-title">
+      {{ title }}
+    </h3>
+    <p v-if="message" class="empty-state-message">
+      {{ message }}
+    </p>
 
     <div
       v-if="$slots.action || $slots.default || actionText"
@@ -61,7 +65,7 @@ defineEmits(["action"]);
   padding: 32px 24px;
   background: var(--semantic-color-surface-muted);
   border: 1px dashed var(--semantic-color-border-control);
-  border-radius: var(--radius-md);
+  border-radius: var(--semantic-radius-md);
   margin: 16px 0;
   width: 100%;
 }

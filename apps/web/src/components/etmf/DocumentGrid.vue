@@ -518,14 +518,13 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
-import { useFocusTrap } from "ui";
+import { EmptyState, useFocusTrap } from "ui";
 import { useEtmfStore } from "../../stores/etmf";
 import { etmfService } from "../../api/etmf";
 import { use2DGrid } from "../../composables/use2DGrid";
 import { useToastStore } from "../../stores/toasts.js";
 import BatchUploadDrawer from "./BatchUploadDrawer.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
-import EmptyState from "../common/EmptyState.vue";
 
 const isBatchDrawerOpen = ref(false);
 
@@ -1496,5 +1495,11 @@ async function submitUpload() {
   font-weight: 700;
   margin-left: 6px;
   white-space: nowrap;
+}
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
 }
 </style>

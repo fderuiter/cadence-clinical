@@ -491,9 +491,9 @@
                   class="checkbox-label"
                 >
                   <input
+                    v-model="batchForm.selectedSites"
                     type="checkbox"
                     :value="site"
-                    v-model="batchForm.selectedSites"
                   />
                   <span>{{ site }}</span>
                 </label>
@@ -509,9 +509,9 @@
                   class="checkbox-label"
                 >
                   <input
+                    v-model="batchForm.selectedRoles"
                     type="checkbox"
                     :value="role"
-                    v-model="batchForm.selectedRoles"
                   />
                   <span>{{ role }}</span>
                 </label>
@@ -647,10 +647,10 @@
                 <tr v-for="del in delegations" :key="del.id">
                   <td>
                     <input
+                      v-model="selectedDelegationIds"
                       type="checkbox"
                       :value="del.id"
                       :aria-label="`Select delegation ${del.id}`"
-                      v-model="selectedDelegationIds"
                       :disabled="del.status === 'COMPLETED'"
                     />
                   </td>
@@ -2075,5 +2075,11 @@ onUnmounted(() => {
   background: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-body);
   font-size: 0.75rem;
+}
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
 }
 </style>

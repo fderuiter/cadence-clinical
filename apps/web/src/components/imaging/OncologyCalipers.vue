@@ -214,8 +214,8 @@
                   step="0.1"
                   class="diameter-input"
                   :value="a.longest_diameter_mm"
-                  @change="updateLongestDiameter(a, $event.target.value)"
                   aria-label="Longest Diameter mm"
+                  @change="updateLongestDiameter(a, $event.target.value)"
                 />
               </td>
               <td>{{ a.perpendicular_diameter_mm || "-" }}</td>
@@ -998,5 +998,11 @@ function getTimepointClass(tp) {
 .btn-confirm-sign:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
 }
 </style>

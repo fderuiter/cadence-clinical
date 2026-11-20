@@ -827,6 +827,9 @@
                 'dropzone-active': isDragging,
                 'dropzone-has-file': parsedTelemetry !== null,
               }"
+              tabindex="0"
+              role="button"
+              aria-label="Upload logger file"
               @dragover.prevent="isDragging = true"
               @dragenter.prevent="isDragging = true"
               @dragleave.prevent="isDragging = false"
@@ -834,9 +837,6 @@
               @click="triggerFileInput"
               @keydown.enter="triggerFileInput"
               @keydown.space="triggerFileInput"
-              tabindex="0"
-              role="button"
-              aria-label="Upload logger file"
             >
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
@@ -991,7 +991,9 @@
                       :key="evt.id"
                       class="row-excursion-event"
                     >
-                      <td class="code-font font-bold">{{ evt.id }}</td>
+                      <td class="code-font font-bold">
+                        {{ evt.id }}
+                      </td>
                       <td>
                         <span class="badge badge-quarantine">
                           {{
@@ -1072,7 +1074,7 @@
           </section>
 
           <!-- Milestone Form -->
-          <form @submit.prevent="submitMilestone" class="milestone-form">
+          <form class="milestone-form" @submit.prevent="submitMilestone">
             <div class="form-grid">
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -2503,5 +2505,11 @@ onMounted(() => {
 .btn-xs {
   padding: 0.25rem 0.5rem;
   font-size: 0.75rem;
+}
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
 }
 </style>

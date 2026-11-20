@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 
@@ -7,6 +8,7 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Domain.Toxicity;
+using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Security.Authentication;
 using Cadence.Testing.Security;
@@ -32,7 +34,7 @@ public sealed class ExecutionWriteAuthorizationTests(ExecutionPostgresApiFactory
     private const string ReviewPath = "/api/v1/execution/labs/toxicity/review/";
 
     private static readonly GatewayIdentity Cra = TestSecurityContext.Identity("cra-01", "CRA") with { ChangeReason = "Authorization check" };
-    private static readonly GatewayIdentity Investigator = TestSecurityContext.Identity("pi-01", "Site Investigator") with { ChangeReason = "Authorization check" };
+    private static readonly GatewayIdentity Investigator = TestSecurityContext.Identity("pi-01", "Site Investigator") with { SiteIds = ["SITE-01"], ChangeReason = "Authorization check" };
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
@@ -60,11 +62,18 @@ public sealed class ExecutionWriteAuthorizationTests(ExecutionPostgresApiFactory
         var ct = TestContext.Current.CancellationToken;
         string reviewId = await StageReviewAsync();
         using var investigator = factory.CreateSignedClient(Investigator);
+        string path = LabToxicityEndpoints.ReviewActionPath(reviewId);
+        string sigToken = TestSecurityContext.CreateSigToken(
+            Investigator.UserId,
+            path,
+            LabToxicityEndpoints.ReviewActionSemanticAction);
+        using var request = new HttpRequestMessage(HttpMethod.Post, path)
+        {
+            Content = JsonContent.Create(new { action = "DISMISS", reason_for_change = "Lab artifact, repeat normal" }),
+        };
+        request.Headers.Add(GatewayHeaders.SigToken, sigToken);
 
-        var response = await investigator.PostAsJsonAsync(
-            $"{ReviewPath}{reviewId}/action",
-            new { action = "DISMISS", reason_for_change = "Lab artifact, repeat normal" },
-            ct);
+        var response = await investigator.SendAsync(request, ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(ct));
         (await ReviewStatusAsync(reviewId)).Should().Be("DISMISSED");

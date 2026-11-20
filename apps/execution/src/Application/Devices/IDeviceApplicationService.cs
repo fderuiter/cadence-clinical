@@ -34,4 +34,20 @@ public interface IDeviceApplicationService
     Task<DeviceQuarantineResponse> ReleaseQuarantineAsync(DeviceQuarantineReleaseRequest request, CancellationToken ct = default);
 
     Task<DeviceInvestigationSummaryResponse> GetInvestigationSummaryAsync(string studyId, CancellationToken ct = default);
+
+    Task<DeviceInvestigationSummaryResponse> GetInvestigationSummaryAsync(
+        string studyId,
+        IReadOnlySet<string>? siteFilter,
+        CancellationToken ct = default) =>
+        GetInvestigationSummaryAsync(studyId, ct);
+
+    Task<(string StudyId, string SiteId)?> GetInventoryScopeAsync(
+        string studyId,
+        string? deviceInventoryId,
+        string? scannedBarcode,
+        CancellationToken ct = default) =>
+        Task.FromResult<(string StudyId, string SiteId)?>(null);
+
+    Task<DeviceQuarantineResponse?> GetQuarantineByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult<DeviceQuarantineResponse?>(null);
 }

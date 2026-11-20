@@ -1,3 +1,30 @@
+export const clinicalOverlayProps = {
+  size: {
+    type: String,
+    default: "md",
+  },
+  dismissible: {
+    type: Boolean,
+    default: true,
+  },
+  closeOnBackdrop: {
+    type: Boolean,
+    default: true,
+  },
+  teleport: {
+    type: [Boolean, String],
+    default: "body",
+  },
+  initialFocus: {
+    type: [String, Object, Function],
+    default: null,
+  },
+  restoreFocus: {
+    type: [Boolean, Function],
+    default: true,
+  },
+};
+
 export const clinicalFieldBaseProps = {
   id: {
     type: String,

@@ -407,13 +407,26 @@ public sealed class DeviceApplicationService(
         return MapToQuarantineResponse(record);
     }
 
+    public Task<DeviceInvestigationSummaryResponse> GetInvestigationSummaryAsync(
+        string studyId,
+        CancellationToken ct = default) =>
+        GetInvestigationSummaryAsync(studyId, siteFilter: null, ct);
+
     public async Task<DeviceInvestigationSummaryResponse> GetInvestigationSummaryAsync(
         string studyId,
+        IReadOnlySet<string>? siteFilter,
         CancellationToken ct = default)
     {
         var devices = await repository.ListInventoryAsync(studyId, null, null, null, null, null, ct).ConfigureAwait(false);
         var deficiencies = await repository.ListDeficienciesAsync(studyId, null, null, ct).ConfigureAwait(false);
         var quarantines = await repository.ListQuarantinesAsync(studyId, null, null, ct).ConfigureAwait(false);
+
+        if (siteFilter is not null)
+        {
+            devices = devices.Where(d => !string.IsNullOrWhiteSpace(d.SiteId) && siteFilter.Contains(d.SiteId.Trim())).ToList();
+            deficiencies = deficiencies.Where(d => !string.IsNullOrWhiteSpace(d.SiteId) && siteFilter.Contains(d.SiteId.Trim())).ToList();
+            quarantines = quarantines.Where(q => !string.IsNullOrWhiteSpace(q.SiteId) && siteFilter.Contains(q.SiteId.Trim())).ToList();
+        }
 
         int totalDevices = devices.Count;
         int availableDevices = devices.Count(d => d.Status == "AVAILABLE");
@@ -434,6 +447,32 @@ public sealed class DeviceApplicationService(
             OpenSafetyCases: openSafetyCases,
             SadeCount: sadeCount,
             ActiveQuarantines: activeQuarantines);
+    }
+
+    public async Task<(string StudyId, string SiteId)?> GetInventoryScopeAsync(
+        string studyId,
+        string? deviceInventoryId,
+        string? scannedBarcode,
+        CancellationToken ct = default)
+    {
+        DeviceInventoryItem? device = null;
+        if (!string.IsNullOrEmpty(deviceInventoryId) && Guid.TryParse(deviceInventoryId, out var devGuid))
+        {
+            device = await repository.GetInventoryByIdAsync(devGuid, ct).ConfigureAwait(false);
+        }
+        else if (!string.IsNullOrEmpty(scannedBarcode))
+        {
+            var parsed = UdiParser.Parse(scannedBarcode);
+            device = await repository.GetInventoryBySerialOrDiAsync(studyId, parsed.UdiDi, parsed.SerialNumber, parsed.LotNumber, ct).ConfigureAwait(false);
+        }
+
+        return device is null ? null : (device.StudyId, device.SiteId);
+    }
+
+    public async Task<DeviceQuarantineResponse?> GetQuarantineByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        var record = await repository.GetQuarantineByIdAsync(id, ct).ConfigureAwait(false);
+        return record is null ? null : MapToQuarantineResponse(record);
     }
 
     private static ParsedUdiResponse MapToParsedResponse(ParsedUdiResult result) => new(

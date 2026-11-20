@@ -4,22 +4,29 @@
 /* eCOA Subject Portal styles */
 
 :root {
+  --accent: var(--semantic-color-accent);
+  --accent-bg: var(--semantic-color-accent-bg);
+  --accent-light: var(--semantic-color-accent-light);
+  --bg-card: var(--semantic-color-surface);
+  --bg-main: var(--semantic-color-surface-muted);
+  --border: var(--semantic-color-border);
+  --border-control: var(--semantic-color-border-control);
+  --danger: var(--semantic-color-error);
+  --danger-bg: var(--semantic-color-error-bg);
+  --error: var(--semantic-color-error);
+  --error-bg: var(--semantic-color-error-bg);
+  --font: var(--semantic-font-family);
+  --neutral-dark: var(--semantic-color-text-muted);
+  --neutral-light: var(--semantic-color-surface-muted);
   --primary: var(--semantic-color-primary);
   --primary-dark: var(--semantic-color-primary-dark);
   --primary-light: var(--semantic-color-primary-light);
-  --text-main: var(--semantic-color-text);
-  --text-muted: var(--semantic-color-text-muted);
-  --bg-main: var(--semantic-color-surface-muted);
-  --bg-card: var(--semantic-color-surface);
-  --border: var(--semantic-color-border);
-  --border-control: var(--semantic-color-border-control);
   --success: var(--semantic-color-success);
   --success-bg: var(--semantic-color-success-bg);
+  --text-main: var(--semantic-color-text);
+  --text-muted: var(--semantic-color-text-muted);
   --warning: var(--semantic-color-warning);
   --warning-bg: var(--semantic-color-warning-bg);
-  --danger: var(--semantic-color-error);
-  --danger-bg: var(--semantic-color-error-bg);
-  --accent: var(--semantic-color-accent);
 }
 
 * {
@@ -361,7 +368,7 @@ body {
 
 .btn-primary {
   background-color: var(--primary);
-  color: white;
+  color: var(--semantic-color-text-on-primary);
 }
 
 .can-hover .btn-primary:hover {
@@ -495,6 +502,7 @@ body {
   border-collapse: collapse;
   text-align: left;
   font-size: 14px;
+  font-variant-numeric: tabular-nums;
 }
 
 .compliance-history-table th {
@@ -836,7 +844,7 @@ a:focus-visible,
 
 .sync-badge {
   background-color: var(--semantic-color-warning-action);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-solid);
   font-size: 11px;
   font-weight: 700;
   padding: 2px 6px;

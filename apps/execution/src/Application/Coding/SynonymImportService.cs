@@ -292,6 +292,17 @@ public sealed class SynonymImportService(
         return true;
     }
 
+    public async Task<SynonymRuleResponse?> GetRuleByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var rule = await dbContext.SynonymRules
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+        return rule is null ? null : MapRuleResponse(rule);
+    }
+
     private async Task<HashSet<string>> GetActiveRuleKeysAsync(
         string scope,
         string? studyId,

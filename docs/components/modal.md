@@ -37,7 +37,7 @@ The `ClinicalModal` and `ClinicalDrawer` primitives render accessible modal over
 ```vue
 <script setup>
 import { ref } from "vue";
-import { ClinicalModal } from "@cadence/ui";
+import { ClinicalModal } from "ui";
 
 const showSignatureModal = ref(false);
 

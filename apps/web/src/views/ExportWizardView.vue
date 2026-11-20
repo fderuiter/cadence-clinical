@@ -103,7 +103,7 @@
                   recordLockFilter === 'all' ? 'var(--primary)' : 'transparent',
                 color:
                   recordLockFilter === 'all'
-                    ? 'var(--semantic-color-surface)'
+                    ? 'var(--semantic-color-text-on-primary)'
                     : 'var(--semantic-color-text)',
               }"
               @click="recordLockFilter = 'all'"
@@ -127,7 +127,7 @@
                     : 'transparent',
                 color:
                   recordLockFilter === 'locked_only'
-                    ? 'var(--semantic-color-surface)'
+                    ? 'var(--semantic-color-text-on-primary)'
                     : 'var(--semantic-color-text)',
               }"
               @click="recordLockFilter = 'locked_only'"
@@ -151,7 +151,7 @@
                     : 'transparent',
                 color:
                   recordLockFilter === 'unlocked_only'
-                    ? 'var(--semantic-color-surface)'
+                    ? 'var(--semantic-color-text-on-primary)'
                     : 'var(--semantic-color-text)',
               }"
               @click="recordLockFilter = 'unlocked_only'"
@@ -1236,13 +1236,13 @@ function resetExport() {
 .wizard-main-title {
   font-size: 1.4rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
   margin-bottom: 4px;
 }
 
 .wizard-subtitle {
   font-size: 0.85rem;
-  color: var(--primary-light);
+  color: var(--semantic-color-text-muted);
 }
 
 .wizard-status-badges {
@@ -1311,12 +1311,12 @@ function resetExport() {
 .step-title {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .step-desc {
   font-size: 0.72rem;
-  color: var(--primary-light);
+  color: var(--semantic-color-text-muted);
 }
 
 /* Wizard Body */
@@ -1331,13 +1331,13 @@ function resetExport() {
 .pane-title {
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
   margin-bottom: 6px;
 }
 
 .pane-description {
   font-size: 0.9rem;
-  color: var(--primary-light);
+  color: var(--semantic-color-text-muted);
   margin-bottom: 24px;
 }
 
@@ -1392,12 +1392,12 @@ function resetExport() {
 .format-name {
   font-size: 1rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .format-detail {
   font-size: 0.8rem;
-  color: var(--primary-light);
+  color: var(--semantic-color-text-muted);
   flex: 1;
 }
 

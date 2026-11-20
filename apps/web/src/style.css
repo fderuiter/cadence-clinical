@@ -4,11 +4,16 @@
 /* Cadence Clinical Platform - Modern Interactive Demo Stylesheet */
 
 :root {
-  --primary: var(--semantic-color-text);
-  --primary-light: var(--semantic-color-text-muted);
-  --accent: var(--semantic-color-primary);
-  --accent-light: var(--semantic-color-primary-light);
-  --accent-bg: var(--semantic-color-primary-light);
+  --primary: var(--semantic-color-primary);
+  --primary-dark: var(--semantic-color-primary-dark);
+  --primary-light: var(--semantic-color-primary-light);
+  --accent: var(--semantic-color-accent);
+  --accent-light: var(--semantic-color-accent-light);
+  --accent-bg: var(--semantic-color-accent-bg);
+  --text-main: var(--semantic-color-text);
+  --text-muted: var(--semantic-color-text-muted);
+  --bg-main: var(--semantic-color-surface-muted);
+  --bg-card: var(--semantic-color-surface);
   --neutral-dark: var(--semantic-color-text-muted);
   --neutral-light: var(--semantic-color-surface-muted);
   --border: var(--semantic-color-border);
@@ -19,6 +24,8 @@
   --warning-bg: var(--semantic-color-warning-bg);
   --error: var(--semantic-color-error);
   --error-bg: var(--semantic-color-error-bg);
+  --danger: var(--semantic-color-error);
+  --danger-bg: var(--semantic-color-error-bg);
   --font: var(--semantic-font-family);
 }
 
@@ -31,7 +38,7 @@
 body {
   font-family: var(--font);
   background-color: var(--semantic-color-surface-header);
-  color: var(--primary);
+  color: var(--text-main);
   line-height: 1.5;
   display: flex;
   flex-direction: column;
@@ -554,7 +561,7 @@ main {
 
 .section-header h2 {
   font-size: 1.5rem;
-  color: var(--primary);
+  color: var(--text-main);
   font-weight: 700;
 }
 
@@ -575,7 +582,7 @@ main {
 .card-title {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
   margin-bottom: 16px;
   display: flex;
   justify-content: space-between;
@@ -618,6 +625,7 @@ main {
   width: 100%;
   border-collapse: collapse;
   margin-top: 8px;
+  font-variant-numeric: tabular-nums;
 }
 
 .clinical-visit-matrix th,
@@ -667,6 +675,10 @@ main {
 }
 
 /* Grouped headers & SoA Matrix specific styles (Enhanced for Phase 19 SoA Builder) */
+.clinical-soa-matrix {
+  font-variant-numeric: tabular-nums;
+}
+
 .clinical-soa-matrix th.grouped-header {
   text-align: center;
   font-size: 0.85rem;
@@ -677,15 +689,15 @@ main {
 }
 
 .clinical-soa-matrix th.arm-header {
-  background-color: var(--primary-light);
-  color: var(--semantic-color-surface);
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
   font-weight: 800;
   box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.1);
 }
 
 .clinical-soa-matrix th.epoch-header {
   background-color: var(--semantic-color-border);
-  color: var(--primary);
+  color: var(--text-main);
   font-weight: 700;
   border-bottom: 1px solid var(--border);
 }
@@ -833,8 +845,8 @@ main {
 
 .btn-submit-query,
 .btn-respond-query {
-  background-color: var(--accent);
-  color: var(--semantic-color-surface);
+  background-color: var(--primary);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .btn-close-query {
@@ -920,14 +932,14 @@ main {
 }
 
 .btn-primary {
-  background-color: var(--accent);
-  color: var(--semantic-color-surface);
-  border-color: var(--accent);
+  background-color: var(--primary);
+  color: var(--semantic-color-text-on-primary);
+  border-color: var(--primary);
 }
 
 .can-hover .btn-primary:hover {
-  background-color: var(--accent-light);
-  border-color: var(--accent-light);
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
 }
 
 /* Modals */
@@ -1122,7 +1134,7 @@ main {
 .ledger-block-title {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
   margin-bottom: 8px;
 }
 
@@ -1144,7 +1156,7 @@ main {
 
 .ledger-val {
   font-family: monospace;
-  color: var(--primary);
+  color: var(--text-main);
   word-break: break-all;
 }
 
@@ -1305,7 +1317,7 @@ a:focus-visible,
 .can-hover .btn-primary:hover {
   background-color: var(--semantic-color-primary-dark) !important;
   border-color: var(--semantic-color-primary-dark) !important;
-  color: var(--semantic-color-surface) !important;
+  color: var(--semantic-color-text-on-primary) !important;
 }
 
 /* 4. Skip to Content Link Styles (WCAG 2.4.1 Bypass Blocks) */
@@ -1582,7 +1594,7 @@ a:focus-visible,
   padding: 5px 10px;
   font-size: 0.75rem;
   font-weight: 600;
-  background-color: var(--semantic-color-info-bg-soft);
+  background-color: var(--semantic-color-primary-light);
   border: 1px solid var(--semantic-color-border-control);
   color: var(--semantic-color-primary);
   border-radius: 6px;
@@ -1594,7 +1606,7 @@ a:focus-visible,
 }
 
 .btn-add-field:hover {
-  background-color: var(--semantic-color-primary-light);
+  background-color: var(--semantic-color-info-light);
   color: var(--semantic-color-primary-dark);
 }
 
@@ -1681,8 +1693,8 @@ a:focus-visible,
   font-size: 0.7rem;
   font-weight: 700;
   color: var(--semantic-color-primary);
-  background-color: var(--semantic-color-info-bg-soft);
-  border: 1px solid var(--semantic-color-info-border-accent);
+  background-color: var(--semantic-color-primary-light);
+  border: 1px solid var(--semantic-color-info-border);
   padding: 2px 6px;
   border-radius: 4px;
 }

@@ -1047,8 +1047,8 @@
                 Automated Re-Consent Notification Channels:
               </div>
               <ReconsentChannelPicker
-                style="margin-top: 6px"
                 v-model="newAmendment.notification_channels"
+                style="margin-top: 6px"
                 :channels="amendmentChannels"
               />
             </div>
@@ -3459,5 +3459,11 @@ onMounted(() => {
 
 .color-dot.dot-gray {
   background: var(--semantic-color-border-control);
+}
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
 }
 </style>

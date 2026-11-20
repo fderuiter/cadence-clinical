@@ -62,7 +62,7 @@
             var(--semantic-color-wallet-start) 0%,
             var(--semantic-color-wallet-end) 100%
           );
-          color: var(--semantic-color-surface);
+          color: var(--semantic-color-text-on-solid);
         "
       >
         <div style="font-size: 14px; font-weight: 600">
@@ -204,8 +204,8 @@
             <label for="ocr-merchant-name">Merchant Name</label>
             <input
               id="ocr-merchant-name"
-              type="text"
               v-model="wallet.expenseForm.merchantName"
+              type="text"
               required
             />
           </div>
@@ -214,8 +214,8 @@
             <label for="ocr-expense-date">Expense Date</label>
             <input
               id="ocr-expense-date"
-              type="text"
               v-model="wallet.expenseForm.expenseDate"
+              type="text"
               required
             />
           </div>
@@ -224,9 +224,9 @@
             <label for="ocr-gross-amount">Gross Amount ($ USD)</label>
             <input
               id="ocr-gross-amount"
+              v-model.number="wallet.expenseForm.grossAmount"
               type="number"
               step="0.01"
-              v-model.number="wallet.expenseForm.grossAmount"
               required
             />
           </div>
@@ -250,8 +250,8 @@
             >
               <input
                 id="ocr-meal-allowance-check"
-                type="checkbox"
                 v-model="wallet.expenseForm.isMealAllowance"
+                type="checkbox"
               />
               <span>Meal Allowance / Per-Diem Cap ($75.00 limit)</span>
             </label>

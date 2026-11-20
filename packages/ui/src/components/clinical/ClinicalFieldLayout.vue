@@ -68,7 +68,7 @@
 import { ref, computed } from "vue";
 import ClinicalQueryFlag from "./ClinicalQueryFlag.vue";
 import ClinicalQueryPanel from "./ClinicalQueryPanel.vue";
-import { clinicalFieldBaseProps } from "./clinicalFieldProps.js";
+import { clinicalFieldBaseProps } from "./sharedProps.js";
 
 const props = defineProps({
   ...clinicalFieldBaseProps,

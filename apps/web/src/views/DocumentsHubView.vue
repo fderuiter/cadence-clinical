@@ -1133,4 +1133,10 @@ async function handleDeleteFile(file) {
   color: var(--semantic-color-surface);
   border-color: var(--accent);
 }
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
+}
 </style>

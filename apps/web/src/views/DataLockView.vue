@@ -1755,4 +1755,10 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
+}
 </style>

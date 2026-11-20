@@ -766,6 +766,7 @@ useFocusTrap(inspectionCardRef, {
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .queue-table th,

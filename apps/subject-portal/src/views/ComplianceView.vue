@@ -102,3 +102,9 @@ import { useUiStore } from "../stores/ui.js";
 
 const ui = useUiStore();
 </script>
+
+<style scoped>
+.compliance-history-table {
+  font-variant-numeric: tabular-nums;
+}
+</style>

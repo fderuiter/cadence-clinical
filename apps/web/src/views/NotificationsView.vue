@@ -204,7 +204,10 @@
           <div style="display: flex; gap: 8px; flex-wrap: wrap">
             <span
               class="badge category-badge"
-              style="background-color: var(--primary-light); color: white"
+              style="
+                background-color: var(--semantic-color-text-muted);
+                color: var(--semantic-color-text-on-solid);
+              "
               >{{ notif.category }}</span
             >
             <span

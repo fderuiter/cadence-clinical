@@ -515,6 +515,29 @@ public sealed class CgtApplicationService(
         return recons.Select(MapReconciliationToResponse).ToList();
     }
 
+    public async Task<(string StudyId, string SiteId)?> GetChainOfCustodyScopeAsync(
+        Guid chainOfCustodyId,
+        CancellationToken cancellationToken = default)
+    {
+        var coc = await _dbContext.CGTChainsOfCustody
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == chainOfCustodyId, cancellationToken);
+
+        return coc is null ? null : (coc.StudyId, coc.SiteId);
+    }
+
+    public async Task<(string StudyId, string SiteId)?> GetSubjectChainOfCustodyScopeAsync(
+        string studyId,
+        string subjectId,
+        CancellationToken cancellationToken = default)
+    {
+        var coc = await _dbContext.CGTChainsOfCustody
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.StudyId == studyId && x.SubjectId == subjectId, cancellationToken);
+
+        return coc is null ? null : (coc.StudyId, coc.SiteId);
+    }
+
     private static CgtChainOfCustodyResponse MapCocToResponse(CgtChainOfCustody coc) =>
         new(
             Id: coc.Id,

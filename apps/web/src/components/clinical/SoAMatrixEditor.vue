@@ -1028,4 +1028,10 @@ onUnmounted(() => {
   justify-content: center;
   box-sizing: border-box;
 }
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
+}
 </style>

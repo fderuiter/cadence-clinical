@@ -31,7 +31,7 @@ namespace Cadence.UnitTests.Execution.Toxicity;
 
 public sealed class LabToxicityEndpointsTests : IDisposable
 {
-    private static readonly GatewayIdentity Investigator = TestSecurityContext.Identity("pi_user_01", "Site Investigator");
+    private static readonly GatewayIdentity Investigator = TestSecurityContext.Identity("pi_user_01", "Site Investigator") with { SiteIds = ["SITE-01"] };
 
     private readonly LabToxicityTestFactory _factory = new();
     private readonly HttpClient _client;

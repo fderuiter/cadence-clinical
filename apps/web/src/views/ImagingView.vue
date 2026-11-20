@@ -194,7 +194,9 @@
             >
               <div class="series-thumb">🖼️</div>
               <div class="series-meta">
-                <div class="series-title">{{ s.description }}</div>
+                <div class="series-title">
+                  {{ s.description }}
+                </div>
                 <div class="series-tags">
                   <span class="modality-tag">{{ s.modality }}</span>
                   <span class="slices-tag">{{ s.instancesCount }} slices</span>
@@ -215,7 +217,9 @@
             >
               <div class="series-thumb">🖼️</div>
               <div class="series-meta">
-                <div class="series-title">{{ s.description }}</div>
+                <div class="series-title">
+                  {{ s.description }}
+                </div>
                 <div class="series-tags">
                   <span class="modality-tag">{{ s.modality }}</span>
                   <span class="slices-tag">{{ s.instancesCount }} slices</span>
@@ -1146,5 +1150,11 @@ function handleBatchIngested(result) {
 .text-danger {
   color: var(--semantic-color-error);
   font-weight: 700;
+}
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
 }
 </style>

@@ -203,7 +203,7 @@ export function createConditionRowHTML(
 
   return `
     <fieldset class="condition-row-fieldset" data-index="${index}" style="border: 1px dashed var(--semantic-color-border-control); border-radius: 8px; padding: 12px; background-color: var(--semantic-color-surface-muted); margin-bottom: 12px;">
-      <legend style="font-size: 0.75rem; font-weight: bold; padding: 0 4px; color: var(--semantic-color-text);">Condition Element #${index + 1}</legend>
+      <legend style="font-size: 0.75rem; font-weight: bold; padding: 0 4px; color: var(--semantic-color-primary);">Condition Element #${index + 1}</legend>
       <div style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;">
         <div class="form-group" style="flex: 1; min-width: 100px;">
           <label for="cond-form-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Left Form</label>
@@ -230,7 +230,7 @@ export function createConditionRowHTML(
 
         ${rightOperandHTML}
 
-        <button type="button" class="btn btn-danger remove-condition-btn" data-action="remove-condition" data-index="${index}" aria-label="Remove Condition Element #${index + 1}" style="background-color: var(--semantic-color-error); color: var(--semantic-color-surface); border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; height: fit-content; align-self: flex-end;">Remove</button>
+        <button type="button" class="btn btn-danger remove-condition-btn" data-action="remove-condition" data-index="${index}" aria-label="Remove Condition Element #${index + 1}" style="background-color: var(--semantic-color-error); color: var(--semantic-color-text-on-solid); border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; height: fit-content; align-self: flex-end;">Remove</button>
       </div>
     </fieldset>
   `.trim();
@@ -751,7 +751,10 @@ export { toBeAccessible } from "./accessibility-matcher.js";
 import {
   AiActionButton,
   AiSuggestionDrawer,
+  AuditLogViewer,
+  ClinicalDataTable,
   ClinicalDrawer,
+  ClinicalFieldLayout,
   ClinicalFormField,
   ClinicalInput,
   ClinicalRadioGroup,
@@ -762,7 +765,9 @@ import {
   ConfidenceBadge,
   EmptyState,
   FileUploadModal,
+  MediaPlayer,
   ModalErrorAlert,
+  PersonaSwitcher,
   useAsyncRetry,
   useFocusTrap,
   getFocusableElements,
@@ -772,7 +777,10 @@ import {
 export {
   AiActionButton,
   AiSuggestionDrawer,
+  AuditLogViewer,
+  ClinicalDataTable,
   ClinicalDrawer,
+  ClinicalFieldLayout,
   ClinicalFormField,
   ClinicalInput,
   ClinicalRadioGroup,
@@ -783,7 +791,9 @@ export {
   ConfidenceBadge,
   EmptyState,
   FileUploadModal,
+  MediaPlayer,
   ModalErrorAlert,
+  PersonaSwitcher,
   useAsyncRetry,
   useFocusTrap,
   getFocusableElements,

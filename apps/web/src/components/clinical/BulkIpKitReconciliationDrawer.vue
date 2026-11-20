@@ -229,9 +229,15 @@
                   'row-lot-mismatch': item.hasLotMismatch,
                 }"
               >
-                <td class="col-index">{{ index + 1 }}</td>
-                <td class="col-kit mono fw-bold">{{ item.kitNumber }}</td>
-                <td class="col-lot mono">{{ item.scannedLotNumber }}</td>
+                <td class="col-index">
+                  {{ index + 1 }}
+                </td>
+                <td class="col-kit mono fw-bold">
+                  {{ item.kitNumber }}
+                </td>
+                <td class="col-lot mono">
+                  {{ item.scannedLotNumber }}
+                </td>
                 <td class="col-expected-lot mono">
                   {{ item.expectedLotNumber }}
                   <span v-if="item.hasLotMismatch" class="badge badge-alert-lot"
@@ -376,11 +382,11 @@
       <!-- Drawer Footer Action Bar -->
       <footer class="drawer-footer">
         <div class="footer-summary">
-          <span class="summary-text" v-if="scannedItems.length > 0">
+          <span v-if="scannedItems.length > 0" class="summary-text">
             Ready to reconcile <strong>{{ scannedItems.length }}</strong> kit(s)
             (<strong>{{ quarantinedCount }}</strong> marked for quarantine)
           </span>
-          <span class="summary-text" v-else>
+          <span v-else class="summary-text">
             Scan barcodes to enable batch commitment
           </span>
         </div>
@@ -1520,5 +1526,11 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+}
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
 }
 </style>

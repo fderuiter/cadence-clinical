@@ -230,6 +230,81 @@ export const ClinicalDrawer: DefineComponent<
   any
 >;
 
+export const AuditLogViewer: DefineComponent<
+  {
+    logs: Array<{
+      id: string | number;
+      timestamp?: string;
+      user_id?: string;
+      action?: string;
+      entity_type?: string;
+      entity_id?: string;
+      reason_for_change?: string;
+      changes?: Array<{ field: string; old_val?: any; new_val?: any }>;
+    }>;
+    title?: string;
+  },
+  {},
+  any
+>;
+
+export const ClinicalDataTable: DefineComponent<
+  {
+    columns: Array<{ key: string; label: string; sortable?: boolean }>;
+    data: Record<string, any>[];
+    pageSize?: number;
+    selectable?: boolean;
+    title?: string;
+  },
+  {},
+  any
+>;
+
+export const ClinicalFieldLayout: DefineComponent<
+  {
+    id: string;
+    label: string;
+    query?: any;
+    gridSpan?: number | string;
+    error?: string | null;
+    attributes?: Record<string, any>;
+    tag?: string;
+    extraClass?: string;
+    canManageQueries?: boolean;
+    queryLabel?: string;
+  },
+  {},
+  any
+>;
+
+export const MediaPlayer: DefineComponent<
+  {
+    src: string;
+    mimeType?: string;
+    title?: string;
+    isWatermarked?: boolean;
+    watermarkText?: string;
+    autoplay?: boolean;
+    initialZoom?: number;
+  },
+  {},
+  any
+>;
+
+export const PersonaSwitcher: DefineComponent<
+  {
+    modelValue?: string;
+    personas?: Array<{
+      id: string;
+      label: string;
+      role: string;
+      badge?: string;
+    }>;
+  },
+  {},
+  any
+>;
+
 export interface FocusTrapOptions {
   isOpen?: import("vue").Ref<boolean> | (() => boolean) | boolean;
   modal?: import("vue").Ref<boolean> | (() => boolean) | boolean;

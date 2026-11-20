@@ -14,7 +14,7 @@ The `ClinicalDataTable` component provides an accessible, performant tabular vie
 ```vue
 <script setup>
 import { ref } from "vue";
-import { ClinicalDataTable } from "@cadence/ui";
+import { ClinicalDataTable } from "ui";
 
 const columns = [
   { key: "subject_id", label: "Subject ID", sortable: true },

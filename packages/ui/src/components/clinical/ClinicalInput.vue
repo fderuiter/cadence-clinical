@@ -28,7 +28,7 @@
 
 <script setup>
 import ClinicalFieldLayout from "./ClinicalFieldLayout.vue";
-import { clinicalFieldBaseProps } from "./clinicalFieldProps.js";
+import { clinicalFieldBaseProps } from "./sharedProps.js";
 
 defineProps({
   ...clinicalFieldBaseProps,

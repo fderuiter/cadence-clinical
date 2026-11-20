@@ -185,9 +185,20 @@ public static partial class SubjectEndpoints
     public static async Task<IResult> CreateSubjectAsync(
         SubjectCreateRequest request, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
     {
+        ct.ThrowIfCancellationRequested();
+
         if (SubjectAuthority.AuthorizeParticipantChange(http.User.ToAuthenticatedCaller()) is { } forbidden)
         {
             return forbidden.ToProblemResult();
+        }
+
+        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(
+                http,
+                request.StudyId,
+                request.SiteId,
+                allowUnassignedSiteForScopedCaller: true) is { } scopeDenied)
+        {
+            return scopeDenied;
         }
 
         if (logger != null)
@@ -215,9 +226,22 @@ public static partial class SubjectEndpoints
     public static async Task<IResult> RecordSubjectConsentAsync(
         string subjectId, SubjectConsentRequest request, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
     {
+        ct.ThrowIfCancellationRequested();
+
         if (SubjectAuthority.AuthorizeParticipantChange(http.User.ToAuthenticatedCaller()) is { } forbidden)
         {
             return forbidden.ToProblemResult();
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.ProtocolVersion?.StudyId)
+            && ExecutionScopeGuard.RequireStudy(http, request.ProtocolVersion.StudyId) is { } requestStudyDenied)
+        {
+            return requestStudyDenied;
+        }
+
+        if (await GuardSubjectScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false) is { } scopeDenied)
+        {
+            return scopeDenied;
         }
 
         if (logger != null)
@@ -243,12 +267,19 @@ public static partial class SubjectEndpoints
     public static async Task<IResult> AdvanceSubjectStateAsync(
         string subjectId, SubjectStateUpdateRequest request, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
     {
+        ct.ThrowIfCancellationRequested();
+
         string changeReason = ChangeReasonHeader.Read(http.Request)
             ?? throw new InvalidOperationException("ChangeReasonHeaderFilter should have rejected this request.");
 
         if (SubjectAuthority.AuthorizeStateChange(http.User.ToAuthenticatedCaller(), request.Target) is { } forbidden)
         {
             return forbidden.ToProblemResult();
+        }
+
+        if (await GuardSubjectScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false) is { } scopeDenied)
+        {
+            return scopeDenied;
         }
 
         if (logger != null)
@@ -270,10 +301,34 @@ public static partial class SubjectEndpoints
         [FromQuery(Name = "status")] string? status,
         [FromQuery(Name = "limit")] int? limit,
         [FromQuery(Name = "offset")] int? offset,
+        HttpContext http,
         ISubjectApplicationService svc,
         CancellationToken ct)
     {
-        var result = await svc.ListAsync(studyId, siteId, status, limit, offset, ct).ConfigureAwait(false);
+        ct.ThrowIfCancellationRequested();
+
+        IResult? studyDenied = !string.IsNullOrWhiteSpace(studyId)
+            ? ExecutionScopeGuard.RequireStudy(http, studyId)
+            : ExecutionScopeGuard.RequireAnyStudyScope(http);
+        if (studyDenied is not null)
+        {
+            return studyDenied;
+        }
+
+        if (ExecutionScopeGuard.ResolveSiteFilter(http, siteId, out var siteFilter, out _) is { } siteDenied)
+        {
+            return siteDenied;
+        }
+
+        var result = await svc.ListAsync(
+                studyId,
+                siteId,
+                status,
+                limit,
+                offset,
+                ct,
+                string.IsNullOrWhiteSpace(siteId) ? siteFilter : null)
+            .ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 
@@ -281,11 +336,14 @@ public static partial class SubjectEndpoints
     /// <c>GET /api/v1/execution/subjects/{subjectId}</c>. Blinded by default: the treatment group and kit are revealed
     /// from the randomisation allocation only to a caller whose signed identity carries
     /// <see cref="CadenceClaimTypes.UnblindedAccess"/>, which the gateway sets from the identity provider (#4943, #5607).
+    /// Study and site scope on the loaded <see cref="ClinicalSubject"/> are verified before <c>RevealAsync</c> runs.
     /// </summary>
     public static async Task<IResult> GetSubjectDetailAsync(
         string subjectId, HttpContext http, ISubjectApplicationService svc, IRandomizationApplicationService randomization,
         CancellationToken ct, [FromServices] ILogger? logger = null)
     {
+        ct.ThrowIfCancellationRequested();
+
         bool isBlindedCaller = !IsUnblindedCaller(http.User);
 
         if (logger != null)
@@ -294,15 +352,30 @@ public static partial class SubjectEndpoints
         }
 
         var result = await svc.GetDetailAsync(subjectId, ct).ConfigureAwait(false);
-        if (result.IsFailure || isBlindedCaller)
+        if (result.IsFailure)
         {
-            return result.Match(Results.Ok, e => e.ToProblemResult());
+            return GuardMissingRecordScope(http) ?? result.Error!.ToProblemResult();
+        }
+
+        var detail = result.Value!;
+        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(
+                http,
+                detail.StudyId.Value,
+                detail.SiteId?.Value,
+                allowUnassignedSiteForScopedCaller: true) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
+        if (isBlindedCaller)
+        {
+            return Results.Ok(detail);
         }
 
         var revealed = await randomization.RevealAsync(subjectId, ct).ConfigureAwait(false);
         return Results.Ok(revealed is null
-            ? result.Value!
-            : result.Value! with { TreatmentGroup = revealed.Arm, InvestigationalProductId = revealed.KitNumber });
+            ? detail
+            : detail with { TreatmentGroup = revealed.Arm, InvestigationalProductId = revealed.KitNumber });
     }
 
     /// <summary>
@@ -315,11 +388,18 @@ public static partial class SubjectEndpoints
     public static async Task<IResult> UpdateSubjectDemographicsAsync(
         string subjectId, SubjectDemographicsUpdateRequest request, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
     {
+        ct.ThrowIfCancellationRequested();
+
         string changeReason = ChangeReasonHeader.Read(http.Request)!;
 
         if (SubjectAuthority.AuthorizeParticipantChange(http.User.ToAuthenticatedCaller()) is { } forbidden)
         {
             return forbidden.ToProblemResult();
+        }
+
+        if (await GuardSubjectScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false) is { } scopeDenied)
+        {
+            return scopeDenied;
         }
 
         if (logger != null)
@@ -340,11 +420,18 @@ public static partial class SubjectEndpoints
     public static async Task<IResult> DeleteSubjectDemographicsAsync(
         string subjectId, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
     {
+        ct.ThrowIfCancellationRequested();
+
         string changeReason = ChangeReasonHeader.Read(http.Request)!;
 
         if (SubjectAuthority.AuthorizeParticipantChange(http.User.ToAuthenticatedCaller()) is { } forbidden)
         {
             return forbidden.ToProblemResult();
+        }
+
+        if (await GuardSubjectScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false) is { } scopeDenied)
+        {
+            return scopeDenied;
         }
 
         if (logger != null)
@@ -355,6 +442,23 @@ public static partial class SubjectEndpoints
         var result = await svc.DeleteDemographicsAsync(subjectId, changeReason, ct).ConfigureAwait(false);
         return result.Match(r => Results.Ok(r), e => e.ToProblemResult());
     }
+
+    private static async Task<IResult?> GuardSubjectScopeAsync(
+        string subjectId, HttpContext http, ISubjectApplicationService svc, CancellationToken ct)
+    {
+        var scope = await svc.GetSubjectScopeAsync(subjectId, ct).ConfigureAwait(false);
+        return scope is { } s
+            ? ExecutionScopeGuard.RequireStudyAndOptionalSite(
+                http,
+                s.StudyId.Value,
+                s.SiteId?.Value,
+                allowUnassignedSiteForScopedCaller: true)
+            : GuardMissingRecordScope(http);
+    }
+
+    private static IResult? GuardMissingRecordScope(HttpContext http) =>
+        ExecutionScopeGuard.RequireAnyStudyScope(http)
+        ?? ExecutionScopeGuard.ResolveSiteFilter(http, null, out _, out _);
 
     /// <summary>Whether <paramref name="user"/> carries the gateway-signed unblinded-access claim.</summary>
     private static bool IsUnblindedCaller(ClaimsPrincipal user) =>

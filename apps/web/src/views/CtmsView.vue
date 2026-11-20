@@ -3743,4 +3743,10 @@ textarea {
   color: var(--semantic-color-error);
   font-size: 14px;
 }
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
+}
 </style>

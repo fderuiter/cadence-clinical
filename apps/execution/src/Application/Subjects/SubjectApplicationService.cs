@@ -359,7 +359,7 @@ public sealed class SubjectApplicationService(
     /// validation error rather than a silently widened or emptied list.
     /// </summary>
     public async Task<Result<SubjectListResponse>> ListAsync(string? studyId, string? siteId, string? status, int? limit,
-        int? offset, CancellationToken ct)
+        int? offset, CancellationToken ct, IReadOnlyCollection<string>? allowedSiteIds = null)
     {
         if (string.IsNullOrWhiteSpace(studyId))
         {
@@ -389,6 +389,15 @@ public sealed class SubjectApplicationService(
             }
         }
 
+        IReadOnlyCollection<SiteCode>? allowedSites = null;
+        if (siteCode is null && allowedSiteIds is not null)
+        {
+            allowedSites = allowedSiteIds
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(s => new SiteCode(s.Trim()))
+                .ToList();
+        }
+
         SubjectState? state = null;
         if (!string.IsNullOrWhiteSpace(status))
         {
@@ -412,11 +421,18 @@ public sealed class SubjectApplicationService(
             return DomainError.Validation("INVALID_OFFSET", "offset cannot be negative.");
         }
 
-        var page = await subjects.ListAsync(new SubjectListCriteria(studyCode, siteCode, state, pageSize, skip), ct)
+        var page = await subjects.ListAsync(new SubjectListCriteria(studyCode, siteCode, state, pageSize, skip, allowedSites), ct)
             .ConfigureAwait(false);
 
         return new SubjectListResponse(page.Items.Select(SubjectSummaryResponse.FromAggregate).ToList(), page.Total,
             pageSize, skip);
+    }
+
+    /// <inheritdoc />
+    public async Task<(StudyCode StudyId, SiteCode? SiteId)?> GetSubjectScopeAsync(string subjectIdOrCode, CancellationToken ct = default)
+    {
+        var subject = await ResolveSubjectAsync(subjectIdOrCode, ct).ConfigureAwait(false);
+        return subject is null ? null : (subject.StudyCode, subject.SiteCode);
     }
 
     /// <summary>

@@ -67,8 +67,12 @@
             <span class="ta-icon">{{ tpl.icon }}</span>
             <span class="badge badge-category">{{ tpl.category }}</span>
           </div>
-          <h5 class="ta-title">{{ tpl.title }}</h5>
-          <p class="ta-desc">{{ tpl.description }}</p>
+          <h5 class="ta-title">
+            {{ tpl.title }}
+          </h5>
+          <p class="ta-desc">
+            {{ tpl.description }}
+          </p>
           <div class="ta-card-meta">
             <span class="meta-tag"
               >Phase: {{ tpl.defaultPhase.replace("_", " ") }}</span
@@ -278,7 +282,9 @@
                 v-for="(epoch, idx) in activeConfig.epochs"
                 :key="epoch.id || idx"
               >
-                <td class="seq-num">{{ epoch.sequence_index }}</td>
+                <td class="seq-num">
+                  {{ epoch.sequence_index }}
+                </td>
                 <td>
                   <input
                     v-model="epoch.name"
@@ -1114,5 +1120,11 @@ function synthesizeProtocol() {
   padding: 8px 16px;
   border-radius: 6px;
   cursor: pointer;
+}
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
 }
 </style>

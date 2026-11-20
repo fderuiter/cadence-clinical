@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -23,9 +24,15 @@ public static class IpKitEndpoints
 
         group.MapPost("/validate-scan", async (
             IpKitScanValidateRequest request,
+            HttpContext httpContext,
             IIpKitApplicationService service,
             CancellationToken ct) =>
         {
+            if (await GuardKitSitesAsync(httpContext, service, request.StudyId, [request.KitNumber], request.SiteId, ct) is { } denied)
+            {
+                return denied;
+            }
+
             var result = await service.ValidateScannedBarcodeAsync(request, ct);
             return Results.Ok(result);
         })
@@ -33,9 +40,16 @@ public static class IpKitEndpoints
 
         group.MapPost("/reconcile-batch", async (
             IpKitBatchReconciliationRequest request,
+            HttpContext httpContext,
             IIpKitApplicationService service,
             CancellationToken ct) =>
         {
+            var kitNumbers = (request.Items ?? []).Select(i => i.KitNumber);
+            if (await GuardKitSitesAsync(httpContext, service, request.StudyId, kitNumbers, request.SiteId, ct) is { } denied)
+            {
+                return denied;
+            }
+
             try
             {
                 var result = await service.ProcessBatchReconciliationAsync(request, ct);
@@ -50,14 +64,27 @@ public static class IpKitEndpoints
 
         group.MapGet("/certificates/{certificateId}", async (
             string certificateId,
+            HttpContext httpContext,
             IIpKitApplicationService service,
             CancellationToken ct) =>
         {
+            if ((ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
+                 ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } callerDenied)
+            {
+                return callerDenied;
+            }
+
             var result = await service.GetCertificateAsync(certificateId, ct);
             if (result == null)
             {
                 return Results.NotFound(new { detail = $"Certificate '{certificateId}' not found." });
             }
+
+            if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, result.StudyId, result.SiteId) is { } recordDenied)
+            {
+                return recordDenied;
+            }
+
             return Results.Ok(result);
         })
         .RequirePermission("rtsm_supply:read");
@@ -65,9 +92,15 @@ public static class IpKitEndpoints
         group.MapGet("/inventory/{studyId}/{siteId}", async (
             string studyId,
             string siteId,
+            HttpContext httpContext,
             IIpKitApplicationService service,
             CancellationToken ct) =>
         {
+            if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId) is { } denied)
+            {
+                return denied;
+            }
+
             var result = await service.GetSiteInventoryAsync(studyId, siteId, ct);
             return Results.Ok(result);
         })
@@ -77,15 +110,46 @@ public static class IpKitEndpoints
 
         group.MapPost("/seed-inventory", async (
             SeedInventoryRequest request,
+            HttpContext httpContext,
             IIpKitApplicationService service,
             CancellationToken ct) =>
         {
-            var result = await service.SeedSiteInventoryAsync(request.StudyId, request.SiteId, request.Kits, ct);
+            var kitNumbers = (request.Kits ?? []).Select(k => k.KitNumber);
+            if (await GuardKitSitesAsync(httpContext, service, request.StudyId, kitNumbers, request.SiteId, ct) is { } denied)
+            {
+                return denied;
+            }
+
+            var result = await service.SeedSiteInventoryAsync(request.StudyId, request.SiteId, request.Kits ?? [], ct);
             return Results.Ok(result);
         })
         .RequirePermission("ip_kit_inventory:seed");
 
         return routes;
+    }
+
+    private static async Task<IResult?> GuardKitSitesAsync(
+        HttpContext httpContext,
+        IIpKitApplicationService service,
+        string studyId,
+        IEnumerable<string> kitNumbers,
+        string siteId,
+        CancellationToken ct)
+    {
+        if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId) is { } requestDenied)
+        {
+            return requestDenied;
+        }
+
+        foreach (string existingSite in await service.GetExistingKitSitesAsync(studyId, kitNumbers, ct).ConfigureAwait(false))
+        {
+            if (ExecutionScopeGuard.RequireSite(httpContext, existingSite) is { } existingDenied)
+            {
+                return existingDenied;
+            }
+        }
+
+        return null;
     }
 }
 

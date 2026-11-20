@@ -1,24 +1,44 @@
 # Cadence Enterprise UI Components & Design System
 
-The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise design system in `@cadence/ui` (`packages/ui`).
+The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise design system in `ui` (`packages/ui`).
 
 ## Core Principles
 
-- **Zero Tailwind Dependency**: Standard Vanilla CSS scoped styling using centralized CSS Custom Properties (`tokens.css`).
-- **Full-Width Authoring Workspaces**: High-density clinical tables and matrices occupy full viewport width.
-- **Accessibility (WCAG 2.2 AA / Section 508)**: ARIA landmarks, keyboard focus management, live regions for terminology lookup feedback, `>= 4.5:1` semantic text/status token contrast across light surfaces, and `>= 3:1` interactive control boundary contrast (`--semantic-color-border-control`).
+- **Zero Tailwind Dependency**: Standard Vanilla CSS scoped styling using centralized CSS Custom Properties (`tokens.css`) across paired light and dark themes (`[data-theme="dark"]`).
+- **Full-Width Authoring Workspaces**: High-density clinical tables and matrices occupy full viewport width with `font-variant-numeric: tabular-nums` digit alignment.
+- **Accessibility (WCAG 2.2 AA / Section 508)**: ARIA landmarks, keyboard focus management (`useFocusTrap`, `getFocusableElements`, `useEscapeClose`), live regions for terminology lookup feedback, 48px touch targets, `>= 4.5:1` AA semantic text/status token contrast, and `>= 3:1` interactive control boundary contrast (`--semantic-color-border-control`).
 - **Multi-Persona Testing**: Built-in Persona Switcher for verifying RBAC roles across clinical workflows.
 
 ---
 
-## Component Catalog
+## Component & Composable Catalog
 
-| Component                      | Description                                                       | ARIA Landmark / Role          |
-| :----------------------------- | :---------------------------------------------------------------- | :---------------------------- |
-| [`ClinicalModal`](./modal.md)  | Accessible modal dialog with focus trap and backdrop blur         | `dialog`, `aria-modal="true"` |
-| [`ClinicalDrawer`](./modal.md) | Accessible slide-over drawer with reactive focus containment      | `dialog`, `aria-modal="true"` |
-| `ClinicalLookupInput`          | Real-time terminology lookup field with dynamic status indicators | `combobox`, `aria-live`       |
-| `ClinicalQueryPanel`           | Inline clinical query discussion thread with `Escape` dismissal   | `region`, `list`              |
+All 19 Vue components and interaction helpers are exported directly from the root `ui` package:
+
+| Export                                     | Description                                                                                                                   | ARIA Landmark / Role              |
+| :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| [`ClinicalDataTable`](./data-table.md)     | Accessible, sortable, paginated clinical dataset table with row selection and tabular numerals                                | `table`, `region`, `columnheader` |
+| [`ClinicalModal`](./modal.md)              | Accessible modal dialog with focus trap and backdrop blur                                                                     | `dialog`, `aria-modal="true"`     |
+| [`ClinicalDrawer`](./modal.md)             | Accessible slide-over drawer with reactive focus containment                                                                  | `dialog`, `aria-modal="true"`     |
+| [`PersonaSwitcher`](./persona-switcher.md) | Top-bar multi-role persona switcher (`super_admin`, `sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `auditor`) | `menu`, `menuitem`                |
+| [`AuditLogViewer`](./audit-viewer.md)      | 21 CFR Part 11 immutable audit trail explorer with diff viewer                                                                | `feed`, `article`                 |
+| `ClinicalFieldLayout`                      | Shared accessible field wrapper for inputs, radio groups, validation messages, and query flags                                | `group`, `status`                 |
+| `ClinicalFormField`                        | Schema-driven CDASH form field dispatcher                                                                                     | `group`                           |
+| `ClinicalInput`                            | Accessible 48px touch-target clinical text input                                                                              | `textbox`                         |
+| `ClinicalRadioGroup`                       | Accessible clinical radio group fieldset                                                                                      | `radiogroup`                      |
+| `ClinicalLookupInput`                      | Real-time terminology lookup field with dynamic status indicators                                                             | `combobox`, `aria-live`           |
+| `ClinicalQueryFlag`                        | Discrepancy query status indicator button                                                                                     | `button`                          |
+| `ClinicalQueryPanel`                       | Inline clinical query discussion thread with Part 11 compliance and `Escape` dismissal                                        | `region`, `list`                  |
+| `AiActionButton`                           | Role-gated AI assist trigger styled with `--semantic-color-ai`                                                                | `button`                          |
+| `AiSuggestionDrawer`                       | Human-in-the-loop AI proposal review drawer                                                                                   | `dialog`, `aria-modal="true"`     |
+| `ConfidenceBadge`                          | AI confidence score indicator badge                                                                                           | `status`                          |
+| `EmptyState`                               | Shared empty-state placeholder region with optional call-to-action                                                            | `region`                          |
+| `FileUploadModal`                          | Multipart GxP file upload dialog with SHA-256 verification                                                                    | `dialog`, `aria-modal="true"`     |
+| `MediaPlayer`                              | Clinical PDF, image pan/zoom, audio waveform, and video viewer with GxP watermark support                                     | `region`                          |
+| `ModalErrorAlert`                          | Accessible error banner with retry and dismiss actions                                                                        | `alert`                           |
+| `useFocusTrap` / `getFocusableElements`    | Reactive keyboard focus containment and focusable element discovery                                                           | Keyboard helper                   |
+| `useEscapeClose`                           | Stack-aware `Escape` dismissal composable                                                                                     | Keyboard helper                   |
+| `useAsyncRetry`                            | Reactive async execution and retry state helper                                                                               | Async helper                      |
 
 ---
 
@@ -27,13 +47,13 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 Tokens are imported from [tokens.css](../../packages/ui/tokens.css):
 
 ```css
-@import "@cadence/ui/tokens.css";
+@import "ui/tokens.css";
 
 .custom-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md, 8px);
-  color: var(--color-text);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
+  border-radius: var(--semantic-radius-md);
+  color: var(--semantic-color-text);
 }
 ```
 

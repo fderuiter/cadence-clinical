@@ -127,8 +127,9 @@ const noInlineHexRule = {
             stripCssCommentsPreservingNewlines(sourceText)
           );
           if (filename.endsWith("/packages/ui/tokens.css")) {
-            masked = masked.replace(/:root\s*\{[\s\S]*?\}/, (rootBlock) =>
-              rootBlock.replace(/[^\r\n]/g, " ")
+            masked = masked.replace(
+              /(?::root(?:\[[^\]]+\])?|\[data-theme="[^"]+"\]|\.dark)[^{]*\{[^}]*\}/g,
+              (rootBlock) => rootBlock.replace(/[^\r\n]/g, " ")
             );
           }
           for (const match of masked.matchAll(hexColorRegex)) {

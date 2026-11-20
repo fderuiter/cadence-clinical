@@ -202,8 +202,8 @@
                     <span
                       class="badge"
                       style="
-                        background-color: var(--primary-light);
-                        color: white;
+                        background-color: var(--semantic-color-text-muted);
+                        color: var(--semantic-color-text-on-solid);
                         font-size: 0.7rem;
                         padding: 2px 6px;
                       "
@@ -1557,5 +1557,11 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 8px;
+}
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
 }
 </style>

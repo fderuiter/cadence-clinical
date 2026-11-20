@@ -78,7 +78,9 @@
     <template v-else>
       <dl class="ecrf-form-summary" data-testid="ecrf-form-summary">
         <dt>Form</dt>
-        <dd data-testid="ecrf-form-id">{{ form.form_id }}</dd>
+        <dd data-testid="ecrf-form-id">
+          {{ form.form_id }}
+        </dd>
         <dt>Collects</dt>
         <dd>{{ form.collection_spec_id }}</dd>
         <dt>Visit</dt>
@@ -86,7 +88,9 @@
         <dt>Collected</dt>
         <dd>{{ form.collected_at }}</dd>
         <dt>Version</dt>
-        <dd data-testid="ecrf-form-version">{{ form.version }}</dd>
+        <dd data-testid="ecrf-form-version">
+          {{ form.version }}
+        </dd>
         <dt>Status</dt>
         <dd data-testid="ecrf-form-status">
           <span v-if="form.complete" class="ecrf-form-complete">Complete</span>
@@ -315,7 +319,7 @@
                     {{ item.revision }} by {{ item.recorded_by }} at
                     {{ item.recorded_at }}
                   </template>
-                  <template v-else>No value</template>
+                  <template v-else> No value </template>
                 </td>
                 <td>
                   <div class="ecrf-item-sdv">
@@ -547,7 +551,9 @@
           {{ outcome.changed === 1 ? "value" : "values" }} recorded, form
           version {{ outcome.version }}.
         </template>
-        <template v-else>{{ outcome.message }}</template>
+        <template v-else>
+          {{ outcome.message }}
+        </template>
         <div
           v-if="outcome.kind === 'locked' && outcome.unsaved.length > 0"
           class="ecrf-locked-unsaved"
@@ -631,10 +637,10 @@
         <li v-for="assertion in form.assertions" :key="assertion.assertion_id">
           {{ assertion.kind }} on {{ assertion.target }}
           <template v-if="assertion.revision !== null">
-            (revision {{ assertion.revision }})</template
-          >
+            (revision {{ assertion.revision }})
+          </template>
           by {{ assertion.asserted_by }} at {{ assertion.asserted_at }}
-          <template v-if="assertion.text">: “{{ assertion.text }}”</template>
+          <template v-if="assertion.text"> : “{{ assertion.text }}” </template>
           <em v-if="assertion.retracted_at">
             (retracted {{ assertion.retracted_at }})</em
           >
@@ -701,7 +707,9 @@
                     'ecrf-signed-changed': changedSince(signed),
                   }"
                 >
-                  <th scope="row">{{ signed.item_id }}</th>
+                  <th scope="row">
+                    {{ signed.item_id }}
+                  </th>
                   <td>{{ formatObservationValue(signed.value) }}</td>
                   <td>{{ signed.revision }}</td>
                   <td>{{ currentValueText(signed.item_id) }}</td>
@@ -753,7 +761,9 @@
           <template v-if="signOutcome.kind === 'signed'">
             Form signed: {{ meaningLabel(signOutcome.meaning) }}.
           </template>
-          <template v-else>{{ signOutcome.message }}</template>
+          <template v-else>
+            {{ signOutcome.message }}
+          </template>
           <button
             v-if="signOutcome.kind === 'changed'"
             id="ecrf-sign-reload"
@@ -1550,5 +1560,11 @@ watch(dirty, (value) => emit("dirty-change", value));
 .ecrf-form-outcome--failed {
   background-color: var(--semantic-color-error-bg-soft);
   color: var(--semantic-color-error-text-dark);
+}
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
 }
 </style>
