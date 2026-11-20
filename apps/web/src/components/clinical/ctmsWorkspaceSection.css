@@ -1,0 +1,125 @@
+.ctms-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+}
+
+.ctms-section .section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.ctms-section .section-subtitle {
+  margin: 4px 0 0;
+  color: var(--text-muted, #64748b);
+  font-size: 0.9rem;
+}
+
+.ctms-section .scope-bar,
+.ctms-section .form-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ctms-section .scope-bar label,
+.ctms-section .form-row label {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.ctms-section .scope-bar input,
+.ctms-section .scope-bar select,
+.ctms-section .form-row input,
+.ctms-section .form-row select {
+  padding: 7px 10px;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 4px;
+  font-size: 0.88rem;
+}
+
+.ctms-section .scope-guidance {
+  padding: 12px 14px;
+  border-radius: 6px;
+  border: 1px solid #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.ctms-section .error-banner {
+  margin: 0;
+  color: #b91c1c;
+}
+
+.ctms-section .muted-status {
+  margin: 0;
+  color: var(--text-muted, #64748b);
+}
+
+.ctms-section .table-wrap {
+  overflow-x: auto;
+}
+
+.ctms-section .data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ctms-section .data-table th,
+.ctms-section .data-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.ctms-section .action-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ctms-section .status-pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.ctms-section .text-ok {
+  color: #166534;
+  font-weight: 600;
+}
+
+.ctms-section .mutation-card {
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.ctms-section .mutation-card h4,
+.ctms-section .mutation-card h5 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+}
+
+.ctms-section .readonly-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 0.88rem;
+}
+
+.ctms-section .btn-sm {
+  padding: 4px 8px;
+  font-size: 0.8rem;
+}

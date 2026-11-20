@@ -175,6 +175,18 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       expect(router.currentRoute.value.path).toBe("/ecrf");
     });
 
+    it("should admit Data Manager directly to /ctms and /ssu matching ROLE_SPONSOR_DM", async () => {
+      const authStore = useAuthStore();
+      authStore.isAuthenticated = true;
+      authStore.rawRoles = ["Data Manager"];
+
+      await router.push("/ctms");
+      expect(router.currentRoute.value.path).toBe("/ctms");
+
+      await router.push("/ssu");
+      expect(router.currentRoute.value.path).toBe("/ssu");
+    });
+
     it("should land TMF Auditor on /studies when bypass preference is set", async () => {
       const authStore = useAuthStore();
       const onboardingStore = useOnboardingStore();

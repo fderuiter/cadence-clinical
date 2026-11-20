@@ -49,6 +49,16 @@
       </div>
     </div>
 
+    <p
+      v-if="!demoBuild"
+      id="adaptive-dose-unbacked-note"
+      class="unbacked-scope-note"
+    >
+      Adaptive dose escalation cohort decisions have no Cadence backend service
+      yet and run only in demo builds (Allocate roadmap). See
+      <PlansRoadmapLink />.
+    </p>
+
     <!-- Active Cohort Recommendation Banner -->
     <div
       class="recommendation-banner"
@@ -377,6 +387,11 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { isDemoBuild } from "../../utils/demoMode.js";
+import { allowUnbackedAction } from "../../utils/unbackedActions.js";
+import PlansRoadmapLink from "./PlansRoadmapLink.vue";
+
+const demoBuild = isDemoBuild();
 
 export interface DoseLevelSummaryDTO {
   dose_level_index: number;
@@ -522,6 +537,7 @@ function rateColorClass(rate: number): string {
 }
 
 function openTransitionModal(): void {
+  if (!allowUnbackedAction("Cohort dose escalation decision")) return;
   selectedAction.value = props.recommendationAction;
   selectedTargetDoseIndex.value =
     props.recommendedDoseLevelIndex || props.currentDoseLevelIndex;
@@ -535,6 +551,7 @@ function closeTransitionModal(): void {
 }
 
 function submitCohortTransition(): void {
+  if (!allowUnbackedAction("Cohort dose escalation decision")) return;
   if (!isFormValid.value) return;
   isSubmitting.value = true;
 
@@ -567,6 +584,16 @@ function submitCohortTransition(): void {
     sans-serif
   );
   color: var(--text-primary, #0f172a);
+}
+
+.unbacked-scope-note {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.88rem;
 }
 
 .console-header {

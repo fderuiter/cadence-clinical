@@ -566,6 +566,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2818: Clinical and Gateway Endpoints Take Time From IClock and Ban TimeProvider](adr/2026-11-20-clinical-and-gateway-endpoints-take-time-from-iclock-and-ban-timeprovider.md) | Current | - Status: Accepted |
 | [ADR-2550: Co-Host Interactive Demos on GitHub Pages Subpaths](adr/2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.md) | Current | - Status: Accepted |
 | [ADR-2547: Keycloak Self-Registration and Clinical Kernel Trial Bootstrap](adr/2026-11-20-keycloak-self-registration-and-clinical-kernel-trial-bootstrap.md) | Current | - Status: Accepted |
+| [ADR-2641: CTMS Core Topology, Scoped Isolation, and Stateful Site Activation](adr/2026-11-20-ctms-core-topology-scoped-isolation-and-stateful-site-activation.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

@@ -47,6 +47,15 @@ public sealed class SiteComplianceCacheConfiguration : IEntityTypeConfiguration<
 
         builder.Property(x => x.Milestone).HasMaxLength(255).IsRequired();
 
+        builder.Property(x => x.IsActivated)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(x => x.ActivatedAt);
+
+        builder.Property(x => x.ActivatedBy)
+            .HasMaxLength(255);
+
         // `missing_documents` was a comma-joined string in the legacy SQLAlchemy model — a storage
         // artifact, not an observable API contract (ComplianceStatusResponse.MissingDocuments is already
         // list<string> on both sides). The public MissingDocuments property is a computed read-only view

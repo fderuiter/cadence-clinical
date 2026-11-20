@@ -8,7 +8,15 @@ export type StageId =
   "design" | "start" | "conduct" | "data" | "analyze" | "submit";
 
 export type SectionId =
-  "protocol-versions" | "site-activation" | "participants" | "queries";
+  | "protocol-versions"
+  | "site-activation"
+  | "startup-greenlight"
+  | "site-milestones"
+  | "delegation"
+  | "participants"
+  | "monitoring-visits"
+  | "supply"
+  | "queries";
 
 export interface Section {
   id: SectionId;
@@ -50,6 +58,24 @@ export const STAGES: readonly Stage[] = [
         description:
           "A site's activation documents and activating the site once they are complete",
       },
+      {
+        id: "startup-greenlight",
+        label: "Startup readiness",
+        description:
+          "Six-facet country and site readiness gates and Part 11 certification",
+      },
+      {
+        id: "site-milestones",
+        label: "Site milestones",
+        description:
+          "Planned and achieved startup and operational milestones by site",
+      },
+      {
+        id: "delegation",
+        label: "Delegation log",
+        description:
+          "Delegated trial duties, Principal Investigator sign-off, and export",
+      },
     ],
   },
   {
@@ -61,6 +87,18 @@ export const STAGES: readonly Stage[] = [
         id: "participants",
         label: "Participants",
         description: "The study's participants in enrollment order",
+      },
+      {
+        id: "monitoring-visits",
+        label: "Monitoring visits",
+        description:
+          "Site monitoring visit schedules, trip findings, letters, and supervisory sign-off",
+      },
+      {
+        id: "supply",
+        label: "Investigational supply",
+        description:
+          "Chain-of-custody trace, site kit accountability, and randomization schemes",
       },
     ],
   },

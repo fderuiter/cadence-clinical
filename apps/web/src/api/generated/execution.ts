@@ -1563,6 +1563,11 @@ export interface components {
       milestone: string;
       is_complete: boolean;
       missing_documents: string[];
+      /** @default false */
+      is_activated: boolean;
+      /** Format: date-time */
+      activated_at?: null | string;
+      activated_by?: null | string;
     };
     Execution_DemographicsPayload: {
       name: null | string;

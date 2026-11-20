@@ -12,13 +12,15 @@ import { isDemoBuild } from "../utils/demoMode";
 
 /** Route names whose screens call endpoints the .NET services serve. */
 export const AVAILABLE_SCREENS = new Set([
-  // Clinical Canvas: participants and their counts, and site activation, from Execution.
+  // Clinical Canvas: participants, protocol versions, site activation, startup readiness, milestones,
+  // delegation logs, monitoring visits, investigational supply, and queries from Kernel, Execution, and CTMS.
   "study",
   // Execution: subjects, forms, observations, SDV, queries (#4828).
   "ecrf",
   // Kernel: one observation and its correction (ADR-2620).
   "observation",
-  // Execution: site activation and eTMF compliance status; the other CTMS tabs run only in a demo build.
+  // CTMS & Execution: site activation, startup greenlight, milestones, monitoring visits, DoA logs, and RTSM supply;
+  // unbacked financials, CRA allocation, recruitment edits, and adaptive dose escalation stay gated to demo builds.
   "ctms",
   "ssu",
 ]);

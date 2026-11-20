@@ -364,6 +364,27 @@ public sealed class StartupGreenlightEndpointsTests
         (await _db.CtmsAuditLogs.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
     }
 
+    [Fact]
+    public async Task GetCountryMatrix_SiteScopedCaller_FiltersToAssignedSitesAndFailsClosedWhenUnassigned()
+    {
+        await AddGatesAsync(("SITE-DE-1", "DE", true), ("SITE-DE-2", "DE", true));
+
+        var scopedResult = await StartupGreenlightEndpoints.GetCountryMatrixAsync(
+            Study, "DE", _db, Caller(["cra"], [Study], ["SITE-DE-1"]), TestContext.Current.CancellationToken);
+        var scopedDtos = scopedResult.Result.Should().BeOfType<Ok<List<SiteGreenlightGateResponseDto>>>().Subject.Value!;
+        scopedDtos.Select(d => d.SiteId).Should().Equal("SITE-DE-1");
+
+        var unassignedSiteCaller = await StartupGreenlightEndpoints.GetCountryMatrixAsync(
+            Study, "DE", _db, Caller(["cra"], [Study], []), TestContext.Current.CancellationToken);
+        var problem = unassignedSiteCaller.Result.Should().BeOfType<ProblemHttpResult>().Subject;
+        problem.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        problem.ProblemDetails.Extensions.Should().ContainKey("code").WhoseValue.Should().Be(CtmsScopeGuard.ForbiddenCode);
+
+        var crossSiteRead = await StartupGreenlightEndpoints.GetSiteGreenlightAsync(
+            "SITE-DE-2", Study, "DE", _db, Caller(["cra"], [Study], ["SITE-DE-1"]), TestContext.Current.CancellationToken);
+        crossSiteRead.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+    }
+
     private async Task AddGatesAsync(params (string SiteId, string Country, bool Compliant)[] sites)
     {
         foreach (var (siteId, country, compliant) in sites)
