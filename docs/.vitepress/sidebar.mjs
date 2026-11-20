@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 
+import { isDraftBlogPostFile } from "./blog.mjs";
 import { splitAnchor, toRepoUrl } from "./repoLinks.mjs";
 import rootDocsModule from "./rootDocs.cjs";
 
@@ -86,6 +87,15 @@ export function toSidebarLink(rawHref, { docsDir, repoRoot }) {
     }
 
     if (exists && !/\.(md|html)$/i.test(absolute)) {
+      return toRepoUrl(href, docsDir, docsDir, repoRoot);
+    }
+
+    const mdCandidate = exists
+      ? absolute
+      : fs.existsSync(`${absolute}.md`)
+        ? `${absolute}.md`
+        : null;
+    if (mdCandidate && isDraftBlogPostFile(mdCandidate)) {
       return toRepoUrl(href, docsDir, docsDir, repoRoot);
     }
 
@@ -290,6 +300,7 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
     { text: "Portal Home", link: "/" },
     { text: "Documentation Index", link: "/DOCUMENTATION_INDEX" },
   ];
+  const blogItems = [];
   const kernelItems = [];
   const devItems = [];
   const productItems = [];
@@ -343,6 +354,11 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
       case "Start here":
         startHereItems.push(entry);
         break;
+      case "Engineering blog":
+        if (entry.link.startsWith("/")) {
+          blogItems.push(entry);
+        }
+        break;
       case "Kernel and roadmap":
         kernelItems.push(entry);
         break;
@@ -367,6 +383,15 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
       }
     }
   }
+
+  // Keep the blog overview at the top and sort published dated posts newest-first.
+  blogItems.sort((a, b) => {
+    const aKey = normalizeRouteKey(a.link);
+    const bKey = normalizeRouteKey(b.link);
+    if (aKey === "/blog/index") return -1;
+    if (bKey === "/blog/index") return 1;
+    return bKey.localeCompare(aKey);
+  });
 
   // Keep overview pages at the top of generated reference and component sections.
   apiItems.sort((a, b) => {
@@ -400,6 +425,7 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
   };
 
   pushGroup("Start Here", startHereItems, false);
+  pushGroup("Engineering Blog", blogItems, false);
   pushGroup("Kernel & Roadmap", kernelItems, false);
   pushGroup("Developing & Running", devItems, false);
   pushGroup("Product & Strategy", productItems, false);
