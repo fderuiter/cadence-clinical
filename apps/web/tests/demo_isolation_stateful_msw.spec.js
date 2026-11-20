@@ -584,6 +584,14 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
       );
       const subsequent = await subsequentRes.json();
       expect(subsequent.tier).toBe("Select");
+
+      setActivePinia(createPinia());
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      const authStore = useAuthStore();
+      authStore.startDemoSession();
+      const loaded = await authStore.loadEntitlements({ force: true });
+      expect(loaded?.tier).toBe("Select");
+      expect(authStore.entitlements?.tier).toBe("Select");
     });
   });
 
