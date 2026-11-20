@@ -48,6 +48,7 @@
         :can-verify-source="canVerifySource"
         :form-location="formLocation"
         :observation-location="observationLocation"
+        @dirty-change="emit('dirty-change', $event)"
         @form-loaded="emit('form-loaded', $event)"
         @closed="emit('closed')"
       />
@@ -56,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onUnmounted, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import type { EcrfForm } from "../../api/ecrfFormsApi";
 import type { SubjectSummary } from "../../api/executionApi";
@@ -89,9 +90,14 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+  (e: "dirty-change", dirty: boolean): void;
   (e: "form-loaded", loaded: EcrfForm): void;
   (e: "closed"): void;
 }>();
+
+onUnmounted(() => {
+  emit("dirty-change", false);
+});
 
 const scheduleOptions = ref<StudyScheduleOptions | null>(null);
 let scheduleReq = 0;
