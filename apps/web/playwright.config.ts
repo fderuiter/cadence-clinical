@@ -1,11 +1,18 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const isAccessibilityOnly = process.argv.some((arg) =>
+  arg.includes("accessibility")
+);
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false, // run sequentially to prevent race conditions or database locks
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
+  expect: {
+    timeout: 15000,
+  },
   outputDir: process.env.RECORDING_OUTPUT_DIR || "./test-results",
   use: {
     baseURL: "http://localhost:3000/cadence-clinical/",
@@ -35,29 +42,47 @@ export default defineConfig({
       testMatch: /web-accessibility\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
-        baseURL: "http://localhost:3001/cadence-clinical/",
+        baseURL: "http://127.0.0.1:3001/cadence-clinical/",
+        launchOptions: {
+          args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+          ],
+        },
       },
     },
   ],
-  webServer: [
-    {
-      command: "pnpm --filter web dev",
-      url: "http://localhost:3000/cadence-clinical/",
-      reuseExistingServer: !process.env.CI,
-      timeout: 120000,
-    },
-    {
-      command:
-        "pnpm --filter web build:demo && pnpm --filter web exec vite preview --port 3001 --strictPort",
-      url: "http://localhost:3001/cadence-clinical/",
-      reuseExistingServer: !process.env.CI,
-      timeout: 120000,
-    },
-    {
-      command: "pnpm --filter subject-portal dev",
-      url: "http://localhost:5174/subject-portal/",
-      reuseExistingServer: !process.env.CI,
-      timeout: 120000,
-    },
-  ],
+  webServer: isAccessibilityOnly
+    ? [
+        {
+          command:
+            "./node_modules/.bin/vite build --mode demo --outDir node_modules/.e2e-demo && exec ./node_modules/.bin/vite preview --outDir node_modules/.e2e-demo --host 127.0.0.1 --port 3001 --strictPort",
+          url: "http://127.0.0.1:3001/cadence-clinical/",
+          reuseExistingServer: false,
+          timeout: 120000,
+        },
+      ]
+    : [
+        {
+          command: "pnpm --filter web dev",
+          url: "http://localhost:3000/cadence-clinical/",
+          reuseExistingServer: !process.env.CI,
+          timeout: 120000,
+        },
+        {
+          command:
+            "pnpm --filter web build:demo && pnpm --filter web exec vite preview --port 3001 --strictPort",
+          url: "http://localhost:3001/cadence-clinical/",
+          reuseExistingServer: !process.env.CI,
+          timeout: 120000,
+        },
+        {
+          command: "pnpm --filter subject-portal dev",
+          url: "http://localhost:5174/subject-portal/",
+          reuseExistingServer: !process.env.CI,
+          timeout: 120000,
+        },
+      ],
 });

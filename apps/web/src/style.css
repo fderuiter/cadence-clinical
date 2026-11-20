@@ -28,6 +28,8 @@
   --danger: var(--semantic-color-error);
   --danger-bg: var(--semantic-color-error-bg);
   --font: var(--semantic-font-family);
+  --shell-header-height: 57px;
+  --canvas-topbar-height: 45px;
 }
 
 * {

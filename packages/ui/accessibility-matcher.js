@@ -1,11 +1,34 @@
 let cachedAxe = null;
+let cachedAxePromise = null;
+let axeRunQueue = Promise.resolve();
 
-async function getAxe() {
-  if (!cachedAxe) {
-    const mod = await import("axe-core");
-    cachedAxe = mod.default || mod;
+function getAxe() {
+  if (cachedAxe) {
+    return Promise.resolve(cachedAxe);
   }
-  return cachedAxe;
+  if (!cachedAxePromise) {
+    cachedAxePromise = import("axe-core").then((mod) => {
+      cachedAxe = mod.default || mod;
+      return cachedAxe;
+    });
+  }
+  return cachedAxePromise;
+}
+
+if (typeof process !== "undefined" && process.env?.VITEST) {
+  void getAxe();
+}
+
+function runAxeSerialized(axe, element, options) {
+  const nextRun = axeRunQueue.then(
+    () => axe.run(element, options),
+    () => axe.run(element, options)
+  );
+  axeRunQueue = nextRun.then(
+    () => undefined,
+    () => undefined
+  );
+  return nextRun;
 }
 
 /**
@@ -92,7 +115,7 @@ export async function toBeAccessible(received, customOptions = {}) {
     }
 
     const axe = await getAxe();
-    const results = await axe.run(element, finalOptions);
+    const results = await runAxeSerialized(axe, element, finalOptions);
     const pass = results.violations.length === 0;
 
     if (pass) {

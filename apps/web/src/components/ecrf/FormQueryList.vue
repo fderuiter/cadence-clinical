@@ -372,6 +372,46 @@ watch(bulkAction, () => {
   );
 });
 
+watch(
+  () => [props.queries, props.canManage] as const,
+  ([nextQueries, canManage]) => {
+    const actions = availableBulkActions.value;
+    if (actions.length > 0 && !actions.includes(bulkAction.value)) {
+      bulkAction.value = actions[0];
+    }
+    const allowedIds = new Set(
+      nextQueries
+        .filter((q) => queryActions(q, canManage).includes(bulkAction.value))
+        .map((q) => q.query_id)
+    );
+    const hadSelected = selectedQueryIds.value.length > 0;
+    const retainedIds = selectedQueryIds.value.filter((id) =>
+      allowedIds.has(id)
+    );
+    if (retainedIds.length !== selectedQueryIds.value.length) {
+      selectedQueryIds.value = retainedIds;
+    }
+    if (hadSelected && retainedIds.length === 0) {
+      bulkReason.value = "";
+    }
+
+    if (pendingAction.value) {
+      const activeTarget = nextQueries.find(
+        (q) => q.query_id === pendingAction.value?.queryId
+      );
+      if (
+        !activeTarget ||
+        !queryActions(activeTarget, canManage).includes(
+          pendingAction.value.action
+        )
+      ) {
+        pendingAction.value = null;
+        actionText.value = "";
+      }
+    }
+  }
+);
+
 function selectAllEligible() {
   selectedQueryIds.value = eligibleQueries.value.map((q) => q.query_id);
 }

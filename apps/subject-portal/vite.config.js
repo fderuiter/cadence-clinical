@@ -13,7 +13,7 @@ const DEV_PORT = 5174;
 const GATEWAY_URL = process.env.CADENCE_GATEWAY_URL || "http://localhost:8000";
 
 export default defineConfig(({ mode }) => ({
-  base: "/subject-portal/",
+  base: process.env.VITE_BASE_PATH || "/subject-portal/",
   cacheDir: mode === "demo" ? "node_modules/.vite-demo" : "node_modules/.vite",
   optimizeDeps: {
     entries: [
@@ -58,6 +58,12 @@ export default defineConfig(({ mode }) => ({
         const title =
           process.env.VITE_APP_TITLE || "Subject Portal - Cadence Clinical";
         return html.replace(/%VITE_APP_TITLE%/g, title);
+      },
+      configurePreviewServer(server) {
+        if (server.httpServer) {
+          server.httpServer.keepAliveTimeout = 65000;
+          server.httpServer.headersTimeout = 66000;
+        }
       },
     },
     {
@@ -111,6 +117,9 @@ export default defineConfig(({ mode }) => ({
         secure: false,
       },
     },
+  },
+  preview: {
+    host: "::",
   },
   resolve: {
     alias: [

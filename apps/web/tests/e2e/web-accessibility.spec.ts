@@ -3,6 +3,10 @@ import AxeBuilder from "@axe-core/playwright";
 
 const WCAG_AA_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
+async function gotoHashRoute(page: Page, routePath: string) {
+  await page.goto(`#${routePath}`);
+}
+
 async function expectNoWcagViolations(page: Page, contextLabel: string) {
   const results = await new AxeBuilder({ page })
     // Exclude non-interactive regulatory watermark overlay per ADR-2388
@@ -56,7 +60,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
   test("LoginView passes WCAG 2.2 AA contrast in both authenticated session state and signed-out login prompt", async ({
     page,
   }) => {
-    await page.goto("login");
+    await gotoHashRoute(page, "/login");
     await expect(page.locator("#section-login")).toBeVisible();
     await expect(page.locator(".auth-success-alert")).toBeVisible();
     await expectNoWcagViolations(page, "LoginView (active demo session)");
@@ -70,7 +74,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
   test("OverviewView, OnboardingChecklistDrawer, and OnboardingTour (including final Finish Tour step) pass WCAG 2.2 AA", async ({
     page,
   }) => {
-    await page.goto("overview");
+    await gotoHashRoute(page, "/overview");
     await expect(page.locator("#overview-hub-root")).toBeVisible();
     await expect(page.locator(".btn-task-launch").first()).toBeVisible();
     await expectNoWcagViolations(page, "OverviewView");
@@ -115,7 +119,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
   test("CtmsView KPI cards, clinical tabs, SsuGreenlightConsole matrix & single-site views, and RTSM header pass WCAG 2.2 AA", async ({
     page,
   }) => {
-    await page.goto("ctms");
+    await gotoHashRoute(page, "/ctms");
     await expect(page.locator("#section-ctms")).toBeVisible();
     await expect(page.locator("#kpi-total-subjects")).toBeVisible();
     await expectNoWcagViolations(page, "CtmsView (Operations tab)");
@@ -146,7 +150,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
   test("EcrfView shared clinical inputs, radio groups, and query panel pass WCAG 2.2 AA and SC 1.4.11 >= 3:1 border contrast", async ({
     page,
   }) => {
-    await page.goto("ecrf");
+    await gotoHashRoute(page, "/ecrf");
     await expect(page.locator("main")).toBeVisible();
     await expectNoWcagViolations(page, "EcrfView");
 
@@ -169,5 +173,9 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
       );
       expect(radioBorderRatio).toBeGreaterThanOrEqual(3);
     }
+
+    await gotoHashRoute(page, "/plans");
+    await expect(page.locator(".plans-view")).toBeVisible();
+    await expectNoWcagViolations(page, "PlansView");
   });
 });

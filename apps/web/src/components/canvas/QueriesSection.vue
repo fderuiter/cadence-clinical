@@ -3,7 +3,7 @@
     id="study-queries-section"
     class="study-queries"
     aria-labelledby="study-queries-title"
-    :aria-busy="queries.loading || studyLoading"
+    :aria-busy="queries.loading || queries.refreshing || studyLoading"
   >
     <header class="study-queries-header">
       <h2 id="study-queries-title">Queries</h2>
@@ -24,11 +24,14 @@
         <label for="study-queries-site">Site</label>
         <input
           id="study-queries-site"
-          :value="siteFilter"
+          ref="siteInputRef"
+          :value="siteInput"
           type="text"
           autocomplete="off"
           placeholder="All sites"
           list="study-queries-sites"
+          @focus="siteFocused = true"
+          @blur="onSiteBlur"
           @input="onSiteInput"
         />
         <datalist id="study-queries-sites">
@@ -38,11 +41,14 @@
         <label for="study-queries-participant">Participant</label>
         <input
           id="study-queries-participant"
-          :value="participantFilter"
+          ref="participantInputRef"
+          :value="participantInput"
           type="text"
           autocomplete="off"
           placeholder="All participants"
           list="study-queries-participants"
+          @focus="participantFocused = true"
+          @blur="onParticipantBlur"
           @input="onParticipantInput"
         />
         <datalist id="study-queries-participants">
@@ -90,36 +96,47 @@
     <p v-else-if="queries.loading" class="status-line" role="status">
       Loading queries for {{ studyCode }}…
     </p>
-    <p
-      v-else-if="queries.loadError"
-      id="study-queries-error"
-      class="status-line"
-      role="alert"
-    >
-      {{ studyCode }}'s queries couldn't be loaded: {{ queries.loadError }}
-    </p>
-    <p
-      v-else-if="queries.queries.length === 0"
-      id="study-queries-empty"
-      class="status-line"
-    >
-      {{
-        hasActiveFilter
-          ? "No queries match these filters."
-          : `No queries on visible enrollments in ${studyCode}.`
-      }}
-    </p>
-    <FormQueryList
-      v-else
-      :queries="queries.queries"
-      :can-manage="canManage"
-      :busy="queries.busy"
-      :study-code="studyCode"
-      :act="queries.act"
-      :act-many="queries.actMany"
-      show-form
-      show-context
-    />
+    <template v-else>
+      <p
+        v-if="queries.refreshing"
+        id="study-queries-refreshing"
+        class="status-line"
+        role="status"
+        aria-live="polite"
+      >
+        Refreshing queries for {{ studyCode }}…
+      </p>
+      <p
+        v-if="queries.loadError"
+        id="study-queries-error"
+        class="status-line"
+        role="alert"
+      >
+        {{ studyCode }}'s queries couldn't be loaded: {{ queries.loadError }}
+      </p>
+      <p
+        v-if="queries.queries.length === 0 && !queries.loadError"
+        id="study-queries-empty"
+        class="status-line"
+      >
+        {{
+          hasActiveFilter
+            ? "No queries match these filters."
+            : `No queries on visible enrollments in ${studyCode}.`
+        }}
+      </p>
+      <FormQueryList
+        v-else-if="queries.queries.length > 0"
+        :queries="queries.queries"
+        :can-manage="canManage"
+        :busy="queries.busy"
+        :study-code="studyCode"
+        :act="queries.act"
+        :act-many="queries.actMany"
+        show-form
+        show-context
+      />
+    </template>
 
     <p
       id="study-queries-outcome"
@@ -136,7 +153,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
+import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 import type { FormQueryStatus } from "../../api/ecrfQueriesApi";
 import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import { parseNodeRef } from "../../canvas/nodeRef";
@@ -149,6 +166,8 @@ export interface StudyQueriesFilterState {
   participant: string;
   changed: string;
 }
+
+const FILTER_DELAY_MS = 250;
 
 const VALID_STATUSES = new Set<FormQueryStatus>([
   "open",
@@ -170,17 +189,54 @@ const emit = defineEmits<{
   filter: [next: StudyQueriesFilterState];
 }>();
 
+const siteInputRef = ref<HTMLInputElement | null>(null);
+const participantInputRef = ref<HTMLInputElement | null>(null);
+const siteFocused = ref(false);
+const participantFocused = ref(false);
+
 const statusFilter = ref(props.status ?? "");
-const siteFilter = ref(props.site ?? "");
-const participantFilter = ref(props.participant ?? "");
+const siteInput = ref(props.site ?? "");
+const participantInput = ref(props.participant ?? "");
+const appliedSite = ref((props.site ?? "").trim());
+const appliedParticipant = ref((props.participant ?? "").trim());
 const changedFilter = ref(props.changed ?? "");
+
+let filterTimer: ReturnType<typeof setTimeout> | undefined;
+
+function isSiteFocused(): boolean {
+  return (
+    siteFocused.value ||
+    (typeof document !== "undefined" &&
+      siteInputRef.value !== null &&
+      document.activeElement === siteInputRef.value)
+  );
+}
+
+function isParticipantFocused(): boolean {
+  return (
+    participantFocused.value ||
+    (typeof document !== "undefined" &&
+      participantInputRef.value !== null &&
+      document.activeElement === participantInputRef.value)
+  );
+}
 
 watch(
   () => [props.status, props.site, props.participant, props.changed],
   ([status, site, participant, changed]) => {
     if (status !== undefined) statusFilter.value = status;
-    if (site !== undefined) siteFilter.value = site;
-    if (participant !== undefined) participantFilter.value = participant;
+    if (site !== undefined) {
+      appliedSite.value = site.trim();
+      if (!isSiteFocused()) {
+        siteInput.value = site;
+      }
+    }
+    if (participant !== undefined) {
+      appliedParticipant.value = participant.trim();
+      if (!isParticipantFocused()) {
+        participantInput.value = participant;
+      }
+    }
     if (changed !== undefined) changedFilter.value = changed;
   }
 );
@@ -202,8 +258,8 @@ const knownParticipants = computed(() =>
 const hasActiveFilter = computed(() =>
   Boolean(
     statusFilter.value ||
-    siteFilter.value.trim() ||
-    participantFilter.value.trim() ||
+    siteInput.value.trim() ||
+    participantInput.value.trim() ||
     changedFilter.value
   )
 );
@@ -211,39 +267,85 @@ const hasActiveFilter = computed(() =>
 function syncFilterUrl() {
   emit("filter", {
     status: statusFilter.value,
-    site: siteFilter.value.trim(),
-    participant: participantFilter.value.trim(),
+    site: appliedSite.value,
+    participant: appliedParticipant.value,
     changed: changedFilter.value,
   });
 }
 
+function flushTextFilters(): boolean {
+  clearTimeout(filterTimer);
+  filterTimer = undefined;
+  const nextSite = siteInput.value.trim();
+  const nextParticipant = participantInput.value.trim();
+  const changed =
+    nextSite !== appliedSite.value ||
+    nextParticipant !== appliedParticipant.value;
+  appliedSite.value = nextSite;
+  appliedParticipant.value = nextParticipant;
+  if (!isSiteFocused()) siteInput.value = nextSite;
+  if (!isParticipantFocused()) participantInput.value = nextParticipant;
+  return changed;
+}
+
+function scheduleTextFilterSync() {
+  clearTimeout(filterTimer);
+  filterTimer = setTimeout(() => {
+    if (flushTextFilters()) {
+      syncFilterUrl();
+    }
+  }, FILTER_DELAY_MS);
+}
+
+function onSiteBlur() {
+  siteFocused.value = false;
+  if (!filterTimer) {
+    siteInput.value = appliedSite.value;
+  }
+}
+
+function onParticipantBlur() {
+  participantFocused.value = false;
+  if (!filterTimer) {
+    participantInput.value = appliedParticipant.value;
+  }
+}
+
 function onStatusChange(event: Event) {
   statusFilter.value = (event.target as HTMLSelectElement).value;
+  flushTextFilters();
   syncFilterUrl();
 }
 
 function onSiteInput(event: Event) {
-  siteFilter.value = (event.target as HTMLInputElement).value;
-  syncFilterUrl();
+  siteInput.value = (event.target as HTMLInputElement).value;
+  scheduleTextFilterSync();
 }
 
 function onParticipantInput(event: Event) {
-  participantFilter.value = (event.target as HTMLInputElement).value;
-  syncFilterUrl();
+  participantInput.value = (event.target as HTMLInputElement).value;
+  scheduleTextFilterSync();
 }
 
 function onChangedChange(event: Event) {
   changedFilter.value = (event.target as HTMLSelectElement).value;
+  flushTextFilters();
   syncFilterUrl();
 }
 
 function clearFilters() {
+  clearTimeout(filterTimer);
+  filterTimer = undefined;
   statusFilter.value = "";
-  siteFilter.value = "";
-  participantFilter.value = "";
+  siteInput.value = "";
+  participantInput.value = "";
+  appliedSite.value = "";
+  appliedParticipant.value = "";
   changedFilter.value = "";
   syncFilterUrl();
 }
+
+onBeforeUnmount(() => clearTimeout(filterTimer));
 
 async function refreshQueries() {
   if (!studyId.value) return;
@@ -262,8 +364,8 @@ async function refreshQueries() {
     studyId: studyId.value,
     filters: {
       status: normalizedStatus,
-      site: siteFilter.value.trim() || undefined,
-      participant: participantFilter.value.trim() || undefined,
+      site: appliedSite.value || undefined,
+      participant: appliedParticipant.value || undefined,
       valueChanged,
     },
   });
@@ -281,6 +383,8 @@ watch(
   () => props.studyCode,
   async (code) => {
     const request = ++studyLookup;
+    clearTimeout(filterTimer);
+    filterTimer = undefined;
     studyId.value = null;
     studyError.value = null;
     seenSites.value = [];
@@ -306,7 +410,7 @@ watch(
   { immediate: true }
 );
 
-watch([statusFilter, siteFilter, participantFilter, changedFilter], () => {
+watch([statusFilter, appliedSite, appliedParticipant, changedFilter], () => {
   if (studyId.value && !studyLoading.value) {
     void refreshQueries();
   }

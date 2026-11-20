@@ -7,6 +7,8 @@ import CommandPaletteOverlay from "../../src/components/CommandPaletteOverlay.vu
 import { useAuthStore } from "../../src/stores/auth";
 import { useKnowledgeStore } from "../../src/stores/knowledge";
 import { useOnboardingStore } from "../../src/stores/onboarding";
+import { useStudyCanvasStore } from "../../src/stores/studyCanvas";
+import { executionApi } from "../../src/api/executionApi";
 import { kernelApi } from "../../src/api/kernelApi";
 
 const DummyView = { template: "<div>Dummy</div>" };
@@ -189,50 +191,157 @@ describe("CommandPaletteOverlay.vue - Unified Global Command Palette", () => {
     expect(startTourSpy).toHaveBeenCalled();
   });
 
-  it("supports keyboard navigation (ArrowDown, ArrowUp, Enter, Escape) and backdrop close", async () => {
+  it("populates study participants across non-Participants views, resolves codes beyond 200 rows, and suppresses Open study on matches", async () => {
+    const many = Array.from({ length: 210 }, (_, i) => ({
+      id: `0192f3c4-5e6a-7b8c-9d0e-${String(i + 1).padStart(12, "0")}`,
+      subject_id: `017-${String(i + 1).padStart(4, "0")}`,
+      study_id: "CAD-101",
+      site_id: "017",
+      status: "ACTIVE",
+      active_protocol_version: "3.0",
+      enrollment_index: i + 1,
+    }));
+
+    const listSpy = vi
+      .spyOn(executionApi, "listSubjects")
+      .mockImplementation(async ({ offset = 0, limit = 200 }) => ({
+        items: many.slice(offset, offset + limit),
+        total: many.length,
+        limit,
+        offset,
+      }));
+    const detailSpy = vi
+      .spyOn(executionApi, "getSubjectDetail")
+      .mockImplementation(async (code) => {
+        const found = many.find((p) => p.subject_id === code);
+        if (!found) {
+          throw Object.assign(new Error("Not found"), { status: 404 });
+        }
+        return {
+          subject_id: found.subject_id,
+          study_id: found.study_id,
+          status: found.status,
+          site_id: found.site_id,
+          treatment_group: null,
+          randomization_seed: null,
+          investigational_product_id: null,
+        };
+      });
+    const searchSpy = vi.spyOn(kernelApi, "search").mockResolvedValue([]);
+    const pushSpy = vi.spyOn(router, "push");
+
+    try {
+      const authStore = useAuthStore();
+      authStore.isAuthenticated = true;
+      authStore.rawRoles = ["CRA"];
+
+      const canvasStore = useStudyCanvasStore();
+      canvasStore.openStudy("CAD-101");
+      await router.push("/ecrf");
+
+      const wrapper = mount(CommandPaletteOverlay, {
+        props: { isOpen: true },
+        global: { plugins: [pinia, router] },
+      });
+      await flushPromises();
+
+      expect(listSpy).toHaveBeenCalledWith({
+        studyId: "CAD-101",
+        limit: 200,
+        offset: 0,
+      });
+
+      const input = wrapper.find("#canvas-palette-input");
+      await input.setValue("017-0002");
+      await flushPromises();
+
+      let options = wrapper.findAll("[role='option']");
+      expect(options[0].text()).toContain("017-0002");
+      expect(
+        options.some((o) => o.find(".palette-group").text() === "Open study")
+      ).toBe(false);
+
+      await input.setValue("017-0205");
+      await flushPromises();
+
+      expect(detailSpy).toHaveBeenCalledWith("017-0205");
+      options = wrapper.findAll("[role='option']");
+      expect(options[0].text()).toContain("017-0205");
+      expect(
+        options.some((o) => o.find(".palette-group").text() === "Open study")
+      ).toBe(false);
+
+      await input.trigger("keydown", { key: "Enter" });
+      expect(pushSpy).toHaveBeenCalledWith({
+        name: "study",
+        params: { studyCode: "CAD-101" },
+        query: {
+          stage: "conduct",
+          section: "participants",
+          node: "participant:0192f3c4-5e6a-7b8c-9d0e-000000000205",
+        },
+      });
+    } finally {
+      listSpy.mockRestore();
+      detailSpy.mockRestore();
+      searchSpy.mockRestore();
+    }
+  });
+
+  it("supports keyboard navigation (ArrowDown, ArrowUp, Enter, Escape), scrolls active options into view, and closes on backdrop click", async () => {
     const authStore = useAuthStore();
     authStore.isAuthenticated = true;
     authStore.rawRoles = ["Sponsor Admin"];
 
     const pushSpy = vi.spyOn(router, "push");
+    const scrollSpy = vi.fn();
+    const originalScroll = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scrollSpy;
 
-    const wrapper = mount(CommandPaletteOverlay, {
-      props: { isOpen: true },
-      global: { plugins: [pinia, router] },
-    });
+    try {
+      const wrapper = mount(CommandPaletteOverlay, {
+        props: { isOpen: true },
+        global: { plugins: [pinia, router] },
+      });
 
-    const input = wrapper.find("#canvas-palette-input");
-    let options = wrapper.findAll("[role='option']");
-    expect(options[0].attributes("aria-selected")).toBe("true");
+      const input = wrapper.find("#canvas-palette-input");
+      let options = wrapper.findAll("[role='option']");
+      expect(options[0].attributes("aria-selected")).toBe("true");
 
-    await input.trigger("keydown", { key: "ArrowDown" });
-    options = wrapper.findAll("[role='option']");
-    expect(options[1].attributes("aria-selected")).toBe("true");
+      await input.trigger("keydown", { key: "ArrowDown" });
+      options = wrapper.findAll("[role='option']");
+      expect(options[1].attributes("aria-selected")).toBe("true");
+      expect(scrollSpy).toHaveBeenLastCalledWith({ block: "nearest" });
 
-    await input.trigger("keydown", { key: "ArrowUp" });
-    options = wrapper.findAll("[role='option']");
-    expect(options[0].attributes("aria-selected")).toBe("true");
+      await input.trigger("keydown", { key: "ArrowUp" });
+      options = wrapper.findAll("[role='option']");
+      expect(options[0].attributes("aria-selected")).toBe("true");
+      expect(scrollSpy).toHaveBeenCalledTimes(2);
+      expect(scrollSpy).toHaveBeenLastCalledWith({ block: "nearest" });
 
-    await input.trigger("keydown", { key: "Enter" });
-    expect(pushSpy).toHaveBeenCalledWith("/studies");
-    expect(wrapper.emitted("close")).toBeTruthy();
+      await input.trigger("keydown", { key: "Enter" });
+      expect(pushSpy).toHaveBeenCalledWith("/studies");
+      expect(wrapper.emitted("close")).toBeTruthy();
 
-    const wrapper2 = mount(CommandPaletteOverlay, {
-      props: { isOpen: true },
-      global: { plugins: [pinia, router] },
-    });
-    await wrapper2.find(".palette-backdrop").trigger("click");
-    expect(wrapper2.emitted("close")).toBeTruthy();
+      const wrapper2 = mount(CommandPaletteOverlay, {
+        props: { isOpen: true },
+        global: { plugins: [pinia, router] },
+      });
+      await wrapper2.find(".palette-backdrop").trigger("click");
+      expect(wrapper2.emitted("close")).toBeTruthy();
 
-    const wrapperAttached = mount(CommandPaletteOverlay, {
-      attachTo: document.body,
-      props: { isOpen: true },
-      global: { plugins: [pinia, router] },
-    });
-    await wrapperAttached
-      .find("#canvas-palette-input")
-      .trigger("keydown", { key: "Escape" });
-    expect(wrapperAttached.emitted("close")).toHaveLength(1);
-    wrapperAttached.unmount();
+      const wrapperAttached = mount(CommandPaletteOverlay, {
+        attachTo: document.body,
+        props: { isOpen: true },
+        global: { plugins: [pinia, router] },
+      });
+      await wrapperAttached
+        .find("#canvas-palette-input")
+        .trigger("keydown", { key: "Escape" });
+      expect(wrapperAttached.emitted("close")).toHaveLength(1);
+      wrapperAttached.unmount();
+    } finally {
+      HTMLElement.prototype.scrollIntoView = originalScroll;
+    }
   });
 });

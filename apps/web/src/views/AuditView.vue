@@ -579,7 +579,6 @@
               bottom: 0;
               pointer-events: none;
               z-index: 5;
-              background-image: url(&quot;data: image/svg+xml;utf8,<svg xmlns='http: //www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><text x='10' y='90' font-family='Arial' font-size='10' fill='rgba(220,53,69,0.12)' transform='rotate(-30 80 80)' letter-spacing='0.5'>CONFIDENTIAL AUDITOR COPY</text></svg>&quot;);
               background-repeat: repeat;
             "
           />
@@ -2308,6 +2307,9 @@ onMounted(() => {
 }
 .clinical-table tr:hover {
   background-color: rgba(0, 0, 0, 0.02);
+}
+.watermark-overlay {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><text x='10' y='90' font-family='Arial' font-size='10' fill='rgba(220,53,69,0.12)' transform='rotate(-30 80 80)' letter-spacing='0.5'>CONFIDENTIAL AUDITOR COPY</text></svg>");
 }
 .spinner {
   border: 3px solid rgba(0, 0, 0, 0.1);
