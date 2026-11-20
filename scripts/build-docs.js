@@ -239,7 +239,8 @@ function sweepAndPreprocessDocs(docsDir) {
           cleanUrl.startsWith("https://") ||
           cleanUrl.startsWith("file://") ||
           cleanUrl.startsWith("mailto:") ||
-          cleanUrl.startsWith("#")
+          cleanUrl.startsWith("#") ||
+          /^\/(demo|subject-portal)(\/|$)/.test(cleanUrl)
         ) {
           return match;
         }
@@ -329,7 +330,7 @@ function prepareRootDocs() {
     console.warn(`Plain-text LICENSE file not found at ${licenseSrcPath}`);
   }
 
-  copyAndPreprocess("README.md", "index.md");
+  copyAndPreprocess("README.md", "README.md");
 }
 
 // `node scripts/build-docs.js --prepare-only` stages the root documents for `vitepress dev` and exits.
@@ -392,7 +393,7 @@ try {
 } finally {
   console.log("--- Cleanup Temporary Docs ---");
   const tempGeneratedDocs = new Set([
-    path.join(repoRoot, "docs", "index.md"),
+    path.join(repoRoot, "docs", "README.md"),
     path.join(repoRoot, "docs", "ARCHITECTURE.md"),
     path.join(repoRoot, "docs", "AGENTS.md"),
     path.join(repoRoot, "docs", "LICENSE.md"),

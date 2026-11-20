@@ -66,18 +66,44 @@ function splitAnchor(href) {
   return index === -1 ? [href, ""] : [href.slice(0, index), href.slice(index)];
 }
 
+export const COHOSTED_SUBPATH_PREFIXES = ["/demo/", "/subject-portal/"];
+
+export function isCohostedSubpathLink(
+  link,
+  prefixes = COHOSTED_SUBPATH_PREFIXES
+) {
+  if (!link || !link.startsWith("/")) return false;
+  const cleanPath = splitAnchor(link)[0].split("?")[0];
+  return prefixes.some((prefix) => {
+    const normalizedPrefix = prefix.endsWith("/") ? prefix : `${prefix}/`;
+    const withoutTrailing = normalizedPrefix.slice(0, -1);
+    return (
+      cleanPath === withoutTrailing || cleanPath.startsWith(normalizedPrefix)
+    );
+  });
+}
+
 /**
- * Throws when a nav or sidebar entry links to a page that does not exist under `docs/`.
+ * Throws when a nav or sidebar entry links to a page that does not exist under `docs/`,
+ * except for declared co-hosted subpath applications staged into the portal bundle.
  *
  * @param {{ nav?: object[], sidebar?: object[] }} themeConfig
  * @param {string} docsDir
+ * @param {{ cohostedSubpaths?: string[] }} [options]
  */
-export function assertThemeLinksExist(themeConfig, docsDir) {
+export function assertThemeLinksExist(themeConfig, docsDir, options = {}) {
+  const cohostedSubpaths =
+    options.cohostedSubpaths ?? COHOSTED_SUBPATH_PREFIXES;
   const missing = [];
   const visit = (items) => {
     for (const item of items ?? []) {
       const link = item.link;
-      if (link && link.startsWith("/") && !pageExists(docsDir, link)) {
+      if (
+        link &&
+        link.startsWith("/") &&
+        !isCohostedSubpathLink(link, cohostedSubpaths) &&
+        !pageExists(docsDir, link)
+      ) {
         missing.push(link);
       }
       visit(item.items);

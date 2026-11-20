@@ -274,7 +274,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2375: Write-Time Soft-Versioning and Active Inactive Cloning for eCRF Form Submissions](adr/2026-08-13-write-time-soft-versioning-and-active-inactive-cloning-for-ecrf-form-submissions.md) | Current | Also known as: ADR-2172 (former number) |
 | [ADR-2376: Biostatistical Export Pipeline Interoperability and Architecture](adr/2026-08-14-biostatistical-export-pipeline-interoperability.md) | Current | Also known as: ADR-094 (former number) |
 | [ADR-2179: Comprehensive Hexagonal Architecture Standardization and Frontend Modularization](adr/2026-08-14-comprehensive-hexagonal-architecture-standardization-and-frontend-modularization.md) | Current | - Status: Accepted |
-| [ADR-071: GitHub Pages Documentation Hosting](adr/2026-08-14-github-pages-documentation-hosting.md) | Current | - Status: Accepted |
+| [ADR-071: GitHub Pages Documentation Hosting](adr/2026-08-14-github-pages-documentation-hosting.md) | Historical | - Status: Superseded by ADR-2550 |
 | [ADR-2175: Graph-Native Zero-Downtime Protocol Amendment and In-Flight Subject Migration Engine](adr/2026-08-14-graph-native-zero-downtime-protocol-amendment-and-in-flight-subject-migration-engine.md) | Current | - Status: Accepted |
 | [ADR-2176: Isolated Concurrent Pytest Harness and Worker Lifecycle](adr/2026-08-14-isolated-concurrent-pytest-harness-and-worker-lifecycle.md) | Current | - Status: Accepted |
 | [ADR-2173: Offline TypeScript Schema Generator using SQLModel Base Metadata](adr/2026-08-14-offline-typescript-schema-generator-using-sqlmodel-base-metadata.md) | Current | - Status: Accepted |
@@ -563,6 +563,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2816: Retire Orphaned Legacy Web Type Schemas](adr/2026-11-19-retire-orphaned-legacy-web-type-schemas.md) | Current | - Status: Accepted |
 | [ADR-2546: Isolate Static Demo Builds with Stateful MSW Handlers](adr/2026-11-19-isolate-static-demo-builds-with-stateful-msw-handlers.md) | Current | - Status: Accepted |
 | [ADR-2817: Caller-Bound Participant Self-Service Wallet and Receipt OCR Capabilities](adr/2026-11-19-caller-bound-participant-self-service-wallet-and-receipt-ocr-capabilities.md) | Current | - Status: Accepted |
+| [ADR-2550: Co-Host Interactive Demos on GitHub Pages Subpaths](adr/2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

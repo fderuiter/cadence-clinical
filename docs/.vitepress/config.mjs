@@ -159,8 +159,9 @@ const config = defineConfig({
   base: process.env.VITEPRESS_BASE || "/cadence-clinical/",
   outDir: path.resolve(__dirname, "dist"),
   srcExclude: ["**/SDLC/runs/**", "**/runs/**"],
-  // Links VitePress cannot serve are pointed at GitHub by repoLinksPlugin; any other dead link fails the build.
-  ignoreDeadLinks: false,
+  // Links VitePress cannot serve are pointed at GitHub by repoLinksPlugin; co-hosted demo subpaths are staged
+  // into dist/demo and dist/subject-portal after VitePress compiles, while any other dead link fails the build.
+  ignoreDeadLinks: [/^\/(demo|subject-portal)(\/|$)/],
   markdown: {
     config(md) {
       md.use(repoLinksPlugin, {
@@ -180,6 +181,8 @@ const config = defineConfig({
     },
     nav: [
       { text: "Home", link: "/" },
+      { text: "Staff Demo", link: "/demo/", target: "_self" },
+      { text: "Participant Demo", link: "/subject-portal/", target: "_self" },
       { text: "Doc Index", link: "/DOCUMENTATION_INDEX" },
       { text: "Kernel Spec", link: "/kernel/CLINICAL_KERNEL_SPECIFICATION" },
       { text: "Architecture", link: "/ARCHITECTURE" },
@@ -192,7 +195,8 @@ const config = defineConfig({
       {
         text: "Overview & Guides",
         items: [
-          { text: "Welcome & Readme", link: "/" },
+          { text: "Portal Home", link: "/" },
+          { text: "Welcome & Readme", link: "/README" },
           { text: "Documentation Index", link: "/DOCUMENTATION_INDEX" },
           { text: "System Architecture", link: "/ARCHITECTURE" },
           {

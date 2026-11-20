@@ -55,6 +55,9 @@ jobs:
           CADENCE_DOCS_SKIP_CHECKS: "1"
         run: pnpm docs:build
 
+      - name: Build and Stage Co-Hosted Interactive Demos
+        run: pnpm docs:stage-demos
+
       - name: Generate Documentation Artifact SHA256 Checksums
         run: |
           (cd docs/.vitepress/dist && LC_ALL=C find . -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/SHA256SUMS"
