@@ -305,6 +305,7 @@
             v-else-if="section?.id === 'participants'"
             :status="statusFilter"
             :site-id="siteFilter"
+            :query="participantSearchFilter"
             :selected-id="selectedNode?.id ?? ''"
             :can-manage-participants="canChangeParticipants"
             @select="selectParticipant"
@@ -535,6 +536,7 @@ interface StudyQuery {
   section?: string;
   status?: string;
   site?: string;
+  q?: string;
   subject?: string;
   changed?: string;
   node?: string;
@@ -589,6 +591,7 @@ const queryStatusFilter = computed(() => {
     : "";
 });
 const siteFilter = computed(() => single(route.query.site).trim());
+const participantSearchFilter = computed(() => single(route.query.q).trim());
 const queryParticipantFilter = computed(() =>
   single(route.query.subject).trim()
 );
@@ -817,6 +820,7 @@ function selectParticipant(participant: SubjectSummary) {
       section: "participants",
       status: statusFilter.value,
       site: siteFilter.value,
+      q: participantSearchFilter.value,
       node: formatNodeRef(node),
     })
   );
@@ -1037,16 +1041,29 @@ function selectVersion(version: KernelProtocolVersion) {
   );
 }
 
-function applyParticipantFilter(filter: { status: string; siteId: string }) {
-  router.push(
-    studyLocation({
-      stage: "conduct",
-      section: "participants",
-      status: filter.status,
-      site: filter.siteId,
-      node: single(route.query.node),
-    })
-  );
+function applyParticipantFilter(filter: {
+  status: string;
+  siteId: string;
+  q?: string;
+}) {
+  const nextSearch = (filter.q ?? "").trim();
+  const location = studyLocation({
+    stage: "conduct",
+    section: "participants",
+    status: filter.status,
+    site: filter.siteId,
+    q: nextSearch,
+    node: single(route.query.node),
+  });
+  const onlySearchChanged =
+    filter.status === statusFilter.value &&
+    filter.siteId === siteFilter.value &&
+    nextSearch !== participantSearchFilter.value;
+  if (onlySearchChanged) {
+    router.replace(location);
+  } else {
+    router.push(location);
+  }
 }
 
 function applyStudyQueryFilter(filter: StudyQueriesFilterState) {
@@ -1081,6 +1098,10 @@ function goToPaletteTarget(target: PaletteTarget) {
     return;
   }
   if (target.participant) {
+    if (target.studyCode && target.studyCode !== canvas.studyCode) {
+      canvas.openStudy(target.studyCode);
+    }
+    canvas.rememberParticipants([target.participant]);
     inspectorRef.value?.expand();
   }
   const node = target.participant
@@ -1189,6 +1210,7 @@ watch(
     () => section.value?.id,
     statusFilter,
     siteFilter,
+    participantSearchFilter,
   ],
   () => {
     if (
@@ -1203,17 +1225,23 @@ watch(
       return;
     }
     if (section.value?.id !== "participants") return;
-    const filter = { status: statusFilter.value, siteId: siteFilter.value };
+    const filter = {
+      status: statusFilter.value,
+      siteId: siteFilter.value,
+      q: participantSearchFilter.value,
+    };
     const loaded = canvas.participantsFilter;
     const sameFilter =
       (loaded.status ?? "") === filter.status &&
-      (loaded.siteId ?? "") === filter.siteId;
+      (loaded.siteId ?? "") === filter.siteId &&
+      (loaded.q ?? "") === filter.q;
     const hasPage =
       canvas.participants.length > 0 || canvas.participantsTotal > 0;
     if (!sameFilter || (!hasPage && !canvas.participantsLoading)) {
       canvas.loadParticipants({
         status: filter.status || undefined,
         siteId: filter.siteId || undefined,
+        q: filter.q || undefined,
       });
     }
   },

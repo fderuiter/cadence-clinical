@@ -129,17 +129,25 @@ public class SubjectResponseTests
     public void SubjectDetailResponse_SerializesWithSpecSnakeCasePropertyNames()
     {
         var response = new SubjectDetailResponse(
+            new SubjectId(Guid.Parse("11111111-1111-1111-1111-111111111111")),
             new SubjectCode("SUBJ-001"), new StudyCode("STUDY-001"), "ENROLLED",
-            new SiteCode("SITE-001"), TreatmentGroup: "ARM-A", RandomizationSeed: "seed-1",
+            new SiteCode("SITE-001"), ActiveProtocolVersion: "1.0.0", EnrollmentIndex: 4,
+            TreatmentGroup: "ARM-A", RandomizationSeed: "seed-1",
             InvestigationalProductId: "IP-1");
 
         using var document = JsonDocument.Parse(JsonSerializer.Serialize(response, WireOptions));
         var root = document.RootElement;
 
+        root.TryGetProperty("id", out var id).Should().BeTrue();
+        id.GetString().Should().Be("11111111-1111-1111-1111-111111111111");
         root.TryGetProperty("subject_id", out _).Should().BeTrue();
         root.TryGetProperty("study_id", out _).Should().BeTrue();
         root.TryGetProperty("status", out _).Should().BeTrue();
         root.TryGetProperty("site_id", out _).Should().BeTrue();
+        root.TryGetProperty("active_protocol_version", out var protocolVersion).Should().BeTrue();
+        protocolVersion.GetString().Should().Be("1.0.0");
+        root.TryGetProperty("enrollment_index", out var enrollmentIndex).Should().BeTrue();
+        enrollmentIndex.GetInt32().Should().Be(4);
         root.TryGetProperty("treatment_group", out _).Should().BeTrue();
         root.TryGetProperty("randomization_seed", out _).Should().BeTrue();
         root.TryGetProperty("investigational_product_id", out _).Should().BeTrue();

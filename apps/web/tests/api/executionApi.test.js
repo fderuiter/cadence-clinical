@@ -46,6 +46,52 @@ describe("executionApi.listSubjects (#4828)", () => {
     });
   });
 
+  it("forwards partial subject search query q to GET /api/v1/execution/subjects", async () => {
+    const page = { items: [], total: 0, limit: 10, offset: 0 };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, page));
+
+    await executionApi.listSubjects({
+      studyId: "CAD-101",
+      q: "SUBJ-02",
+      limit: 10,
+      offset: 0,
+    });
+
+    const request = fetchSpy.mock.calls[0][0];
+    const url = new URL(request.url);
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      study_id: "CAD-101",
+      q: "SUBJ-02",
+      limit: "10",
+      offset: "0",
+    });
+  });
+
+  it("reads full subject detail by surrogate UUID with id, active_protocol_version, and enrollment_index", async () => {
+    const subjectUuid = "0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d79";
+    const detail = {
+      id: subjectUuid,
+      subject_id: "SUBJ-01",
+      study_id: "CAD-101",
+      status: "ACTIVE",
+      site_id: "SITE-7",
+      active_protocol_version: "3.0",
+      enrollment_index: 4,
+      treatment_group: null,
+      randomization_seed: null,
+      investigational_product_id: null,
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, detail));
+
+    const result = await executionApi.getSubjectDetail(subjectUuid);
+
+    expect(result).toEqual(detail);
+    const request = fetchSpy.mock.calls[0][0];
+    const url = new URL(request.url);
+    expect(request.method).toBe("GET");
+    expect(url.pathname).toBe(`/api/v1/execution/subjects/${subjectUuid}`);
+  });
+
   it("raises the service's problem detail as an ApiError", async () => {
     fetchSpy.mockResolvedValueOnce(
       jsonResponse(

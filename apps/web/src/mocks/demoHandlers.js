@@ -197,23 +197,25 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.post("*/api/v1/kernel/simulation/simulate", async ({ request }) => {
       const body = await readJsonBody(request);
       const now = new Date().toISOString();
+      const targetRef =
+        body?.stored_version_ref || body?.base_version_ref || DEFAULT_STUDY_REF;
       return HttpResponse.json({
-        scope: body?.base_version_ref || DEFAULT_STUDY_REF,
+        scope: targetRef,
         as_of: { valid_at: now, known_at: now },
-        candidate: {
-          title: "Candidate Protocol Simulation",
-          content_hash: "sha256-demo-sim-cand",
-          element_count: 14,
-        },
+        candidate: body?.stored_version_ref
+          ? { source: "stored", version_ref: body.stored_version_ref }
+          : {
+              title: "Candidate Protocol Simulation",
+              content_hash: "sha256-demo-sim-cand",
+              element_count: 14,
+            },
         engine_versions: [{ component: "demo-simulator", version: "1.0.0" }],
         input_hash: "sha256-demo-sim-in",
         result_hash: "sha256-demo-sim-out",
         structural_diff: [],
         schedule_changes: [],
         masked: [],
-        dependents: store.getDependents(
-          body?.base_version_ref || DEFAULT_STUDY_REF
-        ),
+        dependents: store.getDependents(targetRef),
         matrix_gaps: [],
         is_empty: true,
       });
@@ -303,6 +305,7 @@ export function createWebDemoHandlers(store = webDemoStore) {
           studyId: url.searchParams.get("study_id") || undefined,
           siteId: url.searchParams.get("site_id") || undefined,
           status: url.searchParams.get("status") || undefined,
+          q: url.searchParams.get("q") || undefined,
           limit: url.searchParams.get("limit") || 50,
           offset: url.searchParams.get("offset") || 0,
         })
