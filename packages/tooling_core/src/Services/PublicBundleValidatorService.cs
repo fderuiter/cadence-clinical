@@ -14,10 +14,10 @@ public sealed record PublicBundleFinding(string File, int Line, int Column, stri
 
 /// <summary>
 /// Post-build verifier (<c>check public-bundle</c> / <c>validate-public-bundle</c>) for public static build outputs
-/// (<c>docs/.vitepress/dist</c> and <c>apps/web/dist</c>). Every generated text file is scanned with zero comment or
-/// pragma exemptions (<c>deid-ignore</c>, <c>deid: ignore</c>, and <c>pragma: allowlist</c> are ignored). Rejects
-/// national identifiers, unapproved emails, secrets, external assets, executable local backend URLs, and missing or
-/// permissive Content-Security-Policy meta directives.
+/// (<c>docs/.vitepress/dist</c>, <c>apps/web/dist</c>, and <c>apps/subject-portal/dist</c>). Every generated text file is
+/// scanned with zero comment or pragma exemptions (<c>deid-ignore</c>, <c>deid: ignore</c>, and <c>pragma: allowlist</c>
+/// are ignored). Rejects national identifiers, unapproved emails, secrets, external assets, executable local backend URLs,
+/// and missing or permissive Content-Security-Policy meta directives.
 /// </summary>
 public static partial class PublicBundleValidatorService
 {
@@ -36,6 +36,7 @@ public static partial class PublicBundleValidatorService
     [
         "docs/.vitepress/dist",
         "apps/web/dist",
+        "apps/subject-portal/dist",
     ];
 
     private static readonly string[] ForbiddenExternalAssetHosts =
@@ -52,9 +53,9 @@ public static partial class PublicBundleValidatorService
     ];
 
     /// <summary>
-    /// Validates both built public bundles (<c>docs/.vitepress/dist</c> and <c>apps/web/dist</c>, or explicit
-    /// <paramref name="bundleDirectories"/>) and returns <c>0</c> only when both exist, are non-empty, and pass all
-    /// zero-exemption checks.
+    /// Validates all built public bundles (<c>docs/.vitepress/dist</c>, <c>apps/web/dist</c>, and
+    /// <c>apps/subject-portal/dist</c>, or explicit <paramref name="bundleDirectories"/>) and returns <c>0</c> only when
+    /// every bundle exists, is non-empty, and passes all zero-exemption checks.
     /// </summary>
     public static int ValidatePublicBundles(string? repoRoot = null, IReadOnlyList<string>? bundleDirectories = null)
     {
@@ -111,7 +112,8 @@ public static partial class PublicBundleValidatorService
                 totalFilesScanned++;
                 string relativeToRepo = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
                 string relativeInsideBundle = Path.GetRelativePath(fullDir, file).Replace('\\', '/');
-                allFindings.AddRange(ScanBundleFile(relativeToRepo, relativeInsideBundle, content, isDocsBundle, detector));
+                bool fileIsDocsPortal = isDocsBundle && !IsStagedSubpathBundle(relativeInsideBundle);
+                allFindings.AddRange(ScanBundleFile(relativeToRepo, relativeInsideBundle, content, fileIsDocsPortal, detector));
             }
         }
 
@@ -492,6 +494,13 @@ public static partial class PublicBundleValidatorService
         string withoutQuery = (cut >= 0 ? lower[..cut] : lower).TrimEnd('\'', '"', '`', ';', ',', ')', ']', '}');
         string[] assetExts = [".js", ".mjs", ".cjs", ".css", ".wasm", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".svg", ".ico", ".woff", ".woff2", ".ttf", ".otf", ".mp4", ".webm", ".mp3"];
         return assetExts.Any(ext => withoutQuery.EndsWith(ext, StringComparison.Ordinal));
+    }
+
+    private static bool IsStagedSubpathBundle(string relativeInsideBundle)
+    {
+        string normalized = relativeInsideBundle.Replace('\\', '/');
+        return normalized.StartsWith("demo/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("subject-portal/", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsDocsSerializedProseChunk(string relativeInsideBundle)

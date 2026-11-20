@@ -29,23 +29,37 @@ public sealed class PublicBundleValidatorServiceTests : IDisposable
     public void Dispose() => Directory.Delete(_dir, recursive: true);
 
     [Fact]
-    public void ValidatePublicBundles_FailsClosed_WhenEitherBundleIsMissing()
+    public void ValidatePublicBundles_FailsClosed_WhenAnyRequiredBundleIsMissing()
     {
         Write("docs/.vitepress/dist/index.html", CleanHtml());
+        Write("apps/web/dist/index.html", CleanHtml());
 
         PublicBundleValidatorService.ValidatePublicBundles(_dir).Should().Be(1);
     }
 
     [Fact]
-    public void ValidatePublicBundles_Passes_OnCleanDocsAndWebBundles()
+    public void ValidatePublicBundles_Passes_OnCleanDocsWebAndSubjectPortalBundles()
     {
         SeedCleanBundles();
         Write("docs/.vitepress/dist/assets/LOCAL_DEV_ENVIRONMENT.md.abc123.js", "export const doc = 'Dev gateway http://localhost:8000 in prose';\n");
         Write("docs/.vitepress/dist/assets/chunks/@localSearchIndexroot.abc123.js", "export const idx = 'http://127.0.0.1:5432';\n");
         Write("docs/.vitepress/dist/guide.html", $"<!doctype html><html><head>{ValidCsp}</head><body><pre><code>curl https://images.unsplash.com/example.png http://localhost:8000</code></pre></body></html>\n");
+        Write("docs/.vitepress/dist/demo/index.html", CleanHtml());
+        Write("docs/.vitepress/dist/subject-portal/index.html", CleanHtml());
         Write("apps/web/dist/assets/consent-diagram.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\"><text>fderuiter@cadence.clinical</text></svg>\n");
+        Write("apps/subject-portal/dist/assets/support.js", "export const supportEmail = 'coordinator@cadence-clinical.com';\n");
 
         PublicBundleValidatorService.ValidatePublicBundles(_dir).Should().Be(0);
+    }
+
+    [Fact]
+    public void ValidatePublicBundles_RejectsLocalhostUrlInStagedSubpathDemoChunk()
+    {
+        SeedCleanBundles();
+        Write("docs/.vitepress/dist/subject-portal/index.html", CleanHtml());
+        Write("docs/.vitepress/dist/subject-portal/assets/LOCAL_DEV_ENVIRONMENT.md.abc123.js", "export const api = 'http://localhost:8000';\n");
+
+        PublicBundleValidatorService.ValidatePublicBundles(_dir).Should().Be(1);
     }
 
     [Fact]
@@ -147,6 +161,7 @@ public sealed class PublicBundleValidatorServiceTests : IDisposable
     {
         Write("docs/.vitepress/dist/index.html", CleanHtml());
         Write("apps/web/dist/index.html", CleanHtml());
+        Write("apps/subject-portal/dist/index.html", CleanHtml());
     }
 
     private static string CleanHtml() =>

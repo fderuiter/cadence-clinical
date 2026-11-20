@@ -10,6 +10,12 @@ export function getApiBaseUrl() {
   if (configured) {
     return configured.replace(/\/+$/, "");
   }
+  if (import.meta.env.MODE === "demo") {
+    return typeof globalThis.location?.origin === "string" &&
+      globalThis.location.origin.startsWith("http")
+      ? globalThis.location.origin.replace(/\/+$/, "")
+      : "";
+  }
   if (
     isDemoBuild() &&
     typeof globalThis.location?.origin === "string" &&

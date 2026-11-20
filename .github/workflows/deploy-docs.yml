@@ -59,19 +59,14 @@ jobs:
       - name: Build UI package
         run: pnpm --filter ui build
 
-      - name: Build Demo Web Application
-        run: pnpm --filter web exec vite build --mode demo --base=/cadence-clinical/demo/
-
       - name: Build Documentation Portal
         env:
           CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
           CADENCE_DOCS_SKIP_CHECKS: "1"
         run: pnpm docs:build
 
-      - name: Stage Demo Web Application into Portal Output
-        run: |
-          mkdir -p docs/.vitepress/dist/demo
-          cp -R apps/web/dist/. docs/.vitepress/dist/demo/
+      - name: Build and Stage Co-Hosted Interactive Demos
+        run: pnpm docs:stage-demos
 
       - name: Verify Public Bundles
         env:

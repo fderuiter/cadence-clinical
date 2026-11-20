@@ -88,8 +88,11 @@ export async function signIn() {
       const KeycloakClass =
         window.Keycloak || (await import("keycloak-js")).default;
       if (KeycloakClass) {
+        const defaultKeycloakUrl = import.meta.env.PROD
+          ? ""
+          : "http://localhost:8080/";
         const keycloak = new KeycloakClass({
-          url: import.meta.env.VITE_KEYCLOAK_URL || "http://localhost:8080/",
+          url: import.meta.env.VITE_KEYCLOAK_URL || defaultKeycloakUrl,
           realm: import.meta.env.VITE_KEYCLOAK_REALM || "cadence",
           clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || "cadence-web",
         });
@@ -209,8 +212,11 @@ export async function login() {
       const KeycloakClass =
         window.Keycloak || (await import("keycloak-js")).default;
       if (KeycloakClass) {
+        const defaultKeycloakUrl = import.meta.env.PROD
+          ? ""
+          : "http://localhost:8080/";
         keycloak = new KeycloakClass({
-          url: import.meta.env.VITE_KEYCLOAK_URL || "http://localhost:8080/",
+          url: import.meta.env.VITE_KEYCLOAK_URL || defaultKeycloakUrl,
           realm: import.meta.env.VITE_KEYCLOAK_REALM || "cadence",
           clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || "cadence-web",
         });

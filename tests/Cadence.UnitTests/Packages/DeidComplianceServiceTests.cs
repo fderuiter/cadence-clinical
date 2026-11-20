@@ -42,6 +42,7 @@ public sealed class DeidComplianceServiceTests : IDisposable
 
     [Theory]
     [InlineData("const docs = \"https://github.com/fderuiter/cadence-clinical\";")]
+    [InlineData("const pages = \"https://fderuiter.github.io/cadence-clinical/demo/\";")]
     [InlineData("const api = \"http://localhost:5000/api\";")]
     [InlineData("const ns = \"https://www.w3.org/2000/svg\";")]
     [InlineData("const mail = \"support@cadence.example\";")]

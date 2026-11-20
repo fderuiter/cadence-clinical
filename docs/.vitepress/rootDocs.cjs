@@ -5,7 +5,7 @@
  * temporary staged filenames inside `docs/` during VitePress dev and build.
  */
 const STAGED_ROOT_DOCS = Object.freeze({
-  "README.md": "index.md",
+  "README.md": "README.md",
   "ARCHITECTURE.md": "ARCHITECTURE.md",
   "AGENTS.md": "AGENTS.md",
   "CONTEXT.md": "CONTEXT.md",

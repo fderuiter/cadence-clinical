@@ -166,11 +166,11 @@ public static class QualityGates
             PreCommitNote = "checks the staged files; `CADENCE_BASELINE_GROWTH=\"<reason>\"` admits growth",
         },
         new("public-bundle", ["validate-public-bundle"],
-            "Zero-exemption post-build scan of `docs/.vitepress/dist` and `apps/web/dist` for national IDs, unapproved emails, secrets, external assets, executable local URLs, and CSP meta headers",
+            "Zero-exemption post-build scan of `docs/.vitepress/dist`, `apps/web/dist`, and `apps/subject-portal/dist` for national IDs, unapproved emails, secrets, external assets, executable local URLs, and CSP meta headers",
             ctx => PublicBundleValidatorService.ValidatePublicBundles(ctx.RepoRoot) == 0)
         {
             PreCommit = PreCommitMode.Skipped,
-            PreCommitNote = "checks built VitePress and demo web bundles in CI and deploy-docs after compilation",
+            PreCommitNote = "checks built VitePress, staff demo, and participant demo bundles in CI and deploy-docs after compilation",
         },
     ];
 

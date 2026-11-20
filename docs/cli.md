@@ -122,7 +122,7 @@ must make it fail.
 | `rtm`                 | `gxp-rtm-validate`                             |                 | Runs                                                                                                                                   |
 | `gxp-snapshot`        | `gxp-snapshot-guard`                           |                 | Quick: checks the staged files instead of the branch                                                                                   |
 | `baseline-ratchet`    | `baselines`                                    |                 | Quick: checks the staged files; `CADENCE_BASELINE_GROWTH="<reason>"` admits growth                                                     |
-| `public-bundle`       | `validate-public-bundle`                       |                 | Skipped: checks built VitePress and demo web bundles in CI and deploy-docs after compilation                                           |
+| `public-bundle`       | `validate-public-bundle`                       |                 | Skipped: checks built VitePress, staff demo, and participant demo bundles in CI and deploy-docs after compilation                      |
 
 <!-- quality-gates:end -->
 

@@ -418,4 +418,46 @@ describe("ObservationView (ADR-2620)", () => {
     );
     wrapper.unmount();
   });
+
+  it("wraps the six-column revisions and audit trail tables in keyboard-focusable horizontal scroll regions", async () => {
+    vi.spyOn(kernelApi, "getObservation").mockResolvedValue(
+      observation({
+        audit: [
+          {
+            sequence: 1,
+            recorded_at: "2026-10-15T09:05:00Z",
+            actor_id: "crc@site.test",
+            action: "Recorded",
+            subject: "Observation",
+            version: 1,
+            reason_for_change: "Initial entry",
+          },
+        ],
+      })
+    );
+    const wrapper = await mountView();
+
+    const revisionsScroll = wrapper.find(
+      '[data-testid="observation-revisions-scroll"]'
+    );
+    expect(revisionsScroll.exists()).toBe(true);
+    expect(revisionsScroll.attributes("role")).toBe("region");
+    expect(revisionsScroll.attributes("tabindex")).toBe("0");
+    expect(revisionsScroll.attributes("aria-label")).toBe(
+      "Observation revisions"
+    );
+
+    const auditScroll = wrapper.find(
+      '[data-testid="observation-audit-scroll"]'
+    );
+    expect(auditScroll.exists()).toBe(true);
+    expect(auditScroll.attributes("role")).toBe("region");
+    expect(auditScroll.attributes("tabindex")).toBe("0");
+    expect(auditScroll.attributes("aria-label")).toBe(
+      "Observation audit trail"
+    );
+
+    await expect(wrapper.element).toBeAccessible();
+    wrapper.unmount();
+  });
 });

@@ -265,6 +265,7 @@ public sealed class QualityGateRegistryTests : IDisposable
         {
             const string validCsp = "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self'; media-src 'self'; worker-src 'self'; connect-src 'self'\">";
             Write("docs/.vitepress/dist/index.html", $"<!doctype html><html><head>{validCsp}</head><body><p>Portal</p></body></html>\n");
+            Write("apps/subject-portal/dist/index.html", $"<!doctype html><html><head>{validCsp}</head><body><p>Participant Portal</p></body></html>\n");
             Write("apps/web/dist/index.html", $"<!doctype html><html><head>{validCsp}</head><body><img src=\"https://images.unsplash.com/photo-1\"></body></html>\n");
             return Context();
         },
