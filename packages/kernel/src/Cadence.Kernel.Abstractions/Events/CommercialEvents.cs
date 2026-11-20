@@ -35,3 +35,11 @@ public sealed record ProductEntitlementGranted(
     ProductEntitlementId ProductEntitlementId,
     SubscriptionId SubscriptionId,
     ProductFamily Family);
+
+/// <summary>A product family entitlement was disabled on a tenant subscription.</summary>
+[KernelEvent("ProductEntitlementRevoked", 1)]
+public sealed record ProductEntitlementRevoked(
+    TenantId TenantId,
+    ProductEntitlementId ProductEntitlementId,
+    SubscriptionId SubscriptionId,
+    ProductFamily Family);
