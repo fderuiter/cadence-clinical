@@ -175,13 +175,39 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             "{\n  \"version\": \"1.5.0\",\n  \"plugins_used\": [{ \"name\": \"PrivateKeyDetector\" }],\n  \"filters_used\": [],\n  \"results\": {}\n}\n";
         string baselinePath = Write(".secrets.baseline", baselineContent);
         Write("clean.txt", "nothing sensitive here\n");
-
-        DetectSecretsGateService.Scan(_tempDir, ["clean.txt"], preCommit: true).Should().Be(0);
-        File.ReadAllText(baselinePath).Should().Be(baselineContent);
-
         Write("secret.txt", $"{PrivateKeyHeader}\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC\n");
-        DetectSecretsGateService.Scan(_tempDir, ["secret.txt"], preCommit: true).Should().Be(1);
+
+        string stubBinDir = CreateDetectSecretsHookStub();
+        string systemPath = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        var stubEnv = new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["PATH"] = string.IsNullOrEmpty(systemPath) ? stubBinDir : $"{stubBinDir}{Path.PathSeparator}{systemPath}",
+            [DetectSecretsGateService.DisableUvxFallbackEnvVar] = "1",
+        };
+
+        DetectSecretsGateService.Scan(_tempDir, ["clean.txt"], preCommit: true, key => stubEnv.GetValueOrDefault(key)).Should().Be(0);
         File.ReadAllText(baselinePath).Should().Be(baselineContent);
+
+        DetectSecretsGateService.Scan(_tempDir, ["secret.txt"], preCommit: true, key => stubEnv.GetValueOrDefault(key)).Should().Be(1);
+        File.ReadAllText(baselinePath).Should().Be(baselineContent);
+
+        var realTool = DetectSecretsGateService.ResolveTool(
+            QualityGateOrchestrator.FindRepoRoot(),
+            key => key == DetectSecretsGateService.DisableUvxFallbackEnvVar ? "1" : Environment.GetEnvironmentVariable(key));
+        if (realTool is not null && Path.GetDirectoryName(realTool.FileName) is { Length: > 0 } realBinDir)
+        {
+            var realEnv = new Dictionary<string, string?>(StringComparer.Ordinal)
+            {
+                ["PATH"] = string.IsNullOrEmpty(systemPath) ? realBinDir : $"{realBinDir}{Path.PathSeparator}{systemPath}",
+                [DetectSecretsGateService.DisableUvxFallbackEnvVar] = "1",
+            };
+
+            DetectSecretsGateService.Scan(_tempDir, ["clean.txt"], preCommit: true, key => realEnv.GetValueOrDefault(key)).Should().Be(0);
+            File.ReadAllText(baselinePath).Should().Be(baselineContent);
+
+            DetectSecretsGateService.Scan(_tempDir, ["secret.txt"], preCommit: true, key => realEnv.GetValueOrDefault(key)).Should().Be(1);
+            File.ReadAllText(baselinePath).Should().Be(baselineContent);
+        }
     }
 
     [Fact]
@@ -410,5 +436,75 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         string err = process.StandardError.ReadToEnd();
         process.WaitForExit();
         process.ExitCode.Should().Be(0, err);
+    }
+
+    private string CreateDetectSecretsHookStub()
+    {
+        string binDir = Path.Combine(_tempDir, "stub-bin");
+        Directory.CreateDirectory(binDir);
+
+        if (OperatingSystem.IsWindows())
+        {
+            string cmdPath = Path.Combine(binDir, "detect-secrets-hook.cmd");
+            File.WriteAllText(
+                cmdPath,
+                "@echo off\r\n" +
+                "if \"%~1\"==\"--version\" (\r\n" +
+                "  echo 1.5.0\r\n" +
+                "  exit /b 0\r\n" +
+                ")\r\n" +
+                ":loop\r\n" +
+                "if \"%~1\"==\"\" exit /b 3\r\n" +
+                "if \"%~1\"==\"--baseline\" (\r\n" +
+                "  shift\r\n" +
+                "  shift\r\n" +
+                "  goto loop\r\n" +
+                ")\r\n" +
+                "if \"%~1\"==\"--exclude-files\" (\r\n" +
+                "  shift\r\n" +
+                "  shift\r\n" +
+                "  goto loop\r\n" +
+                ")\r\n" +
+                "findstr /C:\"PRIVATE KEY\" \"%~1\" >nul 2>&1\r\n" +
+                "if not errorlevel 1 exit /b 1\r\n" +
+                "shift\r\n" +
+                "goto loop\r\n");
+            return binDir;
+        }
+
+        string shPath = Path.Combine(binDir, "detect-secrets-hook");
+        File.WriteAllText(
+            shPath,
+            "#!/bin/sh\n" +
+            "set -eu\n" +
+            "if [ \"${1:-}\" = \"--version\" ]; then\n" +
+            "    echo \"1.5.0\"\n" +
+            "    exit 0\n" +
+            "fi\n" +
+            "baseline=\"\"\n" +
+            "while [ \"$#\" -gt 0 ]; do\n" +
+            "    case \"$1\" in\n" +
+            "        --baseline)\n" +
+            "            baseline=\"$2\"\n" +
+            "            shift 2\n" +
+            "            ;;\n" +
+            "        --exclude-files)\n" +
+            "            shift 2\n" +
+            "            ;;\n" +
+            "        *)\n" +
+            "            if grep -q \"PRIVATE KEY\" \"$1\" 2>/dev/null; then\n" +
+            "                echo \"Potential secrets about to be committed to git repo! Secret Type: Private Key ($1)\"\n" +
+            "                exit 1\n" +
+            "            fi\n" +
+            "            shift\n" +
+            "            ;;\n" +
+            "    esac\n" +
+            "done\n" +
+            "if [ -n \"$baseline\" ] && [ -f \"$baseline\" ]; then\n" +
+            "    printf '%s\\n' '{\"mutated_temp_baseline\":true}' > \"$baseline\"\n" +
+            "fi\n" +
+            "exit 3\n");
+        File.SetUnixFileMode(shPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        return binDir;
     }
 }

@@ -91,6 +91,7 @@ public sealed partial class TrialOnboardingService(
         "subscription.activate",
         "subscription.expire",
         "entitlement.grant",
+        "entitlement.revoke",
         "execution.query.raise",
         "execution.query.answer",
         "execution.query.manage",

@@ -657,6 +657,99 @@ describe("Clinical Canvas: a participant's data", () => {
     });
   });
 
+  describe("form launcher schedule caching and skeleton", () => {
+    it("renders a skeleton while schedule options load, mounts <select> without <input> swap, caches per studyCode, and retries on failure", async () => {
+      let resolveSchedule;
+      vi.mocked(findStudyScheduleOptions).mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveSchedule = resolve;
+          })
+      );
+
+      await openRecord();
+      await wrapper.find("#record-open-form").trigger("click");
+      await flushPromises();
+
+      // While scheduleLoading is true, skeleton renders and <input> is never mounted first.
+      expect(wrapper.find("#ecrf-schedule-skeleton").exists()).toBe(true);
+      expect(wrapper.find("#ecrf-collection-spec").exists()).toBe(false);
+      expect(wrapper.find("#ecrf-planned-activity").exists()).toBe(false);
+
+      resolveSchedule({
+        protocolVersionRef:
+          "protocol_version:0192f3c4-5e6a-7b8c-9d0e-00000000b001@1",
+        collectionSpecs: [
+          { id: "VS", name: "Vital Signs", plannedActivityIds: ["WEEK2"] },
+        ],
+        plannedActivities: [{ id: "WEEK2", name: "Week 2", studyDay: 14 }],
+      });
+      await flushPromises();
+
+      expect(wrapper.find("#ecrf-schedule-skeleton").exists()).toBe(false);
+      expect(wrapper.find("#ecrf-collection-spec").element.tagName).toBe(
+        "SELECT"
+      );
+      expect(wrapper.find("#ecrf-planned-activity").element.tagName).toBe(
+        "SELECT"
+      );
+      expect(findStudyScheduleOptions).toHaveBeenCalledTimes(1);
+
+      // Navigating away and back to ?form=new for the same study reuses the cached schedule without refetching.
+      await wrapper.find("#canvas-form-back").trigger("click");
+      await flushPromises();
+      await wrapper.find("#record-open-form").trigger("click");
+      await flushPromises();
+
+      expect(findStudyScheduleOptions).toHaveBeenCalledTimes(1);
+      expect(wrapper.find("#ecrf-collection-spec").element.tagName).toBe(
+        "SELECT"
+      );
+
+      // On another study, a failed schedule fetch renders an alert with Retry that recovers on click.
+      const secondStudyParticipant = {
+        ...PARTICIPANT,
+        study_id: "CAD-202",
+      };
+      vi.mocked(executionApi.listSubjects).mockResolvedValue({
+        items: [secondStudyParticipant],
+        total: 1,
+        limit: 50,
+        offset: 0,
+      });
+      vi.mocked(findStudyScheduleOptions)
+        .mockRejectedValueOnce(new Error("Kernel timeout"))
+        .mockResolvedValueOnce({
+          protocolVersionRef:
+            "protocol_version:0192f3c4-5e6a-7b8c-9d0e-00000000b002@1",
+          collectionSpecs: [
+            { id: "LB", name: "Laboratory", plannedActivityIds: ["DAY1"] },
+          ],
+          plannedActivities: [{ id: "DAY1", name: "Day 1", studyDay: 1 }],
+        });
+
+      await router.push("/studies/CAD-202?section=participants");
+      await flushPromises();
+      await wrapper.find("#participant-017-0001").trigger("click");
+      await flushPromises();
+      await wrapper.find("#inspector-open-data-entry").trigger("click");
+      await flushPromises();
+
+      expect(wrapper.find("#ecrf-schedule-error").exists()).toBe(true);
+      expect(wrapper.find("#ecrf-schedule-error").text()).toContain(
+        "Kernel timeout"
+      );
+
+      await wrapper.find("#btn-retry-schedule").trigger("click");
+      await flushPromises();
+
+      expect(wrapper.find("#ecrf-schedule-error").exists()).toBe(false);
+      expect(wrapper.find("#ecrf-collection-spec").element.tagName).toBe(
+        "SELECT"
+      );
+    });
+  });
+
   describe("dirty form navigation guards and draft preservation", () => {
     const SECOND_FORM_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000f002";
 
