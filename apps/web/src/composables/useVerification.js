@@ -1,5 +1,6 @@
 import { ref, reactive, computed } from "vue";
 import { useNotificationsStore } from "../stores/notifications";
+import { useToastStore } from "../stores/toasts.js";
 import {
   demoNowIso,
   demoNowMs,
@@ -34,7 +35,11 @@ export function useVerification(activeUserRole) {
 
   function initiateBatchVerify(openReauthModalFn, store, authStore) {
     if (selectedBatchFields.value.length === 0) {
-      alert("No fields selected for batch verification!");
+      useToastStore().push({
+        tone: "error",
+        title: "No fields selected",
+        message: "No fields selected for batch verification!",
+      });
       return;
     }
     if (openReauthModalFn) {

@@ -1,4 +1,4 @@
-# ADR-2819: Export Canonical Demo Manifest from Kernel Seed
+# ADR-2820: Export Canonical Demo Manifest from Kernel Seed
 
 - **Status:** Accepted
 - **Date:** 2026-11-20

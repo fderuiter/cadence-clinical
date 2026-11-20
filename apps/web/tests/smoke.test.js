@@ -64,7 +64,23 @@ describe("Vue SPA Smoke Tests", () => {
     expect(wrapper.html()).toContain("Schedule of Activities (SoA) Matrix");
   });
 
-  it("mounts EcrfView and renders interactive CDASH form fields", () => {
+  it("mounts EcrfView focused on kernel forms outside demo builds", () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const wrapper = mount(EcrfView, {
+      global: {
+        plugins: [pinia, router],
+      },
+    });
+
+    expect(wrapper.html()).toContain("Data collection");
+    expect(wrapper.html()).toContain("Case report form");
+    expect(wrapper.html()).not.toContain("Subject eCRF Data Entry Form");
+  });
+
+  it("mounts EcrfView and renders interactive CDASH form fields (demo build)", () => {
+    vi.stubEnv("VITE_DEMO_MODE", "true");
     const pinia = createPinia();
     setActivePinia(pinia);
 
