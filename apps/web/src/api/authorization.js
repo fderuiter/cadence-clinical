@@ -1,4 +1,5 @@
 import { useAuthStore } from "../stores/auth";
+import { resolveGatewayBaseUrl } from "../utils/demoMode";
 
 /**
  * Bearer-token attachment for calls to the Cadence API gateway.
@@ -14,8 +15,9 @@ import { useAuthStore } from "../stores/auth";
 /** Seconds of remaining validity below which the token is refreshed first. */
 export const TOKEN_MIN_VALIDITY_SECONDS = 30;
 
-export const getApiBaseUrl = () =>
-  import.meta.env?.VITE_API_BASE_URL || "http://localhost:8000";
+export function getApiBaseUrl() {
+  return resolveGatewayBaseUrl();
+}
 
 /**
  * Returns a fresh access token for the signed-in user, or null when no one is
