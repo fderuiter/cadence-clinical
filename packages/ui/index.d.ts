@@ -329,12 +329,20 @@ export function getFocusableElements(
   container: HTMLElement | null | undefined
 ): HTMLElement[];
 
+export function trapTabFocus(
+  event: KeyboardEvent,
+  container: HTMLElement | null | undefined
+): boolean;
+
 export function useEscapeClose(
   onCloseCallback: (event: KeyboardEvent) => void,
   options?: {
     isOpen?: import("vue").Ref<boolean> | (() => boolean) | boolean;
+    target?: EventTarget | null;
   }
-): void;
+): {
+  stop: () => void;
+};
 
 export function useAsyncRetry<T extends (...args: any[]) => any>(
   asyncFn?: T

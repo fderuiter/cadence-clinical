@@ -25,12 +25,6 @@ jobs:
           persist-credentials: false
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           ref: ${{ github.event.pull_request.head.ref || github.ref }}
-          fetch-depth: 0
-
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
-        with:
-          global-json-file: global.json
 
       - name: Check mergeable status
         id: check_status

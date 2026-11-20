@@ -284,6 +284,37 @@ export function hasActiveFocusTrapWithEscape() {
   return getTopActiveTrapEscapeInfo().handlesEscape;
 }
 
+export function trapTabFocus(e, container) {
+  if (!e || e.key !== "Tab" || !container || handledEvents.has(e)) {
+    return false;
+  }
+  handledEvents.add(e);
+  const focusableElements = getFocusableElements(container);
+  if (focusableElements.length === 0) {
+    e.preventDefault();
+    if (typeof container.focus === "function") {
+      container.focus();
+    }
+    return true;
+  }
+
+  const firstEl = focusableElements[0];
+  const lastEl = focusableElements[focusableElements.length - 1];
+  const activeEl =
+    typeof document !== "undefined" ? document.activeElement : null;
+
+  if (e.shiftKey) {
+    if (activeEl === firstEl || !container.contains(activeEl)) {
+      e.preventDefault();
+      lastEl.focus();
+    }
+  } else if (activeEl === lastEl || !container.contains(activeEl)) {
+    e.preventDefault();
+    firstEl.focus();
+  }
+  return true;
+}
+
 const handleTrapKeyDown = (e, trapEntry) => {
   if (!e || handledEvents.has(e)) return;
   if (e.key !== "Tab" && e.key !== "Escape") return;
@@ -298,6 +329,10 @@ const handleTrapKeyDown = (e, trapEntry) => {
       handledEvents.add(e);
       e.preventDefault();
       e.stopPropagation();
+      return;
+    }
+    if (e.defaultPrevented) {
+      handledEvents.add(e);
       return;
     }
     if (getTopEscapeEntryOrder() > (topTrap.order || 0)) {
@@ -317,30 +352,7 @@ const handleTrapKeyDown = (e, trapEntry) => {
   if (!container) return;
 
   // Tab / Shift+Tab containment
-  handledEvents.add(e);
-  const focusableElements = getFocusableElements(container);
-  if (focusableElements.length === 0) {
-    e.preventDefault();
-    if (typeof container.focus === "function") {
-      container.focus();
-    }
-    return;
-  }
-
-  const firstEl = focusableElements[0];
-  const lastEl = focusableElements[focusableElements.length - 1];
-  const activeEl =
-    typeof document !== "undefined" ? document.activeElement : null;
-
-  if (e.shiftKey) {
-    if (activeEl === firstEl || !container.contains(activeEl)) {
-      e.preventDefault();
-      lastEl.focus();
-    }
-  } else if (activeEl === lastEl || !container.contains(activeEl)) {
-    e.preventDefault();
-    firstEl.focus();
-  }
+  trapTabFocus(e, container);
 };
 
 /**

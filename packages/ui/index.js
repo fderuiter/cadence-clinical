@@ -771,6 +771,7 @@ import {
   useAsyncRetry,
   useFocusTrap,
   getFocusableElements,
+  trapTabFocus,
   useEscapeClose,
 } from "./src/index.js";
 
@@ -797,6 +798,7 @@ export {
   useAsyncRetry,
   useFocusTrap,
   getFocusableElements,
+  trapTabFocus,
   useEscapeClose,
 };
 

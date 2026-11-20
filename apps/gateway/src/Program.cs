@@ -5,6 +5,7 @@ using System.Threading.RateLimiting;
 
 using Cadence.Apps.Gateway;
 using Cadence.Apps.Gateway.Signatures;
+using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Telemetry;
 using Cadence.Topology;
@@ -16,7 +17,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 using Yarp.ReverseProxy.Configuration;
@@ -86,7 +86,7 @@ builder.Services.AddOptions<SignatureCredentialOptions>()
         options.ClientSecret = builder.Configuration["OIDC_SIGNATURE_CLIENT_SECRET"];
     });
 builder.Services.AddHttpClient<ICredentialVerifier, KeycloakCredentialVerifier>(client => client.Timeout = TimeSpan.FromSeconds(10));
-builder.Services.TryAddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 // A tighter per-signer limit on password re-checks, on top of the gateway-wide limit (AddGatewayRateLimiting).
 builder.Services.Configure<RateLimiterOptions>(options =>
 {

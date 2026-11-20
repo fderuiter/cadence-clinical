@@ -1989,7 +1989,14 @@
 <script setup>
 import { computed, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
-import { useClinicalStore } from "../stores/clinical";
+import { USDMStudySchema } from "usdm-schemas";
+import {
+  DEFAULT_CLINICAL_USDM,
+  buildMutationValidationPayload,
+  cloneDefaultClinicalUsdm,
+  formatZodIssues,
+  useClinicalStore,
+} from "../stores/clinical";
 import { useToastStore } from "../stores/toasts.js";
 import ClinicalSoAMatrix from "../components/clinical/ClinicalSoAMatrix.vue";
 import ClinicalGanttVisualizer from "../components/clinical/ClinicalGanttVisualizer.vue";
@@ -2085,10 +2092,12 @@ const encSuggestions = ref([]);
 // Difference calculation against baseline
 const differences = computed(() => {
   const diffs = [];
-  const baseArms = ["ARM-A", "ARM-B"];
-  const baseEpochs = ["EP-SCR", "EP-TRT-A", "EP-TRT-B"];
-  const baseVisits = ["V-SCR", "V-TRT-A1", "V-TRT-A2", "V-TRT-B1"];
-  const baseProcedures = ["ACT-DEM", "ACT-VS", "ACT-AE", "ACT-MED"];
+  const baseArms = DEFAULT_CLINICAL_USDM.arms.map((a) => a.arm_id);
+  const baseEpochs = DEFAULT_CLINICAL_USDM.epochs.map((e) => e.epoch_id);
+  const baseVisits = DEFAULT_CLINICAL_USDM.encounters.map(
+    (v) => v.encounter_id
+  );
+  const baseProcedures = DEFAULT_CLINICAL_USDM.rows.map((r) => r.activity_id);
 
   const currentArms = (store.currentUsdm.arms || []).map((a) => a.arm_id);
   const currentEpochs = (store.currentUsdm.epochs || []).map((e) => e.epoch_id);
@@ -2340,148 +2349,7 @@ const soaData = computed(() => {
 });
 
 function resetUsdm() {
-  const defaultUsdm = {
-    studyId: "STUDY-USDM-001",
-    studyTitle: "Phase II Trial of Cadence-001 in Essential Hypertension",
-    objectives: [
-      {
-        id: "OBJ-001",
-        type: "Primary",
-        description:
-          "Evaluate the reduction of mean sitting Systolic Blood Pressure (SBP) from baseline.",
-      },
-      {
-        id: "OBJ-002",
-        type: "Secondary",
-        description:
-          "Evaluate safety and tolerability of daily oral administration of Cadence-001.",
-      },
-    ],
-    arms: [
-      { arm_id: "ARM-A", arm_name: "Arm A: Active 10mg daily" },
-      { arm_id: "ARM-B", arm_name: "Arm B: Placebo Control" },
-    ],
-    epochs: [
-      { epoch_id: "EP-SCR", epoch_name: "Screening", sequence: 1 },
-      {
-        epoch_id: "EP-TRT-A",
-        epoch_name: "Treatment Phase",
-        sequence: 2,
-        arm_id: "ARM-A",
-      },
-      {
-        epoch_id: "EP-TRT-B",
-        epoch_name: "Treatment Phase",
-        sequence: 2,
-        arm_id: "ARM-B",
-      },
-    ],
-    encounters: [
-      {
-        encounter_id: "V-SCR",
-        encounter_name: "Day -7 to -1",
-        epoch_id: "EP-SCR",
-        sequence: 1,
-      },
-      {
-        encounter_id: "V-TRT-A1",
-        encounter_name: "Week 2",
-        epoch_id: "EP-TRT-A",
-        sequence: 2,
-      },
-      {
-        encounter_id: "V-TRT-A2",
-        encounter_name: "Week 4",
-        epoch_id: "EP-TRT-A",
-        sequence: 3,
-      },
-      {
-        encounter_id: "V-TRT-B1",
-        encounter_name: "Week 2",
-        epoch_id: "EP-TRT-B",
-        sequence: 4,
-      },
-    ],
-    rows: [
-      {
-        activity_id: "ACT-DEM",
-        activity_name: "Informed Consent & Demographics",
-        cells: [
-          { encounter_id: "V-SCR", is_applicable: true, details: "Mandatory" },
-          { encounter_id: "V-TRT-A1", is_applicable: false },
-          { encounter_id: "V-TRT-A2", is_applicable: false },
-          { encounter_id: "V-TRT-B1", is_applicable: false },
-        ],
-      },
-      {
-        activity_id: "ACT-VS",
-        activity_name: "Vital Signs (BP & Pulse)",
-        cells: [
-          { encounter_id: "V-SCR", is_applicable: true, details: "Day -7" },
-          {
-            encounter_id: "V-TRT-A1",
-            is_applicable: true,
-            details: "Within 10 mins",
-          },
-          {
-            encounter_id: "V-TRT-A2",
-            is_applicable: true,
-            details: "Conditional",
-          },
-          {
-            encounter_id: "V-TRT-B1",
-            is_applicable: true,
-            details: "Within 10 mins",
-          },
-        ],
-      },
-      {
-        activity_id: "ACT-AE",
-        activity_name: "Adverse Events Check",
-        cells: [
-          { encounter_id: "V-SCR", is_applicable: false },
-          {
-            encounter_id: "V-TRT-A1",
-            is_applicable: true,
-            details: "Continuous",
-          },
-          {
-            encounter_id: "V-TRT-A2",
-            is_applicable: true,
-            details: "Continuous",
-          },
-          {
-            encounter_id: "V-TRT-B1",
-            is_applicable: true,
-            details: "Optional",
-          },
-        ],
-      },
-      {
-        activity_id: "ACT-MED",
-        activity_name: "Study Medication Log",
-        cells: [
-          { encounter_id: "V-SCR", is_applicable: false },
-          {
-            encounter_id: "V-TRT-A1",
-            is_applicable: true,
-            details: "Daily entry",
-          },
-          {
-            encounter_id: "V-TRT-A2",
-            is_applicable: true,
-            details: "Daily entry",
-          },
-          {
-            encounter_id: "V-TRT-B1",
-            is_applicable: true,
-            details: "Daily entry",
-          },
-        ],
-      },
-    ],
-  };
-  store.currentUsdm = JSON.parse(JSON.stringify(defaultUsdm));
+  store.currentUsdm = cloneDefaultClinicalUsdm();
   store.addLedgerBlock(
     "USDM_RESET",
     { studyId: store.currentUsdm.studyId },
@@ -2512,35 +2380,14 @@ function updateSoa() {
 // Interactive Creator Handlers
 function queueMutation(mutation) {
   // Validate instantly on the spot before opening the justification modal!
-  let payloadToValidate = null;
-  let validationType = mutation.type;
-
-  if (mutation.type === "arms") {
-    payloadToValidate = { id: mutation.id, ...mutation.properties };
-  } else if (mutation.type === "epochs") {
-    payloadToValidate = { id: mutation.id, ...mutation.properties };
-  } else if (mutation.type === "visits") {
-    payloadToValidate = { id: mutation.id, ...mutation.properties };
-  } else if (mutation.type === "procedures") {
-    payloadToValidate = { id: mutation.id, ...mutation.properties };
-  } else if (mutation.type === "concept") {
-    payloadToValidate = {
-      code: mutation.id,
-      codeSystem: mutation.properties.codeSystem || "NCI_Thesaurus",
-      codeSystemVersion: mutation.properties.codeSystemVersion || "24.03d",
-      decode:
-        mutation.properties.decode || mutation.properties.preferred_name || "",
-    };
-  }
+  const payloadToValidate = buildMutationValidationPayload(mutation);
 
   if (payloadToValidate) {
-    const validation = store.validateModel(validationType, payloadToValidate);
+    const validation = store.validateModel(mutation.type, payloadToValidate);
     if (!validation.success) {
-      const errorList =
-        validation.error.issues || validation.error.errors || [];
-      const errorMsg = `Instant Schema Validation Error: ${errorList
-        .map((e) => `${e.path.join(".") || "field"}: ${e.message}`)
-        .join(", ")}`;
+      const errorMsg = `Instant Schema Validation Error: ${formatZodIssues(
+        validation.error
+      ).join(", ")}`;
       alert(errorMsg);
       console.error(errorMsg);
       return; // Do not proceed to showReasonModal or save
@@ -2752,7 +2599,6 @@ function handleToggleApplicability(isApplicable) {
 // =========================================================================
 // ZERO-CLICK USDM INGESTION & SYNTHESIS WORKSPACE (M5 / R5)
 // =========================================================================
-import { USDMStudySchema } from "usdm-schemas";
 
 const showUsdmModal = ref(false);
 const usdmModalRef = ref(null);
@@ -3038,6 +2884,26 @@ function loadSampleUsdm() {
   validateUsdmPayload();
 }
 
+function extractUsdmStudyEntities(parsed) {
+  if (Array.isArray(parsed.studyDesigns) && parsed.studyDesigns.length > 0) {
+    const design = parsed.studyDesigns[0] || {};
+    return {
+      arms: design.arms || [],
+      epochs: design.epochs || [],
+      encounters: design.encounters || [],
+      activities: design.activities || [],
+      criteria: design.eligibilityCriteria || [],
+    };
+  }
+  return {
+    arms: parsed.arms || [],
+    epochs: parsed.epochs || [],
+    encounters: parsed.encounters || parsed.visits || [],
+    activities: parsed.activities || parsed.rows || [],
+    criteria: parsed.criteria || parsed.eligibilityCriteria || [],
+  };
+}
+
 function validateUsdmPayload() {
   if (!rawUsdmInput.value || !rawUsdmInput.value.trim()) {
     validationStatus.isValid = false;
@@ -3070,35 +2936,8 @@ function validateUsdmPayload() {
     let therapeuticArea =
       parsed.therapeuticArea || parsed.therapeutic_area || "Oncology";
 
-    let arms = [];
-    let epochs = [];
-    let encounters = [];
-    let activities = [];
-    let criteria = [];
-
-    if (schemaResult.success) {
-      const design = parsed.studyDesigns?.[0] || {};
-      arms = design.arms || [];
-      epochs = design.epochs || [];
-      encounters = design.encounters || [];
-      activities = design.activities || [];
-      criteria = design.eligibilityCriteria || [];
-    } else {
-      if (parsed.studyDesigns && Array.isArray(parsed.studyDesigns)) {
-        const design = parsed.studyDesigns[0] || {};
-        arms = design.arms || [];
-        epochs = design.epochs || [];
-        encounters = design.encounters || [];
-        activities = design.activities || [];
-        criteria = design.eligibilityCriteria || [];
-      } else {
-        arms = parsed.arms || [];
-        epochs = parsed.epochs || [];
-        encounters = parsed.encounters || parsed.visits || [];
-        activities = parsed.activities || parsed.rows || [];
-        criteria = parsed.criteria || parsed.eligibilityCriteria || [];
-      }
-    }
+    const { arms, epochs, encounters, activities, criteria } =
+      extractUsdmStudyEntities(parsed);
 
     const hasStudyInfo = Boolean(studyId || title);
     const hasStructure =
@@ -3133,13 +2972,7 @@ function validateUsdmPayload() {
           "Missing protocol structure (arms, epochs, encounters/visits, or activities)."
         );
       if (schemaResult.error) {
-        const issuesList =
-          schemaResult.error.issues || schemaResult.error.errors || [];
-        issues.push(
-          ...issuesList.map(
-            (e) => `${e.path.join(".") || "root"}: ${e.message}`
-          )
-        );
+        issues.push(...formatZodIssues(schemaResult.error, "root"));
       }
       validationStatus.errorMessage =
         issues[0] || "Invalid USDM specification.";
@@ -3172,30 +3005,13 @@ async function executeZeroClickBuild() {
     let therapeuticArea =
       parsed.therapeuticArea || parsed.therapeutic_area || "Oncology";
 
-    let rawArms = [];
-    let rawEpochs = [];
-    let rawEncounters = [];
-    let rawActivities = [];
-    let rawCriteria = [];
-
-    if (
-      parsed.studyDesigns &&
-      Array.isArray(parsed.studyDesigns) &&
-      parsed.studyDesigns.length > 0
-    ) {
-      const design = parsed.studyDesigns[0];
-      rawArms = design.arms || [];
-      rawEpochs = design.epochs || [];
-      rawEncounters = design.encounters || [];
-      rawActivities = design.activities || [];
-      rawCriteria = design.eligibilityCriteria || [];
-    } else {
-      rawArms = parsed.arms || [];
-      rawEpochs = parsed.epochs || [];
-      rawEncounters = parsed.encounters || parsed.visits || [];
-      rawActivities = parsed.activities || parsed.rows || [];
-      rawCriteria = parsed.criteria || parsed.eligibilityCriteria || [];
-    }
+    const {
+      arms: rawArms,
+      epochs: rawEpochs,
+      encounters: rawEncounters,
+      activities: rawActivities,
+      criteria: rawCriteria,
+    } = extractUsdmStudyEntities(parsed);
 
     const arms = rawArms.map((a, idx) => ({
       arm_id: a.id || a.arm_id || `ARM-0${idx + 1}`,
