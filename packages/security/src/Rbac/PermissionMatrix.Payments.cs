@@ -4,9 +4,9 @@ public static partial class PermissionMatrix
 {
     /// <summary>
     /// The Payments module's route permissions (ADR-2510, ADR-2516, #5361). Finance staff move and settle money, site
-    /// staff act for their participants, the sponsor's data manager and auditors read, and the system administrator
-    /// reads what operations needs. No role holds a write on an arbitrary wallet on a participant's own behalf: a
-    /// participant's sign-in is not yet bound to a wallet, so the <c>subject</c> role gets nothing here.
+    /// staff act for their participants, the sponsor's data manager and auditors read, the system administrator reads
+    /// what operations needs, and authenticated trial participants (<c>subject</c>) hold narrow self-service permissions
+    /// strictly for their own signed-caller-bound wallet, receipt OCR, expense claims, and server-rule diary stipends.
     /// </summary>
     private static partial void AddPaymentsGrants()
     {
@@ -52,5 +52,11 @@ public static partial class PermissionMatrix
         Grant(RoleNormalization.ROLE_SYSADMIN, "payments_invoice", "read");
         Grant(RoleNormalization.ROLE_SYSADMIN, "payments_stipend_rule", "read");
         Grant(RoleNormalization.ROLE_SYSADMIN, "payments_audit_log", "read");
+
+        // Participant self-service: strictly bound to the signed caller's own SubjectId on /participant/me/* routes.
+        // Participants hold zero staff-scoped permissions (payments_wallet:*, payments_expense:*, payments_w9:*, etc.).
+        Grant(RoleNormalization.ROLE_SUBJECT, "payments_self_wallet", "read", "disburse");
+        Grant(RoleNormalization.ROLE_SUBJECT, "payments_self_expense", "ocr_scan", "submit");
+        Grant(RoleNormalization.ROLE_SUBJECT, "payments_self_stipend", "credit");
     }
 }
