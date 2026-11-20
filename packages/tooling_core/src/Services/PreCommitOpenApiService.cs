@@ -105,6 +105,12 @@ public static class PreCommitOpenApiService
     {
         string normalized = file.Replace('\\', '/');
 
+        if (normalized.StartsWith("packages/cli/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("packages/tooling_core/", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
         if (normalized.StartsWith("packages/", StringComparison.OrdinalIgnoreCase) ||
             normalized.StartsWith("apps/apphost/", StringComparison.OrdinalIgnoreCase) ||
             normalized.StartsWith("apps/gateway/", StringComparison.OrdinalIgnoreCase))
@@ -161,7 +167,80 @@ public static class PreCommitOpenApiService
         };
     }
 
-    private static string FindRepoRoot()
+    public static List<string>? TryGetTrackedFiles(string repoRoot)
+    {
+        if (!Directory.Exists(Path.Combine(repoRoot, ".git")) && !File.Exists(Path.Combine(repoRoot, ".git")))
+        {
+            return null;
+        }
+
+        return RunGitLines(repoRoot, "ls-files");
+    }
+
+    public static List<string>? TryGetChangedFilesSinceBase(string repoRoot, string baseRef = "origin/main")
+    {
+        if (!Directory.Exists(Path.Combine(repoRoot, ".git")) && !File.Exists(Path.Combine(repoRoot, ".git")))
+        {
+            return null;
+        }
+
+        string? mergeBase = RunGitLines(repoRoot, "merge-base", baseRef, "HEAD")?.FirstOrDefault();
+        if (string.IsNullOrEmpty(mergeBase))
+        {
+            return null;
+        }
+
+        var changed = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (string file in RunGitLines(repoRoot, "diff", "--name-only", "--diff-filter=d", mergeBase) ?? [])
+        {
+            changed.Add(file);
+        }
+
+        foreach (string file in RunGitLines(repoRoot, "diff", "--cached", "--name-only", "--diff-filter=d") ?? [])
+        {
+            changed.Add(file);
+        }
+
+        return [.. changed];
+    }
+
+    private static List<string>? RunGitLines(string repoRoot, params string[] args)
+    {
+        var psi = new ProcessStartInfo("git")
+        {
+            WorkingDirectory = repoRoot,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        foreach (string arg in args)
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        try
+        {
+            using var process = Process.Start(psi);
+            if (process is null)
+            {
+                return null;
+            }
+
+            var stderrTask = process.StandardError.ReadToEndAsync();
+            string stdout = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            _ = stderrTask.GetAwaiter().GetResult();
+            return process.ExitCode == 0
+                ? [.. stdout.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)]
+                : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    internal static string FindRepoRoot()
     {
         string current = AppContext.BaseDirectory;
         while (!string.IsNullOrEmpty(current))

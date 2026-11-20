@@ -36,7 +36,7 @@ public static class MarkdownParser
 
         foreach (var file in filesToScan)
         {
-            if (file.Contains("node_modules") || file.Contains(".venv") || file.Contains(".git")) continue;
+            if (file.Contains("node_modules") || file.Contains(".venv") || file.Contains(".cadence") || file.Contains(".git")) continue;
             if (!File.Exists(file)) continue;
 
             string relativeFile = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');

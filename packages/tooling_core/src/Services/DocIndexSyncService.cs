@@ -18,6 +18,7 @@ public static partial class DocIndexSyncService
         ".git",
         ".vs",
         ".venv",
+        ".cadence",
         "runs"
     };
 

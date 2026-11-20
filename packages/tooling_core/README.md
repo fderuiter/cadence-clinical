@@ -5,7 +5,7 @@ Implementation library behind the Cadence CLI: repository validators, generators
 ## Projects
 
 - `packages/tooling_core/src/Cadence.ToolingCore.csproj` (assembly `Cadence.ToolingCore`):
-  - `Cadence.ToolingCore.Services`: one static service per tool, for example `ReadmeValidatorService`, `MarkdownValidatorService`, `AdrValidatorService`, `ArchitectureDriftValidatorService`, `ImportValidatorService`, `DependencyValidatorService`, `VulnerabilityAuditorService` (fail-closed `.NET`, `pnpm` and `pip-audit` CVE auditing against `docs/SDLC/vulnerability_exclusions_ledger.json`), `SyncGxPService`, `ScaffoldServiceService`, `SelfHealService`, `OpenApiSyncService`, `SchemaDocGeneratorService`, and `DeidComplianceService` (the `deid` gate: the full `DeidDetector` over tracked files, ratcheted by `.deid-baseline.txt`).
+  - `Cadence.ToolingCore.Services`: one static service per tool, for example `ActionPinningValidatorService` (40-char GitHub Action SHA pinning), `YamlSyntaxValidatorService` (Native AOT YAML 1.2 validator), `FileHygieneValidatorService` (`trailing-whitespace` and `end-of-file` newline checks), `FrontendQualityGateService` (fail-closed Prettier and ESLint gates), `DetectSecretsGateService` (fail-closed `detect-secrets-hook` gate resolving `.cadence/venv`, `.venv`, `PATH` or `uvx`), `SecretsBaselineCleanerService` (canonical `.secrets.baseline` cleaner and file-exclusion regex), `ReadmeValidatorService`, `MarkdownValidatorService`, `AdrValidatorService`, `ArchitectureDriftValidatorService`, `ImportValidatorService`, `DependencyValidatorService`, `VulnerabilityAuditorService` (fail-closed `.NET`, `pnpm` and `pip-audit` CVE auditing against `docs/SDLC/vulnerability_exclusions_ledger.json`), `SyncGxPService`, `ScaffoldServiceService`, `SelfHealService`, `OpenApiSyncService`, `SchemaDocGeneratorService`, and `DeidComplianceService` (the `deid` gate: the full `DeidDetector` over tracked files, ratcheted by `.deid-baseline.txt`).
   - `Cadence.ToolingCore.Markdown`: `MarkdownParser` (workspace link checking, and paths into .NET test project folders that no longer exist; `docs/migration/` and the generated RTM and IQ/OQ/PQ report are skipped).
   - `Cadence.ToolingCore.Security`: `SecretScanner`.
   - `Cadence.ToolingCore.OpenApi`: `OpenApiToolingService`, and `OpenApiSpecExporter` (currently writes placeholder documents with empty `paths`).
@@ -26,8 +26,8 @@ Implementation library behind the Cadence CLI: repository validators, generators
 
 ## Tests
 
-Covered by `tests/Cadence.UnitTests/Packages/PortedPackagesUnitTests.cs`, `VulnerabilityAuditorServiceTests.cs`, `DeidEngineUnitTests.cs` and `DeidComplianceServiceTests.cs`:
+Covered by `tests/Cadence.UnitTests/Packages/PortedPackagesUnitTests.cs`, `PreCommitGuardrailsTests.cs`, `VulnerabilityAuditorServiceTests.cs`, `DeidEngineUnitTests.cs` and `DeidComplianceServiceTests.cs`:
 
 ```bash
-dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.PortedPackagesUnitTests|FullyQualifiedName~Cadence.UnitTests.Packages.DeidEngineUnitTests|FullyQualifiedName~DeidComplianceServiceTests"
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.PortedPackagesUnitTests|FullyQualifiedName~Cadence.UnitTests.Packages.PreCommitGuardrailsTests|FullyQualifiedName~Cadence.UnitTests.Packages.DeidEngineUnitTests|FullyQualifiedName~DeidComplianceServiceTests"
 ```

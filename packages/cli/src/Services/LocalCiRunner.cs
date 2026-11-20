@@ -98,7 +98,7 @@ public sealed class LocalCiEnvironment
     {
         RepoRoot = repoRoot,
         Run = (command, extra, variables) => RunProcess(repoRoot, command, extra, variables),
-        IsToolOnPath = IsOnPath,
+        IsToolOnPath = tool => IsToolAvailable(repoRoot, tool),
         ProbePostgres = ProbePostgresFromEnvironment,
         FindFiles = (step, baseRef) => DiscoverFiles(repoRoot, step, baseRef),
         OnStepStarting = onStepStarting,
@@ -106,7 +106,8 @@ public sealed class LocalCiEnvironment
 
     private static int RunProcess(string repoRoot, CiCommand command, IReadOnlyList<string> extra, IReadOnlyDictionary<string, string> variables)
     {
-        var psi = new ProcessStartInfo(command.FileName) { WorkingDirectory = repoRoot, UseShellExecute = false };
+        string executable = ResolveVenvToolPath(repoRoot, command.FileName) ?? command.FileName;
+        var psi = new ProcessStartInfo(executable) { WorkingDirectory = repoRoot, UseShellExecute = false };
         foreach (var argument in command.Arguments.Concat(extra))
         {
             psi.ArgumentList.Add(argument);
@@ -129,6 +130,29 @@ public sealed class LocalCiEnvironment
             Console.Error.WriteLine($"Could not start '{command.FileName}': {ex.Message}");
             return 127;
         }
+    }
+
+    /// <summary>Whether <paramref name="tool"/> is in <c>.cadence/venv</c>, <c>.venv</c>, or a <c>PATH</c> directory.</summary>
+    public static bool IsToolAvailable(string repoRoot, string tool) =>
+        ResolveVenvToolPath(repoRoot, tool) is not null || IsOnPath(tool);
+
+    private static string? ResolveVenvToolPath(string repoRoot, string tool)
+    {
+        string[] suffixes = OperatingSystem.IsWindows() ? [".exe", ".cmd", ".bat", ""] : [""];
+        string binSubdir = OperatingSystem.IsWindows() ? "Scripts" : "bin";
+        foreach (string venv in new[] { Path.Combine(repoRoot, ".cadence", "venv", binSubdir), Path.Combine(repoRoot, ".venv", binSubdir) })
+        {
+            foreach (string suffix in suffixes)
+            {
+                string candidate = Path.Combine(venv, tool + suffix);
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
+            }
+        }
+
+        return null;
     }
 
     /// <summary>Whether <paramref name="tool"/> is an executable file in a <c>PATH</c> directory.</summary>
@@ -187,9 +211,13 @@ public sealed class LocalCiEnvironment
             CiFileSource.ChangedFiles => ChangedFiles(repoRoot, baseRef, acmrOnly: false),
             CiFileSource.ChangedFilesAcmr => ChangedFiles(repoRoot, baseRef, acmrOnly: true),
             CiFileSource.Dockerfiles => FindUnderRoot(repoRoot, "Dockerfile*",
-                path => !path.Contains("/.venv/", StringComparison.Ordinal) && !path.Contains("/node_modules/", StringComparison.Ordinal)),
+                path => !path.Contains("/.venv/", StringComparison.Ordinal)
+                    && !path.Contains("/.cadence/", StringComparison.Ordinal)
+                    && !path.Contains("/node_modules/", StringComparison.Ordinal)),
             CiFileSource.ShellScripts => FindUnderRoot(repoRoot, "*.sh",
-                path => !path.Contains("/.venv/", StringComparison.Ordinal) && !path.Contains("/node_modules/", StringComparison.Ordinal)),
+                path => !path.Contains("/.venv/", StringComparison.Ordinal)
+                    && !path.Contains("/.cadence/", StringComparison.Ordinal)
+                    && !path.Contains("/node_modules/", StringComparison.Ordinal)),
             _ => [],
         };
 
@@ -456,7 +484,10 @@ public static class LocalCiRunner
         {
             var command = step.Commands[i];
             int exitCode = environment.Run(command, i == step.Commands.Count - 1 ? files : [], variables);
-            if (exitCode != 0)
+            bool succeeded = command.AllowedExitCodes is { Count: > 0 }
+                ? command.AllowedExitCodes.Contains(exitCode)
+                : exitCode == 0;
+            if (!succeeded)
             {
                 return new(step, CiOutcome.Failed, watch.Elapsed, Join(note, $"'{command.Display}' exited {exitCode}"));
             }

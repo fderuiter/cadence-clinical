@@ -57,7 +57,7 @@ format: ## Check formatting only (no auto-fix)
 	dotnet format Cadence.sln --verify-no-changes
 
 action-pinning: ## Validate GitHub Actions commit SHA pinning
-	python3 scripts/check-action-pinning.py
+	$(CADENCE_CLI) check action-pinning
 
 check: ## Run every quality gate (cadence check)
 	$(CADENCE_CLI) check

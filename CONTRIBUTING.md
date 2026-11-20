@@ -64,19 +64,18 @@ To run the services locally, see [README: Running the services](README.md#runnin
 
 ## 3. Local checks
 
-The pre-commit hook (`.githooks/pre-commit` and `.pre-commit-config.yaml`) runs `dotnet format --verify-no-changes`, `pnpm cadence check`, and `python3 scripts/check-action-pinning.py`. Before opening a PR also run the tests:
+The pre-commit hook (`.githooks/pre-commit`) delegates directly to `node scripts/run-cli.js check --pre-commit` on Linux, macOS, and Windows, running Prettier, ESLint, `dotnet format` (`whitespace` and `style`), `detect-secrets`, GitHub Actions SHA pinning, YAML syntax, trailing-whitespace, EOF newline, and all Cadence policy gates fail-closed on staged files. Before opening a PR also run the full checks and tests:
 
 ```bash
 dotnet build Cadence.sln
 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj
 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
-dotnet format Cadence.sln --verify-no-changes
-python3 scripts/check-action-pinning.py
 pnpm cadence check
 ```
 
-Useful single gates (`pnpm cadence check <gate>`): `adrs`, `markdown`, `readmes`, `arch-drift`,
-`env-vars`, `contracts`, `openapi`, `rtm`, `duplication`, `security`, `deid`, `vulnerabilities`.
+Useful single gates (`pnpm cadence check <gate>`): `prettier`, `eslint`, `action-pinning`, `yaml`,
+`detect-secrets`, `adrs`, `markdown`, `readmes`, `arch-drift`, `env-vars`, `openapi`, `rtm`,
+`duplication`, `security`, `deid`, `vulnerabilities`.
 
 **Before merging, run `pnpm cadence ci`** (or `make ci`). GitHub Actions does not run jobs for this repository until
 2027, so this is the check that stands in for CI: it runs the jobs of `.github/workflows/ci.yml` locally with the same

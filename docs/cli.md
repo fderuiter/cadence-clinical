@@ -53,9 +53,10 @@ Checks the local environment. It reports:
 - the .NET SDK version (from `dotnet --version`)
 - whether `Directory.Packages.props` exists in the current directory
 - whether the pnpm on the `PATH` runs and matches the `packageManager` pin in `package.json` (ADR-2508)
+- whether `detect-secrets-hook` runs from `.cadence/venv`, `.venv`, `PATH`, or `uvx`
 - whether PostgreSQL answers on `127.0.0.1:5432`
 
-It exits `1` when pnpm is missing, crashes or differs from the pin, and `0` otherwise.
+It exits `1` when the .NET SDK is missing, pnpm is missing/crashes/differs from the pin, or `detect-secrets` is unavailable, and `0` otherwise.
 
 | Option           | Description                                                                          |
 | ---------------- | ------------------------------------------------------------------------------------ |
@@ -92,9 +93,16 @@ must make it fail.
 
 | Gate                  | Also accepted                                 | Takes `[files]` | Pre-commit hook (`--pre-commit`)                                                                                                       |
 | --------------------- | --------------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `dotnet-format`       |                                               |                 | Skipped: the hook runs `dotnet format` on the staged C# files itself                                                                   |
-| `dotnet-format-style` |                                               |                 | Skipped: the hook runs `dotnet format` on the staged C# files itself                                                                   |
+| `dotnet-format`       |                                               | yes             | Quick: checks only the staged C# files; fails closed when `dotnet` is missing                                                          |
+| `dotnet-format-style` |                                               | yes             | Quick: checks only the staged C# files; fails closed when `dotnet` is missing                                                          |
+| `prettier`            |                                               | yes             | Quick: checks staged JS, TS, Vue, CSS, JSON, Markdown and YAML files; fails closed when `pnpm` or `node_modules` is missing            |
+| `eslint`              |                                               | yes             | Quick: lints staged JS, TS and Vue files; fails closed when `pnpm` or `node_modules` is missing                                        |
+| `action-pinning`      | `check-action-pinning`                        | yes             | Runs on the staged files                                                                                                               |
+| `yaml`                | `check-yaml`, `validate-yaml`                 | yes             | Runs on the staged files                                                                                                               |
+| `trailing-whitespace` | `check-trailing-whitespace`                   | yes             | Runs on the staged files                                                                                                               |
+| `end-of-file`         | `end-of-file-fixer`, `eof-newline`            | yes             | Runs on the staged files                                                                                                               |
 | `clean-secrets`       | `clean-secrets-baseline`                      |                 | Runs                                                                                                                                   |
+| `detect-secrets`      | `secrets-scan`                                | yes             | Quick: scans staged files instead of the branch diff                                                                                   |
 | `duplication`         | `detect-code-duplication`                     | yes             | Runs on the staged files                                                                                                               |
 | `cli-docs`            | `validate-cli-docs`                           |                 | Runs                                                                                                                                   |
 | `adrs`                | `validate-adrs`                               |                 | Runs                                                                                                                                   |
