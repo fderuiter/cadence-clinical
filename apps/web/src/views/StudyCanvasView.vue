@@ -238,6 +238,7 @@
               :back-label="formBackLabel"
               :form-location="formLocationById"
               :observation-location="observationLocationFromForm"
+              @dirty-change="formWorkspaceDirty = $event"
               @form-loaded="onFormLoaded"
               @closed="onFormClosed"
             />
@@ -433,7 +434,14 @@ import {
   ref,
   watch,
 } from "vue";
-import { useRoute, useRouter, type LocationQueryRaw } from "vue-router";
+import {
+  onBeforeRouteLeave,
+  onBeforeRouteUpdate,
+  useRoute,
+  useRouter,
+  type LocationQueryRaw,
+  type RouteLocationNormalized,
+} from "vue-router";
 import type { EcrfForm } from "../api/ecrfFormsApi";
 import type { SubjectSummary } from "../api/executionApi";
 import {
@@ -612,6 +620,7 @@ const recordParticipant = computed<SubjectSummary | null>(() =>
 );
 
 const loadedForm = ref<EcrfForm | null>(null);
+const formWorkspaceDirty = ref(false);
 const loadedObservation = ref<KernelObservation | null>(null);
 const resolvedLineage = ref<{ siteCode: string; subjectCode: string } | null>(
   null
@@ -916,6 +925,8 @@ function onFormLoaded(form: EcrfForm) {
 }
 
 function onFormClosed() {
+  formWorkspaceDirty.value = false;
+  loadedForm.value = null;
   router.push(formBackLocation.value);
 }
 
@@ -1088,6 +1099,57 @@ watch(
   { immediate: true }
 );
 
+const UNSAVED_FORM_CONFIRM_MESSAGE =
+  "You have unsaved eCRF draft changes. Are you sure you want to leave?";
+
+function leavesActiveForm(to: RouteLocationNormalized): boolean {
+  const nextStudyCode = single(to.params.studyCode).trim();
+  if (!nextStudyCode || nextStudyCode !== studyCode.value) return true;
+  if (parseNodeRef(to.query.proposal)?.kind === "proposal") return true;
+  if (observationNodeRef(to.query.observation)) return true;
+
+  const nextFormQuery = single(to.query.form).trim();
+  if (nextFormQuery === "new") return true;
+  const nextFormId = collectionInstanceId(nextFormQuery);
+  if (!nextFormId) return true;
+
+  const currentFormId = loadedForm.value?.form_id || openFormId.value;
+  return Boolean(currentFormId && nextFormId !== currentFormId);
+}
+
+function handleBeforeUnload(event: BeforeUnloadEvent) {
+  if (formWorkspaceDirty.value) {
+    event.preventDefault();
+    event.returnValue = "";
+    return "";
+  }
+}
+
+function confirmDiscardUnsavedForm(): boolean {
+  // eslint-disable-next-line no-alert -- Vue Router navigation guards require synchronous window.confirm.
+  return window.confirm(UNSAVED_FORM_CONFIRM_MESSAGE);
+}
+
+if (typeof onBeforeRouteLeave === "function") {
+  onBeforeRouteLeave(() => {
+    if (formWorkspaceDirty.value && !confirmDiscardUnsavedForm()) {
+      return false;
+    }
+  });
+}
+
+if (typeof onBeforeRouteUpdate === "function") {
+  onBeforeRouteUpdate((to) => {
+    if (
+      formWorkspaceDirty.value &&
+      leavesActiveForm(to) &&
+      !confirmDiscardUnsavedForm()
+    ) {
+      return false;
+    }
+  });
+}
+
 function onGlobalKeydown(event: KeyboardEvent) {
   if (inAppShell) return;
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -1097,11 +1159,15 @@ function onGlobalKeydown(event: KeyboardEvent) {
 }
 
 onMounted(() => {
+  window.addEventListener("beforeunload", handleBeforeUnload);
   if (!inAppShell) {
     document.addEventListener("keydown", onGlobalKeydown);
   }
 });
-onUnmounted(() => document.removeEventListener("keydown", onGlobalKeydown));
+onUnmounted(() => {
+  window.removeEventListener("beforeunload", handleBeforeUnload);
+  document.removeEventListener("keydown", onGlobalKeydown);
+});
 </script>
 
 <style scoped>

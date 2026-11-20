@@ -523,4 +523,193 @@ describe("Clinical Canvas: a participant's data", () => {
       );
     });
   });
+
+  describe("dirty form navigation guards and draft preservation", () => {
+    const SECOND_FORM_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000f002";
+
+    function loadedFormFixture(formId = FORM_ID) {
+      return {
+        form_id: formId,
+        enrollment_id: ENROLLMENT_ID,
+        participant_id: PARTICIPANT_ID,
+        protocol_version_id: "0192f3c4-5e6a-7b8c-9d0e-00000000b001",
+        collection_spec_id: "VS",
+        collection_title: "Vital Signs",
+        planned_activity_id: "WEEK2",
+        collected_at: "2027-03-14T09:00:00Z",
+        opened_at: "2027-03-14T09:00:00Z",
+        opened_by: "crc1",
+        complete: false,
+        missing_required: ["DIABP"],
+        content_hash: "sha256:abc",
+        version: 1,
+        locks: [],
+        assertions: [],
+        signatures: [],
+        items: [
+          {
+            item_id: "SYSBP",
+            concept: "concept:systolic@1",
+            unit: "mm[Hg]",
+            value_kind: "Quantity",
+            required: true,
+            value: {
+              type: "quantity",
+              value: 120,
+              unit: "mm[Hg]",
+              comparator: null,
+            },
+            observation_id: OBSERVATION_ID,
+            revision: 1,
+            recorded_by: "crc1",
+            recorded_at: "2027-03-14T09:05:00Z",
+          },
+        ],
+      };
+    }
+
+    beforeEach(() => {
+      localStorage.clear();
+      const auth = useAuthStore();
+      auth.setAuth({
+        authenticated: true,
+        token: "token-crc-1",
+        tokenParsed: {
+          sub: "crc-1",
+          tenant_id: "tenant-1",
+          realm_access: { roles: ["CRC"] },
+        },
+      });
+      vi.mocked(ecrfFormsApi.getForm).mockImplementation(async (id) =>
+        loadedFormFixture(id)
+      );
+      vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([]);
+    });
+
+    afterEach(() => {
+      localStorage.clear();
+    });
+
+    it("guards beforeunload, route leave, and route updates that unmount, clear, or switch a dirty form while preserving drafts", async () => {
+      await openRecord();
+      await wrapper.find(`#record-form-link-${FORM_ID}`).trigger("click");
+      await flushPromises();
+
+      await wrapper.find("#ecrf-item-SYSBP").setValue("136");
+      await flushPromises();
+
+      // beforeunload blocks tab close while dirty.
+      const unloadEvent = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(unloadEvent);
+      expect(unloadEvent.defaultPrevented).toBe(true);
+
+      const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+      // Inspector query changes on the same open form do not prompt.
+      await router.push({
+        name: "study",
+        params: { studyCode: "CAD-101" },
+        query: {
+          ...router.currentRoute.value.query,
+          ask: "Check vitals range",
+        },
+      });
+      await flushPromises();
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(router.currentRoute.value.query.ask).toBe("Check vitals range");
+      await wrapper.find("#verb-details").trigger("click");
+
+      // Navigating to ?form=new (clearing active form) prompts and cancels when rejected.
+      await wrapper.find("#inspector-open-data-entry").trigger("click");
+      await flushPromises();
+      expect(confirmSpy).toHaveBeenCalledTimes(1);
+      expect(router.currentRoute.value.query.form).toBe(
+        `collection_instance:${FORM_ID}`
+      );
+      expect(wrapper.find("#ecrf-item-SYSBP").element.value).toBe("136");
+
+      // Opening an observation (unmounting CanvasFormWorkspace) prompts and cancels when rejected.
+      await wrapper.find("#ecrf-item-observation-SYSBP").trigger("click");
+      await flushPromises();
+      expect(confirmSpy).toHaveBeenCalledTimes(2);
+      expect(router.currentRoute.value.query.observation).toBeUndefined();
+
+      // Switching to another form prompts and cancels when rejected.
+      await router.push(
+        `/studies/CAD-101?stage=conduct&participant=participant:${PARTICIPANT_ID}&form=collection_instance:${SECOND_FORM_ID}`
+      );
+      await flushPromises();
+      expect(confirmSpy).toHaveBeenCalledTimes(3);
+      expect(router.currentRoute.value.query.form).toBe(
+        `collection_instance:${FORM_ID}`
+      );
+
+      // Leaving the route altogether prompts and cancels when rejected.
+      await router.push("/ecrf");
+      await flushPromises();
+      expect(confirmSpy).toHaveBeenCalledTimes(4);
+      expect(router.currentRoute.value.name).toBe("study");
+
+      // Confirming navigation to ?form=new flushes the <500ms draft to localStorage without deleting it and clears dirty state.
+      confirmSpy.mockReturnValue(true);
+      await wrapper.find("#inspector-open-data-entry").trigger("click");
+      await flushPromises();
+      expect(router.currentRoute.value.query.form).toBe("new");
+
+      const cleanUnload = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(cleanUnload);
+      expect(cleanUnload.defaultPrevented).toBe(false);
+
+      // Returning to the form restores the preserved browser draft.
+      await wrapper.find(`#record-form-link-${FORM_ID}`).trigger("click");
+      await flushPromises();
+      expect(wrapper.find("#ecrf-item-SYSBP").element.value).toBe("136");
+    });
+
+    it("skips confirmation when @form-loaded syncs ?form=new to the URL and avoids duplicate prompts on #ecrf-form-close", async () => {
+      vi.mocked(ecrfFormsApi.openForm).mockResolvedValue({ form_id: FORM_ID });
+      // Seed a saved draft so the form is immediately dirty as soon as openForm loads it.
+      localStorage.setItem(
+        `cadence_user:tenant-1:crc-1:ecrf_form_draft:${FORM_ID}`,
+        JSON.stringify({
+          form_id: FORM_ID,
+          items: { SYSBP: { text: "142", missing: "", revision: 1 } },
+        })
+      );
+
+      const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+      await openRecord();
+      await wrapper.find("#record-open-form").trigger("click");
+      await flushPromises();
+      expect(router.currentRoute.value.query.form).toBe("new");
+
+      await wrapper.find("#ecrf-collection-spec").setValue("VS");
+      await wrapper.find("#ecrf-collected-at").setValue("2027-03-14T09:00");
+      await wrapper.find("#ecrf-form-new").trigger("submit");
+      await flushPromises();
+
+      // URL synced to collection_instance:<FORM_ID> without prompting confirm.
+      expect(router.currentRoute.value.query.form).toBe(
+        `collection_instance:${FORM_ID}`
+      );
+      expect(wrapper.find("#ecrf-item-SYSBP").element.value).toBe("142");
+      expect(confirmSpy).not.toHaveBeenCalled();
+
+      // Explicit #ecrf-form-close prompts once in closeForm, deletes draft, and navigates back without a second route guard prompt.
+      await wrapper.find("#ecrf-form-close").trigger("click");
+      await flushPromises();
+
+      expect(confirmSpy).toHaveBeenCalledTimes(1);
+      expect(router.currentRoute.value.query).toEqual({
+        stage: "conduct",
+        participant: `participant:${PARTICIPANT_ID}`,
+      });
+      expect(
+        localStorage.getItem(
+          `cadence_user:tenant-1:crc-1:ecrf_form_draft:${FORM_ID}`
+        )
+      ).toBeNull();
+    });
+  });
 });
