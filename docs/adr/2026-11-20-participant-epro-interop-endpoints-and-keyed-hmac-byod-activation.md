@@ -22,11 +22,11 @@ Participants using the Companion Portal (`apps/subject-portal`) require live bri
 
 ### Option 1: Mount Interop ePRO Reconciliation with Canonical Observation Forwarding, Signed `X-Subject-Code` Gateway Claims, and Keyed-HMAC Activation Codes (Selected)
 
-- **Overview:** Mount `MapEproEndpoints()` in `apps/interop`, forward resolved diary items via `ICanonicalObservationForwarder` (`K-TRUTH-1`), issue and redeem 30-day HMAC-digested activation codes in `apps/execution` (`SubjectActivationToken`), extend `GatewayIdentity` and `HmacSigner` to sign `X-Subject-Code`, enforce pre-query `Subject` ownership guards, and inject Vite Rollup bundle asset paths into `dist/sw.js` at build time.
+- **Overview:** Mount `MapEproEndpoints()` in `apps/interop`, forward resolved diary items via `ICanonicalObservationForwarder` (`K-TRUTH-1`), issue and redeem 30-day HMAC-digested activation codes in `apps/execution` (`SubjectActivationToken`, hashed via `AddCadenceLookupHashing()` under `FIELD_LOOKUP_HASH_KEY` with fail-closed startup validation per ADR-2494), extend `GatewayIdentity` and `HmacSigner` to sign `X-Subject-Code`, enforce pre-query `Subject` ownership guards, and inject Vite Rollup bundle asset paths into `dist/sw.js` at build time using Vite's resolved `base` (`VITE_BASE_PATH` / `/subject-portal/`, preserving `SW_BASE` subpath co-hosting per ADR-2550).
 - **Pros:**
-  - ✅ Satisfies PRD-SYS-001, `K-TRUTH-1`, `K-IDN-1`, `K-TIME-3`, and `K-XS-1` with zero raw secrets or PII outside `IdentityVault`.
+  - ✅ Satisfies PRD-SYS-001, `K-TRUTH-1`, `K-IDN-1`, `K-TIME-3`, and `K-XS-1` with zero raw secrets, fallback keys, or PII outside `IdentityVault`.
   - ✅ Enforces `HTTP 403` cross-participant isolation before touching `InteropDbContext` and preserves defeated/quarantined offline sync payloads.
-  - ✅ Eliminates production Service Worker `404` precache errors by injecting hashed `/subject-portal/assets/*` chunks during `vite build`.
+  - ✅ Eliminates production Service Worker `404` precache errors across both `/subject-portal/` and GitHub Pages subpaths by injecting hashed `${base}assets/*` chunks during `vite build`.
 - **Cons:**
   - ❌ Adds `subject_code` header canonicalization to `HmacSigner` and an EF Core migration (`AddSubjectActivationTokens`) in `apps/execution`.
 

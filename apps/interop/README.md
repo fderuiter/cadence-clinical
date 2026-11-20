@@ -89,7 +89,8 @@ public key alone is `422` and signs nothing. Neither route, nor polling, accepts
 | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `FIELD_LOOKUP_HASH_KEY`   | **Required.** Base64 HMAC-SHA256 key (`openssl rand -base64 32`) for device-token lookup hashes. The service refuses to start without a valid key; there is no default.                               |
 | `CADENCE_SCE_SIGNING_KEY` | **Required.** Base64 HMAC-SHA256 key (`openssl rand -base64 32`) that signs SCE database-lock tokens and run signature blocks. The service refuses to start without a valid key; there is no default. |
-| `KERNEL_SERVICE_URL`      | Optional base URL of the Kernel API host (`http://kernel-api:8080` in compose). When set, `CanonicalObservationForwarder` posts resolved ePRO diary items to `POST /api/v1/kernel/observations`.      |
+| `EXECUTION_SERVICE_URL`   | Optional base URL of the Execution service (`http://execution:8080` in compose). When set, `ActivationBindingResolver` resolves redeemed BYOD participant activation bindings via `GET /api/v1/execution/subjects/activation-codes/me`. |
+| `KERNEL_SERVICE_URL`      | Optional base URL of the Kernel API host (`http://kernel:8080` in compose). When set, `CanonicalObservationForwarder` posts resolved ePRO diary items to `POST /api/v1/kernel/observations`.         |
 
 Wearable/sensor device tokens are never stored (#4770). `device_registrations`, `sensor_telemetry_streams`,
 `sensor_daily_summaries` and `sensor_safety_alerts` each keep an indexed `DeviceTokenHash`: the keyed HMAC-SHA256

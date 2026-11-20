@@ -170,6 +170,8 @@ public sealed class CommercialAndOnboardingUnitTests
         BaselineKernelCommandAttribute.IsBaseline(typeof(DefineRole)).Should().BeTrue();
         BaselineKernelCommandAttribute.IsBaseline(typeof(IssueGrant)).Should().BeTrue();
         BaselineKernelCommandAttribute.IsBaseline(typeof(ActivateSubscription)).Should().BeTrue();
+        BaselineKernelCommandAttribute.IsBaseline(typeof(GrantProductEntitlement)).Should().BeTrue();
+        BaselineKernelCommandAttribute.IsBaseline(typeof(RevokeProductEntitlement)).Should().BeTrue();
         BaselineKernelCommandAttribute.IsBaseline(typeof(RegisterStudy)).Should().BeFalse();
         BaselineKernelCommandAttribute.IsBaseline(typeof(RecordObservation)).Should().BeFalse();
     }

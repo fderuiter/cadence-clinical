@@ -68,15 +68,17 @@ async function bootstrapApp() {
       });
     }
 
-    // keycloak-js strips the OIDC callback parameters from the URL during
-    // init. Start the router on the cleaned URL, not the snapshot it took at
-    // import, so the one-time authorization code never returns to history.
-    const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
-    const { pathname, search, hash } = window.location;
-    const path = pathname.startsWith(base)
-      ? pathname.slice(base.length)
-      : pathname;
-    await router.replace(`${path || "/"}${search}${hash}`);
+    if (!isDemoBuild()) {
+      // keycloak-js strips the OIDC callback parameters from the URL during
+      // init. Start the router on the cleaned URL, not the snapshot it took at
+      // import, so the one-time authorization code never returns to history.
+      const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+      const { pathname, search, hash } = window.location;
+      const path = pathname.startsWith(base)
+        ? pathname.slice(base.length)
+        : pathname;
+      await router.replace(`${path || "/"}${search}${hash}`);
+    }
   } finally {
     app.use(router);
     await router.isReady();

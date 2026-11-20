@@ -1,6 +1,9 @@
 # ADR-071: GitHub Pages Documentation Hosting
 
-- **Status:** Accepted
+> [!NOTE]
+> Superseded by [ADR-2550: Co-Host Interactive Demos on GitHub Pages Subpaths](2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.md), which retains the VitePress documentation portal at `/cadence-clinical/` while staging isolated staff (`/cadence-clinical/demo/`) and participant (`/cadence-clinical/subject-portal/`) demo bundles into the same Pages artifact.
+
+- **Status:** Superseded by [ADR-2550](2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.md)
 - **Date:** 2026-08-14
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter

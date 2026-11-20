@@ -180,4 +180,49 @@ describe("Subject Portal OIDC subject_code, Activation Redemption, and Built SW 
       expect(fs.existsSync(fileOnDisk)).toBe(true);
     }
   });
+
+  it("rewrites ASSETS under custom VITE_BASE_PATH subpaths (/cadence-clinical/subject-portal/)", async () => {
+    const os = await import("os");
+    const { serviceWorkerManifestPlugin } = await import("../vite.config.js");
+    const tmpOut = fs.mkdtempSync(
+      path.join(os.tmpdir(), "cadence-sw-subpath-")
+    );
+    try {
+      const sourceSw = fs.readFileSync(
+        path.resolve(__dirname, "../public/sw.js"),
+        "utf8"
+      );
+      fs.writeFileSync(path.join(tmpOut, "sw.js"), sourceSw, "utf8");
+
+      const plugin = serviceWorkerManifestPlugin();
+      plugin.configResolved({
+        root: tmpOut,
+        base: "/cadence-clinical/subject-portal/",
+        build: { outDir: "." },
+      });
+      plugin.generateBundle(
+        {},
+        {
+          "assets/index-abc123.js": {},
+          "assets/index-def456.css": {},
+          "assets/index-abc123.js.map": {},
+        }
+      );
+      plugin.closeBundle();
+
+      const builtSw = fs.readFileSync(path.join(tmpOut, "sw.js"), "utf8");
+      const match = builtSw.match(/const ASSETS = (\[[\s\S]*?\]);/);
+      expect(match).not.toBeNull();
+      const assets = JSON.parse(match[1]);
+      expect(assets).toEqual([
+        "/cadence-clinical/subject-portal/",
+        "/cadence-clinical/subject-portal/index.html",
+        "/cadence-clinical/subject-portal/assets/index-abc123.js",
+        "/cadence-clinical/subject-portal/assets/index-def456.css",
+        "/cadence-clinical/subject-portal/manifest.json",
+      ]);
+    } finally {
+      fs.rmSync(tmpOut, { recursive: true, force: true });
+    }
+  });
 });

@@ -13,55 +13,10 @@ const DEV_PORT = 5174;
 // the front proxy).
 const GATEWAY_URL = process.env.CADENCE_GATEWAY_URL || "http://localhost:8000";
 
-function serviceWorkerManifestPlugin(basePath) {
-  let emittedAssetPaths = [];
-  let resolvedOutDir = path.resolve(__dirname, "dist");
-
-  return {
-    name: "inject-service-worker-assets",
-    apply: "build",
-    enforce: "post",
-    configResolved(config) {
-      resolvedOutDir = path.resolve(config.root, config.build.outDir);
-    },
-    generateBundle(_options, bundle) {
-      const normalizedBase = basePath.endsWith("/") ? basePath : `${basePath}/`;
-      emittedAssetPaths = Object.keys(bundle)
-        .filter(
-          (fileName) => !fileName.endsWith(".map") && fileName !== "sw.js"
-        )
-        .map((fileName) => `${normalizedBase}${fileName.replace(/^\/+/, "")}`)
-        .sort();
-    },
-    closeBundle() {
-      const swDistPath = path.join(resolvedOutDir, "sw.js");
-      if (!fs.existsSync(swDistPath)) {
-        return;
-      }
-      const normalizedBase = basePath.endsWith("/") ? basePath : `${basePath}/`;
-      const precacheAssets = Array.from(
-        new Set([
-          normalizedBase,
-          `${normalizedBase}index.html`,
-          ...emittedAssetPaths,
-          `${normalizedBase}manifest.json`,
-        ])
-      );
-      const swSource = fs.readFileSync(swDistPath, "utf8");
-      const updatedSw = swSource.replace(
-        /const ASSETS = \[[\s\S]*?\];/,
-        `const ASSETS = ${JSON.stringify(precacheAssets, null, 2)};`
-      );
-      fs.writeFileSync(swDistPath, updatedSw, "utf8");
-    },
-  };
-}
-
 export default defineConfig({
-  base: "/subject-portal/",
+  base: process.env.VITE_BASE_PATH || "/subject-portal/",
   plugins: [
     vue(),
-    serviceWorkerManifestPlugin("/subject-portal/"),
     {
       // The gateway sends no CORS headers, so a dev server page that called http://localhost:8000 directly would be
       // blocked by the browser. Unless VITE_API_BASE_URL is set (environment or .env files), the dev server sends API
@@ -87,6 +42,7 @@ export default defineConfig({
       },
     },
     createStripMockWorkerInProdPlugin(__dirname),
+    serviceWorkerManifestPlugin(),
   ],
   server: {
     port: DEV_PORT,
@@ -148,3 +104,52 @@ export default defineConfig({
     },
   },
 });
+
+export function serviceWorkerManifestPlugin() {
+  let emittedAssetFiles = [];
+  let resolvedOutDir = path.resolve(__dirname, "dist");
+  let resolvedBase = "/subject-portal/";
+
+  return {
+    name: "inject-service-worker-assets",
+    apply: "build",
+    enforce: "post",
+    configResolved(config) {
+      resolvedOutDir = path.resolve(config.root, config.build.outDir);
+      resolvedBase = config.base || "/subject-portal/";
+    },
+    generateBundle(_options, bundle) {
+      emittedAssetFiles = Object.keys(bundle)
+        .filter(
+          (fileName) => !fileName.endsWith(".map") && fileName !== "sw.js"
+        )
+        .map((fileName) => fileName.replace(/^\/+/, ""))
+        .sort();
+    },
+    closeBundle() {
+      const swDistPath = path.join(resolvedOutDir, "sw.js");
+      if (!fs.existsSync(swDistPath)) {
+        return;
+      }
+      const normalizedBase = resolvedBase.endsWith("/")
+        ? resolvedBase
+        : `${resolvedBase}/`;
+      const precacheAssets = Array.from(
+        new Set([
+          normalizedBase,
+          `${normalizedBase}index.html`,
+          ...emittedAssetFiles.map(
+            (fileName) => `${normalizedBase}${fileName}`
+          ),
+          `${normalizedBase}manifest.json`,
+        ])
+      );
+      const swSource = fs.readFileSync(swDistPath, "utf8");
+      const updatedSw = swSource.replace(
+        /const ASSETS = \[[\s\S]*?\];/,
+        `const ASSETS = ${JSON.stringify(precacheAssets, null, 2)};`
+      );
+      fs.writeFileSync(swDistPath, updatedSw, "utf8");
+    },
+  };
+}
