@@ -702,13 +702,17 @@
               @change="fetchSubjectImpact"
             >
               <option value="ALL">
-                All Assigned Sites (SITE-101, SITE-102, SITE-103)
+                All Assigned Sites ({{
+                  siteOptions.map((site) => site.code).join(", ")
+                }})
               </option>
-              <option value="SITE-101">SITE-101 (General Hospital)</option>
-              <option value="SITE-102">
-                SITE-102 (University Medical Center)
+              <option
+                v-for="site in siteOptions"
+                :key="site.code"
+                :value="site.code"
+              >
+                {{ site.code }} ({{ site.name }})
               </option>
-              <option value="SITE-103">SITE-103 (Metro Clinical Center)</option>
             </select>
           </div>
 
@@ -751,7 +755,7 @@
               v-model="searchQuery"
               type="text"
               class="form-control form-control-sm"
-              placeholder="e.g. SUBJ-102"
+              placeholder="e.g. SUBJ-101-002"
             />
           </div>
         </div>
@@ -1495,6 +1499,7 @@
 <script setup>
 import ReconsentChannelPicker from "../components/econsent/ReconsentChannelPicker.vue";
 import { ref, computed, onMounted } from "vue";
+import { DEMO_SITES } from "demo-fixtures";
 import { useFocusTrap } from "ui";
 import { apiClient } from "../api/apiClient";
 import { designerService } from "../api/designer";
@@ -1587,6 +1592,10 @@ useFocusTrap(singleReconsentModalRef, {
   },
 });
 
+const siteOptions = computed(() =>
+  DEMO_SITES.map((site) => ({ code: site.code, name: site.name }))
+);
+
 // Cohort Subjects Data
 const subjectsList = computed(() => store.subjects);
 
@@ -1615,7 +1624,8 @@ const selectedSiteScope = computed(() => {
 // Filtered Subjects for Bulk Workspace
 const filteredSubjects = computed(() => {
   return subjectsList.value.filter((sub) => {
-    if (siteFilter.value !== "ALL" && sub.site_id !== siteFilter.value) {
+    const subjectSite = sub.siteId || sub.site_id;
+    if (siteFilter.value !== "ALL" && subjectSite !== siteFilter.value) {
       return false;
     }
     if (

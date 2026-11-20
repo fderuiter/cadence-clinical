@@ -32,7 +32,9 @@ describe("Subject Portal Demo Isolation & Stateful MSW Handlers", () => {
 
     await login();
 
-    expect(state.session.userId).toBe("subject_001");
+    expect(state.session.userId).toBe("SUBJ-101-001");
+    expect(state.session.studyId).toBe("CADENCE-101");
+    expect(state.session.siteId).toBe("SITE-101");
     expect(state.session.isOfflineMode).toBe(true);
     expect(state.session.isDemoMode).toBe(true);
     expect(state.session.token).toBeNull();
@@ -131,7 +133,7 @@ describe("Subject Portal Demo Isolation & Stateful MSW Handlers", () => {
       expect(ackRes.status).toBe(200);
 
       const notifsRes = await fetch(
-        `${origin}/api/v1/interop/subjects/subject_001/notifications`,
+        `${origin}/api/v1/interop/subjects/SUBJ-101-001/notifications`,
         { headers: PORTAL_HEADERS }
       );
       expect(notifsRes.status).toBe(200);
@@ -146,14 +148,14 @@ describe("Subject Portal Demo Isolation & Stateful MSW Handlers", () => {
         },
         body: JSON.stringify({
           assignment_id: "assign_01",
-          subject_id: "subject_001",
+          subject_id: "SUBJ-101-001",
           responses: { vssbp: 120, vsdpb: 78, vshr: 68, pain_scale: 2 },
         }),
       });
       expect(submitRes.status).toBe(200);
 
       const assignRes = await fetch(
-        `${origin}/api/v1/interop/assignments/subject/subject_001`,
+        `${origin}/api/v1/interop/assignments/subject/SUBJ-101-001`,
         { headers: PORTAL_HEADERS }
       );
       expect(assignRes.status).toBe(200);
@@ -164,11 +166,12 @@ describe("Subject Portal Demo Isolation & Stateful MSW Handlers", () => {
 
       const pendingBefore = await (
         await fetch(
-          `${origin}/api/v1/econsent/reconsent/pending/STUDY-01?subject_pseudonym=subject_001`,
+          `${origin}/api/v1/econsent/reconsent/pending/CADENCE-101?subject_pseudonym=SUBJ-101-001`,
           { headers: PORTAL_HEADERS }
         )
       ).json();
       expect(pendingBefore.length).toBe(1);
+      expect(pendingBefore[0].study_id).toBe("CADENCE-101");
 
       const completeRes = await fetch(
         `${origin}/api/v1/econsent/reconsent/complete/${pendingBefore[0].id}`,
@@ -179,7 +182,7 @@ describe("Subject Portal Demo Isolation & Stateful MSW Handlers", () => {
             "X-Change-Reason": "Protocol Amendment Re-Consent Acknowledgment",
           },
           body: JSON.stringify({
-            subject_pseudonym: "subject_001",
+            subject_pseudonym: "SUBJ-101-001",
           }),
         }
       );
@@ -187,7 +190,7 @@ describe("Subject Portal Demo Isolation & Stateful MSW Handlers", () => {
 
       const pendingAfter = await (
         await fetch(
-          `${origin}/api/v1/econsent/reconsent/pending/STUDY-01?subject_pseudonym=subject_001`,
+          `${origin}/api/v1/econsent/reconsent/pending/CADENCE-101?subject_pseudonym=SUBJ-101-001`,
           { headers: PORTAL_HEADERS }
         )
       ).json();

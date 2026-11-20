@@ -126,6 +126,11 @@ import draggable from "vuedraggable";
 import CanvasFieldWidget from "./CanvasFieldWidget.vue";
 import { useDesignerStore } from "../../stores/designer.js";
 import { vKeyboardClick } from "../../directives/keyboardClick.js";
+import {
+  demoNowMs,
+  demoRandomToken,
+  nextDemoStep,
+} from "../../utils/demoMode.js";
 
 const props = defineProps({
   section: {
@@ -223,8 +228,9 @@ function toggleCollapse() {
 }
 
 function addNewItem() {
+  const step = nextDemoStep("form-section-field");
   const newField = {
-    id: `field-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    id: `field-${demoNowMs(step)}-${demoRandomToken(5, 36, "form-section-field")}`,
     label: "New Field Entry",
     type: "text",
     gridSpan: 12,
@@ -286,7 +292,8 @@ function onDuplicateField(fieldId) {
     const idx = currentItems.findIndex((item) => item.id === fieldId);
     if (idx !== -1) {
       const original = currentItems[idx];
-      const newId = `field-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const step = nextDemoStep("form-section-field");
+      const newId = `field-${demoNowMs(step)}-${demoRandomToken(5, 36, "form-section-field")}`;
       const copy = {
         ...original,
         id: newId,

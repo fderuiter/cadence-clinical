@@ -1,4 +1,10 @@
 import {
+  DEMO_PARTICIPANTS,
+  DEMO_SITES,
+  DEMO_SPONSOR,
+  DEMO_STUDY,
+} from "demo-fixtures";
+import {
   DEFAULT_CATEGORIES,
   DEFAULT_MOCK_ARTICLES,
   getFallbackContextualHelp,
@@ -14,7 +20,6 @@ const SITE_101_UUID = "00000000-0000-0000-0000-000000000201"; // deid-ignore
 const SITE_102_UUID = "00000000-0000-0000-0000-000000000202"; // deid-ignore
 const ENROLLMENT_1001_UUID = "00000000-0000-0000-0000-000000001001"; // deid-ignore
 const ENROLLMENT_1002_UUID = "00000000-0000-0000-0000-000000001002"; // deid-ignore
-const ENROLLMENT_001_UUID = "00000000-0000-0000-0000-000000001003"; // deid-ignore
 const OBS_1_UUID = "00000000-0000-0000-0000-000000000001"; // deid-ignore
 const OBS_2_UUID = "00000000-0000-0000-0000-000000000002"; // deid-ignore
 const OBS_3_UUID = "00000000-0000-0000-0000-000000000003"; // deid-ignore
@@ -166,6 +171,10 @@ function resolveSiteUuid(siteCode) {
   const normalized = String(siteCode || "SITE-101")
     .trim()
     .toUpperCase();
+  const manifestSite = DEMO_SITES.find((s) => s.code === normalized);
+  if (manifestSite && normalized !== "SITE-101" && normalized !== "SITE-102") {
+    return manifestSite.studySiteUuid;
+  }
   if (normalized === "SITE-101") return SITE_101_UUID;
   if (normalized === "SITE-102") return SITE_102_UUID;
   const digits = normalized.replace(/\D/g, "") || "299";
@@ -174,6 +183,8 @@ function resolveSiteUuid(siteCode) {
 
 function resolveSiteCodeFromRef(nodeRef, subjects = []) {
   const raw = String(nodeRef || "").replace(/^study_site:/, "");
+  const manifestSite = DEMO_SITES.find((s) => s.studySiteUuid === raw);
+  if (manifestSite) return manifestSite.code;
   if (raw === SITE_101_UUID) return "SITE-101";
   if (raw === SITE_102_UUID) return "SITE-102";
   for (const subj of subjects) {
@@ -301,6 +312,16 @@ function buildSsuSiteEntry(country, siteId, siteName, overrides = {}) {
 
 function createStartupMatrixForCountry(countryCode = "US") {
   const country = (countryCode || "US").toUpperCase();
+  if (country === "US" && DEMO_SITES.length >= 2) {
+    return DEMO_SITES.map((site, idx) =>
+      buildSsuSiteEntry(country, site.code, site.name, {
+        overall_status: idx === 0 ? "APPROVED" : "PENDING",
+        greenlight_token: idx === 0 ? `demo_gl_tok_${site.code}` : null,
+        greenlight_certified_by: idx === 0 ? "designer.lead" : null,
+        greenlight_certified_at: idx === 0 ? "2026-01-11T09:00:00Z" : null,
+      })
+    );
+  }
   const prefixByCountry = {
     US: "SITE-10",
     DE: "SITE-20",
@@ -422,7 +443,26 @@ export function createWebDemoStore() {
       ],
     });
 
+    const canonicalStudyCode = DEMO_STUDY.code || "CADENCE-101";
+    const canonicalStudyEntries = DEMO_STUDY.code
+      ? [
+          [
+            DEMO_STUDY.code,
+            {
+              ref: DEMO_STUDY.ref,
+              kind: "study",
+              code: DEMO_STUDY.code,
+              title: DEMO_STUDY.title,
+              sponsor: DEMO_SPONSOR.code,
+              status: "ACTIVE",
+              mask: null,
+            },
+          ],
+        ]
+      : [];
+
     state.studies = new Map([
+      ...canonicalStudyEntries,
       [
         "DEMO-01",
         {
@@ -434,20 +474,21 @@ export function createWebDemoStore() {
           mask: null,
         },
       ],
-      [
-        "STUDY-USDM-001",
-        {
-          ref: "study:00000000-0000-0000-0000-000000000002", // deid-ignore
-          kind: "study",
-          code: "STUDY-USDM-001",
-          title: "USDM v3.0 Synthetic Oncology Reference Trial",
-          status: "ACTIVE",
-          mask: null,
-        },
-      ],
     ]);
 
+    const canonicalSubjects = DEMO_PARTICIPANTS.map((participant, idx) => ({
+      id: participant.enrollmentUuid,
+      subject_id: participant.subjectCode,
+      study_id: canonicalStudyCode,
+      site_id: participant.siteCode,
+      status: idx === 2 ? "ENROLLED" : "ACTIVE",
+      active_protocol_version: idx === 1 ? "1.0" : "2.0",
+      enrollment_index: idx + 1,
+      treatment_group: idx === 1 ? "ARM-B" : "ARM-A",
+    }));
+
     state.subjects = [
+      ...canonicalSubjects,
       {
         id: ENROLLMENT_1001_UUID,
         subject_id: "SUBJ-1001",
@@ -467,16 +508,6 @@ export function createWebDemoStore() {
         active_protocol_version: "2.0",
         enrollment_index: 2,
         treatment_group: null,
-      },
-      {
-        id: ENROLLMENT_001_UUID,
-        subject_id: "SUBJ-001",
-        study_id: "STUDY-USDM-001",
-        site_id: "SITE-101",
-        status: "ACTIVE",
-        active_protocol_version: "1.0",
-        enrollment_index: 1,
-        treatment_group: "ARM-A",
       },
     ];
 
@@ -1009,7 +1040,11 @@ export function createWebDemoStore() {
           code: study.code,
           detail: `Status: ${study.status}`,
           exact_code: Boolean(trimmed && study.code.toLowerCase() === lower),
-          rank: study.code === "DEMO-01" ? 1.0 : 0.9,
+          rank:
+            study.code === (DEMO_STUDY.code || "CADENCE-101") ||
+            study.code === "DEMO-01"
+              ? 1.0
+              : 0.9,
         });
       }
 

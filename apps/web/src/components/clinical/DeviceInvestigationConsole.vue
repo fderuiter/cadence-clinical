@@ -1338,6 +1338,7 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
 import { useFocusTrap } from "ui";
+import { demoRandomInt } from "../../utils/demoMode.js";
 
 // State
 const studyId = ref("STUDY-DEV-101");
@@ -1528,7 +1529,7 @@ function handleBarcodeParse() {
       udi_carrier_format: "RAW_UDI",
       udi_di: bc,
       lot_number: "LOT-GENERIC",
-      serial_number: `SN-${Math.floor(1000 + Math.random() * 9000)}`,
+      serial_number: `SN-${demoRandomInt(1000, 9999, "device-serial")}`,
       expiration_date: "2027-12-31",
       software_version: "",
       is_valid: true,
@@ -1657,7 +1658,7 @@ function submitDeficiencyReport() {
     deficForm.value.could_lead_to_sade ||
     deficForm.value.health_impact !== "NONE";
   const classification = isSade ? "SADE" : "ADE";
-  const caseId = `DEV-CASE-${studyId.value}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const caseId = `DEV-CASE-${studyId.value}-${demoRandomInt(1000, 9999, "device-case")}`;
 
   const newDefic = {
     id: `defic-${Date.now()}`,

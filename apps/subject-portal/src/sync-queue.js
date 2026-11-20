@@ -1,5 +1,34 @@
 import { deriveSessionKey, encryptAESGCM, decryptAESGCM } from "ui";
 import { validateEproPayload } from "usdm-schemas";
+import {
+  createDemoPrng,
+  demoNowMs,
+  demoRandom,
+  demoRandomToken,
+  isDemoModeActive,
+} from "./utils/demoMode.js";
+
+function fillRandomBytes(buffer, demoStreamKey) {
+  if (isDemoModeActive()) {
+    for (let i = 0; i < buffer.length; i++) {
+      buffer[i] = Math.floor(demoRandom(demoStreamKey) * 256);
+    }
+    return;
+  }
+  const cryptoObj = globalThis.crypto;
+  if (cryptoObj && typeof cryptoObj.getRandomValues === "function") {
+    try {
+      cryptoObj.getRandomValues(buffer);
+      return;
+    } catch {
+      // Fallback when test stubs globalThis.crypto with an unbound method wrapper
+    }
+  }
+  const fallbackPrng = createDemoPrng(`${demoStreamKey}:${Date.now()}`);
+  for (let i = 0; i < buffer.length; i++) {
+    buffer[i] = Math.floor(fallbackPrng() * 256);
+  }
+}
 
 let inMemorySessionKey = null;
 
@@ -57,21 +86,7 @@ async function getOrGenerateSalt() {
         resolve(request.result.value);
       } else {
         const newSalt = new Uint8Array(16);
-        /* v8 ignore start */
-        if (typeof crypto !== "undefined" && crypto.getRandomValues) {
-          crypto.getRandomValues(newSalt);
-        } else if (
-          typeof globalThis !== "undefined" &&
-          globalThis.crypto &&
-          globalThis.crypto.getRandomValues
-        ) {
-          globalThis.crypto.getRandomValues(newSalt);
-        } else {
-          for (let i = 0; i < 16; i++) {
-            newSalt[i] = Math.floor(Math.random() * 256);
-          }
-        }
-        /* v8 ignore stop */
+        fillRandomBytes(newSalt, "session-salt");
         const writeTx = db.transaction("config", "readwrite");
         const writeStore = writeTx.objectStore("config");
         writeStore.put({ key: "session_salt", value: newSalt });
@@ -369,15 +384,22 @@ export async function getClientId() {
       if (request.result) {
         resolve(request.result.value);
       } else {
-        /* v8 ignore start */
-        const newId =
-          typeof crypto !== "undefined" && crypto.randomUUID
-            ? crypto.randomUUID()
-            : "client-" +
-              Math.random().toString(36).substring(2, 15) +
-              "-" +
-              Date.now();
-        /* v8 ignore stop */
+        let newId;
+        if (isDemoModeActive()) {
+          newId = `client-${demoRandomToken(13, 36, "client-id")}-${demoNowMs(0)}`;
+        } else if (
+          globalThis.crypto &&
+          typeof globalThis.crypto.randomUUID === "function"
+        ) {
+          newId = globalThis.crypto.randomUUID();
+        } else {
+          const randomBytes = new Uint8Array(16);
+          fillRandomBytes(randomBytes, "client-id");
+          const hex = Array.from(randomBytes, (b) =>
+            b.toString(16).padStart(2, "0")
+          ).join("");
+          newId = `client-${hex}`;
+        }
 
         const writeTx = db.transaction("config", "readwrite");
         const writeStore = writeTx.objectStore("config");

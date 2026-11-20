@@ -50,6 +50,7 @@
 
 <script setup>
 import { ref } from "vue";
+import { demoRandomToken } from "../../../utils/demoMode.js";
 import { unbackedActionsEnabled } from "../../../utils/unbackedActions.js";
 
 const props = defineProps({
@@ -62,7 +63,7 @@ const props = defineProps({
 
 const emit = defineEmits(["update:modelValue", "code-selected"]);
 
-const inputId = `autocode-input-${Math.random().toString(36).substring(2, 9)}`;
+const inputId = `autocode-input-${demoRandomToken(7, 36, "medical-autocode")}`;
 const isOpen = ref(false);
 const loading = ref(false);
 const suggestions = ref([]);

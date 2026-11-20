@@ -985,6 +985,7 @@
 import { ref, reactive, onMounted } from "vue";
 import { useFocusTrap } from "ui";
 import { interopService } from "../../api/interop";
+import { demoNowIso, demoRandomInt } from "../../utils/demoMode.js";
 import BulkIpKitReconciliationDrawer from "./BulkIpKitReconciliationDrawer.vue";
 
 const isLoading = ref(false);
@@ -1100,7 +1101,7 @@ const newSessionForm = reactive({
   study_id: "STUDY-DCT-001",
   subject_id: "SUBJ-BOSTON-101",
   title: "Telehealth Video Consultation & eConsent Review",
-  scheduled_start_utc: new Date().toISOString().slice(0, 16),
+  scheduled_start_utc: demoNowIso(0).slice(0, 16),
 });
 
 const isDispatchDtpModalOpen = ref(false);
@@ -1113,7 +1114,8 @@ const newShipmentForm = reactive({
   courier_name: "World Courier Specialty Logistics",
   temperature_zone: "REFRIGERATED",
   kit_serials_input: "KIT-LOT99-001, KIT-LOT99-002",
-  tamper_seal_id: "SEAL-RFID-" + Math.floor(Math.random() * 899999 + 100000),
+  tamper_seal_id:
+    "SEAL-RFID-" + demoRandomInt(100000, 999998, "telehealth-seal"),
 });
 
 useFocusTrap(scheduleSessionModalRef, isScheduleSessionModalOpen, {

@@ -1,64 +1,77 @@
 import { defineStore } from "pinia";
+import {
+  DEFAULT_DEMO_PARTICIPANT,
+  getDemoPersonaForWorkspace,
+} from "demo-fixtures";
 import { notificationsService } from "../api/notifications";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth.js";
 
-const defaultTemplates = [
-  {
-    id: "notif-001",
-    recipient_user_id: "fderuiter",
-    recipient_role: null,
-    category: "ALERTS",
-    priority: "CRITICAL",
-    channels: "IN_APP",
-    message_content: "High temperature warning in Lab A.",
-    related_entity_id: "LAB-A",
-    related_entity_type: "LAB_FRIDGE",
-    status: "OPEN",
-    delivery_state: "DELIVERED",
-    retries: 0,
-    created_at: "2026-08-15T12:00:00Z",
-    created_by: "system",
-    version_index: 1,
-    reason_for_change: "System generated",
-  },
-  {
-    id: "notif-002",
-    recipient_user_id: null,
-    recipient_role: "monitor",
-    category: "ACTION_ITEMS",
-    priority: "HIGH",
-    channels: "IN_APP",
-    message_content: "Review form submission for Subject 001.",
-    related_entity_id: "FSUB-001",
-    related_entity_type: "FORM",
-    status: "OPEN",
-    delivery_state: "DELIVERED",
-    retries: 0,
-    created_at: "2026-08-16T14:30:00Z",
-    created_by: "system",
-    version_index: 1,
-    reason_for_change: "System generated",
-  },
-  {
-    id: "notif-003",
-    recipient_user_id: "fderuiter",
-    recipient_role: null,
-    category: "SYSTEM",
-    priority: "LOW",
-    channels: "IN_APP",
-    message_content: "Global Maintenance Scheduled for Tonight at 22:00 UTC.",
-    related_entity_id: "SYS-MAINT",
-    related_entity_type: "SYSTEM",
-    status: "OPEN",
-    delivery_state: "DELIVERED",
-    retries: 0,
-    created_at: "2026-08-17T09:00:00Z",
-    created_by: "system",
-    version_index: 1,
-    reason_for_change: "System generated",
-  },
-];
+function buildDefaultTemplates() {
+  const leadUsername =
+    getDemoPersonaForWorkspace("super_admin")?.username || "designer.lead";
+  const subjectCode = DEFAULT_DEMO_PARTICIPANT?.subjectCode || "SUBJ-101-001";
+  return [
+    {
+      id: "notif-001",
+      recipient_user_id: leadUsername,
+      recipient_role: null,
+      category: "ALERTS",
+      priority: "CRITICAL",
+      channels: "IN_APP",
+      message_content: "High temperature warning in Lab A.",
+      related_entity_id: "LAB-A",
+      related_entity_type: "LAB_FRIDGE",
+      status: "OPEN",
+      delivery_state: "DELIVERED",
+      retries: 0,
+      created_at: "2026-01-15T12:00:00Z",
+      created_by: "system",
+      version_index: 1,
+      reason_for_change: "System generated",
+    },
+    {
+      id: "notif-002",
+      recipient_user_id: null,
+      recipient_role: "monitor",
+      category: "ACTION_ITEMS",
+      priority: "HIGH",
+      channels: "IN_APP",
+      message_content: `Review form submission for ${subjectCode}.`,
+      related_entity_id: "FSUB-001",
+      related_entity_type: "FORM",
+      status: "OPEN",
+      delivery_state: "DELIVERED",
+      retries: 0,
+      created_at: "2026-01-16T14:30:00Z",
+      created_by: "system",
+      version_index: 1,
+      reason_for_change: "System generated",
+    },
+    {
+      id: "notif-003",
+      recipient_user_id: leadUsername,
+      recipient_role: null,
+      category: "SYSTEM",
+      priority: "LOW",
+      channels: "IN_APP",
+      message_content: "Global Maintenance Scheduled for Tonight at 22:00 UTC.",
+      related_entity_id: "SYS-MAINT",
+      related_entity_type: "SYSTEM",
+      status: "OPEN",
+      delivery_state: "DELIVERED",
+      retries: 0,
+      created_at: "2026-01-17T09:00:00Z",
+      created_by: "system",
+      version_index: 1,
+      reason_for_change: "System generated",
+    },
+  ];
+}
+
+function getDefaultTemplates() {
+  return isDemoBuild() ? buildDefaultTemplates() : [];
+}
 
 function getStorageKey(authStore) {
   let store = authStore;
@@ -99,7 +112,9 @@ export const useNotificationsStore = defineStore("notifications", {
       }
     }
     return {
-      notifications: demoBuild ? savedNotifications || defaultTemplates : [],
+      notifications: demoBuild
+        ? savedNotifications || getDefaultTemplates()
+        : [],
       filters: {
         category: "",
         priority: "",
@@ -138,11 +153,11 @@ export const useNotificationsStore = defineStore("notifications", {
             if (stored) {
               list = JSON.parse(stored);
             } else {
-              list = JSON.parse(JSON.stringify(defaultTemplates));
+              list = getDefaultTemplates();
               window.localStorage.setItem(storageKey, JSON.stringify(list));
             }
           } else {
-            list = JSON.parse(JSON.stringify(defaultTemplates));
+            list = getDefaultTemplates();
           }
 
           this.notifications = list.filter((n) => {
@@ -316,9 +331,7 @@ export const useNotificationsStore = defineStore("notifications", {
         const storageKey = getStorageKey(authStore);
         window.localStorage.removeItem(storageKey);
       }
-      this.notifications = isDemoBuild()
-        ? JSON.parse(JSON.stringify(defaultTemplates))
-        : [];
+      this.notifications = getDefaultTemplates();
     },
   },
 });

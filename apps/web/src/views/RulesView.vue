@@ -1363,11 +1363,11 @@ async function confirmChangeReason(reasonText) {
     query.status = nextState;
 
     if (nextState === "CLOSED") {
-      query.closedBy = authStore.userId || "usr_dm_fderuiter";
+      query.closedBy = authStore.userId || "dm.lead";
       query.closedAt = new Date().toISOString().slice(0, 10);
     } else if (nextState === "ANSWERED") {
       query.response = "Response added by Data Manager.";
-      query.respondedBy = authStore.userId || "usr_dm_fderuiter";
+      query.respondedBy = authStore.userId || "dm.lead";
       query.respondedAt = new Date().toISOString().slice(0, 10);
     }
 

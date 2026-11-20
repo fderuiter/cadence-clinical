@@ -1,7 +1,7 @@
 // 3. My Compliance: rate, counts and survey history.
 import { fetchCompliance, isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
-import { isDemoModeActive } from "../utils/demoMode.js";
+import { demoNowMs, isDemoModeActive } from "../utils/demoMode.js";
 
 // 3. My Compliance
 export function renderCompliance() {
@@ -75,6 +75,7 @@ export function renderCompliance() {
     const pendingSyncCount = state.assignments.filter((a) => {
       return a.status === "PENDING_SYNC";
     }).length;
+    const referenceNow = new Date(demoNowMs(0));
     overdue = state.assignments.filter((a) => {
       const isCompleted = a.status === "COMPLETED" || a.version_index > 1;
       const isPendingSync = a.status === "PENDING_SYNC";
@@ -82,7 +83,7 @@ export function renderCompliance() {
         !isCompleted &&
         !isPendingSync &&
         (a.status === "OVERDUE" ||
-          (a.due_at && new Date(a.due_at) < new Date()))
+          (a.due_at && new Date(a.due_at) < referenceNow))
       );
     }).length;
     pending = Math.max(0, total - completed - overdue);
@@ -96,7 +97,7 @@ export function renderCompliance() {
         !isCompleted &&
         !isPendingSync &&
         (item.status === "OVERDUE" ||
-          (item.due_at && new Date(item.due_at) < new Date()));
+          (item.due_at && new Date(item.due_at) < referenceNow));
       const status = isCompleted
         ? "COMPLETED"
         : isPendingSync
@@ -162,7 +163,7 @@ export function renderCompliance() {
         statusLabel = "Pending Sync";
       } else if (
         item.status === "OVERDUE" ||
-        (item.due_at && new Date(item.due_at) < new Date())
+        (item.due_at && new Date(item.due_at) < new Date(demoNowMs(0)))
       ) {
         pillClass = "overdue";
         statusLabel = "Overdue";

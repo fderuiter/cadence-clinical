@@ -1616,6 +1616,11 @@ import { auditorService } from "../api/auditor";
 import { etmfService } from "../api/etmf";
 import SignatureCaptureModal from "../components/SignatureCaptureModal.vue";
 import { useToastStore } from "../stores/toasts.js";
+import {
+  demoNowIso,
+  demoRandomToken,
+  nextDemoStep,
+} from "../utils/demoMode.js";
 
 const authStore = useAuthStore();
 const toastStore = useToastStore();
@@ -1748,8 +1753,9 @@ async function uploadTmfDocument() {
     const filename = selectedTmfFile.value.name;
 
     // Create a new document in the registry list
+    const step = nextDemoStep("audit-tmf-ingest");
     const newDoc = {
-      id: "doc_" + Math.random().toString(36).substr(2, 9),
+      id: "doc_" + demoRandomToken(9, 36, "audit-tmf-doc"),
       filename,
       zone: uploadParams.zone,
       section: uploadParams.section,
@@ -1762,8 +1768,8 @@ async function uploadTmfDocument() {
 
     // Record an INGEST audit event
     const mockLog = {
-      id: "log_" + Math.random().toString(36).substr(2, 9),
-      timestamp: new Date().toISOString(),
+      id: "log_" + demoRandomToken(9, 36, "audit-tmf-log"),
+      timestamp: demoNowIso(step),
       user_id: currentUserId.value,
       user_role: "Sponsor Admin",
       action: "INGEST",

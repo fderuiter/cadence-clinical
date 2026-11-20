@@ -1,4 +1,5 @@
 // 21 CFR Part 11 electronic signature modal for ePRO and eConsent.
+import { DEFAULT_DEMO_SITE, DEMO_STUDY } from "demo-fixtures";
 import { getFocusableElements, sha256 } from "ui";
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
@@ -7,7 +8,7 @@ import {
   queueSubmission,
   saveAssignmentsToDB,
 } from "../sync-queue.js";
-import { isDemoModeActive } from "../utils/demoMode.js";
+import { demoNowIso, isDemoModeActive } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { logAuditRecord } from "./audit.js";
 import { renderCompliance } from "./compliance.js";
@@ -197,8 +198,14 @@ export async function verifyAndSubmitSignature() {
         }
 
         const subjectPseudonym = state.session.userId || cleanUsername;
-        const studyId = tpl?.study_id || state.session.studyId || "study_01";
-        const siteId = tpl?.site_id || state.session.siteId || "site_01";
+        const studyId =
+          tpl?.study_id ||
+          state.session.studyId ||
+          (isDemoModeActive() ? DEMO_STUDY?.code || null : null);
+        const siteId =
+          tpl?.site_id ||
+          state.session.siteId ||
+          (isDemoModeActive() ? DEFAULT_DEMO_SITE?.code || null : null);
         const protocolVersion = tpl?.protocol_version || "v1.0";
         const digestSha256 =
           tpl?.digest_sha256 ||
@@ -226,7 +233,7 @@ export async function verifyAndSubmitSignature() {
             digest_sha256: digestSha256,
             signature_data: cleanUsername,
             liveness_token: state.consentLivenessToken,
-            device_timestamp: new Date().toISOString(),
+            device_timestamp: demoNowIso(),
           }),
           headers: {
             "X-Sig-Token": sigToken,

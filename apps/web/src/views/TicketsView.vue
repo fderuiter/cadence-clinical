@@ -602,7 +602,13 @@ import TicketDetailDrawer from "../components/tickets/TicketDetailDrawer.vue";
 import TicketCreateModal from "../components/tickets/TicketCreateModal.vue";
 import apiClient from "../services/api";
 import { useToastStore } from "../stores/toasts.js";
-import { isDemoBuild } from "../utils/demoMode.js";
+import {
+  demoNowIso,
+  demoNowMs,
+  demoRandomInt,
+  isDemoBuild,
+  nextDemoStep,
+} from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 
 const tickets = ref([]);
@@ -1040,14 +1046,16 @@ const handleTicketSigned = ({ ticketId, signature_token, meaning }) => {
 
 const handleTicketCreated = (payload) => {
   if (!allowUnbackedAction("Creating a ticket")) return;
+  const step = nextDemoStep("ticket-create");
+  const nowMs = demoNowMs(step);
   const newTicket = {
-    id: "tk-" + Date.now(),
-    reference: "DEV-2026-" + Math.floor(1000 + Math.random() * 9000),
+    id: "tk-" + nowMs,
+    reference: "DEV-2026-" + demoRandomInt(1000, 9999, "ticket-reference"),
     ...payload,
     status: "OPEN",
     created_by: "active.user@cadence.io",
-    created_at: new Date().toISOString(),
-    sla_target_at: new Date(Date.now() + 3600 * 1000 * 24).toISOString(),
+    created_at: demoNowIso(step),
+    sla_target_at: new Date(nowMs + 3600 * 1000 * 24).toISOString(),
     version_index: 1,
   };
   tickets.value.unshift(newTicket);

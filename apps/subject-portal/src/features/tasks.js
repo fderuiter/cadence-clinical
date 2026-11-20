@@ -12,7 +12,7 @@ import {
   saveAssignmentsToDB,
   saveInstrumentsToDB,
 } from "../sync-queue.js";
-import { isDemoModeActive } from "../utils/demoMode.js";
+import { demoNowMs, isDemoModeActive } from "../utils/demoMode.js";
 import { login } from "./auth.js";
 import { startQuestionnaire } from "./questionnaire.js";
 
@@ -113,7 +113,7 @@ export function renderTasks() {
         !isCompleted &&
         !isPendingSync &&
         (task.status === "OVERDUE" ||
-          (task.due_at && new Date(task.due_at) < new Date()));
+          (task.due_at && new Date(task.due_at) < new Date(demoNowMs(0))));
       const statusClass = isPendingSync
         ? "pending"
         : isOverdue

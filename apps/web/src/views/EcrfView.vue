@@ -350,7 +350,7 @@ function routeQuery(name) {
 }
 
 // Selected Subject & Visit State
-const selectedSubjectId = ref("SUBJ-001");
+const selectedSubjectId = ref(store.activeSubjectId || "SUBJ-001");
 const selectedVisitId = ref("Screening");
 
 const currentStudyId = computed(

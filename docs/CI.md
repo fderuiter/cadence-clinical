@@ -39,7 +39,7 @@ Only on pushes (`main`, `release/*`, and `v*` tags, where `cancel-in-progress` i
 
 <!-- quality-gates:begin (generated from packages/cli/src/Services/QualityGates.cs by `pnpm cadence generate-cli-docs`; do not edit) -->
 
-`pnpm cadence check` runs these 28 gates in this order:
+`pnpm cadence check` runs these 29 gates in this order:
 
 | Gate                  | What it checks                                                                                                                                                                                                        |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -68,6 +68,7 @@ Only on pushes (`main`, `release/*`, and `v*` tags, where `cancel-in-progress` i
 | `vulnerabilities`     | NuGet, pnpm and Python dependency vulnerabilities not exempted by a valid `docs/SDLC/vulnerability_exclusions_ledger.json` entry (fails closed on missing or broken scanners)                                         |
 | `dependencies`        | `apps/web/package.json` lists no client-side crypto package (`node-forge`, `elliptic`, `jose`)                                                                                                                        |
 | `doc-index`           | Every Markdown document under `docs/` is listed in `docs/DOCUMENTATION_INDEX.md`                                                                                                                                      |
+| `demo-manifest`       | `packages/demo-fixtures` matches the canonical demo seed in `DevelopmentDemoData.cs`, `ExecutionDbSeeder.cs` and `docker/cadence-realm.json`                                                                          |
 | `rtm`                 | Requirement tags name known requirements and sit on test methods, and the generated documents match their integrity stamps and are not drafts                                                                         |
 | `gxp-snapshot`        | The branch does not change the generated RTM, IQ/OQ/PQ report or `docs/SDLC/runs/` unless `CADENCE_GXP_SNAPSHOT=1` (ADR-2532)                                                                                         |
 | `baseline-ratchet`    | No ratchet baseline (`*.baseline.txt`, `.deid-baseline.txt`, `.secrets.baseline`) gained an entry since the `origin/main` merge base, unless a commit has a `Baseline-Growth:` trailer                                |

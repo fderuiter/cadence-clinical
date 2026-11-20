@@ -1,4 +1,5 @@
 // My Wallet: live wallet projection, receipt OCR extraction, expense claims, and balance payout.
+import { DEFAULT_DEMO_SITE, DEMO_STUDY } from "demo-fixtures";
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
@@ -126,9 +127,15 @@ function applyWalletProjection(summaryOrWallet) {
 
   state.walletId = w.id ?? w.Id ?? state.walletId;
   state.walletStudyId =
-    w.studyId ?? w.study_id ?? state.walletStudyId ?? "study_001";
+    w.studyId ??
+    w.study_id ??
+    state.walletStudyId ??
+    (isDemoModeActive() ? DEMO_STUDY?.code || null : null);
   state.walletSiteId =
-    w.siteId ?? w.site_id ?? state.walletSiteId ?? "site_001";
+    w.siteId ??
+    w.site_id ??
+    state.walletSiteId ??
+    (isDemoModeActive() ? DEFAULT_DEMO_SITE?.code || null : null);
 
   const currentBal = w.currentBalance ?? w.current_balance;
   if (typeof currentBal === "number") {

@@ -14,6 +14,7 @@
     "format": "prettier --write ."
   },
   "dependencies": {
+    "demo-fixtures": "workspace:*",
     "keycloak-js": "^26.2.5",
     "pinia": "^4.1.0",
     "ui": "workspace:*",

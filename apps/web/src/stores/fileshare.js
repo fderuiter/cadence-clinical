@@ -1,4 +1,9 @@
 import { defineStore } from "pinia";
+import {
+  DEMO_SITES,
+  DEMO_STUDY,
+  getDemoPersonaByWorkflow,
+} from "demo-fixtures";
 import { fileshareService } from "../api/fileshare";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth";
@@ -93,59 +98,79 @@ export const TMF_TAXONOMY_SECTIONS = [
 /**
  * Standard studies and site hierarchy catalog
  */
-export const DEFAULT_STUDIES = [
-  {
-    id: "STUDY-USDM-001",
-    title: "Phase II Trial of Cadence-001 in Essential Hypertension",
-    code: "CAD-HTN-201",
-    sites: [
-      {
-        id: "SITE-101",
-        name: "Site 101 - St. Jude Medical Center",
-        pi: "Dr. Sarah Jenkins",
-      },
-      {
-        id: "SITE-102",
-        name: "Site 102 - Mayo Clinical Research",
-        pi: "Dr. Robert Vance",
-      },
-      {
-        id: "SITE-103",
-        name: "Site 103 - Johns Hopkins Oncology & Cardio",
-        pi: "Dr. Emily Chen",
-      },
-    ],
-  },
-  {
-    id: "STUDY-USDM-002",
-    title: "Phase III Evaluation of Cadence-002 in Type 2 Diabetes Mellitus",
-    code: "CAD-T2D-301",
-    sites: [
-      {
-        id: "SITE-201",
-        name: "Site 201 - Cleveland Clinic Diabetes Center",
-        pi: "Dr. Michael Chang",
-      },
-      {
-        id: "SITE-202",
-        name: "Site 202 - Stanford University Medical Center",
-        pi: "Dr. Alice Morgan",
-      },
-    ],
-  },
-  {
-    id: "STUDY-USDM-003",
-    title: "Observational Registry on Cardiovascular Outcomes in CAD-003",
-    code: "CAD-CVR-401",
-    sites: [
-      {
-        id: "SITE-301",
-        name: "Site 301 - Brigham and Women's Hospital",
-        pi: "Dr. David Brooks",
-      },
-    ],
-  },
-];
+export const DEFAULT_STUDIES =
+  isDemoBuild() && DEMO_STUDY.code
+    ? [
+        {
+          id: DEMO_STUDY.code,
+          title: DEMO_STUDY.title,
+          code: DEMO_STUDY.code,
+          sites: DEMO_SITES.map((site) => ({
+            id: site.code,
+            name: `${site.code} - ${site.name}`,
+            pi:
+              getDemoPersonaByWorkflow("investigator")?.username ||
+              "pi.site101",
+          })),
+        },
+      ]
+    : [
+        {
+          id: "STUDY-USDM-001",
+          title: "Phase II Trial of Cadence-001 in Essential Hypertension",
+          code: "CAD-HTN-201",
+          sites: [
+            {
+              id: "SITE-101",
+              name: "Site 101 - St. Jude Medical Center",
+              pi: "Dr. Sarah Jenkins",
+            },
+            {
+              id: "SITE-102",
+              name: "Site 102 - Mayo Clinical Research",
+              pi: "Dr. Robert Vance",
+            },
+            {
+              id: "SITE-103",
+              name: "Site 103 - Johns Hopkins Oncology & Cardio",
+              pi: "Dr. Emily Chen",
+            },
+          ],
+        },
+        {
+          id: "STUDY-USDM-002",
+          title:
+            "Phase III Evaluation of Cadence-002 in Type 2 Diabetes Mellitus",
+          code: "CAD-T2D-301",
+          sites: [
+            {
+              id: "SITE-201",
+              name: "Site 201 - Cleveland Clinic Diabetes Center",
+              pi: "Dr. Michael Chang",
+            },
+            {
+              id: "SITE-202",
+              name: "Site 202 - Stanford University Medical Center",
+              pi: "Dr. Alice Morgan",
+            },
+          ],
+        },
+        {
+          id: "STUDY-USDM-003",
+          title: "Observational Registry on Cardiovascular Outcomes in CAD-003",
+          code: "CAD-CVR-401",
+          sites: [
+            {
+              id: "SITE-301",
+              name: "Site 301 - Brigham and Women's Hospital",
+              pi: "Dr. David Brooks",
+            },
+          ],
+        },
+      ];
+
+const PRIMARY_FILESHARE_STUDY_ID =
+  isDemoBuild() && DEMO_STUDY.code ? DEMO_STUDY.code : "STUDY-USDM-001";
 
 /**
  * Seed mock files for rich initial demo state across studies
@@ -153,123 +178,118 @@ export const DEFAULT_STUDIES = [
 export const SEED_FILES = [
   {
     id: "file-cad-001",
-    study_id: "STUDY-USDM-001",
+    study_id: PRIMARY_FILESHARE_STUDY_ID,
     site_id: "SITE-101",
     filename: "Clinical_Trial_Protocol_v2.0_Final_Signed.pdf",
     mime_type: "application/pdf",
     size_bytes: 4285120,
-    object_key:
-      "tenant_default/STUDY-USDM-001/file-cad-001/Clinical_Trial_Protocol_v2.0_Final_Signed.pdf",
+    object_key: `tenant_default/${PRIMARY_FILESHARE_STUDY_ID}/file-cad-001/Clinical_Trial_Protocol_v2.0_Final_Signed.pdf`,
     checksum_sha256:
       "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     version_index: 2,
-    uploaded_by: "sponsor_designer_01",
-    uploaded_at: "2026-08-10T14:32:00Z",
+    uploaded_by: "designer_demo",
+    uploaded_at: "2026-01-10T14:32:00Z",
     is_on_hold: false,
     status: "FINAL_APPROVED",
     zone_code: "01",
     section_code: "01.01",
     folder_code: "01.01.01",
     grant_count: 3,
-    created_at: "2026-08-10T14:32:00Z",
-    created_by: "sponsor_designer_01",
+    created_at: "2026-01-10T14:32:00Z",
+    created_by: "designer_demo",
     reason_for_change: "Approved protocol amendment v2.0 incorporation",
   },
   {
     id: "file-cad-002",
-    study_id: "STUDY-USDM-001",
+    study_id: PRIMARY_FILESHARE_STUDY_ID,
     site_id: "SITE-101",
     filename: "Informed_Consent_Form_Template_v2.0.pdf",
     mime_type: "application/pdf",
     size_bytes: 1852400,
-    object_key:
-      "tenant_default/STUDY-USDM-001/file-cad-002/Informed_Consent_Form_Template_v2.0.pdf",
+    object_key: `tenant_default/${PRIMARY_FILESHARE_STUDY_ID}/file-cad-002/Informed_Consent_Form_Template_v2.0.pdf`,
     checksum_sha256:
       "f4a8b79284e9c71a3d6e5c8291b0f3e7a6d5c4b3a29182736450192837465abc",
     version_index: 2,
-    uploaded_by: "sponsor_designer_01",
-    uploaded_at: "2026-08-11T09:15:00Z",
+    uploaded_by: "designer_demo",
+    uploaded_at: "2026-01-11T09:15:00Z",
     is_on_hold: false,
     status: "ACTIVE",
     zone_code: "02",
     section_code: "02.02",
     folder_code: "02.02.01",
     grant_count: 2,
-    created_at: "2026-08-11T09:15:00Z",
-    created_by: "sponsor_designer_01",
+    created_at: "2026-01-11T09:15:00Z",
+    created_by: "designer_demo",
     reason_for_change: "Annual IRB re-consent approval update",
   },
   {
     id: "file-cad-003",
-    study_id: "STUDY-USDM-001",
+    study_id: PRIMARY_FILESHARE_STUDY_ID,
     site_id: "SITE-101",
     filename: "Site_Initiation_Training_Video.mp4",
     mime_type: "video/mp4",
     size_bytes: 52428800,
-    object_key:
-      "tenant_default/STUDY-USDM-001/file-cad-003/Site_Initiation_Training_Video.mp4",
+    object_key: `tenant_default/${PRIMARY_FILESHARE_STUDY_ID}/file-cad-003/Site_Initiation_Training_Video.mp4`,
     checksum_sha256:
       "a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0",
     version_index: 1,
-    uploaded_by: "cra_fderuiter",
-    uploaded_at: "2026-08-12T16:45:00Z",
+    uploaded_by: "cra.monitor",
+    uploaded_at: "2026-01-12T16:45:00Z",
     is_on_hold: false,
     status: "ACTIVE",
     zone_code: "04",
     section_code: "04.02",
     folder_code: "04.02.01",
     grant_count: 4,
-    created_at: "2026-08-12T16:45:00Z",
-    created_by: "cra_fderuiter",
+    created_at: "2026-01-12T16:45:00Z",
+    created_by: "cra.monitor",
     reason_for_change:
       "Investigator site initiation walkthrough training asset",
   },
   {
     id: "file-cad-004",
-    study_id: "STUDY-USDM-001",
+    study_id: PRIMARY_FILESHARE_STUDY_ID,
     site_id: "SITE-102",
     filename: "Delegation_of_Authority_Log_Signed.pdf",
     mime_type: "application/pdf",
     size_bytes: 845200,
-    object_key:
-      "tenant_default/STUDY-USDM-001/file-cad-004/Delegation_of_Authority_Log_Signed.pdf",
+    object_key: `tenant_default/${PRIMARY_FILESHARE_STUDY_ID}/file-cad-004/Delegation_of_Authority_Log_Signed.pdf`,
     checksum_sha256:
       "9876543210abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
     version_index: 1,
-    uploaded_by: "crc_user_102",
-    uploaded_at: "2026-08-14T11:20:00Z",
+    uploaded_by: "pi.site101",
+    uploaded_at: "2026-01-14T11:20:00Z",
     is_on_hold: false,
     status: "VERIFIED",
     zone_code: "04",
     section_code: "04.02",
     folder_code: "04.02.02",
     grant_count: 1,
-    created_at: "2026-08-14T11:20:00Z",
-    created_by: "crc_user_102",
+    created_at: "2026-01-14T11:20:00Z",
+    created_by: "pi.site101",
     reason_for_change: "Site 102 staff onboarding and role delegation sign-off",
   },
   {
     id: "file-cad-005",
-    study_id: "STUDY-USDM-001",
+    study_id: PRIMARY_FILESHARE_STUDY_ID,
     site_id: "SITE-101",
     filename: "Subject_101_Baseline_Echocardiogram.png",
     mime_type: "image/png",
     size_bytes: 3145728,
-    object_key:
-      "tenant_default/STUDY-USDM-001/file-cad-005/Subject_101_Baseline_Echocardiogram.png",
+    object_key: `tenant_default/${PRIMARY_FILESHARE_STUDY_ID}/file-cad-005/Subject_101_Baseline_Echocardiogram.png`,
     checksum_sha256:
       "11223344556677889900aabbccddeeff11223344556677889900aabbccddeeff",
     version_index: 1,
-    uploaded_by: "crc_user_101",
-    uploaded_at: "2026-08-15T08:30:00Z",
+    uploaded_by: "crc.site101",
+    uploaded_at: "2026-01-15T08:30:00Z",
     is_on_hold: false,
     status: "ACTIVE",
     zone_code: "05",
     section_code: "05.02",
     folder_code: "05.02.02",
     grant_count: 0,
-    created_at: "2026-08-15T08:30:00Z",
-    created_by: "crc_user_101",
+    created_at: "2026-01-15T08:30:00Z",
+    created_by: "crc.site101",
     reason_for_change: "Source diagnostic telemetry image attachment",
   },
   {
@@ -324,34 +344,44 @@ export const SEED_FILES = [
 
 /** Sample share grants shown only in a demo build. */
 function demoGrants() {
+  const craUsername =
+    getDemoPersonaByWorkflow("monitor")?.username || "cra.monitor";
+  const crcUsername =
+    getDemoPersonaByWorkflow("coordinator")?.username || "crc.site101";
+  const designerUsername =
+    getDemoPersonaByWorkflow("designer")?.username || "designer_demo";
+  const auditorUsername =
+    getDemoPersonaByWorkflow("auditor")?.username || "auditor.lead";
+  const leadUsername =
+    getDemoPersonaByWorkflow("designer_lead")?.username || "designer.lead";
   return {
     "file-cad-001": [
       {
         id: "grant-001",
         file_record_id: "file-cad-001",
-        granted_to_user_id: "cra_fderuiter",
-        granted_by_user_id: "sponsor_designer_01",
+        granted_to_user_id: craUsername,
+        granted_by_user_id: designerUsername,
         scope: "individual",
         permission_level: "download",
         expires_at: "2026-12-31T23:59:59Z",
         revoked_at: null,
         is_active: true,
-        created_at: "2026-08-10T14:35:00Z",
-        created_by: "sponsor_designer_01",
+        created_at: "2026-01-10T14:35:00Z",
+        created_by: designerUsername,
         reason_for_change: "Lead CRA monitoring assignment delegation",
       },
       {
         id: "grant-002",
         file_record_id: "file-cad-001",
-        granted_to_user_id: "auditor_user_01",
-        granted_by_user_id: "sponsor_admin",
+        granted_to_user_id: auditorUsername,
+        granted_by_user_id: leadUsername,
         scope: "role",
         permission_level: "view",
         expires_at: "2026-09-30T23:59:59Z",
         revoked_at: null,
         is_active: true,
-        created_at: "2026-08-10T15:00:00Z",
-        created_by: "sponsor_admin",
+        created_at: "2026-01-10T15:00:00Z",
+        created_by: leadUsername,
         reason_for_change: "Regulatory compliance audit inspection window",
       },
     ],
@@ -359,15 +389,15 @@ function demoGrants() {
       {
         id: "grant-003",
         file_record_id: "file-cad-003",
-        granted_to_user_id: "crc_user_101",
-        granted_by_user_id: "cra_fderuiter",
+        granted_to_user_id: crcUsername,
+        granted_by_user_id: craUsername,
         scope: "individual",
         permission_level: "view",
         expires_at: null,
         revoked_at: null,
         is_active: true,
-        created_at: "2026-08-12T17:00:00Z",
-        created_by: "cra_fderuiter",
+        created_at: "2026-01-12T17:00:00Z",
+        created_by: craUsername,
         reason_for_change: "Site CRC protocol training access",
       },
     ],
@@ -435,12 +465,13 @@ export const useFileshareStore = defineStore("fileshare", {
       return DEFAULT_STUDIES.filter((study) => {
         if (isSuperAdmin || (!isCrc && !isCra)) return true;
         if (isCrc) {
-          // CRC sees Site-101 on Study-USDM-001
-          return study.id === "STUDY-USDM-001";
+          return study.id === PRIMARY_FILESHARE_STUDY_ID;
         }
         if (isCra) {
-          // CRA sees Study 001 and Study 002
-          return study.id === "STUDY-USDM-001" || study.id === "STUDY-USDM-002";
+          return (
+            study.id === PRIMARY_FILESHARE_STUDY_ID ||
+            study.id === "STUDY-USDM-002"
+          );
         }
         return true;
       }).map((study) => {

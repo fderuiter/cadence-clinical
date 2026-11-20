@@ -9,13 +9,21 @@ declare module "pinia" {
   }
 }
 import { buildLedgerBlock, debounce } from "ui";
+import {
+  DEFAULT_DEMO_PARTICIPANT,
+  DEFAULT_DEMO_SITE,
+  DEMO_PARTICIPANTS,
+  DEMO_SITES,
+  DEMO_STUDY,
+  getDemoPersonaByWorkflow,
+} from "demo-fixtures";
 import { useAuthStore } from "./auth.js";
 import { useToastStore } from "./toasts.js";
 import {
   allowUnbackedAction,
   refuseUnbackedAction,
 } from "../utils/unbackedActions.js";
-import { isDemoBuild } from "../utils/demoMode.js";
+import { demoNowIso, isDemoBuild } from "../utils/demoMode.js";
 import { scopedKey, storageScopeOf } from "../utils/userScopedStorage.js";
 import { executionApi, type SubjectSummary } from "../api/executionApi";
 import { soaClient } from "../api/soaClient.js";
@@ -152,6 +160,7 @@ export interface SubjectFixture {
   /** Execution's record id for the subject; absent on demo sample subjects. */
   recordId?: string;
   siteId?: string;
+  site_id?: string;
   consentDate?: string;
   armId?: string;
   status: string;
@@ -414,88 +423,38 @@ export const DEFAULT_CLINICAL_USDM = Object.freeze({
   ],
 });
 
-export const DEFAULT_DEMO_SUBJECTS: SubjectFixture[] = [
-  {
-    id: "SUBJ-101",
-    status: "ACTIVE",
-    active_protocol_version: "2.0.0",
-    consentText: "Signed ICF v2.0.0",
-    consentColor: "green",
-    category: "migrated",
-    isGated: false,
-    label: "SUBJ-101 (Active - Migrated v2.0.0)",
-  },
-  {
-    id: "SUBJ-102",
-    status: "ACTIVE",
-    active_protocol_version: "1.0.0",
-    consentText: "Pending ICF v2.0.0",
-    consentColor: "yellow",
-    category: "pending",
-    isGated: true,
-    label: "SUBJ-102 (Active - Pending Re-Consent)",
-  },
-  {
-    id: "SUBJ-103",
-    status: "ENROLLED",
-    active_protocol_version: "1.0.0",
-    consentText: "Pending ICF v2.0.0",
-    consentColor: "yellow",
-    category: "pending",
-    isGated: true,
-    label: "SUBJ-103 (Enrolled - Pending Re-Consent)",
-  },
-  {
-    id: "SUBJ-104",
-    status: "COMPLETED",
-    active_protocol_version: "1.0.0",
-    consentText: "Historical v1.0.0",
-    consentColor: "gray",
-    category: "completedPrev",
-    isGated: false,
-    label: "SUBJ-104 (Completed - Historical v1.0.0)",
-  },
-  {
-    id: "SUBJ-105",
-    status: "ACTIVE",
-    active_protocol_version: "2.0.0",
-    consentText: "Signed ICF v2.0.0",
-    consentColor: "green",
-    category: "migrated",
-    isGated: false,
-    label: "SUBJ-105 (Active - Migrated v2.0.0)",
-  },
-  {
-    id: "SUBJ-001",
-    status: "ACTIVE",
-    active_protocol_version: "2.0.0",
-    consentText: "Signed ICF v2.0.0",
-    consentColor: "green",
-    category: "migrated",
-    isGated: false,
-    label: "SUBJ-001 (Mock Subject)",
-  },
-  {
-    id: "SUBJ-002",
-    status: "ACTIVE",
-    active_protocol_version: "1.0.0",
-    consentText: "Pending ICF v2.0.0",
-    consentColor: "yellow",
-    category: "pending",
-    isGated: true,
-    label: "SUBJ-002 (Screened Cohort - Pending Re-Consent)",
-  },
-  {
-    id: "SUBJ-003",
-    status: "ENROLLED",
-    active_protocol_version: "2.0.0",
-    consentText: "Signed ICF v2.0.0",
-    consentColor: "green",
-    category: "migrated",
-    isGated: false,
-    label: "SUBJ-003 (Post-Randomization)",
-  },
-];
+function buildDemoClinicalUsdm() {
+  return {
+    ...DEFAULT_CLINICAL_USDM,
+    studyId: DEMO_STUDY.code || DEFAULT_CLINICAL_USDM.studyId,
+    studyTitle: DEMO_STUDY.title || DEFAULT_CLINICAL_USDM.studyTitle,
+  };
+}
+
+export const DEFAULT_DEMO_SUBJECTS: SubjectFixture[] = DEMO_PARTICIPANTS.map(
+  (participant, idx) => {
+    const isPendingReconsent = idx === 1;
+    const isEnrolled = idx === 2;
+    const status = isEnrolled ? "ENROLLED" : "ACTIVE";
+    return {
+      id: participant.subjectCode,
+      recordId: participant.enrollmentUuid,
+      siteId: participant.siteCode,
+      site_id: participant.siteCode,
+      status,
+      active_protocol_version: isPendingReconsent ? "1.0.0" : "2.0.0",
+      consentText: isPendingReconsent
+        ? "Pending ICF v2.0.0"
+        : "Signed ICF v2.0.0",
+      consentColor: isPendingReconsent ? "yellow" : "green",
+      category: isPendingReconsent ? "pending" : "migrated",
+      isGated: isPendingReconsent,
+      label: isPendingReconsent
+        ? `${participant.subjectCode} (${participant.siteCode} - Pending Re-Consent)`
+        : `${participant.subjectCode} (${participant.siteCode} - ${status === "ENROLLED" ? "Enrolled" : "Active"} v2.0.0)`,
+    };
+  }
+);
 
 export const DEFAULT_FORM_VALUES: Record<
   string,
@@ -570,38 +529,50 @@ const useClinicalStoreInner = defineStore("clinical", {
   state: (): ClinicalState => {
     const initial = readPersonaStorage();
     const demo = isDemoBuild();
+    const monitorUsername =
+      (demo && getDemoPersonaByWorkflow("monitor")?.username) || "cra.monitor";
+    const siteCodes =
+      demo && DEMO_SITES.length > 0
+        ? DEMO_SITES.map((s) => s.code)
+        : ["SITE-101", "SITE-102"];
+    const demoStudyCode = (demo && DEMO_STUDY.code) || "CADENCE-101";
 
     return {
       currentUsdm: normalizeUsdm(
-        initial.savedUsdm || JSON.parse(JSON.stringify(DEFAULT_CLINICAL_USDM))
+        initial.savedUsdm ||
+          JSON.parse(
+            JSON.stringify(
+              demo ? buildDemoClinicalUsdm() : DEFAULT_CLINICAL_USDM
+            )
+          )
       ),
       currentCtmsData: {
         milestones: [
           {
             id: "M1",
             type: "SITE_SELECTION",
-            plannedDate: "2026-08-01", // deid-ignore
-            actualDate: "2026-08-01", // deid-ignore
+            plannedDate: "2026-01-05", // deid-ignore
+            actualDate: "2026-01-05", // deid-ignore
             status: "ACHIEVED",
           },
           {
             id: "M2",
             type: "INITIATION_VISIT",
-            plannedDate: "2026-08-10", // deid-ignore
-            actualDate: "2026-08-12", // deid-ignore
+            plannedDate: "2026-01-08", // deid-ignore
+            actualDate: "2026-01-09", // deid-ignore
             status: "ACHIEVED",
           },
           {
             id: "M3",
             type: "SITE_ACTIVATION",
-            plannedDate: "2026-08-15", // deid-ignore
+            plannedDate: "2026-01-11", // deid-ignore
             actualDate: "",
             status: "PLANNED",
           },
           {
             id: "M4",
             type: "FIRST_SUBJECT_ENROLLED",
-            plannedDate: "2026-09-01", // deid-ignore
+            plannedDate: "2026-01-12", // deid-ignore
             actualDate: "",
             status: "PLANNED",
           },
@@ -610,37 +581,41 @@ const useClinicalStoreInner = defineStore("clinical", {
           {
             id: "V1",
             type: "SIV",
-            scheduledDate: "2026-08-10", // deid-ignore
-            actualDate: "2026-08-12", // deid-ignore
+            scheduledDate: "2026-01-08", // deid-ignore
+            actualDate: "2026-01-09", // deid-ignore
             status: "SIGNED_OFF",
-            cra: "cra_fderuiter",
+            cra: monitorUsername,
           },
           {
             id: "V2",
             type: "IMV",
-            scheduledDate: "2026-08-25", // deid-ignore
+            scheduledDate: "2026-01-25", // deid-ignore
             actualDate: "",
             status: "SCHEDULED",
-            cra: "cra_fderuiter",
+            cra: monitorUsername,
           },
         ],
         allocations: [
           {
-            cra: "cra_fderuiter",
-            activeAllocations: 3,
-            sites: ["Site-01", "Site-02", "Site-09"],
-            studies: ["STUDY-01", "STUDY-02"],
-          },
-          {
-            cra: "cra_alice",
-            activeAllocations: 1,
-            sites: ["Site-03"],
-            studies: ["STUDY-01"],
+            cra: monitorUsername,
+            activeAllocations: siteCodes.length,
+            sites: siteCodes,
+            studies: [demoStudyCode],
           },
         ],
         recruitment: [
-          { siteId: "Site-01", screened: 15, enrolled: 8, target: 20 },
-          { siteId: "Site-02", screened: 8, enrolled: 4, target: 15 },
+          {
+            siteId: siteCodes[0] || "SITE-101",
+            screened: 2,
+            enrolled: 2,
+            target: 20,
+          },
+          {
+            siteId: siteCodes[1] || "SITE-102",
+            screened: 1,
+            enrolled: 1,
+            target: 15,
+          },
         ],
       },
       subjects: demo
@@ -813,9 +788,11 @@ const useClinicalStoreInner = defineStore("clinical", {
       formQueries: initial.savedFormQueries || {},
       ledgerBlocks: initial.savedLedgerBlocks || [],
 
-      activeStudyId: demo ? "STUDY-USDM-001" : "",
-      activeSiteId: demo ? "SITE-001" : "",
-      activeSubjectId: "SUBJ-001",
+      activeStudyId: demo ? DEMO_STUDY.code : "",
+      activeSiteId: demo ? DEFAULT_DEMO_SITE?.code || "" : "",
+      activeSubjectId: demo
+        ? DEFAULT_DEMO_PARTICIPANT?.subjectCode || ""
+        : "SUBJ-001",
       activeVisitId: "Screening",
 
       // --- SoA State ---
@@ -947,7 +924,12 @@ const useClinicalStoreInner = defineStore("clinical", {
       this.formQueries = loaded.savedFormQueries || {};
       this.ledgerBlocks = loaded.savedLedgerBlocks || [];
       this.currentUsdm = normalizeUsdm(
-        loaded.savedUsdm || JSON.parse(JSON.stringify(DEFAULT_CLINICAL_USDM))
+        loaded.savedUsdm ||
+          JSON.parse(
+            JSON.stringify(
+              demo ? buildDemoClinicalUsdm() : DEFAULT_CLINICAL_USDM
+            )
+          )
       );
 
       this.evaluateRules();
@@ -1009,8 +991,8 @@ const useClinicalStoreInner = defineStore("clinical", {
       details: Record<string, unknown>,
       reason: string = "System Action"
     ) {
-      const timestamp = new Date().toISOString();
       const index = this.ledgerBlocks.length;
+      const timestamp = demoNowIso(index);
       const prevHash =
         index === 0
           ? "0000000000000000000000000000000000000000000000000000000000000000" // deid-ignore

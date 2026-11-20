@@ -397,7 +397,7 @@
           type="text"
           autocomplete="off"
           maxlength="255"
-          placeholder="e.g. CAD-101"
+          placeholder="e.g. CADENCE-101"
         />
         <button
           id="btn-open-study"
