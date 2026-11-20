@@ -26,6 +26,7 @@ import {
   loadAssignedTasks,
   renderTasks,
 } from "../features/tasks.js";
+import { loadParticipantWallet } from "../features/wallet.js";
 import { state } from "../stores/state.js";
 import { getAssignmentsFromDB, getInstrumentsFromDB } from "../sync-queue.js";
 import { isDemoBuild, isDemoModeActive } from "../utils/demoMode.js";
@@ -87,6 +88,9 @@ export async function initializeApp() {
     await loadAssignedInstruments(userId);
     await loadCompliance(userId);
     await loadNotifications(userId);
+    await loadParticipantWallet().catch((err) => {
+      console.warn("[Wallet] Initial wallet hydration warning:", err?.message);
+    });
   } else if (isDemoModeActive()) {
     // Explicit demo build: seed synthetic study data
     state.assignments = JSON.parse(JSON.stringify(MOCK_ASSIGNMENTS));
@@ -145,14 +149,18 @@ export async function initializeApp() {
     });
   }
 
-  // Initial sync & sync queue rendering (stipend auto-disbursement runs only in demo builds)
-  await syncOfflineQueue(false, { autoDisburse: isDemoModeActive() });
+  // Initial sync & sync queue rendering (stipend evaluation runs for authenticated or demo sessions)
+  await syncOfflineQueue(false, {
+    autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
+  });
 
   // Attach online/offline listener
   if (typeof window !== "undefined") {
     window.addEventListener("online", () => {
       console.log("[App] Network online detected. Triggering sync...");
-      syncOfflineQueue(false, { autoDisburse: isDemoModeActive() });
+      syncOfflineQueue(false, {
+        autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
+      });
     });
   }
 

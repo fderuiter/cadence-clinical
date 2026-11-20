@@ -1,13 +1,36 @@
-// Stipend wallet balance and the travel expense (receipt OCR) claim.
+// Participant wallet ledger balances, masked payout accounts, receipt OCR, and claim state.
 import { defineStore } from "pinia";
 
 export const useWalletStore = defineStore("wallet", {
   state: () => ({
+    walletId: null,
+    walletStudyId: "study_001",
+    walletSiteId: "site_001",
+    walletLoading: false,
+    walletLoaded: false,
     walletBalance: null,
+    lifetimeStipends: 0.0,
+    lifetimeReimbursements: 0.0,
+    lifetimeDisbursements: 0.0,
+    taxableYtd: 0.0,
+    is1099ThresholdExceeded: false,
+    w9Status: "NOT_REQUIRED",
+    currency: "USD",
+    virtualCardMask: null,
+    virtualCardExpiry: null,
+    achRoutingMask: null,
+    achAccountMask: null,
+    achAccountHolder: null,
+    recentTransactions: [],
+    expenseClaims: [],
+    disbursingBalance: false,
+    disbursementConfirmation: null,
+    expenseSubmitting: false,
     expenseError: null,
     expenseOcr: {
       loading: false,
       error: null,
+      warning: null,
       data: null,
       previewUrl: null,
     },
@@ -21,7 +44,7 @@ export const useWalletStore = defineStore("wallet", {
       isMealAllowance: false,
       perDiemCap: 75.0,
       expenseDate: "",
-      ocrConfidence: 0.98,
+      ocrConfidence: 0.0,
       receiptImageName: "",
     },
     expenseResult: null,

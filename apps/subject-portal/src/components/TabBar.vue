@@ -39,7 +39,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 
 import { showView } from "../features/navigation.js";
-import { AVAILABLE_SCREENS } from "../router/availability.js";
+import { isScreenAvailable } from "../router/availability.js";
 import { activeTabForView, tabs } from "../router/routes.js";
 import { useInboxStore } from "../stores/inbox.js";
 import { useSessionStore } from "../stores/session.js";
@@ -64,10 +64,13 @@ onBeforeUnmount(() => {
 
 const visibleTabs = computed(() => {
   void sessionStore.session?.isDemoMode;
+  void sessionStore.session?.token;
+  void sessionStore.session?.userId;
+  void sessionStore.session?.isOfflineMode;
   if (isDemoModeActive()) {
     return tabs;
   }
-  return tabs.filter((tab) => AVAILABLE_SCREENS.has(tab.id));
+  return tabs.filter((tab) => isScreenAvailable(tab.id));
 });
 
 function handleTabKeyDown(event) {

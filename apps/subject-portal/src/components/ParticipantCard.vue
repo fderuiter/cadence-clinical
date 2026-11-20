@@ -13,8 +13,8 @@
         {{ statusLabel }}
       </span>
     </div>
-    <div v-if="isDemo" class="info-row">
-      <span class="info-lbl">Demo Wallet:</span>
+    <div v-if="isAuthenticated || isDemo" class="info-row">
+      <span class="info-lbl">{{ isDemo ? "Demo Wallet:" : "Wallet:" }}</span>
       <span id="session-wallet-balance" class="info-val">
         ${{
           typeof wallet.walletBalance === "number"

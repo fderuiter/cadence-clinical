@@ -403,13 +403,11 @@
                   💳 {{ selectedWallet.card_type || "Reloadable Debit Card" }}
                 </div>
                 <div class="card-number">
-                  {{
-                    selectedWallet.virtual_card_mask || "**** **** **** 4821"
-                  }}
+                  {{ selectedWallet.virtual_card_mask || "Not issued" }}
                 </div>
                 <div class="card-exp">
-                  EXP: {{ selectedWallet.virtual_card_expiry || "12/29" }} |
-                  Status: {{ selectedWallet.card_status || "ACTIVE" }}
+                  EXP: {{ selectedWallet.virtual_card_expiry || "—" }} | Status:
+                  {{ selectedWallet.card_status || "ACTIVE" }}
                 </div>
                 <div class="card-holder">
                   {{
@@ -422,11 +420,11 @@
                 <div class="card-chip">🏦 Direct ACH Payout Account</div>
                 <div class="ach-row">
                   <strong>Routing:</strong>
-                  {{ selectedWallet.ach_routing_number || "021000021" }}
+                  {{ selectedWallet.ach_routing_mask || "Not configured" }}
                 </div>
                 <div class="ach-row">
                   <strong>Account:</strong>
-                  {{ selectedWallet.ach_account_mask || "ACH-***4321" }}
+                  {{ selectedWallet.ach_account_mask || "Not configured" }}
                 </div>
                 <div class="ach-row">
                   <strong>Holder:</strong>
@@ -618,54 +616,47 @@
             <span class="badge badge-regulatory">Automated Parser</span>
           </div>
           <div class="panel-body">
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <div class="ocr-dropzone" @click="simulateReceiptUpload">
-              <div class="dropzone-icon">📷</div>
-              <div class="dropzone-text">
-                <strong>Click to Upload Receipt Image / Sample OCR</strong>
-                <p>
-                  Supports JPG, PNG, PDF receipts for Mileage, Parking, Transit,
-                  Meals, Lodging
-                </p>
-              </div>
+            <label
+              id="staff-receipt-dropzone"
+              for="staff-receipt-file-input"
+              class="ocr-dropzone"
+            >
+              <input
+                id="staff-receipt-file-input"
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/bmp,image/svg+xml,application/pdf"
+                class="sr-only-file-input"
+                :disabled="isOcrExtracting"
+                @change="handleReceiptFileUpload"
+              />
+              <span class="dropzone-icon">📷</span>
+              <span class="dropzone-text">
+                <strong>{{
+                  isOcrExtracting
+                    ? "Extracting Receipt Metadata..."
+                    : "Click to Upload Receipt Image or PDF"
+                }}</strong>
+                <span class="dropzone-subtext">
+                  Uploads receipt bytes to the OCR service for Mileage, Fuel,
+                  Parking, Transit, Meals, or Lodging
+                </span>
+              </span>
+            </label>
+
+            <div
+              v-if="ocrWarning"
+              id="staff-ocr-warning-banner"
+              role="status"
+              class="ocr-warning-box"
+            >
+              ⚠️ {{ ocrWarning }}
             </div>
 
-            <div class="sample-receipt-presets">
-              <span class="preset-label">Quick Sample Scenarios:</span>
-              <button
-                class="btn btn-xs btn-secondary"
-                @click="loadSampleReceipt('transit')"
-              >
-                Metro Transit ($28.50)
-              </button>
-              <button
-                class="btn btn-xs btn-secondary"
-                @click="loadSampleReceipt('parking')"
-              >
-                Hospital Parking ($22.00)
-              </button>
-              <button
-                class="btn btn-xs btn-secondary"
-                @click="loadSampleReceipt('gas')"
-              >
-                Mileage / Gas ($45.00)
-              </button>
-              <button
-                class="btn btn-xs btn-secondary"
-                @click="loadSampleReceipt('meal_standard')"
-              >
-                Lunch Cafe ($18.75)
-              </button>
-              <button
-                class="btn btn-xs btn-secondary"
-                @click="loadSampleReceipt('meal_excess')"
-              >
-                Dinner Above $75 ($95.00)
-              </button>
-            </div>
-
-            <div v-if="ocrResult" class="ocr-result-card">
+            <div
+              v-if="ocrResult"
+              id="staff-ocr-result-card"
+              class="ocr-result-card"
+            >
               <div class="ocr-header">
                 <h4>
                   Extracted Metadata (Confidence:
@@ -675,9 +666,12 @@
               </div>
               <div class="ocr-grid">
                 <div>
-                  <strong>Merchant:</strong> {{ ocrResult.merchant_name }}
+                  <strong>Merchant:</strong>
+                  {{ ocrResult.merchant_name || "—" }}
                 </div>
-                <div><strong>Date:</strong> {{ ocrResult.expense_date }}</div>
+                <div>
+                  <strong>Date:</strong> {{ ocrResult.expense_date || "—" }}
+                </div>
                 <div>
                   <strong>Gross Amount:</strong> ${{
                     ocrResult.gross_amount.toFixed(2)
@@ -700,7 +694,7 @@
                 withholding of ${{ ocrResult.tax_deduction.toFixed(2) }}
                 deducted from reimbursement.
               </div>
-              <div class="ocr-raw">
+              <div v-if="ocrResult.raw_text" class="ocr-raw">
                 <small><strong>Raw Detected Text:</strong></small>
                 <pre>{{ ocrResult.raw_text }}</pre>
               </div>
@@ -734,7 +728,8 @@
               <label>Category:</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <select v-model="expenseForm.category" class="form-select">
-                <option value="MILEAGE">Mileage / Fuel</option>
+                <option value="MILEAGE">Mileage</option>
+                <option value="FUEL">Fuel / Service Station</option>
                 <option value="PARKING">Parking Fee / Garage</option>
                 <option value="TRANSIT">Public Transit / Taxi / Uber</option>
                 <option value="MEAL">Meal Allowance</option>
@@ -921,7 +916,9 @@
                         : 'text-danger font-bold'
                     "
                   >
-                    {{ tx.amount >= 0 ? "+" : "" }}${{ tx.amount.toFixed(2) }}
+                    {{ tx.amount >= 0 ? "+" : "-" }}${{
+                      Math.abs(tx.amount).toFixed(2)
+                    }}
                   </td>
                   <td>${{ tx.balance_after.toFixed(2) }}</td>
                   <td>{{ tx.description }}</td>
@@ -1028,9 +1025,11 @@ import { isDemoBuild } from "../utils/demoMode.js";
 const activeTab = ref("wallets");
 const isLoading = ref(false);
 const isSubmitting = ref(false);
+const isOcrExtracting = ref(false);
 const showW9Modal = ref(false);
 const visitTriggerSuccess = ref("");
 const claimSubmitSuccess = ref("");
+const ocrWarning = ref("");
 
 const selectedWallet = ref<any>(null);
 const selectedWalletTaxStatus = ref<any>(null);
@@ -1065,11 +1064,157 @@ const expenseForm = ref({
   study_id: "STUDY-DCT-001",
   site_id: "SITE-101",
   category: "TRANSIT",
-  merchant_name: "Metro Transit Authority",
-  gross_amount: 28.5,
+  merchant_name: "",
+  gross_amount: 0,
   is_meal_allowance: false,
-  expense_date: new Date().toISOString().substring(0, 10),
+  expense_date: "",
+  ocr_confidence: 0,
+  receipt_image_name: "",
 });
+
+function maskRoutingValue(raw?: string | null): string | null {
+  if (!raw || typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (trimmed.includes("*")) return trimmed;
+  return trimmed.length > 4 ? `*****${trimmed.slice(-4)}` : `*****${trimmed}`;
+}
+
+function normalizeWallet(w: any) {
+  if (!w || typeof w !== "object") return w;
+  const routingMask = maskRoutingValue(
+    w.ach_routing_mask ??
+      w.achRoutingMask ??
+      w.ach_routing_number ??
+      w.achRoutingNumber ??
+      null
+  );
+  return {
+    ...w,
+    id: w.id ?? w.Id,
+    subject_id: w.subject_id ?? w.subjectId ?? "",
+    study_id: w.study_id ?? w.studyId ?? "",
+    site_id: w.site_id ?? w.siteId ?? "",
+    current_balance: Number(w.current_balance ?? w.currentBalance ?? 0),
+    lifetime_stipends: Number(w.lifetime_stipends ?? w.lifetimeStipends ?? 0),
+    lifetime_reimbursements: Number(
+      w.lifetime_reimbursements ?? w.lifetimeReimbursements ?? 0
+    ),
+    lifetime_disbursements: Number(
+      w.lifetime_disbursements ?? w.lifetimeDisbursements ?? 0
+    ),
+    taxable_ytd: Number(w.taxable_ytd ?? w.taxableYtd ?? 0),
+    is_1099_threshold_exceeded: Boolean(
+      w.is_1099_threshold_exceeded ?? w.is1099ThresholdExceeded
+    ),
+    w9_status: w.w9_status ?? w.w9Status ?? "NOT_REQUIRED",
+    currency: w.currency ?? w.Currency ?? "USD",
+    status: w.status ?? w.Status ?? "ACTIVE",
+    card_type: w.card_type ?? w.cardType ?? "RELOADABLE_DEBIT",
+    card_status:
+      w.card_status ?? w.cardStatus ?? w.debit_card_status ?? "ACTIVE",
+    virtual_card_mask: w.virtual_card_mask ?? w.virtualCardMask ?? null,
+    virtual_card_expiry: w.virtual_card_expiry ?? w.virtualCardExpiry ?? null,
+    virtual_card_token: w.virtual_card_token ?? w.virtualCardToken ?? null,
+    ach_routing_mask: routingMask,
+    ach_account_mask: w.ach_account_mask ?? w.achAccountMask ?? null,
+    ach_account_holder: w.ach_account_holder ?? w.achAccountHolder ?? null,
+    anti_coercion_cap: w.anti_coercion_cap ?? w.antiCoercionCap ?? null,
+    tax_id_last_four: w.tax_id_last_four ?? w.taxIdLastFour ?? null,
+  };
+}
+
+function normalizeStipendRule(r: any) {
+  if (!r || typeof r !== "object") return r;
+  return {
+    ...r,
+    id: r.id ?? r.Id,
+    visit_code: r.visit_code ?? r.visitCode ?? "",
+    visit_name: r.visit_name ?? r.visitName ?? "",
+    amount: Number(r.amount ?? r.Amount ?? 0),
+    currency: r.currency ?? r.Currency ?? "USD",
+    taxable: Boolean(r.taxable ?? r.Taxable),
+    anti_coercion_cap: r.anti_coercion_cap ?? r.antiCoercionCap ?? null,
+    is_milestone: Boolean(r.is_milestone ?? r.isMilestone),
+    milestone_code: r.milestone_code ?? r.milestoneCode ?? null,
+  };
+}
+
+function normalizeExpenseClaim(c: any) {
+  if (!c || typeof c !== "object") return c;
+  return {
+    ...c,
+    id: c.id ?? c.Id ?? "",
+    subject_id: c.subject_id ?? c.subjectId ?? "",
+    expense_date: c.expense_date ?? c.expenseDate ?? "",
+    category: c.category ?? c.Category ?? "OTHER",
+    merchant_name: c.merchant_name ?? c.merchantName ?? "",
+    gross_amount: Number(c.gross_amount ?? c.grossAmount ?? 0),
+    tax_deduction: Number(c.tax_deduction ?? c.taxDeduction ?? 0),
+    net_amount: Number(c.net_amount ?? c.netAmount ?? 0),
+    status: c.status ?? c.Status ?? "PENDING_REVIEW",
+    receipt_image_name: c.receipt_image_name ?? c.receiptImageName ?? null,
+  };
+}
+
+function normalizeTransaction(tx: any) {
+  if (!tx || typeof tx !== "object") return tx;
+  return {
+    ...tx,
+    id: tx.id ?? tx.Id ?? "",
+    created_at: tx.created_at ?? tx.createdAt ?? "",
+    subject_id: tx.subject_id ?? tx.subjectId ?? "",
+    study_id: tx.study_id ?? tx.studyId ?? "",
+    transaction_type: tx.transaction_type ?? tx.transactionType ?? "",
+    amount: Number(tx.amount ?? tx.Amount ?? 0),
+    balance_after: Number(tx.balance_after ?? tx.balanceAfter ?? 0),
+    description: tx.description ?? tx.Description ?? "",
+  };
+}
+
+function normalizeTaxStatus(t: any) {
+  if (!t || typeof t !== "object") return t;
+  const taxableYtd = Number(t.taxable_ytd ?? t.taxableYtd ?? 0);
+  const threshold = Number(
+    t.threshold_amount ?? t.thresholdAmount ?? t.threshold ?? 600
+  );
+  const computedPct = threshold > 0 ? (taxableYtd / threshold) * 100 : 0;
+  return {
+    ...t,
+    taxable_ytd: taxableYtd,
+    threshold_amount: threshold,
+    threshold_percentage: Number(
+      t.threshold_percentage ?? t.thresholdPercentage ?? computedPct
+    ),
+    warning_level: t.warning_level ?? t.warningLevel ?? "NORMAL",
+    w9_status: t.w9_status ?? t.w9Status ?? "NOT_REQUIRED",
+  };
+}
+
+function normalizeBalanceInquiry(b: any) {
+  if (!b || typeof b !== "object") return b;
+  return {
+    ...b,
+    available_balance: Number(
+      b.available_balance ??
+        b.availableBalance ??
+        b.current_balance ??
+        b.currentBalance ??
+        0
+    ),
+    pending_claims_total: Number(
+      b.pending_claims_total ?? b.pendingClaimsTotal ?? 0
+    ),
+    lifetime_stipends: Number(b.lifetime_stipends ?? b.lifetimeStipends ?? 0),
+    lifetime_reimbursements: Number(
+      b.lifetime_reimbursements ?? b.lifetimeReimbursements ?? 0
+    ),
+    lifetime_disbursements: Number(
+      b.lifetime_disbursements ?? b.lifetimeDisbursements ?? 0
+    ),
+    taxable_ytd: Number(b.taxable_ytd ?? b.taxableYtd ?? 0),
+  };
+}
 
 const totalBalance = computed(() =>
   wallets.value.reduce((acc, w) => acc + (w.current_balance || 0), 0)
@@ -1094,9 +1239,13 @@ function formatDate(iso: string) {
 }
 
 async function selectWallet(w: any) {
-  selectedWallet.value = w;
-  disburseForm.value.amount = w.current_balance;
-  await Promise.all([fetchTaxStatus(w.id), fetchBalanceInquiry(w.id)]);
+  const normalized = normalizeWallet(w);
+  selectedWallet.value = normalized;
+  disburseForm.value.amount = normalized.current_balance;
+  await Promise.all([
+    fetchTaxStatus(normalized.id),
+    fetchBalanceInquiry(normalized.id),
+  ]);
 }
 
 async function fetchTaxStatus(walletId: string) {
@@ -1105,7 +1254,7 @@ async function fetchTaxStatus(walletId: string) {
       `/api/v1/payments/participant/wallets/${walletId}/tax-1099-status`
     );
     if (res.ok) {
-      selectedWalletTaxStatus.value = await res.json();
+      selectedWalletTaxStatus.value = normalizeTaxStatus(await res.json());
     }
   } catch (e) {
     console.error("Error fetching tax status:", e);
@@ -1118,7 +1267,7 @@ async function fetchBalanceInquiry(walletId: string) {
       `/api/v1/payments/participant/wallets/${walletId}/balance`
     );
     if (res.ok) {
-      balanceInquiryData.value = await res.json();
+      balanceInquiryData.value = normalizeBalanceInquiry(await res.json());
     }
   } catch (e) {
     console.error("Error fetching balance inquiry:", e);
@@ -1133,11 +1282,18 @@ async function issueReloadableCard(walletId: string) {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ card_type: "RELOADABLE_DEBIT" }),
+        body: JSON.stringify({
+          cardType: "RELOADABLE_DEBIT",
+          card_type: "RELOADABLE_DEBIT",
+        }),
       }
     );
     await ensureOk(res);
     await loadAllData();
+    if (selectedWallet.value?.id === walletId) {
+      const refreshed = wallets.value.find((w) => w.id === walletId);
+      if (refreshed) await selectWallet(refreshed);
+    }
   } catch (e) {
     useToastStore().apiError("Issuing reloadable card failed", e);
   } finally {
@@ -1147,17 +1303,21 @@ async function issueReloadableCard(walletId: string) {
 
 async function submitW9Form() {
   if (!selectedWallet.value) return;
+  const targetWalletId = selectedWallet.value.id;
   isSubmitting.value = true;
   try {
     const res = await fetch(
-      `/api/v1/payments/participant/wallets/${selectedWallet.value.id}/submit-w9`,
+      `/api/v1/payments/participant/wallets/${targetWalletId}/submit-w9`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          fullLegalName: w9Form.value.full_legal_name,
+          taxIdLastFour: w9Form.value.tax_id_last_four,
+          address: w9Form.value.address,
+          certifyAccurate: w9Form.value.certify_accurate,
           full_legal_name: w9Form.value.full_legal_name,
           tax_id_last_four: w9Form.value.tax_id_last_four,
-          address: w9Form.value.address,
           certify_accurate: w9Form.value.certify_accurate,
         }),
       }
@@ -1165,8 +1325,9 @@ async function submitW9Form() {
     await ensureOk(res);
     showW9Modal.value = false;
     await loadAllData();
-    if (selectedWallet.value) {
-      await selectWallet(selectedWallet.value);
+    const refreshed = wallets.value.find((w) => w.id === targetWalletId);
+    if (refreshed) {
+      await selectWallet(refreshed);
     }
   } catch (e) {
     useToastStore().apiError("Submitting W-9 form failed", e);
@@ -1190,8 +1351,9 @@ async function verifyW9Form(walletId: string) {
     );
     await ensureOk(res);
     await loadAllData();
-    if (selectedWallet.value) {
-      await selectWallet(selectedWallet.value);
+    if (selectedWallet.value?.id === walletId) {
+      const refreshed = wallets.value.find((w) => w.id === walletId);
+      if (refreshed) await selectWallet(refreshed);
     }
   } catch (e) {
     useToastStore().apiError("Verifying W-9 form failed", e);
@@ -1200,111 +1362,170 @@ async function verifyW9Form(walletId: string) {
   }
 }
 
-function simulateReceiptUpload() {
-  loadSampleReceipt("transit");
+function bytesToBase64(uint8: Uint8Array): string {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < uint8.length; i += chunkSize) {
+    const sub = uint8.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...sub);
+  }
+  return btoa(binary);
 }
 
-function loadSampleReceipt(scenario: string) {
-  if (scenario === "transit") {
-    ocrResult.value = {
-      merchant_name: "Metro Transit Authority",
-      expense_date: new Date().toISOString().substring(0, 10),
-      gross_amount: 28.5,
-      tax_deduction: 0.0,
-      net_amount: 28.5,
-      category: "TRANSIT",
-      confidence_score: 0.98,
-      detected_keywords: ["transit", "ticket", "fare"],
-      raw_text:
-        "METRO TRANSIT AUTHORITY\nRoute: Clinical Trial Express\nDate: 2026-08-23\nFare Paid: $28.50\nCard: **** 4821",
-    };
-    expenseForm.value.merchant_name = "Metro Transit Authority";
-    expenseForm.value.gross_amount = 28.5;
-    expenseForm.value.category = "TRANSIT";
-  } else if (scenario === "parking") {
-    ocrResult.value = {
-      merchant_name: "Medical Center Parking Garage",
-      expense_date: new Date().toISOString().substring(0, 10),
-      gross_amount: 22.0,
-      tax_deduction: 0.0,
-      net_amount: 22.0,
-      category: "PARKING",
-      confidence_score: 0.97,
-      detected_keywords: ["parking", "garage", "valet"],
-      raw_text:
-        "MEDICAL CENTER PARKING GARAGE\nDate: 2026-08-23\nEntry: 08:30 Exit: 14:15\nTotal Due: $22.00\nPAID IN FULL",
-    };
-    expenseForm.value.merchant_name = "Medical Center Parking Garage";
-    expenseForm.value.gross_amount = 22.0;
-    expenseForm.value.category = "PARKING";
-  } else if (scenario === "gas") {
-    ocrResult.value = {
-      merchant_name: "Shell Service Station",
-      expense_date: new Date().toISOString().substring(0, 10),
-      gross_amount: 45.0,
-      tax_deduction: 0.0,
-      net_amount: 45.0,
-      category: "MILEAGE",
-      confidence_score: 0.95,
-      detected_keywords: ["gas", "fuel", "pump"],
-      raw_text:
-        "SHELL OIL STATION #4411\nPump 04 - Regular Unleaded\nGallons: 11.25\nTotal: $45.00",
-    };
-    expenseForm.value.merchant_name = "Shell Service Station";
-    expenseForm.value.gross_amount = 45.0;
-    expenseForm.value.category = "MILEAGE";
-  } else if (scenario === "meal_excess") {
-    ocrResult.value = {
-      merchant_name: "Hospital Plaza Bistro",
-      expense_date: new Date().toISOString().substring(0, 10),
-      gross_amount: 95.0,
-      tax_deduction: 3.0,
-      net_amount: 92.0,
-      category: "MEAL",
-      confidence_score: 0.96,
-      detected_keywords: ["bistro", "dinner", "taxable_meal_excess"],
-      raw_text:
-        "HOSPITAL PLAZA BISTRO\nExtended Observation Dinner\nTotal: $95.00",
-    };
-    expenseForm.value.merchant_name = "Hospital Plaza Bistro";
-    expenseForm.value.gross_amount = 95.0;
-    expenseForm.value.category = "MEAL";
-    expenseForm.value.is_meal_allowance = true;
-  } else {
-    ocrResult.value = {
-      merchant_name: "Hospital Plaza Cafe",
-      expense_date: new Date().toISOString().substring(0, 10),
-      gross_amount: 18.75,
-      tax_deduction: 0.0,
-      net_amount: 18.75,
-      category: "MEAL",
-      confidence_score: 0.96,
-      detected_keywords: ["cafe", "meal", "lunch"],
-      raw_text:
-        "HOSPITAL PLAZA CAFE\n1x Patient Lunch Special\n1x Bottled Water\nTotal: $18.75",
-    };
-    expenseForm.value.merchant_name = "Hospital Plaza Cafe";
-    expenseForm.value.gross_amount = 18.75;
-    expenseForm.value.category = "MEAL";
+async function readReceiptAsBase64(file: File): Promise<string> {
+  const mime = (file.type || "").toLowerCase();
+  if (
+    (mime === "image/jpeg" || mime === "image/webp") &&
+    typeof createImageBitmap === "function"
+  ) {
+    try {
+      const bitmap = await createImageBitmap(file);
+      const canvas = document.createElement("canvas");
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(bitmap, 0, 0);
+        if (typeof bitmap.close === "function") bitmap.close();
+        const dataUrl = canvas.toDataURL("image/png");
+        if (dataUrl.startsWith("data:image/png;base64,")) {
+          return dataUrl;
+        }
+      }
+    } catch {
+      // Fall back to raw file bytes
+    }
   }
+  const buffer = await file.arrayBuffer();
+  return bytesToBase64(new Uint8Array(buffer));
+}
+
+async function extractReceiptFromFile(file: File) {
+  isOcrExtracting.value = true;
+  ocrWarning.value = "";
+  ocrResult.value = null;
+  expenseForm.value.receipt_image_name = file.name || "";
+
+  try {
+    const imageBase64 = await readReceiptAsBase64(file);
+    const res = await fetch(
+      "/api/v1/payments/participant/expenses/ocr-extract",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageBase64,
+          filename: file.name || null,
+        }),
+      }
+    );
+    await ensureOk(res);
+    const data = await res.json();
+
+    const ocrReadable = Boolean(
+      data.ocrReadable ??
+      data.ocr_readable ??
+      Boolean(
+        (data.merchantName || data.merchant_name) &&
+        (data.grossAmount || data.gross_amount)
+      )
+    );
+    const confidenceScore = ocrReadable
+      ? Number(data.confidenceScore ?? data.confidence_score ?? 0)
+      : 0;
+    const merchantName = ocrReadable
+      ? String(data.merchantName ?? data.merchant_name ?? "")
+      : "";
+    const expenseDate = String(data.expenseDate ?? data.expense_date ?? "");
+    const grossAmount = ocrReadable
+      ? Number(data.grossAmount ?? data.gross_amount ?? 0)
+      : 0;
+    const taxDeduction = ocrReadable
+      ? Number(data.taxDeduction ?? data.tax_deduction ?? 0)
+      : 0;
+    const netAmount = ocrReadable
+      ? Number(data.netAmount ?? data.net_amount ?? grossAmount)
+      : 0;
+    const category = String(data.category || "OTHER");
+    const rawText = String(data.rawText ?? data.raw_text ?? "");
+
+    ocrResult.value = {
+      ocrReadable,
+      ocr_readable: ocrReadable,
+      merchant_name: merchantName,
+      expense_date: expenseDate,
+      gross_amount: grossAmount,
+      tax_deduction: taxDeduction,
+      net_amount: netAmount,
+      category,
+      confidence_score: confidenceScore,
+      raw_text: rawText,
+    };
+
+    ocrWarning.value =
+      data.warning ||
+      (!ocrReadable
+        ? "Receipt text could not be read automatically. Verify the receipt image or enter claim fields manually below."
+        : "");
+
+    expenseForm.value.merchant_name = merchantName;
+    expenseForm.value.gross_amount = grossAmount;
+    expenseForm.value.expense_date = expenseDate;
+    expenseForm.value.category = category;
+    expenseForm.value.is_meal_allowance = category === "MEAL";
+    expenseForm.value.ocr_confidence = confidenceScore;
+  } catch (e) {
+    useToastStore().apiError("Extracting receipt metadata failed", e);
+  } finally {
+    isOcrExtracting.value = false;
+  }
+}
+
+async function handleReceiptFileUpload(event: Event) {
+  const input = event.target as HTMLInputElement | null;
+  const file = input?.files?.[0];
+  if (!file) return;
+  await extractReceiptFromFile(file);
 }
 
 async function loadAllData() {
   isLoading.value = true;
   try {
-    const [wRes, rRes, cRes] = await Promise.all([
+    const [wRes, rRes, cRes, tRes] = await Promise.all([
       fetch("/api/v1/payments/participant/wallets"),
       fetch("/api/v1/payments/participant/stipend-rules"),
       fetch("/api/v1/payments/participant/expenses"),
+      fetch("/api/v1/payments/participant/transactions"),
     ]);
 
     // #4827: outside demo builds a failed request is an error, never an empty or sample wallet.
     if (!isDemoBuild()) {
-      await Promise.all([wRes, rRes, cRes].map(ensureOk));
+      await Promise.all([wRes, rRes, cRes, tRes].map(ensureOk));
     }
-    if (wRes.ok) wallets.value = await wRes.json();
-    if (rRes.ok) stipendRules.value = await rRes.json();
-    if (cRes.ok) expenseClaims.value = await cRes.json();
+    if (wRes.ok) {
+      const rawWallets = await wRes.json();
+      wallets.value = Array.isArray(rawWallets)
+        ? rawWallets.map(normalizeWallet)
+        : [];
+    }
+    if (rRes.ok) {
+      const rawRules = await rRes.json();
+      stipendRules.value = Array.isArray(rawRules)
+        ? rawRules.map(normalizeStipendRule)
+        : [];
+    }
+    if (cRes.ok) {
+      const rawClaims = await cRes.json();
+      expenseClaims.value = Array.isArray(rawClaims)
+        ? rawClaims.map(normalizeExpenseClaim)
+        : [];
+    }
+    if (tRes.ok) {
+      const rawTxs = await tRes.json();
+      ledgerTransactions.value = Array.isArray(rawTxs)
+        ? rawTxs.map(normalizeTransaction)
+        : [];
+    }
 
     // Sample stipend rules and wallets, in demo builds only.
     if (isDemoBuild() && stipendRules.value.length === 0) {
@@ -1393,7 +1614,7 @@ async function loadAllData() {
           card_status: "ACTIVE",
           virtual_card_mask: "**** **** **** 4821",
           virtual_card_expiry: "12/29",
-          ach_routing_number: "021000021",
+          ach_routing_mask: "*****0021",
           ach_account_mask: "ACH-***4321",
           ach_account_holder: "Participant SUBJ-1001",
         },
@@ -1415,7 +1636,7 @@ async function loadAllData() {
           card_status: "ACTIVE",
           virtual_card_mask: "**** **** **** 9012",
           virtual_card_expiry: "06/28",
-          ach_routing_number: "021000021",
+          ach_routing_mask: "*****0021",
           ach_account_mask: "ACH-***9012",
           ach_account_holder: "Participant SUBJ-1002",
         },
@@ -1438,6 +1659,11 @@ async function triggerVisitVerified() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          studyId: visitEventForm.value.study_id,
+          siteId: visitEventForm.value.site_id,
+          subjectId: visitEventForm.value.subject_id,
+          visitCode: visitEventForm.value.visit_code,
+          eventId: `EVT-${Date.now()}`,
           study_id: visitEventForm.value.study_id,
           site_id: visitEventForm.value.site_id,
           subject_id: visitEventForm.value.subject_id,
@@ -1448,11 +1674,12 @@ async function triggerVisitVerified() {
     );
     await ensureOk(res);
     const data = await res.json();
+    const creditedAmount = data.amount ?? data.Amount;
+    const updatedBal = data.current_balance ?? data.currentBalance;
     // Report only the amounts the service returned (#4827).
     visitTriggerSuccess.value =
-      typeof data.amount === "number" &&
-      typeof data.current_balance === "number"
-        ? `Credited $${data.amount.toFixed(2)} stipend for visit ${visitEventForm.value.visit_code}. New balance: $${data.current_balance.toFixed(2)}`
+      typeof creditedAmount === "number" && typeof updatedBal === "number"
+        ? `Credited $${creditedAmount.toFixed(2)} stipend for visit ${visitEventForm.value.visit_code}. New balance: $${updatedBal.toFixed(2)}`
         : `Stipend for visit ${visitEventForm.value.visit_code} recorded.`;
     await loadAllData();
   } catch (e) {
@@ -1470,17 +1697,31 @@ async function submitExpenseClaim() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        subjectId: expenseForm.value.subject_id,
+        studyId: expenseForm.value.study_id,
+        siteId: expenseForm.value.site_id,
+        category: expenseForm.value.category,
+        merchantName: expenseForm.value.merchant_name,
+        grossAmount: expenseForm.value.gross_amount,
+        isMealAllowance: expenseForm.value.is_meal_allowance,
+        perDiemCap: expenseForm.value.is_meal_allowance ? 75.0 : undefined,
+        expenseDate: expenseForm.value.expense_date,
+        receiptImageName:
+          expenseForm.value.receipt_image_name || "receipt_uploaded",
+        receiptOcrData: ocrResult.value || {},
+        ocrConfidence: expenseForm.value.ocr_confidence,
         subject_id: expenseForm.value.subject_id,
         study_id: expenseForm.value.study_id,
         site_id: expenseForm.value.site_id,
-        category: expenseForm.value.category,
         merchant_name: expenseForm.value.merchant_name,
         gross_amount: expenseForm.value.gross_amount,
         is_meal_allowance: expenseForm.value.is_meal_allowance,
         per_diem_cap: expenseForm.value.is_meal_allowance ? 75.0 : undefined,
         expense_date: expenseForm.value.expense_date,
-        receipt_image_name: "receipt_scanned.jpg",
+        receipt_image_name:
+          expenseForm.value.receipt_image_name || "receipt_uploaded",
         receipt_ocr_data: ocrResult.value || {},
+        ocr_confidence: expenseForm.value.ocr_confidence,
       }),
     });
     await ensureOk(res);
@@ -1504,6 +1745,10 @@ async function reviewClaim(claimId: string, decision: string) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status: decision,
+          reviewNotes:
+            decision === "APPROVED"
+              ? "Verified valid clinical travel receipt."
+              : "Non-compliant receipt documentation.",
           review_notes:
             decision === "APPROVED"
               ? "Verified valid clinical travel receipt."
@@ -1530,6 +1775,7 @@ async function triggerDisbursement() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          disbursementType: disburseForm.value.type,
           disbursement_type: disburseForm.value.type,
           amount:
             disburseForm.value.amount || selectedWallet.value.current_balance,
@@ -2131,13 +2377,45 @@ onMounted(() => {
 }
 
 .ocr-dropzone {
-  border: 2px dashed var(--semantic-color-border, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 2px dashed var(--semantic-color-border);
   border-radius: 8px;
   padding: 24px;
   text-align: center;
   cursor: pointer;
-  background-color: var(--semantic-color-surface-muted, #f8fafc);
+  background-color: var(--semantic-color-surface-muted);
   transition: all 0.15s ease;
+  margin-bottom: 12px;
+}
+
+.sr-only-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.dropzone-subtext {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--semantic-color-text-muted);
+}
+
+.ocr-warning-box {
+  background-color: var(--semantic-color-warning-bg);
+  border: 1px solid var(--semantic-color-warning);
+  color: var(--semantic-color-warning);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.82rem;
   margin-bottom: 12px;
 }
 
