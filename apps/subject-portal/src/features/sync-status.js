@@ -242,7 +242,7 @@ export async function renderSyncQueueList() {
       }
 
       return `
-        <div class="task-item" style="flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: rgba(255,255,255,0.02);">
+        <div class="task-item" style="flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; border: 1px solid var(--semantic-color-border); border-radius: 8px; background: rgba(255,255,255,0.02);">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; flex-direction: column;">
               <span style="font-weight: 700; font-size: 14px;">${instName}</span>
@@ -250,7 +250,7 @@ export async function renderSyncQueueList() {
             </div>
             <span class="status-pill ${badgeClass}">${statusLabel}</span>
           </div>
-          <div style="font-size: 12px; color: var(--text-muted); border-top: 1px dashed var(--border-color); padding-top: 6px; margin-top: 4px;">
+          <div style="font-size: 12px; color: var(--text-muted); border-top: 1px dashed var(--semantic-color-border); padding-top: 6px; margin-top: 4px;">
             <p style="margin: 0 0 4px 0;">${statusDesc}</p>
             ${recoveryGuidanceHtml}
             ${answersDetails}

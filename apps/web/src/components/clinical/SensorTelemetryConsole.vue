@@ -377,8 +377,7 @@
                 </td>
                 <td>{{ alert.device_type }}</td>
                 <td>
-                  <strong>{{ alert.parameter_name }}</strong
-                  >:
+                  <strong>{{ alert.parameter_name }}</strong>:
                   <span class="text-danger font-bold"
                     >{{ alert.observed_value }} {{ alert.unit }}</span
                   >
@@ -1275,7 +1274,7 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 16px;
   padding: 24px;
-  background: var(--surface);
+  background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg, 8px);
 }
@@ -1323,7 +1322,7 @@ onMounted(() => {
   align-items: center;
   gap: 14px;
   padding: 16px;
-  background: var(--surface);
+  background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
 }
@@ -1429,7 +1428,7 @@ onMounted(() => {
 }
 
 .card {
-  background: var(--surface);
+  background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
 }
@@ -1558,6 +1557,7 @@ onMounted(() => {
   border-collapse: collapse;
   font-size: 13px;
   text-align: left;
+  font-variant-numeric: tabular-nums;
 }
 
 .data-table th {
@@ -1695,7 +1695,7 @@ onMounted(() => {
   color: #ffffff;
 }
 .btn-secondary {
-  background: var(--surface);
+  background: var(--semantic-color-surface);
   border-color: var(--border);
   color: var(--text-main);
 }
@@ -1727,7 +1727,7 @@ onMounted(() => {
 }
 
 .modal-dialog {
-  background: var(--surface);
+  background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg, 8px);
   width: 100%;
@@ -1792,7 +1792,7 @@ onMounted(() => {
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
   font-size: 13px;
-  background: var(--surface);
+  background: var(--semantic-color-surface);
   color: var(--text-main);
 }
 

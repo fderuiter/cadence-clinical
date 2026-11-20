@@ -406,4 +406,10 @@ function selectField() {
 .canvas-field-widget {
   min-height: 100px;
 }
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
+}
 </style>

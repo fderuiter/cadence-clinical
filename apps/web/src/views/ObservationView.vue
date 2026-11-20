@@ -279,4 +279,10 @@ td {
   padding: 4px 8px;
   border-bottom: 1px solid #e2e8f0;
 }
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
+}
 </style>

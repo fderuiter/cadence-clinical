@@ -720,10 +720,9 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { useFocusTrap } from "ui";
+import { EmptyState, useFocusTrap } from "ui";
 import TicketSignModal from "./TicketSignModal.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
-import EmptyState from "../common/EmptyState.vue";
 
 const props = defineProps({
   isOpen: {

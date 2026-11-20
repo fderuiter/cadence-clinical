@@ -15,4 +15,7 @@ public interface IIpKitApplicationService
     Task<List<IpKitInventoryResponse>> GetSiteInventoryAsync(string studyId, string siteId, CancellationToken ct = default);
 
     Task<List<IpKitInventoryResponse>> SeedSiteInventoryAsync(string studyId, string siteId, List<IpKitSeedItem> kits, CancellationToken ct = default);
+
+    Task<IReadOnlyList<string>> GetExistingKitSitesAsync(string studyId, IEnumerable<string> kitNumbers, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<string>>([]);
 }

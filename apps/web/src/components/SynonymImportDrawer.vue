@@ -175,12 +175,12 @@
                   ? 'opacity-60 cursor-not-allowed'
                   : '',
               ]"
-              @dragover.prevent="isDragging = true"
-              @dragleave.prevent="isDragging = false"
-              @drop.prevent="handleFileDrop"
               role="button"
               tabindex="0"
               aria-label="Select synonym dictionary file"
+              @dragover.prevent="isDragging = true"
+              @dragleave.prevent="isDragging = false"
+              @drop.prevent="handleFileDrop"
               @click="triggerFileInput"
               @keydown.enter.prevent="triggerFileInput"
               @keydown.space.prevent="triggerFileInput"
@@ -258,7 +258,9 @@
             <div class="font-bold flex items-center gap-1.5">
               <span>🛑</span> Import Error
             </div>
-            <p class="mt-1">{{ codingStore.synonymImportError }}</p>
+            <p class="mt-1">
+              {{ codingStore.synonymImportError }}
+            </p>
           </div>
 
           <!-- Pre-flight Validation Summary Report -->
@@ -817,3 +819,11 @@ onMounted(() => {
   codingStore.fetchActiveSynonymRules(studyId.value);
 });
 </script>
+
+<style scoped>
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
+}
+</style>

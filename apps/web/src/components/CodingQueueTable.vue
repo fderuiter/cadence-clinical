@@ -967,11 +967,10 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { useFocusTrap } from "ui";
+import { EmptyState, useFocusTrap } from "ui";
 import { useCodingStore } from "../stores/coding";
 import { use2DGrid } from "../composables/use2DGrid";
 import SkeletonLoader from "./common/SkeletonLoader.vue";
-import EmptyState from "./common/EmptyState.vue";
 
 const codingStore = useCodingStore();
 const containerRef = ref(null);
@@ -1650,6 +1649,10 @@ async function acceptAllSuggestions() {
   margin-bottom: 4px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--card-bg);
+  background: var(--semantic-color-surface);
+}
+
+table {
+  font-variant-numeric: tabular-nums;
 }
 </style>

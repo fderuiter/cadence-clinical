@@ -1964,4 +1964,10 @@ onMounted(() => {
 .text-muted {
   color: var(--text-muted, #64748b);
 }
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
+}
 </style>

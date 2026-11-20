@@ -56,7 +56,7 @@
             style="
               padding: 16px;
               text-align: center;
-              background: var(--bg);
+              background: var(--semantic-color-surface-muted);
               border-radius: 6px;
             "
           >
@@ -86,7 +86,11 @@
                   >INTEGRITY VERIFIED</strong
                 >
                 <p
-                  style="font-size: 12px; margin: 4px 0 0 0; color: var(--text)"
+                  style="
+                    font-size: 12px;
+                    margin: 4px 0 0 0;
+                    color: var(--semantic-color-text);
+                  "
                 >
                   {{
                     integrity.message ||
@@ -113,7 +117,11 @@
                   >INTEGRITY BREACH / TAMPERED</strong
                 >
                 <p
-                  style="font-size: 12px; margin: 4px 0 0 0; color: var(--text)"
+                  style="
+                    font-size: 12px;
+                    margin: 4px 0 0 0;
+                    color: var(--semantic-color-text);
+                  "
                 >
                   {{
                     integrity.message ||
@@ -128,7 +136,7 @@
             v-else
             style="
               padding: 16px;
-              background: var(--bg);
+              background: var(--semantic-color-surface-muted);
               border: 1px dashed var(--border);
               border-radius: 6px;
               text-align: center;
@@ -181,8 +189,8 @@
                   padding: 8px;
                   border-radius: 4px;
                   border: 1px solid var(--border);
-                  background: var(--bg);
-                  color: var(--text);
+                  background: var(--semantic-color-surface-muted);
+                  color: var(--semantic-color-text);
                 "
               />
             </div>
@@ -259,8 +267,8 @@
                   padding: 8px;
                   border-radius: 4px;
                   border: 1px solid var(--border);
-                  background: var(--bg);
-                  color: var(--text);
+                  background: var(--semantic-color-surface-muted);
+                  color: var(--semantic-color-text);
                 "
                 @change="handleTmfFileSelect"
               />
@@ -285,8 +293,8 @@
                     padding: 8px;
                     border-radius: 4px;
                     border: 1px solid var(--border);
-                    background: var(--bg);
-                    color: var(--text);
+                    background: var(--semantic-color-surface-muted);
+                    color: var(--semantic-color-text);
                   "
                 >
                   <option value="01. Trial Management">
@@ -321,8 +329,8 @@
                     padding: 8px;
                     border-radius: 4px;
                     border: 1px solid var(--border);
-                    background: var(--bg);
-                    color: var(--text);
+                    background: var(--semantic-color-surface-muted);
+                    color: var(--semantic-color-text);
                   "
                 />
               </div>
@@ -370,7 +378,7 @@
           <thead>
             <tr
               style="
-                background: var(--bg);
+                background: var(--semantic-color-surface-muted);
                 border-bottom: 1px solid var(--border);
                 text-align: left;
               "
@@ -489,7 +497,7 @@
         style="
           margin-top: 20px;
           border: 1px solid var(--accent);
-          background: var(--bg);
+          background: var(--semantic-color-surface-muted);
           padding: 0;
         "
       >
@@ -580,7 +588,7 @@
             style="
               font-weight: 600;
               margin-bottom: 8px;
-              color: var(--text);
+              color: var(--semantic-color-text);
               display: flex;
               align-items: center;
               gap: 6px;
@@ -641,7 +649,7 @@
             color: var(--text-muted);
             display: flex;
             justify-content: space-between;
-            background: var(--bg);
+            background: var(--semantic-color-surface-muted);
           "
         >
           <span
@@ -685,7 +693,7 @@
           display: flex;
           flex-wrap: wrap;
           gap: 12px;
-          background: var(--bg);
+          background: var(--semantic-color-surface-muted);
           padding: 12px;
           border-radius: 6px;
           border: 1px solid var(--border);
@@ -718,8 +726,8 @@
               font-size: 12px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--card-bg);
-              color: var(--text);
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
             "
           />
         </div>
@@ -747,8 +755,8 @@
               font-size: 12px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--card-bg);
-              color: var(--text);
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
             "
           >
             <option value="">All Actions</option>
@@ -792,8 +800,8 @@
               font-size: 12px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--card-bg);
-              color: var(--text);
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
             "
           >
             <option value="">All Entities</option>
@@ -829,8 +837,8 @@
               font-size: 12px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--card-bg);
-              color: var(--text);
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
             "
           />
         </div>
@@ -859,8 +867,8 @@
               font-size: 12px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--card-bg);
-              color: var(--text);
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
             "
           />
         </div>
@@ -890,8 +898,8 @@
               font-size: 12px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--card-bg);
-              color: var(--text);
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
             "
           />
         </div>
@@ -931,7 +939,7 @@
           <thead>
             <tr
               style="
-                background: var(--bg);
+                background: var(--semantic-color-surface-muted);
                 border-bottom: 1px solid var(--border);
                 text-align: left;
               "
@@ -1069,7 +1077,12 @@
                       <strong style="color: var(--primary)"
                         >Mandatory GxP Reason for Change:</strong
                       >
-                      <p style="margin: 4px 0 0 0; color: var(--text)">
+                      <p
+                        style="
+                          margin: 4px 0 0 0;
+                          color: var(--semantic-color-text);
+                        "
+                      >
                         {{
                           log.reason_for_change ||
                           log.change_reason ||
@@ -1272,7 +1285,7 @@
           display: flex;
           flex-wrap: wrap;
           gap: 12px;
-          background: var(--bg);
+          background: var(--semantic-color-surface-muted);
           padding: 12px;
           border-radius: 6px;
           border: 1px solid var(--border);
@@ -1305,8 +1318,8 @@
               font-size: 12px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--card-bg);
-              color: var(--text);
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
             "
           />
         </div>
@@ -1334,8 +1347,8 @@
               font-size: 12px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--card-bg);
-              color: var(--text);
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
             "
           >
             <option value="INITIATION">INITIATION (Study Start)</option>
@@ -1369,8 +1382,8 @@
               font-size: 12px;
               border-radius: 4px;
               border: 1px solid var(--border);
-              background: var(--card-bg);
-              color: var(--text);
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
             "
           />
         </div>
@@ -1464,7 +1477,11 @@
                   }}
                 </strong>
                 <p
-                  style="font-size: 12px; margin: 4px 0 0 0; color: var(--text)"
+                  style="
+                    font-size: 12px;
+                    margin: 4px 0 0 0;
+                    color: var(--semantic-color-text);
+                  "
                 >
                   Study: <strong>{{ completenessResult.study_id }}</strong> |
                   Milestone: <strong>{{ completenessResult.milestone }}</strong>
@@ -1504,7 +1521,7 @@
             <thead>
               <tr
                 style="
-                  background: var(--bg);
+                  background: var(--semantic-color-surface-muted);
                   border-bottom: 1px solid var(--border);
                   text-align: left;
                 "
@@ -2229,6 +2246,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.clinical-table {
+  font-variant-numeric: tabular-nums;
+}
 .clinical-table th,
 .clinical-table td {
   border-bottom: 1px solid var(--border);

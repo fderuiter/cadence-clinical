@@ -373,10 +373,9 @@
             <p class="cert-lead">
               This certifies that
               <strong>{{ activeAssignment?.user_name }}</strong> (ID:
-              <code>{{ activeAssignment?.user_id }}</code
-              >), acting in the capacity of
-              <strong>{{ activeAssignment?.user_role }}</strong
-              >, has successfully fulfilled all mandatory protocol curriculum
+              <code>{{ activeAssignment?.user_id }}</code>), acting in the
+              capacity of <strong>{{ activeAssignment?.user_role }}</strong>,
+              has successfully fulfilled all mandatory protocol curriculum
               requirements and demonstrated mastery under:
             </p>
 
@@ -392,8 +391,7 @@
                   <td>Study &amp; Site:</td>
                   <td>
                     Study <code>{{ activeAssignment?.study_id }}</code> (Site:
-                    <code>{{ activeAssignment?.site_id }}</code
-                    >)
+                    <code>{{ activeAssignment?.site_id }}</code>)
                   </td>
                 </tr>
                 <tr>
@@ -493,9 +491,9 @@
                   class="checkbox-label"
                 >
                   <input
+                    v-model="batchForm.selectedSites"
                     type="checkbox"
                     :value="site"
-                    v-model="batchForm.selectedSites"
                   />
                   <span>{{ site }}</span>
                 </label>
@@ -511,9 +509,9 @@
                   class="checkbox-label"
                 >
                   <input
+                    v-model="batchForm.selectedRoles"
                     type="checkbox"
                     :value="role"
-                    v-model="batchForm.selectedRoles"
                   />
                   <span>{{ role }}</span>
                 </label>
@@ -649,26 +647,27 @@
                 <tr v-for="del in delegations" :key="del.id">
                   <td>
                     <input
+                      v-model="selectedDelegationIds"
                       type="checkbox"
                       :value="del.id"
                       :aria-label="`Select delegation ${del.id}`"
-                      v-model="selectedDelegationIds"
                       :disabled="del.status === 'COMPLETED'"
                     />
                   </td>
                   <td>
-                    <strong>{{ del.staff_name }}</strong
-                    ><br /><small class="text-muted">{{
-                      del.staff_user_id
-                    }}</small>
+                    <strong>{{ del.staff_name }}</strong><br /><small
+                      class="text-muted"
+                      >{{ del.staff_user_id }}</small
+                    >
                   </td>
                   <td>
                     <span class="badge badge-role">{{ del.role }}</span>
                   </td>
                   <td>{{ del.site_id }}</td>
                   <td>
-                    <strong>{{ del.task_code }}</strong
-                    ><br /><small>{{ del.duties }}</small>
+                    <strong>{{ del.task_code }}</strong><br /><small>{{
+                      del.duties
+                    }}</small>
                   </td>
                   <td>
                     <span
@@ -2076,5 +2075,11 @@ onUnmounted(() => {
   background: #f1f5f9;
   color: #334155;
   font-size: 0.75rem;
+}
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
 }
 </style>

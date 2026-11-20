@@ -3553,4 +3553,10 @@ textarea {
   color: #b91c1c;
   font-size: 14px;
 }
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
+}
 </style>

@@ -25,9 +25,9 @@
         margin-bottom: 16px;
         padding: 12px 16px;
         border-radius: 8px;
-        background: var(--semantic-color-danger-bg-soft);
-        border: 1px solid var(--semantic-color-danger);
-        color: var(--semantic-color-danger);
+        background: var(--semantic-color-error-bg);
+        border: 1px solid var(--semantic-color-error);
+        color: var(--semantic-color-error);
         font-size: 14px;
         font-weight: 600;
       "
@@ -62,7 +62,7 @@
             var(--semantic-color-wallet-start) 0%,
             var(--semantic-color-wallet-end) 100%
           );
-          color: var(--semantic-color-surface);
+          color: var(--semantic-color-text-on-solid);
         "
       >
         <div style="font-size: 14px; font-weight: 600; opacity: 0.9">
@@ -96,12 +96,12 @@
           aria-label="Upload receipt image for travel reimbursement"
           aria-describedby="receipt-upload-hint"
           style="
-            border: 2px dashed var(--border-color);
+            border: 2px dashed var(--semantic-color-border);
             border-radius: 8px;
             padding: 20px;
             text-align: center;
             cursor: pointer;
-            background: var(--bg-muted);
+            background: var(--semantic-color-surface-muted);
             min-height: 120px;
           "
           @click="triggerReceiptUpload"
@@ -141,11 +141,17 @@
             margin-top: 16px;
             text-align: center;
             padding: 12px;
-            background: var(--bg-muted);
+            background: var(--semantic-color-surface-muted);
             border-radius: 6px;
           "
         >
-          <p style="margin: 0; font-weight: 600; color: var(--primary-color)">
+          <p
+            style="
+              margin: 0;
+              font-weight: 600;
+              color: var(--semantic-color-primary);
+            "
+          >
             🔍 Extracting Receipt Metadata via Mobile OCR...
           </p>
         </div>
@@ -157,7 +163,7 @@
           style="
             margin-top: 20px;
             padding: 16px;
-            border: 1px solid var(--border-color);
+            border: 1px solid var(--semantic-color-border);
             border-radius: 8px;
             background: rgba(255, 255, 255, 0.02);
           "
@@ -198,8 +204,8 @@
             <label for="ocr-merchant-name">Merchant Name</label>
             <input
               id="ocr-merchant-name"
-              type="text"
               v-model="wallet.expenseForm.merchantName"
+              type="text"
               required
             />
           </div>
@@ -208,8 +214,8 @@
             <label for="ocr-expense-date">Expense Date</label>
             <input
               id="ocr-expense-date"
-              type="text"
               v-model="wallet.expenseForm.expenseDate"
+              type="text"
               required
             />
           </div>
@@ -218,9 +224,9 @@
             <label for="ocr-gross-amount">Gross Amount ($ USD)</label>
             <input
               id="ocr-gross-amount"
+              v-model.number="wallet.expenseForm.grossAmount"
               type="number"
               step="0.01"
-              v-model.number="wallet.expenseForm.grossAmount"
               required
             />
           </div>
@@ -229,7 +235,7 @@
             v-if="wallet.expenseForm.category === 'MEAL'"
             class="form-group mb-12"
             style="
-              background: var(--bg-muted);
+              background: var(--semantic-color-surface-muted);
               padding: 10px;
               border-radius: 6px;
             "
@@ -244,8 +250,8 @@
             >
               <input
                 id="ocr-meal-allowance-check"
-                type="checkbox"
                 v-model="wallet.expenseForm.isMealAllowance"
+                type="checkbox"
               />
               <span>Meal Allowance / Per-Diem Cap ($75.00 limit)</span>
             </label>

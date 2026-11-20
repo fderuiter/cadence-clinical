@@ -2,14 +2,14 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { ref, defineComponent, nextTick } from "vue";
 import {
+  useFocusTrap,
+  useEscapeClose,
   createClinicalLookupInput,
   createSoaBuilderMatrix,
   createClinicalVisitMatrix,
   createConditionRowHTML,
   ClinicalQueryPanel,
   ClinicalInput,
-  useFocusTrap,
-  useEscapeClose,
 } from "ui";
 
 // Helper component for testing useFocusTrap directly

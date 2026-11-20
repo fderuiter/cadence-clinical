@@ -134,8 +134,8 @@ export function renderConsentUI() {
   clausesContainer.innerHTML = clauseSections
     .map(
       (sec) => `
-    <div class="clause-view-box" style="border: 1px solid var(--border-color); padding: 16px; border-radius: 6px; background: rgba(255,255,255,0.01);">
-      <h4 style="margin-top: 0; color: var(--primary-color); border-bottom: 1px dashed var(--border-color); padding-bottom: 6px;">${sec.title}</h4>
+    <div class="clause-view-box" style="border: 1px solid var(--semantic-color-border); padding: 16px; border-radius: 6px; background: rgba(255,255,255,0.01);">
+      <h4 style="margin-top: 0; color: var(--semantic-color-primary); border-bottom: 1px dashed var(--semantic-color-border); padding-bottom: 6px;">${sec.title}</h4>
       <p style="margin: 0; font-size: 14px;">${sec.content}</p>
     </div>
   `

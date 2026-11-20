@@ -35,4 +35,9 @@ public interface ISynonymImportService
         Guid id,
         string changeReason,
         CancellationToken cancellationToken = default);
+
+    Task<SynonymRuleResponse?> GetRuleByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<SynonymRuleResponse?>(null);
 }

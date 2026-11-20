@@ -67,7 +67,8 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     // Every request is signed as a site coordinator, the role that may change a participant's record, so both the
     // route permission (ADR-2516) and the handlers' role checks (#4943) pass; role coverage lives in
     // SubjectRouteAuthorityTests.
-    public SubjectEndpointsRoutingTests() => _client = _factory.CreateSignedClient(TestSecurityContext.Identity("crc-001", "crc"));
+    public SubjectEndpointsRoutingTests() =>
+        _client = _factory.CreateSignedClient(TestSecurityContext.Identity("crc-001", "crc") with { SiteIds = ["SITE-001"] });
 
     public void Dispose()
     {
@@ -302,7 +303,7 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
         using var responseBody = new MemoryStream();
         var httpContext = new DefaultHttpContext
         {
-            User = TestSecurityContext.CreatePrincipal("pi-001", "principal_investigator"),
+            User = TestSecurityContext.CreateScopedPrincipal("pi-001", TestSecurityContext.AllStudies, ["SITE-001"], "principal_investigator"),
             RequestServices = BuildJsonOptionsServiceProvider(),
         };
         httpContext.Response.Body = responseBody;
@@ -322,7 +323,7 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     public async Task GetSubjectDetailAsync_GivenCallerWithUnblindedAccess_RevealsTheAllocatedArmAndKit()
     {
         // The other half of the matrix above: proves the wiring branches on the signed claim.
-        var principal = TestSecurityContext.CreatePrincipal("pharmacist-001", "pharmacist");
+        var principal = TestSecurityContext.CreateScopedPrincipal("pharmacist-001", TestSecurityContext.AllStudies, ["SITE-001"], "pharmacist");
         ((ClaimsIdentity)principal.Identity!).AddClaim(new Claim(CadenceClaimTypes.UnblindedAccess, "true"));
         var service = new FakeSubjectApplicationService();
         var randomization = new FakeRandomizationService();
@@ -678,7 +679,7 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
         public (string? StudyId, string? SiteId, string? Status, int? Limit, int? Offset)? LastListArguments { get; private set; }
 
         public Task<Result<SubjectListResponse>> ListAsync(string? studyId, string? siteId, string? status, int? limit,
-            int? offset, CancellationToken ct)
+            int? offset, CancellationToken ct, IReadOnlyCollection<string>? allowedSiteIds = null)
         {
             LastListArguments = (studyId, siteId, status, limit, offset);
             ct.ThrowIfCancellationRequested();
@@ -723,7 +724,8 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
             throw new NotSupportedException();
     }
 
-    private static ClaimsPrincipal SiteCoordinator() => TestSecurityContext.CreatePrincipal("crc-001", "crc");
+    private static ClaimsPrincipal SiteCoordinator() =>
+        TestSecurityContext.CreateScopedPrincipal("crc-001", TestSecurityContext.AllStudies, ["SITE-001"], "crc");
 
     private static DefaultHttpContext SiteContext() => new() { User = SiteCoordinator() };
 

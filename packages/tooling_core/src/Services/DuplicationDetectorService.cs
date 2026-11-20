@@ -17,10 +17,12 @@ public static class DuplicationDetectorService
         "node_modules", "tests", ".venv", "__pycache__", "dist", "build", "bin", "obj", "Migrations", "migrations", ".git", "mockServiceWorker.js"
     ];
 
-    // The service hosts share their startup wiring by design until they merge into the kernel host (ADR-2244).
+    // The service hosts share their startup wiring by design until they merge into the kernel host (ADR-2244),
+    // and clinician/participant stylesheets standardize identical :root semantic token aliases by design (ADR-2635).
     private static readonly HashSet<string>[] ExemptedPairs =
     [
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/execution/src/Program.cs", "apps/designer/src/Program.cs", "apps/gateway/src/Program.cs" }
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/execution/src/Program.cs", "apps/designer/src/Program.cs", "apps/gateway/src/Program.cs" },
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/web/src/style.css", "apps/subject-portal/src/style.css" }
     ];
 
     public static int DetectDuplication(string[]? targetFiles = null, string? repoRoot = null)

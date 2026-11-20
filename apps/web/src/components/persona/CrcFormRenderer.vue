@@ -839,8 +839,7 @@
         <div class="modal-body">
           <p>
             Upload or register site-verified paper Informed Consent Form for
-            Subject <strong>{{ selectedSubjectId }}</strong
-            >.
+            Subject <strong>{{ selectedSubjectId }}</strong>.
           </p>
           <div class="form-group" style="margin-bottom: 12px">
             <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->

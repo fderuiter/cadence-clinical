@@ -68,18 +68,18 @@
 import { ref, computed } from "vue";
 import ClinicalQueryFlag from "./ClinicalQueryFlag.vue";
 import ClinicalQueryPanel from "./ClinicalQueryPanel.vue";
+import { clinicalFieldBaseProps } from "./sharedProps.js";
 
 const props = defineProps({
-  id: { type: String, required: true },
-  label: { type: String, required: true },
-  query: { type: Object, default: null },
-  gridSpan: { type: [Number, String], default: 12 },
-  error: { type: String, default: null },
-  attributes: { type: Object, default: () => ({}) },
-  tag: { type: String, default: "div" },
-  extraClass: { type: String, default: "" },
-  canManageQueries: { type: Boolean, default: false },
-  queryLabel: { type: String, default: "" },
+  ...clinicalFieldBaseProps,
+  tag: {
+    type: String,
+    default: "div",
+  },
+  extraClass: {
+    type: String,
+    default: "",
+  },
 });
 
 defineEmits(["create-query", "respond-query", "close-query", "reopen-query"]);

@@ -1651,4 +1651,10 @@ const exportAuditTrail = (format) => {
 .btn-secondary:hover {
   background: #f1f5f9;
 }
+
+table,
+th,
+td {
+  font-variant-numeric: tabular-nums;
+}
 </style>

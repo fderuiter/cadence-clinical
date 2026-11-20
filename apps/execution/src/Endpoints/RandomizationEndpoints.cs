@@ -98,8 +98,15 @@ public static class RandomizationEndpoints
 
     /// <summary><c>POST /api/v1/execution/randomization/schemes</c>.</summary>
     public static async Task<IResult> DraftSchemeAsync(
-        RandomizationSchemeDraftRequest request, IRandomizationApplicationService svc, CancellationToken ct)
+        RandomizationSchemeDraftRequest request, HttpContext http, IRandomizationApplicationService svc, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
+
+        if (ExecutionScopeGuard.RequireStudy(http, request.StudyId.Value) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
         var result = await svc.DraftSchemeAsync(request, ct).ConfigureAwait(false);
         return result.Match(
             onSuccess: r => Results.Created($"/api/v1/execution/randomization/schemes?study_id={Uri.EscapeDataString(r.StudyId.Value)}", r),
@@ -110,32 +117,71 @@ public static class RandomizationEndpoints
     public static async Task<IResult> ApproveSchemeAsync(
         Guid schemeId, HttpContext http, IRandomizationApplicationService svc, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
+
         string changeReason = ChangeReasonHeader.Read(http.Request)
             ?? throw new InvalidOperationException("ChangeReasonHeaderFilter should have rejected this request.");
+
+        var schemeStudy = await svc.GetSchemeStudyAsync(schemeId, ct).ConfigureAwait(false);
+        IResult? scopeDenied = schemeStudy is { } study
+            ? ExecutionScopeGuard.RequireStudy(http, study.Value)
+            : ExecutionScopeGuard.RequireAnyStudyScope(http);
+        if (scopeDenied is not null)
+        {
+            return scopeDenied;
+        }
+
         var result = await svc.ApproveSchemeAsync(schemeId, changeReason, ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 
     /// <summary><c>GET /api/v1/execution/randomization/schemes?study_id=</c>.</summary>
     public static async Task<IResult> ListSchemesAsync(
-        [FromQuery(Name = "study_id")] string? studyId, IRandomizationApplicationService svc, CancellationToken ct)
+        [FromQuery(Name = "study_id")] string? studyId, HttpContext http, IRandomizationApplicationService svc, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
+
+        IResult? scopeDenied = !string.IsNullOrWhiteSpace(studyId)
+            ? ExecutionScopeGuard.RequireStudy(http, studyId)
+            : ExecutionScopeGuard.RequireAnyStudyScope(http);
+        if (scopeDenied is not null)
+        {
+            return scopeDenied;
+        }
+
         var result = await svc.ListSchemesAsync(studyId, ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 
     /// <summary>
     /// <c>POST /api/v1/execution/subjects/{subjectId}/randomize</c>. The caller needs a role that may change a
-    /// participant's record (<see cref="SubjectAuthority.AuthorizeParticipantChange"/>).
+    /// participant's record (<see cref="SubjectAuthority.AuthorizeParticipantChange"/>), plus study and site scope
+    /// on the loaded participant record.
     /// </summary>
     public static async Task<IResult> RandomizeSubjectAsync(
         string subjectId, RandomizeSubjectRequest request, HttpContext http, IRandomizationApplicationService svc, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
+
         string changeReason = ChangeReasonHeader.Read(http.Request)
             ?? throw new InvalidOperationException("ChangeReasonHeaderFilter should have rejected this request.");
         if (SubjectAuthority.AuthorizeParticipantChange(http.User.ToAuthenticatedCaller()) is { } forbidden)
         {
             return forbidden.ToProblemResult();
+        }
+
+        var subjectScope = await svc.GetSubjectScopeAsync(subjectId, ct).ConfigureAwait(false);
+        IResult? scopeDenied = subjectScope is { } s
+            ? ExecutionScopeGuard.RequireStudyAndOptionalSite(
+                http,
+                s.StudyId.Value,
+                s.SiteId?.Value,
+                allowUnassignedSiteForScopedCaller: true)
+            : (ExecutionScopeGuard.RequireAnyStudyScope(http)
+                ?? ExecutionScopeGuard.ResolveSiteFilter(http, null, out _, out _));
+        if (scopeDenied is not null)
+        {
+            return scopeDenied;
         }
 
         var result = await svc.RandomizeAsync(subjectId, request, changeReason, ct).ConfigureAwait(false);
