@@ -107,6 +107,7 @@ must make it fail.
 | `readmes`             | `validate-readmes`                             |                 | Runs                                                                                                                                   |
 | `codeowners`          | `validate-codeowners`                          |                 | Runs                                                                                                                                   |
 | `workflow-security`   | `validate-workflow-security`, `action-pinning` |                 | Runs                                                                                                                                   |
+| `rulesets`            | `validate-rulesets`                            |                 | Runs                                                                                                                                   |
 | `imports`             | `validate-imports`                             |                 | Runs                                                                                                                                   |
 | `security`            | `audit-security`                               | yes             | Runs on the staged files                                                                                                               |
 | `deid`                | `deid-compliance-scan`                         | yes             | Runs on the staged files                                                                                                               |
@@ -195,11 +196,10 @@ Where it differs from CI:
   `security` whose gate already ran inside `Run Cadence quality sentinels` (the static security audit, secrets and DEID)
   are reported as _covered_ when `Run Cadence quality sentinels` passed; if that step failed, each runs on its own so
   the summary shows which gate failed. The Node install and UI build in later jobs are covered by earlier jobs.
-  The documentation build (`pnpm docs:build`) also starts with `cadence check` and Markdown validation; after that step
-  passed it runs with `CADENCE_DOCS_SKIP_CHECKS=1`, which skips them and saves about two and a half minutes.
-- **The docs build leaves the reports alone.** `pnpm docs:build` regenerates the RTM and IQ/OQ/PQ report as drafts;
-  `cadence ci` puts back the committed copies of both after the step, pass or fail, so the compliance job compares its
-  own regenerated reports with what is committed.
+  The documentation build (`pnpm docs:build`) also runs the read-only `openapi`, `schema-doc`, `markdown` and `rtm`
+  checks; after `Run Cadence quality sentinels` passed it runs with `CADENCE_DOCS_SKIP_CHECKS=1`, which skips the
+  duplicate `openapi`, `schema-doc` and `markdown` gates while keeping `check rtm`, saving several minutes without
+  touching `docs/SDLC` or `docs/schema`.
 - **The tests run once.** The .NET test step writes its TRX files to `TestResults/gxp`, and the compliance job's
   `Generate Compliance Reports` step builds the RTM and IQ/OQ/PQ report from them instead of running `gxp sync`, which
   would run every test again. It writes them to `TestResults/gxp/preview/` (to `docs/SDLC` only with
@@ -212,7 +212,7 @@ Where it differs from CI:
   fails with the install hint so an incomplete environment cannot report green. Pass `--allow-skip` to record missing
   tool steps as skipped, with the install hint, instead of failing.
 - **Not run:** the Playwright browser install, and the jobs that act on GitHub or container registries
-  (`container-security`, `classify`, `automerge`, `release-and-archive`, `deploy-docs`).
+  (`container-security`, `ci-gate`, `classify`, `automerge`, `release-and-archive`, `deploy-docs`).
 - **Commit first.** CI checks out the commit, so run `cadence ci` on committed work: gates that list files with git (the
   full DEID scan, for example) do not see untracked files, and a changed-files step falls back to the working tree only
   when the branch has no commits over the base.
@@ -221,6 +221,33 @@ Where it differs from CI:
 
 `tests/Cadence.UnitTests/Packages/LocalCiPlanTests.cs` reads `ci.yml` and fails when a job or step is added, renamed or
 removed, or runs a different command, until `packages/cli/src/Services/CiPlan.cs` follows.
+
+### `cadence rulesets`
+
+Validates the declarative GitHub Repository Rulesets in `.github/rulesets/*.json` (`main.json`, `release_branches.json`,
+`version_tags.json`) against `.github/workflows/*.yml` and reconciles them to GitHub via `gh api`.
+
+```bash
+pnpm cadence rulesets --dry-run                       # validate locally and preview planned gh api operations
+pnpm cadence rulesets                                 # reconcile .github/rulesets/*.json to GitHub via gh api
+pnpm cadence rulesets --repo fderuiter/cadence-clinical # target an explicit owner/repo
+```
+
+| Option                | Description                                                                                                                             |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `--dry-run`           | Validates `.github/rulesets/*.json` and workflow parity, prints the planned `gh api` reconciliation, and exits without mutating GitHub. |
+| `--repo <owner/repo>` | Target GitHub repository (`owner/repo`). Defaults to `GITHUB_REPOSITORY`, then `git remote get-url origin`.                             |
+
+Before making any API request, `cadence rulesets` runs the `rulesets` quality gate (`RulesetService.Validate`): every
+branch ruleset must set `strict_required_status_checks_policy: true`, pin required status checks to GitHub Actions
+(`integration_id: 15368`), require `CI Gate` and `Check for Merge Conflicts`, and match active pull-request workflow
+jobs (`CI Gate` in `.github/workflows/ci.yml` must use `if: always()` and evaluate every pull-request validation job).
+
+Without `--dry-run`, it fetches `gh api --paginate repos/<owner>/<repo>/rulesets?per_page=100`, updates existing
+rulesets by `name` (`PUT repos/<owner>/<repo>/rulesets/<id> --input <file>`), and creates missing ones
+(`POST repos/<owner>/<repo>/rulesets --input <file>`). Requires `gh` authenticated with `Administration: write` on the
+target repository, and exits `1` whenever validation fails or any `gh api` call returns a non-zero exit code or invalid
+JSON.
 
 ### `cadence dev`
 

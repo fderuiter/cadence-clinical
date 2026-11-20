@@ -229,10 +229,9 @@ public partial class LocalCiPlanTests
     }
 
     [Fact]
-    public void ParseWorkflow_ExtractsMultilineNeedsForAutomergeAndSyntheticWorkflows()
+    public void ParseWorkflow_ExtractsMultilineNeedsForCiGateAutomergeAndSyntheticWorkflows()
     {
-        Workflow.Single(j => j.Key == "automerge").Needs.Should().Equal(
-            "classify",
+        Workflow.Single(j => j.Key == "ci-gate").Needs.Should().Equal(
             "actionlint",
             "lint-and-static",
             "dotnet-quality",
@@ -244,6 +243,7 @@ public partial class LocalCiPlanTests
             "dotnet-tests",
             "accessibility-e2e",
             "compliance");
+        Workflow.Single(j => j.Key == "automerge").Needs.Should().Equal("classify", "ci-gate");
 
         var parsed = ParseWorkflow(
         [
@@ -312,6 +312,7 @@ public partial class LocalCiPlanTests
 
     [Theory]
     [InlineData("no-such-job", "Unknown job")]
+    [InlineData("ci-gate", "no local equivalent")]
     [InlineData("automerge", "no local equivalent")]
     [InlineData("release-and-archive", "no local equivalent")]
     [InlineData("deploy-docs", "no local equivalent")]
