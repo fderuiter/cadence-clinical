@@ -293,13 +293,19 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
       await flushPromises();
 
       expect(apiClient.get).toHaveBeenCalledWith(
-        expect.stringContaining("/api/v1/dictionaries/meddra/code?term=Hypertension&version=26.0"),
+        expect.stringContaining(
+          "/api/v1/dictionaries/meddra/code?term=Hypertension&version=26.0"
+        ),
         expect.any(Object)
       );
 
       expect(wrapper.vm.dictResults).toEqual([
         { code: "10019211", name: "Hypertension", dictionary: "MedDRA v26.0" },
-        { code: "10019218", name: "Hypertension aggravated", dictionary: "MedDRA v26.0" },
+        {
+          code: "10019218",
+          name: "Hypertension aggravated",
+          dictionary: "MedDRA v26.0",
+        },
       ]);
 
       expect(wrapper.text()).toContain("10019211");

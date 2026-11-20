@@ -25,143 +25,158 @@ describe("Controlled Terminology (CT) Live Validation Unit & UI Tests", () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.useRealTimers();
   });
 
   describe("eCRF Concept Code Lookup & Race Conditions", () => {
-    it("renders the concept_code field with concept_code input type and lookup container", () => {
+    it("omits unbacked concept_code lookup on EcrfView outside demo builds", () => {
       const wrapper = mount(EcrfView);
-      const container = wrapper.find("#field-container-concept_code");
-      expect(container.exists()).toBe(true);
-      expect(container.classes()).toContain("clinical-lookup-container");
-
-      const input = wrapper.find("input#concept_code");
-      expect(input.exists()).toBe(true);
-    });
-
-    it("triggers debounced asynchronous validation as the user types", async () => {
-      terminologyClient.validateSingleCode.mockResolvedValue({
-        concept_code: "C4872",
-        state: "VALID",
-        decode: "Adverse Event",
-        system: "NCI_Thesaurus",
-      });
-
-      const wrapper = mount(EcrfView);
-      const input = wrapper.find("input#concept_code");
-
-      // Set input value and trigger input event
-      await input.setValue("C4872");
-
-      // Initially, it shouldn't have been called (due to debounce)
-      expect(terminologyClient.validateSingleCode).not.toHaveBeenCalled();
-
-      // Fast-forward debounce timer (300ms)
-      await vi.advanceTimersByTimeAsync(300);
-
-      expect(terminologyClient.validateSingleCode).toHaveBeenCalledTimes(1);
-      expect(terminologyClient.validateSingleCode).toHaveBeenCalledWith(
-        "C4872",
-        expect.any(Object)
+      expect(wrapper.find("#field-container-concept_code").exists()).toBe(
+        false
       );
-
-      // Check visual success feedback in DOM
-      const indicator = wrapper.find("#lookup-status-concept_code");
-      expect(indicator.exists()).toBe(true);
-      expect(indicator.classes()).toContain("lookup-valid");
-      expect(indicator.text()).toContain('Code is valid: "Adverse Event"');
+      expect(terminologyClient.validateSingleCode).not.toHaveBeenCalled();
     });
 
-    it("displays correct visual state for INVALID codes", async () => {
-      terminologyClient.validateSingleCode.mockResolvedValue({
-        concept_code: "INVALID_CODE",
-        state: "INVALID",
-        error_message:
-          'Invalid code "INVALID_CODE". Not found in NCI Thesaurus.',
+    describe("in demo builds", () => {
+      beforeEach(() => {
+        vi.stubEnv("VITE_DEMO_MODE", "true");
       });
 
-      const wrapper = mount(EcrfView);
-      const input = wrapper.find("input#concept_code");
+      it("renders the concept_code field with concept_code input type and lookup container", () => {
+        const wrapper = mount(EcrfView);
+        const container = wrapper.find("#field-container-concept_code");
+        expect(container.exists()).toBe(true);
+        expect(container.classes()).toContain("clinical-lookup-container");
 
-      await input.setValue("INVALID_CODE");
-      await vi.advanceTimersByTimeAsync(300);
-
-      const indicator = wrapper.find("#lookup-status-concept_code");
-      expect(indicator.exists()).toBe(true);
-      expect(indicator.classes()).toContain("lookup-invalid");
-      expect(indicator.text()).toContain("Invalid code");
-    });
-
-    it("displays correct visual state for DEGRADED/offline terminology service", async () => {
-      terminologyClient.validateSingleCode.mockResolvedValue({
-        concept_code: "C123",
-        state: "DEGRADED",
-        error_message: "Terminology service degraded. Validation offline.",
+        const input = wrapper.find("input#concept_code");
+        expect(input.exists()).toBe(true);
       });
 
-      const wrapper = mount(EcrfView);
-      const input = wrapper.find("input#concept_code");
+      it("triggers debounced asynchronous validation as the user types", async () => {
+        terminologyClient.validateSingleCode.mockResolvedValue({
+          concept_code: "C4872",
+          state: "VALID",
+          decode: "Adverse Event",
+          system: "NCI_Thesaurus",
+        });
 
-      await input.setValue("C123");
-      await vi.advanceTimersByTimeAsync(300);
+        const wrapper = mount(EcrfView);
+        const input = wrapper.find("input#concept_code");
 
-      const indicator = wrapper.find("#lookup-status-concept_code");
-      expect(indicator.exists()).toBe(true);
-      expect(indicator.classes()).toContain("lookup-degraded");
-      expect(indicator.text()).toContain("service degraded");
-    });
+        // Set input value and trigger input event
+        await input.setValue("C4872");
 
-    it("discards stale asynchronous responses (race conditions guard)", async () => {
-      let resolveFirst, resolveSecond;
-      const firstPromise = new Promise((resolve) => {
-        resolveFirst = resolve;
+        // Initially, it shouldn't have been called (due to debounce)
+        expect(terminologyClient.validateSingleCode).not.toHaveBeenCalled();
+
+        // Fast-forward debounce timer (300ms)
+        await vi.advanceTimersByTimeAsync(300);
+
+        expect(terminologyClient.validateSingleCode).toHaveBeenCalledTimes(1);
+        expect(terminologyClient.validateSingleCode).toHaveBeenCalledWith(
+          "C4872",
+          expect.any(Object)
+        );
+
+        // Check visual success feedback in DOM
+        const indicator = wrapper.find("#lookup-status-concept_code");
+        expect(indicator.exists()).toBe(true);
+        expect(indicator.classes()).toContain("lookup-valid");
+        expect(indicator.text()).toContain('Code is valid: "Adverse Event"');
       });
-      const secondPromise = new Promise((resolve) => {
-        resolveSecond = resolve;
+
+      it("displays correct visual state for INVALID codes", async () => {
+        terminologyClient.validateSingleCode.mockResolvedValue({
+          concept_code: "INVALID_CODE",
+          state: "INVALID",
+          error_message:
+            'Invalid code "INVALID_CODE". Not found in NCI Thesaurus.',
+        });
+
+        const wrapper = mount(EcrfView);
+        const input = wrapper.find("input#concept_code");
+
+        await input.setValue("INVALID_CODE");
+        await vi.advanceTimersByTimeAsync(300);
+
+        const indicator = wrapper.find("#lookup-status-concept_code");
+        expect(indicator.exists()).toBe(true);
+        expect(indicator.classes()).toContain("lookup-invalid");
+        expect(indicator.text()).toContain("Invalid code");
       });
 
-      terminologyClient.validateSingleCode
-        .mockReturnValueOnce(firstPromise)
-        .mockReturnValueOnce(secondPromise);
+      it("displays correct visual state for DEGRADED/offline terminology service", async () => {
+        terminologyClient.validateSingleCode.mockResolvedValue({
+          concept_code: "C123",
+          state: "DEGRADED",
+          error_message: "Terminology service degraded. Validation offline.",
+        });
 
-      const wrapper = mount(EcrfView);
-      const input = wrapper.find("input#concept_code");
+        const wrapper = mount(EcrfView);
+        const input = wrapper.find("input#concept_code");
 
-      // Type first value
-      await input.setValue("C1");
-      await vi.advanceTimersByTimeAsync(300);
+        await input.setValue("C123");
+        await vi.advanceTimersByTimeAsync(300);
 
-      // Type second value (before first response resolves)
-      await input.setValue("C12");
-      await vi.advanceTimersByTimeAsync(300);
-
-      expect(terminologyClient.validateSingleCode).toHaveBeenCalledTimes(2);
-
-      // Resolve second response first (e.g. faster network response for second call)
-      resolveSecond({
-        concept_code: "C12",
-        state: "VALID",
-        decode: "Faster Response",
-        system: "NCI_Thesaurus",
+        const indicator = wrapper.find("#lookup-status-concept_code");
+        expect(indicator.exists()).toBe(true);
+        expect(indicator.classes()).toContain("lookup-degraded");
+        expect(indicator.text()).toContain("service degraded");
       });
-      await vi.runAllTimersAsync();
 
-      let indicator = wrapper.find("#lookup-status-concept_code");
-      expect(indicator.text()).toContain("Faster Response");
+      it("discards stale asynchronous responses (race conditions guard)", async () => {
+        let resolveFirst, resolveSecond;
+        const firstPromise = new Promise((resolve) => {
+          resolveFirst = resolve;
+        });
+        const secondPromise = new Promise((resolve) => {
+          resolveSecond = resolve;
+        });
 
-      // Resolve first response now (which is slower)
-      resolveFirst({
-        concept_code: "C1",
-        state: "VALID",
-        decode: "Slower Stale Response",
-        system: "NCI_Thesaurus",
+        terminologyClient.validateSingleCode
+          .mockReturnValueOnce(firstPromise)
+          .mockReturnValueOnce(secondPromise);
+
+        const wrapper = mount(EcrfView);
+        const input = wrapper.find("input#concept_code");
+
+        // Type first value
+        await input.setValue("C1");
+        await vi.advanceTimersByTimeAsync(300);
+
+        // Type second value (before first response resolves)
+        await input.setValue("C12");
+        await vi.advanceTimersByTimeAsync(300);
+
+        expect(terminologyClient.validateSingleCode).toHaveBeenCalledTimes(2);
+
+        // Resolve second response first (e.g. faster network response for second call)
+        resolveSecond({
+          concept_code: "C12",
+          state: "VALID",
+          decode: "Faster Response",
+          system: "NCI_Thesaurus",
+        });
+        await vi.runAllTimersAsync();
+
+        let indicator = wrapper.find("#lookup-status-concept_code");
+        expect(indicator.text()).toContain("Faster Response");
+
+        // Resolve first response now (which is slower)
+        resolveFirst({
+          concept_code: "C1",
+          state: "VALID",
+          decode: "Slower Stale Response",
+          system: "NCI_Thesaurus",
+        });
+        await vi.runAllTimersAsync();
+
+        // Indicator must STILL show "Faster Response" and MUST NOT have been overwritten by stale response!
+        indicator = wrapper.find("#lookup-status-concept_code");
+        expect(indicator.text()).toContain("Faster Response");
+        expect(indicator.text()).not.toContain("Slower Stale Response");
       });
-      await vi.runAllTimersAsync();
-
-      // Indicator must STILL show "Faster Response" and MUST NOT have been overwritten by stale response!
-      indicator = wrapper.find("#lookup-status-concept_code");
-      expect(indicator.text()).toContain("Faster Response");
-      expect(indicator.text()).not.toContain("Slower Stale Response");
     });
   });
 
