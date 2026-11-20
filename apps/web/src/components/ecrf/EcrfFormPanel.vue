@@ -1107,7 +1107,8 @@ function activityLabel(activity: StudyPlannedActivityOption): string {
 watch(
   () => props.enrollmentContext?.enrollmentId ?? props.enrollmentId ?? "",
   (next) => {
-    if (next) enrollmentId.value = next;
+    enrollmentId.value = next;
+    openError.value = null;
   }
 );
 

@@ -1,12 +1,14 @@
 import fs from "fs";
 import path from "path";
 
+import { BLOG_FEED_PATH, isDraftBlogPostFile } from "./blog.mjs";
 import rootDocsModule from "./rootDocs.cjs";
 
 const { STAGED_ROOT_DOCS } = rootDocsModule;
 
 const REPO_URL = "https://github.com/fderuiter/cadence-clinical";
 const BRANCH = "main";
+const GENERATED_STATIC_ENDPOINTS = new Set([BLOG_FEED_PATH]);
 
 const CONTROL_CHARS_RE = /[\u0000-\u001f]/g;
 const COMBINING_MARKS_RE = /[\u0300-\u036f]/g;
@@ -439,6 +441,23 @@ function resolveLinkTarget(href, pageDir, docsDir, repoRoot, currentFile = "") {
         samePage: false,
       };
     }
+    const mdCandidate =
+      exists && !isDir
+        ? absolute
+        : !exists && fs.existsSync(`${absolute}.md`)
+          ? `${absolute}.md`
+          : null;
+    if (mdCandidate && isDraftBlogPostFile(mdCandidate)) {
+      const draftRelToRepo = path
+        .relative(repoRoot, mdCandidate)
+        .replace(/\\/g, "/");
+      return {
+        rewrittenHref: `${REPO_URL}/blob/${BRANCH}/${draftRelToRepo}${anchor}`,
+        portalTargetFile: null,
+        anchor: "",
+        samePage: false,
+      };
+    }
 
     let portalTargetFile = null;
     if (isDir) {
@@ -544,11 +563,15 @@ export function assertThemeLinksExist(themeConfig, docsDir, options = {}) {
         link.startsWith("/") &&
         !isCohostedSubpathLink(link, cohostedSubpaths)
       ) {
+        const [cleanLink, rawAnchor] = splitAnchor(link);
+        if (GENERATED_STATIC_ENDPOINTS.has(cleanLink)) {
+          visit(item.items);
+          continue;
+        }
         const filePath = resolveThemePagePath(docsDir, link);
         if (!filePath) {
           missingPages.push(link);
         } else {
-          const [, rawAnchor] = splitAnchor(link);
           const fragment = decodeAnchorFragment(rawAnchor);
           if (fragment) {
             const anchors = getFileAnchors(filePath);

@@ -44,7 +44,7 @@ public static class PathPatternValidatorService
         foreach (var file in boundaryCheckFiles)
         {
             string rel = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
-            if (rel.EndsWith(".vue", StringComparison.OrdinalIgnoreCase) && !rel.StartsWith("apps/", StringComparison.Ordinal) && !rel.StartsWith("packages/", StringComparison.Ordinal))
+            if (rel.EndsWith(".vue", StringComparison.OrdinalIgnoreCase) && !rel.StartsWith("apps/", StringComparison.Ordinal) && !rel.StartsWith("packages/", StringComparison.Ordinal) && !rel.StartsWith("docs/.vitepress/", StringComparison.Ordinal))
             {
                 Console.WriteLine($"[PATH VIOLATION] Vue file outside frontend boundary: {rel}");
                 violations++;
