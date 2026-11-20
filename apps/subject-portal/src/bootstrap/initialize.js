@@ -26,9 +26,10 @@ import {
   loadAssignedTasks,
   renderTasks,
 } from "../features/tasks.js";
+import { loadParticipantWallet } from "../features/wallet.js";
 import { state } from "../stores/state.js";
 import { getAssignmentsFromDB, getInstrumentsFromDB } from "../sync-queue.js";
-import { isDemoBuild, isDemoModeActive } from "../utils/demoMode.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
 import { bindPortalControls } from "./controls.js";
 import { mountPortal } from "./mount.js";
 
@@ -38,14 +39,23 @@ export async function initializeApp() {
   hydrateSiteSupportContact();
   await restoreSession();
 
-  // Initialize MSW Mock Gateway Worker only in explicit demo builds or opt-in MSW runs
+  // Initialize and await MSW Mock Gateway Worker in explicit demo builds or opt-in MSW runs before mounting views
+  const shouldEnableMsw =
+    import.meta.env.MODE === "demo" ||
+    import.meta.env.VITE_DEMO_MODE === "true" ||
+    import.meta.env.VITE_ENABLE_MSW === "true";
+
   if (
     typeof window !== "undefined" &&
-    (isDemoBuild() || import.meta.env?.VITE_ENABLE_MSW === "true")
+    !window.__MOCK_TEST_ENV__ &&
+    shouldEnableMsw
   ) {
-    import("../mocks/browser.js")
-      .then(({ startMswWorker }) => startMswWorker())
-      .catch((err) => console.warn("[MSW] Failed to initialize worker:", err));
+    try {
+      const { startMswWorker } = await import("../mocks/browser.js");
+      await startMswWorker();
+    } catch (err) {
+      console.warn("[MSW] Failed to initialize worker:", err);
+    }
   }
 
   // Mount Vue application
@@ -87,6 +97,9 @@ export async function initializeApp() {
     await loadAssignedInstruments(userId);
     await loadCompliance(userId);
     await loadNotifications(userId);
+    void loadParticipantWallet().catch((err) => {
+      console.warn("[Wallet] Initial wallet hydration warning:", err?.message);
+    });
   } else if (isDemoModeActive()) {
     // Explicit demo build: seed synthetic study data
     state.assignments = JSON.parse(JSON.stringify(MOCK_ASSIGNMENTS));
@@ -127,15 +140,20 @@ export async function initializeApp() {
     await checkPendingReconsent();
   }
 
-  // Graceful Service Worker Registration
+  // Graceful Service Worker Registration (skipped when startMswWorker already registered unified sw.js?msw=1)
   if (
     typeof navigator !== "undefined" &&
     "serviceWorker" in navigator &&
-    !window.__MOCK_TEST_ENV__
+    !window.__MOCK_TEST_ENV__ &&
+    !shouldEnableMsw
   ) {
+    const swBase = (import.meta.env.BASE_URL || "/subject-portal/").replace(
+      /\/?$/,
+      "/"
+    );
     window.addEventListener("load", () => {
       navigator.serviceWorker
-        .register("/subject-portal/sw.js")
+        .register(`${swBase}sw.js`, { scope: swBase })
         .then((reg) => {
           console.log("Service Worker registered with scope:", reg.scope);
         })
@@ -145,14 +163,18 @@ export async function initializeApp() {
     });
   }
 
-  // Initial sync & sync queue rendering (stipend auto-disbursement runs only in demo builds)
-  await syncOfflineQueue(false, { autoDisburse: isDemoModeActive() });
+  // Initial sync & sync queue rendering (stipend evaluation runs for authenticated or demo sessions)
+  await syncOfflineQueue(false, {
+    autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
+  });
 
   // Attach online/offline listener
   if (typeof window !== "undefined") {
     window.addEventListener("online", () => {
       console.log("[App] Network online detected. Triggering sync...");
-      syncOfflineQueue(false, { autoDisburse: isDemoModeActive() });
+      syncOfflineQueue(false, {
+        autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
+      });
     });
   }
 

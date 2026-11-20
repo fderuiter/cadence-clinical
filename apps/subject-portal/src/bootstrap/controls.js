@@ -1,5 +1,6 @@
 // Event bindings for the controls the feature modules own. Tab ARIA and
 // keyboard navigation live declaratively in TabBar.vue + router/routes.js.
+import { isAuthenticatedSession } from "../api/client.js";
 import { retryCompliance } from "../features/compliance.js";
 import {
   loadConsentDetails,
@@ -26,7 +27,9 @@ export function bindPortalControls() {
   const btnSyncNow = document.getElementById("btn-sync-now");
   if (btnSyncNow) {
     btnSyncNow.addEventListener("click", () => {
-      syncOfflineQueue(true, { autoDisburse: isDemoModeActive() });
+      syncOfflineQueue(true, {
+        autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
+      });
     });
   }
 

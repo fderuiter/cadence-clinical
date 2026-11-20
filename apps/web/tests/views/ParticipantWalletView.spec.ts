@@ -589,4 +589,337 @@ describe("ParticipantWalletView Mutation Error Handling (@req: PRD-SYS-182)", ()
       expect(cancelW9Btn.attributes("disabled")).toBeUndefined();
     });
   });
+
+  describe("masked payout credentials and server-backed receipt OCR", () => {
+    it("masks routing identifiers and never renders raw routing numbers", async () => {
+      global.fetch = createMockFetch((url) => {
+        if (url === "/api/v1/payments/participant/wallets") {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify([
+                {
+                  ...mockWallet,
+                  achRoutingNumber: "021000021",
+                  achAccountMask: "ACH-***4321",
+                },
+              ]),
+              { status: 200, headers: { "Content-Type": "application/json" } }
+            )
+          );
+        }
+        return null;
+      });
+
+      const wrapper = await mountComponent();
+      await wrapper.vm.selectWallet(wrapper.vm.wallets[0]);
+      await flushPromises();
+
+      expect(wrapper.text()).not.toContain("021000021");
+      expect(wrapper.text()).toContain("*****0021");
+      expect(wrapper.text()).toContain("ACH-***4321");
+    });
+
+    it("uploads base64 receipt bytes to /api/v1/payments/participant/expenses/ocr-extract and populates extracted fields", async () => {
+      let capturedOcrBody: any = null;
+      global.fetch = createMockFetch((url, init) => {
+        if (url === "/api/v1/payments/participant/expenses/ocr-extract") {
+          capturedOcrBody = JSON.parse(String(init?.body || "{}"));
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                ocrReadable: true,
+                merchantName: "SHELL SERVICE STATION",
+                expenseDate: "2026-09-14",
+                grossAmount: 42.75,
+                taxDeduction: 0,
+                netAmount: 42.75,
+                category: "FUEL",
+                confidenceScore: 0.96,
+                rawText: "SHELL SERVICE STATION\nDATE 2026-09-14\nTOTAL $42.75",
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } }
+            )
+          );
+        }
+        return null;
+      });
+
+      const wrapper = await mountComponent();
+      wrapper.vm.activeTab = "ocr";
+      await flushPromises();
+
+      const receiptFile = new File(
+        ["<svg><text>SHELL SERVICE STATION $42.75</text></svg>"],
+        "fuel_receipt.svg",
+        { type: "image/svg+xml" }
+      );
+      await wrapper.vm.extractReceiptFromFile(receiptFile);
+      await flushPromises();
+
+      expect(capturedOcrBody).not.toBeNull();
+      expect(capturedOcrBody.filename).toBe("fuel_receipt.svg");
+      expect(capturedOcrBody.imageBase64).toBeTruthy();
+      expect(wrapper.vm.expenseForm.merchant_name).toBe(
+        "SHELL SERVICE STATION"
+      );
+      expect(wrapper.vm.expenseForm.gross_amount).toBe(42.75);
+      expect(wrapper.vm.expenseForm.category).toBe("FUEL");
+      expect(wrapper.find("#staff-ocr-warning-banner").exists()).toBe(false);
+    });
+
+    it("never fabricates merchant or amount when OCR returns unreadable image", async () => {
+      global.fetch = createMockFetch((url) => {
+        if (url === "/api/v1/payments/participant/expenses/ocr-extract") {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                ocrReadable: false,
+                merchantName: "",
+                expenseDate: "",
+                grossAmount: 0,
+                taxDeduction: 0,
+                netAmount: 0,
+                category: "OTHER",
+                confidenceScore: 0,
+                rawText: "",
+                warning: "Receipt image is blank or unreadable.",
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } }
+            )
+          );
+        }
+        return null;
+      });
+
+      const wrapper = await mountComponent();
+      wrapper.vm.activeTab = "ocr";
+      await flushPromises();
+
+      const blankFile = new File([new Uint8Array([0, 1, 2])], "blank.png", {
+        type: "image/png",
+      });
+      await wrapper.vm.extractReceiptFromFile(blankFile);
+      await flushPromises();
+
+      expect(wrapper.vm.expenseForm.merchant_name).toBe("");
+      expect(wrapper.vm.expenseForm.gross_amount).toBe(0);
+      expect(wrapper.vm.expenseForm.ocr_confidence).toBe(0);
+      expect(wrapper.find("#staff-ocr-warning-banner").exists()).toBe(true);
+      expect(wrapper.find("#staff-ocr-warning-banner").text()).toContain(
+        "Receipt image is blank or unreadable."
+      );
+    });
+
+    it("renders camelCase .NET wallet columns, balance inquiry, visit verification, claim review, payout, and ledger transactions without runtime errors", async () => {
+      let visitVerifiedCalled = false;
+      let claimReviewedDecision = "";
+      let disburseCalled = false;
+
+      global.fetch = createMockFetch((url, init) => {
+        if (url === "/api/v1/payments/participant/wallets") {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify([
+                {
+                  id: "w-camel-1",
+                  subjectId: "SUBJ-2001",
+                  studyId: "STUDY-DCT-001",
+                  siteId: "SITE-101",
+                  currentBalance: 225.0,
+                  lifetimeStipends: 150.0,
+                  lifetimeReimbursements: 75.0,
+                  lifetimeDisbursements: 50.0,
+                  taxableYtd: 510.0,
+                  is1099ThresholdExceeded: false,
+                  w9Status: "SUBMITTED",
+                  currency: "USD",
+                  status: "ACTIVE",
+                  cardType: "RELOADABLE_DEBIT",
+                  cardStatus: "ACTIVE",
+                  virtualCardMask: "**** **** **** 7788",
+                  virtualCardExpiry: "11/29",
+                  achRoutingMask: "*****0021",
+                  achAccountMask: "ACH-***8899",
+                  achAccountHolder: "Participant SUBJ-2001",
+                  antiCoercionCap: 300.0,
+                  taxIdLastFour: "8899",
+                },
+              ]),
+              { status: 200, headers: { "Content-Type": "application/json" } }
+            )
+          );
+        }
+        if (url === "/api/v1/payments/participant/stipend-rules") {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify([
+                {
+                  id: "rule-1",
+                  visitCode: "V1_SCREENING",
+                  visitName: "Screening & Consent",
+                  amount: 75.0,
+                  currency: "USD",
+                  taxable: false,
+                  antiCoercionCap: 100.0,
+                  isMilestone: false,
+                },
+              ]),
+              { status: 200, headers: { "Content-Type": "application/json" } }
+            )
+          );
+        }
+        if (url === "/api/v1/payments/participant/expenses") {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify([
+                {
+                  id: "claim-camel-12345678",
+                  subjectId: "SUBJ-2001",
+                  expenseDate: "2026-10-12",
+                  category: "LODGING",
+                  merchantName: "CLINICAL INN",
+                  grossAmount: 140.0,
+                  taxDeduction: 0,
+                  netAmount: 140.0,
+                  status: "PENDING_REVIEW",
+                  receiptImageName: "hotel_receipt.png",
+                },
+              ]),
+              { status: 200, headers: { "Content-Type": "application/json" } }
+            )
+          );
+        }
+        if (url === "/api/v1/payments/participant/transactions") {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify([
+                {
+                  id: "tx-camel-1",
+                  createdAt: "2026-10-12T10:00:00Z",
+                  subjectId: "SUBJ-2001",
+                  studyId: "STUDY-DCT-001",
+                  transactionType: "STIPEND_CREDIT",
+                  amount: 75.0,
+                  balanceAfter: 225.0,
+                  description: "Screening visit stipend credited",
+                },
+              ]),
+              { status: 200, headers: { "Content-Type": "application/json" } }
+            )
+          );
+        }
+        if (url.includes("/tax-1099-status")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                walletId: "w-camel-1",
+                subjectId: "SUBJ-2001",
+                taxableYtd: 510.0,
+                thresholdAmount: 600.0,
+                thresholdPercentage: 85.0,
+                is1099ThresholdExceeded: false,
+                w9Status: "SUBMITTED",
+                warningLevel: "APPROACHING",
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } }
+            )
+          );
+        }
+        if (url.includes("/balance")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                walletId: "w-camel-1",
+                subjectId: "SUBJ-2001",
+                availableBalance: 225.0,
+                pendingClaimsTotal: 140.0,
+                lifetimeStipends: 150.0,
+                lifetimeReimbursements: 75.0,
+                lifetimeDisbursements: 50.0,
+                taxableYtd: 510.0,
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } }
+            )
+          );
+        }
+        if (url === "/api/v1/payments/participant/events/visit-verified") {
+          visitVerifiedCalled = true;
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                amount: 75.0,
+                currentBalance: 300.0,
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } }
+            )
+          );
+        }
+        if (url.includes("/expenses/claim-camel-12345678/review")) {
+          const parsed = JSON.parse(String(init?.body || "{}"));
+          claimReviewedDecision = parsed.status;
+          return Promise.resolve(
+            new Response(JSON.stringify({ status: parsed.status }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            })
+          );
+        }
+        if (url.includes("/wallets/w-camel-1/disburse")) {
+          disburseCalled = true;
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                id: "disb-1",
+                status: "DISPATCHED",
+                referenceNumber: "DISB-ACH-998877",
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } }
+            )
+          );
+        }
+        return null;
+      });
+
+      const wrapper = await mountComponent();
+      expect(wrapper.text()).toContain("SUBJ-2001");
+      expect(wrapper.text()).toContain("$225.00 USD");
+      expect(wrapper.text()).toContain("$300.00 max");
+      expect(wrapper.text()).toContain("**** **** **** 7788");
+
+      // Inspect wallet -> renders camelCase balance inquiry & tax status cleanly
+      await wrapper.vm.selectWallet(wrapper.vm.wallets[0]);
+      await flushPromises();
+      expect(wrapper.text()).toContain("APPROACHING (85.0%)");
+      expect(wrapper.text()).toContain("$140.00");
+
+      // Complete visit verification
+      wrapper.vm.activeTab = "stipends";
+      await flushPromises();
+      await wrapper.vm.triggerVisitVerified();
+      await flushPromises();
+      expect(visitVerifiedCalled).toBe(true);
+      expect(wrapper.vm.visitTriggerSuccess).toContain("Credited $75.00");
+
+      // Complete 1-click coordinator claim review
+      wrapper.vm.activeTab = "approvals";
+      await flushPromises();
+      expect(wrapper.text()).toContain("CLINICAL INN");
+      await wrapper.vm.reviewClaim("claim-camel-12345678", "APPROVED");
+      await flushPromises();
+      expect(claimReviewedDecision).toBe("APPROVED");
+
+      // Complete payout action & render transaction ledger tab
+      wrapper.vm.activeTab = "wallets";
+      await wrapper.vm.selectWallet(wrapper.vm.wallets[0]);
+      await flushPromises();
+      await wrapper.vm.triggerDisbursement();
+      await flushPromises();
+      expect(disburseCalled).toBe(true);
+      expect(wrapper.vm.activeTab).toBe("disbursements");
+      expect(wrapper.text()).toContain("STIPEND_CREDIT");
+      expect(wrapper.text()).toContain("+$75.00");
+      expect(wrapper.text()).toContain("$225.00");
+      expect(toastStore.toasts).toHaveLength(0);
+    });
+  });
 });

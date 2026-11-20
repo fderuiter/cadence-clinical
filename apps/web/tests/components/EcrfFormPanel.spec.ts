@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { nextTick } from "vue";
 import { mount, flushPromises, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
+import { createMemoryHistory, createRouter } from "vue-router";
 import EcrfFormPanel from "../../src/components/ecrf/EcrfFormPanel.vue";
 import { ecrfFormsApi } from "../../src/api/ecrfFormsApi";
 import { ApiError } from "../../src/api/client";
@@ -1411,6 +1412,138 @@ describe("EcrfFormPanel: account-scoped browser drafts", () => {
     expect(
       (wrapper.find("#ecrf-item-COMMENT").element as HTMLInputElement).value
     ).toBe("quota note");
+  });
+
+  it("hides raw UUID inputs and provides structured Collection spec and Visit selectors when Clinical Canvas supplies enrollmentContext", async () => {
+    const opened = form();
+    vi.mocked(ecrfFormsApi.openForm).mockResolvedValue(opened as never);
+
+    wrapper = mount(EcrfFormPanel, {
+      props: {
+        enrollmentContext: {
+          enrollmentId: "0192f3c4-5e6a-7b8c-9d0e-00000000e001",
+          subjectCode: "017-0001",
+          collectionSpecs: [
+            { id: "VS", name: "Vital Signs", plannedActivityIds: ["WEEK2"] },
+            { id: "AE", name: "Adverse Events", plannedActivityIds: ["WEEK4"] },
+          ],
+          plannedActivities: [
+            { id: "WEEK2", name: "Week 2", studyDay: 14 },
+            { id: "WEEK4", name: "Week 4", studyDay: 28 },
+          ],
+        },
+      },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    expect(wrapper.find("#ecrf-form-load").exists()).toBe(false);
+    expect(wrapper.find("#ecrf-form-id").exists()).toBe(false);
+    expect(wrapper.find("#ecrf-enrollment-id").exists()).toBe(false);
+
+    const specSelect = wrapper.find("#ecrf-collection-spec");
+    const visitSelect = wrapper.find("#ecrf-planned-activity");
+    expect(specSelect.element.tagName).toBe("SELECT");
+    expect(visitSelect.element.tagName).toBe("SELECT");
+
+    await specSelect.setValue("VS");
+    await nextTick();
+    expect(
+      visitSelect.findAll("option").map((opt) => opt.attributes("value"))
+    ).toEqual(["", "WEEK2"]);
+
+    await visitSelect.setValue("WEEK2");
+    await wrapper.find("#ecrf-collected-at").setValue("2027-03-14T09:00");
+    await wrapper.find("#ecrf-form-new").trigger("submit");
+    await flushPromises();
+
+    expect(ecrfFormsApi.openForm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        enrollmentId: "0192f3c4-5e6a-7b8c-9d0e-00000000e001",
+        collectionSpecId: "VS",
+        plannedActivityId: "WEEK2",
+      })
+    );
+    const sentFormId = vi.mocked(ecrfFormsApi.openForm).mock.calls[0][0].formId;
+    expect(sentFormId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    );
+  });
+
+  it("links recorded form item revisions and queries directly to observations in Clinical Canvas", async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/studies/:studyCode?",
+          name: "study",
+          component: { template: "<div />" },
+        },
+      ],
+    });
+    await router.push("/studies/CAD-101");
+    await router.isReady();
+
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
+    vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([
+      {
+        query_id: "q-canvas-1",
+        form_id: FORM_ID,
+        enrollment_id: "enr-1",
+        item_id: "SYSBP",
+        observation_id: OBS_ID,
+        revision: 1,
+        current_revision: 1,
+        value_changed: false,
+        status: "open",
+        text: "Verify blood pressure",
+        messages: [
+          {
+            kind: "raised",
+            text: "Verify blood pressure",
+            by: "cra1",
+            at: "2027-03-14T10:00:00Z",
+          },
+        ],
+        raised_by: "cra1",
+        raised_at: "2027-03-14T10:00:00Z",
+        version: 1,
+      },
+    ] as never);
+
+    wrapper = mount(EcrfFormPanel, {
+      props: {
+        formId: FORM_ID,
+        observationLocation: (obsId, fId) => ({
+          name: "study",
+          params: { studyCode: "CAD-101" },
+          query: {
+            stage: "conduct",
+            form: `collection_instance:${fId}`,
+            observation: `observation:${obsId}`,
+          },
+        }),
+        formLocation: (fId) => ({
+          name: "study",
+          params: { studyCode: "CAD-101" },
+          query: { stage: "conduct", form: `collection_instance:${fId}` },
+        }),
+      },
+      global: { plugins: [router] },
+    });
+    await flushPromises();
+
+    const itemObsLink = wrapper.find("#ecrf-item-observation-SYSBP");
+    expect(itemObsLink.exists()).toBe(true);
+    expect(itemObsLink.attributes("href")).toBe(
+      `/studies/CAD-101?stage=conduct&form=collection_instance:${FORM_ID}&observation=observation:${OBS_ID}`
+    );
+
+    const queryObsLink = wrapper.find("#query-observation-q-canvas-1");
+    expect(queryObsLink.exists()).toBe(true);
+    expect(queryObsLink.attributes("href")).toBe(
+      `/studies/CAD-101?stage=conduct&form=collection_instance:${FORM_ID}&observation=observation:${OBS_ID}`
+    );
   });
 });
 

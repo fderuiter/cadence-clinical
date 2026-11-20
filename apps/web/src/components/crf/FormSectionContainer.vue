@@ -7,7 +7,6 @@
   >
     <!-- Section Header Card -->
     <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       v-keyboard-click="toggleCollapse"
       class="section-header-card section-header"

@@ -1,12 +1,13 @@
+import { state } from "../stores/state.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 
 /**
- * Screens available outside explicit demo builds (docs/web/API_MIGRATION.md).
+ * Screens available to any session outside explicit demo builds (docs/web/API_MIGRATION.md).
  *
- * Participant wallet and plain-language trial results have no live .NET
- * endpoints and `subject` holds zero payments permissions
- * (PermissionMatrix.Payments.cs), so they remain hidden from navigation and
- * redirect direct visits to UnavailableView outside demo builds.
+ * Plain-language trial results (`lay-summaries`) remains gated to demo builds
+ * until live trial summary publication endpoints exist. Participant wallet
+ * (`wallet`) is enabled for authenticated participants via signed self-service
+ * endpoints (`/api/v1/payments/participant/me/*`) and in explicit demo builds.
  */
 export const AVAILABLE_SCREENS = new Set([
   "tasks",
@@ -15,6 +16,8 @@ export const AVAILABLE_SCREENS = new Set([
   "inbox",
   "consent",
 ]);
+
+export const AUTHENTICATED_SCREENS = new Set(["wallet"]);
 
 const ALWAYS_AVAILABLE = new Set(["unavailable"]);
 
@@ -39,5 +42,12 @@ export function isScreenAvailable(routeName, env = import.meta.env) {
   if (!routeName) return false;
   if (ALWAYS_AVAILABLE.has(routeName)) return true;
   if (isDemoModeActive(env)) return true;
+  if (AUTHENTICATED_SCREENS.has(routeName)) {
+    return Boolean(
+      state.session?.token &&
+      state.session?.userId &&
+      !state.session?.isOfflineMode
+    );
+  }
   return AVAILABLE_SCREENS.has(routeName);
 }

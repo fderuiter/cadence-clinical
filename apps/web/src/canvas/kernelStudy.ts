@@ -62,3 +62,62 @@ export async function findKernelEnrollmentRef(
   const ref = parseNodeRef(enrollments[0].node.ref);
   return ref?.kind === "enrollment" ? ref : null;
 }
+
+export interface StudyCollectionSpecOption {
+  id: string;
+  name: string;
+  plannedActivityIds: string[];
+}
+
+export interface StudyPlannedActivityOption {
+  id: string;
+  name: string;
+  studyDay: number | null;
+}
+
+export interface StudyScheduleOptions {
+  versionRef: string;
+  collectionSpecs: StudyCollectionSpecOption[];
+  plannedActivities: StudyPlannedActivityOption[];
+}
+
+/**
+ * Structured form and visit choices from the study's active (or latest visible) protocol version's Schedule of
+ * Activities (ADR-2475), or null when the kernel has no visible protocol version or schedule for the study.
+ */
+export async function findStudyScheduleOptions(
+  studyCode: string
+): Promise<StudyScheduleOptions | null> {
+  if (
+    typeof kernelApi.listProtocolVersions !== "function" ||
+    typeof kernelApi.getScheduleOfActivities !== "function"
+  ) {
+    return null;
+  }
+  const studyRef = await findKernelStudyRef(studyCode);
+  if (!studyRef) return null;
+  const versions = await kernelApi.listProtocolVersions(studyRef);
+  const chosen =
+    versions.find((v) => v.ref && !v.mask && v.status === "Approved") ??
+    versions.find((v) => v.ref && !v.mask);
+  if (!chosen?.ref) return null;
+  const soa = await kernelApi.getScheduleOfActivities(chosen.ref);
+  return {
+    versionRef: soa.version,
+    collectionSpecs: soa.rows.map((row) => ({
+      id: row.collection_spec_id,
+      name: row.name,
+      plannedActivityIds: row.columns
+        .map((idx) => soa.columns[Number(idx)]?.activity_id)
+        .filter((id): id is string => Boolean(id)),
+    })),
+    plannedActivities: soa.columns.map((col) => ({
+      id: col.activity_id,
+      name: col.name,
+      studyDay:
+        col.study_day !== null && col.study_day !== undefined
+          ? Number(col.study_day)
+          : null,
+    })),
+  };
+}

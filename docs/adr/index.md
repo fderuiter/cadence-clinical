@@ -432,6 +432,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-328: Preservation of CDASH Type Definition Pristine State](2026-09-11-preservation-of-cdash-type-definition-pristine-state.md) (2026-09-11)
 - [ADR-2544: Shared Reactive Focus Containment and Global Reduced-Motion Tokens](2026-11-19-shared-reactive-focus-containment-and-reduced-motion-tokens.md) (2026-11-19)
 - [ADR-2545: Centralize Focus Containment Primitives](2026-11-19-centralize-focus-containment-primitives.md) (2026-11-19)
+- [ADR-2546: Isolate Static Demo Builds with Stateful MSW Handlers](2026-11-19-isolate-static-demo-builds-with-stateful-msw-handlers.md) (2026-11-19)
 
 ### 7. DevOps, Tooling & CI/CD
 
@@ -602,4 +603,5 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2814: Standardize MassTransit EF Core Transactional Outbox Across Core Services](2026-10-07-standardize-masstransit-ef-core-transactional-outbox-across-core-services.md) (2026-10-07)
 - [ADR-2815: Bulk Laboratory Reference Range Import & Persistent Audit Store](2026-10-12-bulk-laboratory-reference-range-import-persistent-audit-store.md) (2026-10-12)
 - [ADR-2816: Retire Orphaned Legacy Web Type Schemas](2026-11-19-retire-orphaned-legacy-web-type-schemas.md) (2026-11-19)
-- [ADR-2817: Recalibrate Shared Color Tokens and WCAG 2.2 AA Contrast Gates](2026-11-19-recalibrate-shared-color-tokens-and-wcag-22-aa-contrast-gates.md) (2026-11-19)
+- [ADR-2817: Caller-Bound Participant Self-Service Wallet and Receipt OCR Capabilities](2026-11-19-caller-bound-participant-self-service-wallet-and-receipt-ocr-capabilities.md) (2026-11-19)
+- [ADR-2818: Recalibrate Shared Color Tokens and WCAG 2.2 AA Contrast Gates](2026-11-19-recalibrate-shared-color-tokens-and-wcag-22-aa-contrast-gates.md) (2026-11-19)

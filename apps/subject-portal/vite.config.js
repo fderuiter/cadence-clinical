@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from "vite";
 import vue from "@vitejs/plugin-vue";
 import path from "path";
 import { fileURLToPath } from "url";
+import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock-worker.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,8 +12,28 @@ const DEV_PORT = 5174;
 // the front proxy).
 const GATEWAY_URL = process.env.CADENCE_GATEWAY_URL || "http://localhost:8000";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   base: "/subject-portal/",
+  cacheDir: mode === "demo" ? "node_modules/.vite-demo" : "node_modules/.vite",
+  optimizeDeps: {
+    entries: [
+      "index.html",
+      "src/**/*.js",
+      "src/**/*.vue",
+      "../../packages/ui/index.js",
+      "../../packages/usdm-schemas/src/index.ts",
+    ],
+    include: [
+      "vue",
+      "vue-router",
+      "pinia",
+      "keycloak-js",
+      "msw",
+      "msw/browser",
+      "ui > axe-core",
+      "usdm-schemas > zod",
+    ],
+  },
   plugins: [
     vue(),
     {
@@ -39,6 +60,46 @@ export default defineConfig({
         return html.replace(/%VITE_APP_TITLE%/g, title);
       },
     },
+    {
+      name: "e2e-module-entrypoints",
+      apply: "build",
+      config(userConfig) {
+        if (userConfig.build?.outDir !== "node_modules/.e2e-prod") {
+          return undefined;
+        }
+        return {
+          build: {
+            rollupOptions: {
+              preserveEntrySignatures: "exports-only",
+              input: {
+                main: path.resolve(__dirname, "index.html"),
+                "src/index": path.resolve(__dirname, "src/index.js"),
+                "src/sync-queue": path.resolve(__dirname, "src/sync-queue.js"),
+              },
+              output: {
+                entryFileNames: (chunkInfo) =>
+                  chunkInfo.name.startsWith("src/")
+                    ? "[name].js"
+                    : "assets/[name]-[hash].js",
+              },
+            },
+          },
+        };
+      },
+      transformIndexHtml: {
+        order: "post",
+        handler(html, ctx) {
+          if (ctx.bundle && html.includes("/subject-portal/assets/main-")) {
+            return html.replace(
+              "</body>",
+              '<script type="module">import "/subject-portal/src/index.js";import "/subject-portal/src/sync-queue.js";</script></body>'
+            );
+          }
+          return html;
+        },
+      },
+    },
+    createStripMockWorkerInProdPlugin(__dirname),
   ],
   server: {
     port: DEV_PORT,
@@ -99,4 +160,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

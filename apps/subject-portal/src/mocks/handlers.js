@@ -1,7 +1,334 @@
 import { http, HttpResponse, passthrough } from "msw";
-import { isGatewayApiCall, validateGatewayRequest } from "ui/testing";
+import { evaluateDemoBoundaryRequest } from "ui/testing";
+import { isDemoBuild } from "../utils/demoMode.js";
+import { createPortalDemoHandlers } from "./demoHandlers.js";
 
-export const gatewayHandlers = [
+// Deterministic mock-sandbox state for explicit demo mode / Vitest MSW tests.
+// Never fabricates fallback merchant/amount/confidence when receipt content is unreadable.
+const mockWalletLedger = new Map();
+
+function getOrCreateMockWallet(subjectId = "subject_001") {
+  if (!mockWalletLedger.has(subjectId)) {
+    mockWalletLedger.set(subjectId, {
+      id: `wallet_${subjectId}`,
+      subjectId,
+      studyId: "study_001",
+      siteId: "site_001",
+      currentBalance: 125.0,
+      lifetimeStipends: 125.0,
+      lifetimeReimbursements: 0.0,
+      lifetimeDisbursements: 0.0,
+      taxableYtd: 125.0,
+      is1099ThresholdExceeded: false,
+      w9Status: "NOT_REQUIRED",
+      currency: "USD",
+      status: "ACTIVE",
+      virtualCardMask: "**** **** **** 4821",
+      virtualCardExpiry: "12/29",
+      achRoutingNumber: "*****0021",
+      achRoutingMask: "*****0021",
+      achAccountMask: "ACH-***4321",
+      achAccountHolder: `Participant ${subjectId}`,
+      recentTransactions: [],
+      expenseClaims: [],
+      creditedKeys: new Set(),
+    });
+  }
+  return mockWalletLedger.get(subjectId);
+}
+
+function decodeBase64ToText(imageBase64) {
+  if (!imageBase64 || typeof imageBase64 !== "string") return "";
+  try {
+    const cleaned = imageBase64.includes(",")
+      ? imageBase64.split(",")[1]
+      : imageBase64;
+    const bin = atob(cleaned.replace(/\s+/g, ""));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) {
+      bytes[i] = bin.charCodeAt(i);
+    }
+
+    // PNG signature -> only extract embedded tEXt chunks if present; pure blank/corrupted bytes yield ""
+    if (
+      bytes.length >= 8 &&
+      bytes[0] === 0x89 &&
+      bytes[1] === 0x50 &&
+      bytes[2] === 0x4e &&
+      bytes[3] === 0x47
+    ) {
+      const chunks = [];
+      let pos = 8;
+      const decoder = new TextDecoder("utf-8", { fatal: false });
+      while (pos + 8 <= bytes.length) {
+        const len =
+          ((bytes[pos] << 24) >>> 0) |
+          (bytes[pos + 1] << 16) |
+          (bytes[pos + 2] << 8) |
+          bytes[pos + 3];
+        const type = String.fromCharCode(
+          bytes[pos + 4],
+          bytes[pos + 5],
+          bytes[pos + 6],
+          bytes[pos + 7]
+        );
+        pos += 8;
+        if (pos + len + 4 > bytes.length) break;
+        if (type === "tEXt") {
+          const slice = bytes.subarray(pos, pos + len);
+          const nul = slice.indexOf(0);
+          if (nul >= 0 && nul + 1 < slice.length) {
+            chunks.push(decoder.decode(slice.subarray(nul + 1)));
+          }
+        }
+        pos += len + 4;
+      }
+      return chunks.join("\n").trim();
+    }
+
+    const strictDecoder = new TextDecoder("utf-8", { fatal: true });
+    const decoded = strictDecoder.decode(bytes);
+    let printable = 0;
+    for (let i = 0; i < decoded.length; i++) {
+      const code = decoded.charCodeAt(i);
+      if (
+        code === 9 ||
+        code === 10 ||
+        code === 13 ||
+        (code >= 32 && code !== 127)
+      ) {
+        printable++;
+      }
+    }
+    if (decoded.length === 0 || printable / decoded.length < 0.9) {
+      return "";
+    }
+    if (decoded.includes("<svg") || decoded.includes("<text")) {
+      return decoded
+        .replace(/<[^>]+>/g, "\n")
+        .replace(/\n+/g, "\n")
+        .trim();
+    }
+    return decoded.trim();
+  } catch {
+    return "";
+  }
+}
+
+function parseReceiptContent(body) {
+  const rawInput =
+    typeof body.rawText === "string" && body.rawText.trim()
+      ? body.rawText.trim()
+      : typeof body.raw_text === "string" && body.raw_text.trim()
+        ? body.raw_text.trim()
+        : decodeBase64ToText(body.imageBase64 || body.image_base64 || "");
+
+  if (!rawInput || rawInput.replace(/[^a-zA-Z0-9]/g, "").length < 3) {
+    return {
+      ocrReadable: false,
+      ocr_readable: false,
+      merchantName: "",
+      merchant_name: "",
+      expenseDate: "",
+      expense_date: "",
+      grossAmount: 0,
+      gross_amount: 0,
+      taxDeduction: 0,
+      tax_deduction: 0,
+      netAmount: 0,
+      net_amount: 0,
+      category: "",
+      confidenceScore: 0,
+      confidence_score: 0,
+      rawText: "",
+      raw_text: "",
+      warning:
+        "Unable to extract readable receipt text from the uploaded image. Please verify image clarity or enter details manually.",
+    };
+  }
+
+  const lines = rawInput
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const dateMatch = rawInput.match(/\b(20\d{2}-\d{2}-\d{2})\b/);
+  const expenseDate = dateMatch ? dateMatch[1] : "";
+
+  const amountMatches = [...rawInput.matchAll(/\$?\s*(\d{1,5}\.\d{2})\b/g)];
+  const grossAmount =
+    amountMatches.length > 0
+      ? Number(amountMatches[amountMatches.length - 1][1])
+      : 0;
+
+  let merchantName = "";
+  for (const line of lines) {
+    if (
+      /^(date|total|subtotal|amount|fare|meal charge|fuel total|tax|receipt|route)\b/i.test(
+        line
+      )
+    ) {
+      continue;
+    }
+    if (/^\$?\d+\.\d{2}$/.test(line)) continue;
+    if ((line.match(/[a-zA-Z]/g) || []).length >= 2) {
+      merchantName = line.replace(/^merchant:\s*/i, "").trim();
+      break;
+    }
+  }
+
+  const lower = `${merchantName}\n${rawInput}`.toLowerCase();
+  let category = body.categoryHint || body.category_hint || "OTHER";
+  if (/mileage|odometer/.test(lower)) category = "MILEAGE";
+  else if (
+    /shell|chevron|exxon|mobil|fuel|gasoline|unleaded|gallon|pump/.test(lower)
+  )
+    category = "FUEL";
+  else if (/parking|garage|valet/.test(lower)) category = "PARKING";
+  else if (
+    /bistro|cafe|coffee|restaurant|diner|grill|meal|lunch|dinner/.test(lower)
+  )
+    category = "MEAL";
+  else if (/hotel|marriott|hilton|inn|lodging/.test(lower))
+    category = "LODGING";
+  else if (
+    /transit|metro|subway|rail|train|bus|fare|uber|lyft|cab|taxi/.test(lower)
+  )
+    category = "TRANSIT";
+
+  const hasMerchant = Boolean(merchantName);
+  const hasAmount = grossAmount > 0;
+  const hasDate = Boolean(expenseDate);
+  const ocrReadable = hasMerchant && hasAmount;
+
+  if (!hasMerchant && !hasAmount) {
+    return {
+      ocrReadable: false,
+      ocr_readable: false,
+      merchantName: "",
+      merchant_name: "",
+      expenseDate,
+      expense_date: expenseDate,
+      grossAmount: 0,
+      gross_amount: 0,
+      taxDeduction: 0,
+      tax_deduction: 0,
+      netAmount: 0,
+      net_amount: 0,
+      category,
+      confidenceScore: 0,
+      confidence_score: 0,
+      rawText: rawInput,
+      raw_text: rawInput,
+      warning:
+        "No recognizable merchant or payment amount was found on the uploaded receipt.",
+    };
+  }
+
+  let completeness = 0;
+  if (hasMerchant) completeness += 0.36;
+  if (hasAmount) completeness += 0.46;
+  if (hasDate) completeness += 0.16;
+  const confidenceScore = ocrReadable
+    ? Number(Math.min(0.98, completeness).toFixed(2))
+    : Number(Math.min(0.45, completeness).toFixed(2));
+
+  return {
+    ocrReadable,
+    ocr_readable: ocrReadable,
+    merchantName,
+    merchant_name: merchantName,
+    expenseDate,
+    expense_date: expenseDate,
+    grossAmount,
+    gross_amount: grossAmount,
+    taxDeduction: 0,
+    tax_deduction: 0,
+    netAmount: grossAmount,
+    net_amount: grossAmount,
+    category,
+    confidenceScore,
+    confidence_score: confidenceScore,
+    rawText: rawInput,
+    raw_text: rawInput,
+    warning:
+      confidenceScore < 0.9
+        ? "Receipt scan confidence is below 90%; please review extracted fields before submitting."
+        : null,
+  };
+}
+
+function evaluateExpenseSubmission(body) {
+  const grossAmount = Number(body.grossAmount ?? body.gross_amount ?? 0);
+  const confidence = Number(body.ocrConfidence ?? body.ocr_confidence ?? 0);
+  const category = String(body.category || "TRANSIT").toUpperCase();
+  const isMeal = Boolean(
+    body.isMealAllowance ?? body.is_meal_allowance ?? category === "MEAL"
+  );
+  const perDiemCap = Number(body.perDiemCap ?? body.per_diem_cap ?? 75.0);
+
+  const isAmountUnderCap = grossAmount > 0 && grossAmount <= 100.0;
+  const isConfidenceHigh = confidence >= 0.9;
+  const isMealCompliant = !isMeal || grossAmount <= perDiemCap;
+
+  if (isAmountUnderCap && isConfidenceHigh && isMealCompliant) {
+    const timestamp = Date.now();
+    const disbRef = `DISB-ACH-${timestamp}`;
+    return {
+      id: `claim_${timestamp}`,
+      claim_id: `claim_${timestamp}`,
+      status: "APPROVED",
+      approvalDecision: "AUTO_APPROVED",
+      autoApproved: true,
+      auto_approved: true,
+      disbursementReference: disbRef,
+      disbursement_reference: disbRef,
+      grossAmount,
+      gross_amount: grossAmount,
+      netAmount: grossAmount,
+      net_amount: grossAmount,
+      disbursement_method: "DIRECT_ACH",
+      dispatched_at: new Date().toISOString(),
+    };
+  }
+
+  const reasons = [];
+  if (!isAmountUnderCap) {
+    reasons.push(
+      `Gross amount $${grossAmount.toFixed(2)} exceeds $100.00 auto-approval threshold.`
+    );
+  }
+  if (!isMealCompliant) {
+    reasons.push(
+      `Meal expense $${grossAmount.toFixed(2)} exceeds per-diem cap ($${perDiemCap.toFixed(2)}).`
+    );
+  }
+  if (!isConfidenceHigh) {
+    reasons.push(
+      `OCR confidence score ${confidence.toFixed(2)} is below 0.90 threshold.`
+    );
+  }
+  const reviewNotes = `${reasons.join(" ")} Routed to site coordinator review queue.`;
+  const id = `claim_${Date.now()}`;
+  return {
+    id,
+    claim_id: id,
+    status: "PENDING_REVIEW",
+    approvalDecision: "PENDING_REVIEW",
+    autoApproved: false,
+    auto_approved: false,
+    disbursementReference: null,
+    disbursement_reference: null,
+    reviewNotes,
+    review_notes: reviewNotes,
+    grossAmount,
+    gross_amount: grossAmount,
+    netAmount: grossAmount,
+    net_amount: grossAmount,
+  };
+}
+
+const sharedPortalActionHandlers = [
   http.post("*/api/v1/ai/biometrics/verify-liveness", async ({ request }) => {
     const body = await request.json().catch(() => ({}));
     const subject = body.subject_pseudonym || "subj-001";
@@ -34,105 +361,135 @@ export const gatewayHandlers = [
     });
   }),
 
+  http.get("*/api/v1/payments/participant/me/wallet", ({ request }) => {
+    const url = new URL(request.url);
+    const subjectId = url.searchParams.get("subjectId") || "subject_001";
+    const wallet = getOrCreateMockWallet(subjectId);
+    return HttpResponse.json({
+      wallet,
+      recentTransactions: wallet.recentTransactions,
+      expenseClaims: wallet.expenseClaims,
+    });
+  }),
+
+  http.post(
+    "*/api/v1/payments/participant/me/expenses/ocr-extract",
+    async ({ request }) => {
+      const body = await request.json().catch(() => ({}));
+      return HttpResponse.json(parseReceiptContent(body));
+    }
+  ),
+
   http.post(
     "*/api/v1/payments/participant/expenses/ocr-extract",
     async ({ request }) => {
       const body = await request.json().catch(() => ({}));
-      const fileName = String(body.file_name || "").toLowerCase();
-      const text =
-        body.raw_text ||
-        body.rawText ||
-        "METRO TRANSIT AUTHORITY\nRoute: Clinical Trial Express\nDate: 2026-08-23\nFare Paid: $28.50"; // deid-ignore
-      let category = body.category_hint || body.categoryHint || "TRANSIT";
-      if (!body.category_hint && !body.categoryHint) {
-        if (fileName.includes("meal")) category = "MEAL";
-        else if (fileName.includes("fuel") || fileName.includes("gas"))
-          category = "MILEAGE";
-      }
+      return HttpResponse.json(parseReceiptContent(body));
+    }
+  ),
 
-      let grossAmount = 28.5;
-      if (
-        text.includes("125.00") ||
-        text.includes("125") ||
-        category === "MEAL"
-      )
-        grossAmount = 125.0;
-      else if (text.includes("85.00") || text.includes("85"))
-        grossAmount = 85.0;
-      else if (category === "MILEAGE") grossAmount = 45.0;
-      else if (text.includes("28.50")) grossAmount = 28.5;
-
-      return HttpResponse.json({
-        merchant_name: "METRO TRANSIT AUTHORITY",
-        expense_date: "2026-08-23", // deid-ignore
-        gross_amount: grossAmount,
-        tax_deduction: 0.0,
-        net_amount: grossAmount,
-        category: category,
-        confidence_score: 0.98,
-        raw_text: text,
-      });
+  http.post(
+    "*/api/v1/payments/participant/me/expenses",
+    async ({ request }) => {
+      const body = await request.json().catch(() => ({}));
+      return HttpResponse.json(evaluateExpenseSubmission(body));
     }
   ),
 
   http.post("*/api/v1/payments/participant/expenses", async ({ request }) => {
     const body = await request.json().catch(() => ({}));
-    const grossAmount =
-      typeof body.gross_amount === "number"
-        ? body.gross_amount
-        : typeof body.grossAmount === "number"
-          ? body.grossAmount
-          : 28.5;
-    const confidence =
-      typeof body.ocr_confidence === "number"
-        ? body.ocr_confidence
-        : typeof body.ocrConfidence === "number"
-          ? body.ocrConfidence
-          : 0.98;
-    const category = body.category || "TRANSIT";
-    const isMeal =
-      body.is_meal_allowance || body.isMealAllowance || category === "MEAL";
-    const perDiemCap =
-      typeof body.per_diem_cap === "number" ? body.per_diem_cap : 75.0;
+    return HttpResponse.json(evaluateExpenseSubmission(body));
+  }),
 
-    const isAmountUnderCap = grossAmount < 100.0;
-    const isConfidenceHigh = confidence >= 0.9;
-    const isMealCompliant = !isMeal || grossAmount <= perDiemCap;
-
-    if (isAmountUnderCap && isConfidenceHigh && isMealCompliant) {
-      const timestamp = Date.now();
-      const disbRef = `DISB-ACH-${timestamp}`;
+  http.post(
+    "*/api/v1/payments/participant/me/disburse",
+    async ({ request }) => {
+      const body = await request.json().catch(() => ({}));
+      const wallet = getOrCreateMockWallet(body.subjectId || "subject_001");
+      if (wallet.currentBalance <= 0) {
+        return HttpResponse.json(
+          {
+            detail:
+              "Available wallet balance is $0.00; there are no funds to disburse.",
+          },
+          { status: 409 }
+        );
+      }
+      const amount = wallet.currentBalance;
+      wallet.currentBalance = 0;
+      wallet.lifetimeDisbursements += amount;
+      const refNum = `DISB-ACH-${Date.now()}`;
       return HttpResponse.json({
-        claim_id: "claim_" + timestamp,
-        status: "AUTO_APPROVED",
-        auto_approved: true,
-        disbursement_reference: disbRef,
-        gross_amount: grossAmount,
-        net_amount: grossAmount,
-        wallet_credit: grossAmount,
-        disbursement_method: "DIRECT_ACH",
-        dispatched_at: new Date().toISOString(),
-      });
-    } else {
-      let reason = "Claim flagged for manual review.";
-      if (!isAmountUnderCap)
-        reason = `Gross amount $${grossAmount.toFixed(2)} exceeds $100.00 auto-approval threshold. Placed on hold for sponsor manual review.`;
-      else if (!isMealCompliant)
-        reason = `Meal expense $${grossAmount.toFixed(2)} exceeds per-diem allowance $${perDiemCap.toFixed(2)}. Placed on hold for manual review.`;
-      else if (!isConfidenceHigh)
-        reason = `OCR confidence score ${confidence} below required 0.90 threshold. Placed on hold for manual review.`;
-
-      return HttpResponse.json({
-        claim_id: "claim_" + Date.now(),
-        status: "PENDING_REVIEW",
-        auto_approved: false,
-        disbursement_reference: null,
-        review_notes: reason,
-        gross_amount: grossAmount,
-        net_amount: grossAmount,
+        id: `disb_${Date.now()}`,
+        walletId: wallet.id,
+        subjectId: wallet.subjectId,
+        amount,
+        currentBalance: 0,
+        lifetimeDisbursements: wallet.lifetimeDisbursements,
+        currency: "USD",
+        disbursementType: body.disbursementType || "DIRECT_ACH",
+        destinationMask: wallet.achAccountMask,
+        referenceNumber: refNum,
+        status: "DISPATCHED",
+        createdAt: new Date().toISOString(),
       });
     }
-  }),
+  ),
+
+  http.post(
+    "*/api/v1/payments/participant/me/diary-stipend",
+    async ({ request }) => {
+      const body = await request.json().catch(() => ({}));
+      if (
+        "amount" in body ||
+        "grossAmount" in body ||
+        "gross_amount" in body ||
+        "stipendAmount" in body
+      ) {
+        return HttpResponse.json(
+          {
+            detail:
+              "Client-supplied stipend amounts are prohibited; stipend credits are computed exclusively from server protocol rules.",
+          },
+          { status: 400 }
+        );
+      }
+      const wallet = getOrCreateMockWallet(body.subjectId || "subject_001");
+      const key =
+        body.idempotencyKey ||
+        `diary_${wallet.subjectId}_${body.diaryId || body.assignmentId}_${body.sequenceNumber || 1}`;
+      if (wallet.creditedKeys.has(key)) {
+        return HttpResponse.json({
+          success: true,
+          status: "ALREADY_PROCESSED",
+          creditedAmount: 0,
+          currentBalance: wallet.currentBalance,
+          lifetimeStipends: wallet.lifetimeStipends,
+          walletId: wallet.id,
+          subjectId: wallet.subjectId,
+          currency: "USD",
+          idempotencyKey: key,
+        });
+      }
+      wallet.creditedKeys.add(key);
+      const serverRuleAmount = 25.0;
+      wallet.currentBalance += serverRuleAmount;
+      wallet.lifetimeStipends += serverRuleAmount;
+      return HttpResponse.json({
+        success: true,
+        status: "CREDITED",
+        creditedAmount: serverRuleAmount,
+        currentBalance: wallet.currentBalance,
+        lifetimeStipends: wallet.lifetimeStipends,
+        walletId: wallet.id,
+        subjectId: wallet.subjectId,
+        currency: "USD",
+        transactionId: `tx_${Date.now()}`,
+        referenceNumber: key,
+        idempotencyKey: key,
+      });
+    }
+  ),
 
   http.post("*/api/v1/payments/disburse", async ({ request }) => {
     const body = await request.json().catch(() => ({}));
@@ -175,28 +532,35 @@ export const gatewayHandlers = [
       });
     }
   ),
+];
 
-  // Intercept all HTTP methods matching API gateway host or API paths
-  http.all("*", async ({ request }) => {
-    const url = new URL(request.url);
+export function buildPortalGatewayHandlers(options = {}) {
+  const demoActive =
+    options.forceDemo !== undefined
+      ? Boolean(options.forceDemo)
+      : isDemoBuild();
 
-    // Only intercept API / service calls targeting gateway or non-asset paths
-    const isApiCall = isGatewayApiCall(url);
+  const demoHandlers = demoActive
+    ? createPortalDemoHandlers(options.store)
+    : [];
 
-    if (!isApiCall) {
+  const boundaryHandler = http.all("*", async ({ request }) => {
+    const result = await evaluateDemoBoundaryRequest(request, {
+      demoActive,
+      appLabel: "portal demo",
+    });
+
+    if (result.passthrough) {
       return passthrough();
     }
 
-    const validation = await validateGatewayRequest(request);
+    return HttpResponse.json(result.body, {
+      status: result.status,
+      headers: result.headers,
+    });
+  });
 
-    if (!validation.valid) {
-      return HttpResponse.json(validation.body, {
-        status: validation.status,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+  return [...sharedPortalActionHandlers, ...demoHandlers, boundaryHandler];
+}
 
-    // Default passthrough for valid gateway requests in live dev/mock mode
-    return passthrough();
-  }),
-];
+export const gatewayHandlers = buildPortalGatewayHandlers();

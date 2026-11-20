@@ -676,7 +676,8 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get?: never;
+    /** Lists the forms opened for an enrollment, oldest first. */
+    get: operations["ExecutionListEnrollmentForms"];
     put?: never;
     /** Opens a form for a participant's visit under the protocol version in force (collection.open). */
     post: operations["ExecutionOpenForm"];
@@ -1139,6 +1140,7 @@ export interface components {
       assertions: components["schemas"]["Kernel_FormAssertionResponse"][];
       signatures: components["schemas"]["Kernel_FormSignatureResponse"][];
       content_hash: null | string;
+      collection_title?: null | string;
     };
     Kernel_FormSavedResponse: {
       /** Format: uuid */
@@ -1190,6 +1192,35 @@ export interface components {
       collected_at: string;
       /** Format: int64 */
       version: number | string;
+    };
+    Kernel_FormSummaryResponse: {
+      /** Format: uuid */
+      form_id: string;
+      /** Format: uuid */
+      enrollment_id: string;
+      /** Format: uuid */
+      participant_id: string;
+      /** Format: uuid */
+      study_id: string;
+      /** Format: uuid */
+      study_site_id: string;
+      /** Format: uuid */
+      protocol_version_id: string;
+      collection_spec_id: string;
+      planned_activity_id: null | string;
+      /** Format: date-time */
+      collected_at: string;
+      opened_by: string;
+      /** Format: date-time */
+      opened_at: string;
+      /** Format: int64 */
+      version: number | string;
+      complete: boolean;
+      /** Format: int32 */
+      item_count: number | string;
+      /** Format: int32 */
+      recorded_count: number | string;
+      collection_title?: null | string;
     };
     Kernel_FormValueRequest: {
       item_id: string;
@@ -3787,6 +3818,46 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ExecutionListEnrollmentForms: {
+    parameters: {
+      query?: {
+        enrollment_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_FormSummaryResponse"][];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
         headers: {
           [name: string]: unknown;
         };

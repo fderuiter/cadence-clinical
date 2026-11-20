@@ -1,4 +1,12 @@
-import axe from "axe-core";
+let cachedAxe = null;
+
+async function getAxe() {
+  if (!cachedAxe) {
+    const mod = await import("axe-core");
+    cachedAxe = mod.default || mod;
+  }
+  return cachedAxe;
+}
 
 /**
  * Asserts that a standard DOM Element, raw HTML string, or Vue test wrapper is WCAG accessible.
@@ -83,6 +91,7 @@ export async function toBeAccessible(received, customOptions = {}) {
       wrapperToCleanup = element;
     }
 
+    const axe = await getAxe();
     const results = await axe.run(element, finalOptions);
     const pass = results.violations.length === 0;
 

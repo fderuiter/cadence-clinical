@@ -18,7 +18,48 @@ public interface ICollectionInstanceRecords
 {
     /// <summary>The form instance, or null when it does not exist in <paramref name="tenant"/>.</summary>
     Task<CollectionInstanceRecord?> FindAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken);
+
+    /// <summary>Every form instance opened for <paramref name="enrollment"/> in <paramref name="tenant"/>, oldest first.</summary>
+    Task<IReadOnlyList<CollectionInstanceSummary>> ListForEnrollmentAsync(
+        TenantId tenant,
+        EnrollmentId enrollment,
+        CancellationToken cancellationToken);
 }
+
+/// <summary>Summary of an opened form instance for an enrollment's form list.</summary>
+/// <param name="CollectionInstanceId">The form instance's id.</param>
+/// <param name="EnrollmentId">Its participant enrollment.</param>
+/// <param name="ParticipantId">The enrollment's participant.</param>
+/// <param name="StudyId">The study.</param>
+/// <param name="StudySiteId">The study site.</param>
+/// <param name="ProtocolVersionId">The protocol version that governs the form (K-TIME-8).</param>
+/// <param name="CollectionSpecId">The CollectionSpec it collects.</param>
+/// <param name="PlannedActivityId">The planned activity (visit) it belongs to, when scheduled.</param>
+/// <param name="CollectedAt">When its values were collected in the trial world.</param>
+/// <param name="OpenedBy">Who opened the form.</param>
+/// <param name="OpenedAt">When it was opened.</param>
+/// <param name="Version">1 when opened, one more per save that changed a value.</param>
+/// <param name="Complete">Whether every required item in the governing CollectionSpec has a value.</param>
+/// <param name="ItemCount">Total items on the form.</param>
+/// <param name="RecordedCount">Items on the form that currently hold a recorded observation.</param>
+/// <param name="CollectionTitle">The CollectionSpec's title in the governing protocol version, when present.</param>
+public sealed record CollectionInstanceSummary(
+    CollectionInstanceId CollectionInstanceId,
+    EnrollmentId EnrollmentId,
+    ParticipantId ParticipantId,
+    StudyId StudyId,
+    StudySiteId StudySiteId,
+    ProtocolVersionId ProtocolVersionId,
+    string CollectionSpecId,
+    string? PlannedActivityId,
+    DateTimeOffset CollectedAt,
+    string OpenedBy,
+    DateTimeOffset OpenedAt,
+    long Version,
+    bool Complete,
+    int ItemCount,
+    int RecordedCount,
+    string? CollectionTitle = null);
 
 /// <summary>A form instance and everything a form screen shows about it.</summary>
 /// <remarks>
@@ -35,6 +76,7 @@ public interface ICollectionInstanceRecords
 /// <para><c>Attestations</c>: The signatures over the form instance, oldest first (spec §9.5).</para>
 /// <para><c>ContentHash</c>: The hash a signature over the form's current values would bind to (#5463); null while the
 /// form has no values.</para>
+/// <para><c>CollectionTitle</c>: The CollectionSpec's title in the governing protocol version, when present.</para>
 /// </remarks>
 public sealed record CollectionInstanceRecord(
     CollectionInstanceId CollectionInstanceId,
@@ -54,7 +96,8 @@ public sealed record CollectionInstanceRecord(
     IReadOnlyList<LockView> Locks,
     IReadOnlyList<AssertionView> Assertions,
     IReadOnlyList<FormAttestationView> Attestations,
-    string? ContentHash);
+    string? ContentHash,
+    string? CollectionTitle = null);
 
 /// <summary>One value of a form instance.</summary>
 /// <remarks>

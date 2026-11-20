@@ -3,6 +3,9 @@ import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { executionApi } from "../../src/api/executionApi";
+import { ecrfFormsApi } from "../../src/api/ecrfFormsApi";
+import { ecrfQueriesApi } from "../../src/api/ecrfQueriesApi";
+import { kernelApi } from "../../src/api/kernelApi";
 import { useAuthStore } from "../../src/stores/auth";
 import { useToastStore } from "../../src/stores/toasts.js";
 import { isScreenAvailable } from "../../src/router/availability";
@@ -14,9 +17,41 @@ vi.mock("../../src/api/kernelApi", () => ({
   kernelApi: {
     listProposals: vi.fn(async () => []),
     search: vi.fn(async () => []),
+    getChildren: vi.fn(async () => []),
+    listProtocolVersions: vi.fn(async () => []),
+    getScheduleOfActivities: vi.fn(),
     getCommands: vi.fn(),
+    getObservation: vi.fn(),
+    getZoomPath: vi.fn(async () => []),
   },
 }));
+
+vi.mock("../../src/api/ecrfFormsApi", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    ecrfFormsApi: {
+      listForEnrollment: vi.fn(async () => []),
+      openForm: vi.fn(),
+      getForm: vi.fn(),
+      saveValues: vi.fn(),
+      signForm: vi.fn(),
+    },
+  };
+});
+
+vi.mock("../../src/api/ecrfQueriesApi", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    ecrfQueriesApi: {
+      raise: vi.fn(),
+      listForForm: vi.fn(async () => []),
+      listForEnrollment: vi.fn(async () => []),
+      transition: vi.fn(),
+    },
+  };
+});
 
 vi.mock("../../src/api/executionApi", () => ({
   executionApi: {
@@ -267,7 +302,9 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
     expect(inspector.find("#inspector-site").text()).toBe("022");
     expect(
       inspector.find("#inspector-open-data-entry").attributes("href")
-    ).toBe("/ecrf?studyId=CAD-101&subjectId=017-0002");
+    ).toBe(
+      `/studies/CAD-101?stage=conduct&participant=participant:${IDS[1]}&form=new`
+    );
 
     // The zoom path shows study, site and participant, and the site is addressable.
     expect(wrapper.find("#zoom-participant").text()).toBe("017-0002");
@@ -284,6 +321,98 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       expect.objectContaining({ siteId: "022", offset: 0 })
     );
     expect(wrapper.findAll("#participants-section tbody tr")).toHaveLength(1);
+  });
+
+  it("opens the participant's forms workspace from the inspector inside the three-pane Canvas without legacy acronyms (UX-1, UX-2, UX-3)", async () => {
+    const studyNodeRef = "study:0192f3c4-5e6a-7b8c-9d0e-000000009001";
+    const siteNodeRef = "study_site:0192f3c4-5e6a-7b8c-9d0e-000000009002";
+    const enrollmentId = "0192f3c4-5e6a-7b8c-9d0e-000000009003";
+    const versionRef =
+      "protocol_version:0192f3c4-5e6a-7b8c-9d0e-000000009004@1";
+
+    vi.mocked(kernelApi.search).mockResolvedValue([
+      { ref: studyNodeRef, exact_code: true, kind: "study", code: "CAD-101" },
+    ]);
+    vi.mocked(kernelApi.getChildren).mockImplementation(async (ref) => {
+      if (ref === studyNodeRef) {
+        return [
+          { node: { kind: "study_site", ref: siteNodeRef, code: "017" } },
+        ];
+      }
+      if (ref === siteNodeRef) {
+        return [
+          {
+            node: {
+              kind: "enrollment",
+              ref: `enrollment:${enrollmentId}`,
+              code: "017-0001",
+            },
+          },
+        ];
+      }
+      return [];
+    });
+    vi.mocked(kernelApi.listProtocolVersions).mockResolvedValue([
+      { ref: versionRef, status: "Approved", mask: null },
+    ]);
+    vi.mocked(kernelApi.getScheduleOfActivities).mockResolvedValue({
+      version: versionRef,
+      columns: [
+        { activity_id: "WEEK2", name: "Week 2", study_day: 14, epoch_id: "E1" },
+      ],
+      rows: [
+        {
+          collection_spec_id: "VS",
+          name: "Vital Signs",
+          concept: "vital_signs",
+          columns: [0],
+        },
+      ],
+    });
+
+    await open(
+      `/studies/CAD-101?stage=conduct&section=participants&node=participant:${IDS[0]}`
+    );
+
+    await wrapper.find("#inspector-open-data-entry").trigger("click");
+    await router.isReady();
+    await flushPromises();
+
+    expect(router.currentRoute.value.fullPath).toBe(
+      `/studies/CAD-101?stage=conduct&participant=participant:${IDS[0]}&form=new`
+    );
+    expect(router.currentRoute.value.fullPath).not.toMatch(/ecrf|edc/i);
+
+    // Stays in the three-pane Canvas layout (UX-3).
+    expect(wrapper.find("#canvas-navigator").exists()).toBe(true);
+    expect(wrapper.find("#canvas-form-workspace").exists()).toBe(true);
+    expect(wrapper.find("#canvas-inspector").exists()).toBe(true);
+
+    // Zoom path shows study, site, participant, and Forms without product acronyms (UX-1, UX-2).
+    const zoomText = wrapper.find("#canvas-zoom-path").text();
+    expect(zoomText).toContain("CAD-101");
+    expect(zoomText).toContain("Site 017");
+    expect(zoomText).toContain("017-0001");
+    expect(zoomText).toContain("Forms");
+    expect(zoomText).not.toMatch(/\b(eCRF|EDC)\b/i);
+
+    // Raw UUID inputs are hidden and structured protocol selectors are shown.
+    expect(wrapper.find("#ecrf-form-id").exists()).toBe(false);
+    expect(wrapper.find("#ecrf-enrollment-id").exists()).toBe(false);
+    expect(wrapper.find("#ecrf-collection-spec").element.tagName).toBe(
+      "SELECT"
+    );
+    expect(wrapper.find("#ecrf-planned-activity").element.tagName).toBe(
+      "SELECT"
+    );
+
+    // One-click return navigation back to participant workspace.
+    await wrapper.find("#canvas-form-back").trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.query).toEqual({
+      stage: "conduct",
+      participant: `participant:${IDS[0]}`,
+    });
   });
 
   it("shows Simulate disabled, saying what it waits on, and Trace, Impact, Explain and Act live (UX-5)", async () => {

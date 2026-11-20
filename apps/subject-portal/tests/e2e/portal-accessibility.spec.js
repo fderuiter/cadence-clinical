@@ -212,6 +212,28 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       });
     });
 
+    await page.route("**/payments/participant/me/wallet", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          wallet: {
+            id: "wallet_mock_001",
+            studyId: "study_001",
+            siteId: "site_001",
+            currentBalance: 50,
+            lifetimeStipends: 50,
+            lifetimeReimbursements: 0,
+            lifetimeDisbursements: 0,
+            w9Status: "NOT_REQUIRED",
+            currency: "USD",
+          },
+          recentTransactions: [],
+          expenseClaims: [],
+        }),
+      });
+    });
+
     // Inject pre-configured mock credentials into storage to bypass login server
     await page.addInitScript(() => {
       sessionStorage.setItem("mock_user_id", "subject_mocked_001");
@@ -356,9 +378,9 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await expect(syncStatusText).toHaveAttribute("role", "status");
     await expect(syncStatusText).toHaveAttribute("aria-live", "polite");
 
-    // 3. Unavailable workflow guard outside demo mode (/wallet redirects to #view-unavailable)
-    await expect(page.locator("#tab-btn-wallet")).toHaveCount(0);
-    await page.goto("wallet");
+    // 3. Unavailable workflow guard outside demo mode (/lay-summaries redirects to #view-unavailable)
+    await expect(page.locator("#tab-btn-lay-summaries")).toHaveCount(0);
+    await page.goto("lay-summaries");
     await completeInitialPinSetupIfOpen(page);
     await expect(page.locator("#view-unavailable")).toBeVisible();
     const unavailableAudit = await new AxeBuilder({ page })
@@ -741,6 +763,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       { id: "btn-tab-btn-compliance", panel: "view-compliance" },
       { id: "btn-tab-btn-inbox", panel: "view-inbox" },
       { id: "btn-tab-btn-consent", panel: "view-consent" },
+      { id: "btn-tab-btn-wallet", panel: "view-wallet" },
     ];
 
     const tabLocator = page.locator('.nav-tabs [role="tab"]');

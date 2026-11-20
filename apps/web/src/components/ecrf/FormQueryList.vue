@@ -135,16 +135,29 @@
             }}</template>
           </span>
           <span class="form-query-target">
-            {{ query.item_id }}, revision {{ query.revision }}
+            <component
+              :is="routerLinkTag"
+              v-if="observationLink(query)"
+              :id="`query-observation-${query.query_id}`"
+              class="form-query-link"
+              :to="observationLink(query)!"
+              >{{ query.item_id }}, revision {{ query.revision }}</component
+            >
+            <template v-else
+              >{{ query.item_id }}, revision {{ query.revision }}</template
+            >
             <template v-if="showForm">
               ·
-              <router-link
+              <component
+                :is="routerLinkTag"
+                v-if="formLink(query)"
                 :id="`query-open-form-${query.query_id}`"
                 :data-testid="`query-form-link-${query.query_id}`"
                 class="form-query-link"
-                :to="formLocation(query)"
-                >form {{ query.form_id }}</router-link
+                :to="formLink(query)!"
+                >form {{ query.form_id }}</component
               >
+              <template v-else>form {{ query.form_id }}</template>
             </template>
           </span>
           <span
@@ -209,8 +222,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
-import { RouterLink } from "vue-router";
+import { computed, getCurrentInstance, ref, watch } from "vue";
+import type { RouteLocationRaw } from "vue-router";
 import type {
   FormQueryAction,
   FormQueryResponse,
@@ -236,6 +249,8 @@ const props = defineProps<{
   studyCode?: string;
   subjectCode?: string;
   assertionsLocked?: boolean;
+  formTo?: (query: FormQueryResponse) => RouteLocationRaw | null;
+  observationTo?: (query: FormQueryResponse) => RouteLocationRaw | null;
   act: (
     query: FormQueryResponse,
     action: FormQueryAction,
@@ -247,6 +262,21 @@ const props = defineProps<{
     text: string
   ) => Promise<FormQueryBatchItemResult[]>;
 }>();
+
+const instance = getCurrentInstance();
+const hasRouter = Boolean(instance?.appContext.config.globalProperties.$router);
+const routerLinkTag = instance?.appContext.components.RouterLink ?? "a";
+
+function observationLink(query: FormQueryResponse): RouteLocationRaw | null {
+  if (!hasRouter || !props.observationTo) return null;
+  return props.observationTo(query);
+}
+
+function formLink(query: FormQueryResponse): RouteLocationRaw | null {
+  if (!hasRouter) return null;
+  if (props.formTo) return props.formTo(query);
+  return defaultFormLocation(query);
+}
 
 const STATUS_LABELS: Record<string, string> = {
   open: "Open",
@@ -346,7 +376,7 @@ function selectAllEligible() {
   selectedQueryIds.value = eligibleQueries.value.map((q) => q.query_id);
 }
 
-function formLocation(query: FormQueryResponse) {
+function defaultFormLocation(query: FormQueryResponse): RouteLocationRaw {
   const routeQuery: Record<string, string> = {};
   if (props.studyCode) routeQuery.studyId = props.studyCode;
   const participantCode = query.subject_code || props.subjectCode;

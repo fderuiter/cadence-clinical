@@ -21,18 +21,28 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
+        launchOptions: {
+          args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+          ],
+        },
       },
     },
   ],
   webServer: [
     {
-      command: "pnpm --filter subject-portal dev",
+      command:
+        "VITE_API_BASE_URL=http://localhost:5174 pnpm --filter subject-portal exec vite build --base=/subject-portal/ --outDir node_modules/.e2e-prod && pnpm --filter subject-portal exec vite preview --outDir node_modules/.e2e-prod --port 5174 --strictPort",
       url: "http://localhost:5174/subject-portal/",
       reuseExistingServer: !process.env.CI,
       timeout: 120000,
     },
     {
-      command: "pnpm --filter subject-portal exec vite --mode demo --port 5175",
+      command:
+        "pnpm --filter subject-portal exec vite build --mode demo --base=/subject-portal/ --outDir node_modules/.e2e-demo && pnpm --filter subject-portal exec vite preview --outDir node_modules/.e2e-demo --port 5175 --strictPort",
       url: "http://localhost:5175/subject-portal/",
       reuseExistingServer: !process.env.CI,
       timeout: 120000,
