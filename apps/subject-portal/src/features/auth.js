@@ -233,6 +233,16 @@ export async function login() {
       return;
     }
 
+    if (isDemoBuild()) {
+      const demoUserId = state.session.userId || "subject_001";
+      state.session.userId = demoUserId;
+      state.session.token = null;
+      state.session.isOfflineMode = true;
+      state.session.isDemoMode = true;
+      setActiveUserId(demoUserId);
+      return;
+    }
+
     let keycloak = window.keycloakInstance;
     if (!keycloak && typeof window !== "undefined") {
       const KeycloakClass =

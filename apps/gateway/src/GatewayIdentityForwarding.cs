@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -197,9 +198,9 @@ public static class GatewayIdentityForwarding
             }
 
             var signing = transformContext.HttpContext.RequestServices.GetRequiredService<IOptions<GatewaySigningOptions>>().Value;
-            var timeProvider = transformContext.HttpContext.RequestServices.GetService<TimeProvider>() ?? TimeProvider.System;
+            var clock = transformContext.HttpContext.RequestServices.GetService<IClock>() ?? SystemClock.Instance;
             IReadOnlyDictionary<string, string> signed = identity.ToSignedHeaders(
-                timeProvider.GetUtcNow(), signing.GetSecretBytes());
+                clock.UtcNow, signing.GetSecretBytes());
 
             foreach (var (name, value) in signed)
             {

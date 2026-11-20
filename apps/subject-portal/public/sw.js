@@ -6,6 +6,16 @@ const ASSETS = [
   "/subject-portal/src/index.js",
   "/subject-portal/manifest.json",
 ];
+const DEMO_SHELL_ASSETS = [
+  "/subject-portal/",
+  "/subject-portal/index.html",
+  "/subject-portal/manifest.json",
+];
+const IS_MSW_MODE =
+  typeof importScripts === "function" &&
+  typeof self !== "undefined" &&
+  typeof self.location?.search === "string" &&
+  new URLSearchParams(self.location.search).get("msw") === "1";
 
 // Helper to fetch with timeout
 function fetchWithTimeout(request, timeoutMs) {
@@ -28,10 +38,11 @@ function fetchWithTimeout(request, timeoutMs) {
 
 // Install event: Pre-cache core shell resources
 self.addEventListener("install", (event) => {
+  const preCacheAssets = IS_MSW_MODE ? DEMO_SHELL_ASSETS : ASSETS;
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log("[Service Worker] Pre-caching offline assets");
-      return cache.addAll(ASSETS).catch((err) => {
+      return cache.addAll(preCacheAssets).catch((err) => {
         console.warn(
           "[Service Worker] Some pre-cache assets could not be retrieved during install:",
           err
@@ -42,13 +53,13 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-// Activate event: Clean up old caches
+// Activate event: Clean up old caches while preserving MSW client-tracking caches
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
+          if (key !== CACHE_NAME && !key.startsWith("msw:")) {
             console.log("[Service Worker] Removing old cache:", key);
             return caches.delete(key);
           }
@@ -59,9 +70,9 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Fetch event: Network-First falling back to Cache
+// Fetch event: Network-First falling back to Cache for static shell assets;
+// in MSW mode, non-static/API calls delegate directly to mockServiceWorker.js.
 self.addEventListener("fetch", (event) => {
-  // Only handle GET requests and ignore internal/external APIs or keycloak/database calls
   if (event.request.method !== "GET") {
     return;
   }
@@ -75,7 +86,9 @@ self.addEventListener("fetch", (event) => {
 
   const isStaticAsset =
     url.origin === self.location.origin &&
-    url.pathname.startsWith("/subject-portal/");
+    url.pathname.startsWith("/subject-portal/") &&
+    !/(^|\/)api\//.test(url.pathname) &&
+    !url.pathname.endsWith("/mockServiceWorker.js");
 
   if (isStaticAsset) {
     // Limit network requests for application shell assets to a maximum of 2 seconds before racing to the local cache fallback
@@ -122,8 +135,15 @@ self.addEventListener("fetch", (event) => {
           });
         })
     );
-  } else {
+    if (IS_MSW_MODE && typeof event.stopImmediatePropagation === "function") {
+      event.stopImmediatePropagation();
+    }
+  } else if (!IS_MSW_MODE) {
     // Uncached dynamic API calls bypass this static asset timeout behavior to avoid returning stale data.
     event.respondWith(fetch(event.request));
   }
 });
+
+if (IS_MSW_MODE) {
+  importScripts("./mockServiceWorker.js");
+}

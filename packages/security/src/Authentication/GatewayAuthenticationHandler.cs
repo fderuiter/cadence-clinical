@@ -179,7 +179,9 @@ public sealed class GatewayAuthenticationHandler(
             return false;
         }
 
+#pragma warning disable RS0030 // AuthenticationHandler owns its TimeProvider property for signed-header clock-skew checks.
         var drift = TimeProvider.GetUtcNow() - issuedAt;
+#pragma warning restore RS0030
         return drift.Duration() <= Options.AllowedClockSkew;
     }
 }

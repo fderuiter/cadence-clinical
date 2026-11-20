@@ -139,27 +139,27 @@ a service that does fails at startup when a required key is missing.
 
 ## Gateway routing
 
-Read by `apps/gateway/src/Program.cs`, one per service in the topology manifest (`packages/topology`). In Development each defaults to `http://localhost:<port>`; in any other environment each is required and the gateway refuses to start without it. A value that is not an absolute http or https URL fails startup in every environment.
+Read by `apps/gateway/src/Program.cs`, one per service in the topology manifest (`packages/topology`). In Development each defaults to `http://localhost:<port>`; in any other environment each is required and the gateway refuses to start without it. A value that is not an absolute http or https URL fails startup in every environment. `apps/interop` also reads `EXECUTION_SERVICE_URL` (`ActivationBindingResolver.cs`, `/api/v1/execution/subjects/activation-codes/me`) and `KERNEL_SERVICE_URL` (`CanonicalObservationForwarder.cs`, `/api/v1/kernel/observations`) when set.
 
-| Key                         | Default port                                                                                                                                                                                    |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DESIGNER_SERVICE_URL`      | 8001                                                                                                                                                                                            |
-| `EXECUTION_SERVICE_URL`     | 8002 (`apps/interop/src/Application/Services/ActivationBindingResolver.cs` also resolves redeemed BYOD activation-code bindings from `/api/v1/execution/subjects/activation-codes/me` when set) |
-| `ETMF_SERVICE_URL`          | 8003                                                                                                                                                                                            |
-| `INTEROP_SERVICE_URL`       | 8004                                                                                                                                                                                            |
-| `QUALITY_SERVICE_URL`       | 8005                                                                                                                                                                                            |
-| `NOTIFICATIONS_SERVICE_URL` | 8006                                                                                                                                                                                            |
-| `CTMS_SERVICE_URL`          | 8007                                                                                                                                                                                            |
-| `SAFETY_SERVICE_URL`        | 8008                                                                                                                                                                                            |
-| `TICKETS_SERVICE_URL`       | 8009                                                                                                                                                                                            |
-| `EISF_SERVICE_URL`          | 8010                                                                                                                                                                                            |
-| `ECONSENT_SERVICE_URL`      | 8011                                                                                                                                                                                            |
-| `ORG_SERVICE_URL`           | 8012                                                                                                                                                                                            |
-| `FILESHARE_SERVICE_URL`     | 8013                                                                                                                                                                                            |
-| `IMAGING_SERVICE_URL`       | 8014                                                                                                                                                                                            |
-| `KNOWLEDGE_SERVICE_URL`     | 8015                                                                                                                                                                                            |
-| `PAYMENTS_SERVICE_URL`      | 8016                                                                                                                                                                                            |
-| `KERNEL_SERVICE_URL`        | 8018 (`apps/interop/src/Application/Services/CanonicalObservationForwarder.cs` also forwards resolved ePRO diary answers to `/api/v1/kernel/observations` when set)                             |
+| Key                         | Default port |
+| --------------------------- | ------------ |
+| `DESIGNER_SERVICE_URL`      | 8001         |
+| `EXECUTION_SERVICE_URL`     | 8002         |
+| `ETMF_SERVICE_URL`          | 8003         |
+| `INTEROP_SERVICE_URL`       | 8004         |
+| `QUALITY_SERVICE_URL`       | 8005         |
+| `NOTIFICATIONS_SERVICE_URL` | 8006         |
+| `CTMS_SERVICE_URL`          | 8007         |
+| `SAFETY_SERVICE_URL`        | 8008         |
+| `TICKETS_SERVICE_URL`       | 8009         |
+| `EISF_SERVICE_URL`          | 8010         |
+| `ECONSENT_SERVICE_URL`      | 8011         |
+| `ORG_SERVICE_URL`           | 8012         |
+| `FILESHARE_SERVICE_URL`     | 8013         |
+| `IMAGING_SERVICE_URL`       | 8014         |
+| `KNOWLEDGE_SERVICE_URL`     | 8015         |
+| `PAYMENTS_SERVICE_URL`      | 8016         |
+| `KERNEL_SERVICE_URL`        | 8018         |
 
 Timeouts and health checks for every route, read by `apps/gateway/src/GatewayClusters.cs` (ADR-2451). Each must be a positive number of seconds; the gateway refuses to start otherwise.
 
@@ -217,7 +217,7 @@ Per-caller rate limit, read by `apps/gateway/src/GatewayRateLimiting.cs` (ADR-24
 | `CADENCE_TEST_BROWSER`            | `tests/Cadence.IntegrationTests/Kernel/KernelObservationHostPostgresTests.cs` (`1` runs the browser-to-database check of the observation correction in Chromium; also needs `CADENCE_TEST_POSTGRES`, Node and pnpm)                                                                                                                                                                                                                                                                                                                                            | none                                                               |
 | `CADENCE_LINEAGE_BENCHMARK`       | `tests/Cadence.IntegrationTests/Kernel/LineageBenchmarkPostgresTests.cs` (`1` runs the 10M-edge lineage benchmark; also needs `CADENCE_TEST_POSTGRES` and about 4 GB of disk. `packages/compliance/src/DatabaseTestEvidence.cs` exempts its skip from the skipped-database-test rule)                                                                                                                                                                                                                                                                          | off                                                                |
 | `PLAYWRIGHT_CHROMIUM_PATH`        | `apps/web/playwright.correction-check.config.ts` (path to a preinstalled Chromium for the browser-to-database check; set to `/opt/pw-browsers/chromium` by the test when that file exists)                                                                                                                                                                                                                                                                                                                                                                     | Playwright's bundled Chromium                                      |
-| `CADENCE_DOCS_SKIP_CHECKS`        | `scripts/build-docs.js` (`1` skips its `cadence check` and Markdown validation; `cadence ci` sets it for the docs build step only when `Run Cadence quality sentinels` already passed in the same run)                                                                                                                                                                                                                                                                                                                                                         | unset                                                              |
+| `CADENCE_DOCS_SKIP_CHECKS`        | `scripts/build-docs.js` (`1` skips duplicate `openapi`, `schema-doc` and `markdown` gates while still running `check rtm`; `cadence ci` and `deploy-docs.yml` set it when quality sentinels already passed)                                                                                                                                                                                                                                                                                                                                                    | unset                                                              |
 | `CADENCE_UPDATE_GOLDEN`           | `tests/Cadence.UnitTests/Packages/UsdmDesignImporterTests.cs` (`1` rewrites the expected design of the USDM import golden test; review the diff before committing)                                                                                                                                                                                                                                                                                                                                                                                             | off                                                                |
 
 ## Web apps

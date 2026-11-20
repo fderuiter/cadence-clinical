@@ -21,14 +21,31 @@ const csprojPath = path.join(
   "src",
   "Cadence.Cli.csproj"
 );
-const cliSrcDir = path.join(rootDir, "packages", "cli", "src");
-const toolingCoreSrcDir = path.join(rootDir, "packages", "tooling_core", "src");
+const cliSourceDirs = [
+  path.join(rootDir, "packages", "cli", "src"),
+  path.join(rootDir, "packages", "engine_core", "src"),
+  path.join(rootDir, "packages", "database", "src"),
+  path.join(rootDir, "packages", "compliance", "src"),
+  path.join(rootDir, "packages", "security", "src"),
+  path.join(rootDir, "packages", "tooling_core", "src"),
+  path.join(
+    rootDir,
+    "packages",
+    "kernel",
+    "src",
+    "Cadence.Kernel.Abstractions"
+  ),
+  path.join(rootDir, "packages", "core-models", "src"),
+  path.join(rootDir, "packages", "deid", "src"),
+  path.join(rootDir, "packages", "topology", "src"),
+];
 const buildConfigFiles = [
   "Directory.Build.props",
   "Directory.Build.targets",
   "Directory.Packages.props",
   "NuGet.Config",
   "global.json",
+  "BannedSymbols.txt",
 ];
 
 // Ensure local .NET installation is available in PATH
@@ -85,10 +102,24 @@ function needsBuild() {
     return true;
   }
 
+  if (
+    process.env.CADENCE_CLI_CACHE_HIT === "true" ||
+    process.env.GITHUB_ACTIONS === "true"
+  ) {
+    if (process.env.CADENCE_CLI_CACHE_HIT === "true") {
+      const now = new Date();
+      try {
+        fs.utimesSync(binaryPath, now, now);
+      } catch {
+        // Ignore utime update failures on read-only filesystems
+      }
+    }
+    return false;
+  }
+
   const binaryMtime = fs.statSync(binaryPath).mtimeMs;
   const latestSourceMtime = Math.max(
-    getLatestSourceMtime(cliSrcDir),
-    getLatestSourceMtime(toolingCoreSrcDir),
+    ...cliSourceDirs.map((dir) => getLatestSourceMtime(dir)),
     ...buildConfigFiles.map(
       (file) =>
         fs.statSync(path.join(rootDir, file), { throwIfNoEntry: false })
@@ -144,6 +175,14 @@ function buildBinary() {
 function main() {
   if (needsBuild()) {
     buildBinary();
+  }
+
+  if (!isWin) {
+    try {
+      fs.accessSync(binaryPath, fs.constants.X_OK);
+    } catch {
+      fs.chmodSync(binaryPath, 0o755);
+    }
   }
 
   const args = process.argv.slice(2);

@@ -254,6 +254,27 @@ describe("Mock Gateway Simulator Unit Tests", () => {
       expect(isWhitelistedSubjectRoute("me", "GET")).toBe(true);
       expect(isWhitelistedSubjectRoute("designer/studies", "GET")).toBe(false);
       expect(isWhitelistedSubjectRoute("", "GET")).toBe(false);
+      expect(
+        isWhitelistedSubjectRoute(
+          "api/v1/execution/subjects/activation-codes/redeem",
+          "POST"
+        )
+      ).toBe(true);
+      expect(
+        isWhitelistedSubjectRoute(
+          "api/v1/execution/subjects/activation-codes/me",
+          "GET"
+        )
+      ).toBe(true);
+      expect(
+        isWhitelistedSubjectRoute(
+          "api/v1/execution/subjects/subj-101-001/activation-code",
+          "POST"
+        )
+      ).toBe(false);
+      expect(
+        isWhitelistedSubjectRoute("api/v1/interop/instruments/phq-9", "GET")
+      ).toBe(true);
     });
   });
 });

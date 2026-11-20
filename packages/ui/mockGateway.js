@@ -110,10 +110,12 @@ export function isWhitelistedSubjectRoute(
     return true;
   }
 
-  // Normalize interop prefix
+  // Normalize interop or execution prefix
   const normalizedPath = pathLower.startsWith("interop/")
     ? pathLower.slice("interop/".length)
-    : pathLower;
+    : pathLower.startsWith("execution/")
+      ? pathLower.slice("execution/".length)
+      : pathLower;
 
   const parts = normalizedPath.split("/").filter(Boolean);
 
@@ -131,10 +133,25 @@ export function isWhitelistedSubjectRoute(
         return true;
       }
     }
+    // POST /api/v1/execution/amendments/reconsent
+    if (
+      parts[0] === "api" &&
+      parts[1] === "v1" &&
+      parts[2] === "execution" &&
+      parts[3] === "amendments" &&
+      parts[4] === "reconsent" &&
+      methodUpper === "POST"
+    ) {
+      return true;
+    }
   }
 
   if (parts.length === 6) {
     if (parts[0] === "api" && parts[1] === "v1" && parts[2] === "interop") {
+      // GET /api/v1/interop/instruments/{id}
+      if (parts[3] === "instruments" && methodUpper === "GET") {
+        return true;
+      }
       // GET /api/v1/interop/assignments/subject/{authenticated-subject-id}
       if (
         parts[3] === "assignments" &&
@@ -163,6 +180,21 @@ export function isWhitelistedSubjectRoute(
         parts[5] === "acknowledge" &&
         methodUpper === "POST"
       ) {
+        return true;
+      }
+    }
+    // POST /api/v1/execution/subjects/activation-codes/redeem and GET /api/v1/execution/subjects/activation-codes/me
+    if (
+      parts[0] === "api" &&
+      parts[1] === "v1" &&
+      parts[2] === "execution" &&
+      parts[3] === "subjects" &&
+      parts[4] === "activation-codes"
+    ) {
+      if (parts[5] === "redeem" && methodUpper === "POST") {
+        return true;
+      }
+      if (parts[5] === "me" && methodUpper === "GET") {
         return true;
       }
     }
@@ -462,4 +494,99 @@ export function isGatewayApiCall(url) {
     url.host.includes("localhost:8000") ||
     GATEWAY_API_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))
   );
+}
+
+/**
+ * Normalizes a Vite BASE_URL into a leading-and-trailing-slash Service Worker scope.
+ * @param {string|undefined} baseUrl
+ * @param {string} [fallback="/"]
+ * @returns {string}
+ */
+export function normalizeMswBasePath(baseUrl, fallback = "/") {
+  const raw =
+    typeof baseUrl === "string" && baseUrl.trim() ? baseUrl : fallback;
+  const withLeading = raw.startsWith("/") ? raw : `/${raw}`;
+  return withLeading.endsWith("/") ? withLeading : `${withLeading}/`;
+}
+
+/**
+ * Waits until the active Service Worker controls the page (or ready/timeout).
+ * @param {number} [timeoutMs=1500]
+ */
+export async function waitForMswController(timeoutMs = 1500) {
+  if (
+    typeof navigator === "undefined" ||
+    !("serviceWorker" in navigator) ||
+    navigator.serviceWorker.controller
+  ) {
+    return;
+  }
+  await Promise.race([
+    new Promise((resolve) => {
+      navigator.serviceWorker.addEventListener("controllerchange", resolve, {
+        once: true,
+      });
+    }),
+    navigator.serviceWorker.ready,
+    new Promise((resolve) => setTimeout(resolve, timeoutMs)),
+  ]);
+}
+
+/**
+ * Evaluates an unhandled request at the MSW catch-all boundary.
+ * Fails closed with 501/503 in isolated demo builds while preserving passthrough in live dev/test modes.
+ * @param {Request} request
+ * @param {{ demoActive?: boolean, appLabel?: string }} [options]
+ */
+export async function evaluateDemoBoundaryRequest(request, options = {}) {
+  const url = new URL(request.url);
+  const demoActive = Boolean(options.demoActive);
+  const appLabel = options.appLabel || "demo";
+
+  if (!isGatewayApiCall(url)) {
+    const offOrigin =
+      typeof globalThis.location?.origin === "string" &&
+      globalThis.location.origin.startsWith("http")
+        ? url.origin !== globalThis.location.origin
+        : url.port === "8000" || url.port === "8080";
+
+    if (demoActive && offOrigin) {
+      return {
+        passthrough: false,
+        status: 503,
+        body: {
+          title: "Off-origin request blocked in demo mode",
+          status: 503,
+          error: "DEMO_OFF_ORIGIN_BLOCKED",
+          detail: `Isolated ${appLabel} build blocked external/off-origin request to ${url.origin}${url.pathname}.`,
+        },
+      };
+    }
+    return { passthrough: true };
+  }
+
+  const validation = await validateGatewayRequest(request);
+  if (!validation.valid) {
+    return {
+      passthrough: false,
+      status: validation.status,
+      body: validation.body,
+      headers: { "Content-Type": "application/json" },
+    };
+  }
+
+  if (demoActive) {
+    return {
+      passthrough: false,
+      status: 501,
+      body: {
+        title: "Demo endpoint not mocked",
+        status: 501,
+        error: "DEMO_UNMOCKED_ENDPOINT",
+        detail: `No synthetic ${appLabel} handler registered for ${request.method} ${url.pathname}.`,
+      },
+    };
+  }
+
+  return { passthrough: true };
 }

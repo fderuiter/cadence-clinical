@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Knowledge.Domain;
 using Cadence.Apps.Knowledge.Infrastructure.Persistence;
+using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
@@ -253,7 +254,7 @@ public static class TrainingEndpoints
         BatchAssignCurriculumRequest request,
         KnowledgeDbContext dbContext,
         HttpContext httpContext,
-        TimeProvider timeProvider,
+        IClock clock,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.CurriculumId))
@@ -343,7 +344,7 @@ public static class TrainingEndpoints
                 statusCode: StatusCodes.Status422UnprocessableEntity);
         }
 
-        var now = timeProvider.GetUtcNow();
+        var now = clock.UtcNow;
         int siteCount = candidateList.Select(c => c.SiteId).Distinct(StringComparer.Ordinal).Count();
 
         // Request Size Guardrail check (200 limit)
@@ -515,7 +516,7 @@ public static class TrainingEndpoints
         BulkDelegationSignOffRequest request,
         HttpContext httpContext,
         KnowledgeDbContext dbContext,
-        TimeProvider timeProvider,
+        IClock clock,
         IOptionsMonitor<GatewayAuthenticationOptions> gatewayAuthentication,
         CancellationToken cancellationToken)
     {
@@ -561,7 +562,7 @@ public static class TrainingEndpoints
             return OutsideStudy();
         }
 
-        var now = timeProvider.GetUtcNow();
+        var now = clock.UtcNow;
         string batchTxId = Guid.NewGuid().ToString();
         string signerRole = string.Join(",", signer.Roles);
 

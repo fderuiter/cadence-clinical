@@ -3,11 +3,26 @@ import createClient, { type Middleware } from "openapi-fetch";
 import type { paths } from "./types";
 import { getBearerToken } from "./authorization.js";
 
+declare global {
+  interface ImportMeta {
+    readonly env: Record<string, string | undefined>;
+  }
+}
+
 export function getBaseUrl(): string {
-  return (
-    (import.meta as unknown as { env?: { VITE_API_BASE_URL?: string } }).env
-      ?.VITE_API_BASE_URL || "http://localhost:8000"
-  );
+  const configured = import.meta.env?.VITE_API_BASE_URL;
+  if (configured) return configured;
+  const isDemo =
+    import.meta.env.MODE === "demo" ||
+    import.meta.env.VITE_DEMO_MODE === "true";
+  if (
+    isDemo &&
+    typeof globalThis.location?.origin === "string" &&
+    globalThis.location.origin.startsWith("http")
+  ) {
+    return globalThis.location.origin;
+  }
+  return "http://localhost:8000";
 }
 
 export class ApiError extends Error {
@@ -57,9 +72,25 @@ export function getAuthMiddleware(): Middleware {
   };
 }
 
+const INITIAL_BASE_URL = getBaseUrl();
+
+function dispatchOpenApiFetch(input: RequestInfo | URL, init?: RequestInit) {
+  const currentBase = getBaseUrl().replace(/\/+$/, "");
+  const initialBase = INITIAL_BASE_URL.replace(/\/+$/, "");
+  if (
+    currentBase !== initialBase &&
+    input instanceof Request &&
+    input.url.startsWith(`${initialBase}/`)
+  ) {
+    const rewrittenUrl = `${currentBase}${input.url.slice(initialBase.length)}`;
+    return globalThis.fetch(new Request(rewrittenUrl, input), init);
+  }
+  return globalThis.fetch(input, init);
+}
+
 export const openApiClient = createClient<paths>({
-  baseUrl: getBaseUrl(),
-  fetch: (...args) => globalThis.fetch(...args),
+  baseUrl: INITIAL_BASE_URL,
+  fetch: dispatchOpenApiFetch,
 });
 
 openApiClient.use(getAuthMiddleware());
