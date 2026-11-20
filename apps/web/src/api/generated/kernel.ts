@@ -292,6 +292,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/studies/{studyRef}/exports": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Streams a bitemporal study snapshot as CSV, CDISC ODM v1.3.2 XML, or CDISC Dataset-JSON.
+     * @description Projects canonical kernel observations at as_of(valid_at, known_at), applying lock_filter and masking unauthorized sites or blinded treatment values in place (K-TRUTH-1, K-AUTH-4).
+     */
+    get: operations["KernelExportStudySnapshot"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/enrollments/{enrollmentRef}/casebook": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Streams a participant casebook with revisions, queries, verifications, attestations and SHA-256 digests.
+     * @description Streams JSON, CDISC ODM v1.3.2 XML, or printable HTML for one enrollment at as_of(valid_at, known_at), masking unauthorized or blinded content under K-AUTH-4.
+     */
+    get: operations["KernelExportEnrollmentCasebook"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/kernel/simulation/simulate": {
     parameters: {
       query?: never;
@@ -405,6 +445,57 @@ export interface paths {
     put?: never;
     /** Retracts a verification, answer or query assertion with the signed reason for change (assertion.retract). */
     post: operations["KernelRetractAssertion"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/locks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Applies a Frozen or Locked assertion to a study, study site, enrollment, form instance or observation (lock.apply). */
+    post: operations["KernelApplyLock"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/locks/{lockRef}/release": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Releases a Frozen or Locked assertion with a signed retracting assertion (lock.release). */
+    post: operations["KernelReleaseLock"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/studies/{studyRef}/locks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lists Frozen and Locked assertions recorded for a study at an optional bitemporal as_of cut. */
+    get: operations["KernelListStudyLocks"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -1284,6 +1375,16 @@ export interface components {
       schedule:
         null | components["schemas"]["Kernel_KernelSoaAmendmentDiffResponse"];
     };
+    Kernel_KernelApplyLockRequest: {
+      study_ref: string;
+      scope_ref: string;
+      kind: string;
+      meaning?: null | string;
+      /** Format: uuid */
+      lock_id?: null | string;
+      /** Format: uuid */
+      attestation_id?: null | string;
+    };
     Kernel_KernelAssertionStateResponse: {
       ref: string;
       kind: string;
@@ -1393,6 +1494,28 @@ export interface components {
       nodes: components["schemas"]["Kernel_KernelLineageNodeResponse"][];
       edges: components["schemas"]["Kernel_KernelLineageEdgeResponse"][];
       truncated: boolean;
+    };
+    Kernel_KernelLockResponse: {
+      ref: null | string;
+      study_ref: string;
+      scope_ref: null | string;
+      scope_kind: string;
+      subject_code: null | string;
+      kind: string;
+      attestation_ref: null | string;
+      attestation_meaning: null | string;
+      /** Format: date-time */
+      locked_at: null | string;
+      locked_by: null | string;
+      reason_for_change: null | string;
+      released: boolean;
+      release_ref: null | string;
+      /** Format: date-time */
+      released_at: null | string;
+      released_by: null | string;
+      release_reason: null | string;
+      masked: boolean;
+      mask: null | string;
     };
     Kernel_KernelNextActionResponse: {
       description: string;
@@ -1504,6 +1627,14 @@ export interface components {
       /** Format: date-time */
       observed_at: string;
     };
+    Kernel_KernelReleaseLockRequest: {
+      study_ref?: null | string;
+      meaning?: null | string;
+      /** Format: uuid */
+      assertion_id?: null | string;
+      /** Format: uuid */
+      attestation_id?: null | string;
+    };
     Kernel_KernelRetractAssertionRequest: {
       enrollment_ref: string;
       /** Format: uuid */
@@ -1599,6 +1730,15 @@ export interface components {
       /** Format: int32 */
       window_after: number | string;
       locations: string[];
+    };
+    Kernel_KernelStudyLocksResponse: {
+      study_ref: string;
+      study_code: string;
+      /** Format: date-time */
+      valid_at: string;
+      /** Format: date-time */
+      known_at: string;
+      locks: components["schemas"]["Kernel_KernelLockResponse"][];
     };
     Kernel_KernelVerifyObservationRequest: {
       enrollment_ref: string;
@@ -2641,6 +2781,111 @@ export interface operations {
       };
     };
   };
+  KernelExportStudySnapshot: {
+    parameters: {
+      query?: {
+        format?: string;
+        lock_filter?: string;
+        as_of?: string;
+        valid_at?: string;
+        known_at?: string;
+      };
+      header?: never;
+      path: {
+        studyRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelExportEnrollmentCasebook: {
+    parameters: {
+      query?: {
+        format?: string;
+        as_of?: string;
+        valid_at?: string;
+        known_at?: string;
+      };
+      header?: never;
+      path: {
+        enrollmentRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
   KernelSimulateProtocol: {
     parameters: {
       query?: never;
@@ -3137,6 +3382,219 @@ export interface operations {
       };
       /** @description Locked. Kernel errors: `K.Assertion.Locked`. */
       423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelApplyLock: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_KernelApplyLockRequest"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelLockResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`, `K.Trust.AuthenticationStale`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Trust.PersonRequired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Assertion.ScopeUnknown`, `K.Trust.TargetUnknown`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Assertion.AlreadyLocked`, `K.Command.IdempotencyConflict`, `K.Trust.TargetContentChanged`, `K.Trust.TargetNotSignable`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Assertion.AttestationRejected`, `K.Assertion.ScopeInvalid`, `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Trust.MethodRequired`, `K.Trust.TargetKindUnsupported`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelReleaseLock: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        lockRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json":
+          null | components["schemas"]["Kernel_KernelReleaseLockRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelLockResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`, `K.Trust.AuthenticationStale`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Trust.PersonRequired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`, `K.Trust.TargetUnknown`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Assertion.AlreadyRetracted`, `K.Command.IdempotencyConflict`, `K.Trust.TargetContentChanged`, `K.Trust.TargetNotSignable`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Assertion.AttestationRejected`, `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Trust.MethodRequired`, `K.Trust.TargetKindUnsupported`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelListStudyLocks: {
+    parameters: {
+      query?: {
+        as_of?: string;
+        valid_at?: string;
+        known_at?: string;
+        active_only?: boolean;
+      };
+      header?: never;
+      path: {
+        studyRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelStudyLocksResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };

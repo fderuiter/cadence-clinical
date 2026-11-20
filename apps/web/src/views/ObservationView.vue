@@ -50,6 +50,15 @@
           </dd>
         </dl>
 
+        <ScopeLockControls
+          :study-ref="observationStudyRef"
+          :scope-ref="cleanObservationRef"
+          scope-label="observation"
+          :direct-locks="directObservationLocks"
+          id-prefix="observation-lock"
+          @changed="load"
+        />
+
         <form
           v-if="!locked"
           class="observation-correction"
@@ -172,6 +181,9 @@
 <script setup lang="ts">
 import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
 import type { RouteLocationRaw, Router } from "vue-router";
+import ScopeLockControls, {
+  type DirectScopeLockItem,
+} from "../components/canvas/ScopeLockControls.vue";
 import ReasonForChangeModal from "../components/ReasonForChangeModal.vue";
 import { useObservationCorrection } from "../composables/useObservationCorrection";
 import { kernelApi, type KernelObservation } from "../api/kernelApi";
@@ -182,6 +194,7 @@ import {
   sameObservationValue,
 } from "../api/observationValue";
 import { observationNodeRef } from "../canvas/nodeRef";
+import { findKernelStudyRef } from "../canvas/kernelStudy";
 
 /**
  * Corrects one kernel observation (ADR-2620). The value shown is always the kernel's: the screen keeps no local
@@ -191,6 +204,8 @@ import { observationNodeRef } from "../canvas/nodeRef";
  */
 const props = defineProps<{
   observationRef: string;
+  studyCode?: string | null;
+  studyRef?: string | null;
   embedded?: boolean;
   returnTo?: RouteLocationRaw | null;
   returnLabel?: string;
@@ -222,8 +237,60 @@ const SCOPE_LABELS: Record<string, string> = {
   study: "study level",
   study_site: "site level",
   enrollment: "participant level",
+  collection_instance: "form level",
   observation: "this value",
 };
+
+const observationStudyRef = ref<string | null>(null);
+const cleanObservationRef = computed(() => {
+  const raw = observation.value?.ref ?? props.observationRef;
+  const at = raw.indexOf("@");
+  return at < 0 ? raw : raw.slice(0, at);
+});
+
+const directObservationLocks = computed<DirectScopeLockItem[]>(() => {
+  const current = observation.value;
+  if (!current) return [];
+  return current.locks
+    .filter((held) => String(held.scope) === cleanObservationRef.value)
+    .map((held) => {
+      const idText = String(held.lock_id);
+      return {
+        lockRef: idText.startsWith("assertion:")
+          ? idText
+          : `assertion:${idText}`,
+        kind: held.kind,
+      };
+    });
+});
+
+let studyLookupSeq = 0;
+
+watch(
+  [() => props.studyRef, () => props.studyCode],
+  async ([explicitStudyRef, code]) => {
+    const seq = ++studyLookupSeq;
+    if (explicitStudyRef) {
+      observationStudyRef.value = explicitStudyRef;
+      return;
+    }
+    if (!code) {
+      if (props.embedded) observationStudyRef.value = null;
+      return;
+    }
+    try {
+      const resolved = await findKernelStudyRef(code);
+      if (seq === studyLookupSeq) {
+        observationStudyRef.value = resolved;
+      }
+    } catch {
+      if (seq === studyLookupSeq) {
+        observationStudyRef.value = null;
+      }
+    }
+  },
+  { immediate: true }
+);
 
 function lockScopeLabel(scope: unknown): string {
   const kind = String(scope).split(":")[0];
@@ -282,8 +349,11 @@ watch(
       const steps = await kernelApi.getZoomPath(obs.enrollment_ref);
       if (request !== redirectRequest) return;
       const studyStep = steps.find(
-        (s) => s.level === "study" && s.mask === null && s.label
+        (s) => s.level === "study" && s.mask === null
       );
+      if (!props.studyRef && !props.studyCode) {
+        observationStudyRef.value = studyStep?.node ?? null;
+      }
       const enrollmentStep = steps.find(
         (s) => s.level === "enrollment" && s.mask === null
       );

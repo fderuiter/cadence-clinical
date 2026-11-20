@@ -705,7 +705,10 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { allowUnbackedAction } from "../utils/unbackedActions.js";
+import {
+  allowUnbackedAction,
+  refuseUnbackedAction,
+} from "../utils/unbackedActions.js";
 
 const STEPS = [
   { number: 1, title: "Target Format", shortDesc: "XPT, ODM, JSON, CSV" },
@@ -912,142 +915,16 @@ const totalSelectedCount = computed(
   () => selectedDomains.value.length + selectedDatasets.value.length
 );
 
-function generateValidOdmXml(studyIdVal, lockFilter, _includeAudit) {
-  const dateStr = new Date().toISOString();
-  const lockComment =
-    lockFilter === "locked_only"
-      ? "Filtered for Locked records only (Frozen snapshot)"
-      : lockFilter === "unlocked_only"
-        ? "Filtered for Unlocked in-progress records"
-        : "Complete study dataset (All records)";
-
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3"
-     xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
-     FileType="Snapshot"
-     FileOID="ODM.${studyIdVal}.${Date.now()}"
-     CreationDateTime="${dateStr}"
-     ODMVersion="1.3.2"
-     Originator="Cadence Clinical Data Platform"
-     SourceSystem="Cadence eClinical MDR/EDC"
-     SourceSystemVersion="2.4.0">
-  <Study OID="STUDY.${studyIdVal}">
-    <GlobalVariables>
-      <StudyName>${studyIdVal}</StudyName>
-      <StudyDescription>Protocol ${studyIdVal} Clinical Trial Dataset</StudyDescription>
-      <ProtocolName>${studyIdVal}</ProtocolName>
-    </GlobalVariables>
-    <BasicDefinitions />
-    <MetaDataVersion OID="MDV.${studyIdVal}.001" Name="Version 1.0">
-      <Protocol>
-        <StudyEventRef StudyEventOID="SE.VISIT1" OrderNumber="1" Mandatory="Yes" />
-      </Protocol>
-      <StudyEventDef OID="SE.VISIT1" Name="Screening Visit" Repeating="No" Type="Scheduled">
-        <FormRef FormOID="FORM.DM" Mandatory="Yes" />
-        <FormRef FormOID="FORM.VS" Mandatory="Yes" />
-      </StudyEventDef>
-      <FormDef OID="FORM.DM" Name="Demographics eCRF" Repeating="No">
-        <ItemGroupRef ItemGroupOID="IG.DM" Mandatory="Yes" />
-      </FormDef>
-      <FormDef OID="FORM.VS" Name="Vital Signs eCRF" Repeating="Yes">
-        <ItemGroupRef ItemGroupOID="IG.VS" Mandatory="Yes" />
-      </FormDef>
-      <ItemGroupDef OID="IG.DM" Name="Demographics Domain" Repeating="No">
-        <ItemRef ItemOID="IT.DM.USUBJID" Mandatory="Yes" />
-        <ItemRef ItemOID="IT.DM.AGE" Mandatory="Yes" />
-        <ItemRef ItemOID="IT.DM.SEX" Mandatory="Yes" />
-        <ItemRef ItemOID="IT.DM.ARM" Mandatory="Yes" />
-      </ItemGroupDef>
-      <ItemGroupDef OID="IG.VS" Name="Vital Signs Domain" Repeating="Yes">
-        <ItemRef ItemOID="IT.VS.USUBJID" Mandatory="Yes" />
-        <ItemRef ItemOID="IT.VS.VSTESTCD" Mandatory="Yes" />
-        <ItemRef ItemOID="IT.VS.VSORRES" Mandatory="Yes" />
-        <ItemRef ItemOID="IT.VS.VSORRESU" Mandatory="Yes" />
-      </ItemGroupDef>
-    </MetaDataVersion>
-  </Study>
-  <ClinicalData StudyOID="STUDY.${studyIdVal}" MetaDataVersionOID="MDV.${studyIdVal}.001">
-    <SubjectData SubjectKey="SUBJ-101" TransactionType="Insert">
-      <AuditRecord>
-        <UserRef UserOID="crc.user" />
-        <LocationRef LocationOID="SITE-101" />
-        <DateTimeStamp>${dateStr}</DateTimeStamp>
-        <ReasonForChange>${lockComment}</ReasonForChange>
-      </AuditRecord>
-      <StudyEventData StudyEventOID="SE.VISIT1">
-        <FormData FormOID="FORM.DM" Status="${lockFilter === "unlocked_only" ? "DRAFT" : "LOCKED"}">
-          <ItemGroupData ItemGroupOID="IG.DM">
-            <ItemDataString ItemOID="IT.DM.USUBJID" Value="SUBJ-101" />
-            <ItemDataInteger ItemOID="IT.DM.AGE" Value="48" />
-            <ItemDataString ItemOID="IT.DM.SEX" Value="F" />
-            <ItemDataString ItemOID="IT.DM.ARM" Value="Active Arm" />
-          </ItemGroupData>
-        </FormData>
-        <FormData FormOID="FORM.VS" Status="${lockFilter === "unlocked_only" ? "DRAFT" : "LOCKED"}">
-          <ItemGroupData ItemGroupOID="IG.VS">
-            <ItemDataString ItemOID="IT.VS.USUBJID" Value="SUBJ-101" />
-            <ItemDataString ItemOID="IT.VS.VSTESTCD" Value="SYSBP" />
-            <ItemDataString ItemOID="IT.VS.VSORRES" Value="120" />
-            <ItemDataString ItemOID="IT.VS.VSORRESU" Value="mmHg" />
-          </ItemGroupData>
-        </FormData>
-      </StudyEventData>
-    </SubjectData>
-  </ClinicalData>
-</ODM>`;
+function fastExportOdmXml() {
+  isFastExporting.value = false;
+  void recordLockFilter.value;
+  refuseUnbackedAction("Exporting CDISC ODM-XML");
 }
 
-function generateValidCsv(studyIdVal, lockFilter) {
-  const statusStr =
-    lockFilter === "locked_only"
-      ? "LOCKED"
-      : lockFilter === "unlocked_only"
-        ? "DRAFT"
-        : "LOCKED";
-  return `STUDYID,DOMAIN,USUBJID,SITEID,RECORD_STATUS,VISIT,VSTESTCD,VSORRES,VSORRESU,CREATED_BY,REASON_FOR_CHANGE
-${studyIdVal},DM,SUBJ-101,SITE-101,${statusStr},SCREENING,,,crc.user,Subject screened and enrolled
-${studyIdVal},VS,SUBJ-101,SITE-101,${statusStr},SCREENING,SYSBP,120,mmHg,crc.user,Screening vital signs measurement
-${studyIdVal},VS,SUBJ-101,SITE-101,${statusStr},SCREENING,DIABP,80,mmHg,crc.user,Screening vital signs measurement
-${studyIdVal},AE,SUBJ-101,SITE-101,${statusStr},VISIT1,CEPHALALGIA,Severe headache,,crc.user,Adverse event onset documented`;
-}
-
-function downloadBlobFile(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-async function fastExportOdmXml() {
-  isFastExporting.value = true;
-  try {
-    const xmlContent = generateValidOdmXml(
-      studyId.value,
-      recordLockFilter.value,
-      true
-    );
-    const blob = new Blob([xmlContent], { type: "application/xml" });
-    const filename = `${studyId.value.toLowerCase()}_cdisc_odm_v1.3.2_${recordLockFilter.value}.xml`;
-    downloadBlobFile(blob, filename);
-  } finally {
-    isFastExporting.value = false;
-  }
-}
-
-async function fastExportCsv() {
-  isFastExporting.value = true;
-  try {
-    const csvContent = generateValidCsv(studyId.value, recordLockFilter.value);
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const filename = `${studyId.value.toLowerCase()}_clinical_dataset_${recordLockFilter.value}.csv`;
-    downloadBlobFile(blob, filename);
-  } finally {
-    isFastExporting.value = false;
-  }
+function fastExportCsv() {
+  isFastExporting.value = false;
+  void recordLockFilter.value;
+  refuseUnbackedAction("Exporting CSV dataset");
 }
 
 function formatNameById(id) {

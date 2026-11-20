@@ -199,6 +199,7 @@
             v-else-if="openObservationRef"
             :key="openObservationRef"
             embedded
+            :study-code="studyCode"
             :observation-ref="openObservationRef"
             :return-to="observationReturnLocation"
             :return-label="observationReturnLabel"
@@ -308,6 +309,18 @@
             :participant="queryParticipantFilter"
             :changed="queryChangedFilter"
             @filter="applyStudyQueryFilter"
+          />
+
+          <LocksSection
+            v-else-if="section?.id === 'locks'"
+            :key="`locks-${studyCode}`"
+            :study-code="studyCode"
+          />
+
+          <ExportsSection
+            v-else-if="section?.id === 'exports'"
+            :key="`exports-${studyCode}`"
+            :study-code="studyCode"
           />
 
           <section
@@ -468,6 +481,8 @@ import { useStudyCanvasStore } from "../stores/studyCanvas";
 import CanvasFormWorkspace from "../components/canvas/CanvasFormWorkspace.vue";
 import CanvasInspector from "../components/canvas/CanvasInspector.vue";
 import CanvasPalette from "../components/canvas/CanvasPalette.vue";
+import ExportsSection from "../components/canvas/ExportsSection.vue";
+import LocksSection from "../components/canvas/LocksSection.vue";
 import ParticipantRecord from "../components/canvas/ParticipantRecord.vue";
 import ParticipantsSection from "../components/canvas/ParticipantsSection.vue";
 import ProtocolVersionsSection from "../components/canvas/ProtocolVersionsSection.vue";
