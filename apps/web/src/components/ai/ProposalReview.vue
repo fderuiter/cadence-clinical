@@ -132,10 +132,8 @@
               >
                 <template v-if="source.role === 'plan' && proposal.plan">
                   <p>
-                    <strong>{{ proposal.plan.title }}</strong
-                    >, version {{ proposal.plan.number }} ({{
-                      proposal.plan.media_type
-                    }})
+                    <strong>{{ proposal.plan.title }}</strong>, version
+                    {{ proposal.plan.number }} ({{ proposal.plan.media_type }})
                   </p>
                   <p class="mono">{{ proposal.plan.content_hash }}</p>
                   <p class="note">
