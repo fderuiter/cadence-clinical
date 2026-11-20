@@ -218,6 +218,13 @@ public sealed class QualityGateRegistryTests : IDisposable
             Git("commit", "-q", "-am", "grow the baseline");
             return Context();
         },
+        ["public-bundle"] = () =>
+        {
+            const string validCsp = "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self'; media-src 'self'; worker-src 'self'; connect-src 'self'\">";
+            Write("docs/.vitepress/dist/index.html", $"<!doctype html><html><head>{validCsp}</head><body><p>Portal</p></body></html>\n");
+            Write("apps/web/dist/index.html", $"<!doctype html><html><head>{validCsp}</head><body><img src=\"https://images.unsplash.com/photo-1\"></body></html>\n");
+            return Context();
+        },
     };
 
     [Theory]
@@ -236,7 +243,7 @@ public sealed class QualityGateRegistryTests : IDisposable
     [Fact]
     public void EveryGate_HasAFailingFixture()
     {
-        QualityGates.All.Should().HaveCount(28);
+        QualityGates.All.Should().HaveCount(29);
         Fixtures().Keys.Should().BeEquivalentTo(QualityGates.All.Select(g => g.Name));
         FailsClosedOnly.Keys.Should().BeSubsetOf(QualityGates.All.Select(g => g.Name));
     }

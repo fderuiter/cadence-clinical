@@ -563,6 +563,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2816: Retire Orphaned Legacy Web Type Schemas](adr/2026-11-19-retire-orphaned-legacy-web-type-schemas.md) | Current | - Status: Accepted |
 | [ADR-2546: Isolate Static Demo Builds with Stateful MSW Handlers](adr/2026-11-19-isolate-static-demo-builds-with-stateful-msw-handlers.md) | Current | - Status: Accepted |
 | [ADR-2817: Caller-Bound Participant Self-Service Wallet and Receipt OCR Capabilities](adr/2026-11-19-caller-bound-participant-self-service-wallet-and-receipt-ocr-capabilities.md) | Current | - Status: Accepted |
+| [ADR-2497: Dual-Layer Gates for Source and Public Bundles](adr/2026-11-20-dual-layer-gates-for-source-and-public-bundles.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

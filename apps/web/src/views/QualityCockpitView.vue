@@ -1485,7 +1485,7 @@ function loadSeedData() {
       audit_number: "AUD-2026-SITE-101",
       audit_type: "SITE_AUDIT",
       site_id: "SITE-101",
-      lead_auditor: "lead.auditor@gxp-assurance.com",
+      lead_auditor: "lead.auditor@cadence.clinical",
       planned_start_date: "2026-09-01T09:00:00",
       planned_end_date: "2026-09-03T17:00:00",
       status: "PLANNED",

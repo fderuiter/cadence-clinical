@@ -9,7 +9,7 @@ namespace Cadence.ToolingCore.Services;
 public static class SecretsBaselineCleanerService
 {
     private static readonly Regex ExcludeRegex = new(
-        @"(pnpm-lock\.yaml|uv\.lock|docs/CDISC/|docs/NCI/|docs/openapi/|docs/schema/|docs/SDLC/runs/|report.*\.xml|coverage.*\.xml|\.cadence/|dist/|\.(pdf|xlsx|xls|docx|doc|png|jpg|jpeg|gif|svg|ico|woff|woff2|eot|ttf|otf|mp4|webm|mp3|wav|zip|tar\.gz|gz|sqlite|db)$)",
+        @"(pnpm-lock\.yaml|uv\.lock|docs/CDISC/|docs/NCI/|docs/openapi/|docs/schema/|docs/SDLC/runs/|report.*\.xml|coverage.*\.xml|\.cadence/|\.(pdf|xlsx|xls|docx|doc|png|jpg|jpeg|gif|svg|ico|woff|woff2|eot|ttf|otf|mp4|webm|mp3|wav|zip|tar\.gz|gz|sqlite|db)$)",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     public static int CleanSecretsBaseline(string? customPath = null, string? repoRoot = null)
@@ -35,7 +35,7 @@ public static class SecretsBaselineCleanerService
                 {
                     var excludeObj = new JsonObject
                     {
-                        ["files"] = @"(pnpm-lock\.yaml|uv\.lock|docs/CDISC/|docs/NCI/|docs/openapi/|docs/schema/|docs/SDLC/runs/|report.*\.xml|coverage.*\.xml|\.cadence/|dist/|\.(pdf|xlsx|xls|docx|doc|png|jpg|jpeg|gif|svg|ico|woff|woff2|eot|ttf|otf|mp4|webm|mp3|wav|zip|tar\.gz|gz|sqlite|db)$)",
+                        ["files"] = @"(pnpm-lock\.yaml|uv\.lock|docs/CDISC/|docs/NCI/|docs/openapi/|docs/schema/|docs/SDLC/runs/|report.*\.xml|coverage.*\.xml|\.cadence/|\.(pdf|xlsx|xls|docx|doc|png|jpg|jpeg|gif|svg|ico|woff|woff2|eot|ttf|otf|mp4|webm|mp3|wav|zip|tar\.gz|gz|sqlite|db)$)",
                         ["lines"] = null
                     };
                     obj["exclude"] = excludeObj;

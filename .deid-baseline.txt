@@ -1,16 +1,12 @@
 # DEID scan ratchet baseline (pnpm cadence check deid). Findings that predate the full detector and are not PHI.
 # One per line: path|category|first 16 hex digits of SHA-256(trimmed line). Sorted ordinally. The list may only shrink.
 # Regenerate with CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid (docs/cli.md).
-apps/apphost/src/Program.cs|urls|0dbf6a3a3204223b
-apps/apphost/src/Properties/launchSettings.json|urls|75a56978a4790517
 apps/execution/src/Domain/Devices/UdiParser.cs|telephone_fax|52696c2bdd7c546c
 apps/execution/src/Domain/Devices/UdiParser.cs|telephone_fax|52696c2bdd7c546c
 apps/execution/src/Domain/Devices/UdiParser.cs|telephone_fax|52696c2bdd7c546c
 apps/execution/src/Domain/Devices/UdiParser.cs|telephone_fax|67d0e9bf4a645a1f
-apps/execution/src/Infrastructure/Persistence/ExecutionDbContextFactory.cs|urls|d926d4cffcf30b90
 apps/execution/src/Infrastructure/Persistence/Migrations/20260905174215_AddExecutionSubjectsSlice.cs|telephone_fax|1bfdd74615111cb2
 apps/execution/src/Infrastructure/Security/AesGcmDemographicsEncryptionService.cs|device_serial|6027352f25ff3b89
-apps/gateway/src/Program.cs|urls|f1c2971dc8dd9c29
 apps/gateway/src/Signatures/KeycloakCredentialVerifier.cs|ip_mac_addresses|38b82aeb958c832d
 apps/payments/src/Endpoints/PaymentEndpoints.cs|telephone_fax|750ed3d5af86a3e1
 apps/web/src/api/types.ts|ip_mac_addresses|62a36757ae909c73
@@ -44,7 +40,6 @@ apps/web/src/components/clinical/CecAdjudicationConsole.vue|dates|a8665a93905cd4
 apps/web/src/components/clinical/CecAdjudicationConsole.vue|dates|b0dd86efa3e8bb43
 apps/web/src/components/clinical/CecAdjudicationConsole.vue|dates|b0dd86efa3e8bb43
 apps/web/src/components/clinical/CecAdjudicationConsole.vue|telephone_fax|8e1803d041cfa5be
-apps/web/src/components/clinical/CecAdjudicationConsole.vue|telephone_fax|8e471e33c6cd1ab6
 apps/web/src/components/clinical/CecAdjudicationConsole.vue|telephone_fax|aa1e0ec3e2275c5a
 apps/web/src/components/clinical/CecAdjudicationConsole.vue|telephone_fax|b6db71b54123e34f
 apps/web/src/components/clinical/CecAdjudicationConsole.vue|telephone_fax|f5aa350df66b8c0e
@@ -135,15 +130,11 @@ apps/web/src/components/clinical/SensorTelemetryConsole.vue|ip_mac_addresses|3ab
 apps/web/src/components/clinical/SensorTelemetryConsole.vue|ip_mac_addresses|e19af88fa35a119a
 apps/web/src/components/clinical/SensorTelemetryConsole.vue|telephone_fax|5c6057495b86139c
 apps/web/src/components/clinical/SensorTelemetryConsole.vue|telephone_fax|635e3f8bc78b8c45
-apps/web/src/components/clinical/SensorTelemetryConsole.vue|urls|0d5218d01ba1d8be
 apps/web/src/components/clinical/SensorTelemetryConsole.vue|zip_geographic|1c162f2a34f6e9c6
 apps/web/src/components/clinical/StatisticalComputingConsole.vue|telephone_fax|8d5ee30aff480dc1
 apps/web/src/components/clinical/StatisticalComputingConsole.vue|zip_geographic|4777f58bd433081f
 apps/web/src/components/clinical/TelehealthDtpConsole.vue|zip_geographic|9f53957d8044ffcb
 apps/web/src/components/crf/AstNodeTraceViewer.vue|zip_geographic|e5edcbfdc3c191cd
-apps/web/src/components/econsent/IcfSectionEditor.vue|urls|504490bbe276ee29
-apps/web/src/components/etmf/PdfPreviewModal.vue|email|938a9a4080776dae
-apps/web/src/components/etmf/PdfPreviewModal.vue|ssn_national_id|be2c1c1457cc705e
 apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue|ip_mac_addresses|0fc09638c565f57f
 apps/web/src/components/imaging/OncologyCalipers.vue|zip_geographic|e5edcbfdc3c191cd
 apps/web/src/components/persona/CrcFormRenderer.vue|zip_geographic|92c673752b9e2cb2
@@ -178,12 +169,8 @@ apps/web/src/views/MdrView.vue|dates|4ce4ddfb324c2bbb
 apps/web/src/views/MdrView.vue|dates|4f3b2069bc61e9bf
 apps/web/src/views/MdrView.vue|dates|5da16049140faa3b
 apps/web/src/views/MdrView.vue|dates|c1f1cbe6dc1a914e
-apps/web/src/views/QualityCockpitView.vue|email|d794d410543dc1db
 apps/web/src/views/QualityCockpitView.vue|zip_geographic|42c0ed4ca665c7d9
-apps/web/src/views/TicketsView.vue|email|0b5dce9c38ac6061
-apps/web/src/views/TicketsView.vue|email|f73396d1a8213cd1
 packages/compliance/src/Pkcs7Signer.cs|ip_mac_addresses|7c874f0a27456a0a
-packages/compliance/src/RtmGeneratorService.cs|urls|f823ee0030ad3f23
 packages/compliance/src/RtmGeneratorService.cs|zip_geographic|0688aff52efeded1
 packages/compliance/src/RtmGeneratorService.cs|zip_geographic|7d655f47a459f7f8
 packages/engine_core/operations/evaluator.py|age|2e69afca2c069814
@@ -194,15 +181,9 @@ packages/engine_core/src/Toxicity/LabToxicityGradingEngine.cs|zip_geographic|df0
 packages/engine_core/src/Toxicity/LabToxicityGradingEngine.cs|zip_geographic|fd06ffc713c419b3
 packages/engine_core/src/Toxicity/LabToxicityGradingEngine.cs|zip_geographic|fd06ffc713c419b3
 packages/engine_core/timeline/engine.py|dates|27adc9ea5a8b78db
-packages/kernel/src/Cadence.Kernel.Abstractions/Knowledge/KnownCodeSystems.cs|urls|66b9c6cac34d4844
-packages/kernel/src/Cadence.Kernel.Abstractions/Knowledge/KnownCodeSystems.cs|urls|7ac99f4b594d2e45
-packages/kernel/src/Cadence.Kernel.Abstractions/Knowledge/KnownCodeSystems.cs|urls|f2da3bff150f651a
 packages/kernel/src/Cadence.Rules/Packs/RulePackJson.cs|dates|966de3f3a4e95540
 packages/kernel/src/Cadence.Standards/Seed/adamig-1-3.json|dates|f8a678961cfd0b6e
 packages/kernel/src/Cadence.Standards/Seed/sdtmig-3-4.json|dates|0a841e453fa2b181
-packages/storage/src/BlobStore.cs|urls|3acb188640f4f752
-packages/storage/src/BlobStore.cs|urls|5fe7364af109e7fc
-packages/storage/src/BlobStore.cs|urls|ecc88c89ea03903e
 packages/telemetry/src/CadenceHttpHardening.cs|ip_mac_addresses|bff8abe990f2aa40
 packages/tooling_core/src/Cadence.SchemaDocExporter/Program.cs|dates|8068134f04bc9287
 packages/tooling_core/src/Services/AdrValidatorService.cs|dates|00e92f95a2ec7c75
@@ -290,9 +271,5 @@ packages/tooling_core/src/Services/AdrValidatorService.cs|dates|f9d77f0501a555ad
 packages/tooling_core/src/Services/AdrValidatorService.cs|dates|fb6f0feb45a02256
 packages/tooling_core/src/Services/AdrValidatorService.cs|dates|fc55cfa8fa8ef53e
 packages/tooling_core/src/Services/AdrValidatorService.cs|dates|fd354ebe3f1cf368
-packages/ui/src/components/FileUploadModal.vue|telephone_fax|0c6db52c0a71e4f8
 packages/ui/src/components/FileUploadModal.vue|telephone_fax|103cc183dda9dbb4
-packages/ui/src/components/FileUploadModal.vue|telephone_fax|12fb350172e8b29d
-packages/ui/src/components/FileUploadModal.vue|telephone_fax|66884420b488d8a8
-packages/ui/src/components/FileUploadModal.vue|telephone_fax|c4026bd5a8c59412
 packages/ui/src/components/FileUploadModal.vue|telephone_fax|f10d8a0b7dd68410

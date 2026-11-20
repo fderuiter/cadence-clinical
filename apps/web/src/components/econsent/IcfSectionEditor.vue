@@ -331,10 +331,8 @@ const insertTable = () => {
 };
 
 const insertImage = () => {
-  const imageUrl = prompt(
-    "Enter Image URL:",
-    "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=500&q=80"
-  );
+  const defaultDiagramUrl = `${import.meta.env.BASE_URL || "/"}assets/consent-diagram.svg`;
+  const imageUrl = prompt("Enter Image URL:", defaultDiagramUrl);
   if (imageUrl) {
     const imgHtml = `<img src="${imageUrl}" alt="Consent diagram" style="max-width: 100%; border-radius: 6px; margin: 12px 0; display: block;" />`;
     formatDoc("insertHTML", imgHtml);

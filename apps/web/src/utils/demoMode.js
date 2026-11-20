@@ -17,6 +17,12 @@ export function isDemoBuild(env) {
 export function resolveGatewayBaseUrl() {
   const configured = import.meta.env?.VITE_API_BASE_URL;
   if (configured) return configured;
+  if (import.meta.env.MODE === "demo") {
+    return typeof globalThis.location?.origin === "string" &&
+      globalThis.location.origin.startsWith("http")
+      ? globalThis.location.origin
+      : "/";
+  }
   if (
     isDemoBuild() &&
     typeof globalThis.location?.origin === "string" &&

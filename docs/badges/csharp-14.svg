@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="74" height="20" role="img" aria-label="C#: 14">
+  <title>C#: 14</title>
+  <rect width="38" height="20" rx="3" fill="#334155"/>
+  <rect x="35" width="39" height="20" rx="3" fill="#239120"/>
+  <rect x="35" width="4" height="20" fill="#239120"/>
+  <g fill="#ffffff" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif" font-size="11" font-weight="600">
+    <text x="19" y="14">C#</text>
+    <text x="55" y="14">14</text>
+  </g>
+</svg>

@@ -50,10 +50,21 @@ jobs:
       - name: Build UI package
         run: pnpm --filter ui build
 
+      - name: Build Demo Web Application
+        run: pnpm --filter web exec vite build --mode demo --base=/cadence-clinical/demo/
+
       - name: Build Documentation Portal
         env:
           CADENCE_DOCS_SKIP_CHECKS: "1"
         run: pnpm docs:build
+
+      - name: Stage Demo Web Application into Portal Output
+        run: |
+          mkdir -p docs/.vitepress/dist/demo
+          cp -R apps/web/dist/. docs/.vitepress/dist/demo/
+
+      - name: Verify Public Bundles
+        run: node scripts/run-cli.js check public-bundle
 
       - name: Generate Documentation Artifact SHA256 Checksums
         run: |

@@ -169,7 +169,7 @@ jobs:
         run: dotnet build Cadence.sln
 
       - name: Run Cadence quality sentinels
-        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude api-clients --exclude vulnerabilities
+        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude api-clients --exclude vulnerabilities --exclude public-bundle
 
       - name: Run architecture tests
         run: dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build
@@ -239,10 +239,16 @@ jobs:
             Directory.Packages.props
             global.json
 
+      - name: Build demo web bundle
+        run: pnpm build:demo
+
       - name: Run documentation compilation
         env:
           CADENCE_DOCS_SKIP_CHECKS: "1"
         run: pnpm docs:build
+
+      - name: Verify public bundles
+        run: node scripts/run-cli.js check public-bundle
 
   security:
     name: Security and Vulnerability Audit
@@ -323,9 +329,9 @@ jobs:
           git fetch origin main --depth=1 || true
           CHANGED_FILES=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '\.(py|js|ts|tsx|jsx|json|md|log|txt|cs)$' || true)
+            CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '(\.(py|js|mjs|cjs|ts|tsx|jsx|vue|json|md|html|svg|yaml|yml|toml|xml|csv|sql|log|txt|cs)|^(LICENSE|Dockerfile|Makefile))$' || true)
           else
-            CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '\.(py|js|ts|tsx|jsx|json|md|log|txt|cs)$' || true)
+            CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '(\.(py|js|mjs|cjs|ts|tsx|jsx|vue|json|md|html|svg|yaml|yml|toml|xml|csv|sql|log|txt|cs)|^(LICENSE|Dockerfile|Makefile))$' || true)
           fi
           if [ -n "$CHANGED_FILES" ]; then
             echo "Scanning changed files: $CHANGED_FILES"

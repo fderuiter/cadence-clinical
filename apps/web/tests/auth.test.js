@@ -386,7 +386,7 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
       expect(authStore.token).toBeNull();
       expect(authStore.identity).toEqual({
         username: "fderuiter",
-        email: "fderuiter@example.com", // deid-ignore
+        email: "fderuiter@cadence.clinical",
         firstName: "Frans",
         lastName: "de Ruiter",
         id: "fderuiter-id-12345",

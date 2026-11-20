@@ -1,5 +1,6 @@
 import { defineConfig } from "vitepress";
 import { withMermaid } from "vitepress-plugin-mermaid";
+import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -152,6 +153,50 @@ function getApiSidebarGroups() {
   ];
 }
 
+function buildPortalCspContent(inlineScriptHashes = []) {
+  const scriptSources = ["'self'", ...inlineScriptHashes].join(" ");
+  return [
+    "default-src 'self'",
+    `script-src ${scriptSources}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self' data:",
+    "media-src 'self'",
+    "worker-src 'self'",
+    "connect-src 'self'",
+    "manifest-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join("; ");
+}
+
+function injectHashedPortalCsp(html) {
+  const inlineHashes = new Set();
+  const inlineScriptRegex =
+    /<script\b(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script>/gi;
+  let match;
+  while ((match = inlineScriptRegex.exec(html)) !== null) {
+    const scriptBody = match[1];
+    if (scriptBody.length > 0) {
+      const digest = crypto
+        .createHash("sha256")
+        .update(scriptBody, "utf8")
+        .digest("base64");
+      inlineHashes.add(`'sha256-${digest}'`);
+    }
+  }
+
+  const cspTag = `<meta http-equiv="Content-Security-Policy" content="${buildPortalCspContent([...inlineHashes])}">`;
+  const existingCspRegex =
+    /<meta\b[^>]*\bhttp-equiv=["']Content-Security-Policy["'][^>]*>/i;
+  if (existingCspRegex.test(html)) {
+    return html.replace(existingCspRegex, cspTag);
+  }
+
+  return html.replace(/<head>/i, `<head>\n    ${cspTag}`);
+}
+
 const config = defineConfig({
   title: "Cadence Clinical Portal",
   description:
@@ -159,6 +204,18 @@ const config = defineConfig({
   base: process.env.VITEPRESS_BASE || "/cadence-clinical/",
   outDir: path.resolve(__dirname, "dist"),
   srcExclude: ["**/SDLC/runs/**", "**/runs/**"],
+  head: [
+    [
+      "meta",
+      {
+        "http-equiv": "Content-Security-Policy",
+        content: buildPortalCspContent(),
+      },
+    ],
+  ],
+  transformHtml(code) {
+    return injectHashedPortalCsp(code);
+  },
   // Links VitePress cannot serve are pointed at GitHub by repoLinksPlugin; any other dead link fails the build.
   ignoreDeadLinks: false,
   markdown: {

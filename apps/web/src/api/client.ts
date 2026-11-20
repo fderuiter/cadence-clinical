@@ -12,11 +12,14 @@ declare global {
 export function getBaseUrl(): string {
   const configured = import.meta.env?.VITE_API_BASE_URL;
   if (configured) return configured;
-  const isDemo =
-    import.meta.env.MODE === "demo" ||
-    import.meta.env.VITE_DEMO_MODE === "true";
+  if (import.meta.env.MODE === "demo") {
+    return typeof globalThis.location?.origin === "string" &&
+      globalThis.location.origin.startsWith("http")
+      ? globalThis.location.origin
+      : "/";
+  }
   if (
-    isDemo &&
+    import.meta.env.VITE_DEMO_MODE === "true" &&
     typeof globalThis.location?.origin === "string" &&
     globalThis.location.origin.startsWith("http")
   ) {

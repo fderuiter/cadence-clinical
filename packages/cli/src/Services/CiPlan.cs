@@ -240,7 +240,7 @@ public static class CiPlan
             new("dotnet-quality", "Build .NET solution") { Commands = [Dotnet("build", "Cadence.sln")] },
             new("dotnet-quality", "Run Cadence quality sentinels")
             {
-                Commands = [CadenceCliNoBuild("check", "--exclude", "api-clients", "--exclude", "vulnerabilities")],
+                Commands = [CadenceCliNoBuild("check", "--exclude", "api-clients", "--exclude", "vulnerabilities", "--exclude", "public-bundle")],
             },
             new("dotnet-quality", "Run architecture tests")
             {
@@ -263,6 +263,7 @@ public static class CiPlan
         var docsBuild = new CiJob("docs-build", "Documentation Compilation",
         [
             new("docs-build", "Install Node dependencies") { Commands = [Pnpm("install", "--frozen-lockfile")] },
+            new("docs-build", "Build demo web bundle") { Commands = [Pnpm("build:demo")] },
             new("docs-build", "Run documentation compilation")
             {
                 Commands = [Pnpm("docs:build")],
@@ -272,6 +273,7 @@ public static class CiPlan
                 EnvironmentIfPassed = [new(QualitySentinels, "CADENCE_DOCS_SKIP_CHECKS", "1")],
                 RestoreFiles = [RtmReport, IqReport],
             },
+            new("docs-build", "Verify public bundles") { Commands = [NodeCli("check", "public-bundle")] },
         ]);
 
         var security = new CiJob("security", "Security and Vulnerability Audit",
@@ -307,7 +309,7 @@ public static class CiPlan
                 Always = true,
                 CoveredBy = QualitySentinels,
                 Files = CiFileSource.ChangedFiles,
-                FilePattern = @"\.(py|js|ts|tsx|jsx|json|md|log|txt|cs)$",
+                FilePattern = @"(\.(py|js|mjs|cjs|ts|tsx|jsx|vue|json|md|html|svg|yaml|yml|toml|xml|csv|sql|log|txt|cs)|^(LICENSE|Dockerfile|Makefile))$",
                 NoFilesMessage = "No changed files to scan.",
                 Commands = [NodeCli("check", "deid")],
             },

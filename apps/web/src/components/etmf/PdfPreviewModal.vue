@@ -281,12 +281,14 @@
                       </div>
                       <div class="redacted-line">
                         Tax Identifier:
-                        <span class="redaction-overlay-block">000-12-3456</span>
+                        <span class="redaction-overlay-block"
+                          >TIN-REDACTED-0000</span
+                        >
                       </div>
                       <div class="redacted-line">
                         Electronic Mail:
                         <span class="redaction-overlay-block"
-                          >john.doe@example.com</span
+                          >participant.redacted@cadence.clinical</span
                         >
                       </div>
                     </div>

@@ -688,7 +688,7 @@ const initialMockTickets = [
     subject_id: null,
     entity_type: "SUPPLY_KIT",
     entity_id: "KIT-9941",
-    created_by: "cra.monitor@cadence.io",
+    created_by: "cra.monitor@cadence.clinical",
     created_at: new Date(Date.now() - 3600 * 1000 * 2).toISOString(),
     sla_target_at: new Date(Date.now() + 3600 * 1000 * 2).toISOString(),
     sla_breached: false,
@@ -710,7 +710,7 @@ const initialMockTickets = [
     subject_id: "SUBJ-8812",
     entity_type: "SUBJECT",
     entity_id: "SUBJ-8812",
-    created_by: "crc.smith@site102.org",
+    created_by: "crc.smith@cadence.clinical",
     created_at: new Date(Date.now() - 3600 * 1000 * 8).toISOString(),
     sla_target_at: new Date(Date.now() + 3600 * 1000 * 16).toISOString(),
     sla_breached: false,
@@ -732,7 +732,7 @@ const initialMockTickets = [
     subject_id: "SUBJ-8815",
     entity_type: "CRF_FORM",
     entity_id: "FORM-VS-003",
-    created_by: "dm.lead@sponsor.org",
+    created_by: "dm.lead@cadence.clinical",
     created_at: new Date(Date.now() - 3600 * 1000 * 24).toISOString(),
     sla_target_at: new Date(Date.now() + 3600 * 1000 * 48).toISOString(),
     sla_total_paused_seconds: 3600 * 12,
@@ -754,7 +754,7 @@ const initialMockTickets = [
     subject_id: "SUBJ-8804",
     entity_type: "SUBJECT",
     entity_id: "SUBJ-8804",
-    created_by: "cra.monitor@cadence.io",
+    created_by: "cra.monitor@cadence.clinical",
     created_at: new Date(Date.now() - 3600 * 1000 * 72).toISOString(),
     sla_target_at: new Date(Date.now() - 3600 * 1000 * 24).toISOString(),
     signature_token: "sig_token_hex_a982fe41b3",
@@ -881,14 +881,14 @@ const openTicketDetail = (t) => {
   selectedTicketComments.value = [
     {
       id: "cm-001",
-      user_id: t.created_by || "cra.monitor@cadence.io",
+      user_id: t.created_by || "cra.monitor@cadence.clinical",
       content: `Logged initial ${formatCategory(t.category)}: ${t.description}`,
       visibility: "PUBLIC",
       created_at: t.created_at,
     },
     {
       id: "cm-002",
-      user_id: "sponsor.qa@cadence.io",
+      user_id: "sponsor.qa@cadence.clinical",
       content:
         "Quality assessment initiated under ICH E6(R3). Reviewing cold-chain calibration records.",
       visibility: "INTERNAL_SPONSOR",
@@ -905,7 +905,7 @@ const openTicketDetail = (t) => {
       mime_type: "text/csv",
       sha256_hash:
         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      uploaded_by: t.created_by || "cra.monitor@cadence.io",
+      uploaded_by: t.created_by || "cra.monitor@cadence.clinical",
       uploaded_at: t.created_at,
       deid_scrubbed: true,
     },
@@ -913,7 +913,7 @@ const openTicketDetail = (t) => {
   selectedTicketAuditLogs.value = [
     {
       action: "CREATE",
-      user_id: t.created_by || "cra.monitor@cadence.io",
+      user_id: t.created_by || "cra.monitor@cadence.clinical",
       timestamp: t.created_at,
       change_reason: "Initial ticket registration",
     },
@@ -959,7 +959,7 @@ const handleBatchTransition = (targetStatus) => {
       t.audit_logs = t.audit_logs || [];
       t.audit_logs.push({
         action: "BATCH_STATUS_UPDATE",
-        user_id: "active.user@cadence.io",
+        user_id: "active.user@cadence.clinical",
         timestamp: new Date().toISOString(),
         change_reason: `Batch status transition to ${statusToApply}`,
       });
@@ -986,7 +986,7 @@ const handleBatchSeverityUpdate = (targetSeverity) => {
       t.audit_logs = t.audit_logs || [];
       t.audit_logs.push({
         action: "BATCH_SEVERITY_UPDATE",
-        user_id: "active.user@cadence.io",
+        user_id: "active.user@cadence.clinical",
         timestamp: new Date().toISOString(),
         change_reason: `Batch severity update to ${severityToApply}`,
       });
@@ -1000,7 +1000,7 @@ const handleTicketComment = ({ content, visibility, reason_for_change }) => {
   if (!allowUnbackedAction("Commenting on a ticket")) return;
   const newComment = {
     id: "cm-" + Date.now(),
-    user_id: "active.user@cadence.io",
+    user_id: "active.user@cadence.clinical",
     content,
     visibility,
     created_at: new Date().toISOString(),
@@ -1018,7 +1018,7 @@ const handleTicketAttachment = ({ file, reason_for_change }) => {
     mime_type: file.type || "application/octet-stream",
     sha256_hash:
       "a4f891b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abc",
-    uploaded_by: "active.user@cadence.io",
+    uploaded_by: "active.user@cadence.clinical",
     uploaded_at: new Date().toISOString(),
     deid_scrubbed: true,
     reason_for_change,
@@ -1033,7 +1033,7 @@ const handleTicketSigned = ({ ticketId, signature_token, meaning }) => {
     tickets.value[index].signature_token = signature_token;
     tickets.value[index].signature_meaning = meaning;
     tickets.value[index].signature_timestamp = new Date().toISOString();
-    tickets.value[index].signature_user = "active.user@cadence.io";
+    tickets.value[index].signature_user = "active.user@cadence.clinical";
     selectedTicket.value = { ...tickets.value[index] };
   }
 };
@@ -1045,7 +1045,7 @@ const handleTicketCreated = (payload) => {
     reference: "DEV-2026-" + Math.floor(1000 + Math.random() * 9000),
     ...payload,
     status: "OPEN",
-    created_by: "active.user@cadence.io",
+    created_by: "active.user@cadence.clinical",
     created_at: new Date().toISOString(),
     sla_target_at: new Date(Date.now() + 3600 * 1000 * 24).toISOString(),
     version_index: 1,
