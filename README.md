@@ -11,7 +11,10 @@
 > [!IMPORTANT]
 > **Pre-release.** Cadence is in active initial development and is not validated for use on
 > real clinical trials. Local containers, Keycloak realms and seed data are synthetic and for
-> evaluation only. For pilots or commercial enquiries see [SUPPORT.md](SUPPORT.md).
+> evaluation only. Explore the [documentation portal](https://fderuiter.github.io/cadence-clinical/),
+> [interactive staff demo](https://fderuiter.github.io/cadence-clinical/demo/), and
+> [participant portal demo](https://fderuiter.github.io/cadence-clinical/subject-portal/) directly in
+> your browser with synthetic data, or see [SUPPORT.md](SUPPORT.md) for pilots and commercial enquiries.
 
 ---
 

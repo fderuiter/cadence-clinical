@@ -126,7 +126,8 @@ public static class KernelEntitlementEndpoints
             return KernelErrorEndpoints.Problem(activated.Error!);
         }
 
-        foreach (var family in CommercialCatalog.FamiliesForTier(tier))
+        var targetFamilies = CommercialCatalog.FamiliesForTier(tier);
+        foreach (var family in targetFamilies)
         {
             var granted = await sender.SendAsync(
                 new GrantProductEntitlement(
@@ -140,6 +141,27 @@ public static class KernelEntitlementEndpoints
             if (!granted.IsSuccess)
             {
                 return KernelErrorEndpoints.Problem(granted.Error!);
+            }
+        }
+
+        foreach (var enabledFamily in current.ProductFamilies)
+        {
+            if (targetFamilies.Contains(enabledFamily))
+            {
+                continue;
+            }
+
+            var revoked = await sender.SendAsync(
+                new RevokeProductEntitlement(
+                    tenant,
+                    subscriptionId,
+                    enabledFamily,
+                    $"{baseKey}:revoke:{enabledFamily}",
+                    reason),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (!revoked.IsSuccess)
+            {
+                return KernelErrorEndpoints.Problem(revoked.Error!);
             }
         }
 
