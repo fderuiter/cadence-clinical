@@ -8,6 +8,7 @@ Site and participant payments scaffold. It holds the budget contract, fee schedu
 
 - Project: `apps/payments/src/Cadence.Apps.Payments.csproj` (assembly `Cadence.Apps.Payments`).
 - `Program.cs`: composition root and route mapping.
+- `Application/`: `ReceiptOcrEngine` (deterministic raster/vector receipt OCR extraction for PNG, BMP, PNM, JPEG, SVG, and PDF inputs with sharpness/completeness confidence scoring and zero fallback fabrication on unreadable images).
 - `Domain/`: EF Core entity classes (budget contracts, fee schedules, split payees, payables and allocations, holdback reserves, invoices, remittance advice, participant wallets, audit log).
   Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Domain/Ledger/`: the grant payables ledger, ported from `packages/engine_core/financial/` ([ADR-2521](../../docs/adr/2026-09-30-grant-payables-ledger-in-decimal-with-kernel-ids.md)), in `decimal` throughout.
@@ -51,6 +52,11 @@ roles (#5361). `finance_officer` is the finance role; the local realm's "Grants 
 | `payments_expense:submit`                  | `POST /participant/expenses`, `POST /participant/expenses/ocr-extract`                                                                                                                                     | crc, investigator                                                 |
 | `payments_expense:review`                  | `POST /participant/expenses/{claimId}/review`                                                                                                                                                              | crc, investigator                                                 |
 | `payments_expense:read`                    | `GET /participant/expenses`                                                                                                                                                                                | finance_officer, crc, investigator, sponsor_dm, auditor           |
+| `payments_self_wallet:read`                | `GET /participant/me/wallet`                                                                                                                                                                               | subject                                                           |
+| `payments_self_wallet:disburse`            | `POST /participant/me/disburse`                                                                                                                                                                            | subject                                                           |
+| `payments_self_expense:ocr_scan`           | `POST /participant/me/expenses/ocr-extract`                                                                                                                                                                | subject                                                           |
+| `payments_self_expense:submit`             | `POST /participant/me/expenses`                                                                                                                                                                            | subject                                                           |
+| `payments_self_stipend:credit`             | `POST /participant/me/diary-stipend`                                                                                                                                                                       | subject                                                           |
 | `payments_audit_log:read`                  | `GET /audit-logs`                                                                                                                                                                                          | finance_officer, auditor, sysadmin                                |
 | `payments_invoice:read`                    | `GET /invoices`, `GET /invoices/{id}`, `GET /invoices/{id}/remittance-advice/pdf`                                                                                                                          | finance_officer, sponsor_dm, auditor, sysadmin                    |
 | `payments_invoice:compile`                 | `POST /invoices/compile`, `POST /invoices/batch-compile`                                                                                                                                                   | finance_officer                                                   |
@@ -73,9 +79,14 @@ roles (#5361). `finance_officer` is the finance role; the local realm's "Grants 
   `svc:payments` on the demonstration stipend rules the service seeds on first read, and `svc:system_auto_approval` on
   the rows the expense auto-approval policy writes (its details name the submitting caller). `SubjectId` on a wallet,
   claim or transaction is the participant the row belongs to, not the actor.
-- **Participant self-service is not open.** A participant's sign-in is not bound to a wallet yet, so the `subject` role
-  holds no Payments permission; site staff submit W-9s and expense claims for the participant. Self-service needs that
-  binding first.
+- **Caller-bound participant self-service ([ADR-2816](../../docs/adr/2026-11-19-caller-bound-participant-self-service-wallet-and-receipt-ocr-capabilities.md)).**
+  The `subject` role holds only the five `payments_self_*` capabilities mapped to `/api/v1/payments/participant/me/*`
+  and never reaches staff directory, card-issuance, W-9 verification, claim-review, or invoice routes (`403` with zero
+  database mutations). Every `/participant/me/*` handler resolves the wallet through `ResolveOwnWalletAsync` bound to
+  `PaymentsCaller.UserId`, refuses (`403`) any cross-participant `subjectId` or `walletId`, masks card/routing/account
+  identifiers before serialization, enforces the `<= $100.00` (`<= $75.00` meal) / `>= 0.90` OCR confidence / IRS
+  `$600.00` verified W-9 auto-approval policy, and computes diary synchronization stipends strictly from server-side
+  `ParticipantStipendRule` rows (`400` if a request supplies an `amount`).
 - `GET /participant/wallets/subject/{subjectId}` no longer opens a wallet when none exists; it answers `404`.
 - **Study and site scope (#5401, [ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).**
   Every handler reaches only the studies in the caller's signed `study_ids` and, for a site-scoped role (CRC,
@@ -124,6 +135,7 @@ refuses to encrypt or decrypt.
 
 - `tests/Cadence.UnitTests/Payments/ContractCalculationsTests.cs` and `PayableLedgerTests.cs`: the ledger, pinned to the Python reference's amounts and digests.
 - `tests/Cadence.UnitTests/Payments/PaymentsCallerAuthorizationTests.cs`: the host over SQLite; a caller without a write route's role gets `403` and no row changes, and audit rows record the signed caller.
+- `tests/Cadence.UnitTests/Payments/ParticipantSelfServiceAndOcrTests.cs`: caller-bound `/participant/me/*` self-service wallet balances and masks, cross-participant and staff-route `403` isolation, `ReceiptOcrEngine` raster/SVG extraction and zero-fabrication guardrails, `$100` / `$75` meal / `0.90` confidence / `$600` W-9 claim policies, on-demand balance payouts, and server-rule diary stipends.
 - `tests/Cadence.IntegrationTests/Payments/PaymentsStudySiteScopeTests.cs`: the host on PostgreSQL as the application role; a CRC at one site gets `404` or `403` on another site's participants and never sees them in lists, a caller outside the study sees none of its rows, nothing is written, and in-scope flows still complete. Needs `CADENCE_TEST_POSTGRES` or `CADENCE_TEST_DOCKER=1`.
 - `tests/Cadence.UnitTests/Payments/PaymentDecimalCalculationTests.cs`: `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Payments"`.
 - Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
