@@ -21,6 +21,7 @@ import { useAsyncRetry } from "./composables/useAsyncRetry.js";
 import { useEscapeClose } from "./composables/useEscapeClose.js";
 import {
   getFocusableElements,
+  trapTabFocus,
   useFocusTrap,
 } from "./composables/useFocusTrap.js";
 
@@ -45,6 +46,7 @@ export {
   ModalErrorAlert,
   PersonaSwitcher,
   getFocusableElements,
+  trapTabFocus,
   useAsyncRetry,
   useEscapeClose,
   useFocusTrap,
