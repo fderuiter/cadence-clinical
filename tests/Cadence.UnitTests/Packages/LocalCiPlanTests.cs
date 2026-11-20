@@ -181,11 +181,53 @@ public partial class LocalCiPlanTests
     [Theory]
     [InlineData("no-such-job", "Unknown job")]
     [InlineData("automerge", "no local equivalent")]
+    [InlineData("release-and-archive", "no local equivalent")]
+    [InlineData("deploy-docs", "no local equivalent")]
     public void Select_RejectsUnknownAndGitHubOnlyJobs(string key, string message)
     {
         var select = () => CiPlan.Select([key]);
 
         select.Should().Throw<ArgumentException>().WithMessage($"*{message}*");
+    }
+
+    [Fact]
+    public void WorkflowTriggersAndConcurrency_IncludeVersionTagsAndProtectPushRunsFromCancellation()
+    {
+        string raw = File.ReadAllText(Path.Combine(RepoRoot(), ".github", "workflows", "ci.yml"));
+
+        raw.Should().MatchRegex(@"push:\s+branches:\s+\[""?main""?,\s*""?release/\*""?\]\s+tags:\s+\[""v\*""\]");
+        raw.Should().Contain("cancel-in-progress: ${{ github.event_name == 'pull_request' }}");
+    }
+
+    [Fact]
+    public void ReleaseAndDocsCallerJobs_DependIndependentlyOnEveryPushValidationJob()
+    {
+        string[] expectedValidationNeeds =
+        [
+            "actionlint",
+            "lint-and-static",
+            "dotnet-quality",
+            "native-aot-build",
+            "docs-build",
+            "security",
+            "container-security",
+            "unit-tests",
+            "dotnet-tests",
+            "accessibility-e2e",
+            "compliance",
+        ];
+
+        var releaseJob = Workflow.Single(j => j.Key == "release-and-archive");
+        var deployDocsJob = Workflow.Single(j => j.Key == "deploy-docs");
+
+        releaseJob.Needs.Should().Equal(expectedValidationNeeds);
+        deployDocsJob.Needs.Should().Equal(expectedValidationNeeds,
+            "deploy-docs must gate on push validation jobs independently of release-and-archive");
+        releaseJob.If.Should().Contain("refs/heads/main")
+            .And.Contain("refs/heads/release/")
+            .And.Contain("refs/tags/v");
+        deployDocsJob.If.Should().Contain("refs/heads/main")
+            .And.NotContain("release-and-archive");
     }
 
     [Fact]
@@ -278,11 +320,36 @@ public partial class LocalCiPlanTests
             }
             else if (TryMatch(line, @"^    if: (.+)$", out var condition))
             {
-                jobIf = condition;
+                if (condition is ">-" or ">" or "|")
+                {
+                    var block = new List<string>();
+                    while (i < lines.Length && (lines[i].Trim().Length == 0 || lines[i].StartsWith("      ", StringComparison.Ordinal)))
+                    {
+                        block.Add(lines[i].Trim());
+                        i++;
+                    }
+
+                    jobIf = string.Join(' ', block);
+                }
+                else
+                {
+                    jobIf = condition;
+                }
             }
             else if (TryMatch(line, @"^    needs: \[(.*)\]\s*$", out var needList))
             {
                 needs = [.. needList.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
+            }
+            else if (line.TrimEnd() == "    needs:")
+            {
+                var rawNeeds = new List<string>();
+                while (i < lines.Length && lines[i].StartsWith("      ", StringComparison.Ordinal))
+                {
+                    rawNeeds.Add(lines[i].Trim().Trim('[', ']'));
+                    i++;
+                }
+
+                needs = [.. string.Join(',', rawNeeds).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
             }
             else if (TryMatch(line, @"^      - (.*)$", out var firstKey))
             {

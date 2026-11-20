@@ -38,6 +38,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Create Isolated Output Directory
         run: mkdir -p tmp_etmf
@@ -51,6 +52,9 @@ jobs:
         with:
           node-version: "22"
           cache: "pnpm"
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
 
       # Set up .NET SDK and restore C# packages for .NET vulnerability audit
       - name: Setup .NET SDK
@@ -84,16 +88,30 @@ jobs:
           export PATH="$RUNNER_TEMP/pip-audit-venv/bin:$PATH"
           node scripts/run-cli.js check vulnerabilities
 
+      - name: Download Verified .NET Test Evidence
+        id: download_evidence
+        if: github.event_name == 'workflow_call'
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: gxp-test-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: TestResults/gxp
+
       # Delete the committed copies first so a sync that exits 0 without
       # writing them fails the verify step instead of archiving stale reports.
       # A release is a snapshot (ADR-2532): only `gxp snapshot` writes docs/SDLC.
+      # On workflow_call, reuse forwarded TestResults/gxp evidence without repeating PostgreSQL tests;
+      # on manual workflow_dispatch without upstream artifacts, run against the fallback PostgreSQL 18 service.
       - name: Generate GxP Reports
         env:
           CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
           CADENCE_GXP_SNAPSHOT: "1"
         run: |
           rm -f docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md
-          node scripts/run-cli.js gxp snapshot
+          if [ "${{ steps.download_evidence.outcome }}" = "success" ]; then
+            node scripts/run-cli.js gxp snapshot --results-dir TestResults/gxp
+          else
+            node scripts/run-cli.js gxp snapshot
+          fi
 
       - name: Verify and Stage Generated Reports
         run: |
@@ -104,7 +122,7 @@ jobs:
             fi
             cp "docs/SDLC/$report" tmp_etmf/
           done
-          (cd tmp_etmf && sha256sum -- *.md > SHA256SUMS)
+          (cd tmp_etmf && sha256sum -- *.md > SHA256SUMS && sha256sum -c SHA256SUMS)
           cat tmp_etmf/SHA256SUMS
 
       - name: Generate SLSA Build Provenance
@@ -117,7 +135,7 @@ jobs:
       - name: Upload Release Evidence
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: gxp-release-evidence-${{ github.sha }}
+          name: gxp-release-evidence-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: tmp_etmf/
           if-no-files-found: error
           retention-days: 90

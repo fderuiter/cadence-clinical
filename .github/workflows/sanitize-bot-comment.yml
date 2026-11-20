@@ -10,18 +10,37 @@ permissions:
 jobs:
   sanitize-comment:
     # 1. Ensure this comment is on a Pull Request (not an issue)
-    # 2. Ensure the comment body contains "[CI/CD Fix Attempt "
-    if: github.event.issue.pull_request && contains(github.event.comment.body, '[CI/CD Fix Attempt ')
+    # 2. Restrict execution to approved CI/CD bot accounts
+    # 3. Ensure the comment body contains "[CI/CD Fix Attempt "
+    if: >-
+      github.event.issue.pull_request != null &&
+      github.event.comment.user.type == 'Bot' &&
+      (
+        github.event.comment.user.login == 'github-actions[bot]' ||
+        github.event.comment.user.login == 'google-labs-jules[bot]' ||
+        github.event.comment.user.login == 'google-labs-stitch[bot]'
+      ) &&
+      contains(github.event.comment.body, '[CI/CD Fix Attempt ')
     runs-on: ubuntu-latest
     permissions:
       issues: write # Required to edit comments on PRs
-      pull-requests: write
 
     steps:
       - name: Update Comment Body
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           script: |
+            const allowedBotLogins = new Set([
+              'github-actions[bot]',
+              'google-labs-jules[bot]',
+              'google-labs-stitch[bot]',
+            ]);
+            const commenter = context.payload.comment?.user;
+            if (!commenter || commenter.type !== 'Bot' || !allowedBotLogins.has(commenter.login)) {
+              console.log('Skipping comment from unapproved actor.');
+              return;
+            }
+
             const commentId = context.payload.comment.id;
             const originalBody = context.payload.comment.body;
 

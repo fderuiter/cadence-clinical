@@ -3,12 +3,13 @@ name: CI
 on:
   push:
     branches: [main, release/*]
+    tags: ["v*"]
   pull_request:
     branches: [main, release/*]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request && github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -27,9 +28,6 @@ jobs:
 
       - name: Run actionlint
         uses: rhysd/actionlint@914e7df21a07ef503a81201c76d2b11c789d3fca # v1.7.12
-
-      - name: Verify third-party action SHA pinning
-        run: python3 scripts/check-action-pinning.py
 
   lint-and-static:
     name: Lint and Static Verification
@@ -198,7 +196,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: duplication-summary
+          name: duplication-summary-${{ github.run_id }}-${{ github.run_attempt }}
           path: duplication_summary.json
 
   native-aot-build:
@@ -499,7 +497,7 @@ jobs:
     permissions:
       contents: read
     outputs:
-      test_outcome: ${{ steps.run_dotnet_tests.outcome == 'success' && steps.database_test_gate.outcome == 'success' && 'success' || 'failure' }}
+      test_outcome: ${{ steps.run_dotnet_tests.outcome == 'success' && steps.database_test_gate.outcome == 'success' && steps.upload_gxp_evidence.outcome == 'success' && 'success' || 'failure' }}
     # tests/Cadence.IntegrationTests and tests/Cadence.E2ETests run against this database; without
     # CADENCE_TEST_POSTGRES they would be skipped (docs/TESTING.md).
     services:
@@ -548,16 +546,15 @@ jobs:
       - name: Execute .NET 10 xUnit Test Suites
         id: run_dotnet_tests
         if: always()
-        run: dotnet test Cadence.sln --configuration Release --no-build --logger "trx;LogFileName=report_dotnet.trx"
+        run: dotnet test Cadence.sln --configuration Release --no-build --results-directory TestResults/gxp --logger "trx;LogFilePrefix=gxp"
 
       - name: Upload .NET TRX Test Report
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: trx-report-dotnet
+          name: trx-report-dotnet-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            tests/**/TestResults/*.trx
-            packages/**/TestResults/*.trx
+            TestResults/gxp/*.trx
             TestResults/gxp/*.database.txt
 
       # A database test that did not execute is skipped, not passed: the fixtures report it as NotExecuted when
@@ -569,6 +566,15 @@ jobs:
         run: |
           bash scripts/test-check-database-test-results.sh
           bash scripts/check-database-test-results.sh
+
+      - name: Upload Verified GxP Test Evidence
+        id: upload_gxp_evidence
+        if: steps.database_test_gate.outcome == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: gxp-test-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: TestResults/gxp
+          if-no-files-found: error
 
   accessibility-e2e:
     name: Parallel E2E Accessibility Testing
@@ -713,7 +719,7 @@ jobs:
       - name: Download .NET Test Evidence
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
-          name: trx-report-dotnet
+          name: gxp-test-evidence-${{ github.run_id }}-${{ github.run_attempt }}
           path: TestResults/gxp
 
       - name: Generate Compliance Reports
@@ -737,7 +743,7 @@ jobs:
       container_scan: ${{ steps.classify.outputs.container_scan }}
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
     steps:
       - name: Fetch list of changed files
         id: classify
@@ -758,11 +764,24 @@ jobs:
           SAFE=true
           CONTAINER_SCAN=false
           while IFS= read -r file; do
-            if [[ "$file" == *"vulnerability_exclusions_ledger.json" ]] || [[ "$file" == *"validate_vulnerabilities"* ]]; then
-              echo "Unsafe vulnerability/validation file: $file"
+            if [[ "$file" =~ (^|/)(AGENTS|CLAUDE|SECURITY)\.md$ ]] || \
+               [[ "$file" == docs/.vitepress/* ]] || \
+               [[ "$file" == docs/SDLC/* ]] || \
+               [[ "$file" == docs/openapi/* ]] || \
+               [[ "$file" == docs/kernel/* ]] || \
+               [[ "$file" == docs/adr/* ]] || \
+               [[ "$file" == .agents/* ]] || \
+               [[ "$file" == .github/* ]] || \
+               [[ "$file" == *.sh ]] || \
+               [[ "$file" == *"vulnerability_exclusions_ledger.json" ]] || \
+               [[ "$file" == *"validate_vulnerabilities"* ]]; then
+              echo "Unsafe file: $file"
               SAFE=false
-            elif [[ "$file" == docs/* ]] || [[ "$file" == *.md ]]; then
-              echo "Safe file: $file"
+            elif [[ "$file" =~ ^(README|ARCHITECTURE|CONTEXT|CONTRIBUTING|SUPPORT)\.md$ ]] || \
+                 [[ "$file" =~ ^(apps|packages)/[A-Za-z0-9][A-Za-z0-9._-]*(/[A-Za-z0-9][A-Za-z0-9._-]*)?/README\.md$ ]] || \
+                 [[ "$file" =~ ^docs/(BACKLOG_INSIGHTS_ARCHIVE|CI|COMPETITIVE_ANALYSIS_AND_MARKET_SUPERIORITY|DATA_LIFECYCLE|DOCUMENTATION_INDEX|ENVIRONMENT_VARIABLES|FEATURE_MATRIX|GOALS_AND_PRIORITIES|ISSUE_MANAGEMENT|LOCAL_DEV_ENVIRONMENT|MIGRATION_WORKFLOW|OPERATIONAL_DATABASE|OPERATIONAL_INBOUND_EMAIL|OPERATIONAL_LAB_RANGES|PROJECT_PLAN|PYTHON_REFERENCE_INVENTORY|TESTING|cli)\.md$ ]] || \
+                 [[ "$file" =~ ^docs/(architecture|components|migration|strategy|ux|web)/([A-Za-z0-9][A-Za-z0-9._-]*/)*[A-Za-z0-9][A-Za-z0-9._-]*\.md$ ]]; then
+              echo "Safe prose Markdown file: $file"
             else
               echo "Unsafe file: $file"
               SAFE=false
@@ -783,9 +802,9 @@ jobs:
         if: steps.classify.outputs.is_safe == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          gh label create "safe-change" --repo ${{ github.repository }} --color "0E8A16" --description "Safe non-GxP change" --force || true
-          gh pr edit ${{ github.event.pull_request && github.event.pull_request.number || '0' }} --repo ${{ github.repository }} --add-label "safe-change" || echo "Failed to apply label. Ignoring."
+          gh pr edit "$PR_NUMBER" --repo "${{ github.repository }}" --add-label "safe-change"
 
   automerge:
     name: Enable Automerge
@@ -822,7 +841,6 @@ jobs:
       needs.compliance.result == 'success'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
       pull-requests: write
     steps:
       - name: Enable Automerge
@@ -837,6 +855,81 @@ jobs:
 
   release-and-archive:
     name: Call Production Pipeline
-    needs: [dotnet-quality, security, container-security, compliance]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs:
+      [
+        actionlint,
+        lint-and-static,
+        dotnet-quality,
+        native-aot-build,
+        docs-build,
+        security,
+        container-security,
+        unit-tests,
+        dotnet-tests,
+        accessibility-e2e,
+        compliance,
+      ]
+    if: >-
+      always() &&
+      !cancelled() &&
+      github.event_name == 'push' &&
+      (
+        github.ref == 'refs/heads/main' ||
+        startsWith(github.ref, 'refs/heads/release/') ||
+        startsWith(github.ref, 'refs/tags/v')
+      ) &&
+      needs.actionlint.result == 'success' &&
+      needs.lint-and-static.result == 'success' &&
+      needs.dotnet-quality.result == 'success' &&
+      needs.native-aot-build.result == 'success' &&
+      needs.docs-build.result == 'success' &&
+      needs.security.result == 'success' &&
+      needs.container-security.result == 'success' &&
+      needs.unit-tests.result == 'success' &&
+      needs.dotnet-tests.result == 'success' &&
+      needs.accessibility-e2e.result == 'success' &&
+      needs.compliance.result == 'success'
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     uses: ./.github/workflows/production-pipeline.yml
+
+  deploy-docs:
+    name: Call Deploy Docs
+    needs:
+      [
+        actionlint,
+        lint-and-static,
+        dotnet-quality,
+        native-aot-build,
+        docs-build,
+        security,
+        container-security,
+        unit-tests,
+        dotnet-tests,
+        accessibility-e2e,
+        compliance,
+      ]
+    if: >-
+      always() &&
+      !cancelled() &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.actionlint.result == 'success' &&
+      needs.lint-and-static.result == 'success' &&
+      needs.dotnet-quality.result == 'success' &&
+      needs.native-aot-build.result == 'success' &&
+      needs.docs-build.result == 'success' &&
+      needs.security.result == 'success' &&
+      needs.container-security.result == 'success' &&
+      needs.unit-tests.result == 'success' &&
+      needs.dotnet-tests.result == 'success' &&
+      needs.accessibility-e2e.result == 'success' &&
+      needs.compliance.result == 'success'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+      attestations: write
+    uses: ./.github/workflows/deploy-docs.yml

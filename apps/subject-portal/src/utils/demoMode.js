@@ -7,11 +7,12 @@ import { useSessionStore } from "../stores/session.js";
  * Only an explicit demo build (or a unit test explicitly opting in via __MOCK_TEST_ENV__ + session.isDemoMode)
  * may seed synthetic tasks/alerts, start the MSW mock worker, or run unbacked clinical/stipend workflows.
  */
-export function isDemoBuild(env = import.meta.env) {
+export function isDemoBuild(env) {
+  if (env !== undefined) {
+    return env?.MODE === "demo" || env?.VITE_DEMO_MODE === "true";
+  }
   return (
-    env?.MODE === "demo" ||
-    env?.VITE_DEMO_MODE === "true" ||
-    (typeof process !== "undefined" && process.env?.VITE_DEMO_MODE === "true")
+    import.meta.env.MODE === "demo" || import.meta.env.VITE_DEMO_MODE === "true"
   );
 }
 
@@ -19,12 +20,13 @@ export function isDemoBuild(env = import.meta.env) {
  * Returns true when synthetic demo mode is active (build-time demo mode, or explicit Vitest sandbox opt-in).
  * Never returns true in production or standard development browser builds unless built in demo mode.
  */
-export function isDemoModeActive(env = import.meta.env) {
+export function isDemoModeActive(env) {
   if (isDemoBuild(env)) {
     return true;
   }
+  const resolvedEnv = env !== undefined ? env : import.meta.env;
   const isVitestSandbox =
-    env?.MODE === "test" ||
+    resolvedEnv?.MODE === "test" ||
     (typeof window !== "undefined" && Boolean(window.__MOCK_TEST_ENV__));
   if (isVitestSandbox) {
     const sessionStore = useSessionStore(pinia);
