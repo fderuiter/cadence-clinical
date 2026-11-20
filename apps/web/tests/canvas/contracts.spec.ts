@@ -7,11 +7,18 @@ import {
   parseNodeRef,
   tryNodeRef,
 } from "../../src/canvas/nodeRef";
-import { canManageParticipants } from "../../src/canvas/authority";
+import {
+  canManageParticipants,
+  canManageRandomizationSchemes,
+  canReconcileKitInventory,
+  canSeedKitInventory,
+  canUnblindParticipant,
+} from "../../src/canvas/authority";
 import {
   PARTICIPANT_STATES,
   PARTICIPANT_TRANSITIONS,
   STAGES,
+  isRandomizationWithheld,
   participantStateChanges,
   findSection,
   findStage,
@@ -170,6 +177,18 @@ describe("Canvas lifecycle", () => {
     expect(participantStateChanges("COMPLETED").targets).toEqual([]);
     expect(participantStateChanges("NOT_A_STATE").targets).toEqual([]);
   });
+
+  it("withholds RANDOMIZED from generic state changes and registers RTSM canvas sections", () => {
+    expect(participantStateChanges("ENROLLED")).toEqual({
+      targets: ["RECONSENT_REQUIRED", "WITHDRAWN"],
+      unblindingWithheld: false,
+    });
+    expect(isRandomizationWithheld("ENROLLED")).toBe(true);
+    expect(isRandomizationWithheld("RECONSENT_REQUIRED")).toBe(true);
+    expect(isRandomizationWithheld("SCREENING")).toBe(false);
+    expect(findSection("randomization-schemes")?.stage.id).toBe("start");
+    expect(findSection("supply")?.stage.id).toBe("conduct");
+  });
 });
 
 describe("Canvas authority mirror", () => {
@@ -212,5 +231,29 @@ describe("Canvas authority mirror", () => {
       expect(canManageParticipants({ rawRoles: [role] }), role).toBe(false);
     }
     expect(canManageParticipants({ rawRoles: null })).toBe(false);
+  });
+
+  it("gates scheme management, kit seeding, kit reconciliation, and emergency unblinding to their Execution roles", () => {
+    expect(
+      canManageRandomizationSchemes({ rawRoles: ["unblinded_statistician"] })
+    ).toBe(true);
+    expect(canManageRandomizationSchemes({ rawRoles: ["crc"] })).toBe(false);
+
+    expect(canSeedKitInventory({ rawRoles: ["sponsor_dm"] })).toBe(true);
+    expect(canSeedKitInventory({ rawRoles: ["pharmacist"] })).toBe(false);
+
+    expect(canReconcileKitInventory({ rawRoles: ["pharmacist"] })).toBe(true);
+    expect(canReconcileKitInventory({ rawRoles: ["crc"] })).toBe(false);
+
+    expect(
+      canUnblindParticipant({ rawRoles: ["Principal Investigator"] })
+    ).toBe(true);
+    expect(
+      canUnblindParticipant({ rawRoles: ["Authorized ER Physician"] })
+    ).toBe(true);
+    expect(canUnblindParticipant({ rawRoles: ["Site Investigator"] })).toBe(
+      false
+    );
+    expect(canUnblindParticipant({ rawRoles: ["crc"] })).toBe(false);
   });
 });

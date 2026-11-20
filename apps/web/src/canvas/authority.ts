@@ -43,6 +43,79 @@ export function canManageParticipants(auth: RawRoleHolder): boolean {
   );
 }
 
+/**
+ * Execution's SubjectAuthority.CanUnblind: only a Principal Investigator or Authorized ER Physician may
+ * perform emergency unblinding (#4943, PRD-SUB-005).
+ */
+const UNBLINDING_ROLES = new Set([
+  "principal_investigator",
+  "principal investigator",
+  "pi",
+  "authorized_er_physician",
+  "authorized er physician",
+  "authorized-er-physician",
+  "er_physician",
+  "er physician",
+  "emergency_unblinder",
+]);
+
+export function canUnblindParticipant(auth: RawRoleHolder): boolean {
+  return (auth.rawRoles ?? []).some((role) =>
+    UNBLINDING_ROLES.has(role.trim().toLowerCase())
+  );
+}
+
+/**
+ * Execution's PermissionMatrix.Execution: only unblinded_statistician drafts and approves randomization schemes.
+ */
+const SCHEME_AUTHOR_ROLES = new Set([
+  "unblinded_statistician",
+  "unblinded statistician",
+  "unblinded-statistician",
+]);
+
+export function canManageRandomizationSchemes(auth: RawRoleHolder): boolean {
+  return (auth.rawRoles ?? []).some((role) =>
+    SCHEME_AUTHOR_ROLES.has(role.trim().toLowerCase())
+  );
+}
+
+/** Seed IP kit inventory at activated sites (PermissionMatrix.Execution: sponsor_dm, sysadmin). */
+const KIT_SEEDING_ROLES = new Set([
+  "sponsor_dm",
+  "data_manager",
+  "data manager",
+  "dm",
+  "sponsor_admin",
+  "admin",
+  "sysadmin",
+]);
+
+export function canSeedKitInventory(auth: RawRoleHolder): boolean {
+  return (auth.rawRoles ?? []).some((role) =>
+    KIT_SEEDING_ROLES.has(role.trim().toLowerCase())
+  );
+}
+
+/** Reconcile returned IP kits (PermissionMatrix: pharmacist, sponsor_dm, sysadmin). */
+const KIT_RECONCILE_ROLES = new Set([
+  "pharmacist",
+  "site_pharmacist",
+  "site pharmacist",
+  "sponsor_dm",
+  "data_manager",
+  "data manager",
+  "sponsor_admin",
+  "admin",
+  "sysadmin",
+]);
+
+export function canReconcileKitInventory(auth: RawRoleHolder): boolean {
+  return (auth.rawRoles ?? []).some((role) =>
+    KIT_RECONCILE_ROLES.has(role.trim().toLowerCase())
+  );
+}
+
 // Execution's query lifecycle roles (ClinicalQueryApplicationService.IsAuthorizedCraOrDm).
 const MONITORING_ROLES = ["cra", "data_manager"];
 

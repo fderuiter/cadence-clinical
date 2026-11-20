@@ -301,6 +301,11 @@ export const useAuthStore = defineStore("auth", {
         lastName: claims.family_name || "",
         id: claims.sub || "",
         tenantId: claims.tenant_id || "",
+        siteId: Array.isArray(claims.site_id)
+          ? claims.site_id[0] || ""
+          : claims.site_id || "",
+        unblindedAccess:
+          String(claims.unblinded_access ?? "").toLowerCase() === "true",
       };
       this.rawRoles = Array.isArray(claims.realm_access?.roles)
         ? [...claims.realm_access.roles]

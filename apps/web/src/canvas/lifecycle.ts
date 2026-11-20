@@ -8,7 +8,12 @@ export type StageId =
   "design" | "start" | "conduct" | "data" | "analyze" | "submit";
 
 export type SectionId =
-  "protocol-versions" | "site-activation" | "participants" | "queries";
+  | "protocol-versions"
+  | "site-activation"
+  | "randomization-schemes"
+  | "participants"
+  | "supply"
+  | "queries";
 
 export interface Section {
   id: SectionId;
@@ -42,13 +47,20 @@ export const STAGES: readonly Stage[] = [
   {
     id: "start",
     label: "Start",
-    scope: "Countries, site activation, essential documents, training",
+    scope:
+      "Countries, site activation, randomization schemes, essential documents, training",
     sections: [
       {
         id: "site-activation",
         label: "Site activation",
         description:
           "A site's activation documents and activating the site once they are complete",
+      },
+      {
+        id: "randomization-schemes",
+        label: "Randomization schemes",
+        description:
+          "Treatment arms, stratification factors, and two-person signed scheme approval before enrollment",
       },
     ],
   },
@@ -61,6 +73,12 @@ export const STAGES: readonly Stage[] = [
         id: "participants",
         label: "Participants",
         description: "The study's participants in enrollment order",
+      },
+      {
+        id: "supply",
+        label: "Investigational supply",
+        description:
+          "Site kit inventory seeding and returned kit batch reconciliation",
       },
     ],
   },
@@ -157,10 +175,16 @@ export const PARTICIPANT_TRANSITIONS: Readonly<
 };
 
 /**
- * Unblinding breaks the blind for a participant, so it gets its own workflow rather than a menu entry here,
- * even though Execution accepts it as a state change from an unblinding authority (#4943).
+ * Randomization allocates from an approved encrypted scheme with a step-up signature (ADR-2640), and
+ * unblinding breaks the blind with a clinical justification (#4943), so both get dedicated workflows
+ * rather than generic state-change menu entries.
  */
-const WITHHELD_STATE_CHANGES = new Set(["UNBLINDED"]);
+const WITHHELD_STATE_CHANGES = new Set(["RANDOMIZED", "UNBLINDED"]);
+
+/** Whether a state's randomization transition is handled via the allocation workflow instead of PATCH /state. */
+export function isRandomizationWithheld(code: string): boolean {
+  return (PARTICIPANT_TRANSITIONS[code] ?? []).includes("RANDOMIZED");
+}
 
 /** The state changes the canvas offers from a state, in lifecycle order, and whether unblinding was left out. */
 export function participantStateChanges(code: string): {
@@ -172,6 +196,6 @@ export function participantStateChanges(code: string): {
     targets: PARTICIPANT_STATES.map((s) => s.code).filter(
       (target) => allowed.has(target) && !WITHHELD_STATE_CHANGES.has(target)
     ),
-    unblindingWithheld: [...allowed].some((t) => WITHHELD_STATE_CHANGES.has(t)),
+    unblindingWithheld: allowed.has("UNBLINDED"),
   };
 }

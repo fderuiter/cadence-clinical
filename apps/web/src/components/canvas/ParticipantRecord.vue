@@ -15,6 +15,23 @@
       </span>
     </header>
 
+    <dl
+      v-if="isPostRandomized"
+      id="record-allocation-summary"
+      class="allocation-summary"
+    >
+      <dt>Treatment allocation</dt>
+      <dd id="record-allocation-arm">
+        {{ allocationLabel }}
+      </dd>
+      <template v-if="assignedKitLabel">
+        <dt>Assigned kit</dt>
+        <dd id="record-allocation-kit">
+          {{ assignedKitLabel }}
+        </dd>
+      </template>
+    </dl>
+
     <p v-if="record.loading" class="status-line" role="status">
       Loading {{ participant.subject_id }}'s data...
     </p>
@@ -56,11 +73,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import type { SubjectSummary } from "../../api/executionApi";
 import { participantStateLabel } from "../../canvas/lifecycle";
-import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import {
+  isPostRandomizationStatus,
+  useStudyCanvasStore,
+} from "../../stores/studyCanvas";
 import ParticipantFormsPanel from "./ParticipantFormsPanel.vue";
 import QueriesPanel from "./QueriesPanel.vue";
 
@@ -68,7 +88,7 @@ import QueriesPanel from "./QueriesPanel.vue";
  * One participant's data inside Clinical Canvas: opened case report forms and queries on the participant's kernel
  * enrollment (ADR-2622, #5461), linking directly to forms and observations in the zoom path.
  */
-defineProps<{
+const props = defineProps<{
   participant: SubjectSummary;
   canManage: boolean;
   formLocation: (formId: string) => RouteLocationRaw;
@@ -84,6 +104,46 @@ const emit = defineEmits<{
 
 const canvas = useStudyCanvasStore();
 const record = computed(() => canvas.record);
+
+const isPostRandomized = computed(
+  () =>
+    isPostRandomizationStatus(props.participant.status) ||
+    Boolean(canvas.allocations[props.participant.subject_id])
+);
+const subjectDetail = computed(
+  () => canvas.subjectDetails[props.participant.subject_id] ?? null
+);
+const localAllocation = computed(
+  () => canvas.allocations[props.participant.subject_id] ?? null
+);
+const allocationLabel = computed(() =>
+  subjectDetail.value?.treatment_group
+    ? subjectDetail.value.treatment_group
+    : "Randomized, arm masked"
+);
+const assignedKitLabel = computed(
+  () =>
+    subjectDetail.value?.investigational_product_id ||
+    localAllocation.value?.kitNumber ||
+    ""
+);
+
+watch(
+  () => [
+    canvas.studyCode,
+    props.participant.subject_id,
+    props.participant.status,
+  ],
+  () => {
+    if (
+      isPostRandomizationStatus(props.participant.status) ||
+      canvas.allocations[props.participant.subject_id]
+    ) {
+      canvas.loadSubjectDetail(props.participant);
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>
@@ -104,6 +164,28 @@ const record = computed(() => canvas.record);
   margin: 0;
   font-size: 1.1rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.allocation-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--neutral-light);
+  font-size: 0.88rem;
+}
+
+.allocation-summary dt {
+  color: var(--neutral-dark);
+  font-weight: 600;
+}
+
+.allocation-summary dd {
+  margin: 0 12px 0 0;
 }
 
 .record-meta,

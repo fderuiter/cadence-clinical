@@ -57,6 +57,22 @@
       {
         "name": "quality_oversight",
         "description": "Quality Oversight role with capability to approve and close CAPAs."
+      },
+      {
+        "name": "unblinded_statistician",
+        "description": "Unblinded Statistician authorized to draft and approve randomization schemes and inspect unblinded allocations."
+      },
+      {
+        "name": "pharmacist",
+        "description": "Site Pharmacist authorized to manage site investigational product inventory and reconcile returned kits."
+      },
+      {
+        "name": "Principal Investigator",
+        "description": "Principal Investigator authorized for clinical oversight, delegation sign-off, and emergency unblinding."
+      },
+      {
+        "name": "Authorized ER Physician",
+        "description": "Authorized Emergency Room Physician permitted to perform emergency participant unblinding."
       }
     ]
   },
@@ -131,6 +147,20 @@
           "config": {
             "user.attribute": "tenant_id",
             "claim.name": "tenant_id",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false"
+          }
+        },
+        {
+          "name": "unblinded access",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "unblinded_access",
+            "claim.name": "unblinded_access",
             "jsonType.label": "String",
             "access.token.claim": "true",
             "id.token.claim": "false",
@@ -223,7 +253,7 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["Site Investigator"],
+      "realmRoles": ["Site Investigator", "Principal Investigator"],
       "attributes": {
         "tenant_id": ["cadence-local"],
         "study_ids": ["*"],
@@ -301,6 +331,70 @@
       ],
       "realmRoles": ["Auditor", "Sponsor Admin"],
       "attributes": { "tenant_id": ["cadence-local"], "study_ids": ["*"] }
+    },
+    {
+      "id": "b1a2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5",
+      "username": "stat.author",
+      "enabled": true,
+      "email": "stat.author@example.com",
+      "firstName": "Unblinded",
+      "lastName": "StatisticianOne",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["unblinded_statistician"],
+      "attributes": {
+        "tenant_id": ["cadence-local"],
+        "study_ids": ["*"],
+        "unblinded_access": ["true"]
+      }
+    },
+    {
+      "id": "c2b3d4e5-f6a7-4b8c-9d0e-f1a2b3c4d5e6",
+      "username": "stat.approver",
+      "enabled": true,
+      "email": "stat.approver@example.com",
+      "firstName": "Unblinded",
+      "lastName": "StatisticianTwo",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["unblinded_statistician"],
+      "attributes": {
+        "tenant_id": ["cadence-local"],
+        "study_ids": ["*"],
+        "unblinded_access": ["true"]
+      }
+    },
+    {
+      "id": "d3c4e5f6-a7b8-4c9d-8e1f-a2b3c4d5e6f7",
+      "username": "pharmacist.site101",
+      "enabled": true,
+      "email": "pharmacist.site101@example.com",
+      "firstName": "Site",
+      "lastName": "Pharmacist",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["pharmacist"],
+      "attributes": {
+        "tenant_id": ["cadence-local"],
+        "study_ids": ["*"],
+        "site_id": ["SITE-101"],
+        "unblinded_access": ["true"]
+      }
     }
   ]
 }

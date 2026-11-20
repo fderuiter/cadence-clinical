@@ -298,6 +298,25 @@
             :study-code="studyCode"
           />
 
+          <RandomizationSchemesSection
+            v-else-if="section?.id === 'randomization-schemes'"
+            :key="`schemes-${studyCode}`"
+            :study-code="studyCode"
+            :can-manage-schemes="canManageSchemes"
+            :current-user-id="authStore.userId ?? ''"
+            :current-username="authStore.identity?.username ?? ''"
+          />
+
+          <SupplySection
+            v-else-if="section?.id === 'supply'"
+            :key="`supply-${studyCode}`"
+            :study-code="studyCode"
+            :default-site-id="siteFilter || authStore.user?.siteId || ''"
+            :can-seed-inventory="canSeedSupply"
+            :can-reconcile-inventory="canReconcileSupply"
+            :pharmacist-name="authStore.identity?.username ?? ''"
+          />
+
           <QueriesSection
             v-else-if="section?.id === 'queries'"
             :key="`queries-${studyCode}`"
@@ -459,6 +478,9 @@ import {
 import {
   canManageParticipants,
   canManageQueries,
+  canManageRandomizationSchemes,
+  canReconcileKitInventory,
+  canSeedKitInventory,
   canVerifySource,
 } from "../canvas/authority";
 import type { PaletteTarget } from "../canvas/palette";
@@ -471,6 +493,8 @@ import CanvasPalette from "../components/canvas/CanvasPalette.vue";
 import ParticipantRecord from "../components/canvas/ParticipantRecord.vue";
 import ParticipantsSection from "../components/canvas/ParticipantsSection.vue";
 import ProtocolVersionsSection from "../components/canvas/ProtocolVersionsSection.vue";
+import RandomizationSchemesSection from "../components/canvas/RandomizationSchemesSection.vue";
+import SupplySection from "../components/canvas/SupplySection.vue";
 import QueriesSection, {
   type StudyQueriesFilterState,
 } from "../components/canvas/QueriesSection.vue";
@@ -656,6 +680,11 @@ const inspectedNodeText = computed(() => {
 const canManage = computed(() => canManageQueries(authStore));
 const canVerify = computed(() => canVerifySource(authStore));
 const canChangeParticipants = computed(() => canManageParticipants(authStore));
+const canManageSchemes = computed(() =>
+  canManageRandomizationSchemes(authStore)
+);
+const canSeedSupply = computed(() => canSeedKitInventory(authStore));
+const canReconcileSupply = computed(() => canReconcileKitInventory(authStore));
 
 const navigatorStages = computed(() =>
   stage.value ? [stage.value] : STAGES.filter((s) => s.sections.length)
