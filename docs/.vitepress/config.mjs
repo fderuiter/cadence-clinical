@@ -5,9 +5,18 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import { assertThemeLinksExist, repoLinksPlugin } from "./repoLinks.mjs";
+import {
+  BLOG_FEED_PATH,
+  getBlogSidebarItems,
+  getDraftBlogPostExcludes,
+  writeRssFeed,
+} from "./blog.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const docsDir = path.resolve(__dirname, "..");
+const siteBase = process.env.VITEPRESS_BASE || "/cadence-clinical/";
+const isDevServer = process.argv.includes("dev");
 
 /**
  * Builds domain-grouped sidebar entries for architectural decision records.
@@ -156,15 +165,30 @@ const config = defineConfig({
   title: "Cadence Clinical Portal",
   description:
     "Metadata-Driven Clinical Execution Platform Documentation Portal",
-  base: process.env.VITEPRESS_BASE || "/cadence-clinical/",
+  base: siteBase,
   outDir: path.resolve(__dirname, "dist"),
-  srcExclude: ["**/SDLC/runs/**", "**/runs/**"],
+  head: [
+    [
+      "link",
+      {
+        rel: "alternate",
+        type: "application/rss+xml",
+        title: "Cadence Clinical Engineering Blog RSS Feed",
+        href: `${siteBase.replace(/\/?$/, "/")}feed.xml`,
+      },
+    ],
+  ],
+  srcExclude: [
+    "**/SDLC/runs/**",
+    "**/runs/**",
+    ...(isDevServer ? [] : getDraftBlogPostExcludes(docsDir)),
+  ],
   // Links VitePress cannot serve are pointed at GitHub by repoLinksPlugin; any other dead link fails the build.
   ignoreDeadLinks: false,
   markdown: {
     config(md) {
       md.use(repoLinksPlugin, {
-        docsDir: path.resolve(__dirname, ".."),
+        docsDir,
         repoRoot: path.resolve(__dirname, "../.."),
       });
     },
@@ -174,12 +198,27 @@ const config = defineConfig({
       chunkSizeWarningLimit: 2000,
     },
   },
+  async buildEnd(siteConfig) {
+    writeRssFeed(siteConfig);
+  },
   themeConfig: {
     search: {
       provider: "local",
+      options: {
+        _render(src, env, md) {
+          if (
+            env.frontmatter?.draft === true ||
+            env.frontmatter?.draft === "true"
+          ) {
+            return "";
+          }
+          return md.render(src, env);
+        },
+      },
     },
     nav: [
       { text: "Home", link: "/" },
+      { text: "Blog", link: "/blog/index", activeMatch: "^/blog/" },
       { text: "Doc Index", link: "/DOCUMENTATION_INDEX" },
       { text: "Kernel Spec", link: "/kernel/CLINICAL_KERNEL_SPECIFICATION" },
       { text: "Architecture", link: "/ARCHITECTURE" },
@@ -187,8 +226,14 @@ const config = defineConfig({
       { text: "API Reference", link: "/api/index" },
       { text: "CLI Reference", link: "/cli" },
       { text: "Agents", link: "/AGENTS" },
+      { text: "RSS", link: BLOG_FEED_PATH, target: "_blank" },
     ],
     sidebar: [
+      {
+        text: "Engineering Blog",
+        collapsed: false,
+        items: getBlogSidebarItems(docsDir),
+      },
       {
         text: "Overview & Guides",
         items: [

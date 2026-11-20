@@ -16,6 +16,7 @@ The script runs `node scripts/run-cli.js`, which executes the compiled Native AO
 pnpm cadence doctor
 pnpm cadence check duplication
 pnpm cadence gxp sync --dry-run
+pnpm cadence scaffold post "Ship Kernel Phase 3"
 ```
 
 Some commands also have a `make` target. Those targets use `pnpm cadence` and share its on-demand CLI build.
@@ -35,6 +36,7 @@ Some commands also have a `make` target. Those targets use `pnpm cadence` and sh
 | `make rtm`                               | `cadence gxp validate`                        |
 | `make gxp-snapshot`                      | `CADENCE_GXP_SNAPSHOT=1 cadence gxp snapshot` |
 | `make adr TITLE="..."`                   | `cadence scaffold adr "<title>"`              |
+| `make post TITLE="..."`                  | `cadence scaffold post "<title>"`             |
 | `make db-reset`, `make db-reset-offline` | `cadence db reset`                            |
 
 `make wizard` runs `scripts/setup_wizard.sh` directly. That is the same script as `cadence wizard onboarding`.
@@ -245,7 +247,7 @@ Paths are relative to the repository root. "Calls" is the method the command run
 | `detect-duplication`          | Finds duplicated blocks (over 15 normalized lines) in `.cs`, `.py`, `.js`, `.vue` and `.css` files under `apps/` and `packages/`. Writes `duplication_summary.json`. Fails only when a duplicate involves a `.cs` file.                                                                                                                               | `DuplicationDetectorService.DetectDuplication`                                            |
 | `validate-imports`            | Fails when a `.cs` file in one `apps/<service>` has `using Cadence.Apps.<other service>`.                                                                                                                                                                                                                                                             | `ImportValidatorService.ValidateImports`                                                  |
 | `validate-dependencies`       | Fails when `apps/web/package.json` lists `node-forge`, `elliptic` or `jose`. Passes if the file is missing.                                                                                                                                                                                                                                           | `DependencyValidatorService.ValidateDependencies`                                         |
-| `validate-path-patterns`      | Fails on directories named `tmp`, `temp`, `scratch` or `old_src`, `.vue` files outside `apps/` and `packages/`, and `.sh` files outside `scripts/`.                                                                                                                                                                                                   | `PathPatternValidatorService.ValidatePathPatterns`                                        |
+| `validate-path-patterns`      | Fails on directories named `tmp`, `temp`, `scratch` or `old_src`, `.vue` files outside `apps/`, `packages/` and `docs/.vitepress/`, and `.sh` files outside `scripts/`.                                                                                                                                                                               | `PathPatternValidatorService.ValidatePathPatterns`                                        |
 | `validate-readmes`            | Fails when a direct subdirectory of `apps/` or `packages/` has no `README.md`, or its README has no `# ` title.                                                                                                                                                                                                                                       | `ReadmeValidatorService.ValidateReadmes`                                                  |
 | `validate-codeowners`         | Fails when `.github/CODEOWNERS` is missing or empty.                                                                                                                                                                                                                                                                                                  | `CodeownersValidatorService.ValidateCodeowners`                                           |
 | `validate-workflow-security`  | Validates `.github/workflows/*.{yml,yaml}` and `.github/actions/**/action.{yml,yaml}` for 40-hex commit SHAs with version comments, `sha256:` digests on `docker://` refs, `persist-credentials: false` on `actions/checkout`, and least-privilege permissions.                                                                                       | `WorkflowSecurityValidatorService.ValidateWorkflowSecurity`                               |
@@ -362,6 +364,19 @@ Runs `bash scripts/migrate_service_wizard.sh -ServiceName <name>` in the current
 Creates `docs/adr/<yyyy-mm-dd>-<slug>.md` from a built-in template. The ADR number is one more than the highest `ADR-<n>:` found on the first line of existing ADRs, or 100 if there are none. Fails if the file already exists. Appends a link to `docs/adr/index.md` if that file exists.
 
 The title is required. With make, pass it as `make adr TITLE="Use X for Y"`.
+
+#### `cadence scaffold post <title>`
+
+Creates `docs/blog/<yyyy-mm-dd>-<slug>.md` with YAML frontmatter (`title`, `date`, `authors`, `summary`, `tags`, `draft`, `related`) and structured Markdown sections, then updates `docs/DOCUMENTATION_INDEX.md` under `## Engineering blog` when that file exists. Posts start with `draft: true` by default so drafts stay excluded from public index pages, site search, and `/feed.xml` until flipped to `draft: false` (or created with `--publish`). Fails with exit code `1` if the title produces an empty slug or the dated file already exists.
+
+The title is required. With make, pass it as `make post TITLE="Ship X"`.
+
+| Option                 | Description                                                                                                                            |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `-a\|--author <value>` | Author GitHub handle or display name (comma-separated for multiple, e.g. `fderuiter` or `--author=@fderuiter`). Default: `@fderuiter`. |
+| `-t\|--tag <slug>`     | Topic tag slug; repeat or comma-separate for multiple tags. Default: `engineering`.                                                    |
+| `-s\|--summary <text>` | One-sentence summary excerpt for the blog index and RSS feed. Defaults to a sentence derived from `<title>`.                           |
+| `--publish`            | Writes `draft: false` so the post is published immediately instead of starting as a draft.                                             |
 
 ### `cadence hook`
 

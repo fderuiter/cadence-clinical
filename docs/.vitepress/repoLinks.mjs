@@ -1,8 +1,11 @@
 import fs from "fs";
 import path from "path";
 
+import { BLOG_FEED_PATH, isDraftBlogPostFile } from "./blog.mjs";
+
 const REPO_URL = "https://github.com/fderuiter/cadence-clinical";
 const BRANCH = "main";
+const GENERATED_STATIC_ENDPOINTS = new Set([BLOG_FEED_PATH]);
 
 /**
  * Markdown-it plugin: points relative links that the docs site cannot serve at the file on GitHub.
@@ -51,6 +54,9 @@ function toRepoUrl(href, pageDir, docsDir, repoRoot) {
     if (exists && !isDir && !/\.(md|html)$/i.test(absolute)) {
       return `${REPO_URL}/blob/${BRANCH}/${relToRepo}${anchor}`;
     }
+    if (exists && !isDir && isDraftBlogPostFile(absolute)) {
+      return `${REPO_URL}/blob/${BRANCH}/${relToRepo}${anchor}`;
+    }
     return null;
   }
 
@@ -93,9 +99,11 @@ export function assertThemeLinksExist(themeConfig, docsDir) {
 }
 
 function pageExists(docsDir, link) {
-  const page = splitAnchor(link)[0]
-    .replace(/^\//, "")
-    .replace(/\.(html|md)$/, "");
+  const cleanLink = splitAnchor(link)[0];
+  if (GENERATED_STATIC_ENDPOINTS.has(cleanLink)) {
+    return true;
+  }
+  const page = cleanLink.replace(/^\//, "").replace(/\.(html|md)$/, "");
   if (page === "" || page.endsWith("/")) {
     return fs.existsSync(path.join(docsDir, page, "index.md"));
   }
