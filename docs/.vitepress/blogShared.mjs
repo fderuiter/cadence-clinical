@@ -238,7 +238,7 @@ export function normalizeSiteLink(rawLink) {
   const hashPart = hashIndex === -1 ? "" : link.slice(hashIndex);
 
   let cleaned = pathPart
-    .replace(/^\.\.\//, "/")
+    .replace(/^(?:\.\.\/)+/, "/")
     .replace(/^\.\//, "/")
     .replace(/^\/?docs\//, "/");
 

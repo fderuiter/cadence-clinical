@@ -11,7 +11,9 @@ import {
   isDraftBlogPostFile,
   loadPublishedBlogPosts,
   normalizeBlogPost,
+  normalizeSiteLink,
   parseBlogFrontmatter,
+  resolveBaseHref,
   transformContentLoaderPosts,
   writeRssFeed,
 } from "../../../docs/.vitepress/blog.mjs";
@@ -313,5 +315,23 @@ describe("VitePress Engineering Blog Engine", () => {
       expect(post.tags.length).toBeGreaterThan(0);
       expect(post.related.length).toBeGreaterThan(0);
     }
+  });
+
+  it("normalizes staged root guide links and co-hosted demo subpaths cleanly", () => {
+    expect(normalizeSiteLink("../../ARCHITECTURE.md#system-topology")).toBe(
+      "/ARCHITECTURE.html#system-topology"
+    );
+    expect(normalizeSiteLink("../adr/index.md")).toBe("/adr/");
+    expect(normalizeSiteLink("/demo/")).toBe("/demo/");
+    expect(normalizeSiteLink("/subject-portal/")).toBe("/subject-portal/");
+    expect(
+      resolveBaseHref(
+        normalizeSiteLink("../../ARCHITECTURE.md"),
+        "/cadence-clinical/"
+      )
+    ).toBe("/cadence-clinical/ARCHITECTURE.html");
+    expect(resolveBaseHref("/demo/", "/cadence-clinical/")).toBe(
+      "/cadence-clinical/demo/"
+    );
   });
 });
