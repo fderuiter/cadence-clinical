@@ -314,7 +314,7 @@ describe("eCRF screen: the participant's case report form", () => {
     );
   });
 
-  it("populates #ecrf-enrollment-id immediately when arriving from Clinical Canvas with ?enrollmentId=", async () => {
+  it("populates #ecrf-enrollment-id immediately when arriving from Clinical Canvas with ?enrollmentId= and syncs same-route participant updates", async () => {
     setRouteQuery({
       studyId: "CAD-101",
       subjectId: "017-0001",
@@ -329,8 +329,15 @@ describe("eCRF screen: the participant's case report form", () => {
           site_id: "SITE-01",
           status: "ENROLLED",
         },
+        {
+          id: "sub-2",
+          subject_id: "017-0002",
+          study_id: "CAD-101",
+          site_id: "SITE-01",
+          status: "ENROLLED",
+        },
       ],
-      total: 1,
+      total: 2,
       limit: 200,
       offset: 0,
     });
@@ -343,6 +350,22 @@ describe("eCRF screen: the participant's case report form", () => {
 
     expect(wrapper.find("#ecrf-enrollment-id").element.value).toBe(
       "0192f3c4-0000-7000-8000-00000000e777"
+    );
+    expect(searchSpy).not.toHaveBeenCalled();
+
+    // Navigating on the same /ecrf route to another participant updates selector and enrollmentId
+    setRouteQuery({
+      studyId: "CAD-101",
+      subjectId: "017-0002",
+      enrollmentId: "0192f3c4-0000-7000-8000-00000000e888",
+    });
+    await flushPromises();
+
+    expect(wrapper.find("#ecrf-subject-selector").element.value).toBe(
+      "017-0002"
+    );
+    expect(wrapper.find("#ecrf-enrollment-id").element.value).toBe(
+      "0192f3c4-0000-7000-8000-00000000e888"
     );
     expect(searchSpy).not.toHaveBeenCalled();
   });

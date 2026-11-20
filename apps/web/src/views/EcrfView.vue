@@ -481,9 +481,9 @@ function routeQuery(name, targetRoute = route) {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
-const initialRouteStudyId = routeQuery("studyId") ?? "";
-const initialRouteSubjectId = routeQuery("subjectId") ?? "";
-const initialRouteEnrollmentId = routeQuery("enrollmentId") ?? "";
+const routeStudyId = ref(routeQuery("studyId") ?? "");
+const routeSubjectId = ref(routeQuery("subjectId") ?? "");
+const routeEnrollmentId = ref(routeQuery("enrollmentId") ?? "");
 
 watch(
   () => routeQuery("formId"),
@@ -521,7 +521,7 @@ function onFormPanelClosed() {
 
 // Selected Subject & Visit State
 const selectedSubjectId = ref(
-  demoBuild ? "SUBJ-001" : initialRouteSubjectId || ""
+  demoBuild ? "SUBJ-001" : routeSubjectId.value || ""
 );
 const selectedVisitId = ref("Screening");
 
@@ -552,7 +552,7 @@ const {
 );
 
 // Kernel enrollment resolution for the selected participant outside demo mode
-const resolvedEnrollmentId = ref(initialRouteEnrollmentId);
+const resolvedEnrollmentId = ref(routeEnrollmentId.value);
 const enrollmentStatusMessage = ref("");
 const selectionChangedFromInitial = ref(false);
 let enrollmentLookupSeq = 0;
@@ -584,12 +584,13 @@ const manageParticipantsLocation = computed(() => {
   return { path: "/studies" };
 });
 
+const basePrefix = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
 const manageParticipantsHref = computed(() => {
   const code = store.activeStudyId.trim();
   if (code) {
-    return `/studies/${encodeURIComponent(code)}?stage=conduct&section=participants`;
+    return `${basePrefix}studies/${encodeURIComponent(code)}?stage=conduct&section=participants`;
   }
-  return "/studies";
+  return `${basePrefix}studies`;
 });
 
 async function resolveSelectedEnrollment() {
@@ -598,10 +599,10 @@ async function resolveSelectedEnrollment() {
   const subjectCode = selectedSubjectId.value.trim();
 
   if (
-    initialRouteEnrollmentId &&
+    routeEnrollmentId.value &&
     !selectionChangedFromInitial.value &&
-    ((studyCode && studyCode !== initialRouteStudyId) ||
-      (subjectCode && subjectCode !== initialRouteSubjectId))
+    ((studyCode && studyCode !== routeStudyId.value) ||
+      (subjectCode && subjectCode !== routeSubjectId.value))
   ) {
     selectionChangedFromInitial.value = true;
   }
@@ -609,12 +610,12 @@ async function resolveSelectedEnrollment() {
   if (!studyCode || !subjectCode) {
     enrollmentLookupSeq++;
     if (
-      initialRouteEnrollmentId &&
+      routeEnrollmentId.value &&
       !selectionChangedFromInitial.value &&
       !studyCode &&
       !subjectCode
     ) {
-      resolvedEnrollmentId.value = initialRouteEnrollmentId;
+      resolvedEnrollmentId.value = routeEnrollmentId.value;
       enrollmentStatusMessage.value = "";
       return;
     }
@@ -624,13 +625,13 @@ async function resolveSelectedEnrollment() {
   }
 
   if (
-    initialRouteEnrollmentId &&
+    routeEnrollmentId.value &&
     !selectionChangedFromInitial.value &&
-    (!initialRouteStudyId || studyCode === initialRouteStudyId) &&
-    (!initialRouteSubjectId || subjectCode === initialRouteSubjectId)
+    (!routeStudyId.value || studyCode === routeStudyId.value) &&
+    (!routeSubjectId.value || subjectCode === routeSubjectId.value)
   ) {
     enrollmentLookupSeq++;
-    resolvedEnrollmentId.value = initialRouteEnrollmentId;
+    resolvedEnrollmentId.value = routeEnrollmentId.value;
     enrollmentStatusMessage.value = "";
     return;
   }
@@ -638,7 +639,7 @@ async function resolveSelectedEnrollment() {
   const seq = ++enrollmentLookupSeq;
   const siteCode =
     selectedSubject.value?.siteId ||
-    (subjectCode === initialRouteSubjectId ? routeQuery("siteId") : null) ||
+    (subjectCode === routeSubjectId.value ? routeQuery("siteId") : null) ||
     null;
 
   enrollmentStatusMessage.value = `Resolving kernel enrollment for ${subjectCode}…`;
@@ -677,13 +678,60 @@ watch(
       (nextStudy !== prevStudy || nextSubject !== prevSubject)
     ) {
       if (
-        nextStudy !== initialRouteStudyId ||
-        nextSubject !== initialRouteSubjectId
+        nextStudy !== routeStudyId.value ||
+        nextSubject !== routeSubjectId.value
       ) {
         selectionChangedFromInitial.value = true;
       }
     }
     void resolveSelectedEnrollment();
+  }
+);
+
+watch(
+  [
+    () => routeQuery("studyId") ?? "",
+    () => routeQuery("siteId") ?? "",
+    () => routeQuery("subjectId") ?? "",
+    () => routeQuery("enrollmentId") ?? "",
+  ],
+  async (
+    [nextStudy, nextSite, nextSubject, nextEnrollment],
+    [prevStudy, prevSite, prevSubject, prevEnrollment]
+  ) => {
+    if (
+      nextStudy === prevStudy &&
+      nextSite === prevSite &&
+      nextSubject === prevSubject &&
+      nextEnrollment === prevEnrollment
+    ) {
+      return;
+    }
+    routeStudyId.value = nextStudy;
+    routeSubjectId.value = nextSubject;
+    routeEnrollmentId.value = nextEnrollment;
+    selectionChangedFromInitial.value = false;
+
+    if (nextSite) {
+      store.activeSiteId = nextSite;
+    }
+    const studyChanged = Boolean(
+      nextStudy && nextStudy !== store.activeStudyId
+    );
+    if (nextStudy) {
+      store.activeStudyId = nextStudy;
+    }
+    if (nextSubject) {
+      store.activeSubjectId = nextSubject;
+      selectedSubjectId.value = nextSubject;
+    }
+    if (!demoBuild) {
+      if (studyChanged) {
+        await store.loadSubjects(nextStudy);
+      }
+      selectListedSubject();
+      await resolveSelectedEnrollment();
+    }
   }
 );
 
