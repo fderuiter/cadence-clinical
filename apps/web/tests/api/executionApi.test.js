@@ -270,7 +270,7 @@ describe("executionApi: RTSM, consent, subject detail, and step-up signature", (
     );
 
     const token = await executionApi.requestSignatureToken({
-      password: "Password-123!",
+      password: "Password-123!", // pragma: allowlist secret
       totp: "654321",
       username: "stat.approver",
       action: "/api/v1/execution/randomization/schemes/abc/approve",
@@ -284,7 +284,7 @@ describe("executionApi: RTSM, consent, subject detail, and step-up signature", (
     );
     expect(init.method).toBe("POST");
     expect(JSON.parse(init.body)).toEqual({
-      password: "Password-123!",
+      password: "Password-123!", // pragma: allowlist secret
       totp: "654321",
       username: "stat.approver",
       action: "/api/v1/execution/randomization/schemes/abc/approve",

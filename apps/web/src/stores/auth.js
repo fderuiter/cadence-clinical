@@ -264,6 +264,8 @@ function hasAssignedClinicalRole(rawRoles) {
  * @property {string} lastName
  * @property {string} id - `sub` claim
  * @property {string} tenantId - `tenant_id` claim; blank when the token has none
+ * @property {string} [siteId] - optional `site_id` claim when assigned to a clinical site
+ * @property {boolean} [unblindedAccess] - optional `unblinded_access` claim when explicitly present
  */
 
 function emptyAuthState() {
@@ -390,19 +392,25 @@ export const useAuthStore = defineStore("auth", {
       this.accessToken = keycloak.token;
       this.idToken = keycloak.idToken || null;
       this.tokenExpiresAt = claims.exp ? claims.exp * 1000 : null;
-      this.user = {
+      const rawSiteId = Array.isArray(claims.site_id)
+        ? claims.site_id[0]
+        : claims.site_id;
+      const user = {
         username: claims.preferred_username || claims.sub || "",
         email: claims.email || "",
         firstName: claims.given_name || "",
         lastName: claims.family_name || "",
         id: claims.sub || "",
         tenantId: claims.tenant_id || "",
-        siteId: Array.isArray(claims.site_id)
-          ? claims.site_id[0] || ""
-          : claims.site_id || "",
-        unblindedAccess:
-          String(claims.unblinded_access ?? "").toLowerCase() === "true",
       };
+      if (rawSiteId !== undefined && rawSiteId !== null && rawSiteId !== "") {
+        user.siteId = String(rawSiteId);
+      }
+      if (claims.unblinded_access !== undefined) {
+        user.unblindedAccess =
+          String(claims.unblinded_access).toLowerCase() === "true";
+      }
+      this.user = user;
       this.rawRoles = Array.isArray(claims.realm_access?.roles)
         ? [...claims.realm_access.roles]
         : [];

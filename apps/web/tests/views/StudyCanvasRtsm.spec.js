@@ -315,7 +315,7 @@ describe("Clinical Canvas RTSM, consent, blinding, and emergency unblinding", ()
     await flushPromises();
 
     expect(executionApi.requestSignatureToken).toHaveBeenCalledWith({
-      password: "ApproverPass!1",
+      password: "ApproverPass!1", // pragma: allowlist secret
       totp: undefined,
       username: "stat.approver",
       action: `/api/v1/execution/randomization/schemes/${SCHEME_UUID}/approve`,
@@ -544,7 +544,7 @@ describe("Clinical Canvas RTSM, consent, blinding, and emergency unblinding", ()
     await flushPromises();
 
     expect(executionApi.requestSignatureToken).toHaveBeenCalledWith({
-      password: "CrcPass!1",
+      password: "CrcPass!1", // pragma: allowlist secret
       totp: undefined,
       username: "crc.site101",
       action: `/api/v1/execution/subjects/${SUBJECT_UUID}/randomize`,
