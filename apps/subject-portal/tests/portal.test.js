@@ -406,9 +406,14 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       "1"
     );
 
-    // Audit trail should contain ACKNOWLEDGE_NOTIFICATION entry
+    // Audit trail renders plain event summary with collapsed verification code while keeping underlying ledgerBlocks intact
     const ledgerTimeline = document.getElementById("portal-ledger-timeline");
-    expect(ledgerTimeline.innerHTML).toContain("ACKNOWLEDGE_NOTIFICATION");
+    expect(ledgerTimeline.innerHTML).toContain("Reminder marked as read");
+    expect(ledgerTimeline.innerHTML).toContain("ledger-verification-details");
+    expect(portal.state.ledgerBlocks.at(-1).action).toBe(
+      "ACKNOWLEDGE_NOTIFICATION"
+    );
+    expect(portal.state.ledgerBlocks.at(-1).hash).toMatch(/^[a-f0-9]{64}$/);
   });
 
   describe("Offline Sync and Queue Capabilities", () => {
@@ -455,17 +460,17 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       document.getElementById("sign-password").value = "pin123";
       await portal.verifyAndSubmitSignature();
 
-      // Verify that IndexedDB and UI renders both with QUEUED status and correct sequence
+      // Verify that IndexedDB and UI render both with plain Saved offline status, question labels, and no internal sequence numbers
       const syncList = document.getElementById("sync-queue-list");
-      expect(syncList.innerHTML).toContain("QUEUED");
-      expect(syncList.innerHTML).toContain("Seq: #1");
-      expect(syncList.innerHTML).toContain("Seq: #2");
+      expect(syncList.innerHTML).toContain("Saved offline");
+      expect(syncList.innerHTML).toContain("Daily Health &amp; Vital Diary");
+      expect(syncList.innerHTML).toContain("Weekly Symptoms");
+      expect(syncList.innerHTML).not.toContain("Seq: #");
 
       // Verify that data survives app reload by checking state and rendering again
       await portal.renderSyncQueueList();
-      expect(syncList.innerHTML).toContain("QUEUED");
-      expect(syncList.innerHTML).toContain("Seq: #1");
-      expect(syncList.innerHTML).toContain("Seq: #2");
+      expect(syncList.innerHTML).toContain("Saved offline");
+      expect(syncList.innerHTML).not.toContain("Seq: #");
     });
 
     it("flushes queued items in correct sequence order upon going online", async () => {
@@ -549,10 +554,10 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
         requestBody.submissions[1].offline_sync_markers.sequence_number
       ).toBe(2);
 
-      // Verify status updates to SYNCED in UI
+      // Verify status updates to Sent in UI
       const syncList = document.getElementById("sync-queue-list");
-      expect(syncList.innerHTML).toContain("SYNCED");
-      expect(syncList.innerHTML).not.toContain("QUEUED");
+      expect(syncList.innerHTML).toContain("Sent");
+      expect(syncList.innerHTML).not.toContain("Saved offline");
     });
 
     it("retains QUEUED status and retries when sync fails", async () => {
@@ -585,9 +590,9 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       portal.state.session.isOfflineMode = false;
       await portal.syncOfflineQueue();
 
-      // Verify still in QUEUED state due to failure
+      // Verify still in Saved offline state due to failure
       const syncList = document.getElementById("sync-queue-list");
-      expect(syncList.innerHTML).toContain("QUEUED");
+      expect(syncList.innerHTML).toContain("Saved offline");
     });
 
     it("asserts Bearer token is attached and gateway headers are absent when authenticated", async () => {
@@ -797,15 +802,15 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       portal.state.session.isOfflineMode = false;
       await portal.syncOfflineQueue();
 
-      // Verify that MERGED and CONFLICT (Ignored) statuses and explanations are visible
+      // Verify that Combined and Already on file statuses and plain explanations are visible
       const syncList = document.getElementById("sync-queue-list");
-      expect(syncList.innerHTML).toContain("MERGED");
-      expect(syncList.innerHTML).toContain("CONFLICT (Ignored)");
+      expect(syncList.innerHTML).toContain("Combined");
+      expect(syncList.innerHTML).toContain("Already on file");
       expect(syncList.innerHTML).toContain(
-        "Conflict resolved: Server data was preserved; local entry archived."
+        "Your study team already had the latest version of this entry."
       );
       expect(syncList.innerHTML).toContain(
-        "Conflict resolved: Local and server entries were combined."
+        "Combined your offline answers with your study record."
       );
     });
   });

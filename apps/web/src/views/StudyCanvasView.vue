@@ -175,7 +175,9 @@
                 </router-link>
               </li>
             </ul>
-            <p v-else class="nav-empty">Nothing here has a service yet.</p>
+            <p v-else class="nav-empty">
+              No sections are available in this stage yet.
+            </p>
           </div>
         </nav>
 
@@ -335,15 +337,13 @@
             <p id="stage-empty" class="stage-empty">
               {{
                 stage.sections.length
-                  ? `The rest of ${stage.label} arrives as its services are built.`
-                  : `No part of ${stage.label} has a service yet.`
+                  ? `Additional ${stage.label.toLowerCase()} workflows are not available in this workspace yet.`
+                  : `${stage.label} workflows are not available in this workspace yet.`
               }}
-              <a
-                :href="UNAVAILABLE_SCREENS_ISSUE"
-                target="_blank"
-                rel="noopener"
-                >See what's planned (#4829)</a
-              >.
+              <router-link :to="studyLocation()">
+                Return to {{ studyCode }} home
+              </router-link>
+              to view active study sections.
             </p>
           </section>
         </component>
@@ -352,9 +352,12 @@
           :study-code="studyCode"
           :participant="inspectedParticipant"
           :node-ref="inspectedNodeText"
-          :missing="Boolean(selectedNode) && !selectedParticipant"
+          :missing="isSelectedParticipantMissing"
           :protocol-version="inspectedVersion"
           :protocol-version-error="inspectedVersionError"
+          :generic-node-ref="selectedGenericNodeRef"
+          :generic-node="inspectedGenericNode"
+          :generic-node-loading="inspectedGenericLoading"
           :record-location="
             inspectedParticipant &&
             (inspectedParticipant !== recordParticipant ||
@@ -409,7 +412,7 @@
         </button>
       </form>
       <p class="open-study-note">
-        No service lists studies yet, so a study is opened by its code.
+        Enter your study code above to open its workspace.
       </p>
     </component>
 
@@ -438,6 +441,7 @@ import type { EcrfForm } from "../api/ecrfFormsApi";
 import type { SubjectSummary } from "../api/executionApi";
 import {
   kernelApi,
+  type KernelNode,
   type KernelObservation,
   type KernelProtocolVersion,
 } from "../api/kernelApi";
@@ -457,12 +461,16 @@ import {
   type NodeRef,
 } from "../canvas/nodeRef";
 import {
+  canResolveNodesRemotely,
+  resolveNode,
+  seedNodeSummary,
+} from "../canvas/nodeResolver";
+import {
   canManageParticipants,
   canManageQueries,
   canVerifySource,
 } from "../canvas/authority";
 import type { PaletteTarget } from "../canvas/palette";
-import { UNAVAILABLE_SCREENS_ISSUE } from "../router/availability.js";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import CanvasFormWorkspace from "../components/canvas/CanvasFormWorkspace.vue";
@@ -546,14 +554,17 @@ const queryChangedFilter = computed(() => {
   const changed = single(route.query.changed).toLowerCase();
   return changed === "true" || changed === "false" ? changed : "";
 });
-const selectedNode = computed<NodeRef | null>(() => {
-  const node = parseNodeRef(route.query.node);
-  return node?.kind === "participant" ? node : null;
-});
-const selectedVersionNode = computed<NodeRef | null>(() => {
-  const node = parseNodeRef(route.query.node);
-  return node?.kind === "protocol_version" ? node : null;
-});
+const anySelectedNode = computed<NodeRef | null>(() =>
+  parseNodeRef(route.query.node)
+);
+const selectedNode = computed<NodeRef | null>(() =>
+  anySelectedNode.value?.kind === "participant" ? anySelectedNode.value : null
+);
+const selectedVersionNode = computed<NodeRef | null>(() =>
+  anySelectedNode.value?.kind === "protocol_version"
+    ? anySelectedNode.value
+    : null
+);
 const selectedVersionText = computed(() =>
   selectedVersionNode.value ? formatNodeRef(selectedVersionNode.value) : ""
 );
@@ -570,7 +581,16 @@ watch(
     if (!text) return;
     try {
       const version = await kernelApi.getProtocolVersion(text);
-      if (request === versionRequest) inspectedVersion.value = version;
+      if (request === versionRequest) {
+        inspectedVersion.value = version;
+        if (version.ref) {
+          seedNodeSummary(version.ref, {
+            kind: "protocol_version",
+            title: `Version ${version.number}`,
+            status: version.status,
+          });
+        }
+      }
     } catch (e) {
       if (request === versionRequest) {
         inspectedVersionError.value =
@@ -584,6 +604,54 @@ const selectedParticipant = computed<SubjectSummary | null>(() =>
   selectedNode.value
     ? (canvas.knownParticipants[selectedNode.value.id] ?? null)
     : null
+);
+
+const selectedGenericNodeRef = computed<string>(() => {
+  const node = anySelectedNode.value;
+  if (!node || node.kind === "protocol_version") return "";
+  if (node.kind === "participant") {
+    return selectedParticipant.value ? "" : formatNodeRef(node);
+  }
+  return formatNodeRef(node);
+});
+
+const inspectedGenericNode = ref<KernelNode | null>(null);
+const inspectedGenericLoading = ref(false);
+let genericNodeRequest = 0;
+watch(
+  selectedGenericNodeRef,
+  async (text) => {
+    const request = ++genericNodeRequest;
+    inspectedGenericNode.value = null;
+    inspectedGenericLoading.value = false;
+    if (studyCode.value) canvas.openStudy(studyCode.value);
+    if (!text) return;
+    if (!canResolveNodesRemotely()) {
+      const local = await resolveNode(text);
+      if (request === genericNodeRequest) inspectedGenericNode.value = local;
+      return;
+    }
+    inspectedGenericLoading.value = true;
+    try {
+      const resolved = await resolveNode(text);
+      if (request === genericNodeRequest) {
+        inspectedGenericNode.value = resolved;
+      }
+    } finally {
+      if (request === genericNodeRequest) {
+        inspectedGenericLoading.value = false;
+      }
+    }
+  },
+  { immediate: true }
+);
+
+const isSelectedParticipantMissing = computed(
+  () =>
+    Boolean(selectedNode.value) &&
+    !selectedParticipant.value &&
+    !inspectedGenericNode.value &&
+    !inspectedGenericLoading.value
 );
 
 const participantRef = (value: unknown): NodeRef | null => {
@@ -642,16 +710,15 @@ const activeEnrollmentId = computed(() => {
   return null;
 });
 
-const inspectedParticipant = computed(
-  () =>
-    selectedParticipant.value ??
-    recordParticipant.value ??
-    loadedFormParticipant.value
-);
+const inspectedParticipant = computed(() => {
+  if (anySelectedNode.value) return selectedParticipant.value;
+  return recordParticipant.value ?? loadedFormParticipant.value;
+});
 const inspectedNodeText = computed(() => {
   const participant = inspectedParticipant.value;
   const node = participant ? tryNodeRef("participant", participant.id) : null;
-  return node ? formatNodeRef(node) : "";
+  if (node) return formatNodeRef(node);
+  return selectedGenericNodeRef.value;
 });
 const canManage = computed(() => canManageQueries(authStore));
 const canVerify = computed(() => canVerifySource(authStore));

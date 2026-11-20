@@ -2,7 +2,21 @@ import { defineStore } from "pinia";
 import { executionApi, type SubjectSummary } from "../api/executionApi";
 import { findKernelEnrollmentRef } from "../canvas/kernelStudy";
 import { PARTICIPANT_STATES, participantStateLabel } from "../canvas/lifecycle";
+import {
+  clearNodeResolutionCache,
+  resetNodeResolutionSession,
+  seedNodeSummary,
+} from "../canvas/nodeResolver";
 import { useToastStore } from "./toasts.js";
+
+function seedParticipantNode(participant: SubjectSummary): void {
+  seedNodeSummary(`participant:${participant.id}`, {
+    kind: "participant",
+    code: participant.subject_id,
+    title: participant.subject_id,
+    status: participant.status,
+  });
+}
 
 /** Participants shown per page in the Participants section. */
 export const PARTICIPANT_PAGE_SIZE = 50;
@@ -67,6 +81,8 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       recordRequest++;
       this.$reset();
       this.studyCode = studyCode;
+      clearNodeResolutionCache();
+      resetNodeResolutionSession(studyCode);
     },
 
     /** Loads the first page of participants for a filter, or the next page with `append`. */
@@ -100,6 +116,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
         this.participantsTotal = toCount(page.total);
         for (const participant of page.items) {
           this.knownParticipants[participant.id] = participant;
+          seedParticipantNode(participant);
         }
         return true;
       } catch (err) {
@@ -214,6 +231,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
           return null;
         }
         this.knownParticipants[newest.id] = newest;
+        seedParticipantNode(newest);
         return newest;
       } catch {
         return null;
@@ -239,6 +257,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
         );
         const changed = { ...participant, status: updated.status };
         this.knownParticipants[participant.id] = changed;
+        seedParticipantNode(changed);
         const index = this.participants.findIndex(
           (p) => p.id === participant.id
         );
@@ -292,6 +311,13 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
         );
         if (request !== recordRequest) return false;
         this.record.enrollmentId = enrollment?.id ?? null;
+        if (enrollment?.id) {
+          seedNodeSummary(`enrollment:${enrollment.id}`, {
+            kind: "enrollment",
+            code: subjectCode,
+            title: `Enrollment ${subjectCode}`,
+          });
+        }
         return true;
       } catch (err) {
         if (request !== recordRequest) return false;

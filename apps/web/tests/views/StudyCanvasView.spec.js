@@ -429,7 +429,10 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       const button = wrapper.find(`#verb-${verb}`);
       expect(button.attributes("aria-disabled")).toBe("true");
       await button.trigger("click");
-      expect(wrapper.find("#verb-note").text()).toMatch(/#48\d\d/);
+      expect(wrapper.find("#verb-note").text()).toBe(
+        "Protocol simulation isn't available in this workspace yet."
+      );
+      expect(wrapper.find("#verb-note").text()).not.toMatch(/#\d+/);
       expect(button.attributes("aria-describedby")).toBe("verb-note");
     }
     expect(wrapper.find("#verb-details").attributes("aria-pressed")).toBe(
@@ -514,17 +517,18 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
     expect(text).toContain("017-0001");
   });
 
-  it("shows a stage with no service as empty, with where it is tracked, not as sample content", async () => {
+  it("shows an unavailable stage in plain clinical terms with a return link instead of sample content", async () => {
     await open("/studies/CAD-101?stage=analyze");
 
     expect(wrapper.find("#stage-analyze").attributes("aria-current")).toBe(
       "step"
     );
     expect(wrapper.find("#stage-empty").text()).toContain(
-      "No part of Analyze has a service yet."
+      "Analyze workflows are not available in this workspace yet."
     );
-    expect(wrapper.find("#stage-empty a").attributes("href")).toContain(
-      "/issues/4829"
+    expect(wrapper.find("#stage-empty").text()).not.toMatch(/#\d+/);
+    expect(wrapper.find("#stage-empty a").attributes("href")).toBe(
+      "/studies/CAD-101"
     );
     expect(executionApi.listSubjects).not.toHaveBeenCalled();
   });

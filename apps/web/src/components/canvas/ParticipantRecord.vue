@@ -41,6 +41,7 @@
         :enrollment-id="record.enrollmentId"
         :form-location="formLocation"
         :new-form-location="newFormLocation"
+        @forms-loaded="onFormsLoaded"
       />
 
       <QueriesPanel
@@ -48,6 +49,7 @@
         :subject-code="participant.subject_id"
         :enrollment-id="record.enrollmentId"
         :can-manage="canManage"
+        :form-titles="formTitles"
         :form-location="formLocation"
         :observation-location="observationLocation"
       />
@@ -56,8 +58,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import type { RouteLocationRaw } from "vue-router";
+import type { EcrfFormSummary } from "../../api/ecrfFormsApi";
 import type { SubjectSummary } from "../../api/executionApi";
 import { participantStateLabel } from "../../canvas/lifecycle";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
@@ -65,8 +68,8 @@ import ParticipantFormsPanel from "./ParticipantFormsPanel.vue";
 import QueriesPanel from "./QueriesPanel.vue";
 
 /**
- * One participant's data inside Clinical Canvas: opened case report forms and queries on the participant's kernel
- * enrollment (ADR-2622, #5461), linking directly to forms and observations in the zoom path.
+ * One participant's data inside Clinical Canvas: opened case report forms and queries on the participant's
+ * enrollment (ADR-2622), linking directly to forms and observations in the zoom path.
  */
 defineProps<{
   participant: SubjectSummary;
@@ -84,6 +87,18 @@ const emit = defineEmits<{
 
 const canvas = useStudyCanvasStore();
 const record = computed(() => canvas.record);
+const formTitles = ref<Record<string, string>>({});
+
+function onFormsLoaded(summaries: EcrfFormSummary[]) {
+  const next: Record<string, string> = {};
+  for (const summary of summaries) {
+    const base = summary.collection_title || summary.collection_spec_id;
+    next[summary.form_id] = summary.planned_activity_id
+      ? `${base} · ${summary.planned_activity_id}`
+      : base;
+  }
+  formTitles.value = next;
+}
 </script>
 
 <style scoped>

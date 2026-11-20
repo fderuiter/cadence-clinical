@@ -75,29 +75,31 @@
     <p v-if="studyLoading" class="status-line" role="status">
       Looking up {{ studyCode }}…
     </p>
-    <p
+    <div
       v-else-if="studyError"
       id="study-queries-error"
       class="status-line"
       role="alert"
     >
-      {{ studyCode }}'s queries couldn't be loaded: {{ studyError }}
-    </p>
+      <p class="status-line">{{ studyCode }}'s queries couldn't be loaded.</p>
+      <SupportDetails :detail="studyError" />
+    </div>
     <p v-else-if="!studyId" id="study-queries-no-study" class="status-line">
-      The kernel has no study {{ studyCode }} that you may see, so its queries
-      cannot be listed here.
+      Study {{ studyCode }} wasn't found or isn't visible to your account, so
+      its queries cannot be listed here.
     </p>
     <p v-else-if="queries.loading" class="status-line" role="status">
       Loading queries for {{ studyCode }}…
     </p>
-    <p
+    <div
       v-else-if="queries.loadError"
       id="study-queries-error"
       class="status-line"
       role="alert"
     >
-      {{ studyCode }}'s queries couldn't be loaded: {{ queries.loadError }}
-    </p>
+      <p class="status-line">{{ studyCode }}'s queries couldn't be loaded.</p>
+      <SupportDetails :detail="queries.loadError" />
+    </div>
     <p
       v-else-if="queries.queries.length === 0"
       id="study-queries-empty"

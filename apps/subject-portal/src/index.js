@@ -62,11 +62,15 @@ import {
   COORDINATOR_QUARANTINE_STEPS,
   DEFAULT_SITE_CONTACT,
   SITE_CONTACT_STORAGE_KEY,
+  formatAnswerPairs,
   formatAnswersSummary,
+  getInstrumentDisplayName,
   getSiteSupportContact,
+  getSyncStatusLabel,
   hydrateSiteSupportContact,
   humanizeValidationError,
   maskParticipantIdentifier,
+  resolveQuestionLabel,
 } from "./features/site-support.js";
 import {
   closeSignatureModal,
@@ -175,6 +179,10 @@ export {
   hydrateSiteSupportContact,
   getSiteSupportContact,
   maskParticipantIdentifier,
+  formatAnswerPairs,
   formatAnswersSummary,
+  resolveQuestionLabel,
+  getInstrumentDisplayName,
+  getSyncStatusLabel,
   humanizeValidationError,
 };

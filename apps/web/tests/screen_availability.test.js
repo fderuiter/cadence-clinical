@@ -101,7 +101,7 @@ describe("Screen availability", () => {
     expect(wrapper.text()).not.toContain("eCRF Form Engine");
   });
 
-  it("explains a hidden screen, links to the tracking issue, and offers study workspace recovery", async () => {
+  it("explains a hidden screen in plain terms without issue tracker links and offers study workspace recovery", async () => {
     signInAsSuperAdmin();
     await router.push("/etmf");
 
@@ -111,8 +111,10 @@ describe("Screen availability", () => {
     expect(wrapper.find("h2").text()).toBe(
       "eTMF Document Vault isn't available yet"
     );
-    expect(wrapper.find("a").attributes("href")).toBe(
-      UNAVAILABLE_SCREENS_ISSUE
+    expect(wrapper.find("a").exists()).toBe(false);
+    expect(wrapper.text()).not.toContain("#4829");
+    expect(wrapper.text()).toContain(
+      "This workflow isn't available in your workspace yet."
     );
     expect(wrapper.find("#btn-unavailable-study").exists()).toBe(true);
     expect(wrapper.find("#btn-unavailable-home").exists()).toBe(true);

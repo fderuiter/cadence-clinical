@@ -13,14 +13,11 @@
   >
     <div class="modal">
       <form id="sign-modal-form" @submit.prevent>
-        <div id="portal-modal-title" class="modal-header">
-          Electronic Signature Required
-        </div>
+        <div id="portal-modal-title" class="modal-header">Confirm and Sign</div>
         <div class="modal-body">
           <p>
-            To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>,
-            you must provide your electronic signature credentials and declare
-            your change reason or completion affirmation.
+            Please confirm that these answers are your own by choosing a reason
+            below and entering your participant ID and security PIN.
           </p>
           <!-- Accessible modal live error region -->
           <div
@@ -40,7 +37,7 @@
           />
 
           <div class="form-group mb-12">
-            <label for="sign-reason">Reason for Action / Declaration</label>
+            <label for="sign-reason">Reason for Signing</label>
             <select id="sign-reason">
               <option value="Initial Questionnaire Completion">
                 Initial Questionnaire Completion
@@ -58,25 +55,23 @@
             </select>
           </div>
           <div class="form-group mb-12">
-            <label for="sign-reason-custom"
-              >Custom Reason Detail (Optional)</label
-            >
+            <label for="sign-reason-custom">Additional Note (Optional)</label>
             <textarea
               id="sign-reason-custom"
-              placeholder="Provide extra detail if 'Other' selected..."
+              placeholder="Add a brief note if you selected 'Other'..."
             />
           </div>
           <div class="form-group mb-12">
-            <label for="sign-username">User ID / Username</label>
+            <label for="sign-username">Participant ID</label>
             <input
               id="sign-username"
               type="text"
-              placeholder="Enter your participant identifier..."
+              placeholder="Enter your participant ID..."
               required
             />
           </div>
           <div class="form-group">
-            <label for="sign-password">Security PIN / Password</label>
+            <label for="sign-password">Security PIN</label>
             <input
               id="sign-password"
               type="password"

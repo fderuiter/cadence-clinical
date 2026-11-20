@@ -29,11 +29,11 @@
             color: var(--semantic-color-warning-text-dark);
           "
         >
-          Action Required: Protocol Amendment Re-Consent
+          Action Needed: Updated Study Consent
         </h3>
         <p style="margin: 0; font-size: 14px">
-          A study protocol amendment requires your review and electronic
-          signature before diary submission.
+          Your study consent form has been updated. Please review and sign the
+          changes before submitting your next survey.
         </p>
       </div>
     </div>

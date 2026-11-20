@@ -10,8 +10,8 @@
     <div class="view-header">
       <h2>Plain-Language Clinical Trial Results</h2>
       <p>
-        EU CTR Regulation No 536/2014 Article 37 summary of trial findings,
-        clinical benefits, and safety profiles.
+        Easy-to-read summaries of what this study found, including potential
+        benefits and side effects.
       </p>
     </div>
 
@@ -26,8 +26,8 @@
       <h3 style="margin-top: 0">Trial Summary Not Yet Available</h3>
       <p style="font-size: 14px; color: var(--text-muted); line-height: 1.5">
         Plain-language clinical trial results have not been published for your
-        study in this portal yet. Your study team will notify you when an
-        IRB-approved lay summary is ready for review.
+        study in this portal yet. Your study team will notify you when a
+        plain-language study summary is ready to read.
       </p>
     </div>
 
