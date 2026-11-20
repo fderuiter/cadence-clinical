@@ -217,6 +217,8 @@ public static partial class DocIndexSyncService
 
     public static string DetermineCategory(string relPath)
     {
+        if (relPath.StartsWith("blog/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.StartsWith("docs/blog/", StringComparison.OrdinalIgnoreCase)) return "## Engineering blog";
         if (relPath.StartsWith("architecture/repository-migration/", StringComparison.OrdinalIgnoreCase)) return "## Former repository migration program";
         if (relPath.StartsWith("kernel/", StringComparison.OrdinalIgnoreCase) ||
             relPath.StartsWith("architecture/", StringComparison.OrdinalIgnoreCase)) return "## Kernel and roadmap";
@@ -256,13 +258,52 @@ public static partial class DocIndexSyncService
     {
         string title = string.Empty;
         string description = string.Empty;
+        string frontmatterTitle = string.Empty;
+        string frontmatterSummary = string.Empty;
 
         try
         {
             string[] lines = File.ReadAllLines(fullPath);
-            foreach (var line in lines)
+            int startIndex = 0;
+            if (lines.Length > 0 && lines[0].Trim() == "---")
             {
-                string trimmed = line.Trim();
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    string fmLine = lines[i].Trim();
+                    if (fmLine is "---" or "...")
+                    {
+                        startIndex = i + 1;
+                        break;
+                    }
+
+                    if (fmLine.StartsWith("title:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        frontmatterTitle = UnquoteYamlScalar(fmLine[6..]);
+                    }
+                    else if (fmLine.StartsWith("summary:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        frontmatterSummary = UnquoteYamlScalar(fmLine[8..]);
+                    }
+                    else if (string.IsNullOrEmpty(frontmatterSummary) &&
+                             fmLine.StartsWith("description:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        frontmatterSummary = UnquoteYamlScalar(fmLine[12..]);
+                    }
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(frontmatterSummary))
+            {
+                string cleanedFm = InlineLinkRegex().Replace(frontmatterSummary, "$1").Trim();
+                if (!string.IsNullOrWhiteSpace(cleanedFm))
+                {
+                    description = cleanedFm.Length > 120 ? cleanedFm[..117] + "..." : cleanedFm;
+                }
+            }
+
+            for (int i = startIndex; i < lines.Length; i++)
+            {
+                string trimmed = lines[i].Trim();
                 if (string.IsNullOrEmpty(title) && trimmed.StartsWith("# "))
                 {
                     title = trimmed[2..].Trim();
@@ -272,6 +313,7 @@ public static partial class DocIndexSyncService
                          !trimmed.StartsWith('#') &&
                          !trimmed.StartsWith("---") &&
                          !trimmed.StartsWith('|') &&
+                         !trimmed.StartsWith('<') &&
                          !trimmed.StartsWith("```"))
                 {
                     string cleaned = trimmed
@@ -297,6 +339,11 @@ public static partial class DocIndexSyncService
             // Fallback
         }
 
+        if (string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(frontmatterTitle))
+        {
+            title = frontmatterTitle;
+        }
+
         if (string.IsNullOrEmpty(title))
         {
             title = Path.GetFileNameWithoutExtension(fullPath).Replace('-', ' ').Replace('_', ' ');
@@ -312,6 +359,18 @@ public static partial class DocIndexSyncService
         title = title.Replace("`", "").Trim();
 
         return (title, description);
+    }
+
+    private static string UnquoteYamlScalar(string raw)
+    {
+        string value = raw.Trim();
+        if (value.Length >= 2 &&
+            ((value[0] == '"' && value[^1] == '"') || (value[0] == '\'' && value[^1] == '\'')))
+        {
+            value = value[1..^1].Replace("\\\"", "\"").Replace("\\\\", "\\");
+        }
+
+        return value.Trim();
     }
 
     private static string GenerateUpdatedIndex(string originalContent, List<MarkdownDocInfo> unindexedDocs)

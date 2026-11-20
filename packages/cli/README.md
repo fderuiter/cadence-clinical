@@ -12,7 +12,7 @@ Developer and CI command-line tool, published as a Native AOT binary. System.Com
   console: no escape codes or colours, not interactive, 120 columns. Spectre's own detection measured such a console as
   -1 columns wide under `TERM=linux` and dropped every markup line, including gate failures (#5417). No `TERM=dumb` or
   `script` wrapper is needed.
-- Time (K-TIME-3): the project bans `DateTime.Now/UtcNow`. `scaffold adr` takes today's date from `Cadence.Kernel.Time.SystemClock`.
+- Time (K-TIME-3): the project bans `DateTime.Now/UtcNow`. `scaffold adr` and `scaffold post` take today's date from `Cadence.Kernel.Time.IClock` (`SystemClock.Instance`).
 
 ## Usage
 
@@ -33,7 +33,7 @@ Common commands:
 | `doctor`                                                               | Checks the local toolchain and environment (`.NET 10 SDK`, `pnpm` pin, `detect-secrets`, PostgreSQL).                                                                                                                                                                                                                                        |
 | `db reset`, `db migrate`                                               | Database utilities.                                                                                                                                                                                                                                                                                                                          |
 | `gxp sync`, `gxp snapshot`, `gxp validate`, `gxp diff`, `generate-rtm` | Requirements traceability and GxP reports (`--results-dir <dir>` reuses verified TRX + `*.database.txt` evidence). `gxp sync` validates a branch and writes a preview; only `gxp snapshot` writes `docs/SDLC` (ADR-2532).                                                                                                                    |
-| `scaffold service`, `scaffold adr`                                     | Scaffolding.                                                                                                                                                                                                                                                                                                                                 |
+| `scaffold service`, `scaffold adr`, `scaffold post`                    | Scaffolding.                                                                                                                                                                                                                                                                                                                                 |
 | `wizard onboarding`, `wizard migrate`, `wizard dotnet`                 | Interactive wizards.                                                                                                                                                                                                                                                                                                                         |
 | `hook pre-tool`, `hook post-write`, `hook pre-invocation`, `hook stop` | Agent lifecycle hooks run by `.agents/hooks.json` from `bin/cadence` (PRD-SYS-053); exit `2` blocks the step.                                                                                                                                                                                                                                |
 
@@ -78,6 +78,8 @@ not AOT-safe fails `dotnet publish packages/cli/src/Cadence.Cli.csproj -c Releas
 - `tests/Cadence.UnitTests/Packages/RulesetServiceTests.cs`: the `rulesets` gate and `cadence rulesets` reconciliation
   command (`Services/RulesetService.cs`), covering strict status checks, `CI Gate` upstream job coverage, workflow
   parity, `--dry-run`, and fail-closed `gh api` sync.
+- `tests/Cadence.UnitTests/Packages/ScaffoldPostAndBlogGatesTests.cs`: `cadence scaffold post` (`Commands/ScaffoldCommands.cs`),
+  documentation index auto-registration, and VitePress theme `.vue` boundary validation.
 - `tests/Cadence.UnitTests/Packages/CliConsoleTests.cs`: plain output when there is no terminal (`Services/CliConsole.cs`),
   including the CLI run as a process with redirected output and `TERM=linux` or no `TERM`, which must print its failure.
 - Architecture rules cover the assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
