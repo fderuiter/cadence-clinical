@@ -28,19 +28,18 @@ This traces to requirement **PRD-SYS-001** (GxP Environment Consistency and Syst
 ### Option 1: **Option A (Selected):** Direct, statically locked upgrade to Python 3.14 across all workspaces, workflows, tooling manifests, local dev environment specifications, and Dockerfile layers.
 
 - **Overview:** **Option A (Selected):** Direct, statically locked upgrade to Python 3.14 across all workspaces, workflows, tooling manifests, local dev environment specifications, and Dockerfile layers.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B (Alternative):** Maintain legacy Python 3.12 runtime and tooling boundaries, creating potential drift across active workflows and sacrificing modern syntax checks.
 
 - **Overview:** **Option B (Alternative):** Maintain legacy Python 3.12 runtime and tooling boundaries, creating potential drift across active workflows and sacrificing modern syntax checks.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

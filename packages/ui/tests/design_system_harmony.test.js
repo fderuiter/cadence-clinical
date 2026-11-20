@@ -9,11 +9,12 @@ const webSrcDir = path.join(repoRoot, "apps/web/src");
 const portalSrcDir = path.join(repoRoot, "apps/subject-portal/src");
 const docsComponentsDir = path.join(repoRoot, "docs/components");
 
-const EXPECTED_18_COMPONENTS = [
+const EXPECTED_SHARED_COMPONENTS = [
   "AiActionButton",
   "AiSuggestionDrawer",
   "AuditLogViewer",
   "ClinicalDataTable",
+  "ClinicalDrawer",
   "ClinicalFieldLayout",
   "ClinicalFormField",
   "ClinicalInput",
@@ -187,16 +188,18 @@ function resolveCssColorExpr(expr, themeMap) {
 
 describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", () => {
   describe("Requirement 1: Complete Root Package Exports & Type Definitions", () => {
-    it("exposes all 18 shared Vue components from root index.js with zero unexported SFCs", () => {
+    it("exposes all 19 shared Vue components from root index.js with zero unexported SFCs", () => {
       const discoveredVueNames = walkFiles(path.join(uiDir, "src/components"), [
         ".vue",
       ])
         .map((f) => path.basename(f, ".vue"))
         .sort();
 
-      expect(discoveredVueNames).toEqual([...EXPECTED_18_COMPONENTS].sort());
-      expect(EXPECTED_18_COMPONENTS).toHaveLength(18);
-      for (const name of EXPECTED_18_COMPONENTS) {
+      expect(discoveredVueNames).toEqual(
+        [...EXPECTED_SHARED_COMPONENTS].sort()
+      );
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(19);
+      for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
     });
@@ -214,9 +217,9 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
-    it("declares complete TypeScript definitions for all 18 components and 3 keyboard helpers in index.d.ts", () => {
+    it("declares complete TypeScript definitions for all 19 components and 3 keyboard helpers in index.d.ts", () => {
       const dts = fs.readFileSync(path.join(uiDir, "index.d.ts"), "utf-8");
-      for (const componentName of EXPECTED_18_COMPONENTS) {
+      for (const componentName of EXPECTED_SHARED_COMPONENTS) {
         expect(dts).toMatch(
           new RegExp(`export (?:declare )?const ${componentName}:`)
         );

@@ -24,22 +24,42 @@ public static class CheckCommand
         {
             Description = "Run the quick variants used by the pre-commit hook (the openapi gate skips exporting specs from the services).",
         };
+        var exclude = new Option<string[]>("--exclude")
+        {
+            Description = "Skip a quality gate by name or alias when running all gates; repeat for more.",
+            AllowMultipleArgumentsPerToken = false,
+        };
 
         // A free positional argument would otherwise swallow a mistyped option such as --pre-comit as a gate name.
         gate.Validators.Add(RejectOptionLikeTokens);
         files.Validators.Add(RejectOptionLikeTokens);
+        exclude.Validators.Add(RejectOptionLikeTokens);
 
         command.Arguments.Add(gate);
         command.Arguments.Add(files);
         command.Options.Add(preCommit);
+        command.Options.Add(exclude);
         command.SetAction(result =>
         {
             string[] targets = result.GetValue(files) ?? [];
-            return QualityGateOrchestrator.RunQualityGates(result.GetValue(gate), targets.Length == 0 ? null : targets, result.GetValue(preCommit));
+            string[] excluded = result.GetValue(exclude) ?? [];
+            return QualityGateOrchestrator.RunQualityGates(
+                result.GetValue(gate),
+                targets.Length == 0 ? null : targets,
+                result.GetValue(preCommit),
+                excluded.Length == 0 ? null : excluded);
         });
     }
 
     private static void RejectOptionLikeTokens(ArgumentResult result)
+    {
+        foreach (var token in result.Tokens.Where(t => t.Value.StartsWith('-')))
+        {
+            result.AddError($"Unrecognized option '{token.Value}'.");
+        }
+    }
+
+    private static void RejectOptionLikeTokens(OptionResult result)
     {
         foreach (var token in result.Tokens.Where(t => t.Value.StartsWith('-')))
         {

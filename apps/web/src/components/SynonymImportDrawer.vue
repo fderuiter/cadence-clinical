@@ -31,6 +31,7 @@
         </div>
         <button
           type="button"
+          aria-label="Close synonym import drawer"
           class="close-btn rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
           @click="close"
         >

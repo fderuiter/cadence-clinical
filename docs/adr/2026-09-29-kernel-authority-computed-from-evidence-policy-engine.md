@@ -13,8 +13,8 @@ Every kernel command must be authorized against actor × capability × scope × 
 (kernel specification §9.3). In clinical research, whether someone may act is not a role lookup. Whether
 a coordinator may sign eligibility for a participant depends on an active delegation at that site, current GCP
 and protocol-specific training, a valid credential, the StudySite being active, and the protocol version in
-effect. It must also be possible to answer the question **retrospectively**: *was this action permitted at time
-t, as known at time k?* ICH E6(R3) and 21 CFR Part 11 §11.10(d)/(g) require authority checks and their audit
+effect. It must also be possible to answer the question **retrospectively**: _was this action permitted at time
+t, as known at time k?_ ICH E6(R3) and 21 CFR Part 11 §11.10(d)/(g) require authority checks and their audit
 (PRD-SYS-053).
 
 Today, authorization is a mix of role strings (`User.Role`), per-module permission matrices (several 2026-07/08
@@ -42,7 +42,7 @@ time-aware or evidence-based.
   - ✅ Decision tables are easy to test exhaustively and to include in validation evidence.
 - **Cons:**
   - ❌ We own the evaluator's correctness and performance.
-  - ❌ Policy changes to the procedure itself need a release (grant and condition *data* do not).
+  - ❌ Policy changes to the procedure itself need a release (grant and condition _data_ do not).
 
 ### Option 2: OpenFGA / Zanzibar-style relationship store
 

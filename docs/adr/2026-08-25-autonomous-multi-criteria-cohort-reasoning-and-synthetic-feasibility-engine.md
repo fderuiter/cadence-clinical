@@ -15,30 +15,29 @@ Designing clinical trial protocol cohorts requires evaluating complex multi-crit
 
 ## 2. Decision Drivers & Constraints
 
-* Asynchronous execution for heavy feasibility simulations without blocking HTTP endpoints (PRD-SYS-051).
-* PostgreSQL transaction advisory locks (`pg_try_advisory_xact_lock`) with in-memory lock fallbacks to prevent duplicate compute tasks for identical study cohorts.
-* Strict GxP and Part 11 de-identification scrubbing (`packages/deid`) for evaluation prompts and patient records.
-* Support for Kleene 3VL (`TRUE`, `FALSE`, `INDETERMINATE`) to assess missing data risk.
-* Granular node-level AST evaluation traces and multi-criteria sub-cohort recommendations.
+- Asynchronous execution for heavy feasibility simulations without blocking HTTP endpoints (PRD-SYS-051).
+- PostgreSQL transaction advisory locks (`pg_try_advisory_xact_lock`) with in-memory lock fallbacks to prevent duplicate compute tasks for identical study cohorts.
+- Strict GxP and Part 11 de-identification scrubbing (`packages/deid`) for evaluation prompts and patient records.
+- Support for Kleene 3VL (`TRUE`, `FALSE`, `INDETERMINATE`) to assess missing data risk.
+- Granular node-level AST evaluation traces and multi-criteria sub-cohort recommendations.
 
 ## 3. Options Considered
 
 ### Option 1: **Option A (Selected): Dedicated Asynchronous Cohort Feasibility Engine in Designer with PostgreSQL Advisory Locking and Kleene 3VL Simulation.**
 
 - **Overview:** **Option A (Selected): Dedicated Asynchronous Cohort Feasibility Engine in Designer with PostgreSQL Advisory Locking and Kleene 3VL Simulation.**
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B: Synchronous inline evaluation without advisory locks or background worker queuing.**
 
 - **Overview:** **Option B: Synchronous inline evaluation without advisory locks or background worker queuing.**
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 
@@ -47,13 +46,13 @@ Designing clinical trial protocol cohorts requires evaluating complex multi-crit
 
 ## 5. Consequences & Trade-offs
 
-* **Positive:** Non-blocking API calls, robust advisory locks preventing duplicate execution, full de-identification air-gapping, and detailed node-level AST fit explanations.
-* **Negative:** Requires maintaining asynchronous worker job state in memory/database.
+- **Positive:** Non-blocking API calls, robust advisory locks preventing duplicate execution, full de-identification air-gapping, and detailed node-level AST fit explanations.
+- **Negative:** Requires maintaining asynchronous worker job state in memory/database.
 
 ## 6. Implementation & Verification
 
-* `apps/designer/domain/cohort_feasibility_models.py`: Domain contracts and DTO models.
-* `apps/designer/workers/cohort_feasibility_worker.py`: Advisory lock coordinator and worker status store.
-* `apps/designer/application/services/cohort_feasibility_engine.py`: Core feasibility reasoning engine.
-* `apps/designer/presentation/routers/cohort_feasibility.py`: REST endpoints (`POST /evaluate`, `GET /jobs/{job_id}`, `POST /synthetic-simulate`).
-* `apps/designer/tests/test_cohort_feasibility_engine.py`: Unit and integration test suite referencing `@req:PRD-SYS-051`.
+- `apps/designer/domain/cohort_feasibility_models.py`: Domain contracts and DTO models.
+- `apps/designer/workers/cohort_feasibility_worker.py`: Advisory lock coordinator and worker status store.
+- `apps/designer/application/services/cohort_feasibility_engine.py`: Core feasibility reasoning engine.
+- `apps/designer/presentation/routers/cohort_feasibility.py`: REST endpoints (`POST /evaluate`, `GET /jobs/{job_id}`, `POST /synthetic-simulate`).
+- `apps/designer/tests/test_cohort_feasibility_engine.py`: Unit and integration test suite referencing `@req:PRD-SYS-051`.

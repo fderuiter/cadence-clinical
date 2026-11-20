@@ -28,20 +28,20 @@ The dispatch boundary must securely post authenticated notification requests to 
 ### Option 1: Direct inline HTTP calls during scanning
 
 - **Overview:** Execute HTTP calls directly as we detect expired documents, before committing the alert state records.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Simplifies code flow within a single loops block.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Severe risk of duplicate notifications if the scanning transaction rolls back after an HTTP call succeeds.
   - ❌ Network latency directly affects the scanning cycle duration.
 
 ### Option 2: Post-Commit Two-Phase Dispatch (Selected)
 
 - **Overview:** Scan and commit alert states as pending (undispatched) first. In the second phase, load undispatched alerts, resolve recipients, attempt signed HTTP posts, and commit the dispatch updates individually in nested transaction blocks.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Prevents duplicate alerts if database commits fail.
   - ✅ Safe, retryable, and highly resilient to network and HTTP transient failures.
   - ✅ Part 11 compliant with atomic audits matching state transitions.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Small added complexity of two-step processing.
 
 ## 4. Decision Outcome

@@ -13,12 +13,13 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 ## Component & Composable Catalog
 
-All 18 Vue components and interaction helpers are exported directly from the root `ui` package:
+All 19 Vue components and interaction helpers are exported directly from the root `ui` package:
 
 | Export                                     | Description                                                                                                                   | ARIA Landmark / Role              |
 | :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- |
 | [`ClinicalDataTable`](./data-table.md)     | Accessible, sortable, paginated clinical dataset table with row selection and tabular numerals                                | `table`, `region`, `columnheader` |
 | [`ClinicalModal`](./modal.md)              | Accessible modal dialog with focus trap and backdrop blur                                                                     | `dialog`, `aria-modal="true"`     |
+| [`ClinicalDrawer`](./modal.md)             | Accessible slide-over drawer with reactive focus containment                                                                  | `dialog`, `aria-modal="true"`     |
 | [`PersonaSwitcher`](./persona-switcher.md) | Top-bar multi-role persona switcher (`super_admin`, `sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `auditor`) | `menu`, `menuitem`                |
 | [`AuditLogViewer`](./audit-viewer.md)      | 21 CFR Part 11 immutable audit trail explorer with diff viewer                                                                | `feed`, `article`                 |
 | `ClinicalFieldLayout`                      | Shared accessible field wrapper for inputs, radio groups, validation messages, and query flags                                | `group`, `status`                 |
@@ -27,7 +28,7 @@ All 18 Vue components and interaction helpers are exported directly from the roo
 | `ClinicalRadioGroup`                       | Accessible clinical radio group fieldset                                                                                      | `radiogroup`                      |
 | `ClinicalLookupInput`                      | Real-time terminology lookup field with dynamic status indicators                                                             | `combobox`, `aria-live`           |
 | `ClinicalQueryFlag`                        | Discrepancy query status indicator button                                                                                     | `button`                          |
-| `ClinicalQueryPanel`                       | Clinical query discussion thread with Part 11 compliance                                                                      | `region`, `list`                  |
+| `ClinicalQueryPanel`                       | Inline clinical query discussion thread with Part 11 compliance and `Escape` dismissal                                        | `region`, `list`                  |
 | `AiActionButton`                           | Role-gated AI assist trigger styled with `--semantic-color-ai`                                                                | `button`                          |
 | `AiSuggestionDrawer`                       | Human-in-the-loop AI proposal review drawer                                                                                   | `dialog`, `aria-modal="true"`     |
 | `ConfidenceBadge`                          | AI confidence score indicator badge                                                                                           | `status`                          |

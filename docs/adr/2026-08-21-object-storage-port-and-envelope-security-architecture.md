@@ -10,6 +10,7 @@
 ## 1. Context & Problem Statement
 
 Historically, trial documents, eTMF artifacts, and eISF binders were stored as raw binary blobs (`BYTEA`) directly inside PostgreSQL database tables. While acceptable in early prototypes, storing high-volume binary files (site delegation logs, medical licenses, laboratory certifications, eCRF audio/video attachments, medical imaging) inside the relational database engine presents severe scalability, backup, and performance bottlenecks:
+
 1. Massive database bloat causing slow vacuuming, bloated WAL files, and degraded query throughput on transaction tables.
 2. Inability to leverage pre-signed streaming or multi-part uploads directly to cloud storage (MinIO/AWS S3/GCS).
 3. Risk of timeout during large file uploads over synchronous HTTP request cycles.
@@ -18,42 +19,41 @@ We must decouple physical binary storage from relational metadata without compro
 
 ## 2. Decision Drivers & Constraints
 
-* **21 CFR Part 11 & Annex 11 Compliance:** Every document upload, revision, redaction, and electronic signature must have an immutable audit trail and verifiable SHA-256 Merkle root hash.
-* **Strict Tenant & Study Isolation:** Binary object paths must enforce strict tenant-level namespace scoping (`/{tenant_id}/{study_id}/{doc_id}`).
-* **High-Performance Direct Transfer:** Heavy binary transfers must bypass application memory using pre-signed upload/download URLs issued by the Gateway.
-* **Local & Production Portability:** The solution must seamlessly operate against local Docker MinIO instances in local development and standard S3/Azure Blob/GCS in production without code alterations.
+- **21 CFR Part 11 & Annex 11 Compliance:** Every document upload, revision, redaction, and electronic signature must have an immutable audit trail and verifiable SHA-256 Merkle root hash.
+- **Strict Tenant & Study Isolation:** Binary object paths must enforce strict tenant-level namespace scoping (`/{tenant_id}/{study_id}/{doc_id}`).
+- **High-Performance Direct Transfer:** Heavy binary transfers must bypass application memory using pre-signed upload/download URLs issued by the Gateway.
+- **Local & Production Portability:** The solution must seamlessly operate against local Docker MinIO instances in local development and standard S3/Azure Blob/GCS in production without code alterations.
 
 ## 3. Options Considered
 
 ### Option 1: **Option 1 (Selected): StoragePort Protocol & Relational Envelope Pattern**
 
 - **Overview:** - Abstract physical blob operations behind a generic PEP 695 `StoragePort[T]` protocol in `packages/storage`.
-   - Store binary payloads in tenant-isolated S3/MinIO buckets.
-   - Maintain all regulatory metadata (taxonomy codes, version indices, virus scan certifications, SHA-256 checksums, 21 CFR Part 11 signature manifests, and legal hold status) in PostgreSQL as a metadata envelope.
-   - Use two-phase commits for uploads: 1) Allocate draft document envelope and issue pre-signed URL; 2) Client completes upload and triggers SHA-256 integrity verification to transition state to `COMMITTED`.
-- ***Pros:***
+  - Store binary payloads in tenant-isolated S3/MinIO buckets.
+  - Maintain all regulatory metadata (taxonomy codes, version indices, virus scan certifications, SHA-256 checksums, 21 CFR Part 11 signature manifests, and legal hold status) in PostgreSQL as a metadata envelope.
+  - Use two-phase commits for uploads: 1) Allocate draft document envelope and issue pre-signed URL; 2) Client completes upload and triggers SHA-256 integrity verification to transition state to `COMMITTED`.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option 2: Direct Gateway Streaming with In-DB Storage**
 
 - **Overview:** - Retain binary blobs in PostgreSQL but stream chunks via FastAPI streaming responses.
-   - *Rejected:* Does not solve relational database bloat, WAL scaling, or high backup latencies.
-- ***Pros:***
+  - _Rejected:_ Does not solve relational database bloat, WAL scaling, or high backup latencies.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 3: **Option 3: Pure Object Store with Object Tags (No Relational Envelope)**
 
 - **Overview:** - Store metadata in S3 object metadata tags.
-   - *Rejected:* S3 object tagging lacks ACID transactional guarantees, foreign key constraints to clinical trials/sites, and fast querying across millions of documents.
-- ***Pros:***
+  - _Rejected:_ S3 object tagging lacks ACID transactional guarantees, foreign key constraints to clinical trials/sites, and fast querying across millions of documents.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 
@@ -89,22 +89,21 @@ We must decouple physical binary storage from relational metadata without compro
 
 ## 5. Consequences & Trade-offs
 
-* **Positive:**
+- **Positive:**
   - Fast, non-blocking pre-signed uploads directly to object storage.
   - Zero database bloat; PostgreSQL tables remain lightweight and indexed.
   - 100% testable via local MinIO Docker containers and in-memory mock storage fakes in `packages/testing`.
   - Immutable SHA-256 verification guarantees zero tamper risk during transit.
-* **Negative:**
+- **Negative:**
   - Requires a two-step upload lifecycle (draft allocation followed by upload confirmation/verification).
   - Requires automated garbage collection for orphaned draft envelopes that never receive binary payloads within the TTL.
 
 ## 6. Implementation & Verification
 
-* **Packages:**
+- **Packages:**
   - `packages/storage/`: Defines `StoragePort[T]`, `S3StorageAdapter`, and `MinioStorageAdapter`.
   - `apps/execution/` and `apps/fileshare/`: Consume `StoragePort` for eTMF, eISF, and general file transfers.
-* **Verification:**
+- **Verification:**
   - Unit tests with `packages.testing.fakes.InMemoryStoragePort`.
   - Integration tests verifying SHA-256 checksum mismatch rejection and MinIO pre-signed URL generation.
   - Traceability linked via docstrings `@req:PRD-DOC-001`, `@req:PRD-DOC-002`.
-

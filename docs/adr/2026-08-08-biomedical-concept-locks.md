@@ -22,18 +22,18 @@ Under regulatory compliance and GxP standards (PRD-MDR-002), a Biomedical Concep
 ### Option 1: Lock All Concepts Globally
 
 - **Overview:** Once a study starts, freeze the entire Metadata Repository.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Very easy to implement.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Blocks trial designers from editing concepts belonging to other draft studies.
 
 ### Option 2: Active-Recruiting Reference-Based Locks
 
 - **Overview:** Dynamically scan if a concept is referenced by any study with status `Active-Recruiting` across in-memory data structures and graph databases, blocking direct update/rename/delete mutations.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Highly precise; only locks referenced concepts on active-recruiting trials.
   - ✅ Preserves full design velocity for all draft and non-recruiting trials.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires recursive dictionary traversing for in-memory mocks.
 
 ## 4. Decision Outcome

@@ -28,7 +28,7 @@ public sealed partial class PostgresVersionPinTests
         string productionPipeline = File.ReadAllText(Path.Combine(Root, ".github", "workflows", "production-pipeline.yml"));
 
         PostgresImages().Matches(compose).Select(m => m.Value).Should().Equal(PostgresTestImage.Image);
-        PostgresImages().Matches(ci).Select(m => m.Value).Should().Equal(PostgresTestImage.Image);
+        PostgresImages().Matches(ci).Select(m => m.Value).Should().Equal(PostgresTestImage.Image, PostgresTestImage.Image);
         PostgresImages().Matches(productionPipeline).Select(m => m.Value).Should().Equal(PostgresTestImage.Image);
         PostgresTestImage.Image.Should().StartWith($"postgres:{PostgresTestImage.Major}-").And.Contain("@sha256:");
     }

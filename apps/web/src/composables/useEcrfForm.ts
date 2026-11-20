@@ -25,6 +25,7 @@ import {
 } from "../api/ecrfFormsApi";
 import {
   formatObservationValue,
+  isUnrecordedValue,
   parseFormEntry,
   type KernelObservationValue,
 } from "../api/observationValue";
@@ -147,6 +148,11 @@ export function useEcrfForm(
 
   const items = computed<EcrfFormItem[]>(() => form.value?.items ?? []);
   const locked = computed(() => (form.value?.locks.length ?? 0) > 0);
+  const assertionsLocked = computed(() =>
+    (form.value?.locks ?? []).some(
+      (held) => held.kind.toLowerCase() === "locked"
+    )
+  );
 
   function currentScope(): EcrfStorageScope | null {
     if (scopeRef !== undefined && scopeRef !== null) {
@@ -201,13 +207,16 @@ export function useEcrfForm(
     clearRecord(entries);
     clearRecord(itemErrors);
     for (const item of items.value) {
+      const unrecorded = isUnrecordedValue(item.value);
       entries[item.item_id] = {
         text:
-          item.value && item.value.type !== "missing"
+          !unrecorded && item.value && item.value.type !== "missing"
             ? formatEntryText(item.value)
             : "",
         missing:
-          item.value?.type === "missing" ? String(item.value.reason) : "",
+          !unrecorded && item.value?.type === "missing"
+            ? String(item.value.reason)
+            : "",
       };
     }
   }
@@ -223,6 +232,9 @@ export function useEcrfForm(
     const entry = entries[item.item_id];
     if (!entry) return false;
     const current = item.value;
+    if (isUnrecordedValue(current)) {
+      return Boolean(entry.missing) || entry.text.trim().length > 0;
+    }
     if (entry.missing) {
       return !(
         current?.type === "missing" && String(current.reason) === entry.missing
@@ -703,6 +715,7 @@ export function useEcrfForm(
     signOutcome,
     canSign,
     locked,
+    assertionsLocked,
     dirty,
     editedItems,
     isEdited,

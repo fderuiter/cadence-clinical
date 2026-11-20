@@ -25,19 +25,18 @@ This decision implements requirements under PRD-SYS-001.
 ### Option 1: **Option A (Selected):** Provision three dedicated PostgreSQL container instances in Docker Compose for eTMF, CTMS, and Quality services, using asyncpg drivers, active connection pools, host-level encrypted directory bindings, and propagation of active user identity contexts into Postgres session variables.
 
 - **Overview:** **Option A (Selected):** Provision three dedicated PostgreSQL container instances in Docker Compose for eTMF, CTMS, and Quality services, using asyncpg drivers, active connection pools, host-level encrypted directory bindings, and propagation of active user identity contexts into Postgres session variables.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B:** Maintain local SQLite database files and use application-level encryption layers. (Rejected due to high application schema maintenance overhead, lack of native session variables, and vulnerability to key leakage).
 
 - **Overview:** **Option B:** Maintain local SQLite database files and use application-level encryption layers. (Rejected due to high application schema maintenance overhead, lack of native session variables, and vulnerability to key leakage).
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

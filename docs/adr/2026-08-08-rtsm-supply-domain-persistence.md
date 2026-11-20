@@ -28,20 +28,20 @@ This decision implements requirements under Trace-1.
 ### Option 1: Standalone Supply Microservice
 
 - **Overview:** Build a dedicated, isolated supply management service.
-- ***Pros:***
+- _**Pros:**_
   - ✅ High separation of concerns.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Increases operational and network overhead.
   - ❌ Does not natively share the clinical execution database's transaction-bound audit shadow triggers, cryptographic sealing, and locking states.
 
 ### Option 2: Unified Audited Models inside Clinical Execution Service
 
 - **Overview:** Add `IPKit`, `SiteInventory`, `KitDispensation`, and `ResupplyEvent` models as subclasses of `AuditedModel` in the existing clinical execution schema.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Native participation in the database-trigger-based GxP audit ledger (`audit_logs`) and soft-delete safeguards.
   - ✅ Instant conformity to `TrialLockManager`'s read-only locks based on existing `site_id`, `visit_id`, and `subject_id` fields.
   - ✅ Minimal technical complexity and robust transactional safety.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Schema addition within the execution microservice (mitigated by logical separation into separate dedicated tables).
 
 ## 4. Decision Outcome

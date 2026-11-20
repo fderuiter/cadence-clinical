@@ -22,6 +22,7 @@ This decision implements requirements under Trace-6.
 ## 3. Options Considered
 
 ### Option 1: Inline Audit Fields in each Service Schema
+
 Define standard audit and metadata fields manually in each service's Pydantic models.
 
 - Pros:
@@ -30,9 +31,8 @@ Define standard audit and metadata fields manually in each service's Pydantic mo
   - ❌ Violates DRY principles.
   - ❌ Inconsistent validation rules (e.g., whitespace and empty checks for reason justification).
 
-
-
 ### Option 2: Shared Pydantic v2 Audit Base Schema (Selected)
+
 Define a reusable `AuditFields` model or mixin in `packages/core-models/audit.py` that can be imported by any microservice, including eConsent and Organization Directory.
 
 - Pros:
@@ -41,8 +41,6 @@ Define a reusable `AuditFields` model or mixin in `packages/core-models/audit.py
   - ✅ Standalone, importable eConsent microservice.
 - Cons:
   - ❌ Introduces a slight shared dependency on `core-models`.
-
-
 
 ## 4. Decision Outcome
 

@@ -29,32 +29,31 @@ Under 21 CFR Part 11, GAMP 5, and EU Annex 11, the platform must guarantee:
 ### Option 1: **Graph-Native Immutable Branching & Dynamic Projection (Selected):**
 
 - **Overview:** - Protocol amendments clone the metadata subgraph into a new version node linked via `PREVIOUS_VERSION`.
-   - Execution engine dynamically resolves schemas per subject active version.
-   - Historical visits remain stamped and rendered with original version schemas.
-   - Re-consent gating blocks upcoming visit data entry until signed consent is recorded.
-- ***Pros:***
+  - Execution engine dynamically resolves schemas per subject active version.
+  - Historical visits remain stamped and rendered with original version schemas.
+  - Re-consent gating blocks upcoming visit data entry until signed consent is recorded.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Global Database Schema Mutation & Retroactive SQL Migration:**
 
 - **Overview:** - Overwriting existing database tables to match the new protocol version and running bulk migration scripts.
-   - Rejected due to risk of historical data corruption, audit trail breakage, and mandatory system downtime.
-- ***Pros:***
+  - Rejected due to risk of historical data corruption, audit trail breakage, and mandatory system downtime.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 3: **Multi-Instance Study Duplication:**
 
 - **Overview:** - Spawning a completely new study instance for amended versions and requiring manual data transcription.
-   - Rejected due to high operational friction and error risk.
-- ***Pros:***
+  - Rejected due to high operational friction and error risk.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

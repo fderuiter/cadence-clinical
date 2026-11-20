@@ -372,7 +372,7 @@ public static class LocalCiRunner
 
     /// <summary>
     /// Fails a passing test step whose results show database tests that did not execute: a green run must have
-    /// exercised them (#5325). The opt-in benchmark is exempt (<see cref="DatabaseTestEvidence.OptInTests"/>).
+    /// exercised them (#5325). Opt-in tests are exempt (<see cref="DatabaseTestEvidence.OptInTests"/>).
     /// </summary>
     private static CiStepResult RejectSkippedDatabaseTests(CiStepResult result, LocalCiEnvironment environment)
     {
@@ -412,9 +412,11 @@ public static class LocalCiRunner
             display.Add(step.InProcessDisplay ?? step.Name);
         }
 
-        var variables = step.EnvironmentIfPassed
-            .Where(e => earlier.TryGetValue(e.StepKey, out var r) && r.Outcome == CiOutcome.Passed)
-            .ToDictionary(e => e.Name, e => e.Value, StringComparer.Ordinal);
+        var variables = new Dictionary<string, string>(step.Environment, StringComparer.Ordinal);
+        foreach (var conditional in step.EnvironmentIfPassed.Where(e => earlier.TryGetValue(e.StepKey, out var r) && r.Outcome == CiOutcome.Passed))
+        {
+            variables[conditional.Name] = conditional.Value;
+        }
         if (step.NeedsPostgres)
         {
             // The database fixtures record the server, extensions, migrations and role they used next to the TRX files.

@@ -3,7 +3,9 @@
     <router-view />
   </AppShell>
   <ContextualHelpDrawer />
-  <ToastHost />
+  <Teleport to="body">
+    <ToastHost />
+  </Teleport>
   <ConfirmationDialogHost />
 </template>
 

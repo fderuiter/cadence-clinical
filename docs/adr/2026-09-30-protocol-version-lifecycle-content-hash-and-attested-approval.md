@@ -107,7 +107,7 @@ the database enforces it. It refines ADR-2245 and does not replace it.
      content hashes.
    - The meanings are those in spec §9.5 plus `Withdrawn`.
 7. **Verification:** `IAttestationVerifier.VerifyAsync(AttestationRequirement(tenant, attestationId, meaning,
-   target, signer))` reads through a context bound to the tenant. An attestation from another tenant is therefore not
+target, signer))` reads through a context bound to the tenant. An attestation from another tenant is therefore not
    found. The signer is the actor executing the governed command, and it must be the person who signed (21 CFR 11.50).
    Approval with a missing, mismatched or stale attestation returns `K.Protocol.AttestationRejected` with the reason.
    Kernel persistence registers the implementation (`AddKernelPersistence`), and standards and library governance
@@ -125,6 +125,7 @@ the database enforces it. It refines ADR-2245 and does not replace it.
    - any change to a `Superseded` or `Withdrawn` row.
 
    Both tables are tenant-isolated (ADR-2250).
+
 9. **Reading without claiming:** `IKernelUnitOfWork` gains `ReadAsync` and `ReadAllAsync`. They read other aggregates
    untracked and do not claim them, so a command can base its decision on a parent version or on attestations and
    still change exactly one aggregate (K-TX-1).

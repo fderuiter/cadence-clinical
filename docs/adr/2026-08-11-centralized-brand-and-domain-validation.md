@@ -26,18 +26,18 @@ Prior to this decision, duplicate boot-time brand name, Keycloak realms, and dom
 
 Keep local boot-time loops inside each `main.py`.
 
-- ***Pros:*** No shared security package dependency.
-- ***Cons:*** High code duplication and maintenance friction; drift prone.
+- _**Pros:**_ No shared security package dependency.
+- _**Cons:**_ High code duplication and maintenance friction; drift prone.
 
 ### Option 2: Centralized Validation Utility in `packages/security` (Selected)
 
 Implement `validate_branding` helper in the security package and import/call it at service startup.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Consolidates duplicate logic into a single testable helper.
   - ✅ Restricts default and legacy domains/branding across all microservices uniformly.
   - ✅ Uses catchable `RuntimeError` allowing easy mock and testing.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Downstream microservices gain an explicit dependency on `packages/security` at boot time (already exists for RBAC/identity).
 
 ## 4. Decision Outcome

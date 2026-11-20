@@ -24,23 +24,22 @@ In the Subject Portal offline synchronization workflow, mismatch vulnerabilities
 ### Option 1: **Option 1: Unique Key-Based Reconciliation with Chronological Index Fallback (Selected)**
 
 - **Overview:** - **Overview:** Use explicit tracking key parameters (`sequence_number` and `client_id`) passed back from backend endpoints as `offline_sync_markers` to reconcile local queued submissions precisely. If tracking keys are completely absent, fall back to array-index matching.
-   - ***Pros:*** Deterministic state tracking under out-of-order responses, robust omission guardrail preserving unmatched items in a pending state, full backward compatibility.
-   - ***Cons:*** Slightly increased payload size due to sync marker metadata.
-- ***Pros:***
+  - _**Pros:**_ Deterministic state tracking under out-of-order responses, robust omission guardrail preserving unmatched items in a pending state, full backward compatibility.
+  - _**Cons:**_ Slightly increased payload size due to sync marker metadata.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option 2: Pure Chronological Array Index Position Matching**
 
 - **Overview:** - **Overview:** Reconcile status updates assuming the order returned by the server perfectly mirrors the order sent.
-   - ***Pros:*** Simple implementation.
-   - ***Cons:*** Susceptible to out-of-order response matching and partial submission failures, violating clinical safety standards (PRD-SYS-001).
-- ***Pros:***
+  - _**Pros:**_ Simple implementation.
+  - _**Cons:**_ Susceptible to out-of-order response matching and partial submission failures, violating clinical safety standards (PRD-SYS-001).
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

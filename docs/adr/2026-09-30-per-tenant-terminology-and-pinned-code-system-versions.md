@@ -99,7 +99,7 @@ Rules:
 
 - **Positive Impact:** a `ConceptRef` and a `Coding` mean the same thing forever; ingestion (LOINC-coded labs) and
   design (eCRF fields bound to a Biomedical Concept) resolve to the same `ConceptRef`.
-- **Negative Impact / Technical Debt:** per-tenant storage of public content; UCUM unit *expressions* (`mg/dL`) are
+- **Negative Impact / Technical Debt:** per-tenant storage of public content; UCUM unit _expressions_ (`mg/dL`) are
   not enumerable, so their validation is a rule (spec §10), not a registry lookup.
 - **Mitigation Strategy:** releases load in one command per version; storage is watched once real tenants exist.
 

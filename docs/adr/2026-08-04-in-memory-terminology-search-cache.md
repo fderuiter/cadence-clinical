@@ -26,22 +26,21 @@ To solve this, we are introducing a thread-safe, in-memory cache layer (`Termino
 ### Option 1: **Option A (Selected): In-Memory Cache with Python's Thread-Safe `threading.Lock`, Compound Keys, FIFO Eviction, and TTL**
 
 - **Overview:** - Implements custom, lightweight class `TerminologySearchCache` in `apps/designer/db.py`.
-   - Enforces a hard boundary of 1,000 cached records using a First-In-First-Out (FIFO) eviction strategy.
-   - Leverages compound keys mapping query parameters (`term`, `from_record`, `page_size`) to prevent pagination collisons.
-- ***Pros:***
+  - Enforces a hard boundary of 1,000 cached records using a First-In-First-Out (FIFO) eviction strategy.
+  - Leverages compound keys mapping query parameters (`term`, `from_record`, `page_size`) to prevent pagination collisons.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B: Heavy Redis-based Caching Layer**
 
 - **Overview:** - Integrates an external Redis container.
-   - While scalable, it adds substantial architectural complexity, networking overhead, and deployment boundaries that are not required for our immediate memory footprint.
-- ***Pros:***
+  - While scalable, it adds substantial architectural complexity, networking overhead, and deployment boundaries that are not required for our immediate memory footprint.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

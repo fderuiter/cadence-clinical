@@ -28,25 +28,25 @@ To satisfy system requirement **PRD-SYS-001**, we establish a comprehensive plat
 ## 3. Options Considered
 
 ### Option 1: Comprehensive Full-Stack Standardization (Selected)
+
 - **Backend Hexagonal Layering:** Every service under `apps/*` strictly conforms to `domain/` (pure entities & exceptions), `application/` (ports & use cases), `adapters/` (persistence ORM, repositories, external HTTP clients, background workers), and `presentation/` (FastAPI routers & DTOs).
 - **Consolidation on Plural `adapters/`:** Retire all `infrastructure/` and `services/` folders in favor of canonical `adapters/` and `application/`.
 - **Centralized RFC 7807 Problem Details:** Register standard `DomainError` exception handlers via `packages.hexagonal.register_rfc7807_handlers(app)` across all microservices.
 - **Frontend Modularization:** Modularize `apps/subject-portal` into `src/views/`, `src/components/`, `src/stores/`, and `src/services/` sharing tokens with `apps/web`.
 - **Package Cleanup:** Purge empty and unused packages such as `packages/deid`.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Addresses requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Trade-offs accepted
-
 
 ### Option 2: Partial / Backend-Only Migration
+
 - Refactor only primary backend services (`designer`, `execution`, `etmf`, `ctms`, `quality`) while keeping satellite services and frontend structures unchanged.
 - **Trade-off:** Leaves architectural fragmentation in place and increases maintenance burden over time.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Addresses requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Trade-offs accepted
-
 
 ## 4. Decision Outcome
 

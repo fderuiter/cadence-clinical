@@ -458,7 +458,7 @@ in `Commands/AssertionCommands.cs`:
   own exclusive lock, so two corrections of one value run one after another; a command that locks a scope exclusively
   shares none.
 - Events: `LockApplied` and `LockReleased` (Quality), `AssertionMade` and `AssertionRetracted` (Evidence).
-- The HTTP surface for locks, queries and SDV comes with #5466, #5461 and #5465.
+- The HTTP surface serves SDV (`POST /api/v1/kernel/observations/{ref}/verifications` and `POST /api/v1/kernel/assertions/{ref}/retraction`, #5465) and Execution's queries (`/api/v1/execution/forms/…/queries`, #5461); the HTTP routes for locks come with #5466.
 
 ## Form instances and page saves (ADR-2622)
 
@@ -469,10 +469,11 @@ CollectionSpec item; an observation belongs to one instance and never leaves it.
 and UI state stay with the application's form. Commands in `Commands/CollectionCommands.cs`, each authorized against
 the enrollment:
 
-| Command                  | Does                                                                                                          |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| `OpenCollectionInstance` | Opens a form for a CollectionSpec and optional planned activity (`collection.open`) at a collection time      |
-| `RecordCollectedValues`  | Saves a page: records new values and corrects existing ones in one commit, each against its expected revision |
+| Command                       | Does                                                                                                                                                                                                     |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OpenCollectionInstance`      | Opens a form for a CollectionSpec and optional planned activity (`collection.open`) at a collection time                                                                                                 |
+| `RecordCollectedValues`       | Saves a page: records new values and corrects existing ones in one commit, each against its expected revision                                                                                            |
+| `RecordUnaskedCollectionItem` | Materializes a `MissingValue(NullFlavor.NotAsked)` observation at revision 1 on an unrecorded item (`collection.record_unasked`) so a missing-data query can target a kernel `(ObservationId, Revision)` |
 
 - The kernel, not the caller, picks the governing protocol version: the highest-numbered version effective at the
   enrollment's study site at the collection time (K-TIME-8, through `EffectivityResolution`). Its design must have the

@@ -22,19 +22,18 @@ Phase 19 terminology integration and eCRF consolidation require standard accessi
 ### Option 1: **Shared Package UI Helper Export (Selected)**: Export `createClinicalLookupInput` from `packages/ui/index.js` with Vitest suite.
 
 - **Overview:** **Shared Package UI Helper Export (Selected)**: Export `createClinicalLookupInput` from `packages/ui/index.js` with Vitest suite.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: Ad-hoc template strings in individual Vue views without shared utility functions.
 
 - **Overview:** Ad-hoc template strings in individual Vue views without shared utility functions.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

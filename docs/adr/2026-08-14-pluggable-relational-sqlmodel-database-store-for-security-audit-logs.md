@@ -25,19 +25,18 @@ To comply with 21 CFR Part 11 and PRD-SYS-001, the system requires an immutable,
 ### Option 1: Option A (SQLModelAuditStore Adapter with Dynamic Session Resolution): Implement a modular `SQLModelAuditStore` adapter and a dynamic session resolver utilizing string-based dynamic imports to maintain perfect architectural boundaries.
 
 - **Overview:** Option A (SQLModelAuditStore Adapter with Dynamic Session Resolution): Implement a modular `SQLModelAuditStore` adapter and a dynamic session resolver utilizing string-based dynamic imports to maintain perfect architectural boundaries.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies requirements and architectural standards
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires component implementation and maintenance overhead
 
 ### Option 2: Option B (Direct Sibling Imports): Directly import context sessions from apps into the security package. This option was rejected as it directly violates cross-service and package import boundaries, leading to cyclic imports and build failures.
 
 - **Overview:** Option B (Direct Sibling Imports): Directly import context sessions from apps into the security package. This option was rejected as it directly violates cross-service and package import boundaries, leading to cyclic imports and build failures.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies requirements and architectural standards
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires component implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

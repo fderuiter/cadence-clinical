@@ -24,6 +24,7 @@ This decision supports compliance tracing under Trace-1 and PRD-QRY-005.
 ## 3. Options Considered
 
 ### Option 1: Incremental Pre-Boot Migrations with Trigger Auto-Registration
+
 Ensure that any new audited models inheriting from `AuditedModel` (such as `SDVSignOff` and `TSDVConfig`) are automatically registered inside the metadata loop, with schema-level migrations executed before service boot.
 
 - Pros:
@@ -32,16 +33,14 @@ Ensure that any new audited models inheriting from `AuditedModel` (such as `SDVS
 - Cons:
   - ❌ Requires precise schema inspection when backfilling columns.
 
-
-
 ### Option 2: Runtime Dynamic Schema Upgrades
+
 Perform dynamic database upgrades on first query execution.
 
 - Cons:
   - ❌ Highly risky for concurrent cluster environments.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Addresses requirements
-
 
 ## 4. Decision Outcome
 

@@ -38,7 +38,9 @@
       >
         <h3 style="margin: 0; font-size: 16px">Export Inspection Log</h3>
         <button
+          type="button"
           class="btn-close"
+          aria-label="Close export modal"
           style="
             background: none;
             border: none;
@@ -52,19 +54,23 @@
         </button>
       </header>
 
-      <div class="form-group" style="margin-bottom: 16px">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label
+      <fieldset
+        class="form-group"
+        style="margin: 0 0 16px 0; padding: 0; border: none"
+      >
+        <legend
           style="
             font-size: 12px;
             font-weight: 600;
             margin-bottom: 6px;
             display: block;
           "
-          >Export Format</label
         >
+          Export Format
+        </legend>
         <div style="display: flex; gap: 16px; margin-top: 8px">
           <label
+            for="auditor-export-format-csv"
             class="touch-target-interactive"
             style="
               display: flex;
@@ -74,9 +80,16 @@
               font-size: 13px;
             "
           >
-            <input v-model="exportFormat" type="radio" value="CSV" /> CSV
+            <input
+              id="auditor-export-format-csv"
+              v-model="exportFormat"
+              type="radio"
+              value="CSV"
+            />
+            CSV
           </label>
           <label
+            for="auditor-export-format-pdf"
             class="touch-target-interactive"
             style="
               display: flex;
@@ -86,9 +99,16 @@
               font-size: 13px;
             "
           >
-            <input v-model="exportFormat" type="radio" value="PDF" /> PDF
+            <input
+              id="auditor-export-format-pdf"
+              v-model="exportFormat"
+              type="radio"
+              value="PDF"
+            />
+            PDF
           </label>
           <label
+            for="auditor-export-format-json"
             class="touch-target-interactive"
             style="
               display: flex;
@@ -98,26 +118,35 @@
               font-size: 13px;
             "
           >
-            <input v-model="exportFormat" type="radio" value="JSON" /> JSON
+            <input
+              id="auditor-export-format-json"
+              v-model="exportFormat"
+              type="radio"
+              value="JSON"
+            />
+            JSON
           </label>
         </div>
-      </div>
+      </fieldset>
 
-      <div class="form-group" style="margin-bottom: 16px">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label
+      <fieldset
+        class="form-group"
+        style="margin: 0 0 16px 0; padding: 0; border: none"
+      >
+        <legend
           style="
             font-size: 12px;
             font-weight: 600;
             margin-bottom: 6px;
             display: block;
           "
-          >Date Range Bounds</label
         >
+          Date Range Bounds
+        </legend>
         <div class="grid-2-responsive" style="margin-top: 8px">
           <div>
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label
+              for="auditor-export-start-date"
               style="
                 font-size: 11px;
                 color: var(--text-muted);
@@ -126,8 +155,8 @@
               "
               >Start Date</label
             >
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
+              id="auditor-export-start-date"
               v-model="startDate"
               type="date"
               class="export-start-date touch-target-interactive"
@@ -143,8 +172,8 @@
             />
           </div>
           <div>
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label
+              for="auditor-export-end-date"
               style="
                 font-size: 11px;
                 color: var(--text-muted);
@@ -153,8 +182,8 @@
               "
               >End Date</label
             >
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
+              id="auditor-export-end-date"
               v-model="endDate"
               type="date"
               class="export-end-date touch-target-interactive"
@@ -170,7 +199,7 @@
             />
           </div>
         </div>
-      </div>
+      </fieldset>
 
       <footer
         style="

@@ -71,8 +71,9 @@ Ubuntu, `postgresql-18` from the PostgreSQL apt repository).
 Once either is set, a fixture that cannot reach or start the server fails its tests; it never turns them into skips.
 A run that skips database tests is not evidence: `cadence ci` fails when any test in `Cadence.IntegrationTests` or
 `Cadence.E2ETests` was skipped or did not execute (unless `--allow-skip` is given), and `gxp sync` and `gxp snapshot`
-fail on such a run. The only exemption is the opt-in lineage benchmark, named in
-`DatabaseTestEvidence.OptInTests`.
+fail on such a run. The only exemptions are the two opt-in tests named in `DatabaseTestEvidence.OptInTests`: the
+10M-edge lineage benchmark (`CADENCE_LINEAGE_BENCHMARK=1`) and `BrowserCorrectionReachesTheDatabaseWithItsReason`
+(`CADENCE_TEST_BROWSER=1`, which CI runs against PostgreSQL 18 in `accessibility-e2e` on pushes to `main`).
 
 The kernel fixture checks that its application role is neither a superuser nor `BYPASSRLS`, and that the server runs
 the qualified major, before any test runs, since a pass under such a role says nothing about Row-Level Security. When `CADENCE_TEST_EVIDENCE_DIR` is set (`gxp sync`,
@@ -118,11 +119,13 @@ These tests currently use it:
   pipeline, all as the non-owner application role under Row-Level Security. The IdentityVault migration tests use the
   same server choice.
 - `tests/Cadence.IntegrationTests/Kernel/KernelObservationHostPostgresTests.cs`: the observation correction through the
-  real kernel host (ADR-2620). Its browser-to-database check also needs `CADENCE_TEST_BROWSER=1`, Node, pnpm and a
-  Chromium: it starts a signing proxy on port 8000 in place of Keycloak and the gateway, runs
-  `apps/web/playwright.correction-check.config.ts` (the real `ObservationView` on the Vite dev server), and reads the
-  correction and its reason back from PostgreSQL. `PLAYWRIGHT_CHROMIUM_PATH` names a preinstalled Chromium; the test
-  sets it to `/opt/pw-browsers/chromium` when that file exists. Without the opt-in it is skipped.
+  real kernel host (ADR-2620). Its browser-to-database check (`BrowserCorrectionReachesTheDatabaseWithItsReason`) also
+  needs `CADENCE_TEST_BROWSER=1`, Node, pnpm and a Chromium: it starts a signing proxy on port 8000 in place of Keycloak
+  and the gateway, runs `apps/web/playwright.correction-check.config.ts` (the real `ObservationView` on the Vite dev
+  server), and reads the correction and its reason back from PostgreSQL. `PLAYWRIGHT_CHROMIUM_PATH` names a preinstalled
+  Chromium; the test sets it to `/opt/pw-browsers/chromium` when that file exists. Without `CADENCE_TEST_BROWSER=1` it
+  is skipped (`DatabaseTestEvidence.OptInTests`), and CI executes it against PostgreSQL 18 in `accessibility-e2e` on
+  pushes to `main`.
 - `tests/Cadence.IntegrationTests/Database/` (`ThrowawayPostgresDatabase`): every service's migrations applied the way a deployed
   service applies them, into one shared database, checking that each service's tables and migration history
   land in its own schema (ADR-2247). `ThrowawayPostgresDatabase` creates a throwaway `NOSUPERUSER NOBYPASSRLS` role that
@@ -154,10 +157,6 @@ Coverage is measured over every hand-written source file in `apps/web`, `apps/su
 in the same change, and never lower it. A few files keep their own 80 percent thresholds, among them the Part 11
 helpers `packages/ui/signing.js` and `packages/ui/econsent.js`. ADR-2530 §7 sets the milestones the `apps/web` floor
 has to reach.
-
-These three scripts regenerate `apps/web/src/types/usdm.ts` from `docs/openapi/legacy` before they run.
-If that leaves the file modified, restore it with `git checkout apps/web/src/types/usdm.ts` rather than
-committing the regenerated copy.
 
 Rules for web tests:
 
@@ -326,10 +325,12 @@ concepts), K-TRUTH-1 also by the K-MOD-1 test (application schemas do not duplic
 ## How the RTM decides a requirement's state
 
 `pnpm cadence gxp sync` runs `dotnet test Cadence.sln` and writes one TRX file per test project into
-`TestResults/gxp/` (gitignored). It then generates a preview of the RTM and the IQ/OQ/PQ report from those results
-in `TestResults/gxp/preview/` (also gitignored) and fails on unknown requirement IDs, failing tagged tests and
-skipped database tests. It writes and stages nothing under `docs/SDLC`. If any test fails, the preview is still
-generated so the failures are visible, and the command exits non-zero.
+`TestResults/gxp/` (gitignored), or reuses existing TRX reports and `*.database.txt` fixture metadata when given
+`--results-dir <dir>` (as CI's `compliance` job does after downloading `trx-report-dotnet` from `dotnet-tests`). It then
+generates a preview of the RTM and the IQ/OQ/PQ report from those results in `TestResults/gxp/preview/` (also
+gitignored) and fails on unknown requirement IDs, failing tagged tests and skipped database tests. It writes and stages
+nothing under `docs/SDLC`. If any test fails, the preview is still generated so the failures are visible, and the
+command exits non-zero.
 
 `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md` are a snapshot of the
 integrated candidate, not something a feature branch commits (ADR-2532). Only the integration owner refreshes them,

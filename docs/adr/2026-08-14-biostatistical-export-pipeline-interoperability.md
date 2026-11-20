@@ -34,20 +34,20 @@ This decision implements requirements under Trace-8.
 ### Option 1: Client-Side Mapping & Conversion
 
 - **Overview:** Rely on external clinical analysis software or client-side JavaScript to perform the data extract, mapping, and conversion.
-- ***Pros:*** Offloads the computational overhead of formatting to client nodes.
-- ***Cons:*** Hard to enforce strict schema validation, lacks GxP traceability at the server/database level, and raises substantial security and data-leakage concerns.
+- _**Pros:**_ Offloads the computational overhead of formatting to client nodes.
+- _**Cons:**_ Hard to enforce strict schema validation, lacks GxP traceability at the server/database level, and raises substantial security and data-leakage concerns.
 
 ### Option 2: Heavyweight Data Science Pipeline (Pandas/NumPy)
 
 - **Overview:** Integrate Pandas and NumPy on the backend to manipulate dataframes and export JSON.
-- ***Pros:*** Familiar interface for biostatisticians.
-- ***Cons:*** High container overhead, slow startup, and potential non-determinism/type coercion when handling SQL nulls (e.g. Pandas converting integer columns with missing values to float).
+- _**Pros:**_ Familiar interface for biostatisticians.
+- _**Cons:**_ High container overhead, slow startup, and potential non-determinism/type coercion when handling SQL nulls (e.g. Pandas converting integer columns with missing values to float).
 
 ### Option 3: Lightweight, Pure-Python Declarative Mapping Table & Pipeline (Selected)
 
 - **Overview:** Implement direct, pure-Python extractors and mappers backed by a declarative table (`SDTM_MAPPINGS` in `apps/execution/biostat/mappings.py`), utilizing Pydantic v2 domain models for CDISC Dataset-JSON 1.0.0 serialization and schema enforcement.
-- ***Pros:*** Highly performant, completely avoids Pandas/NumPy, guarantees type safety, prevents accidental numeric/missing-value coercion, and seamlessly logs each export to the transactional `BiostatExport` database.
-- ***Cons:*** Requires explicit Python-level derivation logic for complex ADaM algorithms (e.g. `TRTEMFL`, `CHG`, `PCHG`).
+- _**Pros:**_ Highly performant, completely avoids Pandas/NumPy, guarantees type safety, prevents accidental numeric/missing-value coercion, and seamlessly logs each export to the transactional `BiostatExport` database.
+- _**Cons:**_ Requires explicit Python-level derivation logic for complex ADaM algorithms (e.g. `TRTEMFL`, `CHG`, `PCHG`).
 
 ---
 

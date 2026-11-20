@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
-import { isMasked, kernelApi } from "../../src/api/kernelApi";
+import {
+  describeAssertionError,
+  isMasked,
+  kernelApi,
+} from "../../src/api/kernelApi";
 import { ApiError } from "../../src/api/client";
 
 const STUDY = "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e@3";
@@ -313,6 +317,76 @@ describe("kernelApi observations (ADR-2620)", () => {
       expect(error.status).toBe(status);
     }
   );
+
+  it("sends source verification and assertion retraction with encoded reason and idempotency key", async () => {
+    const ASSERTION = "assertion:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d75";
+    const verified = {
+      ref: ASSERTION,
+      kind: "Verified",
+      target: OBSERVATION,
+      revision: 2,
+      retracts: null,
+      asserted_at: "2027-03-14T10:00:00Z",
+      asserted_by: "cra@example.test",
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(201, verified));
+
+    await expect(
+      kernelApi.verifyObservation({
+        observationRef: `${OBSERVATION}@2`,
+        enrollmentRef: ENROLLMENT,
+        revision: 2,
+        reason: "Verified against inpatient chart",
+        idempotencyKey: "sdv-1",
+      })
+    ).resolves.toEqual(verified);
+
+    let request = fetchSpy.mock.calls.at(-1)[0];
+    expect(request.method).toBe("POST");
+    expect(new URL(request.url).pathname).toBe(
+      `/api/v1/kernel/observations/${encodeURIComponent(OBSERVATION)}/verifications`
+    );
+    expect(request.headers.get("Idempotency-Key")).toBe("sdv-1");
+    expect(request.headers.get("X-Change-Reason")).toBe(
+      "Verified against inpatient chart"
+    );
+    expect(await request.json()).toEqual({
+      enrollment_ref: ENROLLMENT,
+      revision: 2,
+    });
+
+    const retracted = { ...verified, retracts: ASSERTION };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, retracted));
+
+    await expect(
+      kernelApi.retractAssertion({
+        assertionRef: `${ASSERTION}@1`,
+        enrollmentRef: ENROLLMENT,
+        reason: "Withdrawn after source addendum",
+        idempotencyKey: "retract-1",
+      })
+    ).resolves.toEqual(retracted);
+
+    request = fetchSpy.mock.calls.at(-1)[0];
+    expect(new URL(request.url).pathname).toBe(
+      `/api/v1/kernel/assertions/${encodeURIComponent(ASSERTION)}/retraction`
+    );
+    expect(request.headers.get("Idempotency-Key")).toBe("retract-1");
+    expect(await request.json()).toEqual({
+      enrollment_ref: ENROLLMENT,
+    });
+  });
+
+  it.each([
+    [409, "K.Assertion.RevisionStale", "value changed"],
+    [409, "K.Assertion.AlreadyRetracted", "already withdrawn"],
+    [423, "K.Assertion.Locked", "locked"],
+    [403, "K.Authorization.Denied", "not authorised"],
+  ])("describes assertion error %s %s", (status, code, snippet) => {
+    expect(
+      describeAssertionError(new ApiError("Refused", status, null, { code }))
+    ).toContain(snippet);
+  });
 });
 
 describe("kernelApi proposals (ADR-2635)", () => {

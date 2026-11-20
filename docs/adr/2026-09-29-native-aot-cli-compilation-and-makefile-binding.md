@@ -20,6 +20,7 @@ The Cadence Clinical platform is unifying all developer tooling, execution runti
 ## 3. Options Considered
 
 ### Option 1: Interpreted `dotnet run` CLI
+
 - **Overview:** Use `dotnet run --project packages/cli/src/Cadence.Cli.csproj`.
 - **Pros:**
   - Simple build configuration.
@@ -27,6 +28,7 @@ The Cadence Clinical platform is unifying all developer tooling, execution runti
   - Cold-start latency >1.2s on every command invocation.
 
 ### Option 2: Native AOT Compiled C# Executable (Selected)
+
 - **Overview:** Compile `Cadence.Cli` into a self-contained Native AOT binary (`./bin/cadence`).
 - **Pros:**
   - Sub-50ms execution speed.

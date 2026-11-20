@@ -1,15 +1,13 @@
 <template>
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div
-    ref="modalRef"
-    class="modal-backdrop"
-    role="dialog"
-    aria-modal="true"
-    aria-label="Secure PDF Preview Modal"
-    @click.self="$emit('close')"
-  >
-    <div class="modal-card pdf-preview-modal">
+  <div class="modal-backdrop" role="presentation" @click.self="$emit('close')">
+    <div
+      ref="modalRef"
+      class="modal-card pdf-preview-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Secure PDF Preview Modal"
+      tabindex="-1"
+    >
       <div class="modal-header">
         <div class="header-details">
           <h3>
@@ -184,7 +182,11 @@
         </aside>
 
         <!-- Simulated Document Frame with Dynamic Overlay Watermark -->
-        <main class="viewer-workspace" aria-label="Document Viewer">
+        <div
+          class="viewer-workspace"
+          role="region"
+          aria-label="Document Viewer"
+        >
           <div class="pdf-document-canvas">
             <!-- Dynamic CSS Rotating Diagonal Watermark -->
             <div class="watermark-overlay-container" aria-hidden="true">
@@ -298,7 +300,7 @@
               </div>
             </div>
           </div>
-        </main>
+        </div>
       </div>
     </div>
   </div>
@@ -306,8 +308,8 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { useAuthStore } from "../../stores/auth";
 import { useFocusTrap } from "ui";
+import { useAuthStore } from "../../stores/auth";
 
 const props = defineProps({
   document: {

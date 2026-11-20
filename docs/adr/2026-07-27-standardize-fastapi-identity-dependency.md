@@ -24,19 +24,19 @@ This decision implements requirements under Trace-8.
 ### Option 1: Synchronous/Manual identity extraction across services
 
 - **Overview:** Rely on manual headers or state inspection across individual controllers.
-- ***Pros:***
+- _**Pros:**_
   - ✅ High isolation per route.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Repetitive, error-prone, and misses role normalization.
 
 ### Option 2: Centralized FastAPI async dependency cascade with synchronous fallback
 
 - **Overview:** Implement `get_principal` as an asynchronous FastAPI dependency with normalized roles, and check justification across a multi-tiered fallback cascade (Request State -> Query Parameters -> Request Body -> Custom HTTP Headers). Provide a `get_principal_sync` helper for synchronous consumers/test suites.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Eliminates header-parsing workarounds.
   - ✅ Strict, automated 21 CFR Part 11 audit compliance and site isolation.
   - ✅ Backwards compatible with legacy/sync code via synchronous fallback.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Adds complexity to security middleware and context layers.
 
 ## 4. Decision Outcome

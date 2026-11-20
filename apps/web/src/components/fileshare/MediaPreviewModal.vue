@@ -1,15 +1,14 @@
 <template>
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div
-    ref="modalRef"
-    class="modal-backdrop"
-    role="dialog"
-    aria-modal="true"
-    :aria-label="'Secure Media Preview: ' + (fileRecord?.filename || 'File')"
-    @click.self="$emit('close')"
-  >
-    <div class="modal-card media-preview-modal" @contextmenu.prevent>
+  <div class="modal-backdrop" role="presentation" @click.self="$emit('close')">
+    <div
+      ref="modalRef"
+      class="modal-card media-preview-modal"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="'Secure Media Preview: ' + (fileRecord?.filename || 'File')"
+      tabindex="-1"
+      @contextmenu.prevent
+    >
       <!-- Header -->
       <div class="modal-header">
         <div class="header-details">
@@ -220,7 +219,11 @@
         </aside>
 
         <!-- Viewer Workspace -->
-        <main class="viewer-workspace" aria-label="Media Canvas Workspace">
+        <div
+          class="viewer-workspace"
+          role="region"
+          aria-label="Media Canvas Workspace"
+        >
           <!-- Watermark Overlay (Pointer events none, subtle rotating diagonal text) -->
           <div class="watermark-overlay-container" aria-hidden="true">
             <div v-for="n in 4" :key="n" class="diagonal-watermark-row">
@@ -496,7 +499,7 @@
               </div>
             </div>
           </div>
-        </main>
+        </div>
       </div>
     </div>
 
@@ -517,9 +520,9 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 import Hls from "hls.js";
+import { useFocusTrap } from "ui";
 import { fileshareService } from "../../api/fileshare";
 import { useAuthStore } from "../../stores/auth";
-import { useFocusTrap } from "ui";
 import ReAuthModal from "../shared/ReAuthModal.vue";
 
 const props = defineProps({

@@ -59,46 +59,45 @@ _any_ C# change in the repository, including the `Cadence.Cli` fix below.
 ### Option 1: **Add a single full-stack `scripts/setup_wizard.sh` (+ `.ps1` twin) that
 
 - **Overview:** detects its environment and orchestrates the existing per-stack scripts,
-   wired into `make wizard`, the devcontainer, the Claude Code SessionStart
-   hook, and `dotnet cadence wizard onboarding` (Selected)**
-- ***Pros:***
+  wired into `make wizard`, the devcontainer, the Claude Code SessionStart
+  hook, and `dotnet cadence wizard onboarding` (Selected)**
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: Keep the three onboarding paths separate and just document "run these
 
 - **Overview:** three commands in order" — cheaper to write, but leaves the
-   non-interactive/CI gap unsolved and keeps three copies of environment
-   logic (e.g. `.env` bootstrap, datastore probing) to maintain in sync.
-- ***Pros:***
+  non-interactive/CI gap unsolved and keeps three copies of environment
+  logic (e.g. `.env` bootstrap, datastore probing) to maintain in sync.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 3: Rewrite onboarding entirely in the new `Cadence.Cli` (C#) — the intended
 
 - **Overview:** long-term home per ADR-2233, but that CLI does not yet build cleanly
-   (see below) and can't run before the .NET SDK it's meant to install
-   exists, so a shell entry point remains necessary regardless.
-- ***Pros:***
+  (see below) and can't run before the .NET SDK it's meant to install
+  exists, so a shell entry point remains necessary regardless.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 
 - **Chosen Option:** **1**. `scripts/setup_wizard.sh` (and its `scripts/setup_wizard.ps1`
 - **Justification:** Selected as primary architectural approach.
-twin) detects the runtime context (local workstation, GitHub Codespaces, a
-devcontainer, a Claude Code remote session, or CI) and, per stage,
-installs/validates the .NET 10 SDK (delegating to `scripts/setup_dotnet_env.sh`
-/ `scripts/setup_dotnet_env.ps1`), Node/pnpm, Python/uv
-(+ Playwright, pre-commit), probes local datastores, bootstraps `.env`, and
-finishes with `cadence doctor`. Each stage is non-fatal on failure and the
-wizard prints a summary of anything that needs attention rather than
-aborting outright — reflecting that the three stacks are independent.
+  twin) detects the runtime context (local workstation, GitHub Codespaces, a
+  devcontainer, a Claude Code remote session, or CI) and, per stage,
+  installs/validates the .NET 10 SDK (delegating to `scripts/setup_dotnet_env.sh`
+  / `scripts/setup_dotnet_env.ps1`), Node/pnpm, Python/uv
+  (+ Playwright, pre-commit), probes local datastores, bootstraps `.env`, and
+  finishes with `cadence doctor`. Each stage is non-fatal on failure and the
+  wizard prints a summary of anything that needs attention rather than
+  aborting outright — reflecting that the three stacks are independent.
 
 It is wired into every place the repo already bootstraps an environment:
 `make wizard`, the devcontainer `postCreateCommand`, the Claude Code

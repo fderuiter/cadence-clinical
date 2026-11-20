@@ -30,14 +30,14 @@ To resolve these issues and align with modern accessibility guidelines, this ADR
 ### Option 1: Hardcoded Element-Level Styles
 
 - **Overview:** Keep individual styles on elements using hardcoded pixel values and inline CSS declarations.
-- ***Pros:*** Quick to implement at the component level.
-- ***Cons:*** Disallows uniform token overrides, does not scale, and fails to handle responsive wrapping consistently.
+- _**Pros:**_ Quick to implement at the component level.
+- _**Cons:**_ Disallows uniform token overrides, does not scale, and fails to handle responsive wrapping consistently.
 
 ### Option 2: Token-Based Centralized Responsive Utilities (Selected)
 
 - **Overview:** Transition layout controls and touch target sizing to global token properties (`--touch-target-min: 48px`) in shared stylesheets (`packages/ui/responsive.css`, `packages/ui/tokens.css`). Define standardized responsive layout utilities (`.grid-2-responsive`, `.grid-layout-responsive`, and `.responsive-grid`) collapsing at a strict 1024px threshold.
-- ***Pros:*** Highly consistent, reusable, and allows rapid system-wide modifications.
-- ***Cons:*** Requires refactoring multiple clinical view files to eliminate inline layout styling.
+- _**Pros:**_ Highly consistent, reusable, and allows rapid system-wide modifications.
+- _**Cons:**_ Requires refactoring multiple clinical view files to eliminate inline layout styling.
 
 ## 4. Decision Outcome
 

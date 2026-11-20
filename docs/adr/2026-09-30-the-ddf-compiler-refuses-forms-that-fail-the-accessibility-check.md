@@ -61,12 +61,12 @@ report claiming they had passed.
 
 The built-in check reports these violations, with axe-core rule ids where one exists:
 
-| Rule | WCAG 2.1 | Fails when |
-| --- | --- | --- |
-| `document-title` | 2.4.2 | the form's `h:title` is empty |
-| `label` | 1.3.1, 3.3.2, 4.1.2 | a control has no label with text or an itext reference |
-| `label-language` | 3.1.2 | labels carry `xml:lang` and a control lacks a label in one of the form's languages |
-| `select-option-name` | 4.1.2 | a choice of a select has no label |
+| Rule                 | WCAG 2.1            | Fails when                                                                         |
+| -------------------- | ------------------- | ---------------------------------------------------------------------------------- |
+| `document-title`     | 2.4.2               | the form's `h:title` is empty                                                      |
+| `label`              | 1.3.1, 3.3.2, 4.1.2 | a control has no label with text or an itext reference                             |
+| `label-language`     | 3.1.2               | labels carry `xml:lang` and a control lacks a label in one of the form's languages |
+| `select-option-name` | 4.1.2               | a choice of a select has no label                                                  |
 
 It reports layout errors when the form is not well-formed XML (DTDs are refused), has no `h:html` root with an
 `h:body`, or has a control without a `ref`, a control whose `ref` has no `bind`, or two controls on the same node.

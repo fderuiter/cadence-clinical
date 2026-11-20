@@ -33,9 +33,9 @@ To ensure strict GxP compliance and operational efficiency under `PRD-TMF-001`, 
 ### Option 1: Introduce Third-Party Paginated Grid Libraries (e.g., AG Grid, PrimeVue)
 
 - **Overview:** Integrate a comprehensive third-party Vue data table library to handle virtualization, pagination, and sorting out of the box.
-- ***Pros:***
+- _**Pros:**_
   - ✅ High performance and virtual scrolling support natively built-in.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Heavy bundle size overhead, introducing security and regulatory compliance scanning dependencies.
   - ❌ Diverges from custom UI primitives used elsewhere in the frontend package workspace.
 
@@ -45,12 +45,12 @@ To ensure strict GxP compliance and operational efficiency under `PRD-TMF-001`, 
   - Centralize folder tree indexing into a flat reactive computed lookup map (`folderLookup`) in the Pinia store to enable instant, constant-time $O(1)$ folder resolution instead of recursive traversal.
   - Implement an active computed date-formatting property mapping `documents` to localized formatted representation prior to rendering.
   - Implement standard local pagination in `DocumentGrid.vue` capped at **20 documents per page** using custom controls.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Zero external dependencies, maintaining a very clean and compliant bundle size.
   - ✅ $O(1)$ constant-time folder details resolution from anywhere in the app.
   - ✅ Extremely fast rendering since dates are formatted exactly once per dataset update rather than on every render loop.
   - ✅ Solves DOM freezing issues by rendering at most 20 document items at a time.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires custom UI code for pagination control buttons, page range indicators, and navigation state.
 
 ## 4. Decision Outcome

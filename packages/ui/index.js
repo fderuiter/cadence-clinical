@@ -748,36 +748,38 @@ export function createClinicalVisitMatrix(visitsOrSoa, forms = []) {
 
 export { toBeAccessible } from "./accessibility-matcher.js";
 
-import AiActionButton from "./src/components/clinical/AiActionButton.vue";
-import AiSuggestionDrawer from "./src/components/clinical/AiSuggestionDrawer.vue";
-import AuditLogViewer from "./src/components/clinical/AuditLogViewer.vue";
-import ClinicalDataTable from "./src/components/clinical/ClinicalDataTable.vue";
-import ClinicalFieldLayout from "./src/components/clinical/ClinicalFieldLayout.vue";
-import ClinicalFormField from "./src/components/clinical/ClinicalFormField.vue";
-import ClinicalInput from "./src/components/clinical/ClinicalInput.vue";
-import ClinicalRadioGroup from "./src/components/clinical/ClinicalRadioGroup.vue";
-import ClinicalLookupInput from "./src/components/clinical/ClinicalLookupInput.vue";
-import ClinicalModal from "./src/components/clinical/ClinicalModal.vue";
-import ClinicalQueryFlag from "./src/components/clinical/ClinicalQueryFlag.vue";
-import ClinicalQueryPanel from "./src/components/clinical/ClinicalQueryPanel.vue";
-import ConfidenceBadge from "./src/components/clinical/ConfidenceBadge.vue";
-import PersonaSwitcher from "./src/components/clinical/PersonaSwitcher.vue";
-import EmptyState from "./src/components/common/EmptyState.vue";
-import FileUploadModal from "./src/components/FileUploadModal.vue";
-import MediaPlayer from "./src/components/MediaPlayer.vue";
-import ModalErrorAlert from "./src/components/ModalErrorAlert.vue";
-import { useAsyncRetry } from "./src/composables/useAsyncRetry.js";
 import {
+  AiActionButton,
+  AiSuggestionDrawer,
+  AuditLogViewer,
+  ClinicalDataTable,
+  ClinicalDrawer,
+  ClinicalFieldLayout,
+  ClinicalFormField,
+  ClinicalInput,
+  ClinicalRadioGroup,
+  ClinicalLookupInput,
+  ClinicalModal,
+  ClinicalQueryFlag,
+  ClinicalQueryPanel,
+  ConfidenceBadge,
+  EmptyState,
+  FileUploadModal,
+  MediaPlayer,
+  ModalErrorAlert,
+  PersonaSwitcher,
+  useAsyncRetry,
   useFocusTrap,
   getFocusableElements,
-} from "./src/composables/useFocusTrap.js";
-import { useEscapeClose } from "./src/composables/useEscapeClose.js";
+  useEscapeClose,
+} from "./src/index.js";
 
 export {
   AiActionButton,
   AiSuggestionDrawer,
   AuditLogViewer,
   ClinicalDataTable,
+  ClinicalDrawer,
   ClinicalFieldLayout,
   ClinicalFormField,
   ClinicalInput,

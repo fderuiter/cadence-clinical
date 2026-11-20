@@ -24,20 +24,20 @@ Using a purely in-memory set to prevent replay of the unique token identifier (`
 
 Keep tracking consumed token `jti` in a thread-safe, local in-memory structure only.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Simplest design with no external dependencies.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Does not prevent replay attacks across multi-node deployments.
 
 ### Option 2: Centralized Redis consumption cache with in-memory fallback (Selected)
 
 Introduce a global cache for token consumption and downstream replay prevention. Utilize Redis with atomic `set(..., nx=True)` locks when a `REDIS_URL` is set, and dynamically fall back to thread-safe local in-memory dictionaries if Redis is not configured or experiences an runtime error.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Fully prevents replay attacks across multiple physical nodes.
   - ✅ Highly resilient with fail-safe in-memory fallback keeping single-node systems fully operational during Redis outages.
   - ✅ Standardized verification routines via `TokenConsumptionCache` and `DownstreamReplayCache`.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Introduces a runtime operational dependency on Redis.
 
 ## 4. Decision Outcome
