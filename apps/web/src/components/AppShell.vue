@@ -36,7 +36,7 @@
           <router-link
             v-if="showDataCollectionNav"
             id="nav-data-collection"
-            to="/ecrf"
+            :to="dataCollectionPath"
             class="primary-nav-link"
             :class="{ active: isDataCollectionRoute }"
             :aria-current="isDataCollectionRoute ? 'page' : undefined"
@@ -216,7 +216,7 @@
         </router-link>
         <router-link
           v-if="showDataCollectionNav"
-          to="/ecrf"
+          :to="dataCollectionPath"
           class="mobile-nav-link"
           @click="isMobileMenuOpen = false"
         >
@@ -286,8 +286,10 @@ import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { isScreenAvailable } from "../router/availability";
 import {
+  buildDataCollectionPath,
   canAccessDataCollection,
   canAccessTeamManagement,
+  resolveCanvasParticipantContext,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
 import OnboardingTour from "./OnboardingTour.vue";
@@ -335,6 +337,19 @@ const studiesPath = computed(() =>
     ? `/studies/${encodeURIComponent(activeStudyCode.value)}`
     : "/studies"
 );
+
+const dataCollectionPath = computed(() => {
+  const participantContext = resolveCanvasParticipantContext(
+    activeStudyCode.value,
+    route?.query,
+    canvasStore
+  );
+  return buildDataCollectionPath({
+    studyCode: activeStudyCode.value,
+    subjectCode: participantContext.subjectCode,
+    enrollmentId: participantContext.enrollmentId,
+  });
+});
 
 const showStudiesNav = computed(() => isScreenAvailable("study"));
 const showDataCollectionNav = computed(() =>
