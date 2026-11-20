@@ -57,8 +57,12 @@ Two things are required before any service starts (ADR-2256):
 - `OIDC_AUTHORITY` for the gateway: the local Keycloak realm, `http://localhost:8080/realms/cadence`.
 
 Every API request goes through the gateway (port 8000) with a Keycloak access token. Services reject
-direct calls without a valid gateway signature. The web client must sign in; its token-less demo mode
-cannot reach the API.
+direct calls without a valid gateway signature. Standard web builds must sign in through Keycloak; synthetic
+demo mode (`--mode demo` / `VITE_DEMO_MODE=true`) runs offline in the browser via Mock Service Worker and
+cannot reach the live API. If you only want to evaluate workflows without starting PostgreSQL, Keycloak, or
+the .NET services, open the hosted [staff demo](https://fderuiter.github.io/cadence-clinical/demo/) and
+[participant portal demo](https://fderuiter.github.io/cadence-clinical/subject-portal/) from the
+[GitHub Pages portal](https://fderuiter.github.io/cadence-clinical/) ([ADR-2550](adr/2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.md)).
 
 ### Option A: Docker Compose (full stack)
 
@@ -185,12 +189,16 @@ pnpm cadence fix                 # auto-fix formatting, schemas, ADR index
 pnpm cadence gxp sync            # after changing requirement-tagged tests; validates, never commit docs/SDLC output
 ```
 
-## 7. Documentation site
+## 7. Documentation site and hosted demos
 
 ```bash
 pnpm docs:dev                    # VitePress dev server over docs/
 pnpm docs:build                  # full build: gates, generated API/schema docs, RTM draft, static site
+pnpm docs:stage-demos            # build and stage staff (/demo/) and participant (/subject-portal/) demos into docs/.vitepress/dist
+pnpm portal:build                # build shared UI, VitePress docs, and both co-hosted subpath demos
 ```
 
-VitePress stages the root `README.md`, `ARCHITECTURE.md`, `AGENTS.md`, and `LICENSE` as site pages in
-`docs/`. The documentation index tracks the authored pages.
+`docs/index.md` is the authored guided landing page for the portal; VitePress stages the root `README.md`,
+`ARCHITECTURE.md`, `AGENTS.md`, and `LICENSE` as site pages in `docs/`. `deploy-docs.yml` runs `pnpm docs:stage-demos`
+before computing `SHA256SUMS` and SLSA provenance so the documentation portal and both interactive demos ship as one
+attested Pages artifact. The documentation index tracks the authored pages.

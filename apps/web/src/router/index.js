@@ -1,7 +1,12 @@
-import { createRouter, createWebHistory } from "vue-router";
+import {
+  createRouter,
+  createWebHashHistory,
+  createWebHistory,
+} from "vue-router";
 import { TOKEN_MIN_VALIDITY_SECONDS } from "../api/authorization.js";
 import { useAuthStore, ROLE_ALIASES } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding.js";
+import { isDemoBuild } from "../utils/demoMode.js";
 import { AVAILABLE_SCREENS, isScreenAvailable } from "./availability";
 
 /**
@@ -565,9 +570,16 @@ const routes = [
   },
 ];
 
+export function createAppHistory(
+  env = import.meta.env,
+  base = env?.BASE_URL || "/cadence-clinical/"
+) {
+  return isDemoBuild(env) ? createWebHashHistory(base) : createWebHistory(base);
+}
+
 export const router = createRouter({
-  // Use a GitHub Pages-compatible history mode resolving from the configured Pages base path
-  history: createWebHistory(import.meta.env.BASE_URL || "/cadence-clinical/"),
+  // Use hash history for static subpath demo builds and web history for Keycloak OIDC deployments
+  history: createAppHistory(),
   routes,
 });
 

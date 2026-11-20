@@ -15,7 +15,7 @@ import {
   DEMO_AVAILABLE_SCREENS,
   isScreenAvailable,
 } from "../src/router/availability.js";
-import { router } from "../src/router";
+import { createAppHistory, router } from "../src/router";
 import { useAuthStore } from "../src/stores/auth.js";
 
 const DEMO_HEADERS = {
@@ -45,6 +45,27 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
         url: "/mockServiceWorker.js",
         options: { scope: "/" },
       });
+      expect(resolveWebServiceWorkerOptions("/cadence-clinical/demo/")).toEqual(
+        {
+          url: "/cadence-clinical/demo/mockServiceWorker.js",
+          options: { scope: "/cadence-clinical/demo/" },
+        }
+      );
+    });
+
+    it("uses hash history in demo builds for subpath deep-link safety and web history in standard builds", () => {
+      const demoHistory = createAppHistory(
+        { MODE: "demo" },
+        "/cadence-clinical/demo/"
+      );
+      expect(demoHistory.base).toContain("#");
+      expect(demoHistory.base).toContain("/cadence-clinical/demo/");
+
+      const prodHistory = createAppHistory(
+        { MODE: "production", VITE_DEMO_MODE: "false" },
+        "/cadence-clinical/"
+      );
+      expect(prodHistory.base).not.toContain("#");
     });
 
     it("awaits worker.start with error unhandled-frame mode in demo builds", async () => {
@@ -584,6 +605,14 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
       );
       const subsequent = await subsequentRes.json();
       expect(subsequent.tier).toBe("Select");
+
+      setActivePinia(createPinia());
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      const authStore = useAuthStore();
+      authStore.startDemoSession();
+      const loaded = await authStore.loadEntitlements({ force: true });
+      expect(loaded?.tier).toBe("Select");
+      expect(authStore.entitlements?.tier).toBe("Select");
     });
 
     it("enforces RTSM scheme separation of duties, consent and kit gates, blinded subject detail, and emergency unblinding", async () => {
