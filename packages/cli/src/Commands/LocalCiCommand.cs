@@ -108,6 +108,7 @@ public static class LocalCiCommand
         if (step.Files != CiFileSource.None) parts.Add($"(with {step.Files} files)");
         if (step.RequiredTool is not null) parts.Add($"(when {step.RequiredTool} is on PATH)");
         if (step.CoveredBy is not null) parts.Add($"(covered when '{step.CoveredBy}' passed)");
+        parts.AddRange(step.Environment.Select(e => $"(with {e.Key}={e.Value})"));
         parts.AddRange(step.EnvironmentIfPassed.Select(e => $"(with {e.Name}={e.Value} when '{e.StepKey}' passed)"));
         if (step.RestoreFiles.Count > 0) parts.Add($"(then restores {string.Join(", ", step.RestoreFiles)})");
         return parts;

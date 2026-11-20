@@ -56,8 +56,9 @@ requirement on the test method, so a test that does not apply to a requirement s
 
 - Requirements whose evidence was incomplete drop from Qualified to Not Verified, and aliases that only inherited their
   parent's tests become Planned. That is the intended correction.
-- The opt-in lineage benchmark is the one named exemption from the skipped-test check
-  (`DatabaseTestEvidence.OptInTests`).
+- The opt-in lineage benchmark (`CADENCE_LINEAGE_BENCHMARK=1`) and the Chromium browser-to-database correction check
+  (`BrowserCorrectionReachesTheDatabaseWithItsReason`, `CADENCE_TEST_BROWSER=1`, executed in CI's `accessibility-e2e`
+  job on pushes to `main`) are the two named exemptions from the skipped-test check (`DatabaseTestEvidence.OptInTests`).
 
 ## 6. Implementation & Verification
 
