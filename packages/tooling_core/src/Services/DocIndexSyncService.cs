@@ -34,6 +34,7 @@ public static partial class DocIndexSyncService
         "CONTEXT.md",
         "CONTRIBUTING.md",
         "LICENSE.md",
+        "README.md",
         "SECURITY.md",
         "SUPPORT.md",
         "index.md"

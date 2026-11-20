@@ -107,7 +107,9 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
       ).toBe(true);
     }
 
-    // Key previously omitted pages are present
+    // Key previously omitted pages and both Portal Home + staged README are present
+    expect(sidebarLinks.has("/")).toBe(true);
+    expect(sidebarLinks.has("/README")).toBe(true);
     expect(sidebarLinks.has("/CONTEXT")).toBe(true);
     expect(sidebarLinks.has("/CONTRIBUTING")).toBe(true);
     expect(sidebarLinks.has("/SECURITY")).toBe(true);
@@ -201,7 +203,7 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
       toRepoUrl("../../CONTRIBUTING.md#local-checks", tmpSdlc, tmpDocs, tmpRepo)
     ).toBe("../CONTRIBUTING.md#local-checks");
     expect(toRepoUrl("../README.md#overview", tmpDocs, tmpDocs, tmpRepo)).toBe(
-      "index.md#overview"
+      "README.md#overview"
     );
     expect(toRepoUrl("../LICENSE", tmpDocs, tmpDocs, tmpRepo)).toBe(
       "LICENSE.md"

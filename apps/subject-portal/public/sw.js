@@ -1,15 +1,19 @@
 const CACHE_NAME = "portal-cache-v1";
+const SW_BASE = (self.location?.pathname || "/subject-portal/sw.js").replace(
+  /\/[^/]*$/,
+  "/"
+);
 const ASSETS = [
-  "/subject-portal/",
-  "/subject-portal/index.html",
-  "/subject-portal/src/style.css",
-  "/subject-portal/src/index.js",
-  "/subject-portal/manifest.json",
+  SW_BASE,
+  `${SW_BASE}index.html`,
+  `${SW_BASE}src/style.css`,
+  `${SW_BASE}src/index.js`,
+  `${SW_BASE}manifest.json`,
 ];
 const DEMO_SHELL_ASSETS = [
-  "/subject-portal/",
-  "/subject-portal/index.html",
-  "/subject-portal/manifest.json",
+  SW_BASE,
+  `${SW_BASE}index.html`,
+  `${SW_BASE}manifest.json`,
 ];
 const IS_MSW_MODE =
   typeof importScripts === "function" &&
@@ -86,7 +90,7 @@ self.addEventListener("fetch", (event) => {
 
   const isStaticAsset =
     url.origin === self.location.origin &&
-    url.pathname.startsWith("/subject-portal/") &&
+    url.pathname.startsWith(SW_BASE) &&
     !/(^|\/)api\//.test(url.pathname) &&
     !url.pathname.endsWith("/mockServiceWorker.js");
 
@@ -120,7 +124,7 @@ self.addEventListener("fetch", (event) => {
             }
             // If even cache fails (e.g., first time visiting a non-cached asset while offline)
             if (event.request.mode === "navigate") {
-              return caches.match("/subject-portal/index.html");
+              return caches.match(`${SW_BASE}index.html`);
             }
           });
         })

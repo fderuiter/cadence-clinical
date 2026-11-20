@@ -287,6 +287,7 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
   });
 
   const startHereItems = [
+    { text: "Portal Home", link: "/" },
     { text: "Documentation Index", link: "/DOCUMENTATION_INDEX" },
   ];
   const kernelItems = [];
