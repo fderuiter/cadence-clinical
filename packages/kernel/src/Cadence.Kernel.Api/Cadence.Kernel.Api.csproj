@@ -16,6 +16,7 @@
     <ProjectReference Include="..\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
     <ProjectReference Include="..\Cadence.Kernel.Application\Cadence.Kernel.Application.csproj" />
     <ProjectReference Include="..\Cadence.Kernel.Persistence\Cadence.Kernel.Persistence.csproj" />
+    <ProjectReference Include="..\..\..\security\src\Cadence.Security.csproj" />
   </ItemGroup>
 
 </Project>
