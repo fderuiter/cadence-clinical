@@ -279,6 +279,11 @@
             :participant="participant"
           />
 
+          <ParticipantActivationCode
+            v-if="canManageParticipants"
+            :participant="participant"
+          />
+
           <router-link
             v-if="recordLocation"
             id="inspector-open-record"
@@ -338,6 +343,7 @@ import type { RouteLocationRaw } from "vue-router";
 import type { SubjectSummary } from "../../api/executionApi";
 import { participantStateLabel } from "../../canvas/lifecycle";
 import ParticipantStateChange from "./ParticipantStateChange.vue";
+import ParticipantActivationCode from "./ParticipantActivationCode.vue";
 import KernelActPanel from "./KernelActPanel.vue";
 import KernelExplanation from "./KernelExplanation.vue";
 import KernelLineagePanel from "./KernelLineagePanel.vue";

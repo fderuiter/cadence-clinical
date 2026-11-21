@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,6 +11,7 @@ using Cadence.Apps.Execution.Domain.Randomization;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
 using Cadence.Kernel.Time;
+using Cadence.Security.FieldProtection;
 
 namespace Cadence.Apps.Execution.Application.Subjects;
 
@@ -64,8 +66,11 @@ public sealed class SubjectApplicationService(
     IAuditLogWriter auditLog,
     ICurrentAuditContextAccessor auditContext,
     Func<ClinicalSubject, CancellationToken, Task<bool>>? screeningEligibility = null,
-    IClock? clock = null) : ISubjectApplicationService
+    IClock? clock = null,
+    ILookupHasher? lookupHasher = null) : ISubjectApplicationService
 {
+    private const string ActivationAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // pragma: allowlist secret
+
     private readonly IClock _clock = clock ?? SystemClock.Instance;
 
     // ---- MIG-SUBJ-018: CreateAsync & RecordConsentAsync ----------------------------------------
@@ -567,4 +572,153 @@ public sealed class SubjectApplicationService(
             ["gender"] = demographics.Gender,
             ["race"] = demographics.Race,
         };
+
+    public async Task<Result<SubjectActivationCodeIssueResponse>> IssueActivationCodeAsync(
+        string subjectIdOrCode, string changeReason, CancellationToken ct = default)
+    {
+        ILookupHasher hasher = RequireLookupHasher();
+        var subject = await ResolveSubjectAsync(subjectIdOrCode, ct).ConfigureAwait(false);
+        if (subject is null)
+        {
+            return SubjectErrors.NotFound(subjectIdOrCode);
+        }
+
+        string rawCode = GenerateActivationCode();
+        string normalized = NormalizeActivationCode(rawCode);
+        string tokenHash = hasher.ComputeHash(normalized, SubjectActivationToken.TokenHashPurpose);
+        DateTimeOffset issuedAt = _clock.UtcNow;
+
+        await subjects.RevokePendingActivationTokensAsync(subject.SubjectCode, ct).ConfigureAwait(false);
+        var token = SubjectActivationToken.Issue(
+            subject.SubjectCode,
+            subject.StudyCode,
+            subject.SiteCode,
+            tokenHash,
+            issuedAt,
+            auditContext.UserId,
+            changeReason);
+
+        await subjects.AddActivationTokenAsync(token, ct).ConfigureAwait(false);
+        await auditLog.WriteAsync(
+            nameof(SubjectActivationToken),
+            token.Id.ToString(),
+            "ISSUE_SUBJECT_ACTIVATION_CODE",
+            auditContext.UserId,
+            changeReason,
+            oldValues: null,
+            newValues: new Dictionary<string, object?>
+            {
+                ["subject_code"] = subject.SubjectCode.Value,
+                ["study_code"] = subject.StudyCode.Value,
+                ["expires_at"] = token.ExpiresAt,
+            },
+            ct).ConfigureAwait(false);
+        await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        return new SubjectActivationCodeIssueResponse(
+            subject.SubjectCode,
+            subject.StudyCode,
+            subject.SiteCode,
+            rawCode,
+            token.IssuedAt,
+            token.ExpiresAt,
+            SubjectActivationToken.DefaultValidityDays);
+    }
+
+    public async Task<Result<SubjectActivationCodeRedeemResponse>> RedeemActivationCodeAsync(
+        string activationCode, string callerPrincipalId, string changeReason, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(activationCode) || string.IsNullOrWhiteSpace(callerPrincipalId))
+        {
+            return SubjectErrors.ActivationCodeInvalidOrExpired();
+        }
+
+        ILookupHasher hasher = RequireLookupHasher();
+        string normalized = NormalizeActivationCode(activationCode);
+        string tokenHash = hasher.ComputeHash(normalized, SubjectActivationToken.TokenHashPurpose);
+        var token = await subjects.GetActivationTokenByHashAsync(tokenHash, ct).ConfigureAwait(false);
+        if (token is null)
+        {
+            return SubjectErrors.ActivationCodeInvalidOrExpired();
+        }
+
+        string principalHash = hasher.ComputeHash(callerPrincipalId.Trim(), SubjectActivationToken.PrincipalHashPurpose);
+        DateTimeOffset now = _clock.UtcNow;
+        var redeemResult = token.Redeem(principalHash, now);
+        if (redeemResult.IsFailure)
+        {
+            return Result<SubjectActivationCodeRedeemResponse>.Failure(redeemResult.Error!);
+        }
+
+        await auditLog.WriteAsync(
+            nameof(SubjectActivationToken),
+            token.Id.ToString(),
+            "REDEEM_SUBJECT_ACTIVATION_CODE",
+            auditContext.UserId,
+            changeReason,
+            oldValues: null,
+            newValues: new Dictionary<string, object?>
+            {
+                ["subject_code"] = token.SubjectCode.Value,
+                ["study_code"] = token.StudyCode.Value,
+                ["redeemed_at"] = now,
+            },
+            ct).ConfigureAwait(false);
+        await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        return new SubjectActivationCodeRedeemResponse(
+            token.SubjectCode,
+            token.StudyCode,
+            token.SiteCode,
+            now,
+            token.ExpiresAt);
+    }
+
+    public async Task<Result<SubjectActivationCodeRedeemResponse>> GetRedeemedActivationAsync(
+        string callerPrincipalId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(callerPrincipalId))
+        {
+            return SubjectErrors.ActivationBindingNotFound();
+        }
+
+        ILookupHasher hasher = RequireLookupHasher();
+        string principalHash = hasher.ComputeHash(callerPrincipalId.Trim(), SubjectActivationToken.PrincipalHashPurpose);
+        var token = await subjects.GetRedeemedActivationByPrincipalHashAsync(principalHash, ct).ConfigureAwait(false);
+        if (token is null || token.RedeemedAt is null)
+        {
+            return SubjectErrors.ActivationBindingNotFound();
+        }
+
+        return new SubjectActivationCodeRedeemResponse(
+            token.SubjectCode,
+            token.StudyCode,
+            token.SiteCode,
+            token.RedeemedAt.Value,
+            token.ExpiresAt);
+    }
+
+    private ILookupHasher RequireLookupHasher() =>
+        lookupHasher ?? throw new InvalidOperationException(
+            $"{nameof(ILookupHasher)} must be registered in DI to issue or redeem subject activation codes.");
+
+    private static string GenerateActivationCode()
+    {
+        Span<byte> randomBytes = stackalloc byte[16];
+        RandomNumberGenerator.Fill(randomBytes);
+        Span<char> chars = stackalloc char[16];
+        for (int i = 0; i < 16; i++)
+        {
+            chars[i] = ActivationAlphabet[randomBytes[i] & 0x1F];
+        }
+
+        CryptographicOperations.ZeroMemory(randomBytes);
+        return $"CAD-{chars[..4]}-{chars[4..8]}-{chars[8..12]}-{chars[12..16]}";
+    }
+
+    public static string NormalizeActivationCode(string rawCode) =>
+        new string(rawCode
+            .Where(c => char.IsLetterOrDigit(c))
+            .Select(char.ToUpperInvariant)
+            .ToArray());
 }

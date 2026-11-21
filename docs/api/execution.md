@@ -59,7 +59,10 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `GET` | `/api/v1/execution/sites/{siteId}/compliance-status` | GetSiteComplianceStatus |  |
 | `GET` | `/api/v1/execution/subjects` | ListSubjects | Lists one page of a study's subjects in enrollment order. |
 | `POST` | `/api/v1/execution/subjects` | CreateSubject |  |
+| `GET` | `/api/v1/execution/subjects/activation-codes/me` | GetMyRedeemedActivationCode |  |
+| `POST` | `/api/v1/execution/subjects/activation-codes/redeem` | RedeemSubjectActivationCode |  |
 | `GET` | `/api/v1/execution/subjects/{subjectId}` | GetSubjectDetail |  |
+| `POST` | `/api/v1/execution/subjects/{subjectId}/activation-code` | IssueSubjectActivationCode |  |
 | `POST` | `/api/v1/execution/subjects/{subjectId}/consent` | RecordSubjectConsent |  |
 | `PUT` | `/api/v1/execution/subjects/{subjectId}/demographics` | UpdateSubjectDemographics |  |
 | `DELETE` | `/api/v1/execution/subjects/{subjectId}/demographics` | DeleteSubjectDemographics |  |

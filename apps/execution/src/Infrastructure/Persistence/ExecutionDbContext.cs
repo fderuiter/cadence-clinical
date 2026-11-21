@@ -43,6 +43,8 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
 
     public DbSet<SubjectConsent> SubjectConsents => Set<SubjectConsent>();
 
+    public DbSet<SubjectActivationToken> SubjectActivationTokens => Set<SubjectActivationToken>();
+
     public DbSet<SiteComplianceCache> SiteComplianceCaches => Set<SiteComplianceCache>();
 
 
@@ -96,6 +98,7 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
 
         modelBuilder.ApplyConfiguration(new ClinicalSubjectConfiguration());
         modelBuilder.ApplyConfiguration(new SubjectConsentConfiguration());
+        modelBuilder.ApplyConfiguration(new SubjectActivationTokenConfiguration());
         modelBuilder.ApplyConfiguration(new RandomizationSchemeConfiguration());
         modelBuilder.ApplyConfiguration(new RandomizationListSlotConfiguration());
         modelBuilder.ApplyConfiguration(new RandomizationAllocationConfiguration());

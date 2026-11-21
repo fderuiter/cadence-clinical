@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from "vite";
 import vue from "@vitejs/plugin-vue";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock-worker.mjs";
@@ -54,10 +55,13 @@ export default defineConfig(({ mode }) => ({
     },
     {
       name: "html-transform",
-      transformIndexHtml(html) {
-        const title =
-          process.env.VITE_APP_TITLE || "Subject Portal - Cadence Clinical";
-        return html.replace(/%VITE_APP_TITLE%/g, title);
+      transformIndexHtml: {
+        order: "pre",
+        handler(html) {
+          const title =
+            process.env.VITE_APP_TITLE || "Subject Portal - Cadence Clinical";
+          return html.replace(/%VITE_APP_TITLE%/g, title);
+        },
       },
       configurePreviewServer(server) {
         if (server.httpServer) {
@@ -106,6 +110,7 @@ export default defineConfig(({ mode }) => ({
       },
     },
     createStripMockWorkerInProdPlugin(__dirname),
+    serviceWorkerManifestPlugin(),
   ],
   server: {
     port: DEV_PORT,
@@ -170,3 +175,52 @@ export default defineConfig(({ mode }) => ({
     },
   },
 }));
+
+export function serviceWorkerManifestPlugin() {
+  let emittedAssetFiles = [];
+  let resolvedOutDir = path.resolve(__dirname, "dist");
+  let resolvedBase = "/subject-portal/";
+
+  return {
+    name: "inject-service-worker-assets",
+    apply: "build",
+    enforce: "post",
+    configResolved(config) {
+      resolvedOutDir = path.resolve(config.root, config.build.outDir);
+      resolvedBase = config.base || "/subject-portal/";
+    },
+    generateBundle(_options, bundle) {
+      emittedAssetFiles = Object.keys(bundle)
+        .filter(
+          (fileName) => !fileName.endsWith(".map") && fileName !== "sw.js"
+        )
+        .map((fileName) => fileName.replace(/^\/+/, ""))
+        .sort();
+    },
+    closeBundle() {
+      const swDistPath = path.join(resolvedOutDir, "sw.js");
+      if (!fs.existsSync(swDistPath)) {
+        return;
+      }
+      const normalizedBase = resolvedBase.endsWith("/")
+        ? resolvedBase
+        : `${resolvedBase}/`;
+      const precacheAssets = Array.from(
+        new Set([
+          normalizedBase,
+          `${normalizedBase}index.html`,
+          ...emittedAssetFiles.map(
+            (fileName) => `${normalizedBase}${fileName}`
+          ),
+          `${normalizedBase}manifest.json`,
+        ])
+      );
+      const swSource = fs.readFileSync(swDistPath, "utf8");
+      const updatedSw = swSource.replace(
+        /const ASSETS = \[[\s\S]*?\];/,
+        `const ASSETS = ${JSON.stringify(precacheAssets, null, 2)};`
+      );
+      fs.writeFileSync(swDistPath, updatedSw, "utf8");
+    },
+  };
+}

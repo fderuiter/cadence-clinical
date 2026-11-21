@@ -26,7 +26,6 @@ using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Database;
 using Cadence.Database.Signatures;
 using Cadence.Kernel.Time;
-using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.FieldProtection;
 using Cadence.Telemetry;
@@ -123,6 +122,10 @@ builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.Services.AddSingleton<IDemographicsEncryptionService, AesGcmDemographicsEncryptionService>();
 builder.Services.AddSingleton<IDemographicsNormalizationService, DemographicsNormalizationService>();
 builder.Services.AddSingleton<IUcumNormalizationService, UcumNormalizationService>();
+
+// Keyed HMAC-SHA256 lookup hasher (ADR-2494): hashes BYOD participant activation codes and redeemed OIDC principal
+// identifiers in subject_activation_tokens (`K-IDN-1`). No default: the host refuses to start without FIELD_LOOKUP_HASH_KEY.
+builder.Services.AddCadenceLookupHashing();
 
 // ExecutionDbContext (Scoped, the EF Core default `AddDbContext` lifetime) -- the connection string mirrors
 // ExecutionDbContextFactory's own design-time convention exactly (same POSTGRES_CONNECTION_STRING

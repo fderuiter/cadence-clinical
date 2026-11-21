@@ -33,6 +33,7 @@ public static class HmacSigner
     private static readonly JsonEncodedText SiteIdProperty = JsonEncodedText.Encode("site_id", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
     private static readonly JsonEncodedText SponsorIdProperty = JsonEncodedText.Encode("sponsor_id", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
     private static readonly JsonEncodedText StudyIdsProperty = JsonEncodedText.Encode("study_ids", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
+    private static readonly JsonEncodedText SubjectCodeProperty = JsonEncodedText.Encode("subject_code", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
     private static readonly JsonEncodedText TenantIdProperty = JsonEncodedText.Encode("tenant_id", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
     private static readonly JsonEncodedText TimestampProperty = JsonEncodedText.Encode("timestamp", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
     private static readonly JsonEncodedText UnblindedAccessProperty = JsonEncodedText.Encode("unblinded_access", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
@@ -87,13 +88,14 @@ public static class HmacSigner
         string? sponsorId = null,
         bool unblindedAccess = false,
         string? tenantId = null,
-        string? sigToken = null)
+        string? sigToken = null,
+        string? subjectCode = null)
     {
         ArgumentNullException.ThrowIfNull(secret);
 
         Span<byte> hash = stackalloc byte[HMACSHA256.HashSizeInBytes];
         ComputeGatewaySignatureDigest(
-            userId, roles, timestamp, secret, changeReason, siteId, studyIds, sponsorId, unblindedAccess, tenantId, sigToken, hash);
+            userId, roles, timestamp, secret, changeReason, siteId, studyIds, sponsorId, unblindedAccess, tenantId, sigToken, subjectCode, hash);
         return Convert.ToHexStringLower(hash);
     }
 
@@ -115,7 +117,8 @@ public static class HmacSigner
         string? sponsorId = null,
         bool unblindedAccess = false,
         string? tenantId = null,
-        string? sigToken = null)
+        string? sigToken = null,
+        string? subjectCode = null)
     {
         if (string.IsNullOrWhiteSpace(signature) || secret is null || secret.Length == 0)
         {
@@ -124,7 +127,7 @@ public static class HmacSigner
 
         Span<byte> expectedHash = stackalloc byte[HMACSHA256.HashSizeInBytes];
         ComputeGatewaySignatureDigest(
-            userId, roles, timestamp, secret, changeReason, siteId, studyIds, sponsorId, unblindedAccess, tenantId, sigToken, expectedHash);
+            userId, roles, timestamp, secret, changeReason, siteId, studyIds, sponsorId, unblindedAccess, tenantId, sigToken, subjectCode, expectedHash);
 
         return FixedTimeEqualsHex(expectedHash, signature);
     }
@@ -184,6 +187,7 @@ public static class HmacSigner
         bool unblindedAccess,
         string? tenantId,
         string? sigToken,
+        string? subjectCode,
         Span<byte> destination)
     {
         using var pooled = PooledUtf8JsonWriter.Rent();
@@ -200,6 +204,11 @@ public static class HmacSigner
         writer.WriteString(SiteIdProperty, siteId ?? string.Empty);
         writer.WriteString(SponsorIdProperty, sponsorId ?? string.Empty);
         writer.WriteString(StudyIdsProperty, studyIds ?? string.Empty);
+        if (subjectCode is not null)
+        {
+            writer.WriteString(SubjectCodeProperty, subjectCode);
+        }
+
         writer.WriteString(TenantIdProperty, tenantId ?? string.Empty);
         writer.WriteString(TimestampProperty, timestamp ?? string.Empty);
         writer.WriteBoolean(UnblindedAccessProperty, unblindedAccess);

@@ -8,15 +8,16 @@ import {
 
 declare global {
   interface ImportMeta {
-    readonly env: Record<string, string | undefined>;
+    readonly env?: Record<string, string | undefined>;
   }
 }
 
 export function getBaseUrl(): string {
-  const env = import.meta.env as Record<string, string | undefined> | undefined;
-  const configured = env?.VITE_API_BASE_URL;
+  const configured = import.meta.env?.VITE_API_BASE_URL;
   if (configured) return configured;
-  const isDemo = env?.MODE === "demo" || env?.VITE_DEMO_MODE === "true";
+  const isDemo =
+    import.meta.env?.MODE === "demo" ||
+    import.meta.env?.VITE_DEMO_MODE === "true";
   if (
     isDemo &&
     typeof globalThis.location?.origin === "string" &&
@@ -86,7 +87,7 @@ async function rebuildRequest(
     headers,
     body: body && body.byteLength > 0 ? body : undefined,
     credentials: source.credentials,
-    mode: source.mode,
+    mode: source.mode === "navigate" ? undefined : source.mode,
     cache: source.cache,
     redirect: source.redirect,
     referrer: source.referrer,

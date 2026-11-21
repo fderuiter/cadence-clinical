@@ -530,7 +530,7 @@ public sealed class ExecutionProgramStartupTests : IDisposable
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
-            builder.UseTestGatewaySecret().UseTestDemographicsKey().UseTestRandomizationKey();
+            builder.UseTestGatewaySecret().UseTestDemographicsKey().UseTestRandomizationKey().UseTestFieldProtectionKeys();
             builder.UseTestPostgresConnectionString();
 
             builder.ConfigureServices(services =>

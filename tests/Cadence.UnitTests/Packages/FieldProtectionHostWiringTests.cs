@@ -63,18 +63,24 @@ public class FieldProtectionHostWiringTests
     }
 
     /// <summary>
-    /// Interop resolves the device-token hasher with the configured lookup key.
+    /// Interop and Execution resolve their lookup hashers with the configured lookup key.
     /// </summary>
     [Fact]
     [Trait("Category", "GxP_IQ")]
-    public void InteropHost_WithKey_ResolvesDeviceTokenHasher()
+    public void InteropAndExecutionHosts_WithKey_ResolveLookupHasher()
     {
         using var interop = new WebApplicationFactory<Cadence.Apps.Interop.Program>()
             .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys().UseTestSceSigningKey());
+        using var execution = new WebApplicationFactory<Cadence.Apps.Execution.Program>()
+            .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestDemographicsKey().UseTestRandomizationKey().UseTestFieldProtectionKeys());
 
-        var hasher = interop.Services.GetRequiredService<DeviceTokenHasher>();
+        var expectedHasher = TestFieldProtection.CreateLookupHasher();
+        var interopHasher = interop.Services.GetRequiredService<DeviceTokenHasher>();
+        var executionHasher = execution.Services.GetRequiredService<ILookupHasher>();
 
-        hasher.Hash("token-1").Should().Be(new DeviceTokenHasher(TestFieldProtection.CreateLookupHasher()).Hash("token-1"));
+        interopHasher.Hash("token-1").Should().Be(new DeviceTokenHasher(expectedHasher).Hash("token-1"));
+        executionHasher.ComputeHash("CAD-2345-6789-ABCD", "subject_activation_token")
+            .Should().Be(expectedHasher.ComputeHash("CAD-2345-6789-ABCD", "subject_activation_token"));
     }
 
     /// <summary>
@@ -94,10 +100,13 @@ public class FieldProtectionHostWiringTests
             .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys());
         using var interop = new WebApplicationFactory<Cadence.Apps.Interop.Program>()
             .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys().UseTestSceSigningKey());
+        using var execution = new WebApplicationFactory<Cadence.Apps.Execution.Program>()
+            .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestDemographicsKey().UseTestRandomizationKey().UseTestFieldProtectionKeys());
 
         AssertRejectsMissingKey<FieldEncryptionOptions>(payments.Services, new FieldEncryptionOptions(), new FieldEncryptionOptions { KeyBase64 = " " });
         AssertRejectsMissingKey<FieldEncryptionOptions>(econsent.Services, new FieldEncryptionOptions(), new FieldEncryptionOptions { KeyBase64 = " " });
         AssertRejectsMissingKey<LookupHashOptions>(interop.Services, new LookupHashOptions(), new LookupHashOptions { KeyBase64 = " " });
+        AssertRejectsMissingKey<LookupHashOptions>(execution.Services, new LookupHashOptions(), new LookupHashOptions { KeyBase64 = " " });
     }
 
     private static void AssertRejectsMissingKey<TOptions>(IServiceProvider services, params TOptions[] invalid)

@@ -15,6 +15,7 @@ public record Principal
     public IReadOnlyList<string> AssignedStudies { get; init; } = Array.Empty<string>();
     public bool UnblindedAccess { get; init; } = false;
     public string? SponsorId { get; init; }
+    public string? SubjectCode { get; init; }
     public string? ChangeReason { get; init; }
     public IReadOnlyList<string> RawRoles { get; init; } = Array.Empty<string>();
 }

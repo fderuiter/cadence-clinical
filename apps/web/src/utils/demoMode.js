@@ -10,7 +10,9 @@ export function isDemoBuild(env) {
     return env?.MODE === "demo" || env?.VITE_DEMO_MODE === "true";
   }
   return (
-    import.meta.env.MODE === "demo" || import.meta.env.VITE_DEMO_MODE === "true"
+    Boolean(import.meta.env) &&
+    (import.meta.env.MODE === "demo" ||
+      import.meta.env.VITE_DEMO_MODE === "true")
   );
 }
 

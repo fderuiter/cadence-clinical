@@ -88,6 +88,7 @@ public sealed class GatewayAuthenticationHandler(
         string rolesHeader = headers[GatewayHeaders.Roles].ToString();
         string siteHeader = headers[GatewayHeaders.SiteId].ToString();
         string studyHeader = headers[GatewayHeaders.StudyIds].ToString();
+        string? subjectCode = GatewayIdentity.NullIfBlank(headers[GatewayHeaders.SubjectCode].ToString());
         string sponsorId = headers[GatewayHeaders.SponsorId].ToString();
         string unblindedHeader = headers[GatewayHeaders.UnblindedAccess].ToString();
         bool unblindedAccess = string.Equals(unblindedHeader, "true", StringComparison.OrdinalIgnoreCase);
@@ -112,7 +113,8 @@ public sealed class GatewayAuthenticationHandler(
             sponsorId: GatewayIdentity.NullIfBlank(sponsorId),
             unblindedAccess: unblindedAccess,
             tenantId: tenantId,
-            sigToken: GatewayIdentity.NullIfBlank(sigToken));
+            sigToken: GatewayIdentity.NullIfBlank(sigToken),
+            subjectCode: subjectCode);
 
         if (!verified)
         {
@@ -133,6 +135,7 @@ public sealed class GatewayAuthenticationHandler(
             AssignedStudies = studies,
             UnblindedAccess = unblindedAccess,
             SponsorId = GatewayIdentity.NullIfBlank(sponsorId),
+            SubjectCode = subjectCode,
             ChangeReason = GatewayIdentity.NullIfBlank(changeReason),
         };
 
@@ -152,6 +155,11 @@ public sealed class GatewayAuthenticationHandler(
         if (!string.IsNullOrWhiteSpace(sponsorId))
         {
             claims.Add(new Claim(CadenceClaimTypes.SponsorId, sponsorId));
+        }
+
+        if (subjectCode is not null)
+        {
+            claims.Add(new Claim(CadenceClaimTypes.SubjectCode, subjectCode));
         }
 
         if (unblindedAccess)
@@ -187,6 +195,7 @@ public static class CadenceClaimTypes
     public const string TenantId = "tenant_id";
     public const string SiteId = "site_id";
     public const string StudyIds = "study_ids";
+    public const string SubjectCode = "subject_code";
     public const string SponsorId = "sponsor_id";
     public const string UnblindedAccess = "unblinded_access";
 }

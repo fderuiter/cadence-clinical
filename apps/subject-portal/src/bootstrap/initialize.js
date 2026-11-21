@@ -140,18 +140,31 @@ export async function initializeApp() {
     await checkPendingReconsent();
   }
 
-  // Graceful Service Worker Registration (skipped when startMswWorker already registered unified sw.js?msw=1)
+  // Graceful Service Worker Registration in production builds (skipped in dev, Playwright mock_token harnesses, and when startMswWorker already registered unified sw.js?msw=1)
+  const hasMockStorageSession = (() => {
+    try {
+      return Boolean(
+        sessionStorage.getItem("mock_token") ||
+        localStorage.getItem("mock_token")
+      );
+    } catch {
+      return false;
+    }
+  })();
+
   if (
     typeof navigator !== "undefined" &&
     "serviceWorker" in navigator &&
+    import.meta.env.PROD &&
     !window.__MOCK_TEST_ENV__ &&
+    !hasMockStorageSession &&
     !shouldEnableMsw
   ) {
     const swBase = (import.meta.env.BASE_URL || "/subject-portal/").replace(
       /\/?$/,
       "/"
     );
-    window.addEventListener("load", () => {
+    const registerServiceWorker = () => {
       navigator.serviceWorker
         .register(`${swBase}sw.js`, { scope: swBase })
         .then((reg) => {
@@ -160,7 +173,13 @@ export async function initializeApp() {
         .catch((err) => {
           console.error("Service Worker registration failed:", err);
         });
-    });
+    };
+
+    if (typeof document !== "undefined" && document.readyState === "complete") {
+      registerServiceWorker();
+    } else {
+      window.addEventListener("load", registerServiceWorker, { once: true });
+    }
   }
 
   // Initial sync & sync queue rendering (stipend evaluation runs for authenticated or demo sessions)

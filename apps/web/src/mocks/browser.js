@@ -1,5 +1,10 @@
 import { setupWorker } from "msw/browser";
-import { normalizeMswBasePath, waitForMswController } from "ui/testing";
+import {
+  ensureMswServiceWorkerReady,
+  normalizeMswBasePath,
+  waitForMswController,
+  withMswStartTimeout,
+} from "ui/testing";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { gatewayHandlers } from "./handlers.js";
 
@@ -40,11 +45,17 @@ export async function startMswWorker(customOptions = {}) {
 
   const runWebWorkerStart = async () => {
     try {
-      const registration = await activeWorker.start({
+      if (!customOptions.worker) {
+        await ensureMswServiceWorkerReady(serviceWorker);
+      }
+      const startCall = activeWorker.start({
         onUnhandledFrame,
         quiet: Boolean(customOptions.quiet),
         serviceWorker,
       });
+      const registration = customOptions.worker
+        ? await startCall
+        : await withMswStartTimeout(startCall);
       await waitForMswController();
       console.log(
         "[MSW] Mock Service Worker started for Web App API Gateway simulation."

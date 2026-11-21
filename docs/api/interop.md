@@ -4,6 +4,9 @@ Generated from `docs/openapi/interop_openapi.json` by `pnpm cadence generate-api
 
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
+| `GET` | `/api/v1/interop/assignments/subject/{subjectId}` | ListSubjectAssignments |  |
+| `POST` | `/api/v1/interop/epro/submit` | SubmitEproDiary |  |
+| `POST` | `/api/v1/interop/epro/sync` | SyncEproBatch |  |
 | `GET` | `/api/v1/interop/esource/candidates` | ListCandidates |  |
 | `GET` | `/api/v1/interop/esource/candidates/{candidate_id}` | GetCandidate |  |
 | `GET` | `/api/v1/interop/esource/endpoints` | ListEhrEndpoints |  |
@@ -18,6 +21,8 @@ Generated from `docs/openapi/interop_openapi.json` by `pnpm cadence generate-api
 | `POST` | `/api/v1/interop/esource/reconcile/reject` | RejectCandidate |  |
 | `POST` | `/api/v1/interop/esource/smart/assertion` | GenerateClientAssertion |  |
 | `POST` | `/api/v1/interop/esource/smart/verify` | VerifyClientAssertion |  |
+| `GET` | `/api/v1/interop/instruments/{id}` | GetEproInstrument |  |
+| `POST` | `/api/v1/interop/notifications/{notificationId}/acknowledge` | AcknowledgeSubjectNotification |  |
 | `POST` | `/api/v1/interop/sce/execute` |  |  |
 | `GET` | `/api/v1/interop/sce/lock-tokens` |  |  |
 | `POST` | `/api/v1/interop/sce/lock-tokens` |  |  |
@@ -31,4 +36,7 @@ Generated from `docs/openapi/interop_openapi.json` by `pnpm cadence generate-api
 | `POST` | `/api/v1/interop/sce/runs/{run_id}/verify` |  |  |
 | `POST` | `/api/v1/interop/sce/validate-lockfile` |  |  |
 | `GET` | `/api/v1/interop/status` | InteropStatus | Returns Interoperability operational status. |
+| `GET` | `/api/v1/interop/subjects/{subjectId}/compliance` | GetSubjectCompliance |  |
+| `GET` | `/api/v1/interop/subjects/{subjectId}/instruments` | ListSubjectInstruments |  |
+| `GET` | `/api/v1/interop/subjects/{subjectId}/notifications` | ListSubjectNotifications |  |
 | `GET` | `/healthz` | InteropHealthCheck | Interoperability FHIR & CDISC connector health probe. |

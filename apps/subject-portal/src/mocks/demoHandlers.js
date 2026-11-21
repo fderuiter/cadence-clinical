@@ -29,6 +29,7 @@ export function createPortalDemoStore() {
     consentCaptured: false,
     walletBalance: 125.0,
     complianceScore: 92,
+    redeemedActivation: null,
   };
 
   function reset() {
@@ -40,6 +41,7 @@ export function createPortalDemoStore() {
     state.consentCaptured = false;
     state.walletBalance = 125.0;
     state.complianceScore = 92;
+    state.redeemedActivation = null;
   }
 
   reset();
@@ -186,6 +188,45 @@ export function createPortalDemoHandlers(store = portalDemoStore) {
         recorded_at: new Date().toISOString(),
       })
     ),
+    http.post(
+      "*/api/v1/execution/subjects/activation-codes/redeem",
+      async ({ request }) => {
+        const body = await request.json().catch(() => ({}));
+        const code = String(body?.activation_code || "").trim();
+        if (!code) {
+          return HttpResponse.json(
+            {
+              title: "Validation failed",
+              status: 400,
+              errors: { activation_code: ["Activation code is required."] },
+            },
+            { status: 400 }
+          );
+        }
+        const redeemedAt = new Date().toISOString();
+        const expiresAt = new Date(
+          Date.now() + 30 * 24 * 60 * 60 * 1000
+        ).toISOString();
+        const binding = {
+          subject_id: "SUBJ-101-001",
+          study_id: "STUDY-01",
+          site_id: "SITE-101",
+          redeemed_at: redeemedAt,
+          expires_at: expiresAt,
+        };
+        store.state.redeemedActivation = binding;
+        return HttpResponse.json(binding);
+      }
+    ),
+    http.get("*/api/v1/execution/subjects/activation-codes/me", () => {
+      if (!store.state.redeemedActivation) {
+        return HttpResponse.json(
+          { title: "No redeemed activation code found.", status: 404 },
+          { status: 404 }
+        );
+      }
+      return HttpResponse.json(store.state.redeemedActivation);
+    }),
     http.post(
       "*/api/v1/econsent/reconsent/complete/:requirementId",
       ({ params }) => {

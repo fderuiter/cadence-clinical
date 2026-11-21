@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading;
@@ -84,6 +85,18 @@ public static partial class SubjectEndpoints
         Level = LogLevel.Information,
         Message = "Deleting demographics for subject '{SubjectId}' with reason '{ChangeReason}'")]
     public static partial void LogDeletingSubjectDemographics(this ILogger logger, string subjectId, string changeReason);
+
+    [LoggerMessage(
+        EventId = 3008,
+        Level = LogLevel.Information,
+        Message = "Issuing 30-day BYOD activation code for subject '{SubjectId}' with reason '{ChangeReason}'")]
+    public static partial void LogIssuingSubjectActivationCode(this ILogger logger, string subjectId, string changeReason);
+
+    [LoggerMessage(
+        EventId = 3009,
+        Level = LogLevel.Information,
+        Message = "Redeeming BYOD activation code with reason '{ChangeReason}'")]
+    public static partial void LogRedeemingSubjectActivationCode(this ILogger logger, string changeReason);
 
     public static IEndpointRouteBuilder MapSubjectEndpoints(this IEndpointRouteBuilder app)
     {
@@ -172,6 +185,31 @@ public static partial class SubjectEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission("subject_enrollment:update")
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
+
+        group.MapPost("/{subjectId}/activation-code", IssueSubjectActivationCodeAsync)
+            .WithName("IssueSubjectActivationCode")
+            .Produces<SubjectActivationCodeIssueResponse>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission("subject_enrollment:update")
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+
+        group.MapPost("/activation-codes/redeem", RedeemSubjectActivationCodeAsync)
+            .WithName("RedeemSubjectActivationCode")
+            .Produces<SubjectActivationCodeRedeemResponse>(StatusCodes.Status200OK)
+            .ProducesValidationProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .RequirePermission("ecoa_activation:redeem")
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+
+        group.MapGet("/activation-codes/me", GetMyRedeemedActivationCodeAsync)
+            .WithName("GetMyRedeemedActivationCode")
+            .Produces<SubjectActivationCodeRedeemResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission("ecoa_activation:redeem");
 
         return app;
     }
@@ -442,6 +480,95 @@ public static partial class SubjectEndpoints
         var result = await svc.DeleteDemographicsAsync(subjectId, changeReason, ct).ConfigureAwait(false);
         return result.Match(r => Results.Ok(r), e => e.ToProblemResult());
     }
+
+    /// <summary>
+    /// <c>POST /api/v1/execution/subjects/{subjectId}/activation-code</c>. Issues a single-use 30-day BYOD
+    /// activation code for <paramref name="subjectId"/>, storing only its keyed HMAC-SHA256 digest at rest.
+    /// Restricted to investigators and clinical research coordinators via <see cref="SubjectAuthority.AuthorizeParticipantChange"/>.
+    /// </summary>
+    public static async Task<IResult> IssueSubjectActivationCodeAsync(
+        string subjectId, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        string changeReason = ChangeReasonHeader.Read(http.Request)!;
+
+        if (SubjectAuthority.AuthorizeParticipantChange(http.User.ToAuthenticatedCaller()) is { } forbidden)
+        {
+            return forbidden.ToProblemResult();
+        }
+
+        if (await GuardSubjectScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
+        if (logger != null)
+        {
+            logger.LogIssuingSubjectActivationCode(subjectId, changeReason);
+        }
+
+        var result = await svc.IssueActivationCodeAsync(subjectId, changeReason, ct).ConfigureAwait(false);
+        return result.Match(
+            onSuccess: r => Results.Created($"/api/v1/execution/subjects/{r.SubjectId}", r),
+            onFailure: e => e.ToProblemResult());
+    }
+
+    /// <summary>
+    /// <c>POST /api/v1/execution/subjects/activation-codes/redeem</c>. Redeems a 30-day BYOD activation code
+    /// for the authenticated participant and binds their hashed principal identifier to the participant's <see cref="SubjectCode"/>.
+    /// </summary>
+    public static async Task<IResult> RedeemSubjectActivationCodeAsync(
+        SubjectActivationCodeRedeemRequest request, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        string changeReason = ChangeReasonHeader.Read(http.Request)!;
+
+        if (string.IsNullOrWhiteSpace(request.ActivationCode))
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["activation_code"] = ["Activation code is required."],
+            });
+        }
+
+        string? callerPrincipalId = ResolveCallerPrincipalId(http.User);
+        if (string.IsNullOrWhiteSpace(callerPrincipalId))
+        {
+            return Results.Problem("Authenticated principal identifier is required.", statusCode: StatusCodes.Status403Forbidden);
+        }
+
+        if (logger != null)
+        {
+            logger.LogRedeemingSubjectActivationCode(changeReason);
+        }
+
+        var result = await svc.RedeemActivationCodeAsync(request.ActivationCode, callerPrincipalId, changeReason, ct).ConfigureAwait(false);
+        return result.Match(Results.Ok, e => e.ToProblemResult());
+    }
+
+    /// <summary>
+    /// <c>GET /api/v1/execution/subjects/activation-codes/me</c>. Resolves the participant <see cref="SubjectCode"/>
+    /// bound to the authenticated caller from a previously redeemed BYOD activation code.
+    /// </summary>
+    public static async Task<IResult> GetMyRedeemedActivationCodeAsync(
+        HttpContext http, ISubjectApplicationService svc, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        string? callerPrincipalId = ResolveCallerPrincipalId(http.User);
+        if (string.IsNullOrWhiteSpace(callerPrincipalId))
+        {
+            return Results.Problem("Authenticated principal identifier is required.", statusCode: StatusCodes.Status403Forbidden);
+        }
+
+        var result = await svc.GetRedeemedActivationAsync(callerPrincipalId, ct).ConfigureAwait(false);
+        return result.Match(Results.Ok, e => e.ToProblemResult());
+    }
+
+    private static string? ResolveCallerPrincipalId(ClaimsPrincipal user) =>
+        user.FindFirst("sub")?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
     private static async Task<IResult?> GuardSubjectScopeAsync(
         string subjectId, HttpContext http, ISubjectApplicationService svc, CancellationToken ct)

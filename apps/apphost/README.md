@@ -63,7 +63,7 @@ Aspire sets `OTEL_EXPORTER_OTLP_ENDPOINT` on each project; [packages/telemetry](
 ## Configuration
 
 Credentials have no default value (ADR-2260). These are Aspire secret parameters, declared only when a resource
-that uses them runs (the `core` profile never asks for the MinIO or field-protection keys, and an existing OIDC
+that uses them runs (the `core` profile never asks for the MinIO or field-encryption keys, and an existing OIDC
 issuer never asks for the Keycloak admin):
 
 - the MinIO root user and password, and the Keycloak admin user and password;
@@ -74,8 +74,10 @@ issuer never asks for the Keycloak admin):
 - `randomization-allocation-key`, passed to execution as `RANDOMIZATION_ALLOCATION_KEY` (base64 of 32 bytes, a
   different key; it encrypts randomisation lists, allocations and kit arm labels, and execution refuses to start
   without one, ADR-2640);
-- `field-encryption-key`, passed to econsent and payments as `FIELD_ENCRYPTION_KEY`, and `field-lookup-hash-key`,
-  passed to interop as `FIELD_LOOKUP_HASH_KEY` (base64 of 32 bytes each, ADR-2494);
+- `field-lookup-hash-key`, passed to execution and interop as `FIELD_LOOKUP_HASH_KEY` (base64 of 32 bytes; hashes
+  BYOD participant activation tokens and device-token lookups, and both services refuse to start without one,
+  ADR-2494);
+- `field-encryption-key`, passed to econsent and payments as `FIELD_ENCRYPTION_KEY` (base64 of 32 bytes, ADR-2494);
 - `sce-signing-key`, passed to interop as `CADENCE_SCE_SIGNING_KEY` (base64 of 32 bytes; signs SCE database-lock
   tokens, ADR-2515);
 - `imaging-deid-signing-key` and `imaging-deid-pseudonymization-key`, passed to imaging as

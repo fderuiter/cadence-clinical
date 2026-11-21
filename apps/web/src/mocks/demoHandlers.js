@@ -397,10 +397,49 @@ export function createWebDemoHandlers(store = webDemoStore) {
       const body = await readJsonBody(request);
       return HttpResponse.json(store.createSubject(body), { status: 201 });
     }),
+    http.post(
+      "*/api/v1/execution/subjects/activation-codes/redeem",
+      async ({ request }) => {
+        const body = await readJsonBody(request);
+        if (!body?.activation_code || !String(body.activation_code).trim()) {
+          return HttpResponse.json(
+            {
+              title: "Validation failed",
+              status: 400,
+              errors: { activation_code: ["Activation code is required."] },
+            },
+            { status: 400 }
+          );
+        }
+        return HttpResponse.json(
+          store.redeemSubjectActivationCode(body.activation_code)
+        );
+      }
+    ),
+    http.get("*/api/v1/execution/subjects/activation-codes/me", () => {
+      const redeemed = store.getRedeemedSubjectActivationCode();
+      if (!redeemed) {
+        return HttpResponse.json(
+          { title: "No redeemed activation code found.", status: 404 },
+          { status: 404 }
+        );
+      }
+      return HttpResponse.json(redeemed);
+    }),
     http.get("*/api/v1/execution/subjects/:subjectId", ({ params }) =>
       HttpResponse.json(
         store.getSubjectDetail(decodeURIComponent(String(params.subjectId)))
       )
+    ),
+    http.post(
+      "*/api/v1/execution/subjects/:subjectId/activation-code",
+      ({ params }) =>
+        HttpResponse.json(
+          store.issueSubjectActivationCode(
+            decodeURIComponent(String(params.subjectId))
+          ),
+          { status: 201 }
+        )
     ),
     http.patch(
       "*/api/v1/execution/subjects/:subjectId/state",

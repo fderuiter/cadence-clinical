@@ -405,6 +405,8 @@ export function createWebDemoStore() {
     stipendRules: [],
     expenseClaims: [],
     walletTransactions: [],
+    activationTokens: [],
+    redeemedActivation: null,
   };
 
   function seedInitialState() {
@@ -520,6 +522,8 @@ export function createWebDemoStore() {
         treatment_group: "ARM-A",
       },
     ];
+    state.activationTokens = [];
+    state.redeemedActivation = null;
 
     const initialForm = createInitialForm();
     state.forms = new Map([[initialForm.form_id, initialForm]]);
@@ -2468,6 +2472,63 @@ export function createWebDemoStore() {
         active_protocol_version: found.active_protocol_version,
         encrypted_demographics: null,
       };
+    },
+
+    issueSubjectActivationCode(subjectId) {
+      const found =
+        state.subjects.find(
+          (s) =>
+            s.subject_id.toUpperCase() === String(subjectId).toUpperCase() ||
+            s.id === subjectId
+        ) || state.subjects[0];
+      const seq = String(nextCounter()).padStart(4, "0");
+      const issuedAt = new Date("2026-11-20T12:00:00Z");
+      const expiresAt = new Date(issuedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const activationCode = `SYNTH-BYOD-30D-${seq}`;
+      const record = {
+        subject_id: found.subject_id,
+        study_id: found.study_id,
+        site_id: found.site_id || null,
+        activation_code: activationCode,
+        issued_at: issuedAt.toISOString(),
+        expires_at: expiresAt.toISOString(),
+        expires_in_days: 30,
+      };
+      state.activationTokens.push(record);
+      recordActivity(
+        "execution.subject.activation_code_issued",
+        "execution",
+        "enrollment",
+        `enrollment:${found.id}`,
+        "usr-crc-01"
+      );
+      return record;
+    },
+
+    redeemSubjectActivationCode(activationCode) {
+      const normalized = String(activationCode || "").trim();
+      const matched = state.activationTokens.find(
+        (t) => t.activation_code === normalized
+      );
+      const targetSubject = matched
+        ? state.subjects.find((s) => s.subject_id === matched.subject_id) ||
+          state.subjects[0]
+        : state.subjects[0];
+      const redeemedAt = "2026-11-20T12:05:00Z";
+      const expiresAt = matched?.expires_at || "2026-12-20T12:00:00Z";
+      const binding = {
+        subject_id: targetSubject.subject_id,
+        study_id: targetSubject.study_id,
+        site_id: targetSubject.site_id || null,
+        redeemed_at: redeemedAt,
+        expires_at: expiresAt,
+      };
+      state.redeemedActivation = binding;
+      return binding;
+    },
+
+    getRedeemedSubjectActivationCode() {
+      return state.redeemedActivation;
     },
 
     getSiteCompliance(
