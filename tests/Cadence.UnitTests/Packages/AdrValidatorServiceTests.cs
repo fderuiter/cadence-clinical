@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 
 using Cadence.Testing;
@@ -26,10 +28,17 @@ public sealed class AdrValidatorServiceTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_adrDir))
+        if (!Directory.Exists(_adrDir))
         {
-            Directory.Delete(_adrDir, recursive: true);
+            return;
         }
+
+        foreach (var file in new DirectoryInfo(_adrDir).EnumerateFiles("*", SearchOption.AllDirectories))
+        {
+            file.Attributes = FileAttributes.Normal;
+        }
+
+        Directory.Delete(_adrDir, recursive: true);
     }
 
     private void WriteAdr(string fileName, string heading) =>
@@ -168,5 +177,92 @@ public sealed class AdrValidatorServiceTests : IDisposable
         string repoAdrDir = Path.Combine(AdrValidatorService.FindRepoRoot(), "docs", "adr");
 
         AdrValidatorService.FindIntegrityErrors(repoAdrDir).Should().BeEmpty();
+    }
+
+    [Fact]
+    [Trait("Category", "Tooling")]
+    public void ValidateAdrs_RejectsCommittedGatewayAndPackageJsonDependencyChangesWithoutAdr_AndAdmitsPreCommitWhenBranchAddedAdr()
+    {
+        string repo = Path.Combine(_adrDir, "repo");
+        Directory.CreateDirectory(Path.Combine(repo, "docs", "adr"));
+        Directory.CreateDirectory(Path.Combine(repo, "docs", "SDLC"));
+        Directory.CreateDirectory(Path.Combine(repo, "apps", "gateway", "src"));
+
+        File.WriteAllText(Path.Combine(repo, "docs", "SDLC", "prd.md"), "#### PRD-SYS-001: Gateway routing\n");
+        File.WriteAllText(Path.Combine(repo, "docs", "adr", "TEMPLATE.md"), "# ADR-[NUMBER]: Title\n");
+        File.WriteAllText(
+            Path.Combine(repo, "docs", "adr", "2025-01-01-initial.md"),
+            "# ADR-0100: Initial\n\n## Status\nAccepted\n\n## Context\nBaseline.\n\n## Decision\nKeep.\n\n## Alternatives Considered\nNone.\n\n## Trade-offs\nNone.\n");
+        File.WriteAllText(
+            Path.Combine(repo, "docs", "adr", "index.md"),
+            "# ADR Index\n\n- [ADR-0100: Initial](2025-01-01-initial.md)\n");
+        File.WriteAllText(Path.Combine(repo, "apps", "gateway", "src", "Program.cs"), "class Program {}\n");
+        File.WriteAllText(
+            Path.Combine(repo, "package.json"),
+            "{\n  \"name\": \"cadence\",\n  \"scripts\": { \"test\": \"vitest\" },\n  \"devDependencies\": { \"vitest\": \"3.0.0\" }\n}\n");
+
+        RunGit(repo, "init", "-q", "-b", "main");
+        RunGit(repo, "add", "-A");
+        RunGit(repo, "commit", "-q", "-m", "baseline");
+        RunGit(repo, "update-ref", "refs/remotes/origin/main", "HEAD");
+        RunGit(repo, "checkout", "-q", "-b", "feature");
+
+        // Committed script-only change in package.json needs no ADR.
+        File.WriteAllText(
+            Path.Combine(repo, "package.json"),
+            "{\n  \"name\": \"cadence\",\n  \"scripts\": { \"test\": \"vitest run\" },\n  \"devDependencies\": { \"vitest\": \"3.0.0\" }\n}\n");
+        RunGit(repo, "add", "-A");
+        RunGit(repo, "commit", "-q", "-m", "chore: update test script");
+        AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: repo).Should().BeTrue();
+
+        // Committed dependency change in package.json against compareBase fails without an ADR.
+        File.WriteAllText(
+            Path.Combine(repo, "package.json"),
+            "{\n  \"name\": \"cadence\",\n  \"scripts\": { \"test\": \"vitest run\" },\n  \"devDependencies\": { \"vitest\": \"4.0.0\" }\n}\n");
+        RunGit(repo, "add", "-A");
+        RunGit(repo, "commit", "-q", "-m", "build: bump vitest major");
+        AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: repo).Should().BeFalse();
+
+        // Adding an ADR on the branch satisfies both the branch check and subsequent --pre-commit architectural edits!
+        File.WriteAllText(
+            Path.Combine(repo, "docs", "adr", "2026-11-20-gateway-and-toolchain.md"),
+            "# ADR-0101: Gateway and toolchain\n\n## Status\nAccepted\n\n## Context\nImplements PRD-SYS-001.\n\n## Decision\nUpgrade gateway and toolchain.\n\n## Alternatives Considered\nManual scripting.\n\n## Trade-offs\nValidated in CI.\n");
+        File.WriteAllText(
+            Path.Combine(repo, "docs", "adr", "index.md"),
+            "# ADR Index\n\n- [ADR-0100: Initial](2025-01-01-initial.md)\n- [ADR-0101: Gateway and toolchain](2026-11-20-gateway-and-toolchain.md)\n");
+        RunGit(repo, "add", "-A");
+        RunGit(repo, "commit", "-q", "-m", "docs: add ADR-0101");
+        AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: repo).Should().BeTrue();
+
+        // Follow-up staged gateway edit on the same branch passes --pre-commit because ADR-0101 was already added in mergeBase..HEAD.
+        File.WriteAllText(Path.Combine(repo, "apps", "gateway", "src", "Program.cs"), "class Program { static void Main() {} }\n");
+        RunGit(repo, "add", "apps/gateway/src/Program.cs");
+        AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: repo, preCommit: true).Should().BeTrue();
+    }
+
+    private static void RunGit(string workingDir, params string[] args)
+    {
+        var psi = new ProcessStartInfo("git")
+        {
+            WorkingDirectory = workingDir,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        foreach (string arg in new List<string> { "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgsign=false" })
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        foreach (string arg in args)
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        using var process = Process.Start(psi)!;
+        process.StandardOutput.ReadToEnd();
+        string err = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        process.ExitCode.Should().Be(0, err);
     }
 }

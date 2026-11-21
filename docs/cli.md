@@ -74,15 +74,19 @@ pnpm cadence check                       # every gate
 pnpm cadence check <gate>                # one gate
 pnpm cadence check <gate> <files>        # one gate, limited to these files
 pnpm cadence check --exclude <gate>      # every gate except the named gate (repeatable)
+pnpm cadence check --base <ref>          # scope branch diffs against <ref> (default: origin/main)
+pnpm cadence check --push-before <sha>   # scope push diffs across <sha>..HEAD (falls back to git ls-files -z)
 pnpm cadence check --pre-commit          # what the pre-commit hook runs
 ```
 
-| Argument           | Description                                                                                                                                                             |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `[gate]`           | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens.                                        |
-| `[files]`          | Files to check. Only the gates marked in the table below use them.                                                                                                      |
-| `--exclude <gate>` | Skip a gate by name or alias when running all gates (repeatable). Fails on an unknown gate name or when combined with `[gate]`.                                         |
-| `--pre-commit`     | What the pre-commit hook runs: the staged files are the `[files]`, and each gate runs, runs a quicker variant or is skipped as the last column of the table below says. |
+| Argument              | Description                                                                                                                                                                                               |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[gate]`              | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens.                                                                          |
+| `[files]`             | Files to check. Only the gates marked in the table below use them.                                                                                                                                        |
+| `--exclude <gate>`    | Skip a gate by name or alias when running all gates (repeatable). Fails on an unknown gate name or when combined with `[gate]`.                                                                           |
+| `--base <ref>`        | Base Git ref for revision-scoped gates (`deid`, `adrs`, `gxp-snapshot`, `baseline-ratchet`, and secret scanning; defaults to `origin/main`). Scans all tracked files when `HEAD` matches `<ref>`.         |
+| `--push-before <sha>` | Pre-push SHA used in CI push runs (`<sha>..HEAD`). Falls back to every tracked file (`git ls-files -z`) when `<sha>` is all zeros, a tag, or not an ancestor of `HEAD`. Mutually exclusive with `--base`. |
+| `--pre-commit`        | What the pre-commit hook runs: the staged files are the `[files]`, and each gate runs, runs a quicker variant or is skipped as the last column of the table below says.                                   |
 
 With no gate, every gate runs in the order below. A failing gate does not stop the run. The command exits `1` if any
 gate failed. An unknown gate name prints the gate names and exits `1`.
@@ -131,28 +135,36 @@ must make it fail.
 | `demo-manifest`       | `validate-demo-manifest`                                               |                 | Runs                                                                                                                                   |
 | `rtm`                 | `gxp-rtm-validate`                                                     |                 | Runs                                                                                                                                   |
 | `gxp-snapshot`        | `gxp-snapshot-guard`                                                   |                 | Quick: checks the staged files instead of the branch                                                                                   |
-| `baseline-ratchet`    | `baselines`                                                            |                 | Quick: checks the staged files; `CADENCE_BASELINE_GROWTH="<reason>"` admits growth                                                     |
+| `baseline-ratchet`    | `baselines`                                                            |                 | Quick: checks staged files against `HEAD`; `CADENCE_BASELINE_GROWTH="<reason>"` admits growth                                          |
 
 <!-- quality-gates:end -->
 
 The `gxp-snapshot` gate (also `gxp-snapshot-guard`, ADR-2532) fails when the generated RTM, the IQ/OQ/PQ report or
-anything under `docs/SDLC/runs/` is changed: the staged files with `--pre-commit`, otherwise everything the branch changed
-since its merge base with `origin/main`, uncommitted changes included. With `CADENCE_GXP_SNAPSHOT=1` it admits them, and
-outside the pre-commit hook it then runs `cadence gxp diff` instead. A branch that changed them restores `main`'s copy
-with `git checkout origin/main -- docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md docs/SDLC/runs`.
+anything under `docs/SDLC/runs/` is changed: the staged files with `--pre-commit`, the `--push-before <sha>..HEAD` range
+on pushes to `main` or `release/*`, and otherwise everything the branch changed since its merge base with `--base <ref>`
+(default `origin/main`), uncommitted changes included. With `CADENCE_GXP_SNAPSHOT=1` it admits them, and outside the
+pre-commit hook it then runs `cadence gxp diff` instead. A branch that changed them restores `main`'s copy with
+`git checkout origin/main -- docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md docs/SDLC/runs`.
 
-The `baseline-ratchet` gate (also `baselines`, #5318) fails when a ratchet baseline gained an entry since the merge
-base with `origin/main`: every tracked `*.baseline.txt` or `*-baseline.txt` file (comment lines ignored) and the
-`results` of `.secrets.baseline`, compared as multisets, so a reorder or a shrink passes. It reads the staged copies with
-`--pre-commit` and the working tree otherwise. A `Baseline-Growth: <reason>` trailer on any commit since the merge base
-admits the growth; in the pre-commit hook `CADENCE_BASELINE_GROWTH="<reason>"` admits it for the commit being made.
-Without `origin/main` it is skipped, except in CI (`CI` or `GITHUB_ACTIONS` set), where it fails.
+The `baseline-ratchet` gate (also `baselines`, #5318) fails when a ratchet baseline gained an entry: every tracked
+`*.baseline.txt` or `*-baseline.txt` file (comment lines ignored) and the `results` of `.secrets.baseline`, compared as
+multisets, so a reorder or a shrink passes. With `--pre-commit` it compares the staged index copies against `HEAD` and
+admits staged growth only when `CADENCE_BASELINE_GROWTH="<reason>"` is set. Outside `--pre-commit` it rejects any
+uncommitted working-tree growth and inspects every commit in `compareBase..HEAD` (`--push-before <sha>` or the merge
+base with `--base <ref>`), requiring each commit that grows a baseline file to carry a matching
+`Baseline-Growth: <path> - <reason>` trailer for each grown file. Without the base ref it is skipped locally and fails
+in CI (`CI` or `GITHUB_ACTIONS` set).
 
-The `deid` gate scans the given files, or every file git tracks, with the full de-identification detector
-(`packages/deid`). Tests, docs, scripts and generated folders are skipped. A line containing `deid-ignore` is skipped. Findings print as
+The `deid` gate scans the given files, or the candidate files resolved from `--pre-commit`, `--push-before <sha>`, or
+`--base <ref>` (default `origin/main`, falling back to every file git tracks via `git ls-files -z` when `HEAD` equals
+the base ref, the base ref is missing, or `--push-before` is all zeros, a tag, or a non-ancestor), with the full
+de-identification detector (`packages/deid`). Candidate files cover all 19 text extensions, `AlwaysScannedNames`
+(`Dockerfile`, `Makefile`, `LICENSE`, `Pipfile`, `pyproject.toml`, `package.json`, `pnpm-workspace.yaml`,
+`pnpm-lock.yaml`, `uv.lock`) and extensionless UTF-8 text files (such as `.gitignore` and `.editorconfig`); tests, docs,
+scripts and generated folders are skipped. A line containing `deid-ignore` is skipped. Findings print as
 `path:line:column` and category, never the matched value. Findings that predate the full detector are listed in
-`.deid-baseline.txt` (`path|category|line hash`), which may only shrink: a new finding or a stale entry fails the
-gate. Run `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid` to drop stale entries.
+`.deid-baseline.txt` (`path|category|line hash`), which may only shrink: a new finding or a stale entry fails the gate.
+Run `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid` to drop stale entries.
 
 See [CI.md](CI.md#quality-gates) for the list of gates and what each one checks.
 
@@ -184,7 +196,7 @@ pnpm cadence ci --list                  # what each step runs locally, without r
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `-j\|--job <job>` | Runs this job and the jobs it needs. Jobs: `actionlint`, `lint-and-static`, `dotnet-quality`, `native-aot-build`, `docs-build`, `security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`.                                           |
 | `--allow-skip`    | Skips steps whose required binary (`actionlint`, `hadolint`, `shellcheck`, `detect-secrets-hook`, `bash`) is missing on `PATH` with the install hint, and accepts a run whose database tests did not execute (without PostgreSQL or with skipped TRX). |
-| `--base <ref>`    | The ref that changed files are compared with, for the duplication, DEID and detect-secrets steps. Default: `origin/main`.                                                                                                                              |
+| `--base <ref>`    | The ref forwarded as `--base <ref>` to CLI `check` steps and `Check GxP Snapshot Policy`. Default: `origin/main`.                                                                                                                                      |
 | `--list`          | Prints each step and what it runs locally, then exits `0`.                                                                                                                                                                                             |
 
 It follows the workflow's rules: inside a job, a failed step stops the later steps unless CI gives them `if: always()`,
