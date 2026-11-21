@@ -32,7 +32,7 @@ public static class DeviceEndpoints
             .Produces<ParsedUdiResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("device_accountability:read");
+            .RequirePermission("device_accountability:read").RequireCallerStudyAndSiteScope();
 
         group.MapPost("/inventory", RegisterInventoryAsync)
             .WithName("RegisterDeviceInventory")
@@ -41,7 +41,7 @@ public static class DeviceEndpoints
             .Produces<IReadOnlyList<DeviceInventoryResponse>>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("device_accountability:register");
+            .RequirePermission("device_accountability:register").RequireCallerStudyAndSiteScope();
 
         group.MapGet("/inventory", ListInventoryAsync)
             .WithName("ListDeviceInventory")
@@ -50,7 +50,7 @@ public static class DeviceEndpoints
             .Produces<IReadOnlyList<DeviceInventoryResponse>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("device_accountability:read");
+            .RequirePermission("device_accountability:read").RequireCallerStudyAndSiteScope();
 
         group.MapPost("/dispense", DispenseDeviceAsync)
             .WithName("DispenseDevice")
@@ -61,7 +61,7 @@ public static class DeviceEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("device_accountability:dispense");
+            .RequirePermission("device_accountability:dispense").RequireCallerStudyAndSiteScope();
 
         group.MapPost("/deficiencies", LogDeficiencyAsync)
             .WithName("LogDeviceDeficiency")
@@ -70,14 +70,14 @@ public static class DeviceEndpoints
             .Produces<DeviceDeficiencyResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("device_accountability:report_deficiency");
+            .RequirePermission("device_accountability:report_deficiency").RequireCallerStudyAndSiteScope();
 
         group.MapGet("/deficiencies", ListDeficienciesAsync)
             .WithName("ListDeviceDeficiencies")
             .WithSummary("List Device Deficiencies")
             .Produces<IReadOnlyList<DeviceDeficiencyResponse>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("device_accountability:read");
+            .RequirePermission("device_accountability:read").RequireCallerStudyAndSiteScope();
 
         group.MapGet("/deficiencies/{deficiency_id}", GetDeficiencyByIdAsync)
             .WithName("GetDeviceDeficiencyById")
@@ -85,21 +85,21 @@ public static class DeviceEndpoints
             .Produces<DeviceDeficiencyResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("device_accountability:read");
+            .RequirePermission("device_accountability:read").RequireCallerStudyAndSiteScope();
 
         group.MapPost("/quarantine", InitiateQuarantineAsync)
             .WithName("InitiateDeviceQuarantine")
             .WithSummary("Initiate Quarantine")
             .Produces<DeviceQuarantineResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("device_accountability:quarantine");
+            .RequirePermission("device_accountability:quarantine").RequireCallerStudyAndSiteScope();
 
         group.MapGet("/quarantine", ListQuarantinesAsync)
             .WithName("ListDeviceQuarantines")
             .WithSummary("List Device Quarantines")
             .Produces<IReadOnlyList<DeviceQuarantineResponse>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("device_accountability:read");
+            .RequirePermission("device_accountability:read").RequireCallerStudyAndSiteScope();
 
         group.MapPost("/quarantine/release", ReleaseQuarantineAsync)
             .WithName("ReleaseDeviceQuarantine")
@@ -107,14 +107,14 @@ public static class DeviceEndpoints
             .Produces<DeviceQuarantineResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("device_accountability:release");
+            .RequirePermission("device_accountability:release").RequireCallerStudyAndSiteScope();
 
         group.MapGet("/investigation-summary", GetInvestigationSummaryAsync)
             .WithName("GetDeviceInvestigationSummary")
             .WithSummary("Get Investigation Summary")
             .Produces<DeviceInvestigationSummaryResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("device_accountability:read");
+            .RequirePermission("device_accountability:read").RequireCallerStudyAndSiteScope();
 
         return routes;
     }

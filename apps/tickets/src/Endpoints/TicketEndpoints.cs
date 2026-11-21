@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -93,7 +92,8 @@ public static class TicketEndpoints
     public static IEndpointRouteBuilder MapTicketEndpoints(this IEndpointRouteBuilder app)
     {
         RouteGroupBuilder group = app.MapGroup("/api/v1/tickets")
-            .WithTags("Tickets");
+            .WithTags("Tickets")
+            .RequireCallerStudyAndSiteScope();
 
         group.MapPost("", CreateTicketAsync)
             .WithName("CreateTicket")
@@ -129,13 +129,17 @@ public static class TicketEndpoints
         IClock clock,
         CancellationToken ct)
     {
-        Principal? principal = ResolvePrincipal(httpContext);
+        Principal? principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
         if (principal is null || string.IsNullOrWhiteSpace(principal.UserId))
         {
             return Results.Problem(
                 title: "Unauthorized caller",
                 detail: "Verified gateway caller identity is required to create a support ticket.",
                 statusCode: StatusCodes.Status401Unauthorized);
+        }
+        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext) is { } callerScopeDenied)
+        {
+            return callerScopeDenied;
         }
 
         string changeReason = ChangeReasonHeader.Read(httpContext.Request)
@@ -221,12 +225,9 @@ public static class TicketEndpoints
         string? effectiveStudy;
         if (requestedStudy is not null)
         {
-            if (!CanAccessStudy(httpContext, principal, requestedStudy))
+            if (ClinicalScopeGuard.RequireStudy(httpContext, requestedStudy) is { } studyDenied)
             {
-                return Results.Problem(
-                    title: "Study scope forbidden",
-                    detail: $"Caller is not authorized for study '{requestedStudy}'.",
-                    statusCode: StatusCodes.Status403Forbidden);
+                return studyDenied;
             }
 
             effectiveStudy = requestedStudy;
@@ -240,12 +241,9 @@ public static class TicketEndpoints
         string? effectiveSite;
         if (requestedSite is not null)
         {
-            if (!SiteAccessEvaluator.CanAccessSite(principal, requestedSite))
+            if (ClinicalScopeGuard.RequireSite(httpContext, requestedSite) is { } siteDenied)
             {
-                return Results.Problem(
-                    title: "Site scope forbidden",
-                    detail: $"Caller is not authorized for site '{requestedSite}'.",
-                    statusCode: StatusCodes.Status403Forbidden);
+                return siteDenied;
             }
 
             effectiveSite = requestedSite;
@@ -337,7 +335,7 @@ public static class TicketEndpoints
         TicketsDbContext db,
         CancellationToken ct)
     {
-        Principal? principal = ResolvePrincipal(httpContext);
+        Principal? principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
         if (principal is null || string.IsNullOrWhiteSpace(principal.UserId))
         {
             return Results.Problem(
@@ -345,23 +343,21 @@ public static class TicketEndpoints
                 detail: "Verified gateway caller identity is required.",
                 statusCode: StatusCodes.Status401Unauthorized);
         }
+        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext) is { } callerScopeDenied)
+        {
+            return callerScopeDenied;
+        }
 
         string? normStudy = NormalizeOptional(requestedStudy);
-        if (normStudy is not null && !CanAccessStudy(httpContext, principal, normStudy))
+        if (normStudy is not null && ClinicalScopeGuard.RequireStudy(httpContext, normStudy) is { } studyDenied)
         {
-            return Results.Problem(
-                title: "Study scope forbidden",
-                detail: $"Caller is not authorized for study '{normStudy}'.",
-                statusCode: StatusCodes.Status403Forbidden);
+            return studyDenied;
         }
 
         string? normSite = NormalizeOptional(requestedSite);
-        if (normSite is not null && !SiteAccessEvaluator.CanAccessSite(principal, normSite))
+        if (normSite is not null && ClinicalScopeGuard.RequireSite(httpContext, normSite) is { } siteDenied)
         {
-            return Results.Problem(
-                title: "Site scope forbidden",
-                detail: $"Caller is not authorized for site '{normSite}'.",
-                statusCode: StatusCodes.Status403Forbidden);
+            return siteDenied;
         }
 
         IQueryable<Ticket> query = db.Tickets
@@ -417,7 +413,7 @@ public static class TicketEndpoints
         int safeLimit = Math.Clamp(limit ?? 100, 1, 500);
 
         var visible = candidates
-            .Where(t => IsTicketVisibleToCaller(httpContext, principal, t))
+            .Where(t => IsTicketVisibleToCaller(principal, t))
             .OrderByDescending(t => t.CreatedAt)
             .ThenByDescending(t => t.Reference, StringComparer.Ordinal)
             .Select(ToResponseDto)
@@ -438,13 +434,17 @@ public static class TicketEndpoints
         TicketsDbContext db,
         CancellationToken ct)
     {
-        Principal? principal = ResolvePrincipal(httpContext);
+        Principal? principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
         if (principal is null || string.IsNullOrWhiteSpace(principal.UserId))
         {
             return Results.Problem(
                 title: "Unauthorized caller",
                 detail: "Verified gateway caller identity is required.",
                 statusCode: StatusCodes.Status401Unauthorized);
+        }
+        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext) is { } callerScopeDenied)
+        {
+            return callerScopeDenied;
         }
 
         string key = ticket_id.Trim();
@@ -461,7 +461,7 @@ public static class TicketEndpoints
                 statusCode: StatusCodes.Status404NotFound);
         }
 
-        if (!IsTicketVisibleToCaller(httpContext, principal, ticket))
+        if (!IsTicketVisibleToCaller(principal, ticket))
         {
             return Results.Problem(
                 title: "Ticket scope forbidden",
@@ -472,11 +472,11 @@ public static class TicketEndpoints
         return TypedResults.Ok(ToResponseDto(ticket));
     }
 
-    private static bool IsTicketVisibleToCaller(HttpContext httpContext, Principal principal, Ticket ticket)
+    private static bool IsTicketVisibleToCaller(Principal principal, Ticket ticket)
     {
         if (!string.IsNullOrWhiteSpace(ticket.StudyId))
         {
-            if (!CanAccessStudy(httpContext, principal, ticket.StudyId))
+            if (!StudyAccessEvaluator.CanAccessStudy(principal, ticket.StudyId))
             {
                 return false;
             }
@@ -494,7 +494,7 @@ public static class TicketEndpoints
                 return false;
             }
         }
-        else if (IsSiteBound(principal)
+        else if (ClinicalScopeGuard.IsSiteBound(principal)
                  && !string.Equals(ticket.Reporter, principal.UserId, StringComparison.OrdinalIgnoreCase))
         {
             return false;
@@ -503,47 +503,8 @@ public static class TicketEndpoints
         return true;
     }
 
-    private static Principal? ResolvePrincipal(HttpContext? httpContext)
-    {
-        if (httpContext is null)
-        {
-            return null;
-        }
-
-        if (CallerScope.Principal(httpContext) is { } principal)
-        {
-            return principal;
-        }
-
-        ClaimsPrincipal user = httpContext.User;
-        string? userId = user.FindFirst(CadenceClaimTypes.Subject)?.Value;
-        if (user.Identity?.IsAuthenticated != true || string.IsNullOrWhiteSpace(userId))
-        {
-            return null;
-        }
-
-        var rawRoles = user.FindAll(ClaimTypes.Role).Select(c => c.Value).Where(v => !string.IsNullOrWhiteSpace(v)).ToList();
-        return new Principal
-        {
-            UserId = userId,
-            Roles = RoleNormalization.GetNormalizedRoles(rawRoles),
-            RawRoles = rawRoles,
-            AssignedStudies = user.FindAll(CadenceClaimTypes.StudyIds).Select(c => c.Value).Where(v => !string.IsNullOrWhiteSpace(v)).ToList(),
-            AssignedSites = user.FindAll(CadenceClaimTypes.SiteId).Select(c => c.Value).Where(v => !string.IsNullOrWhiteSpace(v)).ToList(),
-        };
-    }
-
-    private static bool CanAccessStudy(HttpContext httpContext, Principal principal, string studyCode) =>
-        CallerScope.Principal(httpContext) is not null
-            ? CallerScope.CanAccessStudy(httpContext, studyCode)
-            : StudyAccessEvaluator.CanAccessStudy(principal, studyCode);
-
     private static bool HasAllStudies(Principal principal) =>
         principal.AssignedStudies.Any(s => string.Equals(s.Trim(), StudyAccessEvaluator.AllStudies, StringComparison.Ordinal));
-
-    private static bool IsSiteBound(Principal principal) =>
-        principal.Roles.Any(SiteAccessEvaluator.SITE_SCOPED_ROLES.Contains)
-        || principal.AssignedSites.Count > 0;
 
     private static string? ResolveDefaultStudyScope(Principal principal)
     {

@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,6 +16,7 @@ using Cadence.Rules.Expressions;
 using Cadence.Rules.Packs;
 using Cadence.Rules.Validation;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -45,6 +49,8 @@ public record AmendmentRegressionApiRequest(
 /// </summary>
 public static class RuleBatchEndpoints
 {
+    private static readonly ConcurrentDictionary<string, (TenantId Tenant, string StudyRouteId)> JobScopes = new(StringComparer.Ordinal);
+
     /// <summary>
     /// Maps batch rule validation and amendment regression endpoints.
     /// </summary>
@@ -58,11 +64,12 @@ public static class RuleBatchEndpoints
             BatchValidateApiRequest? request,
             ParallelBatchRuleValidator validator,
             IClock clock,
+            HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
             var req = request ?? new BatchValidateApiRequest();
             var studyId = StudyId.TryParse(id, out var parsed) ? parsed : StudyId.New(clock.UtcNow);
-            var tenant = TenantId.New(clock.UtcNow);
+            var tenant = ResolveVerifiedTenantId(httpContext);
 
             var records = req.Records ?? GetDefaultSampleRecords();
             var packs = req.RulePacks ?? [GetDefaultSampleRulePack()];
@@ -80,6 +87,7 @@ public static class RuleBatchEndpoints
             };
 
             var report = await validator.ValidateAsync(batchReq, cancellationToken).ConfigureAwait(false);
+            JobScopes[report.JobId] = (tenant, id);
             return TypedResults.Ok(report);
         })
         .WithName("BatchValidateRules")
@@ -89,10 +97,29 @@ public static class RuleBatchEndpoints
         api.MapGet("/batch-validate/{jobId}", Results<Ok<BatchValidationReport>, NotFound> (
             string id,
             string jobId,
-            BatchJobStore jobStore) =>
+            BatchJobStore jobStore,
+            HttpContext httpContext) =>
         {
+            var tenant = ResolveVerifiedTenantId(httpContext);
             var job = jobStore.GetJob(jobId);
-            return job is not null ? TypedResults.Ok(job) : TypedResults.NotFound();
+            if (job is null)
+            {
+                return TypedResults.NotFound();
+            }
+
+            if (JobScopes.TryGetValue(jobId, out var owner))
+            {
+                if (owner.Tenant != tenant || !string.Equals(owner.StudyRouteId, id, StringComparison.Ordinal))
+                {
+                    return TypedResults.NotFound();
+                }
+            }
+            else if (StudyId.TryParse(id, out var routeStudyId) && job.Study != routeStudyId)
+            {
+                return TypedResults.NotFound();
+            }
+
+            return TypedResults.Ok(job);
         })
         .WithName("GetBatchValidationJob")
         .WithSummary("Retrieves the aggregated report for an asynchronous batch validation job.")
@@ -247,4 +274,25 @@ public static class RuleBatchEndpoints
                 "Check subject vitals.",
                 EffectivePeriod.Always),
         ]);
+
+    private static TenantId ResolveVerifiedTenantId(HttpContext httpContext)
+    {
+        string? tenantCode = CallerScope.TenantId(httpContext);
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            throw new InvalidOperationException("Verified tenant header is required.");
+        }
+
+        if (Guid.TryParse(tenantCode, out Guid parsed) && parsed != Guid.Empty)
+        {
+            return new TenantId(parsed);
+        }
+
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes("cadence-tenant:" + tenantCode.Trim()));
+        Span<byte> guidBytes = stackalloc byte[16];
+        hash.AsSpan(0, 16).CopyTo(guidBytes);
+        guidBytes[6] = (byte)((guidBytes[6] & 0x0F) | 0x50);
+        guidBytes[8] = (byte)((guidBytes[8] & 0x3F) | 0x80);
+        return new TenantId(new Guid(guidBytes));
+    }
 }

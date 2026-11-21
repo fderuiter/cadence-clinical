@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 
@@ -37,6 +38,8 @@ public static class ApiClientValidatorService
         return 0;
     }
 
+    private const int PosixEnoexec = 8;
+
     private static int RunCommand(string workingDir, string fileName, string[] arguments, string subject)
     {
         var psi = new ProcessStartInfo(fileName)
@@ -56,7 +59,18 @@ public static class ApiClientValidatorService
         {
             process = Process.Start(psi);
         }
-        catch (System.ComponentModel.Win32Exception ex)
+        catch (Win32Exception ex) when (!OperatingSystem.IsWindows() && ex.NativeErrorCode == PosixEnoexec && fileName != "/bin/sh")
+        {
+            string? resolved = ResolveOnPath(fileName, workingDir);
+            if (resolved is not null)
+            {
+                return RunCommand(workingDir, "/bin/sh", [resolved, .. arguments], subject);
+            }
+
+            Console.WriteLine($"[ERROR] Could not run {fileName} ({ex.Message}). Install Node.js and pnpm, then run 'pnpm install'.");
+            return 1;
+        }
+        catch (Win32Exception ex)
         {
             Console.WriteLine($"[ERROR] Could not run {fileName} ({ex.Message}). Install Node.js and pnpm, then run 'pnpm install'.");
             return 1;
@@ -98,5 +112,31 @@ public static class ApiClientValidatorService
             current = parent ?? "";
         }
         return Directory.GetCurrentDirectory();
+    }
+
+    private static string? ResolveOnPath(string fileName, string workingDirectory)
+    {
+        if (fileName.Contains(Path.DirectorySeparatorChar) || fileName.Contains(Path.AltDirectorySeparatorChar))
+        {
+            string full = Path.IsPathRooted(fileName) ? fileName : Path.GetFullPath(fileName, workingDirectory);
+            return File.Exists(full) ? full : null;
+        }
+
+        string? pathValue = Environment.GetEnvironmentVariable("PATH");
+        if (string.IsNullOrWhiteSpace(pathValue))
+        {
+            return null;
+        }
+
+        foreach (string dir in pathValue.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+        {
+            string candidate = Path.Combine(dir, fileName);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 }

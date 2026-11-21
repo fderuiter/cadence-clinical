@@ -49,10 +49,10 @@ public sealed class ClinicalVisitCompletedConsumerTests : IDisposable
         return new PaymentsDbContext(options, TestFieldProtection.CreateEncryptor());
     }
 
-    private ServiceProvider CreateServiceProvider(PaymentsDbContext dbContext)
+    private ServiceProvider CreateServiceProvider()
     {
         var services = new ServiceCollection();
-        services.AddSingleton(dbContext);
+        services.AddScoped(_ => CreateContext());
         services.AddSingleton<IClock>(_clock);
         services.AddMassTransitTestHarness(x =>
         {
@@ -142,7 +142,7 @@ public sealed class ClinicalVisitCompletedConsumerTests : IDisposable
         await using var db = CreateContext();
         await SeedContractAndFeeScheduleAsync(db);
 
-        await using var provider = CreateServiceProvider(db);
+        await using var provider = CreateServiceProvider();
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();
 
@@ -209,7 +209,7 @@ public sealed class ClinicalVisitCompletedConsumerTests : IDisposable
         await using var db = CreateContext();
         await SeedContractAndFeeScheduleAsync(db);
 
-        await using var provider = CreateServiceProvider(db);
+        await using var provider = CreateServiceProvider();
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();
 
@@ -232,7 +232,9 @@ public sealed class ClinicalVisitCompletedConsumerTests : IDisposable
         countFirst.Should().Be(1);
 
         // Second delivery (duplicate replay)
-        await harness.Bus.Publish(message, ct);
+        Guid replayMessageId = Guid.NewGuid();
+        await harness.Bus.Publish(message, ctx => ctx.MessageId = replayMessageId, ct);
+        (await harness.Consumed.Any<ClinicalVisitCompleted>(x => x.Context.MessageId == replayMessageId, ct)).Should().BeTrue();
 
         // Criterion 2: Duplicate events with identical TriggerEventId values produce no duplicate payables
         var countSecond = await db.Payables.CountAsync(p => p.TriggerEventId == "MVR-VISIT-001", ct);
@@ -253,7 +255,7 @@ public sealed class ClinicalVisitCompletedConsumerTests : IDisposable
         await using var db = CreateContext();
         await SeedContractAndFeeScheduleAsync(db);
 
-        await using var provider = CreateServiceProvider(db);
+        await using var provider = CreateServiceProvider();
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();
 
@@ -290,7 +292,7 @@ public sealed class ClinicalVisitCompletedConsumerTests : IDisposable
         await using var db = CreateContext();
         await SeedContractAndFeeScheduleAsync(db);
 
-        await using var provider = CreateServiceProvider(db);
+        await using var provider = CreateServiceProvider();
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();
 

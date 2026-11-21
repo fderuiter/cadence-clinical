@@ -1,8 +1,11 @@
+using System;
+
 using Cadence.Apps.Econsent.Domain;
 using Cadence.Apps.Econsent.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
 using Cadence.Database.Signatures;
+using Cadence.Database.Tenancy;
 using Cadence.Security.FieldProtection;
 
 using MassTransit;
@@ -17,8 +20,11 @@ namespace Cadence.Apps.Econsent.Infrastructure.Persistence;
 /// with <paramref name="fieldEncryptor"/> (#4770).
 /// </summary>
 public sealed class EconsentDbContext(DbContextOptions<EconsentDbContext> options, IFieldEncryptor fieldEncryptor)
-    : DbContext(options), IFieldEncryptingDbContext
+    : DbContext(options), IFieldEncryptingDbContext, ITenantScopedDbContext
 {
+    public Guid? ActiveInMemoryTenantFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantFilter(this);
+
+    public string? ActiveInMemoryTenantStringFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantStringFilter(this);
     /// <inheritdoc />
     public IFieldEncryptor FieldEncryptor { get; } = fieldEncryptor;
 
@@ -69,5 +75,6 @@ public sealed class EconsentDbContext(DbContextOptions<EconsentDbContext> option
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
 
         modelBuilder.AddTransactionalOutboxEntities();
+        modelBuilder.ConfigureStandaloneTenancy(this);
     }
 }

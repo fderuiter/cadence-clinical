@@ -6,11 +6,11 @@ Generated from the EF Core model of `Cadence.Apps.Quality.Infrastructure.Persist
 
 | Table | Entity | Columns |
 | --- | --- | --- |
-| [`quality.audit_log_entries`](#qualityaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`quality.quality_audit_logs`](#qualityquality_audit_logs) | `QualityAuditLog` | 12 |
-| [`quality.quality_capa_records`](#qualityquality_capa_records) | `QualityCapaRecord` | 14 |
-| [`quality.quality_deviations`](#qualityquality_deviations) | `QualityDeviation` | 13 |
-| [`quality.quality_root_cause_analyses`](#qualityquality_root_cause_analyses) | `QualityRootCauseAnalysis` | 11 |
+| [`quality.audit_log_entries`](#qualityaudit_log_entries) | `AuditLogEntry` | 12 |
+| [`quality.quality_audit_logs`](#qualityquality_audit_logs) | `QualityAuditLog` | 13 |
+| [`quality.quality_capa_records`](#qualityquality_capa_records) | `QualityCapaRecord` | 15 |
+| [`quality.quality_deviations`](#qualityquality_deviations) | `QualityDeviation` | 14 |
+| [`quality.quality_root_cause_analyses`](#qualityquality_root_cause_analyses) | `QualityRootCauseAnalysis` | 12 |
 
 ## quality.audit_log_entries
 
@@ -29,10 +29,12 @@ Entity: `AuditLogEntry`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+- `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
 ## quality.quality_audit_logs
 
@@ -52,11 +54,13 @@ Entity: `QualityAuditLog`
 | `UserId` | `character varying(255)` | no |  |  |
 | `UserRole` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_quality_audit_logs_Timestamp`: (`Timestamp`)
 - `IX_quality_audit_logs_UserId`: (`UserId`)
+- `IX_quality_audit_logs_tenant_id`: (`tenant_id`)
 
 ## quality.quality_capa_records
 
@@ -78,6 +82,7 @@ Entity: `QualityCapaRecord`
 | `StudyId` | `character varying(255)` | no |  |  |
 | `TargetCompletionDate` | `timestamp with time zone` | yes |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Foreign keys:
 
@@ -90,6 +95,7 @@ Indexes:
 - `IX_quality_capa_records_RcaId`: (`RcaId`)
 - `IX_quality_capa_records_SiteId`: (`SiteId`)
 - `IX_quality_capa_records_StudyId`: (`StudyId`)
+- `IX_quality_capa_records_tenant_id`: (`tenant_id`)
 
 ## quality.quality_deviations
 
@@ -110,11 +116,13 @@ Entity: `QualityDeviation`
 | `Title` | `character varying(255)` | no |  |  |
 | `Type` | `character varying(100)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_quality_deviations_SiteId`: (`SiteId`)
 - `IX_quality_deviations_StudyId`: (`StudyId`)
+- `IX_quality_deviations_tenant_id`: (`tenant_id`)
 
 ## quality.quality_root_cause_analyses
 
@@ -133,6 +141,7 @@ Entity: `QualityRootCauseAnalysis`
 | `SiteId` | `character varying(255)` | yes |  |  |
 | `StudyId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Foreign keys:
 
@@ -143,3 +152,4 @@ Indexes:
 - `IX_quality_root_cause_analyses_DeviationId`: unique (`DeviationId`)
 - `IX_quality_root_cause_analyses_SiteId`: (`SiteId`)
 - `IX_quality_root_cause_analyses_StudyId`: (`StudyId`)
+- `IX_quality_root_cause_analyses_tenant_id`: (`tenant_id`)

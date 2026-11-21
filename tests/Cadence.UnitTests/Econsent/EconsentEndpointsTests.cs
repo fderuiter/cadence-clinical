@@ -173,7 +173,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             Meaning: meaning,
             SigningReason: null,
             ProtocolVersion: "v2.0",
-            DigestSha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            DigestSha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
             SignatureData: "SIG_BINDING_DATA_001",
             LivenessToken: livenessToken,
             DeviceTimestamp: clock.UtcNow);
@@ -194,7 +194,7 @@ public sealed class EconsentEndpointsTests : IDisposable
         doc.RootElement.GetProperty("signer_name").GetString().Should().Be(signerName);
         doc.RootElement.GetProperty("signer_role").GetString().Should().Be("Subject");
         doc.RootElement.GetProperty("meaning").GetString().Should().Be(meaning);
-        doc.RootElement.GetProperty("digest").GetString().Should().Be("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+        doc.RootElement.GetProperty("digest").GetString().Should().Be("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"); // pragma: allowlist secret
     }
 
     [Fact]
@@ -213,7 +213,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             Meaning: "I agree to participate",
             SigningReason: null,
             ProtocolVersion: "v1.0",
-            DigestSha256: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289",
+            DigestSha256: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
             SignatureData: "DATA_BINDING_V1_SUBJ-123",
             LivenessToken: livenessToken,
             DeviceTimestamp: clock.UtcNow);
@@ -258,7 +258,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             Meaning: "I agree to participate",
             SigningReason: null,
             ProtocolVersion: "v1.0",
-            DigestSha256: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289",
+            DigestSha256: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
             SignatureData: "DATA_BINDING_V1_SUBJ-EXP",
             LivenessToken: expiredToken,
             DeviceTimestamp: clock.UtcNow);
@@ -384,6 +384,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             UserId = "crc-1",
             Roles = ["crc"],
             AssignedStudies = studies.Length == 0 ? ["*"] : studies,
+            AssignedSites = ["SITE-01", "SITE-05", "SITE-1"],
         };
         return httpContext;
     }

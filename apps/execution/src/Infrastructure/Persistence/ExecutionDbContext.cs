@@ -1,3 +1,5 @@
+using System;
+
 using Cadence.Apps.Execution.Domain.Cec;
 using Cadence.Apps.Execution.Domain.Cgt;
 using Cadence.Apps.Execution.Domain.Coding;
@@ -12,6 +14,7 @@ using Cadence.Apps.Execution.Infrastructure.Persistence.Configurations;
 using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Signatures;
+using Cadence.Database.Tenancy;
 
 using MassTransit;
 
@@ -37,8 +40,11 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 /// @req:SRS-EDC-002
 /// @req:SRS-EDC-004
 /// </summary>
-public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> options) : DbContext(options)
+public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> options) : DbContext(options), ITenantScopedDbContext
 {
+    public Guid? ActiveInMemoryTenantFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantFilter(this);
+
+    public string? ActiveInMemoryTenantStringFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantStringFilter(this);
     public DbSet<ClinicalSubject> ClinicalSubjects => Set<ClinicalSubject>();
 
     public DbSet<SubjectConsent> SubjectConsents => Set<SubjectConsent>();
@@ -121,5 +127,6 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new ConsumedSignatureTokenConfiguration());
 
         modelBuilder.AddTransactionalOutboxEntities();
+        modelBuilder.ConfigureStandaloneTenancy(this);
     }
 }

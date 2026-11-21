@@ -75,6 +75,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<string>("TierLevel")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -99,6 +103,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasIndex("Status");
 
                     b.HasIndex("StudyId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("payments_budget_contracts", (string)null);
                 });
@@ -154,6 +160,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<int>("VersionIndex")
                         .HasColumnType("integer");
 
@@ -166,6 +176,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasIndex("InvoiceId");
 
                     b.HasIndex("Status");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("payments_erp_sync_logs", (string)null);
                 });
@@ -226,6 +238,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.Property<bool>("RequiresSdv")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<decimal>("TravelReimbursement")
                         .HasColumnType("numeric(18,4)");
 
@@ -248,6 +264,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasIndex("ContractId");
 
                     b.HasIndex("FormId");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("VisitCode");
 
@@ -330,6 +348,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -348,6 +370,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasIndex("Status");
 
                     b.HasIndex("StudyId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("payments_holdback_reserves", (string)null);
                 });
@@ -412,6 +436,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<decimal>("TravelReimbursement")
                         .HasColumnType("numeric(18,4)");
 
@@ -439,6 +467,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasIndex("PayableId");
 
                     b.HasIndex("SubjectId");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("VisitCode");
 
@@ -482,6 +512,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<int>("VersionIndex")
                         .HasColumnType("integer");
 
@@ -498,6 +532,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasIndex("Status");
 
                     b.HasIndex("SubjectId");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("WalletId");
 
@@ -591,6 +627,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("TaxDeduction")
                         .HasColumnType("numeric(18,4)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -611,6 +651,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasIndex("StudyId");
 
                     b.HasIndex("SubjectId");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("WalletId");
 
@@ -677,6 +719,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.Property<bool>("Taxable")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -696,6 +742,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("StudyId");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("VisitCode");
 
@@ -742,6 +790,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<string>("TransactionType")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -762,6 +814,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasIndex("StudyId");
 
                     b.HasIndex("SubjectId");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("TransactionType");
 
@@ -867,6 +921,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("TaxableYtd")
                         .HasColumnType("numeric(18,4)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -905,6 +963,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasIndex("StudyId");
 
                     b.HasIndex("SubjectId");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("W9Status");
 
@@ -996,6 +1056,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<decimal>("TravelReimbursementAmount")
                         .HasColumnType("numeric(18,4)");
 
@@ -1046,6 +1110,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasIndex("StudyId");
 
                     b.HasIndex("SubjectId");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("TriggerEventId")
                         .IsUnique();
@@ -1117,6 +1183,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1131,6 +1201,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasIndex("PayableId");
 
                     b.HasIndex("PayeeId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("payments_payable_allocations", (string)null);
                 });
@@ -1178,6 +1250,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -1200,6 +1276,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasIndex("EntityId");
 
                     b.HasIndex("EntityType");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("UserId");
 
@@ -1301,6 +1379,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1320,6 +1402,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasIndex("SiteId");
 
                     b.HasIndex("StudyId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("payments_remittance_advices", (string)null);
                 });
@@ -1428,6 +1512,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<decimal>("TotalBaseAmount")
                         .HasColumnType("numeric(18,4)");
 
@@ -1473,6 +1561,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasIndex("Status");
 
                     b.HasIndex("StudyId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("payments_self_billing_invoices", null, t =>
                         {
@@ -1532,6 +1622,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1541,6 +1635,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ContractId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("payments_split_payees", (string)null);
                 });
@@ -1584,6 +1680,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("timestamp with time zone");
 
@@ -1596,6 +1696,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("EntityName", "Timestamp");
 

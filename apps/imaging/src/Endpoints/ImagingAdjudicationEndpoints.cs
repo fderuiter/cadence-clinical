@@ -69,21 +69,21 @@ public static class ImagingAdjudicationEndpoints
 
         group.MapPost("/", SubmitOrEvaluateSessionAsync)
             .WithName("SubmitOrEvaluateAdjudicationSession")
-            .RequirePermission("imaging_adjudication:submit")
+            .RequirePermission("imaging_adjudication:submit").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<AdjudicationSessionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
         group.MapGet("/{sessionId}", GetSessionByIdAsync)
             .WithName("GetImagingAdjudicationSession")
-            .RequirePermission("imaging_adjudication:read")
+            .RequirePermission("imaging_adjudication:read").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<ImagingAdjudicationSession>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPost("/{sessionId}/chair-adjudicate", ChairAdjudicateSessionAsync)
             .WithName("ChairAdjudicateImagingSession")
-            .RequirePermission("imaging_adjudication:adjudicate")
+            .RequirePermission("imaging_adjudication:adjudicate").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<AdjudicationSessionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -113,7 +113,7 @@ public static class ImagingAdjudicationEndpoints
             return TypedResults.BadRequest(new { code = "INVALID_REQUEST", message = "Request body is required." });
         }
 
-        if (!CallerScope.CanAccessStudy(httpContext, request.StudyId))
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId, allowUnassignedSiteForScopedCaller: true) is not null)
         {
             return OutsideStudy();
         }
@@ -209,7 +209,8 @@ public static class ImagingAdjudicationEndpoints
             .FirstOrDefaultAsync(s => s.Id == sessionId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (session == null || !CallerScope.CanAccessStudy(httpContext, session.StudyId))
+        if (session == null
+            || ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, session.StudyId, session.SiteId, allowUnassignedSiteForScopedCaller: true) is not null)
         {
             return TypedResults.NotFound(new { code = "SESSION_NOT_FOUND", message = $"Adjudication session '{sessionId}' not found." });
         }
@@ -233,7 +234,7 @@ public static class ImagingAdjudicationEndpoints
             return TypedResults.NotFound(new { code = "SESSION_NOT_FOUND", message = $"Adjudication session '{sessionId}' not found." });
         }
 
-        if (!CallerScope.CanAccessStudy(httpContext, session.StudyId))
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, session.StudyId, session.SiteId, allowUnassignedSiteForScopedCaller: true) is not null)
         {
             return OutsideStudy();
         }

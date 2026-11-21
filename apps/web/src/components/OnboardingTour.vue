@@ -361,6 +361,26 @@ const popoverStyle = ref({
 });
 
 let currentRafId = null;
+let isDisposed = false;
+const pendingTimers = new Set();
+
+function cancelPendingRaf() {
+  if (currentRafId !== null) {
+    if (typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(currentRafId);
+    }
+    currentRafId = null;
+  }
+}
+
+function schedulePositionUpdate(delayMs) {
+  if (isDisposed) return;
+  const timerId = setTimeout(() => {
+    pendingTimers.delete(timerId);
+    updatePosition();
+  }, delayMs);
+  pendingTimers.add(timerId);
+}
 
 async function syncStepRoute() {
   if (!onboardingStore.isActive || onboardingStore.disabled) return;
@@ -410,12 +430,16 @@ async function syncStepRoute() {
 }
 
 const updatePosition = () => {
-  if (!onboardingStore.isActive || onboardingStore.disabled) return;
-
-  if (currentRafId !== null) {
-    cancelAnimationFrame(currentRafId);
-    currentRafId = null;
+  if (
+    isDisposed ||
+    typeof document === "undefined" ||
+    !onboardingStore.isActive ||
+    onboardingStore.disabled
+  ) {
+    return;
   }
+
+  cancelPendingRaf();
 
   const config = currentStepConfig.value;
   const selector = config?.targetSelector;
@@ -436,6 +460,10 @@ const updatePosition = () => {
   let attempts = 0;
 
   const checkAndPosition = () => {
+    if (isDisposed || typeof document === "undefined") {
+      currentRafId = null;
+      return;
+    }
     const el = document.querySelector(selector);
     if (el) {
       const rect = el.getBoundingClientRect();
@@ -452,7 +480,7 @@ const updatePosition = () => {
         return;
       }
     }
-    if (attempts < MAX_RETRIES) {
+    if (attempts < MAX_RETRIES && typeof requestAnimationFrame === "function") {
       attempts++;
       currentRafId = requestAnimationFrame(checkAndPosition);
     } else {
@@ -476,16 +504,16 @@ const handleNext = async () => {
   onboardingStore.nextStep(currentDesc);
   await syncStepRoute();
   updatePosition();
-  setTimeout(updatePosition, 50);
-  setTimeout(updatePosition, 150);
+  schedulePositionUpdate(50);
+  schedulePositionUpdate(150);
 };
 
 const handlePrev = async () => {
   onboardingStore.prevStep();
   await syncStepRoute();
   updatePosition();
-  setTimeout(updatePosition, 50);
-  setTimeout(updatePosition, 150);
+  schedulePositionUpdate(50);
+  schedulePositionUpdate(150);
 };
 
 const handleComplete = () => {
@@ -500,14 +528,14 @@ watch(currentStep, async () => {
   }
   await syncStepRoute();
   updatePosition();
-  setTimeout(updatePosition, 50);
+  schedulePositionUpdate(50);
 });
 
 watch(
   () => route?.fullPath,
   () => {
     updatePosition();
-    setTimeout(updatePosition, 50);
+    schedulePositionUpdate(50);
   }
 );
 
@@ -548,10 +576,11 @@ watch(
 );
 
 onMounted(async () => {
+  isDisposed = false;
   window.addEventListener("resize", updatePosition);
   await syncStepRoute();
   updatePosition();
-  setTimeout(updatePosition, 100);
+  schedulePositionUpdate(100);
   if (
     onboardingStore.isActive &&
     !onboardingStore.disabled &&
@@ -566,10 +595,14 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  window.removeEventListener("resize", updatePosition);
-  if (currentRafId !== null) {
-    cancelAnimationFrame(currentRafId);
-    currentRafId = null;
+  isDisposed = true;
+  if (typeof window !== "undefined") {
+    window.removeEventListener("resize", updatePosition);
   }
+  for (const timerId of pendingTimers) {
+    clearTimeout(timerId);
+  }
+  pendingTimers.clear();
+  cancelPendingRaf();
 });
 </script>

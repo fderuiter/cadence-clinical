@@ -40,7 +40,6 @@ public sealed class KernelErrorContractTests
         "KernelGenerateProtocolProposal",
         "KernelMatrixGapCheck",
         "RouteAiIntent",
-        "AiVerifyLiveness",
     };
 
     private static KernelErrorCatalog KernelCatalog() => KernelErrorCatalog.From(

@@ -6,11 +6,11 @@ Generated from the EF Core model of `Cadence.Apps.Eisf.Infrastructure.Persistenc
 
 | Table | Entity | Columns |
 | --- | --- | --- |
-| [`eisf.audit_log_entries`](#eisfaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`eisf.eisf_document_records`](#eisfeisf_document_records) | `EisfDocumentRecord` | 17 |
-| [`eisf.eisf_section_taxonomies`](#eisfeisf_section_taxonomies) | `EisfSectionTaxonomy` | 5 |
+| [`eisf.audit_log_entries`](#eisfaudit_log_entries) | `AuditLogEntry` | 12 |
+| [`eisf.eisf_document_records`](#eisfeisf_document_records) | `EisfDocumentRecord` | 18 |
+| [`eisf.eisf_section_taxonomies`](#eisfeisf_section_taxonomies) | `EisfSectionTaxonomy` | 6 |
 | [`eisf.isf_audit_logs`](#eisfisf_audit_logs) | `IsfAuditLog` | 11 |
-| [`eisf.isf_documents`](#eisfisf_documents) | `IsfDocument` | 19 |
+| [`eisf.isf_documents`](#eisfisf_documents) | `IsfDocument` | 20 |
 
 ## eisf.audit_log_entries
 
@@ -29,10 +29,12 @@ Entity: `AuditLogEntry`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+- `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
 ## eisf.eisf_document_records
 
@@ -57,12 +59,14 @@ Entity: `EisfDocumentRecord`
 | `VersionIndex` | `integer` | no |  |  |
 | `VersionMajor` | `integer` | no |  |  |
 | `VersionMinor` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_eisf_document_records_SectionCode`: (`SectionCode`)
 - `IX_eisf_document_records_SiteId`: (`SiteId`)
 - `IX_eisf_document_records_StudyId`: (`StudyId`)
+- `IX_eisf_document_records_tenant_id`: (`tenant_id`)
 
 ## eisf.eisf_section_taxonomies
 
@@ -75,10 +79,12 @@ Entity: `EisfSectionTaxonomy`
 | `IsMandatory` | `boolean` | no |  |  |
 | `SectionNumber` | `character varying(50)` | no |  |  |
 | `Title` | `character varying(255)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_eisf_section_taxonomies_SectionNumber`: (`SectionNumber`)
+- `IX_eisf_section_taxonomies_tenant_id`: (`tenant_id`)
 
 ## eisf.isf_audit_logs
 
@@ -95,14 +101,15 @@ Entity: `IsfAuditLog`
 | `PreviousDigest` | `character varying(64)` | yes |  |  |
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `Sha256Digest` | `character varying(64)` | yes |  |  |
-| `TenantId` | `character varying(255)` | no |  |  |
 | `Timestamp` | `timestamp with time zone` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_isf_audit_logs_ActorId`: (`ActorId`)
 - `IX_isf_audit_logs_DocumentId`: (`DocumentId`)
 - `IX_isf_audit_logs_Timestamp`: (`Timestamp`)
+- `IX_isf_audit_logs_tenant_id`: (`tenant_id`)
 
 ## eisf.isf_documents
 
@@ -129,6 +136,7 @@ Entity: `IsfDocument`
 | `StudyId` | `character varying(255)` | no |  |  |
 | `SyncStatus` | `character varying(50)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -140,3 +148,4 @@ Indexes:
 - `IX_isf_documents_ObjectKey`: (`ObjectKey`)
 - `IX_isf_documents_SiteId`: (`SiteId`)
 - `IX_isf_documents_StudyId`: (`StudyId`)
+- `IX_isf_documents_tenant_id`: (`tenant_id`)

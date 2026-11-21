@@ -6,12 +6,12 @@ Generated from the EF Core model of `Cadence.Apps.Fileshare.Infrastructure.Persi
 
 | Table | Entity | Columns |
 | --- | --- | --- |
-| [`fileshare.audit_log_entries`](#fileshareaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`fileshare.file_audit_logs`](#filesharefile_audit_logs) | `FileAuditLog` | 10 |
-| [`fileshare.file_records`](#filesharefile_records) | `FileRecord` | 33 |
-| [`fileshare.guest_links`](#fileshareguest_links) | `GuestLink` | 11 |
-| [`fileshare.playback_audit_logs`](#fileshareplayback_audit_logs) | `PlaybackAuditLog` | 11 |
-| [`fileshare.share_grants`](#fileshareshare_grants) | `ShareGrant` | 13 |
+| [`fileshare.audit_log_entries`](#fileshareaudit_log_entries) | `AuditLogEntry` | 12 |
+| [`fileshare.file_audit_logs`](#filesharefile_audit_logs) | `FileAuditLog` | 11 |
+| [`fileshare.file_records`](#filesharefile_records) | `FileRecord` | 34 |
+| [`fileshare.guest_links`](#fileshareguest_links) | `GuestLink` | 12 |
+| [`fileshare.playback_audit_logs`](#fileshareplayback_audit_logs) | `PlaybackAuditLog` | 12 |
+| [`fileshare.share_grants`](#fileshareshare_grants) | `ShareGrant` | 14 |
 
 ## fileshare.audit_log_entries
 
@@ -30,10 +30,12 @@ Entity: `AuditLogEntry`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+- `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
 ## fileshare.file_audit_logs
 
@@ -51,6 +53,7 @@ Entity: `FileAuditLog`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Foreign keys:
 
@@ -62,6 +65,7 @@ Indexes:
 - `IX_file_audit_logs_FileRecordId`: (`FileRecordId`)
 - `IX_file_audit_logs_Timestamp`: (`Timestamp`)
 - `IX_file_audit_logs_UserId`: (`UserId`)
+- `IX_file_audit_logs_tenant_id`: (`tenant_id`)
 
 ## fileshare.file_records
 
@@ -102,6 +106,7 @@ Entity: `FileRecord`
 | `UploadedAt` | `timestamp with time zone` | no |  |  |
 | `UploadedBy` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -115,6 +120,7 @@ Indexes:
 - `IX_file_records_StudyId`: (`StudyId`)
 - `IX_file_records_TranscodeStatus`: (`TranscodeStatus`)
 - `IX_file_records_UploadedBy`: (`UploadedBy`)
+- `IX_file_records_tenant_id`: (`tenant_id`)
 
 ## fileshare.guest_links
 
@@ -133,6 +139,7 @@ Entity: `GuestLink`
 | `RevokedAt` | `timestamp with time zone` | yes |  |  |
 | `TokenHmac` | `character varying(128)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Foreign keys:
 
@@ -142,6 +149,7 @@ Indexes:
 
 - `IX_guest_links_FileRecordId`: (`FileRecordId`)
 - `IX_guest_links_TokenHmac`: unique (`TokenHmac`)
+- `IX_guest_links_tenant_id`: (`tenant_id`)
 
 ## fileshare.playback_audit_logs
 
@@ -160,6 +168,7 @@ Entity: `PlaybackAuditLog`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Foreign keys:
 
@@ -171,6 +180,7 @@ Indexes:
 - `IX_playback_audit_logs_FileRecordId`: (`FileRecordId`)
 - `IX_playback_audit_logs_SessionId`: (`SessionId`)
 - `IX_playback_audit_logs_UserId`: (`UserId`)
+- `IX_playback_audit_logs_tenant_id`: (`tenant_id`)
 
 ## fileshare.share_grants
 
@@ -191,6 +201,7 @@ Entity: `ShareGrant`
 | `RevokedAt` | `timestamp with time zone` | yes |  |  |
 | `Scope` | `character varying(50)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Foreign keys:
 
@@ -200,3 +211,4 @@ Indexes:
 
 - `IX_share_grants_FileRecordId`: (`FileRecordId`)
 - `IX_share_grants_GrantedToUserId`: (`GrantedToUserId`)
+- `IX_share_grants_tenant_id`: (`tenant_id`)

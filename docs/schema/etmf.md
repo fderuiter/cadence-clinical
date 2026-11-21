@@ -9,14 +9,14 @@ Generated from the EF Core model of `Cadence.Apps.Etmf.Infrastructure.Persistenc
 | [`etmf.InboxState`](#etmfinboxstate) | `InboxState` | 11 |
 | [`etmf.OutboxMessage`](#etmfoutboxmessage) | `OutboxMessage` | 21 |
 | [`etmf.OutboxState`](#etmfoutboxstate) | `OutboxState` | 6 |
-| [`etmf.audit_log_entries`](#etmfaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`etmf.tmf_audit_ledger_seals`](#etmftmf_audit_ledger_seals) | `TmfAuditLedgerSeal` | 6 |
-| [`etmf.tmf_audit_logs`](#etmftmf_audit_logs) | `TmfAuditLog` | 12 |
-| [`etmf.tmf_document_expiration_alert_states`](#etmftmf_document_expiration_alert_states) | `TmfDocumentExpirationAlertState` | 12 |
-| [`etmf.tmf_document_qc_transitions`](#etmftmf_document_qc_transitions) | `TmfDocumentQcTransition` | 9 |
-| [`etmf.tmf_documents`](#etmftmf_documents) | `TmfDocument` | 37 |
-| [`etmf.tmf_expected_documents`](#etmftmf_expected_documents) | `TmfExpectedDocument` | 12 |
-| [`etmf.tmf_export_jobs`](#etmftmf_export_jobs) | `TmfExportJob` | 14 |
+| [`etmf.audit_log_entries`](#etmfaudit_log_entries) | `AuditLogEntry` | 12 |
+| [`etmf.tmf_audit_ledger_seals`](#etmftmf_audit_ledger_seals) | `TmfAuditLedgerSeal` | 7 |
+| [`etmf.tmf_audit_logs`](#etmftmf_audit_logs) | `TmfAuditLog` | 13 |
+| [`etmf.tmf_document_expiration_alert_states`](#etmftmf_document_expiration_alert_states) | `TmfDocumentExpirationAlertState` | 13 |
+| [`etmf.tmf_document_qc_transitions`](#etmftmf_document_qc_transitions) | `TmfDocumentQcTransition` | 10 |
+| [`etmf.tmf_documents`](#etmftmf_documents) | `TmfDocument` | 38 |
+| [`etmf.tmf_expected_documents`](#etmftmf_expected_documents) | `TmfExpectedDocument` | 13 |
+| [`etmf.tmf_export_jobs`](#etmftmf_export_jobs) | `TmfExportJob` | 15 |
 
 ## etmf.InboxState
 
@@ -115,10 +115,12 @@ Entity: `AuditLogEntry`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+- `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
 ## etmf.tmf_audit_ledger_seals
 
@@ -132,6 +134,11 @@ Entity: `TmfAuditLedgerSeal`
 | `PreviousBlockHash` | `character varying(64)` | no |  |  |
 | `SealedRecordCount` | `integer` | no |  |  |
 | `Timestamp` | `timestamp with time zone` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Indexes:
+
+- `IX_tmf_audit_ledger_seals_tenant_id`: (`tenant_id`)
 
 ## etmf.tmf_audit_logs
 
@@ -151,12 +158,14 @@ Entity: `TmfAuditLog`
 | `UserId` | `character varying(255)` | no |  |  |
 | `UserRole` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_tmf_audit_logs_DocumentId`: (`DocumentId`)
 - `IX_tmf_audit_logs_Timestamp`: (`Timestamp`)
 - `IX_tmf_audit_logs_UserId`: (`UserId`)
+- `IX_tmf_audit_logs_tenant_id`: (`tenant_id`)
 
 ## etmf.tmf_document_expiration_alert_states
 
@@ -176,6 +185,7 @@ Entity: `TmfDocumentExpirationAlertState`
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
 | `WarningWindow` | `character varying(50)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Foreign keys:
 
@@ -188,6 +198,7 @@ Indexes:
 - `IX_tmf_document_expiration_alert_states_DocumentId_WarningWind~`: unique (`DocumentId`, `WarningWindow`)
 - `IX_tmf_document_expiration_alert_states_NotificationId`: (`NotificationId`)
 - `IX_tmf_document_expiration_alert_states_WarningWindow`: (`WarningWindow`)
+- `IX_tmf_document_expiration_alert_states_tenant_id`: (`tenant_id`)
 
 ## etmf.tmf_document_qc_transitions
 
@@ -204,6 +215,7 @@ Entity: `TmfDocumentQcTransition`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `ToStatus` | `character varying(50)` | no |  |  |
 | `TransitionSequence` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Foreign keys:
 
@@ -214,6 +226,7 @@ Indexes:
 - `IX_tmf_document_qc_transitions_DocumentId`: (`DocumentId`)
 - `IX_tmf_document_qc_transitions_DocumentId_TransitionSequence`: unique (`DocumentId`, `TransitionSequence`)
 - `IX_tmf_document_qc_transitions_Timestamp`: (`Timestamp`)
+- `IX_tmf_document_qc_transitions_tenant_id`: (`tenant_id`)
 
 ## etmf.tmf_documents
 
@@ -258,6 +271,7 @@ Entity: `TmfDocument`
 | `TaxonomyVersion` | `character varying(50)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
 | `Zone` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -274,6 +288,7 @@ Indexes:
 - `IX_tmf_documents_SiteId`: (`SiteId`)
 - `IX_tmf_documents_StudyId`: (`StudyId`)
 - `IX_tmf_documents_Zone`: (`Zone`)
+- `IX_tmf_documents_tenant_id`: (`tenant_id`)
 
 ## etmf.tmf_expected_documents
 
@@ -293,6 +308,7 @@ Entity: `TmfExpectedDocument`
 | `StudyId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
 | `Zone` | `integer` | yes |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -300,6 +316,7 @@ Indexes:
 - `IX_tmf_expected_documents_Milestone`: (`Milestone`)
 - `IX_tmf_expected_documents_SiteId`: (`SiteId`)
 - `IX_tmf_expected_documents_StudyId`: (`StudyId`)
+- `IX_tmf_expected_documents_tenant_id`: (`tenant_id`)
 
 ## etmf.tmf_export_jobs
 
@@ -321,9 +338,11 @@ Entity: `TmfExportJob`
 | `StudyId` | `character varying(255)` | no |  |  |
 | `TotalDocuments` | `integer` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_tmf_export_jobs_CreatedAt`: (`CreatedAt`)
 - `IX_tmf_export_jobs_Status`: (`Status`)
 - `IX_tmf_export_jobs_StudyId`: (`StudyId`)
+- `IX_tmf_export_jobs_tenant_id`: (`tenant_id`)

@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 using Xunit;
 
@@ -61,10 +62,18 @@ internal static class ServiceHosts
                 .UseTestFieldProtectionKeys()
                 .UseTestSceSigningKey()
                 .UseTestImagingDeidentificationKeys();
-            if (configure is not null)
+            host.ConfigureTestServices(services =>
             {
-                host.ConfigureTestServices(configure);
-            }
+                foreach (var descriptor in services
+                    .Where(d => d.ServiceType == typeof(IHostedService)
+                        && d.ImplementationType != typeof(SigTokenUseStoreStartupCheck))
+                    .ToList())
+                {
+                    services.Remove(descriptor);
+                }
+
+                configure?.Invoke(services);
+            });
         });
         return new BootedHost(factory, factory.Services, identity => factory.CreateSignedClient(identity), factory.CreateClient);
     }
