@@ -10,11 +10,10 @@ declare global {
 }
 
 export function getBaseUrl(): string {
-  const configured = import.meta.env?.VITE_API_BASE_URL;
+  const env = import.meta.env as Record<string, string | undefined> | undefined;
+  const configured = env?.VITE_API_BASE_URL;
   if (configured) return configured;
-  const isDemo =
-    import.meta.env?.MODE === "demo" ||
-    import.meta.env?.VITE_DEMO_MODE === "true";
+  const isDemo = env?.MODE === "demo" || env?.VITE_DEMO_MODE === "true";
   if (
     isDemo &&
     typeof globalThis.location?.origin === "string" &&
@@ -72,11 +71,13 @@ export function getAuthMiddleware(): Middleware {
   };
 }
 
+const INITIAL_BASE_URL = getBaseUrl();
+
 async function dispatchOpenApiFetch(
-  initialBaseUrl: string,
   input: RequestInfo | URL,
-  init?: RequestInit
-) {
+  init?: RequestInit,
+  initialBaseUrl: string = INITIAL_BASE_URL
+): Promise<Response> {
   const currentBase = getBaseUrl().replace(/\/+$/, "");
   const initialBase = initialBaseUrl.replace(/\/+$/, "");
   if (
@@ -85,45 +86,52 @@ async function dispatchOpenApiFetch(
     input.url.startsWith(`${initialBase}/`)
   ) {
     const rewrittenUrl = `${currentBase}${input.url.slice(initialBase.length)}`;
-    const rawBody =
-      input.method === "GET" || input.method === "HEAD"
-        ? null
-        : await input.arrayBuffer();
-    return globalThis.fetch(
-      new Request(rewrittenUrl, {
-        method: input.method,
-        headers: input.headers,
-        body: rawBody && rawBody.byteLength > 0 ? rawBody : undefined,
-        credentials: input.credentials,
-        mode: input.mode,
-        redirect: input.redirect,
-        referrer: input.referrer,
-        referrerPolicy: input.referrerPolicy,
-        integrity: input.integrity,
-        signal: input.signal,
-      }),
-      init
-    );
+    const hasBody = input.method !== "GET" && input.method !== "HEAD";
+    const body = hasBody ? await input.clone().arrayBuffer() : undefined;
+    const rewritten = new Request(rewrittenUrl, {
+      method: input.method,
+      headers: input.headers,
+      body: body && body.byteLength > 0 ? body : undefined,
+      credentials: input.credentials,
+      mode: input.mode,
+      cache: input.cache,
+      redirect: input.redirect,
+      referrer: input.referrer,
+      referrerPolicy: input.referrerPolicy,
+      integrity: input.integrity,
+      keepalive: input.keepalive,
+      signal: input.signal,
+    });
+    return globalThis.fetch(rewritten, init);
   }
   return globalThis.fetch(input, init);
 }
 
+function createDynamicBaseFetch(initialBaseUrl: string) {
+  return (input: RequestInfo | URL, init?: RequestInit): Promise<Response> =>
+    dispatchOpenApiFetch(input, init, initialBaseUrl);
+}
+
+export const openApiClient = createClient<paths>({
+  baseUrl: INITIAL_BASE_URL,
+  fetch: createDynamicBaseFetch(INITIAL_BASE_URL),
+});
+
+openApiClient.use(getAuthMiddleware());
+
 export function createOpenApiClient<T extends {} = paths>(baseUrl?: string) {
-  // Resolve fetch and dynamic demo/configured baseUrl per call so tests and the MSW worker see the current global.
-  const resolvedInitialBase = baseUrl ?? getBaseUrl();
+  const resolvedBaseUrl = baseUrl ?? getBaseUrl();
+  // Resolve fetch per call, as openApiClient does, so tests, Vite circular module init, and the MSW worker see the current global/base URL.
   const client = createClient<T>({
-    baseUrl: resolvedInitialBase,
+    baseUrl: resolvedBaseUrl,
     fetch:
       baseUrl === undefined
-        ? (input: RequestInfo | URL, init?: RequestInit) =>
-            dispatchOpenApiFetch(resolvedInitialBase, input, init)
+        ? createDynamicBaseFetch(resolvedBaseUrl)
         : (...args) => globalThis.fetch(...args),
   });
   client.use(getAuthMiddleware());
   return client;
 }
-
-export const openApiClient = createOpenApiClient<paths>();
 
 export async function unwrapResponse<T>(
   promise: Promise<{ data?: T; error?: unknown; response: Response }>

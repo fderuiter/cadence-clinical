@@ -25,6 +25,13 @@ public interface IProtocolVersionReader
     /// version or its content is not a typed protocol design (ADR-2472).
     /// </summary>
     Task<SoaMatrix?> GetScheduleOfActivitiesAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The typed <see cref="ProtocolDesign"/> stored on one version, or null when the tenant has no such version or its
+    /// content is not a typed protocol design.
+    /// </summary>
+    Task<ProtocolDesign?> GetDesignAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
+        Task.FromResult<ProtocolDesign?>(null);
 }
 
 /// <summary>A protocol version without its content.</summary>
