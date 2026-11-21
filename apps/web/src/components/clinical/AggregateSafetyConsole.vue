@@ -2034,7 +2034,7 @@ onMounted(() => {
   // Sample snapshot seal and report id for demo builds only (#4827).
   if (!isDemoBuild()) return;
   snapshotHash.value =
-    "4a8b79e2c6f1a84d291e0a84d291e0a84d291e0a84d291e0a84d291e0a84d291";
+    "4a8b79e2c6f1a84d291e0a84d291e0a84d291e0a84d291e0a84d291e0a84d291"; // pragma: allowlist secret
   activeReportId.value = "rpt_demo_dsur_01";
   frozenCasesCount.value = 3;
   frozenSubjectsCount.value = 150;

@@ -1030,8 +1030,7 @@
             <div>
               <h4>Cryptographic Merkle SHA-256 Tamper Seal</h4>
               <code class="merkle-hash">{{
-                dossierData?.cryptographic_tamper_seal ||
-                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                dossierData?.cryptographic_tamper_seal || emptySha256Seal
               }}</code>
               <p class="seal-desc">
                 This dossier represents a verified, immutable state snapshot
@@ -1191,6 +1190,8 @@ const qtlBreaches = ref([]);
 const audits = ref([]);
 const seriousBreaches = ref([]);
 const dossierData = ref(null);
+const emptySha256Seal =
+  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"; // pragma: allowlist secret
 
 // Modal states
 const isRcaModalOpen = ref(false);
@@ -1517,7 +1518,7 @@ function loadSeedData() {
   dossierData.value = {
     study_id: "STUDY-CARDIO-002",
     cryptographic_tamper_seal:
-      "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+      "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", // pragma: allowlist secret
     summary_statistics: {
       total_deviations: 2,
       total_capas: 2,

@@ -904,7 +904,7 @@ const openTicketDetail = (t) => {
       file_size_bytes: 42100,
       mime_type: "text/csv",
       sha256_hash:
-        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
       uploaded_by: t.created_by || "cra.monitor@cadence.io",
       uploaded_at: t.created_at,
       deid_scrubbed: true,
@@ -1017,7 +1017,7 @@ const handleTicketAttachment = ({ file, reason_for_change }) => {
     file_size_bytes: file.size,
     mime_type: file.type || "application/octet-stream",
     sha256_hash:
-      "a4f891b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abc",
+      "a4f891b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abc", // pragma: allowlist secret
     uploaded_by: "active.user@cadence.io",
     uploaded_at: new Date().toISOString(),
     deid_scrubbed: true,

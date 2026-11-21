@@ -1042,7 +1042,7 @@ const assents = ref([
     lar_name: "Jane Connor",
     lar_relationship: "PARENT",
     cryptographic_bundle_hash:
-      "3f78a8bc819e917a94367f08d0e51703e3a98bc19e917a94367f08d0e51703e3",
+      "3f78a8bc819e917a94367f08d0e51703e3a98bc19e917a94367f08d0e51703e3", // pragma: allowlist secret
   },
 ]);
 

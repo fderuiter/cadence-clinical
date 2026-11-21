@@ -807,7 +807,7 @@ const edcBindingData = computed(() => ({
   adjudication_status: workflowStatus.value,
   binding_source: selectedBindingReader.value,
   manifest_sha256:
-    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
   signed_by: "chair_dr_smith",
   signed_at: "2026-08-24T14:45:00Z",
 }));

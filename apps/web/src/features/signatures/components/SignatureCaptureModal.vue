@@ -49,11 +49,10 @@
         <!-- prettier-ignore -->
         <GxpCredentialsInput
           v-model:username="usernameVal"
-          v-model:password="password"
           v-model:totp="totp"
-          data-pragma="pragma: allowlist secret"
           :disabled="busy"
-          @keyup-enter="confirm"/><!-- pragma: allowlist secret -->
+          @keyup-enter="confirm"
+          v-model:password="password"/><!-- pragma: allowlist secret -->
 
         <div class="form-group last-group">
           <label for="sig-reason">Meaning of Signing / Signing Reason</label>

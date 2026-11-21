@@ -908,7 +908,7 @@ function submitCreateSnapshot(): void {
     stream_counts: {},
     domain_counts: {},
     sha256_digest:
-      "a7c9f4d1e2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9",
+      "a7c9f4d1e2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9", // pragma: allowlist secret
     created_at: new Date().toISOString(),
     created_by: "statistician_lead",
     reason_for_snapshot: createForm.value.reason_for_snapshot,
@@ -974,7 +974,7 @@ onMounted(() => {
       },
       domain_counts: { VS: 400, LB: 400, QS: 320, AE: 180, TR: 60, DM: 60 },
       sha256_digest:
-        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
       created_at: new Date().toISOString(),
       created_by: "lead_statistician",
       reason_for_snapshot:

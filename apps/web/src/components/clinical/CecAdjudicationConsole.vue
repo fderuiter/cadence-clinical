@@ -1451,7 +1451,7 @@ const dossiers = ref(
           is_discordant: false,
           discordance_reasons: [],
           dossier_digest:
-            "8f92a3c4b12398fa209cba112984719283719284729184719284719284719284",
+            "8f92a3c4b12398fa209cba112984719283719284729184719284719284719284", // pragma: allowlist secret
           lab_panels: [
             {
               test_name: "High-Sensitivity Troponin I",
@@ -1545,7 +1545,7 @@ const dossiers = ref(
             "Primary classification discordance: Reader 1 assessed [CONFIRMED_ISCHEMIC_STROKE] vs Reader 2 assessed [NOT_AN_ENDPOINT]",
           ],
           dossier_digest:
-            "4a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b",
+            "4a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b", // pragma: allowlist secret
           lab_panels: [],
           ecg_records: [],
           diagnostic_attachments: [
@@ -1618,7 +1618,7 @@ const dossiers = ref(
           is_discordant: false,
           discordance_reasons: [],
           dossier_digest:
-            "99887766554433221100aabbccddeeff99887766554433221100aabbccddeeff",
+            "99887766554433221100aabbccddeeff99887766554433221100aabbccddeeff", // pragma: allowlist secret
           lab_panels: [],
           ecg_records: [],
           diagnostic_attachments: [],

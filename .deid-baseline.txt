@@ -43,7 +43,6 @@ apps/web/src/components/clinical/CecAdjudicationConsole.vue|dates|a8665a93905cd4
 apps/web/src/components/clinical/CecAdjudicationConsole.vue|dates|b0dd86efa3e8bb43
 apps/web/src/components/clinical/CecAdjudicationConsole.vue|dates|b0dd86efa3e8bb43
 apps/web/src/components/clinical/CecAdjudicationConsole.vue|telephone_fax|8e1803d041cfa5be
-apps/web/src/components/clinical/CecAdjudicationConsole.vue|telephone_fax|8e471e33c6cd1ab6
 apps/web/src/components/clinical/CecAdjudicationConsole.vue|telephone_fax|aa1e0ec3e2275c5a
 apps/web/src/components/clinical/CecAdjudicationConsole.vue|telephone_fax|b6db71b54123e34f
 apps/web/src/components/clinical/CecAdjudicationConsole.vue|telephone_fax|f5aa350df66b8c0e
@@ -137,7 +136,6 @@ apps/web/src/components/econsent/IcfSectionEditor.vue|urls|504490bbe276ee29
 apps/web/src/components/etmf/PdfPreviewModal.vue|email|938a9a4080776dae
 apps/web/src/components/etmf/PdfPreviewModal.vue|ssn_national_id|be2c1c1457cc705e
 apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue|ip_mac_addresses|0fc09638c565f57f
-apps/web/src/components/quality/StatisticalForensicsViewer.vue|telephone_fax|205a70949afe01c4
 apps/web/src/components/quality/StatisticalForensicsViewer.vue|zip_geographic|8d3e810cb0b4ecab
 apps/web/src/components/quality/StatisticalForensicsViewer.vue|zip_geographic|8d3e810cb0b4ecab
 apps/web/src/components/quality/StatisticalForensicsViewer.vue|zip_geographic|d6d20fb139e917b0

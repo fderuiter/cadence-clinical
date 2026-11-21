@@ -165,10 +165,7 @@
             <div class="checksum-block">
               <h5>SHA-256 Digest:</h5>
               <code class="checksum-text" :title="fileRecord?.checksum_sha256">
-                {{
-                  fileRecord?.checksum_sha256 ||
-                  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-                }}
+                {{ fileRecord?.checksum_sha256 || emptySha256Digest }}
               </code>
             </div>
           </div>
@@ -573,6 +570,8 @@ const pollTimer = ref(null);
 const qualityLevels = ref([]);
 const selectedQuality = ref(-1);
 const hlsInstance = ref(null);
+const emptySha256Digest =
+  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"; // pragma: allowlist secret
 const reportedCheckpoints = ref(new Set());
 const pendingAuditEvents = ref(new Set());
 const auditErrorState = ref(null);

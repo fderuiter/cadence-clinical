@@ -1379,13 +1379,13 @@ function loadSampleLockfile() {
             Package: "dplyr",
             Version: "1.1.4",
             Source: "CRAN",
-            Hash: "9a77b8f9e1e2d3c4",
+            Hash: "9a77b8f9e1e2d3c4", // pragma: allowlist secret
           },
           rtables: {
             Package: "rtables",
             Version: "0.6.6",
             Source: "CRAN",
-            Hash: "c4d3e2f1a8b7c6d5",
+            Hash: "c4d3e2f1a8b7c6d5", // pragma: allowlist secret
           },
           survival: {
             Package: "survival",
