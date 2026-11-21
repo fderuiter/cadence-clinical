@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setupServer } from "msw/node";
 import { createPinia, setActivePinia } from "pinia";
 import { getApiBaseUrl } from "../src/api/authorization.js";
-import { getBaseUrl } from "../src/api/client";
+import { createOpenApiClient, getBaseUrl } from "../src/api/client";
 import {
   ensureServiceWorkerController,
   normalizeBasePath,
@@ -735,6 +735,40 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
       await router.isReady();
 
       expect(router.currentRoute.value.name).toBe("mdr");
+    });
+
+    it("rewrites default createOpenApiClient requests when VITE_API_BASE_URL updates after client construction", async () => {
+      vi.stubEnv("VITE_API_BASE_URL", "");
+      const client = createOpenApiClient();
+
+      const seenRequests = [];
+      vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+        const req = input instanceof Request ? input : new Request(input);
+        seenRequests.push({
+          url: req.url,
+          method: req.method,
+          body:
+            req.method === "GET" || req.method === "HEAD"
+              ? null
+              : await req.text(),
+        });
+        return new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      });
+
+      vi.stubEnv("VITE_API_BASE_URL", "http://127.0.0.1:45678");
+      await client.POST("/api/v1/kernel/observations/correct", {
+        body: { value: "125" },
+      });
+
+      expect(seenRequests).toHaveLength(1);
+      expect(seenRequests[0].url).toBe(
+        "http://127.0.0.1:45678/api/v1/kernel/observations/correct"
+      );
+      expect(seenRequests[0].method).toBe("POST");
+      expect(JSON.parse(seenRequests[0].body)).toEqual({ value: "125" });
     });
   });
 });

@@ -89,29 +89,34 @@ jobs:
           node scripts/run-cli.js check vulnerabilities
 
       - name: Download Verified .NET Test Evidence
-        id: download_evidence
-        if: github.event_name == 'workflow_call'
+        if: github.event_name != 'workflow_dispatch'
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: gxp-test-evidence-${{ github.run_id }}-${{ github.run_attempt }}
           path: TestResults/gxp
 
+      - name: Execute .NET Test Suite (Manual Dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          CADENCE_TEST_EVIDENCE_DIR: ${{ github.workspace }}/TestResults/gxp
+        run: |
+          dotnet build Cadence.sln --configuration Release --no-restore
+          dotnet test Cadence.sln --configuration Release --no-build --results-directory TestResults/gxp --logger "trx;LogFilePrefix=gxp"
+          bash scripts/test-check-database-test-results.sh
+          bash scripts/check-database-test-results.sh
+
       # Delete the committed copies first so a sync that exits 0 without
       # writing them fails the verify step instead of archiving stale reports.
       # A release is a snapshot (ADR-2532): only `gxp snapshot` writes docs/SDLC.
-      # On workflow_call, reuse forwarded TestResults/gxp evidence without repeating PostgreSQL tests;
-      # on manual workflow_dispatch without upstream artifacts, run against the fallback PostgreSQL 18 service.
+      # Reusable calls from ci.yml inherit the caller's event_name ('push') and download TestResults/gxp;
+      # manual workflow_dispatch populates TestResults/gxp above before the committed copies are removed.
       - name: Generate GxP Reports
         env:
           CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
           CADENCE_GXP_SNAPSHOT: "1"
         run: |
           rm -f docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md
-          if [ "${{ steps.download_evidence.outcome }}" = "success" ]; then
-            node scripts/run-cli.js gxp snapshot --results-dir TestResults/gxp
-          else
-            node scripts/run-cli.js gxp snapshot
-          fi
+          node scripts/run-cli.js gxp snapshot --results-dir TestResults/gxp
 
       - name: Verify and Stage Generated Reports
         run: |

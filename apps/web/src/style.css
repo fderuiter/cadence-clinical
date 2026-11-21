@@ -1880,3 +1880,20 @@ a:focus-visible,
   transform: rotate(-30deg);
   white-space: nowrap;
 }
+
+/* Ensure sticky header does not obscure scrolled-to targets and 12-col clinical form inputs shrink cleanly */
+html {
+  scroll-padding-top: 88px;
+}
+
+.clinical-form > *,
+.clinical-form fieldset > div,
+.clinical-input,
+.clinical-input .input-wrapper,
+.clinical-input input[type="text"] {
+  min-width: 0;
+}
+
+.clinical-input .query-flag {
+  flex-shrink: 0;
+}
