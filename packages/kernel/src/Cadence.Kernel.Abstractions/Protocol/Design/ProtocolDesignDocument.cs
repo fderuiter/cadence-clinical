@@ -158,7 +158,8 @@ public static partial class ProtocolDesignDocument
             .Concat(design.Estimands.OfType<Estimand>().Select(e => (Name: $"{e.Id}.interventionIds", Items: (IEnumerable<object?>)(e.InterventionIds ?? []))))
             .Concat(design.Populations.OfType<Population>().Select(p => (Name: $"{p.Id}.criterionIds", Items: (IEnumerable<object?>)p.CriterionIds)))
             .Concat(design.Cohorts.OfType<Cohort>().Select(c => (Name: $"{c.Id}.armIds", Items: (IEnumerable<object?>)c.ArmIds)))
-            .Concat(design.PlannedActivities.OfType<PlannedActivity>().Select(a => (Name: $"{a.Id}.collectionSpecIds", Items: (IEnumerable<object?>)a.CollectionSpecIds)));
+            .Concat(design.PlannedActivities.OfType<PlannedActivity>().Select(a => (Name: $"{a.Id}.collectionSpecIds", Items: (IEnumerable<object?>)a.CollectionSpecIds)))
+            .Concat(design.ImportNotes is null ? [] : [(Name: "importNotes", Items: (IEnumerable<object?>)design.ImportNotes)]);
         return lists.Concat(nested).Where(list => list.Items.Any(item => item is null)).Select(list => $"{list.Name} contains null.");
     }
 

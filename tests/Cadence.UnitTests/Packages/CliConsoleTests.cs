@@ -57,7 +57,12 @@ public sealed class CliConsoleTests
     public void TerminalWithoutAnsi_GetsThePlainConsole()
     {
         using var output = new StringWriter();
-        var detected = AnsiConsole.Create(new AnsiConsoleSettings { Ansi = AnsiSupport.No, Out = new AnsiConsoleOutput(output) });
+        var detected = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Ansi = AnsiSupport.No,
+            Enrichment = new ProfileEnrichment { UseDefaultEnrichers = false },
+            Out = new AnsiConsoleOutput(output),
+        });
 
         var console = CliConsole.Create(output, outputRedirected: false, detected);
 
@@ -73,6 +78,24 @@ public sealed class CliConsoleTests
     [InlineData("linux")]
     [InlineData(null)]
     public async Task Cli_WithRedirectedOutput_PrintsAFailingCheck(string? term)
+    {
+        string stdout = await RunRedirectedCheckNoSuchGateAsync(term, githubActions: false);
+
+        stdout.Should().Contain("Unknown quality gate 'no-such-gate'.");
+        stdout.Should().Contain("Executing Cadence Quality Sentinels & Policy Gates...");
+        stdout.Should().NotContain("\u001b");
+    }
+
+    [Fact]
+    public async Task Cli_WithRedirectedOutputInGitHubActions_PrintsPlainTextWithoutAnsi()
+    {
+        string stdout = await RunRedirectedCheckNoSuchGateAsync("linux", githubActions: true);
+
+        stdout.Should().Contain("Unknown quality gate 'no-such-gate'.");
+        stdout.Should().NotContain("\u001b", "Spectre CI profile enrichers must not re-enable ANSI codes on redirected output");
+    }
+
+    private static async Task<string> RunRedirectedCheckNoSuchGateAsync(string? term, bool githubActions)
     {
         string cli = Path.Combine(AppContext.BaseDirectory, "cadence.dll");
         File.Exists(cli).Should().BeTrue($"the test project references the CLI, so {cli} is built next to the tests");
@@ -95,6 +118,12 @@ public sealed class CliConsoleTests
             psi.Environment["TERM"] = term;
         }
 
+        if (githubActions)
+        {
+            psi.Environment["GITHUB_ACTIONS"] = "true";
+            psi.Environment["CI"] = "true";
+        }
+
         using var process = Process.Start(psi)!;
         process.StandardInput.Close();
         var ct = TestContext.Current.CancellationToken;
@@ -103,8 +132,6 @@ public sealed class CliConsoleTests
         await process.WaitForExitAsync(ct);
 
         process.ExitCode.Should().Be(1, await stderr);
-        stdout.Should().Contain("Unknown quality gate 'no-such-gate'.");
-        stdout.Should().Contain("Executing Cadence Quality Sentinels & Policy Gates...");
-        stdout.Should().NotContain("\u001b");
+        return stdout;
     }
 }

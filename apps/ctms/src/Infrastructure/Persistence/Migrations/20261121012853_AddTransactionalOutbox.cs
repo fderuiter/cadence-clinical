@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations;
 
 /// <inheritdoc />
-public partial class SyncCtmsOutboxAndDelegationModel : Migration
+public partial class AddTransactionalOutbox : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)

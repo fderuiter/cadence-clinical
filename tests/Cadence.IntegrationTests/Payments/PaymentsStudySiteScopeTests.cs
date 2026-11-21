@@ -171,7 +171,7 @@ public sealed class PaymentsStudySiteScopeTests(PaymentsPostgresApiFactory facto
     }
 
     /// <summary>
-    /// The same flows still work in scope: a finance officer assigned to the study approves, reconciles and exports its
+    /// The same flows still work in scope: a finance officer assigned to the study approves, exports and reconciles its
     /// invoice and reads the resulting audit rows, and a site-A CRC credits a stipend at site A.
     /// </summary>
     [Fact]
@@ -182,9 +182,9 @@ public sealed class PaymentsStudySiteScopeTests(PaymentsPostgresApiFactory facto
         using (var finance = Client(TestSecurityContext.Identity("finance-1", "Grants Manager") with { StudyIds = [study.StudyId] }))
         {
             (await finance.PostAsync($"{Base}/invoices/{study.InvoiceA}/approve", null, Ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await finance.PostAsync($"{Base}/invoices/{study.InvoiceA}/erp-export", null, Ct)).StatusCode.Should().Be(HttpStatusCode.OK);
             (await finance.PostAsJsonAsync($"{Base}/invoices/{study.InvoiceA}/reconcile", new { payment_reference = "WIRE-1" }, Ct))
                 .StatusCode.Should().Be(HttpStatusCode.OK);
-            (await finance.PostAsync($"{Base}/invoices/{study.InvoiceA}/erp-export", null, Ct)).StatusCode.Should().Be(HttpStatusCode.OK);
             (await IdsAsync(finance, "/audit-logs")).Should().HaveCount(3);
         }
 

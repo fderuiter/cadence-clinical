@@ -4,9 +4,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Cadence.Kernel.Modules;
 using Cadence.Kernel.Time;
-using Cadence.Modules.Intelligence.Domain;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 
@@ -55,7 +53,7 @@ public static class BiometricEndpoints
             .WithName("AiVerifyLiveness")
             .WithSummary("Tests video frame payloads for anti-spoofing in temporary memory and returns signed liveness tokens.")
             .Produces<VerifyLivenessResponse>(StatusCodes.Status200OK)
-            .ProducesKernelErrors(IntelligenceErrors.BiometricLivenessRejected);
+            .ProducesProblem(StatusCodes.Status400BadRequest);
 
         return app;
     }
