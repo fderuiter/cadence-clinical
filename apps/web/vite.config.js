@@ -84,6 +84,9 @@ export default defineConfig({
   preview: {
     host: "::",
   },
+  optimizeDeps: {
+    entries: ["index.html", "tests/browser/observation.html"],
+  },
   build: {
     outDir: "dist",
     emptyOutDir: true,

@@ -209,7 +209,9 @@
           :form-id="routeQuery('formId')"
           :enrollment-id="activeEnrollmentProp"
           :collection-spec-id="routeQuery('collectionSpecId')"
-          :planned-activity-id="routeQuery('plannedActivityId')"
+          :planned-activity-id="
+            routeQuery('plannedActivityId') ?? routeQuery('visitId')
+          "
           :highlight-item-id="routeQuery('itemId')"
           :can-manage-queries="
             authStore.isAuthenticated
@@ -997,16 +999,21 @@ if (demoBuild) {
 onMounted(async () => {
   window.addEventListener("beforeunload", handleBeforeUnload);
   if (route && route.query) {
-    if (route.query.studyId) store.activeStudyId = String(route.query.studyId);
+    if (route.query.studyId) {
+      const incomingStudy = String(route.query.studyId);
+      store.activeStudyId = incomingStudy;
+      if (demoBuild) store.currentStudyId = incomingStudy;
+    }
     if (route.query.siteId) store.activeSiteId = String(route.query.siteId);
     if (route.query.subjectId) {
       const sId = String(route.query.subjectId);
       store.activeSubjectId = sId;
       selectedSubjectId.value = sId;
     }
-    if (demoBuild && route.query.visitId) {
-      store.activeVisitId = route.query.visitId;
-      const vId = String(route.query.visitId);
+    const incomingVisit = route.query.visitId || route.query.plannedActivityId;
+    if (demoBuild && incomingVisit) {
+      const vId = String(incomingVisit);
+      store.activeVisitId = vId;
       if (
         vId.toLowerCase().includes("week2") ||
         vId.toLowerCase().includes("week 2")

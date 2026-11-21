@@ -109,13 +109,3 @@ internal sealed partial class DevelopmentTenantBootstrap(
     [LoggerMessage(EventId = 2544, Level = LogLevel.Information, Message = "The demo study {StudyCode} is seeded in the development tenant {Code}")]
     private static partial void LogDemoData(ILogger logger, string studyCode, string code);
 }
-
-/// <summary>
-/// The service account a host-internal unit of work acts as, set only by host code in its own DI scope (the
-/// development tenant bootstrap). Request scopes never set it, so a request's actor still comes only from the verified
-/// caller identity (<see cref="ClaimsCurrentActor"/>).
-/// </summary>
-internal sealed class ServiceActorScope
-{
-    public Actor? Actor { get; set; }
-}

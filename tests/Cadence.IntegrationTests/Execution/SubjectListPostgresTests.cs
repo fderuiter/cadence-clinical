@@ -55,5 +55,9 @@ public sealed class SubjectListPostgresTests(ExecutionPostgresFixture fixture) :
         var secondPage = await reader.ListAsync(new SubjectListCriteria(study, null, null, 2, 2), ct);
         secondPage.Total.Should().Be(4);
         secondPage.Items.Select(s => s.EnrollmentIndex).Should().Equal(2, 3);
+
+        var filteredByQuery = await reader.ListAsync(new SubjectListCriteria(study, null, null, 50, 0, Query: "-s2"), ct);
+        filteredByQuery.Total.Should().Be(1);
+        filteredByQuery.Items.Single().SubjectCode.Value.Should().Be($"{study.Value}-S2");
     }
 }
