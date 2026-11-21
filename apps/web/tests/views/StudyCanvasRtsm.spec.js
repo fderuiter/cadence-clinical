@@ -684,7 +684,7 @@ describe("Clinical Canvas RTSM, consent, blinding, and emergency unblinding", ()
     ).toBe(true);
   });
 
-  it("passes axe-core WCAG 2.2 AA accessibility audits across all new RTSM sections, drawers, and modals", async () => {
+  it("passes axe-core WCAG 2.2 AA accessibility audit on Randomization schemes drafting and approval", async () => {
     vi.mocked(executionApi.listRandomizationSchemes).mockResolvedValue([
       makeScheme({ status: "DRAFT", drafted_by: "stat.author" }),
     ]);
@@ -701,15 +701,17 @@ describe("Clinical Canvas RTSM, consent, blinding, and emergency unblinding", ()
     await expect(
       wrapper.find("#randomization-schemes-section").element
     ).toBeAccessible();
+  });
 
-    wrapper.unmount();
+  it("passes axe-core WCAG 2.2 AA accessibility audit on Investigational supply and kit seeding", async () => {
     signIn({ roles: ["sponsor_dm"], username: "dm.user", siteId: "017" });
     await open("/studies/CAD-101?stage=conduct&section=supply&site=017");
     await wrapper.find("#btn-open-seed-kits").trigger("click");
     await flushPromises();
     await expect(wrapper.find("#supply-section").element).toBeAccessible();
+  });
 
-    wrapper.unmount();
+  it("passes axe-core WCAG 2.2 AA accessibility audit on inspector consent capture and RandomizeParticipantDrawer", async () => {
     vi.mocked(executionApi.listRandomizationSchemes).mockResolvedValue([
       makeScheme({ status: "APPROVED", approved_by: "stat.approver" }),
     ]);
@@ -724,10 +726,10 @@ describe("Clinical Canvas RTSM, consent, blinding, and emergency unblinding", ()
     await wrapper.find("#btn-open-randomize-drawer").trigger("click");
     await flushPromises();
     await expect(wrapper.find("#canvas-inspector").element).toBeAccessible();
+  });
 
-    wrapper.unmount();
+  it("passes axe-core WCAG 2.2 AA accessibility audit on EmergencyUnblindModal", async () => {
     participants = [makeParticipant({ status: "ACTIVE" })];
-    await router.push("/studies");
     signIn({
       roles: ["Principal Investigator"],
       username: "pi.site101",
@@ -738,8 +740,9 @@ describe("Clinical Canvas RTSM, consent, blinding, and emergency unblinding", ()
     await wrapper.find("#btn-emergency-unblind").trigger("click");
     await flushPromises();
     await expect(wrapper.find("#canvas-inspector").element).toBeAccessible();
+  });
 
-    wrapper.unmount();
+  it("passes axe-core WCAG 2.2 AA accessibility audit on CTMS returned kit reconciliation panel", async () => {
     signIn({ roles: ["pharmacist"], username: "pharmacist.site101" });
     await open("/ctms?studyId=CAD-101&siteId=017");
     await expect(

@@ -1,10 +1,14 @@
 using System;
+using System.Collections.Generic;
 using System.CommandLine;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 using Cadence.Kernel.Time;
+using Cadence.ToolingCore.Services;
 
 using Spectre.Console;
 
@@ -26,6 +30,41 @@ public static class ScaffoldCommands
         command.SetAction(result => ScaffoldAdr(result.GetRequiredValue(title)));
     }
 
+    public static void ConfigurePost(Command command)
+    {
+        var title = new Argument<string>("title") { Description = "Title of the engineering blog post" };
+        var author = new Option<string>("--author", "-a")
+        {
+            Description = "Author GitHub handle or display name (comma-separated for multiple, e.g. fderuiter)",
+            DefaultValueFactory = _ => "@fderuiter",
+        };
+        var tags = new Option<string[]>("--tag", "-t")
+        {
+            Description = "Topic tag slug (repeat or comma-separate for multiple)",
+            AllowMultipleArgumentsPerToken = false,
+        };
+        var summary = new Option<string?>("--summary", "-s")
+        {
+            Description = "One-sentence summary excerpt for the blog index and RSS feed",
+        };
+        var publish = new Option<bool>("--publish")
+        {
+            Description = "Write draft: false so the post is published immediately instead of starting as a draft",
+        };
+
+        command.Arguments.Add(title);
+        command.Options.Add(author);
+        command.Options.Add(tags);
+        command.Options.Add(summary);
+        command.Options.Add(publish);
+        command.SetAction(result => ScaffoldPost(
+            result.GetRequiredValue(title),
+            author: result.GetValue(author),
+            tags: result.GetValue(tags),
+            summary: result.GetValue(summary),
+            draft: !result.GetValue(publish)));
+    }
+
     private static int ScaffoldService(string name)
     {
         AnsiConsole.MarkupLine($"[cyan]Scaffolding Clean Architecture service: {Markup.Escape(name)}[/]");
@@ -42,9 +81,8 @@ public static class ScaffoldCommands
     {
         AnsiConsole.MarkupLine($"[cyan]Scaffolding new ADR: {Markup.Escape(title)}[/]");
         string repoRoot = Cadence.Cli.Services.QualityGateOrchestrator.FindRepoRoot();
-        string todayStr = SystemClock.Instance.UtcNow.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
-        string slug = Regex.Replace(title.ToLowerInvariant().Trim(), @"[^\w\s-]", "");
-        slug = Regex.Replace(slug, @"[\s_-]+", "-").Trim('-');
+        string todayStr = SystemClock.Instance.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        string slug = SlugifyTitle(title);
         string filename = $"{todayStr}-{slug}.md";
         string adrDir = Path.Combine(repoRoot, "docs", "adr");
         Directory.CreateDirectory(adrDir);
@@ -153,6 +191,134 @@ Describe the background, architectural context, and the specific technical or bu
         }
 
         return 0;
+    }
+
+    public static int ScaffoldPost(
+        string title,
+        string? repoRoot = null,
+        IClock? clock = null,
+        string? author = null,
+        IReadOnlyList<string>? tags = null,
+        string? summary = null,
+        bool draft = true)
+    {
+        AnsiConsole.MarkupLine($"[cyan]Scaffolding new engineering blog post: {Markup.Escape(title)}[/]");
+        string resolvedRoot = repoRoot ?? Services.QualityGateOrchestrator.FindRepoRoot();
+        string todayStr = (clock ?? SystemClock.Instance).UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        string slug = SlugifyTitle(title);
+        if (string.IsNullOrWhiteSpace(slug))
+        {
+            AnsiConsole.MarkupLine("[red]Error: Post title must contain at least one alphanumeric character.[/]");
+            return 1;
+        }
+
+        string filename = $"{todayStr}-{slug}.md";
+        string blogDir = Path.Combine(resolvedRoot, "docs", "blog");
+        Directory.CreateDirectory(blogDir);
+        string filepath = Path.Combine(blogDir, filename);
+
+        if (File.Exists(filepath))
+        {
+            AnsiConsole.MarkupLine($"[red]Error: Blog post file already exists: {Markup.Escape(filepath)}[/]");
+            return 1;
+        }
+
+        string cleanTitle = title.Trim();
+        var authorList = ParseDelimitedItems(author, fallback: "@fderuiter");
+        var tagList = (tags ?? [])
+            .SelectMany(entry => entry.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Select(SlugifyTitle)
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (tagList.Count == 0)
+        {
+            tagList.Add("engineering");
+        }
+
+        string cleanSummary = string.IsNullOrWhiteSpace(summary)
+            ? $"Engineering notes and architectural context for {cleanTitle}."
+            : summary.Trim();
+
+        string authorsYaml = string.Join("\n", authorList.Select(a => $"  - \"{EscapeYamlString(a)}\""));
+        string tagsYaml = string.Join(", ", tagList.Select(t => $"\"{EscapeYamlString(t)}\""));
+        string draftYaml = draft ? "true" : "false";
+
+        string template = $@"---
+title: ""{EscapeYamlString(cleanTitle)}""
+date: ""{todayStr}""
+authors:
+{authorsYaml}
+summary: ""{EscapeYamlString(cleanSummary)}""
+tags: [{tagsYaml}]
+draft: {draftYaml}
+related:
+  - text: ""Architecture Decision Records""
+    link: ""../adr/index.md""
+---
+
+# {cleanTitle}
+
+{cleanSummary}
+
+## Context
+
+Summarize the clinical workflow, platform boundary, or operational problem that motivated this change, linking the relevant [Architecture Decision Records](../adr/index.md) or [Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) sections.
+
+## Design and Implementation
+
+Explain the key architectural choices, domain invariants, and trade-offs evaluated during implementation.
+
+## Verification and Trade-offs
+
+Document how the change is verified across automated unit, architecture, or end-to-end suites, and flip `draft: false` in the frontmatter when ready to publish.
+";
+
+        File.WriteAllText(filepath, template);
+        AnsiConsole.MarkupLine($"[green]Successfully created blog post: {Markup.Escape(filepath)}[/]");
+
+        string indexPath = Path.Combine(resolvedRoot, "docs", "DOCUMENTATION_INDEX.md");
+        if (File.Exists(indexPath))
+        {
+            int syncExit = DocIndexSyncService.SyncDocIndex(check: false, repoRoot: resolvedRoot);
+            if (syncExit != 0)
+            {
+                return syncExit;
+            }
+        }
+
+        return 0;
+    }
+
+    private static string SlugifyTitle(string input)
+    {
+        string slug = Regex.Replace(input.ToLowerInvariant().Trim(), @"[^\w\s-]", "");
+        return Regex.Replace(slug, @"[\s_-]+", "-").Trim('-');
+    }
+
+    private static List<string> ParseDelimitedItems(string? raw, string fallback)
+    {
+        var items = (raw ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => !item.Contains(' ') && !item.StartsWith('@') ? $"@{item}" : item)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (items.Count == 0)
+        {
+            items.Add(fallback);
+        }
+
+        return items;
+    }
+
+    private static string EscapeYamlString(string value)
+    {
+        return value
+            .Replace("\\", "\\\\")
+            .Replace("\"", "\\\"")
+            .Replace("\r", " ")
+            .Replace("\n", " ");
     }
 }
 
