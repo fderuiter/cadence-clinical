@@ -212,7 +212,7 @@ public static class CiPlan
             new("actionlint", "Run actionlint")
             {
                 RequiredTool = "actionlint",
-                ToolHint = "install actionlint 1.7.12 (CI runs rhysd/actionlint from github.com/rhysd/actionlint/releases)",
+                ToolHint = "provision actionlint 1.7.12 into .cadence/bin via './scripts/setup_wizard.sh --minimal'",
                 Commands = [new CiCommand("actionlint", [])],
             },
         ]);
@@ -232,7 +232,7 @@ public static class CiPlan
             new("lint-and-static", "Run Hadolint on Dockerfiles")
             {
                 RequiredTool = "hadolint",
-                ToolHint = "install hadolint 2.15.1 (CI downloads it from github.com/hadolint/hadolint/releases)",
+                ToolHint = "provision hadolint 2.15.1 into .cadence/bin via './scripts/setup_wizard.sh --minimal'",
                 Files = CiFileSource.Dockerfiles,
                 Commands = [new CiCommand("hadolint", ["--failure-threshold", "error"])],
             },
@@ -258,7 +258,7 @@ public static class CiPlan
             new("dotnet-quality", "Build .NET solution") { Commands = [Dotnet("build", "Cadence.sln")] },
             new("dotnet-quality", "Run Cadence quality sentinels")
             {
-                Commands = [CadenceCliNoBuild("check", "--exclude", "prettier", "--exclude", "eslint", "--exclude", "detect-secrets", "--exclude", "api-clients", "--exclude", "vulnerabilities")],
+                Commands = [CadenceCliNoBuild("check", "--exclude", "prettier", "--exclude", "eslint", "--exclude", "actionlint", "--exclude", "hadolint", "--exclude", "detect-secrets", "--exclude", "api-clients", "--exclude", "vulnerabilities")],
             },
             new("dotnet-quality", "Run architecture tests")
             {

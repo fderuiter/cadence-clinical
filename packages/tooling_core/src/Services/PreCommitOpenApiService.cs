@@ -12,55 +12,104 @@ public static class PreCommitOpenApiService
     /// The <c>openapi</c> gate. When staged C# files exist, exports specs for affected services.
     /// When no C# files are staged, skips service host startup for sub-second execution.
     /// </summary>
-    public static int ExecutePreCommitOpenApi(string? repoRoot = null, bool quick = false, IEnumerable<string>? targetFiles = null)
+    public static int ExecutePreCommitOpenApi(
+        string? repoRoot = null,
+        bool quick = false,
+        IEnumerable<string>? targetFiles = null,
+        GitIndexReader? indexReader = null)
     {
         repoRoot ??= FindRepoRoot();
 
         if (!quick)
         {
+            if (targetFiles is not null)
+            {
+                var explicitList = targetFiles.ToList();
+                if (explicitList.Count == 0)
+                {
+                    return 0;
+                }
+            }
+
             return OpenApiDriftValidatorService.ValidateDrift(repoRoot);
         }
 
-        var files = targetFiles?.ToList() ?? GetStagedFiles(repoRoot);
-
-        var csharpFiles = files
-            .Where(IsCsharpFile)
-            .ToList();
-
-        if (csharpFiles.Count == 0)
+        List<string> files;
+        if (targetFiles is not null)
         {
-            Console.WriteLine("No staged C# backend changes detected. Skipping service startup (lightweight docs check)...");
-            return ApiDocsGeneratorService.GenerateApiDocs(validate: true, repoRoot);
-        }
-
-        bool affectsSharedLibraries = csharpFiles.Any(IsSharedOrSolutionFile);
-        List<string>? targetServices = null;
-
-        if (!affectsSharedLibraries)
-        {
-            var detectedServices = csharpFiles
-                .Select(ResolveServiceFromPath)
-                .Where(s => !string.IsNullOrEmpty(s))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList()!;
-
-            if (detectedServices.Count == 0)
+            files = targetFiles.ToList();
+            if (files.Count == 0)
             {
-                Console.WriteLine("Staged C# changes do not affect microservice API contracts. Skipping service startup...");
-                return ApiDocsGeneratorService.GenerateApiDocs(validate: true, repoRoot);
+                return 0;
             }
-
-            targetServices = detectedServices!;
-            Console.WriteLine($"Staged C# changes detected for microservice(s): {string.Join(", ", targetServices)}");
         }
         else
         {
-            Console.WriteLine("Staged C# changes detected in shared packages/solution files. Triggering multi-service OpenAPI export...");
+            files = GetStagedFiles(repoRoot);
+            if (files.Count == 0)
+            {
+                return 0;
+            }
         }
 
-        int syncResult = OpenApiSyncService.SyncOpenApiSpec(validate: true, repoRoot, targetServices);
-        int docsResult = ApiDocsGeneratorService.GenerateApiDocs(validate: true, repoRoot);
-        return syncResult != 0 || docsResult != 0 ? 1 : 0;
+        var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit: true, indexReader, out var ownedReader);
+        using (ownedReader)
+        {
+            var csharpFiles = files
+                .Select(f => GitIndexReader.TryNormalizeRelativePath(repoRoot, f))
+                .Where(rel => !string.IsNullOrEmpty(rel) &&
+                              IsCsharpFile(rel) &&
+                              (reader is not null ? reader.FileExists(rel) : File.Exists(Path.Combine(repoRoot, rel))))
+                .Select(rel => rel!)
+                .ToList();
+
+            if (csharpFiles.Count == 0)
+            {
+                Console.WriteLine("No staged C# backend changes detected. Skipping service startup (lightweight docs check)...");
+                return ApiDocsGeneratorService.GenerateApiDocs(validate: true, repoRoot, preCommit: true, indexReader: reader);
+            }
+
+            bool affectsSharedLibraries = csharpFiles.Any(IsSharedOrSolutionFile);
+            List<string>? targetServices = null;
+
+            if (!affectsSharedLibraries)
+            {
+                var detectedServices = csharpFiles
+                    .Select(ResolveServiceFromPath)
+                    .Where(s => !string.IsNullOrEmpty(s))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList()!;
+
+                if (detectedServices.Count == 0)
+                {
+                    Console.WriteLine("Staged C# changes do not affect microservice API contracts. Skipping service startup...");
+                    return ApiDocsGeneratorService.GenerateApiDocs(validate: true, repoRoot, preCommit: true, indexReader: reader);
+                }
+
+                targetServices = detectedServices!;
+                Console.WriteLine($"Staged C# changes detected for microservice(s): {string.Join(", ", targetServices)}");
+            }
+            else
+            {
+                Console.WriteLine("Staged C# changes detected in shared packages/solution files. Triggering multi-service OpenAPI export...");
+            }
+
+            var overlappingUnstaged = GitIndexReader.GetOverlappingUnstagedPaths(
+                repoRoot,
+                p => GitIndexReader.IsMsBuildInputPath(p) ||
+                     p.StartsWith("docs/openapi/", StringComparison.OrdinalIgnoreCase) ||
+                     p.StartsWith("docs/api/", StringComparison.OrdinalIgnoreCase));
+            if (overlappingUnstaged.Count > 0)
+            {
+                string sample = string.Join(", ", overlappingUnstaged.Take(5));
+                Console.WriteLine($"[ERROR] Unstaged or untracked working-tree edits overlap MSBuild/OpenAPI inputs ({sample}). Stage or stash them before committing so staged OpenAPI contracts can be verified fail-closed.");
+                return 1;
+            }
+
+            int syncResult = OpenApiSyncService.SyncOpenApiSpec(validate: true, repoRoot, targetServices);
+            int docsResult = ApiDocsGeneratorService.GenerateApiDocs(validate: true, repoRoot, preCommit: true, indexReader: reader);
+            return syncResult != 0 || docsResult != 0 ? 1 : 0;
+        }
     }
 
     public static List<string> GetStagedFiles(string repoRoot)

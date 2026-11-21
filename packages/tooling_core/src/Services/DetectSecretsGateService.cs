@@ -71,9 +71,15 @@ public static class DetectSecretsGateService
         string? repoRoot = null,
         string[]? targetFiles = null,
         bool preCommit = false,
-        Func<string, string?>? getEnvironmentVariable = null)
+        Func<string, string?>? getEnvironmentVariable = null,
+        GitIndexReader? indexReader = null)
     {
         repoRoot ??= FindRepoRoot();
+        if (targetFiles is { Length: 0 })
+        {
+            return 0;
+        }
+
         getEnvironmentVariable ??= Environment.GetEnvironmentVariable;
 
         var tool = ResolveTool(repoRoot, getEnvironmentVariable);
@@ -84,97 +90,142 @@ public static class DetectSecretsGateService
             return 1;
         }
 
-        string baselinePath = Path.Combine(repoRoot, ".secrets.baseline");
-        if (!File.Exists(baselinePath))
+        var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
+        using (ownedReader)
         {
-            Console.WriteLine($"[ERROR] Secrets baseline file not found at '{baselinePath}'.");
-            return 1;
-        }
+            string baselinePath = Path.Combine(repoRoot, ".secrets.baseline");
+            string baselineContent;
 
-        string baselineContent;
-        try
-        {
-            baselineContent = File.ReadAllText(baselinePath);
-            using var _ = JsonDocument.Parse(baselineContent);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Secrets baseline '{baselinePath}' is invalid JSON: {ex.Message}");
-            return 1;
-        }
-
-        var filesToScan = ResolveFilesToScan(repoRoot, targetFiles, preCommit);
-        if (filesToScan.Count == 0)
-        {
-            return 0;
-        }
-
-        if (!IsGitWorkTree(repoRoot))
-        {
-            Console.WriteLine($"[ERROR] '{repoRoot}' is not a git work tree; detect-secrets requires a git repository context.");
-            return 1;
-        }
-
-        string tempBaseline = Path.Combine(Path.GetTempPath(), $"cadence-secrets-baseline-{Guid.NewGuid():N}.json");
-        try
-        {
-            foreach (string[] batch in filesToScan.Chunk(MaxFilesPerBatch))
+            if (reader is { HasAuthoritativeIndex: true })
             {
-                // Re-seed temp baseline on each batch because detect-secrets-hook trims baseline entries to the scanned batch.
-                File.WriteAllText(tempBaseline, baselineContent);
-
-                var args = new List<string>(tool.PrefixArguments)
+                if (!reader.TryReadText(".secrets.baseline", out baselineContent))
                 {
-                    "--baseline",
-                    tempBaseline,
-                    "--exclude-files",
-                    SecretsBaselineCleanerService.CanonicalExcludePattern,
-                };
-                args.AddRange(batch);
-
-                (int exitCode, string stdout, string stderr) = RunCaptured(repoRoot, tool.FileName, args, getEnvironmentVariable);
-
-                // Exit code 0: clean.
-                // Exit code 3: detect_secrets.pre_commit_hook returns 3 strictly when new_secrets is empty and only
-                // baseline line_number / trim metadata changed (SecretsBaselineCleanerService strips line_number).
-                if (exitCode is 0 or 3)
+                    Console.WriteLine($"[ERROR] Secrets baseline '.secrets.baseline' was not found in the Git index at '{repoRoot}'.");
+                    return 1;
+                }
+            }
+            else
+            {
+                if (!File.Exists(baselinePath))
                 {
-                    continue;
+                    Console.WriteLine($"[ERROR] Secrets baseline file not found at '{baselinePath}'.");
+                    return 1;
                 }
 
-                if (!string.IsNullOrWhiteSpace(stdout))
+                try
                 {
-                    Console.WriteLine(stdout.TrimEnd());
+                    baselineContent = File.ReadAllText(baselinePath);
                 }
-
-                if (!string.IsNullOrWhiteSpace(stderr))
+                catch (Exception ex)
                 {
-                    Console.WriteLine(stderr.TrimEnd());
+                    Console.WriteLine($"[ERROR] Secrets baseline '{baselinePath}' could not be read: {ex.Message}");
+                    return 1;
                 }
+            }
 
-                Console.WriteLine("[ERROR] detect-secrets blocked unbaselined secret(s). Remove the secret, or mark a reviewed false positive with an inline '# pragma: allowlist secret' comment.");
+            try
+            {
+                using var _ = JsonDocument.Parse(baselineContent);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] Secrets baseline '{baselinePath}' is invalid JSON: {ex.Message}");
                 return 1;
             }
 
-            return 0;
-        }
-        finally
-        {
-            if (File.Exists(tempBaseline))
+            var filesToScan = ResolveFilesToScan(repoRoot, targetFiles, preCommit, reader);
+            if (filesToScan.Count == 0)
             {
-                File.Delete(tempBaseline);
+                return 0;
+            }
+
+            if (!IsGitWorkTree(repoRoot))
+            {
+                Console.WriteLine($"[ERROR] '{repoRoot}' is not a git work tree; detect-secrets requires a git repository context.");
+                return 1;
+            }
+
+            using var workspace = reader is { HasAuthoritativeIndex: true }
+                ? reader.Materialize(filesToScan)
+                : null;
+            string scanWorkingDirectory = workspace?.RootPath ?? repoRoot;
+            IReadOnlyDictionary<string, string>? gitContextEnv = workspace is not null
+                ? BuildGitContextEnvironment(repoRoot)
+                : null;
+
+            string tempBaseline = Path.Combine(Path.GetTempPath(), $"cadence-secrets-baseline-{Guid.NewGuid():N}.json");
+            try
+            {
+                foreach (string[] batch in filesToScan.Chunk(MaxFilesPerBatch))
+                {
+                    // Re-seed temp baseline on each batch because detect-secrets-hook trims baseline entries to the scanned batch.
+                    File.WriteAllText(tempBaseline, baselineContent);
+
+                    var args = new List<string>(tool.PrefixArguments)
+                    {
+                        "--baseline",
+                        tempBaseline,
+                        "--exclude-files",
+                        SecretsBaselineCleanerService.CanonicalExcludePattern,
+                    };
+                    args.AddRange(batch);
+
+                    (int exitCode, string stdout, string stderr) = RunCaptured(
+                        scanWorkingDirectory,
+                        tool.FileName,
+                        args,
+                        getEnvironmentVariable,
+                        gitContextEnv);
+
+                    // Exit code 0: clean.
+                    // Exit code 3: detect_secrets.pre_commit_hook returns 3 strictly when new_secrets is empty and only
+                    // baseline line_number / trim metadata changed (SecretsBaselineCleanerService strips line_number).
+                    if (exitCode is 0 or 3)
+                    {
+                        continue;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(stdout))
+                    {
+                        Console.WriteLine(stdout.TrimEnd());
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(stderr))
+                    {
+                        Console.WriteLine(stderr.TrimEnd());
+                    }
+
+                    Console.WriteLine("[ERROR] detect-secrets blocked unbaselined secret(s). Remove the secret, or mark a reviewed false positive with an inline '# pragma: allowlist secret' comment.");
+                    return 1;
+                }
+
+                return 0;
+            }
+            finally
+            {
+                if (File.Exists(tempBaseline))
+                {
+                    File.Delete(tempBaseline);
+                }
             }
         }
     }
 
-    private static List<string> ResolveFilesToScan(string repoRoot, string[]? targetFiles, bool preCommit)
+    private static List<string> ResolveFilesToScan(
+        string repoRoot,
+        string[]? targetFiles,
+        bool preCommit,
+        GitIndexReader? reader)
     {
+        if (targetFiles is { Length: 0 })
+        {
+            return [];
+        }
+
         IEnumerable<string> rawCandidates;
         if (preCommit)
         {
-            rawCandidates = targetFiles is { Length: > 0 }
-                ? targetFiles
-                : PreCommitOpenApiService.GetStagedFiles(repoRoot);
+            rawCandidates = targetFiles ?? (IEnumerable<string>)PreCommitOpenApiService.GetStagedFiles(repoRoot);
         }
         else if (targetFiles is not null)
         {
@@ -190,13 +241,20 @@ public static class DetectSecretsGateService
         var result = new SortedSet<string>(StringComparer.Ordinal);
         foreach (string raw in rawCandidates)
         {
-            string fullPath = Path.IsPathRooted(raw) ? Path.GetFullPath(raw) : Path.GetFullPath(Path.Combine(repoRoot, raw));
-            if (!File.Exists(fullPath))
+            string? rel = GitIndexReader.TryNormalizeRelativePath(repoRoot, raw);
+            if (string.IsNullOrEmpty(rel))
             {
                 continue;
             }
 
-            string rel = Path.GetRelativePath(repoRoot, fullPath).Replace('\\', '/');
+            bool exists = reader is { HasAuthoritativeIndex: true }
+                ? reader.FileExists(rel)
+                : File.Exists(Path.Combine(repoRoot, rel));
+            if (!exists)
+            {
+                continue;
+            }
+
             if (rel.StartsWith(".git/", StringComparison.OrdinalIgnoreCase) ||
                 rel.StartsWith("node_modules/", StringComparison.OrdinalIgnoreCase) ||
                 rel.Contains("/node_modules/", StringComparison.OrdinalIgnoreCase) ||
@@ -260,7 +318,8 @@ public static class DetectSecretsGateService
         string workingDirectory,
         string fileName,
         IReadOnlyList<string> arguments,
-        Func<string, string?> getEnvironmentVariable)
+        Func<string, string?> getEnvironmentVariable,
+        IReadOnlyDictionary<string, string>? extraEnvironment = null)
     {
         var psi = new ProcessStartInfo(fileName)
         {
@@ -274,6 +333,14 @@ public static class DetectSecretsGateService
         if (overriddenPath is not null)
         {
             psi.Environment["PATH"] = overriddenPath;
+        }
+
+        if (extraEnvironment is not null)
+        {
+            foreach (var kvp in extraEnvironment)
+            {
+                psi.Environment[kvp.Key] = kvp.Value;
+            }
         }
 
         foreach (string arg in arguments)
@@ -299,6 +366,41 @@ public static class DetectSecretsGateService
         {
             return (127, "", ex.Message);
         }
+    }
+
+    private static Dictionary<string, string>? BuildGitContextEnvironment(string repoRoot)
+    {
+        string fullRepoRoot = Path.GetFullPath(repoRoot);
+        string dotGit = Path.Combine(fullRepoRoot, ".git");
+        string? gitDir = null;
+        if (Directory.Exists(dotGit))
+        {
+            gitDir = dotGit;
+        }
+        else if (File.Exists(dotGit))
+        {
+            var (exitCode, stdout, _) = RunCaptured(
+                fullRepoRoot,
+                "git",
+                ["--no-optional-locks", "rev-parse", "--absolute-git-dir"],
+                Environment.GetEnvironmentVariable);
+            if (exitCode == 0 && !string.IsNullOrWhiteSpace(stdout))
+            {
+                gitDir = stdout.Trim();
+            }
+        }
+
+        if (string.IsNullOrEmpty(gitDir))
+        {
+            return null;
+        }
+
+        return new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["GIT_DIR"] = gitDir,
+            ["GIT_WORK_TREE"] = fullRepoRoot,
+            ["GIT_OPTIONAL_LOCKS"] = "0",
+        };
     }
 
     private static bool IsGitWorkTree(string repoRoot) =>

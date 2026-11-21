@@ -15,64 +15,85 @@ namespace Cadence.ToolingCore.Services;
 /// </summary>
 public static partial class WorkflowSecurityValidatorService
 {
-    public static int ValidateWorkflowSecurity(string[]? files = null, string? repoRoot = null)
+    public static int ValidateWorkflowSecurity(
+        string[]? files = null,
+        string? repoRoot = null,
+        bool preCommit = false,
+        GitIndexReader? indexReader = null)
     {
         repoRoot ??= FindRepoRoot();
         Console.WriteLine("Validating GitHub Actions workflow security, SHA pinning, and token permissions...");
 
-        var targets = ResolveTargetFiles(files, repoRoot, out bool explicitFilterEmpty);
-        if (explicitFilterEmpty)
+        if (files is { Length: 0 })
         {
             Console.WriteLine("✔ No workflow or composite action files in target list.");
             return 0;
         }
 
-        if (targets.Count == 0)
+        var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
+        using (ownedReader)
         {
-            Console.WriteLine($"[ERROR] No GitHub workflow or action files found under '{Path.Combine(repoRoot, ".github")}'.");
-            return 1;
-        }
-
-        var errors = new List<string>();
-        foreach (var (fullPath, relativePath, isWorkflow) in targets)
-        {
-            ValidateFile(fullPath, relativePath, isWorkflow, errors);
-        }
-
-        if (errors.Count > 0)
-        {
-            foreach (string error in errors)
+            var targets = ResolveTargetFiles(files, repoRoot, reader, out bool explicitFilterEmpty);
+            if (explicitFilterEmpty)
             {
-                Console.WriteLine($"[WORKFLOW SECURITY] {error}");
+                Console.WriteLine("✔ No workflow or composite action files in target list.");
+                return 0;
             }
 
-            Console.WriteLine($"\n[ERROR] Found {errors.Count} workflow security violation(s).");
-            return 1;
-        }
+            if (targets.Count == 0)
+            {
+                Console.WriteLine($"[ERROR] No GitHub workflow or action files found under '{Path.Combine(repoRoot, ".github")}'.");
+                return 1;
+            }
 
-        Console.WriteLine($"✔ Validated {targets.Count} workflow and action file(s) cleanly.");
-        return 0;
+            var errors = new List<string>();
+            foreach (var (fullPath, relativePath, isWorkflow) in targets)
+            {
+                ValidateFile(fullPath, relativePath, isWorkflow, reader, errors);
+            }
+
+            if (errors.Count > 0)
+            {
+                foreach (string error in errors)
+                {
+                    Console.WriteLine($"[WORKFLOW SECURITY] {error}");
+                }
+
+                Console.WriteLine($"\n[ERROR] Found {errors.Count} workflow security violation(s).");
+                return 1;
+            }
+
+            Console.WriteLine($"✔ Validated {targets.Count} workflow and action file(s) cleanly.");
+            return 0;
+        }
     }
 
     private static List<(string FullPath, string RelativePath, bool IsWorkflow)> ResolveTargetFiles(
         string[]? files,
         string repoRoot,
+        GitIndexReader? reader,
         out bool explicitFilterEmpty)
     {
         explicitFilterEmpty = false;
         var results = new List<(string FullPath, string RelativePath, bool IsWorkflow)>();
 
-        if (files is { Length: > 0 })
+        if (files is not null)
         {
             foreach (string raw in files)
             {
-                string fullPath = Path.IsPathRooted(raw) ? raw : Path.Combine(repoRoot, raw);
-                if (!File.Exists(fullPath))
+                string? rel = GitIndexReader.TryNormalizeRelativePath(repoRoot, raw);
+                if (string.IsNullOrEmpty(rel))
                 {
                     continue;
                 }
 
-                string rel = Path.GetRelativePath(repoRoot, fullPath).Replace('\\', '/');
+                string fullPath = Path.Combine(repoRoot, rel);
+                bool exists = reader is not null ? reader.FileExists(rel) : File.Exists(fullPath);
+                if (!exists)
+                {
+                    continue;
+                }
+
                 if (IsWorkflowPath(rel))
                 {
                     results.Add((fullPath, rel, true));
@@ -145,9 +166,25 @@ public static partial class WorkflowSecurityValidatorService
         fileName.EndsWith(".yml", StringComparison.OrdinalIgnoreCase) ||
         fileName.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase);
 
-    private static void ValidateFile(string fullPath, string relativePath, bool isWorkflow, List<string> errors)
+    private static void ValidateFile(
+        string fullPath,
+        string relativePath,
+        bool isWorkflow,
+        GitIndexReader? reader,
+        List<string> errors)
     {
-        string[] lines = File.ReadAllLines(fullPath);
+        string[] lines;
+        if (reader is not null)
+        {
+            if (!reader.TryReadLines(relativePath, out lines))
+            {
+                return;
+            }
+        }
+        else
+        {
+            lines = File.ReadAllLines(fullPath);
+        }
         if (isWorkflow)
         {
             var workflow = ParseWorkflowFile(lines);

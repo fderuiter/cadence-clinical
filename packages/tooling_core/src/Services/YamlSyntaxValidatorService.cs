@@ -19,57 +19,81 @@ public static partial class YamlSyntaxValidatorService
     [GeneratedRegex(@"^[|>](?:[+-][1-9]?|[1-9][+-]?)?(?:\s+#.*|\s*)$", RegexOptions.CultureInvariant)]
     private static partial Regex ValidBlockScalarHeaderRegex();
 
-    public static int ValidateYaml(string[]? targetFiles = null, string? repoRoot = null, bool preCommit = false)
+    public static int ValidateYaml(
+        string[]? targetFiles = null,
+        string? repoRoot = null,
+        bool preCommit = false,
+        GitIndexReader? indexReader = null)
     {
         repoRoot ??= FindRepoRoot();
-
-        IReadOnlyList<string> yamlFiles;
-        if (preCommit)
+        if (targetFiles is { Length: 0 })
         {
-            var staged = targetFiles is { Length: > 0 }
-                ? (IEnumerable<string>)targetFiles
-                : PreCommitOpenApiService.GetStagedFiles(repoRoot);
-            yamlFiles = ResolveTargetFiles(repoRoot, staged);
-            if (yamlFiles.Count == 0)
-            {
-                return 0;
-            }
-        }
-        else if (targetFiles is not null)
-        {
-            yamlFiles = ResolveTargetFiles(repoRoot, targetFiles);
-            if (yamlFiles.Count == 0)
-            {
-                return 0;
-            }
-        }
-        else
-        {
-            yamlFiles = DiscoverAllYamlFiles(repoRoot);
+            return 0;
         }
 
-        var errors = new List<string>();
-        foreach (string file in yamlFiles)
+        var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
+        using (ownedReader)
         {
-            string displayPath = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
-            foreach (string error in ValidateFile(file, displayPath))
+            IReadOnlyList<string> yamlFiles;
+            if (preCommit)
             {
-                errors.Add(error);
+                var staged = targetFiles is not null
+                    ? (IEnumerable<string>)targetFiles
+                    : PreCommitOpenApiService.GetStagedFiles(repoRoot);
+                yamlFiles = ResolveTargetFiles(repoRoot, staged, reader);
+                if (yamlFiles.Count == 0)
+                {
+                    return 0;
+                }
             }
-        }
-
-        if (errors.Count > 0)
-        {
-            Console.WriteLine("[YAML] Syntax validation failed:");
-            foreach (string error in errors)
+            else if (targetFiles is not null)
             {
-                Console.WriteLine($"  - {error}");
+                yamlFiles = ResolveTargetFiles(repoRoot, targetFiles, reader: null);
+                if (yamlFiles.Count == 0)
+                {
+                    return 0;
+                }
+            }
+            else
+            {
+                yamlFiles = DiscoverAllYamlFiles(repoRoot);
             }
 
-            return 1;
-        }
+            var errors = new List<string>();
+            foreach (string file in yamlFiles)
+            {
+                string displayPath = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
+                IReadOnlyList<string> fileErrors;
+                if (reader is not null)
+                {
+                    fileErrors = reader.TryReadBytes(displayPath, out byte[] stagedBytes)
+                        ? ValidateBytes(stagedBytes, displayPath)
+                        : [];
+                }
+                else
+                {
+                    fileErrors = ValidateFile(file, displayPath);
+                }
 
-        return 0;
+                foreach (string error in fileErrors)
+                {
+                    errors.Add(error);
+                }
+            }
+
+            if (errors.Count > 0)
+            {
+                Console.WriteLine("[YAML] Syntax validation failed:");
+                foreach (string error in errors)
+                {
+                    Console.WriteLine($"  - {error}");
+                }
+
+                return 1;
+            }
+
+            return 0;
+        }
     }
 
     public static IReadOnlyList<string> ValidateFile(string filePath, string? displayPath = null)
@@ -85,6 +109,11 @@ public static partial class YamlSyntaxValidatorService
             return [$"{displayPath}:1: Could not read file ({ex.Message})."];
         }
 
+        return ValidateBytes(bytes, displayPath);
+    }
+
+    public static IReadOnlyList<string> ValidateBytes(byte[] bytes, string displayPath = "<yaml>")
+    {
         string content;
         try
         {
@@ -1033,18 +1062,27 @@ public static partial class YamlSyntaxValidatorService
         return i;
     }
 
-    private static List<string> ResolveTargetFiles(string repoRoot, IEnumerable<string> candidates)
+    private static List<string> ResolveTargetFiles(
+        string repoRoot,
+        IEnumerable<string> candidates,
+        GitIndexReader? reader)
     {
         var result = new SortedSet<string>(StringComparer.Ordinal);
         foreach (string raw in candidates)
         {
-            string fullPath = Path.IsPathRooted(raw) ? Path.GetFullPath(raw) : Path.GetFullPath(Path.Combine(repoRoot, raw));
-            if (!File.Exists(fullPath))
+            string? rel = GitIndexReader.TryNormalizeRelativePath(repoRoot, raw);
+            if (string.IsNullOrEmpty(rel))
             {
                 continue;
             }
 
-            string rel = Path.GetRelativePath(repoRoot, fullPath).Replace('\\', '/');
+            string fullPath = Path.Combine(repoRoot, rel);
+            bool exists = reader is not null ? reader.FileExists(rel) : File.Exists(fullPath);
+            if (!exists)
+            {
+                continue;
+            }
+
             if (IsYamlFile(rel) && !IsExcludedDirectory(rel))
             {
                 result.Add(fullPath);

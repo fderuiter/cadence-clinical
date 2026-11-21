@@ -133,7 +133,7 @@ public sealed class LocalCiEnvironment
         }
     }
 
-    /// <summary>Whether <paramref name="tool"/> is in <c>.cadence/venv</c>, <c>.venv</c>, or a <c>PATH</c> directory.</summary>
+    /// <summary>Whether <paramref name="tool"/> is in <c>.cadence/bin</c>, <c>.cadence/venv</c>, <c>.venv</c>, or a <c>PATH</c> directory.</summary>
     public static bool IsToolAvailable(string repoRoot, string tool) =>
         ResolveVenvToolPath(repoRoot, tool) is not null || IsOnPath(tool);
 
@@ -141,11 +141,18 @@ public sealed class LocalCiEnvironment
     {
         string[] suffixes = OperatingSystem.IsWindows() ? [".exe", ".cmd", ".bat", ""] : [""];
         string binSubdir = OperatingSystem.IsWindows() ? "Scripts" : "bin";
-        foreach (string venv in new[] { Path.Combine(repoRoot, ".cadence", "venv", binSubdir), Path.Combine(repoRoot, ".venv", binSubdir) })
+        string[] searchDirs =
+        [
+            Path.Combine(repoRoot, ".cadence", "bin"),
+            Path.Combine(repoRoot, ".cadence", "venv", binSubdir),
+            Path.Combine(repoRoot, ".venv", binSubdir),
+        ];
+
+        foreach (string dir in searchDirs)
         {
             foreach (string suffix in suffixes)
             {
-                string candidate = Path.Combine(venv, tool + suffix);
+                string candidate = Path.Combine(dir, tool + suffix);
                 if (File.Exists(candidate))
                 {
                     return candidate;

@@ -6,62 +6,112 @@ namespace Cadence.ToolingCore.Services;
 
 public static class QueryLinterService
 {
-    public static int LintQueries(string[]? files = null, string? repoRoot = null)
+    public static int LintQueries(
+        string[]? files = null,
+        string? repoRoot = null,
+        bool preCommit = false,
+        GitIndexReader? indexReader = null)
     {
         repoRoot ??= FindRepoRoot();
         Console.WriteLine("Linting database and ORM query statements...");
 
-        var csFiles = files != null && files.Length > 0
-            // The pre-commit gate passes every staged file; only C# source is linted, so a Markdown table that
-            // documents these rules is not reported as a violation of them.
-            ? files.Where(f => f.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
-                .Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)).Where(File.Exists).ToList()
-            : Directory.EnumerateFiles(repoRoot, "*.cs", SearchOption.AllDirectories)
-                .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") &&
-                            !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") &&
-                            !f.Contains($"{Path.DirectorySeparatorChar}tests{Path.DirectorySeparatorChar}"))
-                .ToList();
-
-        int issues = 0;
-        foreach (var file in csFiles)
+        if (files is { Length: 0 })
         {
-            string relPath = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
-            if (relPath.Contains("Services/QueryLinterService.cs")) continue;
+            Console.WriteLine("✔ Query style linting passed cleanly (no target files).");
+            return 0;
+        }
 
-            string[] lines;
-            try { lines = File.ReadAllLines(file); } catch { continue; }
-
-            for (int i = 0; i < lines.Length; i++)
+        var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
+        using (ownedReader)
+        {
+            System.Collections.Generic.List<string> csRelativeFiles;
+            if (files is not null)
             {
-                string line = lines[i];
-                string trimmed = line.TrimStart();
-                if (trimmed.StartsWith("//") || trimmed.StartsWith("/*") || trimmed.StartsWith('*') || trimmed.StartsWith('#'))
+                // The pre-commit gate passes every staged file; only C# source is linted, so a Markdown table that
+                // documents these rules is not reported as a violation of them.
+                csRelativeFiles = files
+                    .Where(f => f.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+                    .Select(f => GitIndexReader.TryNormalizeRelativePath(repoRoot, f))
+                    .Where(rel => !string.IsNullOrEmpty(rel) &&
+                                  (reader is not null ? reader.FileExists(rel) : File.Exists(Path.Combine(repoRoot, rel))))
+                    .Select(rel => rel!)
+                    .ToList();
+            }
+            else
+            {
+                csRelativeFiles = Directory.EnumerateFiles(repoRoot, "*.cs", SearchOption.AllDirectories)
+                    .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") &&
+                                !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") &&
+                                !f.Contains($"{Path.DirectorySeparatorChar}tests{Path.DirectorySeparatorChar}"))
+                    .Select(f => Path.GetRelativePath(repoRoot, f).Replace('\\', '/'))
+                    .ToList();
+            }
+
+            int issues = 0;
+            foreach (string relPath in csRelativeFiles)
+            {
+                if (relPath.Contains("Services/QueryLinterService.cs", StringComparison.Ordinal))
                 {
                     continue;
                 }
 
-                if (line.Contains("FromSql" + "Raw($") || line.Contains("ExecuteSql" + "Raw($"))
+                string[] lines;
+                if (reader is not null)
                 {
-                    Console.WriteLine($"[QUERY STYLE VIOLATION] {relPath}:{i + 1} - Unparameterized raw SQL interpolation: '{line.Trim()}'");
-                    issues++;
+                    if (!reader.TryReadLines(relPath, out lines))
+                    {
+                        continue;
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        lines = File.ReadAllLines(Path.Combine(repoRoot, relPath));
+                    }
+                    catch
+                    {
+                        continue;
+                    }
                 }
 
-                if (line.Contains("== true") || line.Contains("== false"))
+                for (int i = 0; i < lines.Length; i++)
                 {
-                    Console.WriteLine($"[QUERY STYLE] {relPath}:{i + 1} - Avoid explicit '== true' or '== false' in boolean comparisons: '{line.Trim()}'");
-                    issues++;
+                    string line = lines[i];
+                    string trimmed = line.TrimStart();
+                    if (trimmed.StartsWith("//", StringComparison.Ordinal) ||
+                        trimmed.StartsWith("/*", StringComparison.Ordinal) ||
+                        trimmed.StartsWith('*') ||
+                        trimmed.StartsWith('#'))
+                    {
+                        continue;
+                    }
+
+                    if (line.Contains("FromSql" + "Raw($", StringComparison.Ordinal) ||
+                        line.Contains("ExecuteSql" + "Raw($", StringComparison.Ordinal))
+                    {
+                        Console.WriteLine($"[QUERY STYLE VIOLATION] {relPath}:{i + 1} - Unparameterized raw SQL interpolation: '{line.Trim()}'");
+                        issues++;
+                    }
+
+                    if (line.Contains("== true", StringComparison.Ordinal) ||
+                        line.Contains("== false", StringComparison.Ordinal))
+                    {
+                        Console.WriteLine($"[QUERY STYLE] {relPath}:{i + 1} - Avoid explicit '== true' or '== false' in boolean comparisons: '{line.Trim()}'");
+                        issues++;
+                    }
                 }
             }
-        }
 
-        if (issues > 0)
-        {
-            Console.WriteLine($"\n[ERROR] Found {issues} query style issues.");
-            return 1;
-        }
+            if (issues > 0)
+            {
+                Console.WriteLine($"\n[ERROR] Found {issues} query style issues.");
+                return 1;
+            }
 
-        Console.WriteLine("✔ Query style linting passed cleanly.");
-        return 0;
+            Console.WriteLine("✔ Query style linting passed cleanly.");
+            return 0;
+        }
     }
 
     private static string FindRepoRoot()

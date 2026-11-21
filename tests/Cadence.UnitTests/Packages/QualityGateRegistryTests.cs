@@ -80,6 +80,17 @@ public sealed class QualityGateRegistryTests : IDisposable
         },
         ["prettier"] = () => Context(),
         ["eslint"] = () => Context(),
+        ["actionlint"] = () =>
+        {
+            Write(".github/workflows/broken.yml",
+                "name: Broken\non: invalid_trigger_event\njobs:\n  bad:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo \"${{ invalid.context.value }}\"\n");
+            return Context();
+        },
+        ["hadolint"] = () =>
+        {
+            Write("Dockerfile", "FROM ubuntu:24.04\nWORKDIR relative/path\nEXPOSE 99999\n");
+            return Context();
+        },
         ["yaml"] = () =>
         {
             Write(".github/workflows/broken.yml", "name: \"unclosed\njobs:\n\tbad: true\n");
@@ -236,7 +247,7 @@ public sealed class QualityGateRegistryTests : IDisposable
             // The pre-commit variant with no staged C#: docs/api is compared with docs/openapi, which serves nothing.
             Directory.CreateDirectory(Path.Combine(_root, "docs", "openapi"));
             Write("docs/api/retired.md", "# Retired service\n");
-            return Context(files: [], preCommit: true);
+            return Context(files: ["docs/api/retired.md"], preCommit: true);
         },
         ["api-clients"] = () => Context(),
         ["schema-doc"] = () => Context(),
@@ -313,9 +324,36 @@ public sealed class QualityGateRegistryTests : IDisposable
     [Fact]
     public void EveryGate_HasAFailingFixture()
     {
-        QualityGates.All.Should().HaveCount(36);
+        QualityGates.All.Should().HaveCount(38);
         Fixtures().Keys.Should().BeEquivalentTo(QualityGates.All.Select(g => g.Name));
         FailsClosedOnly.Keys.Should().BeSubsetOf(QualityGates.All.Select(g => g.Name));
+    }
+
+    [Fact]
+    public void EveryFileScopedGate_TreatsExplicitEmptyTargetFilesAsNoOp()
+    {
+        string reqPath = Path.Combine(_root, "docs", "requirements.md");
+        const string originalReqDoc = "# Requirements\n\nCovers @req:prd-sys-001   \n";
+        Write("docs/requirements.md", originalReqDoc);
+        Write("scratch/notes.txt", "forbidden directory\n");
+        Write(".github/workflows/broken.yml", "name: \"unclosed\n");
+        Write("Dockerfile", "FROM ubuntu:latest\nWORKDIR relative/path\n");
+        Write("config/service.pem", $"{PrivateKeyHeader}\nMIIB\n");
+        Write("apps/alpha/src/Seed.cs", $"class Seed {{ string Ssn = \"000-12-3456\"; bool Check(bool f) => f {BooleanComparison}; }}\n");
+        Directory.CreateDirectory(Path.Combine(_root, "docs", "openapi"));
+        Write("docs/api/retired.md", "# Retired service\n");
+
+        var emptyPreCommitContext = Context(files: [], preCommit: true);
+        emptyPreCommitContext.Files.Should().NotBeNull().And.BeEmpty();
+
+        foreach (var gate in QualityGates.All.Where(g => g.TakesFiles))
+        {
+            gate.Run(emptyPreCommitContext).Should().BeTrue(
+                $"file-scoped gate '{gate.Name}' must treat an explicit empty TargetFiles list ([]) as a no-op");
+        }
+
+        File.ReadAllText(reqPath).Should().Be(originalReqDoc,
+            "unstaged Markdown files must never be rewritten on an empty-file pre-commit run");
     }
 
     [Fact]

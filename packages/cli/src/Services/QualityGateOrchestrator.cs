@@ -44,16 +44,13 @@ public static class QualityGateOrchestrator
         }
 
         repoRoot ??= FindRepoRoot();
-        if (preCommit && (targetFiles == null || targetFiles.Length == 0))
+        if (preCommit && targetFiles is null)
         {
-            var staged = PreCommitOpenApiService.GetStagedFiles(repoRoot);
-            if (staged.Count > 0)
-            {
-                targetFiles = staged.ToArray();
-            }
+            targetFiles = [.. PreCommitOpenApiService.GetStagedFiles(repoRoot)];
         }
 
-        var context = new GateContext(repoRoot, targetFiles, preCommit);
+        using var indexReader = preCommit ? GitIndexReader.TryOpen(repoRoot) : null;
+        var context = new GateContext(repoRoot, targetFiles, preCommit, indexReader);
 
         if (!string.IsNullOrEmpty(gateName))
         {
