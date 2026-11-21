@@ -147,6 +147,27 @@ public class SubjectApplicationServiceStateTests
         harness.AuditLog.Calls.Should().BeEmpty();
     }
 
+    [Theory]
+    [InlineData("ACTIVE")]
+    [InlineData("UNBLINDED")]
+    [InlineData("COMPLETED")]
+    [GxPRequirement("PRD-SUB-001")]
+    public async Task AdvanceStateAsync_FromReconsentRequiredWithoutAllocation_IsRefused(string target)
+    {
+        var harness = new Harness { AuditContext = new FakeCurrentAuditContextAccessor { UserId = "pi.site101" } };
+        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-RECON", status: SubjectState.ReconsentRequired);
+
+        var result = await harness.Service.AdvanceStateAsync("SUBJ-RECON",
+            new SubjectStateUpdateRequest(Status: target, State: null), UnblindingReason,
+            TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be("INVALID_STATE_TRANSITION");
+        subject.Status.Should().Be(SubjectState.ReconsentRequired);
+        subject.IsUnblinded.Should().BeFalse();
+        harness.AuditLog.Calls.Should().BeEmpty();
+    }
+
     // -- AdvanceStateAsync: SCN-003 state-machine integration ------------------------------------
 
     [Fact]

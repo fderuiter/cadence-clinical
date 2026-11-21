@@ -1,6 +1,9 @@
 import { defineStore } from "pinia";
 import {
   executionApi,
+  type RandomizationResult,
+  type SubjectConsent,
+  type SubjectDetail,
   type SubjectList,
   type SubjectSummary,
 } from "../api/executionApi";
@@ -11,6 +14,24 @@ import {
 } from "../canvas/kernelStudy";
 import { PARTICIPANT_STATES, participantStateLabel } from "../canvas/lifecycle";
 import { useToastStore } from "./toasts.js";
+
+/** Blind-safe allocation metadata kept in memory only (never stores plaintext arms). */
+export interface BlindSafeAllocationSummary {
+  randomizationId: string;
+  schemeVersion: number;
+  stratumKey: string;
+  kitNumber: string | null;
+  randomizedAt: string;
+}
+
+export interface RecordParticipantConsentInput {
+  versionTag: string;
+  versionIndex: number;
+  signedDate: string;
+  isPaperOverride?: boolean;
+  requiresReconsent?: boolean;
+  reason: string;
+}
 
 /** Participants shown per page in the Participants section. */
 export const PARTICIPANT_PAGE_SIZE = 50;
@@ -42,11 +63,13 @@ const sortByEnrollment = (
 let participantsRequest = 0;
 let pulseRequest = 0;
 let recordRequest = 0;
+let detailRequest = 0;
 let scheduleRequest = 0;
 let lookupEpoch = 0;
 const inFlightPages = new Map<string, Promise<SubjectList>>();
 const inFlightById = new Map<string, Promise<SubjectSummary | null>>();
 const inFlightByCode = new Map<string, Promise<SubjectSummary | null>>();
+const inFlightDetails = new Map<string, Promise<SubjectDetail | null>>();
 const inFlightSchedules = new WeakMap<
   object,
   {
@@ -57,6 +80,17 @@ const inFlightSchedules = new WeakMap<
 >();
 let palettePromise: Promise<boolean> | null = null;
 let palettePromiseKey = "";
+
+const POST_RANDOMIZATION_STATES = new Set([
+  "RANDOMIZED",
+  "ACTIVE",
+  "UNBLINDED",
+  "COMPLETED",
+]);
+
+export function isPostRandomizationStatus(status: string): boolean {
+  return POST_RANDOMIZATION_STATES.has(status);
+}
 
 function fetchStudyPage(
   studyId: string,
@@ -122,6 +156,14 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       loading: false,
       error: false,
     },
+    /** Blind-aware subject detail read from GET /api/v1/execution/subjects/{subjectCode}, keyed by subject_id. */
+    subjectDetails: {} as Record<string, SubjectDetail>,
+    subjectDetailLoading: false,
+    subjectDetailError: false,
+    /** Blind-safe randomization receipts (kit number, stratum, timestamp; never arm) keyed by subject_id. */
+    allocations: {} as Record<string, BlindSafeAllocationSummary>,
+    /** Latest consent receipts recorded in this session, keyed by subject_id. */
+    recordedConsents: {} as Record<string, SubjectConsent>,
   }),
   getters: {
     hasMoreParticipants: (state) =>
@@ -135,12 +177,14 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       participantsRequest++;
       pulseRequest++;
       recordRequest++;
+      detailRequest++;
       scheduleRequest++;
       inFlightSchedules.delete(this);
       lookupEpoch++;
       inFlightPages.clear();
       inFlightById.clear();
       inFlightByCode.clear();
+      inFlightDetails.clear();
       palettePromise = null;
       palettePromiseKey = "";
       this.$reset();
@@ -703,7 +747,178 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
         return false;
       }
       await this.refreshAfterChange();
+      if (state === "UNBLINDED" || isPostRandomizationStatus(state)) {
+        await this.loadSubjectDetail(
+          { ...participant, status: state },
+          { force: true }
+        );
+      }
       return true;
+    },
+
+    /**
+     * Records informed consent for a participant with an explicit signed date
+     * (POST /api/v1/execution/subjects/{subjectId}/consent).
+     */
+    async recordParticipantConsent(
+      participant: SubjectSummary,
+      input: RecordParticipantConsentInput
+    ): Promise<SubjectConsent | null> {
+      const studyId = this.studyCode || participant.study_id;
+      const toasts = useToastStore();
+      if (!studyId) return null;
+      const signedDate = input.signedDate.trim();
+      if (!signedDate) {
+        toasts.push({
+          tone: "error",
+          title: "Signed consent date required",
+          message:
+            "Enter the date the participant signed the informed consent form.",
+        });
+        return null;
+      }
+      const isoSignedDate = signedDate.includes("T")
+        ? signedDate
+        : `${signedDate}T00:00:00Z`;
+      try {
+        const consent = await executionApi.recordSubjectConsent(
+          participant.id,
+          {
+            protocol_version: {
+              study_id: studyId,
+              version_tag: input.versionTag.trim() || "1.0",
+              version_index: Number(input.versionIndex) || 1,
+            },
+            icf_signed: true,
+            icf_signed_date: isoSignedDate,
+            requires_reconsent: Boolean(input.requiresReconsent),
+            is_paper_override: Boolean(input.isPaperOverride),
+          },
+          input.reason.trim() || "Informed consent recorded"
+        );
+        this.recordedConsents[participant.subject_id] = consent;
+        toasts.push({
+          tone: "success",
+          title: `Consent recorded for ${participant.subject_id}`,
+          message: `Protocol version ${consent.version_tag}`,
+        });
+        return consent;
+      } catch (err) {
+        toasts.apiError(
+          `Consent was not recorded for ${participant.subject_id}`,
+          err
+        );
+        return null;
+      }
+    },
+
+    /**
+     * Randomizes an enrolled participant using a single-use X-Sig-Token (`execution.subject.randomize`).
+     * Updates the participant's state to RANDOMIZED and stores only blind-safe allocation details in memory.
+     */
+    async randomizeParticipant(
+      participant: SubjectSummary,
+      options: {
+        stratificationFactors: Record<string, string>;
+        reason: string;
+        sigToken: string;
+      }
+    ): Promise<RandomizationResult | null> {
+      const toasts = useToastStore();
+      try {
+        const result = await executionApi.randomizeSubject(participant.id, {
+          stratificationFactors: options.stratificationFactors,
+          reason: options.reason,
+          sigToken: options.sigToken,
+        });
+        const changed: SubjectSummary = {
+          ...participant,
+          status: result.status || "RANDOMIZED",
+        };
+        this.rememberParticipants([changed]);
+        const index = this.participants.findIndex(
+          (p) => p.id === participant.id
+        );
+        if (index >= 0) this.participants.splice(index, 1, changed);
+        this.allocations[participant.subject_id] = {
+          randomizationId: result.randomization_id,
+          schemeVersion: Number(result.scheme_version) || 1,
+          stratumKey: result.stratum_key,
+          kitNumber: result.kit_number ?? null,
+          randomizedAt: result.randomized_at,
+        };
+        toasts.push({
+          tone: "success",
+          title: `${participant.subject_id} randomized`,
+          message: result.kit_number
+            ? `Randomized, arm masked · Kit ${result.kit_number}`
+            : "Randomized, arm masked",
+        });
+        await Promise.all([
+          this.refreshAfterChange(),
+          this.loadSubjectDetail(changed, { force: true }),
+        ]);
+        return result;
+      } catch (err) {
+        toasts.apiError(`${participant.subject_id} was not randomized`, err);
+        return null;
+      }
+    },
+
+    /**
+     * Loads blind-aware subject detail (GET /api/v1/execution/subjects/{subjectCode}).
+     * Blinded callers receive null treatment_group; unblinded callers receive treatment_group and investigational_product_id.
+     */
+    async loadSubjectDetail(
+      participant: Pick<SubjectSummary, "subject_id" | "status">,
+      { force = false } = {}
+    ): Promise<SubjectDetail | null> {
+      const studyId = this.studyCode;
+      const subjectCode = participant.subject_id;
+      if (!studyId || !subjectCode) return null;
+      if (
+        !isPostRandomizationStatus(participant.status) &&
+        !this.allocations[subjectCode]
+      ) {
+        return null;
+      }
+      if (typeof executionApi.getSubjectDetail !== "function") {
+        return null;
+      }
+      const epoch = lookupEpoch;
+      const key = `${epoch}:${studyId}:${subjectCode.toLowerCase()}`;
+      if (!force) {
+        const existing = inFlightDetails.get(key);
+        if (existing) return existing;
+      }
+      const request = ++detailRequest;
+      this.subjectDetailLoading = true;
+      this.subjectDetailError = false;
+      const run = (async (): Promise<SubjectDetail | null> => {
+        try {
+          const detail = await executionApi.getSubjectDetail(subjectCode);
+          if (epoch !== lookupEpoch || studyId !== this.studyCode) {
+            return null;
+          }
+          if (detail && typeof detail === "object") {
+            this.subjectDetails[subjectCode] = detail;
+            return detail;
+          }
+          return null;
+        } catch {
+          if (request === detailRequest) {
+            this.subjectDetailError = true;
+          }
+          return null;
+        } finally {
+          inFlightDetails.delete(key);
+          if (request === detailRequest) {
+            this.subjectDetailLoading = false;
+          }
+        }
+      })();
+      inFlightDetails.set(key, run);
+      return run;
     },
 
     /** Reads the participant list and the counts again, where the canvas has already read them. */

@@ -41,13 +41,55 @@
         are complete.
       </p>
     </template>
-    <p
-      v-if="changes.unblindingWithheld"
-      id="state-change-unblinding-note"
-      class="note"
-    >
-      Unblinding isn't offered here: it needs its own unblinding workflow.
-    </p>
+
+    <div v-if="canOpenRandomize" class="workflow-callout">
+      <p class="note">
+        Randomization assigns a treatment arm and kit through the study's
+        approved randomization scheme.
+      </p>
+      <button
+        id="btn-open-randomize-drawer"
+        type="button"
+        class="btn btn-primary"
+        @click="randomizeOpen = true"
+      >
+        Randomize participant
+      </button>
+    </div>
+    <RandomizeParticipantDrawer
+      v-if="canManage && (participant.status === 'ENROLLED' || randomizeOpen)"
+      :is-open="randomizeOpen"
+      :study-code="studyCode"
+      :participant="participant"
+      :username="authStore.identity?.username ?? undefined"
+      @close="randomizeOpen = false"
+    />
+
+    <div v-if="changes.unblindingWithheld" class="workflow-callout">
+      <template v-if="canEmergencyUnblind">
+        <p class="note">
+          Emergency unblinding permanently breaks the treatment blind and
+          requires a 50-character clinical justification.
+        </p>
+        <button
+          id="btn-emergency-unblind"
+          type="button"
+          class="btn btn-danger-outline"
+          @click="unblindOpen = true"
+        >
+          Emergency unblinding
+        </button>
+        <EmergencyUnblindModal
+          :is-open="unblindOpen"
+          :participant="participant"
+          @close="unblindOpen = false"
+        />
+      </template>
+      <p v-else id="state-change-unblinding-note" class="note">
+        Emergency unblinding requires a Principal Investigator or Authorized ER
+        Physician and a 50-character clinical justification.
+      </p>
+    </div>
   </section>
 </template>
 
@@ -55,29 +97,54 @@
 import { computed, ref, watch } from "vue";
 import type { SubjectSummary } from "../../api/executionApi";
 import {
+  canManageParticipants,
+  canUnblindParticipant,
+} from "../../canvas/authority";
+import {
   participantStateChanges,
   participantStateLabel,
 } from "../../canvas/lifecycle";
+import { useAuthStore } from "../../stores/auth";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import EmergencyUnblindModal from "./EmergencyUnblindModal.vue";
+import RandomizeParticipantDrawer from "./RandomizeParticipantDrawer.vue";
 
 /**
  * Moves the inspected participant to another state. It offers the transitions Execution's graph allows from
- * the current state (less unblinding); Execution checks the transition again, gates enrolment on site
- * activation and records the reason.
+ * the current state (less randomization and unblinding, which have dedicated signed/audited workflows).
  */
 const props = defineProps<{ participant: SubjectSummary }>();
 
+const authStore = useAuthStore();
 const canvas = useStudyCanvasStore();
 const target = ref("");
 const reason = ref("");
 const busy = ref(false);
+const randomizeOpen = ref(false);
+const unblindOpen = ref(false);
 
+const studyCode = computed(
+  () => canvas.studyCode || props.participant.study_id || ""
+);
 const changes = computed(() =>
   participantStateChanges(props.participant.status)
 );
+const canManage = computed(() => canManageParticipants(authStore));
+const canOpenRandomize = computed(
+  () => props.participant.status === "ENROLLED" && canManage.value
+);
+const canEmergencyUnblind = computed(() => canUnblindParticipant(authStore));
 const finalNote = computed(
   () =>
     `${participantStateLabel(props.participant.status)} is a final state; it doesn't change.`
+);
+
+watch(
+  () => props.participant.id,
+  () => {
+    randomizeOpen.value = false;
+    unblindOpen.value = false;
+  }
 );
 
 watch(
@@ -118,6 +185,21 @@ async function submit() {
   padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
+}
+
+.workflow-callout {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.btn-danger-outline {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger);
+  color: var(--danger);
 }
 
 .note {

@@ -233,6 +233,40 @@ export function personasForRoles(rawRoles) {
   return PERSONA_PRESETS.filter((p) => holdsAnyRole(rawRoles, p.requires));
 }
 
+const ASSIGNED_CLINICAL_ROLES = [
+  "sponsor_admin",
+  "sponsor_designer",
+  "data_manager",
+  "sponsor_dm",
+  "site_investigator",
+  "investigator",
+  "principal_investigator",
+  "authorized_er_physician",
+  "crc",
+  "coordinator",
+  "cra",
+  "monitor",
+  "auditor",
+  "tmf_auditor",
+  "unblinded_statistician",
+  "sponsor_statistician",
+  "pharmacist",
+  "idmc",
+  "grants_manager",
+  "quality_manager",
+  "qa_lead",
+  "quality_oversight",
+  "subject",
+  "sysadmin",
+];
+
+function hasAssignedClinicalRole(rawRoles) {
+  return (
+    personasForRoles(rawRoles).length > 0 ||
+    holdsAnyRole(rawRoles, ASSIGNED_CLINICAL_ROLES)
+  );
+}
+
 /**
  * @typedef {object} AuthUser
  * @property {string} username - `preferred_username` claim
@@ -241,6 +275,8 @@ export function personasForRoles(rawRoles) {
  * @property {string} lastName
  * @property {string} id - `sub` claim
  * @property {string} tenantId - `tenant_id` claim; blank when the token has none
+ * @property {string} [siteId] - optional `site_id` claim when assigned to a clinical site
+ * @property {boolean} [unblindedAccess] - optional `unblinded_access` claim when explicitly present
  */
 
 function emptyAuthState() {
@@ -306,7 +342,7 @@ export const useAuthStore = defineStore("auth", {
         !state.isDemoMode &&
         state.accessToken &&
         !state.user?.tenantId &&
-        personasForRoles(state.rawRoles).length === 0
+        !hasAssignedClinicalRole(state.rawRoles)
       ),
     activeTier: (state) =>
       state.entitlements?.tier ||
@@ -348,10 +384,7 @@ export const useAuthStore = defineStore("auth", {
       if (state.entitlements?.tier) {
         return `${tier} Plan`;
       }
-      if (
-        !state.user?.tenantId &&
-        personasForRoles(state.rawRoles).length === 0
-      ) {
+      if (!state.user?.tenantId && !hasAssignedClinicalRole(state.rawRoles)) {
         return "Trial Setup Pending";
       }
       return `${tier} Plan`;
@@ -374,7 +407,10 @@ export const useAuthStore = defineStore("auth", {
       this.accessToken = keycloak.token;
       this.idToken = keycloak.idToken || null;
       this.tokenExpiresAt = claims.exp ? claims.exp * 1000 : null;
-      this.user = {
+      const rawSiteId = Array.isArray(claims.site_id)
+        ? claims.site_id[0]
+        : claims.site_id;
+      const user = {
         username: claims.preferred_username || claims.sub || "",
         email: claims.email || "",
         firstName: claims.given_name || "",
@@ -382,6 +418,14 @@ export const useAuthStore = defineStore("auth", {
         id: claims.sub || "",
         tenantId: claims.tenant_id || "",
       };
+      if (rawSiteId !== undefined && rawSiteId !== null && rawSiteId !== "") {
+        user.siteId = String(rawSiteId);
+      }
+      if (claims.unblinded_access !== undefined) {
+        user.unblindedAccess =
+          String(claims.unblinded_access).toLowerCase() === "true";
+      }
+      this.user = user;
       this.rawRoles = Array.isArray(claims.realm_access?.roles)
         ? [...claims.realm_access.roles]
         : [];

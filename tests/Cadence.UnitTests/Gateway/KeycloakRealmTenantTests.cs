@@ -122,9 +122,53 @@ public sealed class KeycloakRealmTenantTests
         AttributeValues(attributes, "site_id").Should().Equal("SITE-101");
     }
 
+    [Fact]
+    public void WebClient_MapsUnblindedAccessAttributeIntoTheAccessToken()
+    {
+        var web = Realm().GetProperty("clients").EnumerateArray().Single(c => c.GetProperty("clientId").GetString() == "cadence-web");
+
+        var unblinded = web.GetProperty("protocolMappers").EnumerateArray()
+            .Single(m => m.GetProperty("name").GetString() == "unblinded access").GetProperty("config");
+
+        unblinded.GetProperty("user.attribute").GetString().Should().Be("unblinded_access");
+        unblinded.GetProperty("claim.name").GetString().Should().Be("unblinded_access");
+        unblinded.GetProperty("access.token.claim").GetString().Should().Be("true");
+    }
+
+    [Fact]
+    public void Realm_DeclaresRtsmAndEmergencyUnblindingRoles_AndSeedsTwoStatisticiansPharmacistAndPi()
+    {
+        var root = Realm();
+        var roleNames = root.GetProperty("roles").GetProperty("realm").EnumerateArray()
+            .Select(r => r.GetProperty("name").GetString())
+            .ToList();
+
+        roleNames.Should().Contain([
+            "unblinded_statistician",
+            "pharmacist",
+            "Principal Investigator",
+            "Authorized ER Physician",
+        ]);
+
+        var users = root.GetProperty("users").EnumerateArray().ToList();
+        var pi = users.Single(u => u.GetProperty("username").GetString() == "pi.site101");
+        pi.GetProperty("realmRoles").EnumerateArray().Select(r => r.GetString())
+            .Should().Contain("Principal Investigator");
+
+        var statisticians = users.Where(u =>
+            u.GetProperty("realmRoles").EnumerateArray().Any(r => r.GetString() == "unblinded_statistician")).ToList();
+        statisticians.Should().HaveCountGreaterThanOrEqualTo(2);
+        statisticians.Should().AllSatisfy(u =>
+            u.GetProperty("attributes").GetProperty("unblinded_access")[0].GetString().Should().Be("true"));
+
+        var pharmacists = users.Where(u =>
+            u.GetProperty("realmRoles").EnumerateArray().Any(r => r.GetString() == "pharmacist")).ToList();
+        pharmacists.Should().ContainSingle();
+        pharmacists[0].GetProperty("attributes").GetProperty("unblinded_access")[0].GetString().Should().Be("true");
+    }
+
     private static string[] AttributeValues(JsonElement attributes, string name) =>
         [.. attributes.GetProperty(name).EnumerateArray().Select(v => v.GetString()!)];
-
     private static string? TenantOf(JsonElement user) =>
         user.TryGetProperty("attributes", out var attributes)
         && attributes.TryGetProperty("tenant_id", out var tenant)

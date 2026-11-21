@@ -126,10 +126,17 @@ public sealed class ClinicalSubject : AggregateRoot<SubjectId>
     public bool IsPostRandomization() => Status is SubjectState.Randomized or SubjectState.Active
         or SubjectState.Completed or SubjectState.Unblinded or SubjectState.Withdrawn;
 
+    private bool RequiresRandomizationBefore(SubjectState target) =>
+        Status == SubjectState.ReconsentRequired
+        && RandomizationId is null
+        && target is SubjectState.Active or SubjectState.Unblinded or SubjectState.Completed;
+
     public Result<SubjectState> TransitionTo(SubjectState target)
     {
         var result = SubjectTransitionGraph.Guard(Status, target);
         if (result.IsFailure) return result;
+        if (RequiresRandomizationBefore(target))
+            return SubjectErrors.InvalidStateTransition(SubjectStateCodec.ToCode(Status), SubjectStateCodec.ToCode(target));
         Status = result.Value;
         return result;
     }
@@ -142,7 +149,8 @@ public sealed class ClinicalSubject : AggregateRoot<SubjectId>
     public Result<bool> Unblind(string unblindedBy, string reason, IClock clock)
     {
         var transition = SubjectTransitionGraph.Guard(Status, SubjectState.Unblinded);
-        if (transition.IsFailure) return SubjectErrors.InvalidStateTransition(SubjectStateCodec.ToCode(Status), "UNBLINDED");
+        if (transition.IsFailure || RequiresRandomizationBefore(SubjectState.Unblinded))
+            return SubjectErrors.InvalidStateTransition(SubjectStateCodec.ToCode(Status), "UNBLINDED");
         Status = SubjectState.Unblinded;
         IsUnblinded = true;
         UnblindedBy = unblindedBy;

@@ -1,5 +1,12 @@
+import { buildStepUpVerificationPayload } from "ui";
+import { getBearerToken } from "./authorization.js";
 import { encodeChangeReason } from "./changeReason";
-import { createOpenApiClient, unwrapResponse } from "./client";
+import {
+  ApiError,
+  createOpenApiClient,
+  getBaseUrl,
+  unwrapResponse,
+} from "./client";
 import type { components, paths } from "./generated/execution";
 
 /**
@@ -15,8 +22,55 @@ export type SubjectSummary = Schemas["Execution_SubjectSummaryResponse"];
 export type SubjectList = Schemas["Execution_SubjectListResponse"];
 export type Subject = Schemas["Execution_SubjectResponse"];
 export type SubjectDetail = Schemas["Execution_SubjectDetailResponse"];
+export type SubjectConsentRequest = Schemas["Execution_SubjectConsentRequest"];
+export type SubjectConsent = Schemas["Execution_SubjectConsentResponse"];
+export type ProtocolVersionPayload =
+  Schemas["Execution_ProtocolVersionPayload"];
 export type ComplianceStatus = Schemas["Execution_ComplianceStatusResponse"];
 export type OperationEnvelope = Schemas["Execution_OperationEnvelopeResponse"];
+export type RandomizationScheme =
+  Schemas["Execution_RandomizationSchemeResponse"];
+export type RandomizationSchemeDraftRequest =
+  Schemas["Execution_RandomizationSchemeDraftRequest"];
+export type RandomizeSubjectRequest =
+  Schemas["Execution_RandomizeSubjectRequest"];
+export type RandomizationResult = Schemas["Execution_RandomizationResponse"];
+export type IpKitSeedItem = Schemas["Execution_IpKitSeedItem"];
+export type SeedInventoryRequest = Schemas["Execution_SeedInventoryRequest"];
+
+export interface IpKitInventoryItem {
+  id?: string;
+  study_id: string;
+  site_id: string;
+  kit_number: string;
+  lot_number: string;
+  expiration_date: string;
+  status: string;
+  residual_volume_ml?: number | null;
+  residual_volume_percentage?: number | null;
+  reconciliation_count?: number;
+}
+
+export {
+  APPROVE_SCHEME_SEMANTIC_ACTION,
+  RANDOMIZE_SUBJECT_SEMANTIC_ACTION,
+  approveSchemeSignatureAction,
+  randomizeSubjectSignatureAction,
+} from "../canvas/rtsm";
+
+export interface SignatureVerificationInput {
+  password: string;
+  action: string;
+  semanticAction: string;
+  totp?: string | null;
+  username?: string | null;
+  batchId?: string | null;
+}
+
+export interface SignatureTokenResponse {
+  sig_token: string;
+  expires_in: number;
+}
 
 export interface AddSubject {
   studyId: string;
@@ -36,6 +90,54 @@ export interface ListSubjectsQuery {
 const client = createOpenApiClient<paths>();
 
 export const executionApi = {
+  /**
+   * Re-authenticates the signed-in user at the gateway (POST /api/v1/auth/signature-verification)
+   * and returns a single-use, 60-second X-Sig-Token bound to one action (21 CFR Part 11).
+   */
+  async requestSignatureToken(
+    input: SignatureVerificationInput
+  ): Promise<SignatureTokenResponse> {
+    const baseUrl = getBaseUrl().replace(/\/+$/, "");
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    const bearer = await getBearerToken();
+    if (bearer) {
+      headers.Authorization = `Bearer ${bearer}`;
+    }
+    const payload = buildStepUpVerificationPayload({
+      username: input.username,
+      password: input.password,
+      totp: input.totp,
+      action: input.action,
+      semanticAction: input.semanticAction,
+      batchId: input.batchId,
+    });
+    const response = await globalThis.fetch(
+      `${baseUrl}/api/v1/auth/signature-verification`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      }
+    );
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      const detail =
+        data?.detail ||
+        data?.title ||
+        data?.message ||
+        `Signature verification failed with status ${response.status}`;
+      throw new ApiError(
+        typeof detail === "string" ? detail : JSON.stringify(detail),
+        response.status,
+        response.statusText,
+        data
+      );
+    }
+    return data as SignatureTokenResponse;
+  },
+
   /** One page of a study's subjects in enrollment order (GET /api/v1/execution/subjects). */
   listSubjects(query: ListSubjectsQuery): Promise<SubjectList> {
     return unwrapResponse(
@@ -146,6 +248,110 @@ export const executionApi = {
     );
   },
 
+  /** Lists a study's randomization scheme versions, newest first (GET /api/v1/execution/randomization/schemes). */
+  listRandomizationSchemes(studyId: string): Promise<RandomizationScheme[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/execution/randomization/schemes", {
+        params: { query: { study_id: studyId } },
+      })
+    );
+  },
+
+  /** Drafts the study's next randomization scheme version (POST /api/v1/execution/randomization/schemes). */
+  draftRandomizationScheme(
+    payload: RandomizationSchemeDraftRequest,
+    reason: string
+  ): Promise<RandomizationScheme> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/randomization/schemes", {
+        body: payload,
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
+      })
+    );
+  },
+
+  /**
+   * Approves a draft randomization scheme version for go-live using a single-use X-Sig-Token
+   * bound to `execution.form.approve` (POST /api/v1/execution/randomization/schemes/{schemeId}/approve).
+   */
+  approveRandomizationScheme(
+    schemeId: string,
+    options: { reason: string; sigToken: string }
+  ): Promise<RandomizationScheme> {
+    return unwrapResponse(
+      client.POST(
+        "/api/v1/execution/randomization/schemes/{schemeId}/approve",
+        {
+          params: { path: { schemeId } },
+          headers: {
+            "X-Change-Reason": encodeChangeReason(options.reason),
+            "X-Sig-Token": options.sigToken,
+          },
+        }
+      )
+    );
+  },
+
+  /**
+   * Randomizes an enrolled participant under the live scheme with a single-use X-Sig-Token
+   * bound to `execution.subject.randomize` (POST /api/v1/execution/subjects/{subjectId}/randomize).
+   * Never returns the treatment arm.
+   */
+  randomizeSubject(
+    subjectId: string,
+    options: {
+      stratificationFactors?: Record<string, string> | null;
+      reason: string;
+      sigToken: string;
+    }
+  ): Promise<RandomizationResult> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/subjects/{subjectId}/randomize", {
+        params: { path: { subjectId } },
+        body: {
+          stratification_factors: options.stratificationFactors ?? null,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(options.reason),
+          "X-Sig-Token": options.sigToken,
+        },
+      })
+    );
+  },
+
+  /**
+   * Records or merges a participant's informed consent with an explicit signed date
+   * (POST /api/v1/execution/subjects/{subjectId}/consent).
+   */
+  recordSubjectConsent(
+    subjectId: string,
+    payload: SubjectConsentRequest,
+    reason?: string
+  ): Promise<SubjectConsent> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/subjects/{subjectId}/consent", {
+        params: { path: { subjectId } },
+        body: payload,
+        headers: reason
+          ? { "X-Change-Reason": encodeChangeReason(reason) }
+          : undefined,
+      })
+    );
+  },
+
+  /** Seeds encrypted IP kit inventory for a site (POST /api/v1/execution/rtsm/kits/seed-inventory). */
+  seedIpKitInventory(
+    payload: SeedInventoryRequest,
+    reason: string
+  ): Promise<unknown> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/rtsm/kits/seed-inventory", {
+        body: payload,
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
+      })
+    );
+  },
+
   /** Reconciles a batch of IP kit returns atomically in RTSM (POST /api/v1/execution/rtsm/kits/reconcile-batch). */
   async reconcileIpKitBatch(payload: {
     study_id: string;
@@ -180,15 +386,20 @@ export const executionApi = {
     return res.json();
   },
 
-  /** Retrieves site IP kit inventory catalog (GET /api/v1/execution/rtsm/kits/inventory/{studyId}/{siteId}). */
-  async getSiteIpKitInventory(studyId: string, siteId: string): Promise<any[]> {
-    const res = await fetch(
-      `/api/v1/execution/rtsm/kits/inventory/${studyId}/${siteId}`
+  /** Retrieves blind-safe site IP kit inventory catalog (GET /api/v1/execution/rtsm/kits/inventory/{studyId}/{siteId}). */
+  getSiteIpKitInventory(
+    studyId: string,
+    siteId: string
+  ): Promise<IpKitInventoryItem[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/execution/rtsm/kits/inventory/{studyId}/{siteId}", {
+        params: { path: { studyId, siteId } },
+      }) as unknown as Promise<{
+        data?: IpKitInventoryItem[];
+        error?: unknown;
+        response: Response;
+      }>
     );
-    if (!res.ok) {
-      throw new Error("Failed to load site IP kit inventory");
-    }
-    return res.json();
   },
 
   /** Validates scanned barcode against site inventory (POST /api/v1/execution/rtsm/kits/validate-scan). */

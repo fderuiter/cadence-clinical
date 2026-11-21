@@ -1,4 +1,5 @@
-import { defineConfig, devices } from "@playwright/test";
+import { chromium, defineConfig, devices } from "@playwright/test";
+import { buildChromiumLaunchOptions } from "../../scripts/playwright-chromium-launcher.mjs";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -22,13 +23,13 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         channel: "chromium",
-        launchOptions: {
+        launchOptions: buildChromiumLaunchOptions(chromium, {
           args: [
             "--no-sandbox",
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
           ],
-        },
+        }),
       },
     },
   ],

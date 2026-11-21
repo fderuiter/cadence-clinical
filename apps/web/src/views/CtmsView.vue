@@ -9,8 +9,69 @@
       </p>
     </div>
 
-    <!-- Outside demo builds only site activation has a backend (Execution); the rest waits on #4829. -->
-    <SiteActivationPanel v-if="!demoBuild" />
+    <!-- Outside demo builds only site activation and RTSM kit return reconciliation have Execution backends; the rest waits on #4829. -->
+    <div v-if="!demoBuild" class="non-demo-ctms-stack">
+      <SiteActivationPanel />
+
+      <section
+        id="ctms-kit-reconciliation-panel"
+        class="card ctms-kit-reconciliation"
+        aria-labelledby="ctms-kit-reconciliation-title"
+      >
+        <div class="ctms-kit-reconciliation-header">
+          <div>
+            <h3 id="ctms-kit-reconciliation-title" class="card-title">
+              IP kit return reconciliation
+            </h3>
+            <p class="ctms-kit-reconciliation-subtitle">
+              Scan returned investigational product kits, verify lot numbers and
+              residual volumes, and issue a 21 CFR Part 11 batch accountability
+              certificate.
+            </p>
+          </div>
+        </div>
+
+        <form
+          id="ctms-kit-reconciliation-scope"
+          class="ctms-kit-reconciliation-scope"
+          aria-label="Kit reconciliation study and site"
+          @submit.prevent="openNonDemoKitReconciliation"
+        >
+          <label for="ctms-reconcile-study">Study</label>
+          <input
+            id="ctms-reconcile-study"
+            v-model="reconcileStudyCode"
+            type="text"
+            autocomplete="off"
+            placeholder="Study code"
+          />
+          <label for="ctms-reconcile-site">Site</label>
+          <input
+            id="ctms-reconcile-site"
+            v-model="reconcileSiteCode"
+            type="text"
+            autocomplete="off"
+            placeholder="Site code"
+          />
+          <button
+            id="btn-open-kit-reconciliation"
+            type="submit"
+            class="btn btn-primary"
+            :disabled="!canOpenNonDemoReconciliation"
+          >
+            Reconcile returned kits
+          </button>
+        </form>
+      </section>
+
+      <BulkIpKitReconciliationDrawer
+        :is-open="isIpKitReconciliationDrawerOpen"
+        :study-id="reconcileStudyCode.trim() || studyId"
+        :site-id="reconcileSiteCode.trim() || siteId"
+        :pharmacist-name="authStore.identity?.username || ''"
+        @close="isIpKitReconciliationDrawerOpen = false"
+      />
+    </div>
 
     <template v-else>
       <!-- Live CTMS KPI Metric Cards Grid -->
@@ -2581,6 +2642,7 @@ import { useToastStore } from "../stores/toasts.js";
 
 // Active session store/router setup
 const store = useClinicalStore();
+const authStore = useAuthStore();
 const route = useRoute();
 const demoBuild = isDemoBuild();
 const isIpKitReconciliationDrawerOpen = ref(false);
@@ -2591,6 +2653,37 @@ if (route && route.query) {
   if (route.query.siteId) store.activeSiteId = route.query.siteId;
   if (route.query.subjectId) store.activeSubjectId = route.query.subjectId;
   if (route.query.visitId) store.activeVisitId = route.query.visitId;
+}
+
+const reconcileStudyCode = ref(store.activeStudyId || "");
+const reconcileSiteCode = ref(
+  store.activeSiteId || authStore.user?.siteId || ""
+);
+
+watch(
+  () => store.activeStudyId,
+  (next) => {
+    if (next) reconcileStudyCode.value = next;
+  }
+);
+watch(
+  () => store.activeSiteId,
+  (next) => {
+    if (next) reconcileSiteCode.value = next;
+  }
+);
+
+const canOpenNonDemoReconciliation = computed(
+  () =>
+    Boolean(reconcileStudyCode.value.trim()) &&
+    Boolean(reconcileSiteCode.value.trim())
+);
+
+function openNonDemoKitReconciliation() {
+  if (!canOpenNonDemoReconciliation.value) return;
+  store.activeStudyId = reconcileStudyCode.value.trim();
+  store.activeSiteId = reconcileSiteCode.value.trim();
+  isIpKitReconciliationDrawerOpen.value = true;
 }
 
 // Scope properties
@@ -2926,7 +3019,6 @@ function cancelSignatureModal() {
 }
 
 function promptSignature(callback) {
-  const authStore = useAuthStore();
   sigUsername.value = authStore.user?.username || store.user?.username || "";
   sigPassword.value = "";
   sigTotp.value = "";
@@ -3787,5 +3879,45 @@ table,
 th,
 td {
   font-variant-numeric: tabular-nums;
+}
+
+.non-demo-ctms-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ctms-kit-reconciliation {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+}
+
+.ctms-kit-reconciliation-subtitle {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.ctms-kit-reconciliation-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ctms-kit-reconciliation-scope label {
+  font-weight: 600;
+}
+
+.ctms-kit-reconciliation-scope input {
+  flex: 0 1 12rem;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-card);
+  color: var(--text-main);
 }
 </style>

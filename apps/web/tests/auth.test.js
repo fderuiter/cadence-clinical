@@ -184,6 +184,20 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
       expect(authStore.isAuthenticated).toBe(false);
       expect(authStore.normalizedRoles).toEqual([]);
     });
+
+    it("normalizes optional site_id and unblinded_access OIDC claims when present on tokenParsed", () => {
+      const authStore = useAuthStore();
+      const kc = keycloakWith(["unblinded_statistician"]);
+      kc.tokenParsed.site_id = ["017"];
+      kc.tokenParsed.unblinded_access = "true";
+
+      authStore.setAuth(kc);
+
+      expect(authStore.identity).toMatchObject({
+        siteId: "017",
+        unblindedAccess: true,
+      });
+    });
   });
 
   describe("Keycloak sign-in, sign-out and token refresh", () => {

@@ -266,7 +266,12 @@ function resolveAuthorizedRoute(routeSpec) {
   ) {
     if (
       isScreenAvailable("ctms") &&
-      hasRequiredRole(effectiveRoles.value, ["cra", "monitor", "sponsor_admin"])
+      hasRequiredRole(effectiveRoles.value, [
+        "cra",
+        "monitor",
+        "sponsor_admin",
+        "pharmacist",
+      ])
     ) {
       return "/ctms";
     }
