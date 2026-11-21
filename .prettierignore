@@ -11,6 +11,11 @@ obj/
 **/obj/
 .pytest_cache/
 .ruff_cache/
+playwright-report/
+**/playwright-report/
+**/playwright-report*.xml
+test-results/
+**/test-results/
 pnpm-lock.yaml
 uv.lock
 

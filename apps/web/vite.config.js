@@ -4,6 +4,7 @@ import vue from "@vitejs/plugin-vue";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock-worker.mjs";
+import { createDemoFixturesPlugin } from "../../scripts/vite-strip-demo-fixtures.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,6 +46,7 @@ export default defineConfig({
       },
     },
     createStripMockWorkerInProdPlugin(__dirname),
+    createDemoFixturesPlugin(__dirname),
   ],
   resolve: {
     alias: [

@@ -2224,7 +2224,7 @@
                 id="sched-visit-cra"
                 v-model="newVisitCra"
                 type="text"
-                placeholder="e.g. cra_fderuiter"
+                placeholder="e.g. cra.monitor"
               />
             </div>
 
@@ -2757,7 +2757,7 @@ let signatureCallback = null;
 const showScheduleVisitModal = ref(false);
 const newVisitType = ref("IMV");
 const newVisitScheduledDate = ref("");
-const newVisitCra = ref("cra_fderuiter");
+const newVisitCra = ref("cra.monitor");
 const newVisitReason = ref("");
 const scheduleError = ref("");
 
@@ -3070,9 +3070,7 @@ function openScheduleVisit() {
   newVisitScheduledDate.value = new Date(Date.now() + 5 * 24 * 3600 * 1000)
     .toISOString()
     .slice(0, 10);
-  newVisitCra.value = store.user?.username
-    ? `cra_${store.user.username}`
-    : "cra_fderuiter";
+  newVisitCra.value = store.user?.username || "cra.monitor";
   newVisitReason.value = "";
   scheduleError.value = "";
   showScheduleVisitModal.value = true;

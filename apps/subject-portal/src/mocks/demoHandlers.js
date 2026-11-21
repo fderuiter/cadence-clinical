@@ -1,3 +1,4 @@
+import { DEFAULT_DEMO_PARTICIPANT, DEMO_STUDY } from "demo-fixtures";
 import { http, HttpResponse } from "msw";
 import {
   MOCK_APPROVED_CONTENT,
@@ -6,10 +7,13 @@ import {
   MOCK_INSTRUMENTS,
   MOCK_NOTIFICATIONS,
 } from "../data/mock-data.js";
+import { demoNowIso, demoNowMs } from "../utils/demoMode.js";
+
+const DEFAULT_DEMO_SUBJECT_ID = DEFAULT_DEMO_PARTICIPANT?.subjectCode || "";
 
 const DEFAULT_PENDING_RECONSENT = {
   id: "req_amendment_v2",
-  study_id: "STUDY-01",
+  study_id: DEMO_STUDY?.code || "",
   protocol_version: "2.0",
   change_summary:
     "Protocol amendment v2.0 schedule clarification requiring participant re-consent.",
@@ -29,6 +33,7 @@ export function createPortalDemoStore() {
     consentCaptured: false,
     walletBalance: 125.0,
     complianceScore: 92,
+    actionSeq: 0,
   };
 
   function reset() {
@@ -40,6 +45,7 @@ export function createPortalDemoStore() {
     state.consentCaptured = false;
     state.walletBalance = 125.0;
     state.complianceScore = 92;
+    state.actionSeq = 0;
   }
 
   reset();
@@ -53,14 +59,20 @@ export function createPortalDemoStore() {
 export const portalDemoStore = createPortalDemoStore();
 
 export function createPortalDemoHandlers(store = portalDemoStore) {
+  const nextSeq = () => {
+    store.state.actionSeq += 1;
+    return store.state.actionSeq;
+  };
+
   return [
     http.get("*/health", () =>
       HttpResponse.json({ status: "healthy", portal: "demo" })
     ),
     http.post("*/api/v1/auth/signature-verification", async ({ request }) => {
       const body = await request.json().catch(() => ({}));
+      const seq = nextSeq();
       return HttpResponse.json({
-        sig_token: `portal_demo_sig_${Date.now()}`,
+        sig_token: `portal_demo_sig_${demoNowMs(seq)}`,
         action: body?.action || "portal.sign",
         expires_in: 300,
       });
@@ -69,7 +81,7 @@ export function createPortalDemoHandlers(store = portalDemoStore) {
       HttpResponse.json(
         store.state.assignments.map((item) => ({
           ...item,
-          subject_id: params.subjectId || "subject_001",
+          subject_id: params.subjectId || DEFAULT_DEMO_SUBJECT_ID,
         }))
       )
     ),
@@ -87,7 +99,7 @@ export function createPortalDemoHandlers(store = portalDemoStore) {
     }),
     http.get("*/api/v1/interop/subjects/:subjectId/compliance", ({ params }) =>
       HttpResponse.json({
-        subject_id: params.subjectId || "subject_001",
+        subject_id: params.subjectId || DEFAULT_DEMO_SUBJECT_ID,
         adherence_percentage: store.state.complianceScore,
         completed_count: 11 + store.state.submissions.length,
         missed_count: 1,
@@ -107,7 +119,7 @@ export function createPortalDemoHandlers(store = portalDemoStore) {
           target.is_read = true;
           target.acknowledged = true;
           target.status = "ACKNOWLEDGED";
-          target.acknowledged_at = new Date().toISOString();
+          target.acknowledged_at = demoNowIso(nextSeq());
         }
         return HttpResponse.json(
           target || {
@@ -121,10 +133,11 @@ export function createPortalDemoHandlers(store = portalDemoStore) {
     ),
     http.post("*/api/v1/interop/epro/submit", async ({ request }) => {
       const body = await request.json().catch(() => ({}));
+      const seq = nextSeq();
       const record = {
-        submission_id: `sub_${Date.now()}`,
+        submission_id: `sub_${demoNowMs(seq)}`,
         status: "ACCEPTED",
-        received_at: new Date().toISOString(),
+        received_at: demoNowIso(seq),
         ...body,
       };
       store.state.submissions.push(record);
@@ -147,7 +160,7 @@ export function createPortalDemoHandlers(store = portalDemoStore) {
       return HttpResponse.json({
         synced_count: items.length,
         status: "SYNCED",
-        synced_at: new Date().toISOString(),
+        synced_at: demoNowIso(nextSeq()),
       });
     }),
     http.get("*/api/v1/econsent/templates/:templateId/approved-content", () =>
@@ -163,17 +176,18 @@ export function createPortalDemoHandlers(store = portalDemoStore) {
         HttpResponse.json({
           passed: true,
           score_pct: 100,
-          evaluated_at: new Date().toISOString(),
+          evaluated_at: demoNowIso(nextSeq()),
         })
     ),
     http.post(
       "*/api/v1/econsent/templates/:templateId/versions/:version/capture-consent",
       () => {
         store.state.consentCaptured = true;
+        const seq = nextSeq();
         return HttpResponse.json({
-          consent_id: `icf_demo_${Date.now()}`,
+          consent_id: `icf_demo_${demoNowMs(seq)}`,
           status: "SIGNED",
-          signed_at: new Date().toISOString(),
+          signed_at: demoNowIso(seq),
         });
       }
     ),
@@ -183,7 +197,7 @@ export function createPortalDemoHandlers(store = portalDemoStore) {
     http.post("*/api/v1/execution/amendments/reconsent", () =>
       HttpResponse.json({
         status: "RECORDED",
-        recorded_at: new Date().toISOString(),
+        recorded_at: demoNowIso(nextSeq()),
       })
     ),
     http.post(

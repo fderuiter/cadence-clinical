@@ -1,4 +1,6 @@
 # Local build, test and coverage output (git-ignored)
 coverage/
 dist/
+playwright-report/
+playwright-report*.xml
 test-results/

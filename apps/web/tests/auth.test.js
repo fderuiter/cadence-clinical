@@ -385,12 +385,12 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
       expect(authStore.isAuthenticated).toBe(true);
       expect(authStore.token).toBeNull();
       expect(authStore.identity).toEqual({
-        username: "fderuiter",
-        email: "fderuiter@example.com", // deid-ignore
-        firstName: "Frans",
-        lastName: "de Ruiter",
-        id: "fderuiter-id-12345",
-        tenantId: "demo",
+        username: "designer.lead",
+        email: "designer.lead@example.com", // deid-ignore
+        firstName: "Designer",
+        lastName: "Lead",
+        id: "8808e058-a472-4f72-9970-a027eddf35bc",
+        tenantId: "cadence-local",
       });
       expect(authStore.currentPersona).toBe("super_admin");
 
