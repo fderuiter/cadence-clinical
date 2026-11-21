@@ -384,6 +384,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             UserId = "crc-1",
             Roles = ["crc"],
             AssignedStudies = studies.Length == 0 ? ["*"] : studies,
+            AssignedSites = ["SITE-01", "SITE-05", "SITE-1"],
         };
         return httpContext;
     }

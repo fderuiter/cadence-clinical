@@ -1,6 +1,10 @@
-import { defineConfig, devices } from "@playwright/test";
+import { chromium, defineConfig, devices } from "@playwright/test";
+import { buildChromiumLaunchOptions } from "../../scripts/playwright-chromium-launcher.mjs";
 
-const chromiumLaunchOptions = {
+const chromiumLaunchOptions = buildChromiumLaunchOptions(chromium, {
+  ...(process.env.PLAYWRIGHT_CHROME_EXECUTABLE
+    ? { executablePath: process.env.PLAYWRIGHT_CHROME_EXECUTABLE }
+    : {}),
   args: [
     "--no-sandbox",
     "--disable-setuid-sandbox",
@@ -8,7 +12,7 @@ const chromiumLaunchOptions = {
     "--disable-gpu",
     "--no-proxy-server",
   ],
-};
+});
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -32,6 +36,7 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
+        channel: "chromium",
         launchOptions: chromiumLaunchOptions,
       },
     },

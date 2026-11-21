@@ -1,7 +1,10 @@
+using System;
+
 using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
+using Cadence.Database.Tenancy;
 using Cadence.Security.FieldProtection;
 
 using Microsoft.EntityFrameworkCore;
@@ -14,8 +17,11 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence;
 /// at rest with <paramref name="fieldEncryptor"/> (#4770).
 /// </summary>
 public sealed class PaymentsDbContext(DbContextOptions<PaymentsDbContext> options, IFieldEncryptor fieldEncryptor)
-    : DbContext(options), IFieldEncryptingDbContext
+    : DbContext(options), IFieldEncryptingDbContext, ITenantScopedDbContext
 {
+    public Guid? ActiveInMemoryTenantFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantFilter(this);
+
+    public string? ActiveInMemoryTenantStringFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantStringFilter(this);
     /// <inheritdoc />
     public IFieldEncryptor FieldEncryptor { get; } = fieldEncryptor;
 
@@ -64,5 +70,6 @@ public sealed class PaymentsDbContext(DbContextOptions<PaymentsDbContext> option
         modelBuilder.ApplyConfiguration(new ParticipantExpenseClaimConfiguration());
         modelBuilder.ApplyConfiguration(new ParticipantDisbursementConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+        modelBuilder.ConfigureStandaloneTenancy(this);
     }
 }

@@ -1,4 +1,5 @@
-import { defineConfig, devices } from "@playwright/test";
+import { chromium, defineConfig, devices } from "@playwright/test";
+import { buildChromiumLaunchOptions } from "../../scripts/playwright-chromium-launcher.mjs";
 
 /**
  * The browser-to-database check of the observation correction (ADR-2620), run by
@@ -10,6 +11,9 @@ export default defineConfig({
   testDir: "./tests/browser",
   workers: 1,
   retries: 0,
+  expect: {
+    timeout: 15000,
+  },
   outputDir:
     process.env.RECORDING_OUTPUT_DIR || "./test-results/correction-check",
   reporter: [["list"]],
@@ -23,9 +27,14 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
-        launchOptions: process.env.PLAYWRIGHT_CHROMIUM_PATH
-          ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH }
-          : {},
+        launchOptions: buildChromiumLaunchOptions(chromium, {
+          args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+          ],
+        }),
       },
     },
   ],

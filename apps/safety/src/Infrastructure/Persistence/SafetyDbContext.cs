@@ -1,8 +1,11 @@
+using System;
+
 using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
 using Cadence.Database.Signatures;
+using Cadence.Database.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -11,8 +14,12 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence;
 /// <summary>
 /// EF Core 10 DbContext for Safety microservice persistence gateway.
 /// </summary>
-public sealed class SafetyDbContext(DbContextOptions<SafetyDbContext> options) : DbContext(options)
+public sealed class SafetyDbContext(DbContextOptions<SafetyDbContext> options) : DbContext(options), ITenantScopedDbContext
 {
+    public Guid? ActiveInMemoryTenantFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantFilter(this);
+
+    public string? ActiveInMemoryTenantStringFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantStringFilter(this);
+
     public DbSet<IcsrReportingEvaluation> SafetyReportingEvaluations => Set<IcsrReportingEvaluation>();
     public DbSet<SafetyCaseIcsr> SafetyCases => Set<SafetyCaseIcsr>();
     public DbSet<ExportJob> SafetyExportJobs => Set<ExportJob>();
@@ -50,5 +57,6 @@ public sealed class SafetyDbContext(DbContextOptions<SafetyDbContext> options) :
         modelBuilder.ApplyConfiguration(new PeriodicSafetyReportRecordConfiguration());
         modelBuilder.ApplyConfiguration(new DeviceSafetyInvestigationConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+        modelBuilder.ConfigureStandaloneTenancy(this);
     }
 }

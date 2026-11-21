@@ -1,14 +1,27 @@
-import { defineConfig, devices } from "@playwright/test";
+import { chromium, defineConfig, devices } from "@playwright/test";
+import { buildChromiumLaunchOptions } from "../../scripts/playwright-chromium-launcher.mjs";
 
 const useLiveKeycloak = process.env.E2E_KEYCLOAK === "true";
 const demoPreviewUrl = "http://127.0.0.1:3001/cadence-clinical/";
 const webBaseUrl = useLiveKeycloak
   ? "http://localhost:3000/cadence-clinical/"
   : demoPreviewUrl;
-const isAccessibilityOnly = process.argv.some((arg) =>
-  arg.includes("accessibility")
+const hasExplicitFullStackTarget = process.argv.some(
+  (arg) =>
+    arg.includes("chromium") ||
+    arg.includes("setup") ||
+    arg.includes("clinical_workflows") ||
+    arg.includes("crf_authoring") ||
+    arg.includes("etmf_workflow") ||
+    arg.includes("suites")
 );
-const chromiumLaunchOptions = {
+const isAccessibilityOnly =
+  process.env.CADENCE_TEST_BROWSER === "1" ||
+  process.argv.some((arg) => arg.includes("accessibility")) ||
+  (process.env.E2E_KEYCLOAK !== "true" &&
+    process.env.RECORD_VIDEO !== "true" &&
+    !hasExplicitFullStackTarget);
+const chromiumLaunchOptions = buildChromiumLaunchOptions(chromium, {
   ...(process.env.PLAYWRIGHT_CHROME_EXECUTABLE
     ? { executablePath: process.env.PLAYWRIGHT_CHROME_EXECUTABLE }
     : {}),
@@ -19,13 +32,14 @@ const chromiumLaunchOptions = {
     "--disable-gpu",
     "--no-proxy-server",
   ],
-};
+});
 
 const accessibilityProject = {
   name: "accessibility",
   testMatch: /web-accessibility\.spec\.ts/,
   use: {
     ...devices["Desktop Chrome"],
+    channel: "chromium",
     baseURL: demoPreviewUrl,
     serviceWorkers: "block" as const,
     launchOptions: chromiumLaunchOptions,
@@ -65,9 +79,10 @@ export default defineConfig({
           testIgnore: /web-accessibility\.spec\.ts/,
           use: {
             ...devices["Desktop Chrome"],
+            channel: "chromium",
             serviceWorkers: useLiveKeycloak ? "allow" : "block",
-            launchOptions: chromiumLaunchOptions,
             storageState: "playwright/.auth/user.json",
+            launchOptions: chromiumLaunchOptions,
           },
           dependencies: ["setup"],
         },

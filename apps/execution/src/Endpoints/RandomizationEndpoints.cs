@@ -47,7 +47,7 @@ public static class RandomizationEndpoints
             .Produces<RandomizationSchemeResponse>(StatusCodes.Status201Created)
             .ProducesValidationProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("randomization_scheme:draft")
+            .RequirePermission("randomization_scheme:draft").RequireCallerStudyScope()
             .AddEndpointFilter<ValidationFilter<RandomizationSchemeDraftRequest>>()
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
@@ -59,7 +59,7 @@ public static class RandomizationEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .RequirePermission("randomization_scheme:approve")
+            .RequirePermission("randomization_scheme:approve").RequireCallerStudyScope()
             .RequireElectronicSignature(ApproveSchemeSemanticAction, ApproveSchemeActionFor)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
@@ -69,7 +69,7 @@ public static class RandomizationEndpoints
             .Produces<RandomizationSchemeResponse[]>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("randomization_scheme:read");
+            .RequirePermission("randomization_scheme:read").RequireCallerStudyScope();
 
         app.MapGroup("/api/v1/execution/subjects").WithTags("Subjects")
             .MapPost("/{subjectId}/randomize", RandomizeSubjectAsync)
@@ -81,7 +81,7 @@ public static class RandomizationEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .RequirePermission("subject_enrollment:randomize")
+            .RequirePermission("subject_enrollment:randomize").RequireCallerStudyScope()
             .RequireElectronicSignature(RandomizeSubjectSemanticAction, RandomizeSubjectActionFor)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 

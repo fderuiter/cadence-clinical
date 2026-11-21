@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { getApiBaseUrl } from "../src/api/authorization.js";
 import { createOpenApiClient, getBaseUrl } from "../src/api/client";
 import {
+  ensureServiceWorkerController,
   normalizeBasePath,
   resolveWebServiceWorkerOptions,
   startMswWorker,
@@ -102,6 +103,62 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
           options: { scope: "/cadence-clinical/" },
         },
       });
+    });
+
+    it("waits for controllerchange when navigator.serviceWorker.ready resolves before controller is set", async () => {
+      const originalDescriptor = Object.getOwnPropertyDescriptor(
+        globalThis.navigator,
+        "serviceWorker"
+      );
+      const listeners = new Set();
+      const fakeServiceWorker = {
+        controller: null,
+        ready: Promise.resolve({ active: {} }),
+        addEventListener: vi.fn((event, cb) => {
+          if (event === "controllerchange") {
+            listeners.add(cb);
+          }
+        }),
+        removeEventListener: vi.fn((event, cb) => {
+          if (event === "controllerchange") {
+            listeners.delete(cb);
+          }
+        }),
+      };
+
+      Object.defineProperty(globalThis.navigator, "serviceWorker", {
+        configurable: true,
+        value: fakeServiceWorker,
+      });
+
+      try {
+        let settled = false;
+        const waitPromise = ensureServiceWorkerController(1000).then(() => {
+          settled = true;
+        });
+
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(settled).toBe(false);
+
+        fakeServiceWorker.controller = { scriptURL: "/mockServiceWorker.js" };
+        for (const cb of [...listeners]) {
+          cb();
+        }
+
+        await waitPromise;
+        expect(settled).toBe(true);
+      } finally {
+        if (originalDescriptor) {
+          Object.defineProperty(
+            globalThis.navigator,
+            "serviceWorker",
+            originalDescriptor
+          );
+        } else {
+          delete globalThis.navigator.serviceWorker;
+        }
+      }
     });
   });
 

@@ -66,6 +66,7 @@ export function createWebDemoHandlers(store = webDemoStore) {
       reason_for_change: "Initial protocol eTMF baseline registration",
     },
   ];
+  let demoLocks = Array.isArray(store.locks) ? [...store.locks] : [];
 
   return [
     // Health & identity
@@ -286,6 +287,184 @@ export function createWebDemoHandlers(store = webDemoStore) {
     ),
     http.get("*/api/v1/kernel/studies/:studyRef/proposals", () =>
       HttpResponse.json(store.listProposals())
+    ),
+    http.get(
+      "*/api/v1/kernel/studies/:studyRef/locks",
+      ({ params, request }) => {
+        const url = new URL(request.url);
+        const activeOnly = url.searchParams.get("active_only") === "true";
+        const now = new Date().toISOString();
+        const studyRef = decodeURIComponent(String(params.studyRef));
+        const locks = activeOnly
+          ? demoLocks.filter((item) => !item.released)
+          : demoLocks;
+        return HttpResponse.json({
+          study_ref: studyRef,
+          study_code: "CAD-ONC-2026",
+          valid_at: now,
+          known_at: now,
+          locks,
+        });
+      }
+    ),
+    http.post("*/api/v1/kernel/locks", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const now = new Date().toISOString();
+      const scopeRef = body?.scope_ref || DEFAULT_STUDY_REF;
+      const scopeKind =
+        body?.scope_kind || String(scopeRef).split(":")[0] || "study";
+      const suffix = String(Date.now()).slice(-12).padStart(12, "0");
+      const record = {
+        ref: body?.lock_id
+          ? `assertion:${body.lock_id}`
+          : `assertion:01960000-0000-7000-8000-${suffix}`, // deid-ignore
+        study_ref: body?.study_ref || DEFAULT_STUDY_REF,
+        scope_ref: scopeRef,
+        scope_kind: scopeKind,
+        subject_code: null,
+        kind: body?.kind || "Frozen",
+        attestation_ref: body?.attestation_id
+          ? `attestation:${body.attestation_id}`
+          : "attestation:01960000-0000-7000-8000-000000000099", // deid-ignore
+        attestation_meaning: body?.meaning || "Approved",
+        locked_at: now,
+        locked_by: "usr-demo-operator",
+        reason_for_change:
+          decodeReasonHeader(request) || body?.reason_for_change || "Demo lock",
+        released: false,
+        release_ref: null,
+        released_at: null,
+        released_by: null,
+        release_reason: null,
+        masked: false,
+        mask: null,
+      };
+      demoLocks = [...demoLocks, record];
+      store.locks = demoLocks;
+      return HttpResponse.json(record, { status: 201 });
+    }),
+    http.post(
+      "*/api/v1/kernel/locks/:lockRef/release",
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        const lockRef = decodeURIComponent(String(params.lockRef));
+        const now = new Date().toISOString();
+        const reason = decodeReasonHeader(request) || "Released in demo";
+        const suffix = String(Date.now()).slice(-12).padStart(12, "0");
+        demoLocks = demoLocks.map((item) =>
+          item.ref === lockRef
+            ? {
+                ...item,
+                released: true,
+                release_ref: body?.assertion_id
+                  ? `assertion:${body.assertion_id}`
+                  : `assertion:01960000-0000-7000-8001-${suffix}`, // deid-ignore
+                released_at: now,
+                released_by: "usr-demo-operator",
+                release_reason: reason,
+              }
+            : item
+        );
+        store.locks = demoLocks;
+        const updated = demoLocks.find((item) => item.ref === lockRef) || {
+          ref: lockRef,
+          study_ref: body?.study_ref || DEFAULT_STUDY_REF,
+          scope_ref: body?.study_ref || DEFAULT_STUDY_REF,
+          scope_kind: "study",
+          subject_code: null,
+          kind: "Frozen",
+          attestation_ref: "attestation:01960000-0000-7000-8000-000000000099", // deid-ignore
+          attestation_meaning: body?.meaning || "Responsibility",
+          locked_at: now,
+          locked_by: "usr-demo-operator",
+          reason_for_change: "Demo lock",
+          released: true,
+          release_ref: `assertion:01960000-0000-7000-8001-${suffix}`, // deid-ignore
+          released_at: now,
+          released_by: "usr-demo-operator",
+          release_reason: reason,
+          masked: false,
+          mask: null,
+        };
+        return HttpResponse.json(updated);
+      }
+    ),
+    http.get(
+      "*/api/v1/kernel/studies/:studyRef/exports",
+      ({ params, request }) => {
+        const url = new URL(request.url);
+        const format = (url.searchParams.get("format") || "csv").toLowerCase();
+        const studyRef = decodeURIComponent(String(params.studyRef));
+        const digestHeader = {
+          "X-Content-Sha256":
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
+        };
+        if (format === "odm_xml" || format === "odm" || format === "xml") {
+          return new HttpResponse(
+            `<?xml version="1.0" encoding="UTF-8"?><ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileType="Snapshot" FileOID="DEMO" CreationDateTime="${new Date().toISOString()}" ODMVersion="1.3.2"><Study OID="${studyRef}"/></ODM>`,
+            {
+              headers: {
+                "Content-Type": "application/xml",
+                ...digestHeader,
+              },
+            }
+          );
+        }
+        if (
+          format === "dataset_json" ||
+          format === "dataset-json" ||
+          format === "json"
+        ) {
+          return HttpResponse.json(
+            { study_ref: studyRef, records: [] },
+            { headers: digestHeader }
+          );
+        }
+        return new HttpResponse("STUDYID,USUBJID\nCAD-ONC-2026,SUBJ-001\n", {
+          headers: {
+            "Content-Type": "text/csv",
+            ...digestHeader,
+          },
+        });
+      }
+    ),
+    http.get(
+      "*/api/v1/kernel/enrollments/:enrollmentRef/casebook",
+      ({ params, request }) => {
+        const url = new URL(request.url);
+        const format = (url.searchParams.get("format") || "json").toLowerCase();
+        const enrollmentRef = decodeURIComponent(String(params.enrollmentRef));
+        const digestHeader = {
+          "X-Content-Sha256":
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
+        };
+        if (format === "odm_xml" || format === "odm" || format === "xml") {
+          return new HttpResponse(
+            `<?xml version="1.0" encoding="UTF-8"?><ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileType="Snapshot" FileOID="CASEBOOK-DEMO" CreationDateTime="${new Date().toISOString()}" ODMVersion="1.3.2"><ClinicalData StudyOID="CAD-ONC-2026" MetaDataVersionOID="MDV.1"><SubjectData SubjectKey="${enrollmentRef}"/></ClinicalData></ODM>`,
+            {
+              headers: {
+                "Content-Type": "application/xml",
+                ...digestHeader,
+              },
+            }
+          );
+        }
+        if (format === "html") {
+          return new HttpResponse(
+            `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Casebook ${enrollmentRef}</title></head><body><h1>Participant Casebook</h1><p>${enrollmentRef}</p></body></html>`,
+            {
+              headers: {
+                "Content-Type": "text/html; charset=utf-8",
+                ...digestHeader,
+              },
+            }
+          );
+        }
+        return HttpResponse.json(
+          { enrollment_ref: enrollmentRef, observations: [] },
+          { headers: digestHeader }
+        );
+      }
     ),
     http.get("*/api/v1/kernel/proposals/:proposalRef", ({ params }) =>
       HttpResponse.json(

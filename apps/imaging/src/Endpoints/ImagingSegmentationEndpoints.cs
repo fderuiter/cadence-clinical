@@ -22,7 +22,7 @@ public static class ImagingSegmentationEndpoints
         group.MapPost("/{studyUid}/series/{seriesUid}/segment", SegmentRoiAsync)
             .WithName("SegmentRoiSeed")
             // Writing a measurement is a reader's act, not a read: the independent-review readers hold it (ADR-2516).
-            .RequirePermission("imaging_adjudication:submit")
+            .RequirePermission("imaging_adjudication:submit").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status501NotImplemented)
@@ -58,8 +58,11 @@ public static class ImagingSegmentationEndpoints
             seriesUid,
             request,
             Caller(httpContext),
-            studyId => CallerScope.CanAccessStudy(httpContext, studyId),
-            cancellationToken).ConfigureAwait(false);
+            studyId => ClinicalScopeGuard.CanAccessStudy(httpContext, studyId),
+            cancellationToken,
+            siteId => string.IsNullOrWhiteSpace(siteId)
+                ? ClinicalScopeGuard.HasValidSiteScopeIfRequired(ClinicalScopeGuard.ResolvePrincipal(httpContext))
+                : ClinicalScopeGuard.CanAccessSite(httpContext, siteId)).ConfigureAwait(false);
 
         return outcome.Status switch
         {

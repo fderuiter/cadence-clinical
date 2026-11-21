@@ -6,6 +6,7 @@ using Cadence.Apps.Designer.Endpoints;
 using Cadence.Ddf;
 using Cadence.Rules;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 using Cadence.Telemetry;
 
 using Microsoft.AspNetCore.Builder;
@@ -32,11 +33,19 @@ var api = app.MapGroup("/api/v1/studies");
 api.MapGet("/", () => TypedResults.Ok(Array.Empty<string>()))
     .WithName("ListStudies")
     .WithSummary("Lists active CDISC USDM study protocol definitions.")
-    .RequirePermission("study_design:read");
+    .RequirePermission("study_design:read").RequireCallerStudyScope();
 
 var protocols = app.MapGroup("/api/v1/protocols");
-protocols.MapPost("/compile", Results<Ok<DDFCompilationResult>, ProblemHttpResult> (CompileProtocolRequest request) =>
+protocols.MapPost("/compile", Results<Ok<DDFCompilationResult>, ProblemHttpResult> (CompileProtocolRequest request, HttpContext httpContext) =>
 {
+    if (!string.IsNullOrWhiteSpace(request.StudyId) && !ClinicalScopeGuard.CanAccessStudy(httpContext, request.StudyId))
+    {
+        return TypedResults.Problem(
+            title: "Outside your studies",
+            detail: ClinicalScopeGuard.StudyAccessDeniedDetail,
+            statusCode: StatusCodes.Status403Forbidden);
+    }
+
     try
     {
         return TypedResults.Ok(UsdmCompiler.CompileUsdm(request.UsdmJson, request.StudyId, request.VersionTag));
@@ -78,7 +87,7 @@ protocols.MapPost("/compile", Results<Ok<DDFCompilationResult>, ProblemHttpResul
 .ProducesProblem(StatusCodes.Status403Forbidden)
 .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
 // Compiling a protocol is study design work: sponsor designers and system administrators (#4958, ADR-2510).
-.RequirePermission(DesignerPermissions.CompileProtocol);
+.RequirePermission(DesignerPermissions.CompileProtocol).RequireCallerStudyScope();
 
 await app.RunAsync();
 

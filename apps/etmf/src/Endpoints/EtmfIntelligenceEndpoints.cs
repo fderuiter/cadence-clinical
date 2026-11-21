@@ -33,20 +33,20 @@ public static class EtmfIntelligenceEndpoints
 
         // Every route names its permission (ADR-2510, ADR-2516). A study id in a body or on a stored document is checked
         // against the caller's signed study assignments, and lists are narrowed to them (#5361).
-        group.MapPost("/intelligence/classify", ClassifyDocument).RequirePermission("etmf_document:tag");
-        group.MapPost("/intelligence/stage-qc", StageQcDocument).RequirePermission("etmf_document:create");
-        group.MapGet("/intelligence/qc-queue", GetQcQueue).RequirePermission("etmf_document:read");
-        group.MapPost("/intelligence/qc-review/{doc_id}", ReviewQcDocument).RequirePermission("etmf_document:transition_clinical_qc");
+        group.MapPost("/intelligence/classify", ClassifyDocument).RequirePermission("etmf_document:tag").RequireCallerStudyScope();
+        group.MapPost("/intelligence/stage-qc", StageQcDocument).RequirePermission("etmf_document:create").RequireCallerStudyAndSiteScope();
+        group.MapGet("/intelligence/qc-queue", GetQcQueue).RequirePermission("etmf_document:read").RequireCallerStudyAndSiteScope();
+        group.MapPost("/intelligence/qc-review/{doc_id}", ReviewQcDocument).RequirePermission("etmf_document:transition_clinical_qc").RequireCallerStudyAndSiteScope();
 
-        group.MapGet("/documents", GetDocuments).RequirePermission("etmf_document:read");
-        group.MapGet("/documents/{document_id}", GetDocumentById).RequirePermission("etmf_document:read");
-        group.MapPost("/documents/export", ExportDocuments).RequirePermission("etmf_document:export");
-        group.MapGet("/export-jobs/{job_id}", GetExportJob).RequirePermission("etmf_document:export");
-        group.MapGet("/export-jobs/{job_id}/download", DownloadExportJob).RequirePermission("etmf_document:export");
-        group.MapGet("/export-jobs", ListExportJobs).RequirePermission("etmf_document:export");
+        group.MapGet("/documents", GetDocuments).RequirePermission("etmf_document:read").RequireCallerStudyAndSiteScope();
+        group.MapGet("/documents/{document_id}", GetDocumentById).RequirePermission("etmf_document:read").RequireCallerStudyAndSiteScope();
+        group.MapPost("/documents/export", ExportDocuments).RequirePermission("etmf_document:export").RequireCallerStudyAndSiteScope();
+        group.MapGet("/export-jobs/{job_id}", GetExportJob).RequirePermission("etmf_document:export").RequireCallerStudyAndSiteScope();
+        group.MapGet("/export-jobs/{job_id}/download", DownloadExportJob).RequirePermission("etmf_document:export").RequireCallerStudyAndSiteScope();
+        group.MapGet("/export-jobs", ListExportJobs).RequirePermission("etmf_document:export").RequireCallerStudyAndSiteScope();
 
-        group.MapPost("/ingest", IngestDocument).RequirePermission("etmf_document:create");
-        group.MapGet("/taxonomy", GetTaxonomy).RequirePermission("etmf_taxonomy:read");
+        group.MapPost("/ingest", IngestDocument).RequirePermission("etmf_document:create").RequireCallerStudyAndSiteScope();
+        group.MapGet("/taxonomy", GetTaxonomy).RequirePermission("etmf_taxonomy:read").RequireCallerStudyScope();
     }
 
     /// <summary>The signed caller's user id; the gateway scheme always sets one on an admitted request.</summary>
@@ -93,7 +93,7 @@ public static class EtmfIntelligenceEndpoints
             return TypedResults.BadRequest(new { error = "21 CFR Part 11 requires a reason_for_change of at least 10 characters." });
         }
 
-        if (!CallerScope.CanAccessStudy(httpContext, request.StudyId))
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId, allowUnassignedSiteForScopedCaller: true) is not null)
         {
             return OutsideStudy();
         }
@@ -178,13 +178,26 @@ public static class EtmfIntelligenceEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
+        if (!string.IsNullOrWhiteSpace(study_id) && !CallerScope.CanAccessStudy(httpContext, study_id))
+        {
+            return OutsideStudy();
+        }
+
+        var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
+        if (!ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
+        {
+            return OutsideStudy();
+        }
+
         var query = InCallerStudies(dbContext.TmfDocuments.AsNoTracking(), httpContext).Where(d => d.Status == "TECHNICAL_QC");
         if (!string.IsNullOrWhiteSpace(study_id))
         {
             query = query.Where(d => d.StudyId == study_id);
         }
 
-        var docs = await query.ToListAsync(ct);
+        var docs = (await query.ToListAsync(ct))
+            .Where(d => string.IsNullOrWhiteSpace(d.SiteId) || ClinicalScopeGuard.CanAccessSite(httpContext, d.SiteId))
+            .ToList();
         var stagingItems = docs.Select(doc =>
         {
             DocumentIntelligenceReport report;
@@ -248,7 +261,7 @@ public static class EtmfIntelligenceEndpoints
             return TypedResults.NotFound(new { error = $"Document with ID '{doc_id}' not found." });
         }
 
-        if (!CallerScope.CanAccessStudy(httpContext, doc.StudyId))
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, doc.StudyId, doc.SiteId, allowUnassignedSiteForScopedCaller: true) is not null)
         {
             return OutsideStudy();
         }
@@ -326,17 +339,41 @@ public static class EtmfIntelligenceEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
+        if (!string.IsNullOrWhiteSpace(study_id) && !ClinicalScopeGuard.CanAccessStudy(httpContext, study_id))
+        {
+            return OutsideStudy();
+        }
+
+        var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
+        if (!ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
+        {
+            return OutsideStudy();
+        }
+
+        string? requestedSiteId = httpContext.Request.Query["site_id"].FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(requestedSiteId)
+            && ClinicalScopeGuard.RequireSite(httpContext, requestedSiteId) is { } siteDenied)
+        {
+            return siteDenied;
+        }
+
         var query = InCallerStudies(dbContext.TmfDocuments.AsNoTracking(), httpContext);
         if (!string.IsNullOrWhiteSpace(study_id))
         {
             query = query.Where(d => d.StudyId == study_id);
+        }
+        if (!string.IsNullOrWhiteSpace(requestedSiteId))
+        {
+            query = query.Where(d => d.SiteId == requestedSiteId);
         }
         if (zone.HasValue)
         {
             query = query.Where(d => d.Zone == zone.Value);
         }
 
-        var docs = await query.ToListAsync(ct);
+        var docs = (await query.ToListAsync(ct))
+            .Where(d => string.IsNullOrWhiteSpace(d.SiteId) || ClinicalScopeGuard.CanAccessSite(httpContext, d.SiteId))
+            .ToList();
         return TypedResults.Ok(docs);
     }
 
@@ -348,7 +385,7 @@ public static class EtmfIntelligenceEndpoints
     {
         var doc = await dbContext.TmfDocuments.AsNoTracking().FirstOrDefaultAsync(d => d.Id == document_id, ct);
         // A document in a study the caller is not assigned to is answered as missing, so its id reveals nothing.
-        if (doc == null || !CallerScope.CanAccessStudy(httpContext, doc.StudyId))
+        if (doc == null || ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, doc.StudyId, doc.SiteId, allowUnassignedSiteForScopedCaller: true) is not null)
         {
             return TypedResults.NotFound(new { error = $"Document '{document_id}' not found." });
         }
@@ -367,7 +404,7 @@ public static class EtmfIntelligenceEndpoints
             return TypedResults.BadRequest(new { error = "study_id is required: every document is filed in a study." });
         }
 
-        if (!CallerScope.CanAccessStudy(httpContext, request.StudyId))
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId, allowUnassignedSiteForScopedCaller: true) is not null)
         {
             return OutsideStudy();
         }
@@ -556,7 +593,8 @@ public static class EtmfIntelligenceEndpoints
             return TypedResults.BadRequest(new { error = "study_id is required: an export is one study's binder." });
         }
 
-        if (!CallerScope.CanAccessStudy(httpContext, request.StudyId))
+        var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
+        if (!CallerScope.CanAccessStudy(httpContext, request.StudyId) || !ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
         {
             return OutsideStudy();
         }
@@ -580,11 +618,13 @@ public static class EtmfIntelligenceEndpoints
             query = query.Where(d => d.Zone == request.Zone.Value);
         }
 
-        var matchingDocs = await query
+        var matchingDocs = (await query
             .OrderBy(d => d.Zone)
             .ThenBy(d => d.Section)
             .ThenBy(d => d.Filename)
-            .ToListAsync(ct);
+            .ToListAsync(ct))
+            .Where(d => string.IsNullOrWhiteSpace(d.SiteId) || ClinicalScopeGuard.CanAccessSite(httpContext, d.SiteId))
+            .ToList();
 
         int count = matchingDocs.Count;
         var studyId = request.StudyId;
@@ -626,7 +666,7 @@ public static class EtmfIntelligenceEndpoints
             dbContext.TmfExportJobs.Add(job);
             await dbContext.SaveChangesAsync(ct);
 
-            await exportQueue.EnqueueAsync(jobId, ct);
+            await exportQueue.EnqueueAsync(jobId, CallerScope.TenantId(httpContext), ct);
 
             return TypedResults.Accepted(
                 uri: $"/api/v1/etmf/export-jobs/{jobId}",
@@ -655,8 +695,11 @@ public static class EtmfIntelligenceEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
+        var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
         var job = await dbContext.TmfExportJobs.AsNoTracking().FirstOrDefaultAsync(j => j.Id == job_id, ct);
-        if (job == null || !CallerScope.CanAccessStudy(httpContext, job.StudyId))
+        if (job == null
+            || !CallerScope.CanAccessStudy(httpContext, job.StudyId)
+            || !ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
         {
             return TypedResults.NotFound(new { error = $"Export job '{job_id}' not found." });
         }
@@ -683,8 +726,11 @@ public static class EtmfIntelligenceEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
+        var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
         var job = await dbContext.TmfExportJobs.AsNoTracking().FirstOrDefaultAsync(j => j.Id == job_id, ct);
-        if (job == null || !CallerScope.CanAccessStudy(httpContext, job.StudyId))
+        if (job == null
+            || !CallerScope.CanAccessStudy(httpContext, job.StudyId)
+            || !ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
         {
             return TypedResults.NotFound(new { error = $"Export job '{job_id}' not found." });
         }
@@ -700,15 +746,17 @@ public static class EtmfIntelligenceEndpoints
         }
 
         var filePath = Path.Combine(Path.GetTempPath(), "etmf_exports", $"{job_id}.zip");
-        if (!File.Exists(filePath))
+        if (!File.Exists(filePath) || ClinicalScopeGuard.IsSiteBound(principal))
         {
-            var docs = await dbContext.TmfDocuments
+            var docs = (await dbContext.TmfDocuments
                 .AsNoTracking()
                 .Where(d => d.StudyId == job.StudyId)
                 .OrderBy(d => d.Zone)
                 .ThenBy(d => d.Section)
                 .ThenBy(d => d.Filename)
-                .ToListAsync(ct);
+                .ToListAsync(ct))
+                .Where(d => string.IsNullOrWhiteSpace(d.SiteId) || ClinicalScopeGuard.CanAccessSite(httpContext, d.SiteId))
+                .ToList();
 
             var zipBytes = EtmfExportPackager.CreateZipArchive(job.Id, job.StudyId, docs, clock.UtcNow);
             return TypedResults.File(zipBytes, "application/zip", $"etmf_export_{job.StudyId}_{job.Id}.zip");
@@ -724,6 +772,16 @@ public static class EtmfIntelligenceEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
+        var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
+        if (!ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
+        {
+            return OutsideStudy();
+        }
+        if (!string.IsNullOrWhiteSpace(study_id) && !CallerScope.CanAccessStudy(httpContext, study_id))
+        {
+            return OutsideStudy();
+        }
+
         var studies = CallerScope.StudyFilter(httpContext);
         var query = dbContext.TmfExportJobs.AsNoTracking().Where(j => studies == null || studies.Contains(j.StudyId));
         if (!string.IsNullOrWhiteSpace(study_id))

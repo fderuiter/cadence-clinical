@@ -1,8 +1,11 @@
+using System;
+
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
+using Cadence.Database.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -11,8 +14,11 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence;
 /// <summary>
 /// EF Core 10 DbContext for CTMS microservice persistence gateway.
 /// </summary>
-public sealed class CtmsDbContext(DbContextOptions<CtmsDbContext> options) : DbContext(options)
+public sealed class CtmsDbContext(DbContextOptions<CtmsDbContext> options) : DbContext(options), ITenantScopedDbContext
 {
+    public Guid? ActiveInMemoryTenantFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantFilter(this);
+
+    public string? ActiveInMemoryTenantStringFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantStringFilter(this);
     public DbSet<CtmsAuditLog> CtmsAuditLogs => Set<CtmsAuditLog>();
     public DbSet<CtmsClinicalQuery> CtmsClinicalQueries => Set<CtmsClinicalQuery>();
     public DbSet<CtmsCraAllocation> CtmsCraAllocations => Set<CtmsCraAllocation>();
@@ -56,5 +62,6 @@ public sealed class CtmsDbContext(DbContextOptions<CtmsDbContext> options) : DbC
         modelBuilder.ApplyConfiguration(new CtmsSiteGreenlightGateConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
         modelBuilder.ApplyConfiguration(new TransactionalOutboxMessageConfiguration());
+        modelBuilder.ConfigureStandaloneTenancy(this);
     }
 }

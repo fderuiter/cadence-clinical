@@ -61,7 +61,7 @@ public static class StartupGreenlightEndpoints
 
         startup.MapGet("/matrix", GetCountryMatrixAsync)
             .WithName("GetCountryGreenlightMatrix")
-            .RequirePermission(ReadPermission)
+            .RequirePermission(ReadPermission).RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Displays country-level matrix showing 6-facet greenlight readiness for all sites in a selected country.")
             .Produces<List<SiteGreenlightGateResponseDto>>(StatusCodes.Status200OK)
@@ -69,7 +69,7 @@ public static class StartupGreenlightEndpoints
 
         startup.MapPost("/matrix/batch-certify", BatchCertifyCountrySitesAsync)
             .WithName("BatchCertifyCountrySites")
-            .RequirePermission(CertifyPermission)
+            .RequirePermission(CertifyPermission).RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Batch-certifies all selected 100% compliant sites in a target country with a single e-signature.")
             .Produces<BatchCertifyResponseDto>(StatusCodes.Status200OK)
@@ -182,6 +182,12 @@ public static class StartupGreenlightEndpoints
         return TypedResults.Ok(ToResponseDto(gate));
     }
 
+    private static ProblemHttpResult OutsideSites() =>
+        TypedResults.Problem(
+            title: "Outside your sites",
+            detail: ClinicalScopeGuard.SiteAccessDeniedDetail,
+            statusCode: StatusCodes.Status403Forbidden);
+
     public static async Task<Results<Ok<List<SiteGreenlightGateResponseDto>>, ProblemHttpResult>> GetCountryMatrixAsync(
         [FromQuery(Name = "study_id")] string studyId,
         [FromQuery(Name = "country_code")] string countryCode,
@@ -195,9 +201,14 @@ public static class StartupGreenlightEndpoints
         }
 
         countryCode = (countryCode ?? "US").ToUpperInvariant();
-        if (!CallerScope.CanAccessStudy(httpContext, studyId))
+        if (!ClinicalScopeGuard.CanAccessStudy(httpContext, studyId))
         {
             return OutsideStudy();
+        }
+
+        if (httpContext is not null && !ClinicalScopeGuard.HasValidSiteScopeIfRequired(ClinicalScopeGuard.ResolvePrincipal(httpContext)))
+        {
+            return OutsideSites();
         }
 
         // Reads only: a study and country with no recorded gates is an empty matrix (#5433).
@@ -206,6 +217,10 @@ public static class StartupGreenlightEndpoints
             .Where(g => g.StudyId == studyId && g.CountryCode == countryCode)
             .OrderBy(g => g.SiteId)
             .ToListAsync(ct);
+        if (httpContext is not null)
+        {
+            gates = gates.Where(row => ClinicalScopeGuard.CanAccessSite(httpContext, row.SiteId)).ToList();
+        }
 
         var responseDtos = gates.Select(ToResponseDto).ToList();
         return TypedResults.Ok(responseDtos);
