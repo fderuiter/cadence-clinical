@@ -40,8 +40,7 @@
     "generate:api": "node scripts/generate-api-types.js",
     "lint": "node ../../scripts/check_duplicate_identifiers.js && eslint .",
     "test": "vitest run --coverage",
-    "test:e2e": "playwright test --project=accessibility",
-    "test:e2e:keycloak": "playwright test --project=chromium",
+    "test:e2e": "playwright test",
     "typecheck": "node ../../scripts/check_duplicate_identifiers.js && tsc --noEmit"
   },
   "type": "module",

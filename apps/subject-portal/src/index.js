@@ -21,7 +21,15 @@ import {
   fetchNotifications,
   isAuthenticatedSession,
 } from "./api/client.js";
-import { login, logout, redeemActivationCode } from "./features/auth.js";
+import {
+  ensurePortalSessionToken,
+  expirePortalSession,
+  login,
+  logout,
+  portalSessionCoordinator,
+  redeemActivationCode,
+  refreshPortalSessionOnUnauthorized,
+} from "./features/auth.js";
 import { renderCompliance } from "./features/compliance.js";
 import {
   loadConsentDetails,
@@ -45,6 +53,8 @@ import {
 import {
   confirmCancelQuestionnaire,
   dismissCancelQuestionnaire,
+  flushActiveQuestionnaireDraft,
+  hasUnsavedQuestionnaireDrafts,
   leaveQuestionnaire,
   requestCancelQuestionnaire,
   saveActiveDraftProgress,
@@ -120,6 +130,8 @@ export {
   startQuestionnaire,
   validateActiveQuestionnaire,
   saveActiveDraftProgress,
+  flushActiveQuestionnaireDraft,
+  hasUnsavedQuestionnaireDrafts,
   saveAndLeaveQuestionnaire,
   leaveQuestionnaire,
   requestCancelQuestionnaire,
@@ -155,6 +167,10 @@ export {
   login,
   logout,
   redeemActivationCode,
+  expirePortalSession,
+  portalSessionCoordinator,
+  ensurePortalSessionToken,
+  refreshPortalSessionOnUnauthorized,
   refreshSubmissionsState,
   checkPINWrapper,
   handlePINSetupSubmit,

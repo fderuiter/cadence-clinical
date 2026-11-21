@@ -1,6 +1,6 @@
 // 2. Questionnaire completion: compiling the form, preserving drafts on Back,
 // confirming Cancel before discarding, and validating before signature.
-import { debounce, validateField } from "ui";
+import { debounce, registerDraftSource, validateField } from "ui";
 import { nextTick } from "vue";
 
 import { fetchInstrument, isAuthenticatedSession } from "../api/client.js";
@@ -115,6 +115,32 @@ export async function saveActiveDraftProgress() {
 }
 
 export const debouncedSaveActiveDraft = debounce(saveActiveDraftProgress, 1500);
+
+export async function flushActiveQuestionnaireDraft() {
+  debouncedSaveActiveDraft.cancel();
+  if (!state.activeQuestionnaire) {
+    return false;
+  }
+  return await saveActiveDraftProgress();
+}
+
+export function hasUnsavedQuestionnaireDrafts() {
+  if (state.activeQuestionnaire?.instrument) {
+    const currentAnswers = readCurrentFormAnswers(
+      state.activeQuestionnaire.instrument,
+      state.activeQuestionnaire.answers
+    );
+    if (hasAnyRecordedAnswer(currentAnswers)) {
+      return true;
+    }
+  }
+  return Object.values(state.draftPresence || {}).some(Boolean);
+}
+
+registerDraftSource({
+  flush: flushActiveQuestionnaireDraft,
+  hasDrafts: hasUnsavedQuestionnaireDrafts,
+});
 
 // 2. Questionnaire Completion
 export async function startQuestionnaire(assignmentId) {

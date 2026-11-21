@@ -73,6 +73,15 @@
         {{ activationError }}
       </div>
     </div>
+    <div
+      v-else-if="isSessionExpired"
+      id="session-expired-banner"
+      class="participant-auth-error"
+      role="alert"
+    >
+      Your session has expired. Sign in again to continue — your local drafts
+      are preserved on this device.
+    </div>
     <div class="info-row participant-session-actions">
       <button
         v-if="isSignedInOrDemo"
@@ -88,9 +97,10 @@
         id="btn-login"
         type="button"
         class="btn btn-primary participant-action-btn"
+        :data-testid="isSessionExpired ? 'reauthenticate-btn' : 'signin-btn'"
         @click="handleLogin"
       >
-        Sign In
+        {{ isSessionExpired ? "Sign In to Continue" : "Sign In" }}
       </button>
     </div>
     <SiteContactLinks
@@ -99,13 +109,28 @@
       heading="Site Support"
       region-label="Participant card study site coordinator contacts"
     />
+    <SignOutConfirmModal
+      id="portal-signout-confirm-modal"
+      :open="isSignOutConfirmOpen"
+      title="Log Out With Unsaved Survey Progress?"
+      description="You have unsaved questionnaire answers on this device. Your latest entries have been saved locally as a draft, but logging out now will close your active survey."
+      stay-label="Stay & Keep Answering"
+      confirm-label="Log Out Anyway"
+      @confirm="confirmSignOut"
+      @cancel="cancelSignOut"
+    />
   </div>
 </template>
 
 <script setup>
+import { SignOutConfirmModal, useSignOutGuard } from "ui";
 import { computed, ref } from "vue";
 
 import { login, logout, redeemActivationCode } from "../features/auth.js";
+import {
+  flushActiveQuestionnaireDraft,
+  hasUnsavedQuestionnaireDrafts,
+} from "../features/questionnaire.js";
 import { maskParticipantIdentifier } from "../features/site-support.js";
 import { useSessionStore } from "../stores/session.js";
 import { useWalletStore } from "../stores/wallet.js";
@@ -119,6 +144,17 @@ const redeeming = ref(false);
 const activationMessage = ref("");
 const activationError = ref("");
 
+const {
+  isConfirmOpen: isSignOutConfirmOpen,
+  requestSignOut,
+  confirmSignOut,
+  cancelSignOut,
+} = useSignOutGuard({
+  flushExternalDrafts: flushActiveQuestionnaireDraft,
+  hasExternalDrafts: hasUnsavedQuestionnaireDrafts,
+  onConfirmSignOut: () => logout(),
+});
+
 const isDemo = computed(() => {
   void sessionStore.session?.isDemoMode;
   return isDemoModeActive();
@@ -128,10 +164,18 @@ const isAuthenticated = computed(
   () => Boolean(sessionStore.session.token) && !isDemo.value
 );
 
+const isSessionExpired = computed(
+  () =>
+    !isAuthenticated.value &&
+    !isDemo.value &&
+    Boolean(sessionStore.session.sessionExpired)
+);
+
 const isOfflineCached = computed(
   () =>
     !isAuthenticated.value &&
     !isDemo.value &&
+    !isSessionExpired.value &&
     Boolean(sessionStore.session.isOfflineMode) &&
     Boolean(sessionStore.session.userId)
 );
@@ -152,6 +196,7 @@ const statusLabel = computed(() => {
   if (isAuthenticated.value) {
     return sessionStore.session.isOfflineMode ? "Offline" : "Authenticated";
   }
+  if (isSessionExpired.value) return "Session Expired";
   if (isOfflineCached.value) return "Offline (Locked)";
   return "Unauthenticated";
 });
@@ -159,6 +204,9 @@ const statusLabel = computed(() => {
 const statusClass = computed(() => {
   if (isAuthenticated.value && !sessionStore.session.isOfflineMode) {
     return "text-success";
+  }
+  if (isSessionExpired.value) {
+    return "participant-status-expired";
   }
   return "text-muted";
 });
@@ -168,7 +216,7 @@ function handleLogin() {
 }
 
 function handleLogout() {
-  logout();
+  return requestSignOut();
 }
 
 async function handleRedeemActivation() {
@@ -219,5 +267,10 @@ async function handleRedeemActivation() {
 .participant-activation-note {
   font-size: 12px;
   color: var(--success);
+}
+
+.participant-status-expired {
+  color: var(--semantic-color-error-text-dark);
+  font-weight: 700;
 }
 </style>
