@@ -4,5 +4,8 @@ Generated from `docs/openapi/tickets_openapi.json` by `pnpm cadence generate-api
 
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
+| `GET` | `/api/v1/tickets` | ListTickets |  |
+| `POST` | `/api/v1/tickets` | CreateTicket |  |
 | `GET` | `/api/v1/tickets/status` | TicketsStatus | Returns Tickets operational status. |
+| `GET` | `/api/v1/tickets/{ticket_id}` | GetTicket |  |
 | `GET` | `/healthz` | TicketsHealthCheck | Support tickets health probe. |

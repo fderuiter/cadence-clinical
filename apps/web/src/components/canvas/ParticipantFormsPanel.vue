@@ -914,7 +914,7 @@ watch(
 
 .status-line {
   margin: 0;
-  color: var(--neutral-dark, #475569);
+  color: var(--semantic-color-text-secondary);
   font-size: 0.85rem;
 }
 
@@ -934,15 +934,15 @@ watch(
   justify-content: space-between;
   gap: 8px 12px;
   padding: 8px 12px;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   font-size: 0.82rem;
 }
 
 .casebook-protocol-title {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .casebook-rollups {
@@ -953,9 +953,9 @@ watch(
 
 .casebook-matrix-scroll {
   overflow-x: auto;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--semantic-color-surface);
 }
 
 .casebook-matrix {
@@ -967,8 +967,8 @@ watch(
 
 .casebook-matrix th,
 .casebook-matrix td {
-  border-bottom: 1px solid var(--border, #e2e8f0);
-  border-right: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--semantic-color-border);
+  border-right: 1px solid var(--semantic-color-border);
   padding: 8px 10px;
   vertical-align: top;
   text-align: left;
@@ -985,15 +985,15 @@ watch(
 }
 
 .matrix-corner {
-  background: #f8fafc;
+  background: var(--semantic-color-surface-subtle);
   font-weight: 700;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
   min-width: 10rem;
 }
 
 .matrix-epoch-header {
-  background: #f1f5f9;
-  color: #1e293b;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-dark);
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -1002,56 +1002,56 @@ watch(
 }
 
 .matrix-visit-header {
-  background: #f8fafc;
+  background: var(--semantic-color-surface-subtle);
   min-width: 9rem;
 }
 
 .visit-name {
   display: block;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .visit-day {
   display: block;
   font-size: 0.74rem;
   font-weight: 500;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   margin-top: 2px;
 }
 
 .matrix-row-header {
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   min-width: 10rem;
 }
 
 .row-spec-title {
   display: block;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .row-spec-code {
   display: block;
   font-size: 0.74rem;
   font-weight: 400;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   margin-top: 2px;
 }
 
 .matrix-cell--na {
-  background: #f8fafc;
+  background: var(--semantic-color-surface-subtle);
   text-align: center;
   vertical-align: middle;
 }
 
 .matrix-na {
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   font-weight: 600;
 }
 
 .matrix-cell--queried {
-  background: #fffdf5;
+  background: var(--semantic-color-warning-bg-soft);
 }
 
 .matrix-cell-empty {
@@ -1065,7 +1065,7 @@ watch(
 .matrix-repeat-link {
   font-size: 0.78rem;
   font-weight: 600;
-  color: #1d4ed8;
+  color: var(--semantic-color-interactive-primary);
   text-decoration: underline;
 }
 
@@ -1086,7 +1086,7 @@ watch(
 
 .matrix-instance + .matrix-instance {
   padding-top: 6px;
-  border-top: 1px dashed #cbd5e1;
+  border-top: 1px dashed var(--semantic-color-border-muted);
 }
 
 .matrix-instance-top {
@@ -1111,43 +1111,43 @@ watch(
 }
 
 .cb-badge--not-started {
-  background: #f1f5f9;
-  color: #334155;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
 }
 
 .cb-badge--complete,
 .cb-badge--verified,
 .cb-badge--signed {
-  background: #ecfdf5;
-  color: #065f46;
+  background: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success-dark);
 }
 
 .cb-badge--incomplete,
 .cb-badge--query-open,
 .cb-badge--partial-sdv,
 .cb-badge--sig-superseded {
-  background: #fffbeb;
-  color: #92400e;
+  background: var(--semantic-color-warning-bg-soft);
+  color: var(--semantic-color-warning-dark);
 }
 
 .cb-badge--query-answered {
-  background: #eff6ff;
-  color: #1e40af;
+  background: var(--semantic-color-info-bg);
+  color: var(--semantic-color-info);
 }
 
 .cb-badge--unverified {
-  background: #f1f5f9;
-  color: #334155;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
 }
 
 .cb-badge--locked {
-  background: #fef2f2;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg-soft);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .cb-badge--frozen {
-  background: #f0f9ff;
-  color: #075985;
+  background: var(--semantic-color-info-bg-soft);
+  color: var(--semantic-color-primary-dark);
 }
 
 .casebook-unscheduled {
@@ -1168,7 +1168,7 @@ watch(
 .unscheduled-head h4 {
   margin: 0;
   font-size: 0.92rem;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .unscheduled-triggers {
@@ -1191,9 +1191,9 @@ watch(
   flex-direction: column;
   gap: 4px;
   padding: 10px 12px;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   font-size: 0.85rem;
 }
 
@@ -1206,7 +1206,7 @@ watch(
 
 .forms-link {
   font-weight: 600;
-  color: #1d4ed8;
+  color: var(--semantic-color-interactive-primary);
   text-decoration: underline;
 }
 
@@ -1215,17 +1215,17 @@ watch(
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: #fffbeb;
-  color: #92400e;
+  background: var(--semantic-color-warning-bg-soft);
+  color: var(--semantic-color-warning-dark);
 }
 
 .forms-status[data-complete="true"] {
-  background: #ecfdf5;
-  color: #065f46;
+  background: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success-dark);
 }
 
 .forms-meta {
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   font-size: 0.78rem;
 }
 </style>

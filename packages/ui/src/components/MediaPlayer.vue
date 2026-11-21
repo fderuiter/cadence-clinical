@@ -500,8 +500,8 @@ onUnmounted(() => {
 .clinical-media-player {
   display: flex;
   flex-direction: column;
-  background: var(--color-surface, #ffffff);
-  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
@@ -514,8 +514,8 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: var(--color-surface-muted, #f8fafc);
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  background: var(--semantic-color-surface-muted);
+  border-bottom: 1px solid var(--semantic-color-border);
 }
 
 .media-title-wrapper {
@@ -533,30 +533,30 @@ onUnmounted(() => {
 }
 
 .badge-pdf {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .badge-image {
-  background: #e0e7ff;
-  color: #3730a3;
+  background: var(--semantic-color-indigo-bg);
+  color: var(--semantic-color-indigo-text);
 }
 
 .badge-audio {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
 }
 
 .badge-video {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 
 .media-title {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-text, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .header-controls {
@@ -566,18 +566,18 @@ onUnmounted(() => {
 }
 
 .control-btn {
-  background: var(--color-surface, #ffffff);
-  border: 1px solid var(--color-border, #cbd5e1);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   padding: 4px 8px;
   font-size: 13px;
   cursor: pointer;
-  color: var(--color-text, #0f172a);
+  color: var(--semantic-color-text);
   transition: background 0.15s ease;
 }
 
 .control-btn:hover:not(:disabled) {
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
 }
 
 .control-btn:disabled {
@@ -588,7 +588,7 @@ onUnmounted(() => {
 .zoom-indicator {
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-text-muted, #64748b);
+  color: var(--semantic-color-text-muted);
   min-width: 42px;
   text-align: center;
 }
@@ -597,7 +597,7 @@ onUnmounted(() => {
   position: relative;
   min-height: 380px;
   max-height: 650px;
-  background: #0f172a;
+  background: var(--semantic-color-surface-inverse);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -627,7 +627,7 @@ onUnmounted(() => {
   transform: rotate(-35deg);
   font-size: 14px;
   font-weight: 800;
-  color: #ffffff;
+  color: var(--semantic-color-text-inverse);
   white-space: nowrap;
   letter-spacing: 2px;
 }
@@ -638,7 +638,7 @@ onUnmounted(() => {
   height: 520px;
   display: flex;
   flex-direction: column;
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
 }
 
 .pdf-frame {
@@ -657,14 +657,14 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   padding: 8px;
-  background: #e2e8f0;
-  border-top: 1px solid #cbd5e1;
+  background: var(--semantic-color-border);
+  border-top: 1px solid var(--semantic-color-border-muted);
 }
 
 .page-counter {
   font-size: 13px;
   font-weight: 500;
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 
 /* Image Viewer */
@@ -692,13 +692,13 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  background: #1e293b;
+  background: var(--semantic-color-surface-elevated);
 }
 
 .waveform-box {
   width: 100%;
   height: 80px;
-  background: #0f172a;
+  background: var(--semantic-color-surface-inverse);
   border-radius: 6px;
   padding: 12px;
   display: flex;
@@ -716,7 +716,7 @@ onUnmounted(() => {
 
 .waveform-bar {
   flex: 1;
-  background: #0284c7;
+  background: var(--semantic-color-accent-inverse);
   border-radius: 2px;
   transition: height 0.15s ease;
 }
@@ -746,8 +746,8 @@ onUnmounted(() => {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: var(--color-primary, #026597);
-  color: #ffffff;
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
   border: none;
   font-size: 16px;
   display: flex;
@@ -758,20 +758,20 @@ onUnmounted(() => {
 }
 
 .play-toggle-btn:hover {
-  background: var(--color-primary-dark, #014d76);
+  background: var(--semantic-color-primary-dark);
 }
 
 .time-display {
   font-size: 12px;
   font-family: monospace;
-  color: var(--semantic-color-border, #cbd5e1); /* deid-ignore */
+  color: var(--semantic-color-text-inverse-muted);
   min-width: 42px;
   font-variant-numeric: tabular-nums;
 }
 
 .timeline-slider {
   flex: 1;
-  accent-color: var(--color-primary, #026597);
+  accent-color: var(--semantic-color-primary);
   cursor: pointer;
 }
 
@@ -780,13 +780,13 @@ onUnmounted(() => {
   width: 100%;
   display: flex;
   flex-direction: column;
-  background: #000000;
+  background: var(--semantic-color-black);
 }
 
 .video-element {
   width: 100%;
   max-height: 450px;
-  background: #000000;
+  background: var(--semantic-color-black);
 }
 
 .video-controls-bar {
@@ -801,8 +801,8 @@ onUnmounted(() => {
 
 .speed-btn {
   background: transparent;
-  border: 1px solid #475569;
-  color: #cbd5e1;
+  border: 1px solid var(--semantic-color-border-inverse);
+  color: var(--semantic-color-text-inverse-muted);
   font-size: 11px;
   border-radius: 4px;
   padding: 2px 6px;
@@ -810,9 +810,9 @@ onUnmounted(() => {
 }
 
 .speed-btn.active {
-  background: var(--color-primary, #026597);
-  color: #ffffff;
-  border-color: var(--color-primary, #026597);
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
+  border-color: var(--semantic-color-primary);
 }
 
 /* Fallback */
@@ -821,13 +821,13 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  color: #ffffff;
+  color: var(--semantic-color-text-inverse);
   padding: 40px;
 }
 
 .unsupported-msg {
   font-size: 14px;
-  color: #cbd5e1;
+  color: var(--semantic-color-text-inverse-muted);
 }
 
 .btn {
@@ -841,7 +841,7 @@ onUnmounted(() => {
 }
 
 .btn-secondary {
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--semantic-color-text-inverse);
+  color: var(--semantic-color-surface-inverse);
 }
 </style>

@@ -84,12 +84,12 @@ const clearPins = () => {
 .widget-label {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--text-primary, #1e293b);
+  color: var(--semantic-color-text);
 }
 
 .widget-hint {
   font-size: 0.75rem;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   margin: 0 0 4px 0;
 }
 
@@ -97,9 +97,9 @@ const clearPins = () => {
   position: relative;
   width: 240px;
   height: 320px;
-  border: 2px dashed var(--border, #cbd5e1);
+  border: 2px dashed var(--border);
   border-radius: var(--radius-md, 6px);
-  background-color: var(--surface-subtle, #f8fafc);
+  background-color: var(--semantic-color-surface-muted);
   cursor: crosshair;
   margin: 0 auto;
   overflow: hidden;
@@ -118,7 +118,7 @@ const clearPins = () => {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: var(--text-muted, #64748b);
+  background-color: var(--semantic-color-text-secondary);
   margin-bottom: 8px;
 }
 
@@ -126,7 +126,7 @@ const clearPins = () => {
   width: 70px;
   height: 100px;
   border-radius: 12px;
-  background-color: var(--text-muted, #64748b);
+  background-color: var(--semantic-color-text-secondary);
   margin-bottom: 8px;
 }
 
@@ -134,7 +134,7 @@ const clearPins = () => {
   width: 90px;
   height: 120px;
   border-radius: 8px;
-  background-color: var(--text-muted, #64748b);
+  background-color: var(--semantic-color-text-secondary);
 }
 
 .map-pin {
@@ -143,8 +143,8 @@ const clearPins = () => {
   height: 20px;
   margin-left: -10px;
   margin-top: -10px;
-  background-color: var(--error, #ef4444);
-  color: #ffffff;
+  background-color: var(--error);
+  color: var(--semantic-color-surface);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -166,7 +166,7 @@ const clearPins = () => {
 .btn-clear {
   background: none;
   border: none;
-  color: var(--error, #ef4444);
+  color: var(--error);
   cursor: pointer;
   text-decoration: underline;
   padding: 0;

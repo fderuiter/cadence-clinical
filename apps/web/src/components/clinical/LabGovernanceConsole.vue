@@ -975,7 +975,7 @@
                 y="20"
                 width="710"
                 height="210"
-                fill="#f8fafc"
+                fill="var(--semantic-color-text-inverse)"
                 rx="4"
               />
               <!-- Normal Range Band -->
@@ -989,7 +989,7 @@
                     getYCoord(trendSummary.lln) - getYCoord(trendSummary.uln)
                   )
                 "
-                fill="#ecfdf5"
+                fill="var(--semantic-color-success-bg-soft)"
                 opacity="0.75"
               />
 
@@ -999,7 +999,7 @@
                 :y1="getYCoord(trendSummary.uln)"
                 x2="770"
                 :y2="getYCoord(trendSummary.uln)"
-                stroke="#10b981"
+                stroke="var(--semantic-color-success)"
                 stroke-dasharray="4,4"
                 stroke-width="1.5"
               />
@@ -1007,7 +1007,7 @@
                 x="775"
                 :y="getYCoord(trendSummary.uln) + 4"
                 font-size="10"
-                fill="#059669"
+                fill="var(--semantic-color-success)"
                 font-weight="bold"
               >
                 ULN
@@ -1020,7 +1020,7 @@
                 :y1="getYCoord(trendSummary.lln)"
                 x2="770"
                 :y2="getYCoord(trendSummary.lln)"
-                stroke="#10b981"
+                stroke="var(--semantic-color-success)"
                 stroke-dasharray="4,4"
                 stroke-width="1.5"
               />
@@ -1029,7 +1029,7 @@
                 x="775"
                 :y="getYCoord(trendSummary.lln) + 4"
                 font-size="10"
-                fill="#059669"
+                fill="var(--semantic-color-success)"
                 font-weight="bold"
               >
                 LLN
@@ -1039,7 +1039,7 @@
               <polyline
                 :points="trendPointsString"
                 fill="none"
-                stroke="#2563eb"
+                stroke="var(--semantic-color-interactive-primary)"
                 stroke-width="2.5"
               />
 
@@ -1050,7 +1050,7 @@
                   :cy="pt.y"
                   :r="pt.grade >= 3 ? 7 : 5"
                   :fill="getPointColor(pt.grade)"
-                  stroke="#ffffff"
+                  stroke="var(--semantic-color-surface)"
                   stroke-width="2"
                 />
                 <!-- Value label above point -->
@@ -1070,7 +1070,7 @@
                   y="250"
                   text-anchor="middle"
                   font-size="10"
-                  fill="#475569"
+                  fill="var(--semantic-color-text-secondary)"
                   font-weight="600"
                 >
                   {{ pt.visit }}
@@ -1080,7 +1080,7 @@
                   y="265"
                   text-anchor="middle"
                   font-size="9"
-                  fill="#94a3b8"
+                  fill="var(--semantic-color-text-secondary)"
                 >
                   {{ pt.date }}
                 </text>
@@ -2273,11 +2273,11 @@ const trendPointsString = computed(() => {
 });
 
 function getPointColor(grade) {
-  if (grade >= 4) return "#991b1b";
-  if (grade === 3) return "#dc2626";
-  if (grade === 2) return "#d97706";
-  if (grade === 1) return "#0284c7";
-  return "#10b981";
+  if (grade >= 4) return "var(--semantic-color-error-text-dark)";
+  if (grade === 3) return "var(--semantic-color-error)";
+  if (grade === 2) return "var(--semantic-color-warning-action)";
+  if (grade === 1) return "var(--semantic-color-primary)";
+  return "var(--semantic-color-success)";
 }
 
 // Computed Filters
@@ -2724,22 +2724,22 @@ onMounted(() => {
   flex-direction: column;
   gap: 1rem;
   padding: 1.5rem;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   min-height: 100vh;
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .console-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   padding: 1.25rem 1.5rem;
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--semantic-color-border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
@@ -2753,8 +2753,8 @@ onMounted(() => {
   font-size: 0.7rem;
   text-transform: uppercase;
   font-weight: 700;
-  color: #0369a1;
-  background-color: #e0f2fe;
+  color: var(--semantic-color-primary);
+  background-color: var(--semantic-color-primary-light);
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
   width: fit-content;
@@ -2764,7 +2764,7 @@ onMounted(() => {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .header-metadata {
@@ -2782,8 +2782,8 @@ onMounted(() => {
 .nav-tabs {
   display: flex;
   gap: 0.5rem;
-  border-bottom: 2px solid #e2e8f0;
-  background: #ffffff;
+  border-bottom: 2px solid var(--semantic-color-border);
+  background: var(--semantic-color-surface);
   padding: 0.5rem 1rem 0;
   border-radius: 8px 8px 0 0;
 }
@@ -2794,20 +2794,20 @@ onMounted(() => {
   background: transparent;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
   border-bottom: 2px solid transparent;
   margin-bottom: -2px;
 }
 
 .tab-button.active {
-  color: #2563eb;
-  border-bottom-color: #2563eb;
+  color: var(--semantic-color-interactive-primary);
+  border-bottom-color: var(--semantic-color-interactive-primary);
 }
 
 .tab-pane {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 0 0 8px 8px;
   padding: 1.25rem;
   display: flex;
@@ -2832,11 +2832,11 @@ onMounted(() => {
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border-soft);
   padding: 0.75rem 1rem;
   border-radius: 6px;
-  color: #991b1b;
+  color: var(--semantic-color-error-text-dark);
   font-size: 0.85rem;
 }
 
@@ -2851,10 +2851,10 @@ onMounted(() => {
 .select-input,
 .textarea-input {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 0.85rem;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
 }
 
 .textarea-input {
@@ -2869,24 +2869,24 @@ onMounted(() => {
 }
 
 .data-table th {
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
   padding: 0.75rem;
   font-weight: 600;
-  border-bottom: 2px solid #cbd5e1;
+  border-bottom: 2px solid var(--semantic-color-border-control);
 }
 
 .data-table td {
   padding: 0.75rem;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--semantic-color-border);
   vertical-align: middle;
 }
 
 .row-critical {
-  background-color: #fff1f2;
+  background-color: var(--semantic-color-error-bg-row);
 }
 
 .code-tag {
-  background: #e2e8f0;
+  background: var(--semantic-color-surface-header);
   padding: 0.2rem 0.4rem;
   border-radius: 4px;
 }
@@ -2898,7 +2898,7 @@ onMounted(() => {
 }
 
 .mini-tag {
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
   font-size: 0.75rem;
   padding: 0.15rem 0.35rem;
   border-radius: 3px;
@@ -2912,28 +2912,28 @@ onMounted(() => {
 }
 
 .status-pill.primary {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--semantic-color-info-light);
+  color: var(--semantic-color-info);
 }
 .status-pill.secondary {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 .status-pill.success {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 .status-pill.warning {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
 }
 .status-pill.danger {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-text-dark);
 }
 .status-pill.info {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
 }
 
 .grade-badge {
@@ -2944,25 +2944,25 @@ onMounted(() => {
 }
 
 .grade-badge.grade-0 {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 .grade-badge.grade-1 {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
 }
 .grade-badge.grade-2 {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
 }
 .grade-badge.grade-3 {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-text-dark);
   font-weight: 800;
 }
 .grade-badge.grade-4 {
-  background: #991b1b;
-  color: #ffffff;
+  background: var(--semantic-color-error-text-dark);
+  color: var(--semantic-color-surface);
   font-weight: 900;
 }
 
@@ -2974,12 +2974,12 @@ onMounted(() => {
 }
 
 .safety-tag.hys-law {
-  background: #7f1d1d;
-  color: #fef2f2;
+  background: var(--semantic-color-error-text-deep);
+  color: var(--semantic-color-error-bg-soft);
 }
 .safety-tag.delta {
-  background: #fef08a;
-  color: #854d0e;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning);
 }
 
 .btn {
@@ -2996,17 +2996,17 @@ onMounted(() => {
   font-size: 0.75rem;
 }
 .btn-primary {
-  background: #2563eb;
-  color: #ffffff;
+  background: var(--semantic-color-interactive-primary);
+  color: var(--semantic-color-surface);
 }
 .btn-secondary {
-  background: #e2e8f0;
-  color: #1e293b;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-dark);
 }
 .btn-outline {
   background: transparent;
-  border-color: #94a3b8;
-  color: #334155;
+  border-color: var(--semantic-color-border-control);
+  color: var(--semantic-color-text-body);
 }
 
 .converter-grid {
@@ -3016,8 +3016,8 @@ onMounted(() => {
 }
 
 .converter-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   padding: 1.25rem;
   display: flex;
@@ -3033,8 +3033,8 @@ onMounted(() => {
 
 .conversion-output {
   margin-top: 0.75rem;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 0.75rem;
 }
@@ -3057,7 +3057,7 @@ onMounted(() => {
 }
 
 .modal-box {
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   border-radius: 8px;
   width: 540px;
   max-width: 90vw;
@@ -3075,7 +3075,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--semantic-color-border);
 }
 
 .modal-body {
@@ -3090,12 +3090,12 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 0.5rem;
   padding: 1rem;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--semantic-color-border);
 }
 
 .empty-state {
   text-align: center;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   padding: 2rem;
 }
 
@@ -3107,8 +3107,8 @@ onMounted(() => {
 }
 
 .kpi-card {
-  background: var(--neutral-light, #f8fafc);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--neutral-light);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 1rem;
   display: flex;
@@ -3127,17 +3127,17 @@ onMounted(() => {
 .kpi-value {
   font-size: 1.35rem;
   font-weight: 800;
-  color: var(--primary, #0f172a);
+  color: var(--primary);
 }
 
 .kpi-sub {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .trend-chart-card {
-  background: #ffffff;
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 1.25rem;
   display: flex;
@@ -3157,14 +3157,14 @@ onMounted(() => {
   margin: 0;
   font-size: 1rem;
   font-weight: 700;
-  color: var(--primary, #0f172a);
+  color: var(--primary);
 }
 
 .chart-legend {
   display: flex;
   gap: 1rem;
   font-size: 0.8rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   flex-wrap: wrap;
 }
 
@@ -3177,22 +3177,22 @@ onMounted(() => {
 .legend-box.normal-band {
   width: 14px;
   height: 14px;
-  background: #ecfdf5;
-  border: 1px solid #10b981;
+  background: var(--semantic-color-success-bg-soft);
+  border: 1px solid var(--semantic-color-success);
   border-radius: 2px;
 }
 
 .legend-line.uln-line {
   width: 16px;
   height: 2px;
-  background: #10b981;
-  border-top: 2px dashed #10b981;
+  background: var(--semantic-color-success);
+  border-top: 2px dashed var(--semantic-color-success);
 }
 
 .legend-line.delta-line {
   width: 16px;
   height: 2px;
-  background: #f59e0b;
+  background: var(--semantic-color-warning-action);
 }
 
 .svg-container {
@@ -3211,28 +3211,28 @@ onMounted(() => {
   padding: 0.2rem 0.45rem;
   border-radius: 4px;
   font-weight: 700;
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
 }
 
 .delta-tag.alert {
-  background: #fef08a;
-  color: #854d0e;
-  border: 1px solid #fde047;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning);
+  border: 1px solid var(--semantic-color-warning-border);
 }
 
 .text-danger {
-  color: #dc2626 !important;
+  color: var(--semantic-color-error) !important;
 }
 
 .text-primary {
-  color: #2563eb !important;
+  color: var(--semantic-color-interactive-primary) !important;
 }
 
 .dry-run-results {
   margin-top: 1rem;
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 1rem;
   display: flex;
@@ -3254,11 +3254,11 @@ onMounted(() => {
 }
 
 .error-summary {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border-soft);
   border-radius: 6px;
   padding: 0.75rem 1rem;
-  color: #991b1b;
+  color: var(--semantic-color-error-text-dark);
   font-size: 0.85rem;
 }
 
@@ -3279,8 +3279,8 @@ onMounted(() => {
 
 .btn-outline-danger {
   background: transparent;
-  border: 1px solid #fca5a5;
-  color: #dc2626;
+  border: 1px solid var(--semantic-color-error-border);
+  color: var(--semantic-color-error);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -3288,7 +3288,7 @@ onMounted(() => {
 }
 
 .btn-outline-danger:hover {
-  background: #fef2f2;
+  background: var(--semantic-color-error-bg-soft);
 }
 
 .file-input {
@@ -3296,7 +3296,7 @@ onMounted(() => {
   width: 100%;
   padding: 0.4rem;
   font-size: 0.85rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
 }
 

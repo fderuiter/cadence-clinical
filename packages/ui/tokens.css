@@ -16,6 +16,22 @@
   --color-text: #0f172a;
   --color-text-muted: #475569;
   --color-border: #e2e8f0;
+  --color-border-control: #64748b;
+
+  /* Border Radius & Elevation Scale */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --shadow-xl:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
 
   /* Spacing Scale */
   --spacing-2xs: 4px;
@@ -74,6 +90,7 @@
   --semantic-color-surface: var(--color-surface);
   --semantic-color-surface-muted: var(--color-surface-muted);
   --semantic-color-border: var(--color-border);
+  --semantic-color-border-control: var(--color-border-control);
 
   /* Semantic Colors - Validation States */
   --semantic-color-success: var(--color-success);
@@ -91,64 +108,105 @@
   --semantic-color-ai: #6d28d9;
   --semantic-color-ai-bg: #f5f3ff;
   --semantic-color-ai-border: #c4b5fd;
+  --semantic-color-ai-dark: #5b21b6;
 
   /* Info & Notice Banners / Badges */
   --semantic-color-info: #1e40af;
   --semantic-color-info-bg: #eff6ff;
+  --semantic-color-info-bg-soft: #f0f9ff;
   --semantic-color-info-border: #bfdbfe;
+  --semantic-color-info-border-accent: #bae6fd;
   --semantic-color-info-light: #dbeafe;
 
   /* Extended Warning Banners & Badges */
   --semantic-color-warning-text: #854d0e;
   --semantic-color-warning-text-dark: #713f12;
   --semantic-color-warning-bg-light: #fefce8;
+  --semantic-color-warning-bg-soft: #fffbeb;
   --semantic-color-warning-bg-badge: #fef3c7;
   --semantic-color-warning-border: #fef08a;
-  --semantic-color-warning-border-strong: #eab308;
+  --semantic-color-warning-border-strong: #b45309;
   --semantic-color-warning-dark: #92400e;
   --semantic-color-warning-action: #854d0e;
   --semantic-color-warning-action-border: #713f12;
 
   /* Extended Success & Validation States */
   --semantic-color-success-dark: #166534;
+  --semantic-color-success-bg-soft: #f0fdf4;
   --semantic-color-success-border: #86efac;
+  --semantic-color-success-border-soft: #bbf7d0;
   --semantic-color-success-interactive: #15803d;
-  --semantic-color-success-accent: #047857;
+  --semantic-color-success-accent: #15803d;
 
   /* Extended Error & Validation States */
+  --semantic-color-error-bg-soft: #fef2f2;
+  --semantic-color-error-bg-row: #fff1f2;
   --semantic-color-error-border: #fca5a5;
-  --semantic-color-error-dark: #991b1b;
+  --semantic-color-error-border-soft: #fecaca;
+  --semantic-color-error-dark: #b91c1c;
+  --semantic-color-error-text-dark: #991b1b;
+  --semantic-color-error-text-deep: #7f1d1d;
 
   /* Interactive Controls, Neutrals & Layout */
-  --semantic-color-interactive-primary: #2563eb;
+  --semantic-color-interactive-primary: #1d4ed8;
+  --semantic-color-interactive-primary-hover: #1e40af;
   --semantic-color-interactive-brand: #026597;
   --semantic-color-border-muted: #cbd5e1;
   --semantic-color-text-dark: #1e293b;
   --semantic-color-text-body: #334155;
-  --semantic-color-text-secondary: #4b5563;
-  --semantic-color-text-subtle: #526074;
+  --semantic-color-text-secondary: #475569;
+  --semantic-color-text-subtle: #475569;
   --semantic-color-text-on-solid: #ffffff;
   --semantic-color-text-on-primary: #ffffff;
   --semantic-color-surface-header: #f1f5f9;
-  --semantic-color-surface-elevated: #ffffff;
   --semantic-color-surface-subtle: #f8fafc;
-  --semantic-color-surface-sunken: #f1f5f9;
   --semantic-color-divider-accent: #93c5fd;
+
+  /* Inverse / Dark Chrome & Specialized Surfaces (non-theme chrome: header, code, imaging) */
+  --semantic-color-surface-inverse: #0f172a;
+  --semantic-color-surface-elevated: #1e293b;
+  --semantic-color-surface-sunken: #090d16;
+  --semantic-color-border-inverse: #334155;
+  --semantic-color-text-inverse: #ffffff;
+  --semantic-color-text-inverse-muted: #cbd5e1;
+  --semantic-color-accent-inverse: #38bdf8;
+  --semantic-color-emerald-inverse-bg: #064e3b;
+  --semantic-color-emerald-inverse-border: #059669;
+  --semantic-color-emerald-inverse-text: #a7f3d0;
+
+  /* Extended Categorical & Accent Roles (WCAG AA >= 4.5:1 text on light surfaces) */
+  --semantic-color-teal-text: #0f766e;
+  --semantic-color-teal-bg: #f0fdfa;
+  --semantic-color-teal-border: #99f6e4;
+  --semantic-color-indigo-text: #3730a3;
+  --semantic-color-indigo-bg: #eef2ff;
+  --semantic-color-indigo-border: #c7d2fe;
+  --semantic-color-purple-text: #6b21a8;
+  --semantic-color-purple-bg: #faf5ff;
+  --semantic-color-purple-border: #e9d5ff;
+  --semantic-color-orange-text: #9a3412;
+  --semantic-color-orange-bg: #fff7ed;
+  --semantic-color-orange-border: #fed7aa;
+  --semantic-color-rose-text: #9f1239;
+  --semantic-color-rose-bg: #fff1f2;
+  --semantic-color-rose-border: #fecdd3;
+  --semantic-color-pink-text: #be185d;
+  --semantic-color-pink-bg: #fdf2f8;
+  --semantic-color-pink-border: #fbcfe8;
+  --semantic-color-cyan-bg: #ecfeff;
+  --semantic-color-black: #000000;
 
   /* Financial Wallet & Gradient Roles */
   --semantic-color-wallet-start: #0369a1;
   --semantic-color-wallet-end: #075985;
 
-  /* Border Radius & Elevation Scale */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  /* Semantic Border Radius & Elevation */
   --semantic-radius-sm: var(--radius-sm);
   --semantic-radius-md: var(--radius-md);
   --semantic-radius-lg: var(--radius-lg);
+  --semantic-border-radius-sm: var(--radius-xs);
   --semantic-border-radius-md: var(--radius-md);
-  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
-  --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.12);
+  --semantic-border-radius-lg: var(--radius-lg);
   --semantic-shadow-sm: var(--shadow-sm);
   --semantic-shadow-xl: var(--shadow-xl);
 
@@ -200,6 +258,7 @@
   --color-text: #f8fafc;
   --color-text-muted: #cbd5e1;
   --color-border: #334155;
+  --color-border-control: #94a3b8;
 
   --semantic-color-primary: var(--color-primary);
   --semantic-color-primary-dark: var(--color-primary-dark);
@@ -213,6 +272,7 @@
   --semantic-color-surface: var(--color-surface);
   --semantic-color-surface-muted: var(--color-surface-muted);
   --semantic-color-border: var(--color-border);
+  --semantic-color-border-control: var(--color-border-control);
 
   --semantic-color-success: var(--color-success);
   --semantic-color-success-bg: var(--color-success-bg);
@@ -288,6 +348,8 @@
     --color-text: #f8fafc;
     --color-text-muted: #cbd5e1;
     --color-border: #334155;
+    --color-border-control: #94a3b8;
+    --semantic-color-border-control: var(--color-border-control);
     --semantic-color-accent-light: #1e1b4b;
     --semantic-color-accent-bg: #1e1b4b;
     --semantic-color-ai: #c4b5fd;
@@ -351,7 +413,7 @@ td,
   font-weight: 600;
   font-size: var(--semantic-font-size-base, 15px);
   margin-bottom: var(--semantic-spacing-xs, 8px);
-  color: var(--semantic-color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
 }
 
 .clinical-input .input-wrapper {
@@ -361,59 +423,83 @@ td,
   align-items: center;
 }
 
-/* Centralized styles maintain WCAG 2.1 minimum target dimensions of 48px for interactive elements */
-.clinical-input input[type="text"] {
+/* Centralized styles maintain WCAG 2.1 minimum target dimensions of 48px and SC 1.4.11 >= 3:1 boundary contrast */
+.clinical-input input[type="text"],
+.clinical-input input[type="number"],
+.clinical-input input[type="date"],
+.clinical-input input[type="email"],
+.clinical-input input[type="tel"],
+.clinical-input select,
+.clinical-input textarea,
+.clinical-input .clinical-input-control {
   flex: 1;
   padding: 12px 14px;
   min-height: var(--semantic-touch-target-min, 48px);
-  border: 1px solid var(--semantic-color-border, #e2e8f0);
-  border-radius: 6px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: var(--radius-sm);
   font-family: var(--semantic-font-family, sans-serif);
   font-size: var(--semantic-font-size-base, 15px);
-  background-color: var(--semantic-color-surface, #ffffff);
-  color: var(--semantic-color-text, #0f172a);
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   transition: all 0.2s;
   box-sizing: border-box;
 }
 
-.clinical-input input[type="text"]:focus {
+.clinical-input input[type="text"]:focus,
+.clinical-input input[type="number"]:focus,
+.clinical-input input[type="date"]:focus,
+.clinical-input input[type="email"]:focus,
+.clinical-input input[type="tel"]:focus,
+.clinical-input select:focus,
+.clinical-input textarea:focus,
+.clinical-input .clinical-input-control:focus {
   outline: none;
   box-shadow: none;
-  border-color: var(--semantic-color-border, #e2e8f0);
+  border-color: var(--semantic-color-border-control);
 }
 
-.clinical-input input[type="text"]:focus-visible {
-  outline: 3px solid var(--semantic-color-accent, #4338ca) !important;
+.clinical-input input[type="text"]:focus-visible,
+.clinical-input input[type="number"]:focus-visible,
+.clinical-input input[type="date"]:focus-visible,
+.clinical-input input[type="email"]:focus-visible,
+.clinical-input input[type="tel"]:focus-visible,
+.clinical-input select:focus-visible,
+.clinical-input textarea:focus-visible,
+.clinical-input .clinical-input-control:focus-visible {
+  outline: 3px solid var(--semantic-color-accent) !important;
   outline-offset: 2px !important;
-  border-color: var(--semantic-color-accent, #4338ca) !important;
+  border-color: var(--semantic-color-accent) !important;
 }
 
 /* Form validation states use unified error variables */
 .clinical-input.has-error input[type="text"],
+.clinical-input.has-error .clinical-input-control,
 input[aria-invalid="true"],
 select[aria-invalid="true"],
 textarea[aria-invalid="true"] {
-  border: 1px solid var(--semantic-color-error, #b91c1c) !important;
-  background-color: var(--semantic-color-error-bg, #fee2e2) !important;
+  border: 1px solid var(--semantic-color-error) !important;
+  background-color: var(--semantic-color-error-bg) !important;
 }
 
 .clinical-input.has-error input[type="text"]:focus,
 .clinical-input.has-error input[type="text"]:focus-visible,
+.clinical-input.has-error .clinical-input-control:focus,
+.clinical-input.has-error .clinical-input-control:focus-visible,
 input[aria-invalid="true"]:focus,
 input[aria-invalid="true"]:focus-visible,
 select[aria-invalid="true"]:focus,
 select[aria-invalid="true"]:focus-visible,
 textarea[aria-invalid="true"]:focus,
 textarea[aria-invalid="true"]:focus-visible {
-  border: 1px solid var(--semantic-color-error, #b91c1c) !important;
-  background-color: var(--semantic-color-error-bg, #fee2e2) !important;
+  border: 1px solid var(--semantic-color-error) !important;
+  background-color: var(--semantic-color-error-bg) !important;
   box-shadow: none !important;
-  outline: 3px solid var(--semantic-color-error, #b91c1c) !important;
+  outline: 3px solid var(--semantic-color-error) !important;
   outline-offset: 2px !important;
 }
 
 .validation-error-msg {
-  color: var(--semantic-color-error, #b91c1c);
+  color: var(--semantic-color-error);
   font-size: 13px;
   font-weight: 600;
   margin-top: var(--semantic-spacing-2xs, 4px);
@@ -421,10 +507,10 @@ textarea[aria-invalid="true"]:focus-visible {
 
 /* Radio buttons grid */
 .clinical-radio-grid {
-  border: 1px solid var(--semantic-color-border, #e2e8f0);
-  border-radius: 8px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: var(--radius-md);
   padding: var(--semantic-spacing-md, 16px);
-  background-color: var(--semantic-color-surface, #ffffff);
+  background-color: var(--semantic-color-surface);
 }
 
 .radio-options-wrapper {
@@ -453,7 +539,7 @@ textarea[aria-invalid="true"]:focus-visible {
 .radio-option input[type="radio"] {
   width: 20px;
   height: 20px;
-  accent-color: var(--semantic-color-accent, #4338ca);
+  accent-color: var(--semantic-color-accent);
   cursor: pointer;
 }
 
@@ -461,7 +547,49 @@ textarea[aria-invalid="true"]:focus-visible {
   cursor: pointer;
   font-weight: 500;
   font-size: var(--semantic-font-size-base, 15px);
-  color: var(--semantic-color-text, #0f172a);
+  color: var(--semantic-color-text);
+}
+
+/* Standardized Badge, Tab, Button, and Query Panel Contrast Primitives (Requirement 5) */
+.query-restriction-note {
+  font-size: 0.85rem;
+  color: var(--semantic-color-text-secondary);
+  font-style: italic;
+}
+
+.clinical-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--semantic-spacing-2xs, 4px);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-2xs, 11px);
+  font-weight: 600;
+  line-height: 1.2;
+  border: 1px solid var(--semantic-color-border-control);
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
+}
+
+.clinical-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: 3px solid transparent;
+  color: var(--semantic-color-text-secondary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.clinical-tab[aria-selected="true"],
+.clinical-tab.active {
+  color: var(--semantic-color-primary);
+  border-bottom-color: var(--semantic-color-primary);
+}
+
+.clinical-btn-outline {
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  border: 1px solid var(--semantic-color-border-control);
 }
 
 /* Global Reduced Motion Support (WCAG 2.1 AA / Crafted Execution) */

@@ -76,26 +76,26 @@ function getValueClass(val) {
 }
 
 .node-operator {
-  color: #38bdf8;
+  color: var(--semantic-color-accent-inverse);
   font-weight: bold;
 }
 
 .node-function {
-  color: #c084fc;
+  color: var(--semantic-color-ai-border);
   font-weight: bold;
 }
 
 .node-field {
-  color: #4ade80;
+  color: var(--semantic-color-emerald-inverse-text);
   font-weight: bold;
 }
 
 .node-constant {
-  color: #fbbf24;
+  color: var(--semantic-color-warning-border);
 }
 
 .node-desc {
-  color: #cbd5e1;
+  color: var(--semantic-color-text-inverse-muted);
   font-size: 0.7rem;
 }
 
@@ -108,29 +108,29 @@ function getValueClass(val) {
 }
 
 .val-true {
-  background-color: #15803d;
-  color: #ffffff;
+  background-color: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
 }
 
 .val-false {
-  background-color: #b91c1c;
-  color: #ffffff;
+  background-color: var(--semantic-color-error);
+  color: var(--semantic-color-surface);
 }
 
 .val-null {
-  background-color: #475569;
-  color: #cbd5e1;
+  background-color: var(--semantic-color-border-inverse);
+  color: var(--semantic-color-text-inverse);
 }
 
 .val-value {
-  background-color: #0369a1;
-  color: #ffffff;
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-surface);
 }
 
 .node-children {
   margin-left: 14px;
   padding-left: 8px;
-  border-left: 1px dashed #475569;
+  border-left: 1px dashed var(--semantic-color-border-control);
   display: flex;
   flex-direction: column;
   gap: 2px;

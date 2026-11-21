@@ -787,31 +787,31 @@ function handleBatchIngested(result) {
 
 .badge-gxp {
   background-color: rgba(56, 189, 248, 0.15);
-  color: #38bdf8;
+  color: var(--semantic-color-accent-inverse);
   border: 1px solid rgba(56, 189, 248, 0.4);
 }
 
 .badge-regulatory {
   background-color: rgba(168, 85, 247, 0.15);
-  color: #c084fc;
+  color: var(--semantic-color-ai);
   border: 1px solid rgba(168, 85, 247, 0.4);
 }
 
 .badge-standard {
   background-color: rgba(52, 211, 153, 0.15);
-  color: #34d399;
+  color: var(--semantic-color-emerald-inverse-text);
   border: 1px solid rgba(52, 211, 153, 0.4);
 }
 
 .view-title {
   font-size: 1.5rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .view-subtitle {
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--semantic-color-text-inverse-muted);
   line-height: 1.4;
 }
 
@@ -822,27 +822,27 @@ function handleBatchIngested(result) {
 }
 
 .header-select {
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 8px 12px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
   outline: none;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .view-mode-select {
-  background-color: #0f172a;
-  color: #f8fafc;
-  border: 1px solid #38bdf8;
+  background-color: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse);
+  border: 1px solid var(--semantic-color-accent-inverse);
 }
 
 .btn-sync-toggle {
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: #334155;
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border-control);
+  color: var(--semantic-color-text-body);
   border-radius: 6px;
   padding: 8px 12px;
   font-size: 0.85rem;
@@ -854,8 +854,8 @@ function handleBatchIngested(result) {
 
 .btn-sync-toggle.synced {
   background-color: rgba(52, 211, 153, 0.15);
-  border-color: #34d399;
-  color: #065f46;
+  border-color: var(--semantic-color-success-border);
+  color: var(--semantic-color-success-dark);
 }
 
 .dual-viewports-grid {
@@ -874,7 +874,7 @@ function handleBatchIngested(result) {
 .series-group-title {
   font-size: 0.75rem;
   font-weight: 700;
-  color: #38bdf8;
+  color: var(--semantic-color-accent-inverse);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding-bottom: 4px;
@@ -933,8 +933,8 @@ function handleBatchIngested(result) {
 }
 
 .series-nav-panel {
-  background-color: #0f172a;
-  border: 1px solid #334155;
+  background-color: var(--semantic-color-surface-inverse);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 8px;
   padding: 12px;
   display: flex;
@@ -944,13 +944,13 @@ function handleBatchIngested(result) {
 
 .nav-panel-header {
   padding-bottom: 8px;
-  border-bottom: 1px solid #1e293b;
+  border-bottom: 1px solid var(--semantic-color-text-dark);
 }
 
 .panel-heading {
   font-size: 0.85rem;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
 }
 
 .series-list {
@@ -963,8 +963,8 @@ function handleBatchIngested(result) {
   display: flex;
   align-items: center;
   gap: 10px;
-  background-color: #1e293b;
-  border: 1px solid #334155;
+  background-color: var(--semantic-color-surface-elevated);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 6px;
   padding: 8px;
   cursor: pointer;
@@ -972,12 +972,12 @@ function handleBatchIngested(result) {
 }
 
 .series-item:hover {
-  background-color: #334155;
+  background-color: var(--semantic-color-border-inverse);
 }
 
 .series-item.active {
-  background-color: #0284c7;
-  border-color: #38bdf8;
+  background-color: var(--semantic-color-primary);
+  border-color: var(--semantic-color-accent-inverse);
 }
 
 .series-thumb {
@@ -993,7 +993,7 @@ function handleBatchIngested(result) {
 .series-title {
   font-size: 0.78rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--semantic-color-text-inverse);
   line-height: 1.2;
 }
 
@@ -1009,13 +1009,13 @@ function handleBatchIngested(result) {
   padding: 1px 4px;
   border-radius: 3px;
   background-color: rgba(0, 0, 0, 0.3);
-  color: #cbd5e1;
+  color: var(--semantic-color-text-inverse-muted);
 }
 
 .volume-info-card {
   margin-top: auto;
-  background-color: #090d16;
-  border: 1px solid #1e293b;
+  background-color: var(--semantic-color-surface-sunken);
+  border: 1px solid var(--semantic-color-text-dark);
   border-radius: 6px;
   padding: 10px;
   display: flex;
@@ -1030,17 +1030,17 @@ function handleBatchIngested(result) {
 }
 
 .info-label {
-  color: #94a3b8;
+  color: var(--semantic-color-text-inverse-muted);
 }
 
 .info-val {
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
 }
 
 .info-val.code {
   font-family: monospace;
-  color: #38bdf8;
+  color: var(--semantic-color-accent-inverse);
 }
 
 .mpr-viewer-wrapper {
@@ -1054,8 +1054,8 @@ function handleBatchIngested(result) {
 }
 
 .trajectory-section {
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   padding: 16px;
   display: flex;
@@ -1073,12 +1073,12 @@ function handleBatchIngested(result) {
 .trajectory-title {
   font-size: 1rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .trajectory-count {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--semantic-color-text-inverse-muted);
   font-weight: 600;
 }
 
@@ -1093,18 +1093,18 @@ function handleBatchIngested(result) {
 }
 
 .trajectory-table th {
-  background-color: #f8fafc;
-  color: #475569;
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-secondary);
   text-align: left;
   padding: 10px 12px;
   font-weight: 700;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 2px solid var(--semantic-color-border);
 }
 
 .trajectory-table td {
   padding: 10px 12px;
-  border-bottom: 1px solid #f1f5f9;
-  color: #1e293b;
+  border-bottom: 1px solid var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-dark);
 }
 
 .font-bold {
@@ -1120,35 +1120,35 @@ function handleBatchIngested(result) {
 
 .resp-cr,
 .resp-cmr {
-  background-color: #d1fae5;
-  color: #065f46;
+  background-color: var(--semantic-color-success-border-soft);
+  color: var(--semantic-color-success-dark);
 }
 
 .resp-pr,
 .resp-pmr {
-  background-color: #e0f2fe;
-  color: #0369a1;
+  background-color: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
 }
 
 .resp-sd,
 .resp-nmr {
-  background-color: #fef3c7;
-  color: #92400e;
+  background-color: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
 }
 
 .resp-pd,
 .resp-pmd {
-  background-color: #fee2e2;
-  color: #991b1b;
+  background-color: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .text-success {
-  color: #059669;
+  color: var(--semantic-color-success);
   font-weight: 700;
 }
 
 .text-danger {
-  color: #dc2626;
+  color: var(--semantic-color-error);
   font-weight: 700;
 }
 
