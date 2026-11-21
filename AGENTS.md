@@ -57,21 +57,21 @@ clinical truth (K-TRUTH-1).
 
 ## Technical stack
 
-| Concern              | Technology                                                                                             |
-| -------------------- | ------------------------------------------------------------------------------------------------------ |
-| Language and runtime | C# 14 / .NET 10 (`net10.0`, SDK pinned in `global.json`)                                               |
-| Web APIs             | ASP.NET Core 10 Minimal APIs, `TypedResults`, endpoint filters (`IEndpointFilter`)                     |
-| Data modelling       | `record` types, primary constructors, FluentValidation, `System.Text.Json` source generation           |
-| Persistence          | EF Core 10 + Npgsql on PostgreSQL 18 (ADR-2533), GxP audit `SaveChangesInterceptor`                    |
-| Messaging            | MassTransit 8 (Apache 2.0, ADR-2524) with the EF Core transactional outbox (`apps/execution`)          |
-| HTTP clients         | `IHttpClientFactory` typed clients with Polly resilience pipelines                                     |
-| Identity             | Keycloak OIDC at the gateway; HMAC-signed caller identity to services (`packages/security`)            |
-| Style and analysis   | `.editorconfig`, `dotnet format`, NetAnalyzers, SonarAnalyzer, BannedApiAnalyzers; warnings are errors |
-| Dependencies         | Central Package Management: `Directory.Packages.props`, `Directory.Build.props`                        |
-| Tests                | xUnit v3, FluentAssertions, ArchUnitNET, Testcontainers                                                |
-| Clinical standards   | CDISC USDM v3/v4, ODM, CDASH, SDTM/ADaM (Dataset-JSON)                                                 |
-| CLI                  | `packages/cli` (System.CommandLine + Spectre.Console, Native AOT), run with `pnpm cadence <command>`   |
-| Frontend             | Vue 3 + Vite (`apps/web`, `apps/subject-portal`, `packages/ui`)                                        |
+| Concern              | Technology                                                                                                           |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Language and runtime | C# 14 / .NET 10 (`net10.0`, SDK pinned in `global.json`)                                                             |
+| Web APIs             | ASP.NET Core 10 Minimal APIs, `TypedResults`, endpoint filters (`IEndpointFilter`)                                   |
+| Data modelling       | `record` types, primary constructors, FluentValidation, `System.Text.Json` source generation                         |
+| Persistence          | EF Core 10 + Npgsql on PostgreSQL 18 (ADR-2533), GxP audit `SaveChangesInterceptor`                                  |
+| Messaging            | MassTransit 8 (Apache 2.0, ADR-2524) with the EF Core transactional outbox (`apps/execution`)                        |
+| HTTP clients         | `IHttpClientFactory` typed and named clients (outbound integrations; DB retries use EF Core strategies per ADR-2523) |
+| Identity             | Keycloak OIDC at the gateway; HMAC-signed caller identity to services (`packages/security`)                          |
+| Style and analysis   | `.editorconfig`, `dotnet format`, NetAnalyzers, SonarAnalyzer, BannedApiAnalyzers; warnings are errors               |
+| Dependencies         | Central Package Management: `Directory.Packages.props`, `Directory.Build.props`                                      |
+| Tests                | xUnit v3, FluentAssertions, ArchUnitNET, Testcontainers                                                              |
+| Clinical standards   | CDISC USDM v3/v4, ODM, CDASH, SDTM/ADaM (Dataset-JSON)                                                               |
+| CLI                  | `packages/cli` (System.CommandLine + Spectre.Console, Native AOT), run with `pnpm cadence <command>`                 |
+| Frontend             | Vue 3 + Vite (`apps/web`, `apps/subject-portal`, `packages/ui`)                                                      |
 
 Neo4j is retired (ADR-2245); do not add Neo4j code.
 
@@ -210,10 +210,10 @@ PostgreSQL integration tests need `CADENCE_TEST_POSTGRES=<connection string>` or
 ### 8. Service boundaries and contracts
 
 - No project references to another service's persistence layer.
-- Cross-service calls go through typed clients and DTOs in `packages/contracts`, registered with
-  `IHttpClientFactory` and Polly, and carry HMAC signatures from `Cadence.Security`.
-- In the target architecture most of these calls disappear: applications share kernel concepts
-  in-process (ADR-2244). Do not build new cross-service synchronisation for kernel concepts.
+- Cross-module clinical mutations go through the in-process kernel command path (`Cadence.Kernel.Abstractions`
+  and `Cadence.Kernel.Modules`, ADR-2244, ADR-2600); asynchronous cross-service events use MassTransit
+  records in `packages/contracts` via the EF Core transactional outbox (ADR-2524).
+- Do not build new cross-service HTTP synchronisation for kernel concepts.
 
 ### 9. Layer purity
 
