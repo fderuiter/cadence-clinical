@@ -574,7 +574,28 @@ export function createAppHistory(
   env = import.meta.env,
   base = env?.BASE_URL || "/cadence-clinical/"
 ) {
-  return isDemoBuild(env) ? createWebHashHistory(base) : createWebHistory(base);
+  if (isDemoBuild(env)) {
+    if (
+      typeof window !== "undefined" &&
+      window.location &&
+      !window.location.hash
+    ) {
+      const normalizedBase = (base || "/").replace(/\/$/, "");
+      const { pathname, search } = window.location;
+      if (normalizedBase && pathname.startsWith(`${normalizedBase}/`)) {
+        const subpath = pathname.slice(normalizedBase.length);
+        if (subpath && subpath !== "/" && subpath !== "/index.html") {
+          window.history.replaceState(
+            window.history.state,
+            "",
+            `${normalizedBase}/#${subpath}${search}`
+          );
+        }
+      }
+    }
+    return createWebHashHistory(base);
+  }
+  return createWebHistory(base);
 }
 
 export const router = createRouter({

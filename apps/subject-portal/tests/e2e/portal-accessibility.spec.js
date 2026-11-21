@@ -2,6 +2,9 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 async function completeInitialPinSetupIfOpen(page) {
+  await page
+    .locator("#app .skip-link")
+    .waitFor({ state: "attached", timeout: 10000 });
   const pinSetupModal = page.locator("#portal-pin-setup-modal");
   const pinUnlockModal = page.locator("#portal-pin-unlock-modal");
   await Promise.race([

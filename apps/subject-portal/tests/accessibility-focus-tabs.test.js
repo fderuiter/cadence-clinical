@@ -186,7 +186,7 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
 
     const reconsentPw = document.getElementById("reconsent-sign-password");
     expect(state.reconsentModalOpen).toBe(true);
-    state.reconsentForm.password = "AmendmentSecret456!";
+    state.reconsentForm.password = "AmendmentSecret456!"; // pragma: allowlist secret
     await nextTick();
     expect(reconsentPw.value).toBe("AmendmentSecret456!");
 

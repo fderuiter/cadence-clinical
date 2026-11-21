@@ -407,6 +407,11 @@ function selectField() {
   min-height: 100px;
 }
 
+.field-preview-container,
+.field-preview-input {
+  pointer-events: none;
+}
+
 table,
 th,
 td {

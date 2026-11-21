@@ -43,11 +43,11 @@ test.describe("CRF Authoring and Interactive Builder Workspace", () => {
     await page.goto("mdr");
 
     // Click eCRF Canvas tab
-    await page.click("#btn-tab-canvas");
+    await page.click("button.tab-btn-canvas");
 
     // Check that we are on the canvas view and desktop viewport is active by default
     const desktopBtn = page.locator(".btn-viewport-desktop");
-    await expect(desktopBtn).toHaveClass(/bg-indigo-600/);
+    await expect(desktopBtn).toHaveClass(/\bactive\b/);
 
     // Click on the first field widget on the canvas ("Subject Initials") to select it
     const fieldWidget = page.locator(".canvas-field-widget").first();
@@ -96,7 +96,7 @@ test.describe("CRF Authoring and Interactive Builder Workspace", () => {
     // Now switch viewport to Tablet
     await page.click(".btn-viewport-tablet");
     const tabletBtn = page.locator(".btn-viewport-tablet");
-    await expect(tabletBtn).toHaveClass(/bg-indigo-600/);
+    await expect(tabletBtn).toHaveClass(/\bactive\b/);
 
     // Reset grid span back to 6
     await page.selectOption("#inspect-field-span", "6");
@@ -106,7 +106,7 @@ test.describe("CRF Authoring and Interactive Builder Workspace", () => {
     // Switch viewport to Mobile
     await page.click(".btn-viewport-mobile");
     const mobileBtn = page.locator(".btn-viewport-mobile");
-    await expect(mobileBtn).toHaveClass(/bg-indigo-600/);
+    await expect(mobileBtn).toHaveClass(/\bactive\b/);
 
     // On mobile (width 480), grid span 3 has width (480/12)*3 = 120px < 150px.
     // Let's set grid span of "Subject Initials" to 3
