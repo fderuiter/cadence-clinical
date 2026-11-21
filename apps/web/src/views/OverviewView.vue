@@ -266,7 +266,12 @@ function resolveAuthorizedRoute(routeSpec) {
   ) {
     if (
       isScreenAvailable("ctms") &&
-      hasRequiredRole(effectiveRoles.value, ["cra", "monitor", "sponsor_admin"])
+      hasRequiredRole(effectiveRoles.value, [
+        "cra",
+        "monitor",
+        "data_manager",
+        "sponsor_admin",
+      ])
     ) {
       return "/ctms";
     }
@@ -284,6 +289,7 @@ function resolveAuthorizedRoute(routeSpec) {
       hasRequiredRole(effectiveRoles.value, [
         "cra",
         "monitor",
+        "data_manager",
         "sponsor_admin",
         "site_investigator",
         "crc",
@@ -413,6 +419,13 @@ const CHECKLISTS = {
       description:
         "Verify participant visit entries and discrepancy resolution status.",
       targetRoute: "/ecrf",
+    },
+    {
+      id: "dm-4",
+      title: "Site Readiness & Activation",
+      description:
+        "Certify startup greenlight readiness and activate compliant study sites.",
+      targetRoute: "site-readiness",
     },
   ],
   site_crc: [

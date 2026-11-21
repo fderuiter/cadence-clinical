@@ -21,6 +21,9 @@ public sealed class SiteComplianceCache : AggregateRoot<Guid>
     public SiteCode SiteCode { get; private set; }
     public string Milestone { get; private set; } = default!;
     public bool IsComplete { get; private set; }
+    public bool IsActivated { get; private set; }
+    public DateTimeOffset? ActivatedAt { get; private set; }
+    public string? ActivatedBy { get; private set; }
 
     /// <summary>
     /// Exposed as a genuine read-only view — backed by a private mutable list that is never handed out
@@ -63,5 +66,24 @@ public sealed class SiteComplianceCache : AggregateRoot<Guid>
         _missingDocuments.Clear();
         _missingDocuments.AddRange(missingDocuments);
         Version++;
+    }
+
+    /// <summary>
+    /// Marks this compliance gate as activated without incrementing <see cref="Version"/> or mutating
+    /// <see cref="IsComplete"/>. Idempotent: returns <see langword="false"/> without overwriting the original
+    /// timestamp or actor when already activated.
+    /// </summary>
+    public bool MarkActivated(DateTimeOffset activatedAt, string activatedBy)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(activatedBy);
+        if (IsActivated)
+        {
+            return false;
+        }
+
+        IsActivated = true;
+        ActivatedAt = activatedAt;
+        ActivatedBy = activatedBy.Trim();
+        return true;
     }
 }
