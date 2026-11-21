@@ -44,11 +44,13 @@ On pushes to `main`, `release/*`, and `v*` tags, `.github/workflows/ci.yml` exec
 2. `dotnet-tests` enforces assembly, `*.database.txt`, and `NotExecuted` checks via `scripts/check-database-test-results.sh` before uploading `gxp-test-evidence-${{ github.run_id }}-${{ github.run_attempt }}`.
 3. `ci.yml` calls `production-pipeline.yml` and `deploy-docs.yml` only after all push validation jobs succeed, and disables `cancel-in-progress` on `push` events so release evidence pipelines are not aborted mid-run.
 4. `ctms` (`AddTransactionalOutboxAndEnumConversions`), `tickets` (`EnforceTicketStatusConstraint`), and `payments` (`EnforcePaymentStatusConstraints`) include EF Core migrations matching their domain state-machine and transactional outbox configurations.
+5. `apps/web` (`client.ts`, `demoMode.js`, `router/index.js`) and `apps/subject-portal` (`src/index.js`) guard circular ESM `import.meta.env` access, dynamically resolve `VITE_API_BASE_URL` across circular OpenAPI client imports, normalize path-based demo deep links into hash routes prior to `createWebHashHistory` initialization, and run `initializeApp()` immediately when `document.readyState !== "loading"` so all `accessibility-e2e` browser suites (`subject-portal`, `web`, and `BrowserCorrectionReachesTheDatabaseWithItsReason`) execute deterministically in CI.
 
 ## 5. Consequences & Trade-offs
 
 - Release archives (`gxp-release-evidence-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}`) carry stamped, non-draft RTM and IQ/OQ/PQ reports without committing generated snapshots on feature branches (`ADR-2532`).
 - Manual `workflow_dispatch` executions of `production-pipeline.yml` still qualify against a live pinned PostgreSQL 18 service container when no upstream `evidence_artifact` is supplied.
+- Standalone CI runs of `apps/web` Playwright E2E execute against `--mode demo` with stateful MSW handlers while preserving `E2E_KEYCLOAK=true` for live Docker Keycloak runs and keeping non-demo runtime authentication strictly Keycloak-only (`ADR-2493`).
 
 ## 6. Implementation & Verification
 
@@ -56,3 +58,4 @@ On pushes to `main`, `release/*`, and `v*` tags, `.github/workflows/ci.yml` exec
 - `scripts/check-database-test-results.sh` and `scripts/test-check-database-test-results.sh`.
 - `.github/workflows/ci.yml`, `.github/workflows/production-pipeline.yml`, and `.github/workflows/deploy-docs.yml`.
 - EF Core migrations under `apps/ctms/src/Infrastructure/Persistence/Migrations/`, `apps/tickets/src/Infrastructure/Persistence/Migrations/`, and `apps/payments/src/Infrastructure/Persistence/Migrations/`.
+- Browser & E2E verification across `apps/web/src/api/client.ts`, `apps/web/src/router/index.js`, `apps/web/src/mocks/demoHandlers.js`, `apps/subject-portal/src/index.js`, `apps/subject-portal/tests/e2e/`, and `tests/Cadence.IntegrationTests/Kernel/KernelObservationHostPostgresTests.cs`.

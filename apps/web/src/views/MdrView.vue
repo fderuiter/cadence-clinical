@@ -2349,36 +2349,68 @@ async function confirmMutation(finalReason) {
 function applyMutationLocally(mutation) {
   if (mutation.type === "arms") {
     if (!store.currentUsdm.arms) store.currentUsdm.arms = [];
-    store.currentUsdm.arms.push({
-      arm_id: mutation.id,
-      arm_name: mutation.properties.name,
-    });
+    const existing = store.currentUsdm.arms.find(
+      (a) => a.arm_id === mutation.id
+    );
+    if (existing) {
+      existing.arm_name = mutation.properties.name;
+    } else {
+      store.currentUsdm.arms.push({
+        arm_id: mutation.id,
+        arm_name: mutation.properties.name,
+      });
+    }
   } else if (mutation.type === "epochs") {
     if (!store.currentUsdm.epochs) store.currentUsdm.epochs = [];
-    store.currentUsdm.epochs.push({
-      epoch_id: mutation.id,
-      epoch_name: mutation.properties.name,
-      sequence: mutation.properties.sequence,
-      arm_id: mutation.properties.arm_id || undefined,
-    });
+    const existing = store.currentUsdm.epochs.find(
+      (e) => e.epoch_id === mutation.id
+    );
+    if (existing) {
+      existing.epoch_name = mutation.properties.name;
+      existing.sequence = mutation.properties.sequence;
+      existing.arm_id = mutation.properties.arm_id || undefined;
+    } else {
+      store.currentUsdm.epochs.push({
+        epoch_id: mutation.id,
+        epoch_name: mutation.properties.name,
+        sequence: mutation.properties.sequence,
+        arm_id: mutation.properties.arm_id || undefined,
+      });
+    }
   } else if (mutation.type === "visits") {
     if (!store.currentUsdm.encounters) store.currentUsdm.encounters = [];
-    store.currentUsdm.encounters.push({
-      encounter_id: mutation.id,
-      encounter_name: mutation.properties.name,
-      epoch_id: mutation.properties.epoch_id,
-      sequence: mutation.properties.sequence,
-    });
+    const existing = store.currentUsdm.encounters.find(
+      (v) => v.encounter_id === mutation.id
+    );
+    if (existing) {
+      existing.encounter_name = mutation.properties.name;
+      existing.epoch_id = mutation.properties.epoch_id;
+      existing.sequence = mutation.properties.sequence;
+    } else {
+      store.currentUsdm.encounters.push({
+        encounter_id: mutation.id,
+        encounter_name: mutation.properties.name,
+        epoch_id: mutation.properties.epoch_id,
+        sequence: mutation.properties.sequence,
+      });
+    }
   } else if (mutation.type === "procedures") {
     if (!store.currentUsdm.rows) store.currentUsdm.rows = [];
-    store.currentUsdm.rows.push({
-      activity_id: mutation.id,
-      activity_name: mutation.properties.name,
-      cells: store.currentUsdm.encounters.map((e) => ({
-        encounter_id: e.encounter_id,
-        is_applicable: false,
-      })),
-    });
+    const existing = store.currentUsdm.rows.find(
+      (r) => r.activity_id === mutation.id
+    );
+    if (existing) {
+      existing.activity_name = mutation.properties.name;
+    } else {
+      store.currentUsdm.rows.push({
+        activity_id: mutation.id,
+        activity_name: mutation.properties.name,
+        cells: store.currentUsdm.encounters.map((e) => ({
+          encounter_id: e.encounter_id,
+          is_applicable: false,
+        })),
+      });
+    }
   } else if (mutation.type === "link") {
     const { procedure_id, visit_id, is_applicable, timing } = mutation.payload;
     const row = store.currentUsdm.rows.find(

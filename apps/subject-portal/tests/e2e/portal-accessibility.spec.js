@@ -2,6 +2,9 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 async function completeInitialPinSetupIfOpen(page) {
+  await page
+    .locator("#app .skip-link")
+    .waitFor({ state: "attached", timeout: 10000 });
   const pinSetupModal = page.locator("#portal-pin-setup-modal");
   const pinUnlockModal = page.locator("#portal-pin-unlock-modal");
   await Promise.race([
@@ -188,6 +191,40 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       });
     });
 
+    await page.route(
+      "**/api/v1/payments/participant/me/wallet",
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            wallet: {
+              id: "wallet-mock-001",
+              study_id: "study_001",
+              site_id: "site_001",
+              current_balance: 75.0,
+              lifetime_stipends: 150.0,
+              lifetime_reimbursements: 25.0,
+              lifetime_disbursements: 100.0,
+              w9_status: "NOT_REQUIRED",
+              currency: "USD",
+              ach_account_mask: "•••• 4821",
+              ach_routing_mask: "•••••0210",
+            },
+            recent_transactions: [
+              {
+                id: "tx-mock-001",
+                description: "Screening Visit Stipend",
+                transactionType: "STIPEND",
+                amount: 75.0,
+              },
+            ],
+            expense_claims: [],
+          }),
+        });
+      }
+    );
+
     // Inject pre-configured mock credentials into storage to bypass login server
     await page.addInitScript(() => {
       sessionStorage.setItem("mock_user_id", "subject_mocked_001");
@@ -332,9 +369,9 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await expect(syncStatusText).toHaveAttribute("role", "status");
     await expect(syncStatusText).toHaveAttribute("aria-live", "polite");
 
-    // 3. Unavailable workflow guard outside demo mode (/wallet redirects to #view-unavailable)
-    await expect(page.locator("#tab-btn-wallet")).toHaveCount(0);
-    await page.goto("wallet");
+    // 3. Unavailable workflow guard outside demo mode (/lay-summaries redirects to #view-unavailable)
+    await expect(page.locator("#tab-btn-lay-summaries")).toHaveCount(0);
+    await page.goto("lay-summaries");
     await completeInitialPinSetupIfOpen(page);
     await expect(page.locator("#view-unavailable")).toBeVisible();
     const unavailableAudit = await new AxeBuilder({ page })
@@ -533,6 +570,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       { id: "btn-tab-btn-compliance", panel: "view-compliance" },
       { id: "btn-tab-btn-inbox", panel: "view-inbox" },
       { id: "btn-tab-btn-consent", panel: "view-consent" },
+      { id: "btn-tab-btn-wallet", panel: "view-wallet" },
     ];
 
     const tabLocator = page.locator('.nav-tabs [role="tab"]');

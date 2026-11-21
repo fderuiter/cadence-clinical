@@ -60,7 +60,18 @@ public sealed class DocIndexSyncServiceTests : IDisposable
 
         File.WriteAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"), "# Index\n");
         File.WriteAllText(Path.Combine(docsDir, "empty.md"), ""); // Empty file
-        foreach (string stagedPage in new[] { "AGENTS.md", "ARCHITECTURE.md", "LICENSE.md", "index.md" })
+        foreach (string stagedPage in new[]
+                 {
+                     "AGENTS.md",
+                     "ARCHITECTURE.md",
+                     "CONTEXT.md",
+                     "CONTRIBUTING.md",
+                     "LICENSE.md",
+                     "README.md",
+                     "SECURITY.md",
+                     "SUPPORT.md",
+                     "index.md"
+                 })
         {
             File.WriteAllText(Path.Combine(docsDir, stagedPage), "# Staged VitePress page\n");
         }
@@ -80,6 +91,9 @@ public sealed class DocIndexSyncServiceTests : IDisposable
     [Fact]
     public void DetermineCategory_CategorizesPathsCorrectly()
     {
+        DocIndexSyncService.DetermineCategory("blog/index.md").Should().Be("## Engineering blog");
+        DocIndexSyncService.DetermineCategory("blog/2026-11-19-keeping-cadence-in-one-repository.md").Should().Be("## Engineering blog");
+        DocIndexSyncService.DetermineCategory("docs/blog/2026-11-19-keeping-cadence-in-one-repository.md").Should().Be("## Engineering blog");
         DocIndexSyncService.DetermineCategory("kernel/SPEC.md").Should().Be("## Kernel and roadmap");
         DocIndexSyncService.DetermineCategory("architecture/repository-migration/MIGRATION_PLAN.md").Should().Be("## Former repository migration program");
         DocIndexSyncService.DetermineCategory("adr/001.md").Should().Be("## Architecture decision records");
@@ -91,6 +105,20 @@ public sealed class DocIndexSyncServiceTests : IDisposable
         DocIndexSyncService.DetermineCategory("strategy/MARKET_HYPOTHESES.md").Should().Be("## Product");
         DocIndexSyncService.DetermineCategory("FUNCTIONAL_PRODUCT_SPECIFICATION.md").Should().Be("## Product");
         DocIndexSyncService.DetermineCategory("api/designer.md").Should().Be("## Developing and running");
+    }
+
+    [Fact]
+    public void ExtractDocMetadata_ReadsYamlFrontmatterSummaryAndTitle_AndSkipsVueTags()
+    {
+        string filePath = Path.Combine(_tempDir, "2026-11-20-post.md");
+        File.WriteAllText(
+            filePath,
+            "---\ntitle: \"Frontmatter Blog Title\"\nsummary: \"Concise [ADR-2603](../adr/index.md) summary from frontmatter.\"\ndraft: true\n---\n\n<BlogIndex />\n");
+
+        var (title, desc) = DocIndexSyncService.ExtractDocMetadata(filePath, "blog/2026-11-20-post.md");
+
+        title.Should().Be("Frontmatter Blog Title");
+        desc.Should().Be("Concise ADR-2603 summary from frontmatter.");
     }
 
     [Fact]
@@ -166,5 +194,20 @@ public sealed class DocIndexSyncServiceTests : IDisposable
         string updatedIndex = File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"));
         updatedIndex.Should().Contain("docb.md");
         updatedIndex.Should().Contain("Doc B");
+    }
+
+    [Fact]
+    public void ScanMarkdownFiles_ExcludesStagedReadmePage()
+    {
+        string docsDir = Path.Combine(_tempDir, "docs");
+        Directory.CreateDirectory(docsDir);
+
+        File.WriteAllText(Path.Combine(docsDir, "README.md"), "# Staged Root README\n");
+        File.WriteAllText(Path.Combine(docsDir, "index.md"), "# Guided Landing Page\n");
+        File.WriteAllText(Path.Combine(docsDir, "LOCAL_DEV_ENVIRONMENT.md"), "# Local Dev\nDetails\n");
+
+        var files = DocIndexSyncService.ScanMarkdownFiles(docsDir);
+
+        files.Should().ContainSingle(f => f.RelativePath == "LOCAL_DEV_ENVIRONMENT.md");
     }
 }

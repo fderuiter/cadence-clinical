@@ -33,7 +33,7 @@ export class EtmfPage {
   }
 
   async assertAuditLogEventRecorded(action: string, filename: string) {
-    const logsTable = this.page.locator(".clinical-table").last();
+    const logsTable = this.page.locator(".audit-ledger-table");
     await expect(logsTable).toContainText(action);
     await expect(logsTable).toContainText(filename);
   }

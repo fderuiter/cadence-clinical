@@ -186,6 +186,33 @@ async function setupAuthenticatedPortalRoutes(page, options = {}) {
     });
   });
 
+  await page.route(
+    "**/api/v1/payments/participant/me/wallet",
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          wallet: {
+            id: "wallet-mock-001",
+            study_id: "study_001",
+            site_id: "site_001",
+            current_balance: 75.0,
+            lifetime_stipends: 150.0,
+            lifetime_reimbursements: 25.0,
+            lifetime_disbursements: 100.0,
+            w9_status: "NOT_REQUIRED",
+            currency: "USD",
+            ach_account_mask: "•••• 4821",
+            ach_routing_mask: "•••••0210",
+          },
+          recent_transactions: [],
+          expense_claims: [],
+        }),
+      });
+    }
+  );
+
   await page.addInitScript(() => {
     sessionStorage.setItem("mock_user_id", "subject_mocked_001");
     sessionStorage.setItem("mock_token", "mock_jwt_token_xyz_123"); // pragma: allowlist secret

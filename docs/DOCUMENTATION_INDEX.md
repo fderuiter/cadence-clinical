@@ -16,52 +16,62 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 
 ## Start here
 
-| Document | Status | What it is |
-| --- | --- | --- |
-| [README](../README.md) | Current | What Cadence is, where the code is today, quickstart |
-| [Kernel specification v0.2](kernel/CLINICAL_KERNEL_SPECIFICATION.md) | Normative | Clinical Research OS: engines, kernel concepts, invariants (`K-…`), roadmap (§15) |
-| [ARCHITECTURE.md](../ARCHITECTURE.md) | Current | Target architecture, key decisions, running services, security, persistence |
-| [CONTEXT.md](../CONTEXT.md) | Current | Domain glossary: kernel vocabulary and application terms |
-| [AGENTS.md](../AGENTS.md) | Current | Coding rules for humans and AI agents |
-| [CONTRIBUTING.md](../CONTRIBUTING.md) | Current | Setup, workflow, local checks, documentation rules |
-| [Project plan](PROJECT_PLAN.md) | Current | Single-repository delivery scope, module ownership, milestones, and engineering practices |
-| [Goals and priorities](GOALS_AND_PRIORITIES.md) | Current | Code-level objectives and measurable outcomes, in priority order |
-| [Issue management](ISSUE_MANAGEMENT.md) | Current | Canonical issue taxonomy, readiness, horizon caps, and maintenance cadence |
-| [Backlog insights archive](BACKLOG_INSIGHTS_ARCHIVE.md) | Historical | Source-to-owner provenance and constraints preserved during the November 2026 reset |
+| Document                                                             | Status     | What it is                                                                                |
+| -------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------- |
+| [README](../README.md)                                               | Current    | What Cadence is, where the code is today, quickstart                                      |
+| [Kernel specification v0.2](kernel/CLINICAL_KERNEL_SPECIFICATION.md) | Normative  | Clinical Research OS: engines, kernel concepts, invariants (`K-…`), roadmap (§15)         |
+| [ARCHITECTURE.md](../ARCHITECTURE.md)                                | Current    | Target architecture, key decisions, running services, security, persistence               |
+| [CONTEXT.md](../CONTEXT.md)                                          | Current    | Domain glossary: kernel vocabulary and application terms                                  |
+| [AGENTS.md](../AGENTS.md)                                            | Current    | Coding rules for humans and AI agents                                                     |
+| [CONTRIBUTING.md](../CONTRIBUTING.md)                                | Current    | Setup, workflow, local checks, documentation rules                                        |
+| [Project plan](PROJECT_PLAN.md)                                      | Current    | Single-repository delivery scope, module ownership, milestones, and engineering practices |
+| [Goals and priorities](GOALS_AND_PRIORITIES.md)                      | Current    | Code-level objectives and measurable outcomes, in priority order                          |
+| [Issue management](ISSUE_MANAGEMENT.md)                              | Current    | Canonical issue taxonomy, readiness, horizon caps, and maintenance cadence                |
+| [Backlog insights archive](BACKLOG_INSIGHTS_ARCHIVE.md)              | Historical | Source-to-owner provenance and constraints preserved during the November 2026 reset       |
+
+## Engineering blog
+
+| Document                                                                                                                                   | Status  | What it is                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------ |
+| [Cadence Engineering Blog](blog/index.md)                                                                                                  | Current | Curated architectural milestones, platform engineering narratives, and governance updates                                |
+| [Clinical Kernel v0.2: One Canonical Body of Clinical Truth](blog/2026-09-29-clinical-kernel-v02-ontology-and-invariants.md)               | Current | Why Cadence inverted the multi-product eClinical stack around one PostgreSQL clinical kernel, six domain engines, bit... |
+| [From Python Microservices to .NET 10 and Disciplined Python Retirement](blog/2026-09-30-dotnet-10-modernization-and-python-retirement.md) | Current | How we migrated Cadence's backend and developer tooling to .NET 10 / C# 14 with Native AOT quality gates and retired ... |
+| [Governed AI in Clinical Research: Proposals, Grounding, and Human Attestation](blog/2026-10-20-governed-ai-proposals-in-one-runtime.md)   | Current | How ADR-2630 (K037) embeds AI agents across clinical workflows through one governed runtime where every output is a c... |
+| [Keeping Cadence in One Repository: Consolidating on a Modular Monolith](blog/2026-11-19-keeping-cadence-in-one-repository.md)             | Current | Why ADR-2603 ended our multi-repository split plan so kernel contracts, application modules, and end-to-end GxP evide... |
 
 ## Kernel and roadmap
 
-| Document | Status | What it is |
-| --- | --- | --- |
-| [Kernel specification v0.2](kernel/CLINICAL_KERNEL_SPECIFICATION.md) | Normative | The model every capability builds on |
-| [Roadmap (spec §15)](kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap) | Normative | Phases 0–5, tracked in epic [#4719](https://github.com/fderuiter/cadence-clinical/issues/4719) |
-| [Kernel decisions K001–K032](adr/index.md) | Current | Kernel decisions and their ADRs; [ARCHITECTURE §2](../ARCHITECTURE.md#2-key-decisions) summarises them with the platform decisions |
-| [Kernel package guide](https://github.com/fderuiter/cadence-clinical/blob/main/packages/kernel/README.md) | Current | How the kernel projects are built and used: command pipeline, tenancy, NodeRef, explanations, authorization dry runs, search, protocol versions, Concept and Standards Registries, rule packs, validation findings, activity stream, expected schedule, IdentityVault, grants and qualifications |
-| [Rule packs](kernel/RULE_PACKS.md) | Current | Writing, releasing and benchmarking rule packs (spec §10.1, ADR-2461) |
-| [Indicators](kernel/INDICATORS.md) | Current | Writing, releasing and evaluating Study Pulse indicators, KRIs and QTLs (spec §10.4, ADR-2488) |
-| [Mapping specifications](kernel/MAPPING_SPECIFICATIONS.md) | Current | Writing, pinning and applying mapping specifications; K-STD-1 (spec §6.3, ADR-2463) |
-| [Clock migration backlog](kernel/CLOCK_MIGRATION_BACKLOG.md) | Current | Remaining `DateTime.Now/UtcNow` call sites to move to `IClock` (K-TIME-3) |
-| [Clinical Canvas](ux/CLINICAL_CANVAS.md) | Current | UI interaction model (study-centric navigation, three panes, six verbs) and the kernel read APIs the UI needs |
-| [AI agents](ai/AI_AGENTS.md) | Current | The AI agent catalogue by lifecycle stage, research-type packs, the autonomy ladder and the regulatory map (ADR-2630) |
-| [Agent tools, grounding and the MCP server](ai/AGENT_TOOLS.md) | Current | The read tools agents call as their requester, tool allow-lists, the citation verifier, the Proposal writer and the MCP endpoint (ADR-2633) |
-| [Evaluating AI task configurations](ai/EVALUATION.md) | Current | Evaluation sets, deterministic checks, the calibrated judge, run records for qualification and production signals (ADR-2634) |
+| Document                                                                                                  | Status    | What it is                                                                                                                                                                                                                                                                                       |
+| --------------------------------------------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [Kernel specification v0.2](kernel/CLINICAL_KERNEL_SPECIFICATION.md)                                      | Normative | The model every capability builds on                                                                                                                                                                                                                                                             |
+| [Roadmap (spec §15)](kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap)                                  | Normative | Phases 0–5, tracked in epic [#4719](https://github.com/fderuiter/cadence-clinical/issues/4719)                                                                                                                                                                                                   |
+| [Kernel decisions K001–K032](adr/index.md)                                                                | Current   | Kernel decisions and their ADRs; [ARCHITECTURE §2](../ARCHITECTURE.md#2-key-decisions) summarises them with the platform decisions                                                                                                                                                               |
+| [Kernel package guide](https://github.com/fderuiter/cadence-clinical/blob/main/packages/kernel/README.md) | Current   | How the kernel projects are built and used: command pipeline, tenancy, NodeRef, explanations, authorization dry runs, search, protocol versions, Concept and Standards Registries, rule packs, validation findings, activity stream, expected schedule, IdentityVault, grants and qualifications |
+| [Rule packs](kernel/RULE_PACKS.md)                                                                        | Current   | Writing, releasing and benchmarking rule packs (spec §10.1, ADR-2461)                                                                                                                                                                                                                            |
+| [Indicators](kernel/INDICATORS.md)                                                                        | Current   | Writing, releasing and evaluating Study Pulse indicators, KRIs and QTLs (spec §10.4, ADR-2488)                                                                                                                                                                                                   |
+| [Mapping specifications](kernel/MAPPING_SPECIFICATIONS.md)                                                | Current   | Writing, pinning and applying mapping specifications; K-STD-1 (spec §6.3, ADR-2463)                                                                                                                                                                                                              |
+| [Clock migration backlog](kernel/CLOCK_MIGRATION_BACKLOG.md)                                              | Current   | Remaining `DateTime.Now/UtcNow` call sites to move to `IClock` (K-TIME-3)                                                                                                                                                                                                                        |
+| [Clinical Canvas](ux/CLINICAL_CANVAS.md)                                                                  | Current   | UI interaction model (study-centric navigation, three panes, six verbs) and the kernel read APIs the UI needs                                                                                                                                                                                    |
+| [AI agents](ai/AI_AGENTS.md)                                                                              | Current   | The AI agent catalogue by lifecycle stage, research-type packs, the autonomy ladder and the regulatory map (ADR-2630)                                                                                                                                                                            |
+| [Agent tools, grounding and the MCP server](ai/AGENT_TOOLS.md)                                            | Current   | The read tools agents call as their requester, tool allow-lists, the citation verifier, the Proposal writer and the MCP endpoint (ADR-2633)                                                                                                                                                      |
+| [Evaluating AI task configurations](ai/EVALUATION.md)                                                     | Current   | Evaluation sets, deterministic checks, the calibrated judge, run records for qualification and production signals (ADR-2634)                                                                                                                                                                     |
 
 ## Former repository migration program
 
-| Document | Status | What it is |
-| --- | --- | --- |
-| [Controlled migration plan](architecture/repository-migration/MIGRATION_PLAN.md) | Historical | Former ten-repository program and proposed extraction phases |
-| [Repository registry](architecture/repository-migration/REPOSITORY_REGISTRY.md) | Historical | Former destination repository and product mapping |
-| [Capability ownership matrix](architecture/repository-migration/CAPABILITY_OWNERSHIP_MATRIX.md) | Historical | Prior mapping and analysis of overlapping module responsibilities |
-| [Source inventory](architecture/repository-migration/SOURCE_INVENTORY.md) | Historical | Dated dependency and ownership inventory used in the migration review |
-| [Kernel extraction plan](architecture/repository-migration/KERNEL_EXTRACTION_PLAN.md) | Historical | Prior SDK extraction preparation and verification analysis |
-| [Multi-repository handoff](architecture/repository-migration/AGENT_HANDOFF.md) | Historical | Former migration workflow and synchronization conditions |
+| Document                                                                                        | Status     | What it is                                                            |
+| ----------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------- |
+| [Controlled migration plan](architecture/repository-migration/MIGRATION_PLAN.md)                | Historical | Former ten-repository program and proposed extraction phases          |
+| [Repository registry](architecture/repository-migration/REPOSITORY_REGISTRY.md)                 | Historical | Former destination repository and product mapping                     |
+| [Capability ownership matrix](architecture/repository-migration/CAPABILITY_OWNERSHIP_MATRIX.md) | Historical | Prior mapping and analysis of overlapping module responsibilities     |
+| [Source inventory](architecture/repository-migration/SOURCE_INVENTORY.md)                       | Historical | Dated dependency and ownership inventory used in the migration review |
+| [Kernel extraction plan](architecture/repository-migration/KERNEL_EXTRACTION_PLAN.md)           | Historical | Prior SDK extraction preparation and verification analysis            |
+| [Multi-repository handoff](architecture/repository-migration/AGENT_HANDOFF.md)                  | Historical | Former migration workflow and synchronization conditions              |
 
 ## Architecture decision records
 
-| Document | Status | What it is |
-| --- | --- | --- |
-| [ADR index](adr/index.md) | Current | Every ADR by domain, with supersession marked |
+| Document                        | Status  | What it is                                                 |
+| ------------------------------- | ------- | ---------------------------------------------------------- |
+| [ADR index](adr/index.md)       | Current | Every ADR by domain, with supersession marked              |
 | [ADR template](adr/TEMPLATE.md) | Current | Create new ADRs with `pnpm cadence scaffold adr "<title>"` |
 
 | [ADR-2262: Neo4j Graph Database for Clinical Metadata](adr/2023-01-01-neo4j-graph-database.md) | Current | Superseded by [ADR-2245](adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md). Neo4j is re... |
@@ -274,7 +284,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2375: Write-Time Soft-Versioning and Active Inactive Cloning for eCRF Form Submissions](adr/2026-08-13-write-time-soft-versioning-and-active-inactive-cloning-for-ecrf-form-submissions.md) | Current | Also known as: ADR-2172 (former number) |
 | [ADR-2376: Biostatistical Export Pipeline Interoperability and Architecture](adr/2026-08-14-biostatistical-export-pipeline-interoperability.md) | Current | Also known as: ADR-094 (former number) |
 | [ADR-2179: Comprehensive Hexagonal Architecture Standardization and Frontend Modularization](adr/2026-08-14-comprehensive-hexagonal-architecture-standardization-and-frontend-modularization.md) | Current | - Status: Accepted |
-| [ADR-071: GitHub Pages Documentation Hosting](adr/2026-08-14-github-pages-documentation-hosting.md) | Current | - Status: Accepted |
+| [ADR-071: GitHub Pages Documentation Hosting](adr/2026-08-14-github-pages-documentation-hosting.md) | Historical | - Status: Superseded by ADR-2550 |
 | [ADR-2175: Graph-Native Zero-Downtime Protocol Amendment and In-Flight Subject Migration Engine](adr/2026-08-14-graph-native-zero-downtime-protocol-amendment-and-in-flight-subject-migration-engine.md) | Current | - Status: Accepted |
 | [ADR-2176: Isolated Concurrent Pytest Harness and Worker Lifecycle](adr/2026-08-14-isolated-concurrent-pytest-harness-and-worker-lifecycle.md) | Current | - Status: Accepted |
 | [ADR-2173: Offline TypeScript Schema Generator using SQLModel Base Metadata](adr/2026-08-14-offline-typescript-schema-generator-using-sqlmodel-base-metadata.md) | Current | - Status: Accepted |
@@ -564,29 +574,32 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2546: Isolate Static Demo Builds with Stateful MSW Handlers](adr/2026-11-19-isolate-static-demo-builds-with-stateful-msw-handlers.md) | Current | - Status: Accepted |
 | [ADR-2817: Caller-Bound Participant Self-Service Wallet and Receipt OCR Capabilities](adr/2026-11-19-caller-bound-participant-self-service-wallet-and-receipt-ocr-capabilities.md) | Current | - Status: Accepted |
 | [ADR-2818: Clinical and Gateway Endpoints Take Time From IClock and Ban TimeProvider](adr/2026-11-20-clinical-and-gateway-endpoints-take-time-from-iclock-and-ban-timeprovider.md) | Current | - Status: Accepted |
+| [ADR-2550: Co-Host Interactive Demos on GitHub Pages Subpaths](adr/2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.md) | Current | - Status: Accepted |
+| [ADR-2547: Keycloak Self-Registration and Clinical Kernel Trial Bootstrap](adr/2026-11-20-keycloak-self-registration-and-clinical-kernel-trial-bootstrap.md) | Current | - Status: Accepted |
+| [ADR-2819: Focus Active eCRF View on Backed Kernel Forms Outside Demo Mode](adr/2026-11-20-focus-active-ecrf-view-on-backed-kernel-forms-outside-demo-mode.md) | Current | - Status: Accepted |
 | [ADR-2535: Forward Verified CI GxP Evidence to Releases and Synchronize Service Migration Snapshots](adr/2026-11-20-forward-verified-ci-gxp-evidence-and-sync-service-migrations.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
-| Document | Status | What it is |
-| --- | --- | --- |
-| [Local development environment](LOCAL_DEV_ENVIRONMENT.md) | Current | Prerequisites, build, run (compose, Aspire, single service), ports |
-| [Environment variables](ENVIRONMENT_VARIABLES.md) | Current | Every setting the code reads, required or optional |
-| [Database layout and migrations](OPERATIONAL_DATABASE.md) | Current | One `cadence` database with a schema per service; migrations at startup or as a job |
-| [Testing and requirement qualification](TESTING.md) | Current | Running the .NET and Vitest suites, PostgreSQL opt-ins, `Cadence.Testing` helpers, requirement tagging and when a requirement counts as qualified |
-| [CI and quality gates](CI.md) | Current | Workflows, CI jobs, the quality gates, the pre-commit hook and a failure runbook |
-| [CLI reference](cli.md) | Generated | Every `pnpm cadence` command (`pnpm cadence generate-cli-docs`) |
-| [Service and package READMEs](../ARCHITECTURE.md#3-running-services-today) | Current | One README per `apps/*` and `packages/*` directory |
-| [REST API reference](api/index.md) | Generated | Per-service endpoint reference from `docs/openapi/*.json` (`pnpm cadence generate-api-docs`) |
-| [OpenAPI specifications](openapi/README.md) | Generated | Exported OpenAPI documents (`pnpm openapi:export`); Python-era specs kept in `openapi/legacy/` |
-| [UI components](components/index.md) | Current | Shared Vue component catalog (`packages/ui`) |
-| [Moving the web app onto the .NET API](web/API_MIGRATION.md) | Current | Which web screens have a .NET backend, which are hidden, and how a screen moves over (epic #4833) |
-| [Migration workflow playbook](MIGRATION_WORKFLOW.md) | Current | How to port the remaining Python reference sources to C# |
-| [Python reference inventory](PYTHON_REFERENCE_INVENTORY.md) | Current | Each remaining Python file, its C# status and what it needs before deletion (#4789) |
-| [Operations and deployment guide](SDLC/07_Operations_Deployment_Guide.md) | Baseline | Deployment topology and runbooks; being revised with the production-readiness work |
-| [Lab reference ranges](OPERATIONAL_LAB_RANGES.md) | Baseline | Range selection, scoring and tie-breaking rules |
-| [eTMF inbound email](OPERATIONAL_INBOUND_EMAIL.md) | Baseline | Inbound-email webhook security and processing |
-| [Data lifecycle](DATA_LIFECYCLE.md) | Baseline | eTMF document QC lifecycle |
+| Document                                                                   | Status    | What it is                                                                                                                                        |
+| -------------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Local development environment](LOCAL_DEV_ENVIRONMENT.md)                  | Current   | Prerequisites, build, run (compose, Aspire, single service), ports                                                                                |
+| [Environment variables](ENVIRONMENT_VARIABLES.md)                          | Current   | Every setting the code reads, required or optional                                                                                                |
+| [Database layout and migrations](OPERATIONAL_DATABASE.md)                  | Current   | One `cadence` database with a schema per service; migrations at startup or as a job                                                               |
+| [Testing and requirement qualification](TESTING.md)                        | Current   | Running the .NET and Vitest suites, PostgreSQL opt-ins, `Cadence.Testing` helpers, requirement tagging and when a requirement counts as qualified |
+| [CI and quality gates](CI.md)                                              | Current   | Workflows, CI jobs, the quality gates, the pre-commit hook and a failure runbook                                                                  |
+| [CLI reference](cli.md)                                                    | Generated | Every `pnpm cadence` command (`pnpm cadence generate-cli-docs`)                                                                                   |
+| [Service and package READMEs](../ARCHITECTURE.md#3-running-services-today) | Current   | One README per `apps/*` and `packages/*` directory                                                                                                |
+| [REST API reference](api/index.md)                                         | Generated | Per-service endpoint reference from `docs/openapi/*.json` (`pnpm cadence generate-api-docs`)                                                      |
+| [OpenAPI specifications](openapi/README.md)                                | Generated | Exported OpenAPI documents (`pnpm openapi:export`); Python-era specs kept in `openapi/legacy/`                                                    |
+| [UI components](components/index.md)                                       | Current   | Shared Vue component catalog (`packages/ui`)                                                                                                      |
+| [Moving the web app onto the .NET API](web/API_MIGRATION.md)               | Current   | Which web screens have a .NET backend, which are hidden, and how a screen moves over (epic #4833)                                                 |
+| [Migration workflow playbook](MIGRATION_WORKFLOW.md)                       | Current   | How to port the remaining Python reference sources to C#                                                                                          |
+| [Python reference inventory](PYTHON_REFERENCE_INVENTORY.md)                | Current   | Each remaining Python file, its C# status and what it needs before deletion (#4789)                                                               |
+| [Operations and deployment guide](SDLC/07_Operations_Deployment_Guide.md)  | Baseline  | Deployment topology and runbooks; being revised with the production-readiness work                                                                |
+| [Lab reference ranges](OPERATIONAL_LAB_RANGES.md)                          | Baseline  | Range selection, scoring and tie-breaking rules                                                                                                   |
+| [eTMF inbound email](OPERATIONAL_INBOUND_EMAIL.md)                         | Baseline  | Inbound-email webhook security and processing                                                                                                     |
+| [Data lifecycle](DATA_LIFECYCLE.md)                                        | Baseline  | eTMF document QC lifecycle                                                                                                                        |
 
 | [ctms API](api/ctms.md) | Generated | Generated from `docs/openapi/ctms_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [designer API](api/designer.md) | Generated | Generated from `docs/openapi/designer_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
@@ -627,57 +640,58 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [safety database schema](schema/safety.md) | Generated | <!-- Generated by `pnpm cadence generate-schema-doc`. Do not edit by hand. -- |
 | [tickets database schema](schema/tickets.md) | Generated | <!-- Generated by `pnpm cadence generate-schema-doc`. Do not edit by hand. -- |
 | [executionmodule database schema](schema/executionmodule.md) | Generated | <!-- Generated by `pnpm cadence generate-schema-doc`. Do not edit by hand. -- |
+
 ## Requirements, validation and GxP
 
-| Document | Status | What it is |
-| --- | --- | --- |
-| [SDLC documentation suite](SDLC/SDLC_Documentation_Suite.md) | Baseline | Overview of the SDLC document set |
-| [Product requirements (PRD)](SDLC/01_Product_Requirements_Document_PRD.md) | Baseline | `PRD-…` requirement IDs used by tests and the RTM |
-| [Software requirements (SRS)](SRS.md) | Baseline | `SRS-…` and `Trace-…` requirement IDs |
-| [Requirements traceability matrix](SDLC/Requirements_Traceability_Matrix.md) | Generated | Requirement ↔ test mapping (snapshot from `pnpm cadence gxp snapshot`) |
-| [IQ/OQ/PQ execution report](SDLC/IQ_OQ_PQ_Execution_Report.md) | Generated | Qualification evidence from the last snapshot |
-| [Technical design (TDD)](SDLC/02_Technical_Design_Document_TDD.md) | Baseline | Superseded by the kernel spec and ARCHITECTURE.md |
-| [API and integration specification](SDLC/03_API_Integration_Specification.md) | Baseline | Planned integration contracts |
-| [Data standards and interoperability](SDLC/04_Data_Standards_Interoperability_Blueprint.md) | Baseline | CDISC, FHIR and coding dictionaries |
-| [Security, compliance and audit](SDLC/05_Security_Compliance_Audit_Spec.md) | Baseline | Part 11 controls; current controls are in [ARCHITECTURE §4](../ARCHITECTURE.md#4-request-path-and-security) (ADR-2256, ADR-2259, ADR-2493, ADR-2494, ADR-2495) |
-| [Signature token contract](SDLC/Signature_Token_Cryptographic_Contract.md) | Current | E-signature step-up token: claims, issuance at the gateway and verification in services (ADR-2259); used today by PI form approval |
-| [QA and validation plan](SDLC/06_QA_Validation_Plan.md) | Baseline | GAMP 5 strategy and test tiers |
-| [Implementation roadmap](SDLC/08_Implementation_Roadmap.md) | Baseline | Superseded by spec §15 |
-| [Issue structure guide](SDLC/ISSUE_STRUCTURE_GUIDE.md) | Baseline | Issue formatting and work streams; epics now organise the backlog |
-| [Knowledge hub specification](SDLC/SPEC_Knowledge_Support_Hub.md) | Baseline | Knowledge and support hub feature spec |
-| [Neo4j decommissioning specification](SDLC/SPEC_Neo4j_to_Relational_Algebraic_MDR.md) | Baseline | Decided in ADR-2245 |
+| Document                                                                                    | Status    | What it is                                                                                                                                                     |
+| ------------------------------------------------------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [SDLC documentation suite](SDLC/SDLC_Documentation_Suite.md)                                | Baseline  | Overview of the SDLC document set                                                                                                                              |
+| [Product requirements (PRD)](SDLC/01_Product_Requirements_Document_PRD.md)                  | Baseline  | `PRD-…` requirement IDs used by tests and the RTM                                                                                                              |
+| [Software requirements (SRS)](SRS.md)                                                       | Baseline  | `SRS-…` and `Trace-…` requirement IDs                                                                                                                          |
+| [Requirements traceability matrix](SDLC/Requirements_Traceability_Matrix.md)                | Generated | Requirement ↔ test mapping (snapshot from `pnpm cadence gxp snapshot`)                                                                                         |
+| [IQ/OQ/PQ execution report](SDLC/IQ_OQ_PQ_Execution_Report.md)                              | Generated | Qualification evidence from the last snapshot                                                                                                                  |
+| [Technical design (TDD)](SDLC/02_Technical_Design_Document_TDD.md)                          | Baseline  | Superseded by the kernel spec and ARCHITECTURE.md                                                                                                              |
+| [API and integration specification](SDLC/03_API_Integration_Specification.md)               | Baseline  | Planned integration contracts                                                                                                                                  |
+| [Data standards and interoperability](SDLC/04_Data_Standards_Interoperability_Blueprint.md) | Baseline  | CDISC, FHIR and coding dictionaries                                                                                                                            |
+| [Security, compliance and audit](SDLC/05_Security_Compliance_Audit_Spec.md)                 | Baseline  | Part 11 controls; current controls are in [ARCHITECTURE §4](../ARCHITECTURE.md#4-request-path-and-security) (ADR-2256, ADR-2259, ADR-2493, ADR-2494, ADR-2495) |
+| [Signature token contract](SDLC/Signature_Token_Cryptographic_Contract.md)                  | Current   | E-signature step-up token: claims, issuance at the gateway and verification in services (ADR-2259); used today by PI form approval                             |
+| [QA and validation plan](SDLC/06_QA_Validation_Plan.md)                                     | Baseline  | GAMP 5 strategy and test tiers                                                                                                                                 |
+| [Implementation roadmap](SDLC/08_Implementation_Roadmap.md)                                 | Baseline  | Superseded by spec §15                                                                                                                                         |
+| [Issue structure guide](SDLC/ISSUE_STRUCTURE_GUIDE.md)                                      | Baseline  | Issue formatting and work streams; epics now organise the backlog                                                                                              |
+| [Knowledge hub specification](SDLC/SPEC_Knowledge_Support_Hub.md)                           | Baseline  | Knowledge and support hub feature spec                                                                                                                         |
+| [Neo4j decommissioning specification](SDLC/SPEC_Neo4j_to_Relational_Algebraic_MDR.md)       | Baseline  | Decided in ADR-2245                                                                                                                                            |
 
 ## Product
 
-| Document | Status | What it is |
-| --- | --- | --- |
-| [Functional product specification](FUNCTIONAL_PRODUCT_SPECIFICATION.md) | Baseline | Capabilities reverse-engineered from the Python implementation |
-| [Feature matrix](FEATURE_MATRIX.md) | Baseline | Features by service in the per-service design |
-| [Competitive analysis](COMPETITIVE_ANALYSIS_AND_MARKET_SUPERIORITY.md) | Baseline | Product vision and market positioning |
-| [Cadence market hypotheses and evidence plan](strategy/MARKET_HYPOTHESES.md) | Current | Status: hypotheses, not customer-validated market conclusions. Competitors are active in EDC, eTMF, CDISC, study buil... |
-| [Cadence: proposed product packaging and licensing](strategy/PRODUCT_CATALOG.md) | Current | Status: commercial design proposal; not products available for purchase. Marketing names, suite name and trademarks a... |
+| Document                                                                         | Status   | What it is                                                                                                               |
+| -------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------ |
+| [Functional product specification](FUNCTIONAL_PRODUCT_SPECIFICATION.md)          | Baseline | Capabilities reverse-engineered from the Python implementation                                                           |
+| [Feature matrix](FEATURE_MATRIX.md)                                              | Baseline | Features by service in the per-service design                                                                            |
+| [Competitive analysis](COMPETITIVE_ANALYSIS_AND_MARKET_SUPERIORITY.md)           | Baseline | Product vision and market positioning                                                                                    |
+| [Cadence market hypotheses and evidence plan](strategy/MARKET_HYPOTHESES.md)     | Current  | Status: hypotheses, not customer-validated market conclusions. Competitors are active in EDC, eTMF, CDISC, study buil... |
+| [Cadence: proposed product packaging and licensing](strategy/PRODUCT_CATALOG.md) | Current  | Status: commercial design proposal; not products available for purchase. Marketing names, suite name and trademarks a... |
 
 ## Design proposals
 
-| Document | Status | What it is |
-| --- | --- | --- |
-| [GxP lifecycle hooks](specs/01-antigravity-gxp-lifecycle-hooks.md) | Baseline | Agent guardrail hooks |
-| [Domain MCP tools and agent sidecars](specs/02-antigravity-domain-mcp-tools-and-agent-sidecars.md) | Baseline | MCP tooling proposal |
-| [Developer tooling and MCP guardrails](specs/developer-tooling-mcp-guardrails.md) | Baseline | CLI, MCP server and staged guardrails |
-| [eCRF designer IDE](specs/ecrf_designer_ide_spec.md) | Baseline | Visual metadata IDE proposal |
+| Document                                                                                           | Status   | What it is                            |
+| -------------------------------------------------------------------------------------------------- | -------- | ------------------------------------- |
+| [GxP lifecycle hooks](specs/01-antigravity-gxp-lifecycle-hooks.md)                                 | Baseline | Agent guardrail hooks                 |
+| [Domain MCP tools and agent sidecars](specs/02-antigravity-domain-mcp-tools-and-agent-sidecars.md) | Baseline | MCP tooling proposal                  |
+| [Developer tooling and MCP guardrails](specs/developer-tooling-mcp-guardrails.md)                  | Baseline | CLI, MCP server and staged guardrails |
+| [eCRF designer IDE](specs/ecrf_designer_ide_spec.md)                                               | Baseline | Visual metadata IDE proposal          |
 
 ## Python-to-.NET port (completed)
 
-| Document | Status | What it is |
-| --- | --- | --- |
-| [Modernization hub](migration/index.md) | Historical | Phase 0 baseline and links to the port documents |
-| [System topology audit](migration/SYSTEM_TOPOLOGY_AUDIT.md) | Historical | Entry points and persistence of the Python system |
-| [Dependency and parity catalog](migration/DEPENDENCY_AND_PARITY_CATALOG.md) | Historical | Python-to-.NET library crosswalk |
-| [Bounded context migration matrix](migration/BOUNDED_CONTEXT_MIGRATION_MATRIX.md) | Historical | Port sequencing |
-| [Phase 0 decomposition and scaffold](migration/PHASE0_DOMAIN_DECOMPOSITION_AND_SCAFFOLD.md) | Historical | Solution scaffold decisions |
-| [Solution scaffold guide](migration/SCAFFOLD_GUIDE.md) | Historical | How the solution was scaffolded |
-| [Phase 0 readiness audit](migration/Migration_Phase0_Readiness_Audit.md) | Historical | Gap analysis before the port |
-| [Phase 0 working papers](migration/phase0/) | Historical | Validation gate, topology, contexts, plan |
+| Document                                                                                    | Status     | What it is                                        |
+| ------------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------- |
+| [Modernization hub](migration/index.md)                                                     | Historical | Phase 0 baseline and links to the port documents  |
+| [System topology audit](migration/SYSTEM_TOPOLOGY_AUDIT.md)                                 | Historical | Entry points and persistence of the Python system |
+| [Dependency and parity catalog](migration/DEPENDENCY_AND_PARITY_CATALOG.md)                 | Historical | Python-to-.NET library crosswalk                  |
+| [Bounded context migration matrix](migration/BOUNDED_CONTEXT_MIGRATION_MATRIX.md)           | Historical | Port sequencing                                   |
+| [Phase 0 decomposition and scaffold](migration/PHASE0_DOMAIN_DECOMPOSITION_AND_SCAFFOLD.md) | Historical | Solution scaffold decisions                       |
+| [Solution scaffold guide](migration/SCAFFOLD_GUIDE.md)                                      | Historical | How the solution was scaffolded                   |
+| [Phase 0 readiness audit](migration/Migration_Phase0_Readiness_Audit.md)                    | Historical | Gap analysis before the port                      |
+| [Phase 0 working papers](migration/phase0/)                                                 | Historical | Validation gate, topology, contexts, plan         |
 
 | [00a. Gate 5 Remediation — Clean dotnet build Cadence.sln Restored](migration/phase0/00a_build_remediation.md) | Historical | Document ID: PHASE0-NET10-00A-BUILD-REMEDIATION |
 | [00. Phase 0 Validation Gate — Audit Report](migration/phase0/00_validation_gate_report.md) | Historical | Document ID: PHASE0-NET10-00-VALIDATION |
@@ -687,41 +701,46 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [05. Orphan Audit Gate — Zero-Orphan Verification](migration/phase0/05_orphan_audit_gate.md) | Historical | Document ID: PHASE0-NET10-05 |
 | [Behavioral & Invariant Specification: Clinical Observations, Form Submissions & Dynamic Projections](migration/slices/execution-observations/01_spec.md) | Historical | Slice: `execution-observations` |
 | [Technical Design: EXECUTION-OBSERVATIONS (.NET 10 / C# 14)](migration/slices/execution-observations/02_technical_design.md) | Historical | Slice: `execution-observations` · Bounded Context: `Cadence.Apps.Execution` · Target Assembly: `apps/execution/src/Ca... |
-| [Tracer-Bullet Development Tickets: EXECUTION-OBSERVATIONS](migration/slices/execution-observations/03_tickets.md) | Historical | Slice: `execution-observations` · Bounded Context: `Cadence.Apps.Execution` · Standard: 6-Step Service Transcription ... |
-| [Implementation Sign-Off: execution-observations](migration/slices/execution-observations/04_implementation_signoff.md) | Historical | Slice: `execution-observations` · Bounded Context: `Cadence.Apps.Execution` · Standard: 6-Step Service Transcription ... |
+| [Tracer-Bullet Development Tickets: EXECUTION-OBSERVATIONS](migration/slices/execution-observations/03_tickets.md) | Historical | Slice: `execution-observations`· Bounded Context:`Cadence.Apps.Execution`· Standard: 6-Step Service Transcription ... |
+| [Implementation Sign-Off: execution-observations](migration/slices/execution-observations/04_implementation_signoff.md) | Historical | Slice:`execution-observations`· Bounded Context:`Cadence.Apps.Execution`· Standard: 6-Step Service Transcription ... |
 | [Phase 1 Validation Gate Report: execution-subjects](migration/slices/execution-subjects/00_phase1_validation_report.md) | Historical | Remediation Addendum (2026-09-04, same-day follow-up): The five FAIL verdicts recorded below were addressed in a reme... |
-| [Phase 2 Validation Gate Report: EXECUTION-SUBJECTS](migration/slices/execution-subjects/00_phase2_validation_report.md) | Historical | Scope note on file naming. The validation prompt names `01_functional_spec.md` as the reference spec; this slice's ac... |
-| [Phase 3 Validation Gate Report: EXECUTION-SUBJECTS](migration/slices/execution-subjects/00_phase3_validation_report.md) | Historical | Superseded Notice (2026-09-05): The verdict below (§5, "PHASE 4 BLOCKED") audited the pre-remediation 8-ticket `03_ti... |
+| [Phase 2 Validation Gate Report: EXECUTION-SUBJECTS](migration/slices/execution-subjects/00_phase2_validation_report.md) | Historical | Scope note on file naming. The validation prompt names`01_functional_spec.md`as the reference spec; this slice's ac... |
+| [Phase 3 Validation Gate Report: EXECUTION-SUBJECTS](migration/slices/execution-subjects/00_phase3_validation_report.md) | Historical | Superseded Notice (2026-09-05): The verdict below (§5, "PHASE 4 BLOCKED") audited the pre-remediation 8-ticket`03_ti... |
 | [Behavioral & Invariant Specification: Subject Lifecycle & Enrollment](migration/slices/execution-subjects/01_spec.md) | Historical | Slice: `execution-subjects` |
 | [Target .NET 10 Architecture: Subject Lifecycle & Enrollment](migration/slices/execution-subjects/02_architecture.md) | Historical | Slice: `execution-subjects` |
 | [Technical Design: EXECUTION-SUBJECTS (.NET 10 / C# 14)](migration/slices/execution-subjects/02_technical_design.md) | Historical | Supersedes the pre-remediation draft at `02_architecture.md` (and the backlog in `03_tickets.md`), both of which were... |
 | [Migration Backlog: EXECUTION-SUBJECTS](migration/slices/execution-subjects/03_tickets.md) | Historical | Slice Code: `SUBJ` · Bounded Context: `Cadence.Apps.Execution` · Target Project: `apps/execution/src/Cadence.Apps.Exe... |
 | [Implementation Sign-Off: execution-subjects](migration/slices/execution-subjects/04_implementation_signoff.md) | Historical | - Status: VERIFIED & COMPLETED |
 | [Functional Specification: Participant Compensation](migration/slices/participant-compensation/Participant_Compensation_Functional_Spec.md) | Historical | Slice: `participant-compensation` |
+
 ## Standards reference material
 
-| Location | What it is |
-| --- | --- |
-| [docs/CDISC](CDISC/README.md) | CDISC Library API description and USDM compliance data |
-| [docs/NCI](NCI/) | NCI EVS REST API description |
+| Location                        | What it is                                                                                              |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| [docs/CDISC](CDISC/README.md)   | CDISC Library API description and USDM compliance data                                                  |
+| [docs/NCI](NCI/)                | NCI EVS REST API description                                                                            |
 | [docs/schema](schema/README.md) | Generated database schema of every module, from the EF Core models (`pnpm cadence generate-schema-doc`) |
 
 ## Repository policies
 
-| Document | What it is |
-| --- | --- |
-| [SECURITY.md](../SECURITY.md) | How to report a vulnerability |
-| [SUPPORT.md](../SUPPORT.md) | Where to get help |
-| [LICENSE](../LICENSE) | Proprietary licence, all rights reserved |
+| Document                                | What it is                                                                                                            |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| [SECURITY.md](../SECURITY.md)           | How to report a vulnerability                                                                                         |
+| [SUPPORT.md](../SUPPORT.md)             | Where to get help                                                                                                     |
+| [LICENSE](../LICENSE)                   | Proprietary licence, all rights reserved                                                                              |
 | [Agent working notes](agents/domain.md) | How agents use domain docs, the [issue tracker](agents/issue-tracker.md) and [triage labels](agents/triage-labels.md) |
 
 ## Documentation site
 
-`pnpm docs:dev` serves this folder with VitePress; `pnpm docs:build` builds the static site (it also
-runs the quality gates and regenerates the API, schema and RTM documents). The site's home page is
-generated from the root README.
+`pnpm docs:dev` serves this folder with VitePress; `pnpm docs:build` builds the static site (validating
+`rtm` on every run, plus `openapi`, `schema-doc` and `markdown` when `CADENCE_DOCS_SKIP_CHECKS` is unset), and
+`pnpm docs:stage-demos` stages the interactive staff (`/demo/`) and participant (`/subject-portal/`) demos into
+`docs/.vitepress/dist`. `docs/index.md` serves as the site's home page, sidebar navigation is synthesized from
+this index (`docs/.vitepress/sidebar.mjs`), and the root guides (`README.md`, `ARCHITECTURE.md`, `AGENTS.md`,
+`CONTEXT.md`, `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md` and `LICENSE`) are staged into `docs/` (with
+`README.md` at `docs/README.md`) so local search indexes them and links to them stay inside the portal.
 
-Write relative links as you would for GitHub. On the site, a link to a file outside `docs/`, to a
-non-Markdown file or to a folder without an `index.md` opens that file on GitHub
-(`docs/.vitepress/repoLinks.mjs`). Any other link to a missing page, including in the nav and sidebar,
-fails the build.
+Write relative links and heading anchors as you would for GitHub. On the site, links to unindexed files
+outside `docs/`, to non-Markdown files or to folders without an `index.md` open on GitHub
+(`docs/.vitepress/repoLinks.mjs`), while headings emit both VitePress and GitHub slugs. Any link to a
+missing page or missing `#anchor` fragment, including in the nav and sidebar, fails the build.

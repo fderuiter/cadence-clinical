@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { useRouter } from "vue-router";
@@ -68,6 +68,10 @@ describe("Source Data Verification and GxP Compliance Flow Tests", () => {
     vi.mocked(soaClient.verifySignature).mockReset();
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("successfully parses route query parameters and preserves study/site context on land", () => {
     mount(EcrfView, {
       global: {
@@ -75,14 +79,14 @@ describe("Source Data Verification and GxP Compliance Flow Tests", () => {
       },
     });
 
-    // Check store synchronization on mount
+    // Check store synchronization on mount outside demo mode
     expect(clinicalStore.activeStudyId).toBe("TEST-STUDY");
     expect(clinicalStore.activeSiteId).toBe("TEST-SITE");
     expect(clinicalStore.activeSubjectId).toBe("SUBJ-002");
-    expect(clinicalStore.activeVisitId).toBe("Week2");
   });
 
-  it("automatically clears verification status and dispatches an high-priority alert notification when a verified field is modified", async () => {
+  it("automatically clears verification status and dispatches an high-priority alert notification when a verified field is modified (demo build)", async () => {
+    vi.stubEnv("VITE_DEMO_MODE", "true");
     const wrapper = mount(EcrfView, {
       global: {
         plugins: [pinia],

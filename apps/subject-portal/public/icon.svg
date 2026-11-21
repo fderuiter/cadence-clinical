@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-label="Cadence MyPortal">
+  <rect width="192" height="192" rx="36" fill="#0f172a" />
+  <path
+    d="M42 100h28l16-38 22 68 18-44 12 14h12"
+    fill="none"
+    stroke="#3b82f6"
+    stroke-width="14"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

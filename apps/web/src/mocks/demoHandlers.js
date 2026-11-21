@@ -24,6 +24,35 @@ async function readJsonBody(request) {
 }
 
 export function createWebDemoHandlers(store = webDemoStore) {
+  const etmfDocuments = [
+    {
+      id: "doc-demo-01",
+      filename: "DEMO-01-Protocol-v2.0.pdf",
+      zone: "01. Trial Management",
+      section: "01.01 Trial Steering Committee",
+      artifact_type: "Protocol",
+      artifact_code: "01.01.02",
+      status: "APPROVED",
+      version_index: 1.0,
+      site_id: "SITE-101",
+      uploaded_at: "2026-07-01T10:00:00Z", // deid-ignore
+    },
+  ];
+  const etmfAuditLogs = [
+    {
+      id: "elog-seed-01",
+      timestamp: "2026-07-01T10:00:00Z", // deid-ignore
+      user_id: "qa_director",
+      user_role: "Sponsor Admin",
+      action: "INGEST",
+      document_id: "doc-demo-01",
+      entity_type: "Document",
+      details:
+        "Ingested document: DEMO-01-Protocol-v2.0.pdf under Zone: 01. Trial Management",
+      reason_for_change: "Initial protocol eTMF baseline registration",
+    },
+  ];
+
   return [
     // Health & identity
     http.get("*/health", () =>
@@ -49,6 +78,29 @@ export function createWebDemoHandlers(store = webDemoStore) {
     }),
 
     // Kernel Search, Nodes, Zoom Path, Children, Commands, Authorization
+    http.get("*/api/v1/kernel/entitlements", () =>
+      HttpResponse.json(store.getEntitlements())
+    ),
+    http.post("*/api/v1/kernel/entitlements/tier", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const updated = store.upgradeSubscriptionTier(body?.tier);
+      if (!updated) {
+        return HttpResponse.json(
+          {
+            type: "https://cadence.clinical/errors/K.Commercial.TierInvalid",
+            title: "Invalid commercial tier",
+            status: 400,
+            code: "K.Commercial.TierInvalid",
+          },
+          { status: 400 }
+        );
+      }
+      return HttpResponse.json(updated);
+    }),
+    http.post("*/api/v1/kernel/onboarding/trial", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return HttpResponse.json(store.bootstrapTrial(body));
+    }),
     http.get("*/api/v1/kernel/search", ({ request }) => {
       const url = new URL(request.url);
       const q = url.searchParams.get("q") || "";
@@ -899,17 +951,101 @@ export function createWebDemoHandlers(store = webDemoStore) {
         ],
       })
     ),
-    http.get("*/api/v1/etmf/documents", () =>
-      HttpResponse.json([
-        {
-          id: "doc-demo-01",
-          filename: "DEMO-01-Protocol-v2.0.pdf",
-          artifact_code: "01.01.02",
-          status: "APPROVED",
-          site_id: "SITE-101",
-          uploaded_at: "2026-07-01T10:00:00Z",
-        },
-      ])
+    http.get("*/api/v1/etmf/documents", () => HttpResponse.json(etmfDocuments)),
+    http.get(
+      "*/api/v1/etmf/documents/:documentId/watermark",
+      ({ params }) =>
+        new HttpResponse(
+          `CONFIDENTIAL AUDITOR WATERMARKED COPY — Document ${decodeURIComponent(String(params.documentId))}`,
+          {
+            status: 200,
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+          }
+        )
+    ),
+    http.post(
+      "*/api/v1/etmf/documents/:documentId/sign-off",
+      async ({ params, request }) => {
+        const docId = decodeURIComponent(String(params.documentId));
+        const body = await readJsonBody(request);
+        const now = new Date().toISOString();
+        const existing = etmfDocuments.find((d) => d.id === docId);
+        const signed = {
+          id: docId,
+          filename:
+            existing?.filename || body?.filename || "sample_protocol.pdf",
+          zone: existing?.zone || "01. Trial Management",
+          section: existing?.section || "01.01 Trial Steering Committee",
+          artifact_type: existing?.artifact_type || "Protocol",
+          artifact_code: existing?.artifact_code || "01.01.02",
+          site_id: existing?.site_id || "SITE-101",
+          status: "SIGNED",
+          version_index: 1.1,
+          uploaded_at: existing?.uploaded_at || now,
+          signature_manifestation: {
+            signer_id: body?.username || body?.signer_id || "auditor_demo",
+            timestamp: now,
+            signing_reason: body?.signing_reason || body?.reason || "APPROVAL",
+            sha256_hash: "sha256-demo-etmf-signed-789",
+            signature: "demo-part11-manifestation-seal",
+          },
+        };
+        if (existing) {
+          Object.assign(existing, signed);
+        } else {
+          etmfDocuments.unshift(signed);
+        }
+        etmfAuditLogs.unshift({
+          id: `elog-${Date.now()}`,
+          timestamp: now,
+          user_id: signed.signature_manifestation.signer_id,
+          user_role: "Sponsor Admin",
+          action: "SIGN",
+          document_id: docId,
+          entity_type: "Document",
+          details: `Digitally signed document ${signed.filename} (v1.1)`,
+          reason_for_change: signed.signature_manifestation.signing_reason,
+        });
+        return HttpResponse.json(signed);
+      }
+    ),
+    http.get("*/api/v1/etmf/audit-logs", () =>
+      HttpResponse.json({
+        items: etmfAuditLogs,
+        total_count: etmfAuditLogs.length,
+      })
+    ),
+    http.get("*/api/v1/etmf/completeness", ({ request }) => {
+      const url = new URL(request.url);
+      return HttpResponse.json({
+        study_id: url.searchParams.get("study_id") || "DEMO-01",
+        milestone: url.searchParams.get("milestone") || "INITIATION",
+        site_id: url.searchParams.get("site_id") || null,
+        is_complete: true,
+        present_count: 1,
+        expected_count: 1,
+        present_artifacts: ["Protocol"],
+        per_artifact_detail: [
+          {
+            artifact_type: "Protocol",
+            scope: "study",
+            status: "PRESENT",
+            document_id: etmfDocuments[0]?.id || "doc-demo-01",
+            version_index: etmfDocuments[0]?.version_index ?? 1.0,
+          },
+        ],
+      });
+    }),
+    http.get("*/api/v1/etmf/intelligence/qc-queue", () =>
+      HttpResponse.json([])
+    ),
+    http.get("*/api/v1/etmf/export-jobs", () => HttpResponse.json([])),
+    http.get("*/api/v1/execution/audit/integrity", () =>
+      HttpResponse.json({
+        verified: true,
+        message:
+          "All sequential block hashes, Merkle roots, and historical data logs are intact and structurally unbroken.",
+      })
     ),
     http.get("*/api/v1/notifications", () =>
       HttpResponse.json([
@@ -1150,6 +1286,10 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.get("*/api/v1/execution/coding/assignments", () =>
       HttpResponse.json([])
     ),
+    http.get("*/api/v1/execution/coding/synonyms/jobs", () =>
+      HttpResponse.json([])
+    ),
+    http.get("*/api/v1/execution/coding/synonyms", () => HttpResponse.json([])),
     http.get(
       "*/api/v1/execution/amendments/:studyId/subject-impact",
       ({ params }) =>
@@ -1159,6 +1299,581 @@ export function createWebDemoHandlers(store = webDemoStore) {
           impacted_subjects: [],
           total_impacted: 0,
         })
+    ),
+    http.post("*/api/v1/designer/amendments/diff", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return HttpResponse.json({
+        study_id: body?.study_id || "DEMO-01",
+        base_version_tag: body?.base_version_tag || "1.0.0",
+        amended_version_tag: body?.amended_version_tag || "2.0.0",
+        impact_summary: {
+          impacted_sites: 2,
+          subjects_requiring_reconsent: 2,
+          added_procedures: 1,
+          modified_visits: 1,
+        },
+        soa_matrix_diffs: [],
+      });
+    }),
+    http.post("*/api/v1/designer/amendments/branch", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return HttpResponse.json({
+        status: "BRANCHED",
+        study_id: body?.study_id || "DEMO-01",
+        version_tag: body?.target_version_tag || "2.0.0",
+      });
+    }),
+    http.post("*/api/v1/execution/amendments/publish", () =>
+      HttpResponse.json({ status: "PUBLISHED" })
+    ),
+    http.post("*/api/v1/execution/amendments/reconsent", () =>
+      HttpResponse.json({ status: "COMPLETED" })
+    ),
+    http.post("*/api/v1/execution/amendments/bulk-reconsent", () =>
+      HttpResponse.json({ status: "COMPLETED", updated_count: 1 })
+    ),
+
+    // USDM Interactive SoA Builder Mutations (stateful in-memory demo projection)
+    ...(() => {
+      const soaState = {
+        arms: [
+          { arm_id: "ARM-A", arm_name: "Arm A: Active 10mg daily" },
+          { arm_id: "ARM-B", arm_name: "Arm B: Placebo Control" },
+        ],
+        epochs: [
+          { epoch_id: "EP-SCR", epoch_name: "Screening", sequence: 1 },
+          {
+            epoch_id: "EP-TRT-A",
+            epoch_name: "Treatment Phase",
+            sequence: 2,
+            arm_id: "ARM-A",
+          },
+          {
+            epoch_id: "EP-TRT-B",
+            epoch_name: "Treatment Phase",
+            sequence: 2,
+            arm_id: "ARM-B",
+          },
+        ],
+        encounters: [
+          {
+            encounter_id: "V-SCR",
+            encounter_name: "Day -7 to -1",
+            epoch_id: "EP-SCR",
+            sequence: 1,
+          },
+          {
+            encounter_id: "V-TRT-A1",
+            encounter_name: "Week 2",
+            epoch_id: "EP-TRT-A",
+            sequence: 2,
+          },
+          {
+            encounter_id: "V-TRT-A2",
+            encounter_name: "Week 4",
+            epoch_id: "EP-TRT-A",
+            sequence: 3,
+          },
+          {
+            encounter_id: "V-TRT-B1",
+            encounter_name: "Week 2",
+            epoch_id: "EP-TRT-B",
+            sequence: 4,
+          },
+        ],
+        rows: [
+          {
+            activity_id: "ACT-DEM",
+            activity_name: "Informed Consent & Demographics",
+            cells: [
+              {
+                encounter_id: "V-SCR",
+                is_applicable: true,
+                details: "Mandatory",
+              },
+              { encounter_id: "V-TRT-A1", is_applicable: false },
+              { encounter_id: "V-TRT-A2", is_applicable: false },
+              { encounter_id: "V-TRT-B1", is_applicable: false },
+            ],
+          },
+          {
+            activity_id: "ACT-VS",
+            activity_name: "Vital Signs (BP & Pulse)",
+            cells: [
+              { encounter_id: "V-SCR", is_applicable: true, details: "Day -7" },
+              {
+                encounter_id: "V-TRT-A1",
+                is_applicable: true,
+                details: "Within 10 mins",
+              },
+              {
+                encounter_id: "V-TRT-A2",
+                is_applicable: true,
+                details: "Conditional",
+              },
+              {
+                encounter_id: "V-TRT-B1",
+                is_applicable: true,
+                details: "Within 10 mins",
+              },
+            ],
+          },
+        ],
+      };
+
+      const upsertArm = (armId, props) => {
+        const idx = soaState.arms.findIndex((a) => a.arm_id === armId);
+        const entry = { arm_id: armId, arm_name: props?.name || armId };
+        if (idx >= 0) soaState.arms[idx] = entry;
+        else soaState.arms.push(entry);
+        return entry;
+      };
+
+      const upsertEpoch = (epochId, props) => {
+        const idx = soaState.epochs.findIndex((e) => e.epoch_id === epochId);
+        const entry = {
+          epoch_id: epochId,
+          epoch_name: props?.name || epochId,
+          sequence: Number(props?.sequence ?? soaState.epochs.length + 1),
+          ...(props?.arm_id ? { arm_id: props.arm_id } : {}),
+        };
+        if (idx >= 0) soaState.epochs[idx] = entry;
+        else soaState.epochs.push(entry);
+        return entry;
+      };
+
+      const upsertVisit = (visitId, props) => {
+        const idx = soaState.encounters.findIndex(
+          (v) => v.encounter_id === visitId
+        );
+        const entry = {
+          encounter_id: visitId,
+          encounter_name: props?.name || visitId,
+          epoch_id: props?.epoch_id || soaState.epochs[0]?.epoch_id || "EP-SCR",
+          sequence: Number(props?.sequence ?? soaState.encounters.length + 1),
+        };
+        if (idx >= 0) soaState.encounters[idx] = entry;
+        else soaState.encounters.push(entry);
+        for (const row of soaState.rows) {
+          if (!row.cells.some((c) => c.encounter_id === visitId)) {
+            row.cells.push({ encounter_id: visitId, is_applicable: false });
+          }
+        }
+        return entry;
+      };
+
+      const upsertProcedure = (procId, props) => {
+        const idx = soaState.rows.findIndex((r) => r.activity_id === procId);
+        if (idx >= 0) {
+          soaState.rows[idx].activity_name =
+            props?.name || soaState.rows[idx].activity_name;
+          return soaState.rows[idx];
+        }
+        const entry = {
+          activity_id: procId,
+          activity_name: props?.name || procId,
+          cells: soaState.encounters.map((enc) => ({
+            encounter_id: enc.encounter_id,
+            is_applicable: false,
+          })),
+        };
+        soaState.rows.push(entry);
+        return entry;
+      };
+
+      return [
+        http.get(
+          "*/api/v1/studies/:studyId/versions/:versionId/soa-projection",
+          ({ params }) =>
+            HttpResponse.json({
+              study_id: params.studyId,
+              version_id: params.versionId,
+              arms: soaState.arms,
+              epochs: soaState.epochs,
+              encounters: soaState.encounters,
+              rows: soaState.rows,
+            })
+        ),
+        http.post(
+          "*/api/v1/studies/:studyId/versions/:versionId/arms",
+          async ({ request }) => {
+            const body = await readJsonBody(request);
+            const armId = body?.id || "ARM-DEMO";
+            upsertArm(armId, body?.properties || body);
+            return HttpResponse.json(
+              { id: armId, properties: body?.properties || {} },
+              { status: 201 }
+            );
+          }
+        ),
+        http.put(
+          "*/api/v1/studies/:studyId/versions/:versionId/arms/:armId",
+          async ({ params, request }) => {
+            const body = await readJsonBody(request);
+            upsertArm(String(params.armId), body?.properties || body);
+            return HttpResponse.json({
+              id: params.armId,
+              properties: body?.properties || {},
+            });
+          }
+        ),
+        http.post(
+          "*/api/v1/studies/:studyId/versions/:versionId/epochs",
+          async ({ request }) => {
+            const body = await readJsonBody(request);
+            const epochId = body?.id || "EP-DEMO";
+            upsertEpoch(epochId, body?.properties || body);
+            return HttpResponse.json(
+              { id: epochId, properties: body?.properties || {} },
+              { status: 201 }
+            );
+          }
+        ),
+        http.put(
+          "*/api/v1/studies/:studyId/versions/:versionId/epochs/:epochId",
+          async ({ params, request }) => {
+            const body = await readJsonBody(request);
+            upsertEpoch(String(params.epochId), body?.properties || body);
+            return HttpResponse.json({
+              id: params.epochId,
+              properties: body?.properties || {},
+            });
+          }
+        ),
+        http.post(
+          "*/api/v1/studies/:studyId/versions/:versionId/visits",
+          async ({ request }) => {
+            const body = await readJsonBody(request);
+            const visitId = body?.id || "V-DEMO";
+            upsertVisit(visitId, body?.properties || body);
+            return HttpResponse.json(
+              { id: visitId, properties: body?.properties || {} },
+              { status: 201 }
+            );
+          }
+        ),
+        http.put(
+          "*/api/v1/studies/:studyId/versions/:versionId/visits/:visitId",
+          async ({ params, request }) => {
+            const body = await readJsonBody(request);
+            upsertVisit(String(params.visitId), body?.properties || body);
+            return HttpResponse.json({
+              id: params.visitId,
+              properties: body?.properties || {},
+            });
+          }
+        ),
+        http.post(
+          "*/api/v1/studies/:studyId/versions/:versionId/procedures",
+          async ({ request }) => {
+            const body = await readJsonBody(request);
+            const procId = body?.id || "ACT-DEMO";
+            upsertProcedure(procId, body?.properties || body);
+            return HttpResponse.json(
+              { id: procId, properties: body?.properties || {} },
+              { status: 201 }
+            );
+          }
+        ),
+        http.put(
+          "*/api/v1/studies/:studyId/versions/:versionId/procedures/:procedureId",
+          async ({ params, request }) => {
+            const body = await readJsonBody(request);
+            upsertProcedure(
+              String(params.procedureId),
+              body?.properties || body
+            );
+            return HttpResponse.json({
+              id: params.procedureId,
+              properties: body?.properties || {},
+            });
+          }
+        ),
+        http.post(
+          "*/api/v1/studies/:studyId/versions/:versionId/links/:linkType",
+          async ({ params, request }) => {
+            const body = await readJsonBody(request);
+            const payload = body?.properties || body;
+            const procId = payload?.procedure_id;
+            const visitId = payload?.visit_id;
+            if (procId && visitId) {
+              const row = soaState.rows.find((r) => r.activity_id === procId);
+              if (row) {
+                let cell = row.cells.find((c) => c.encounter_id === visitId);
+                if (!cell) {
+                  cell = { encounter_id: visitId, is_applicable: false };
+                  row.cells.push(cell);
+                }
+                cell.is_applicable = Boolean(payload?.is_applicable ?? true);
+                cell.details = cell.is_applicable
+                  ? payload?.timing || undefined
+                  : undefined;
+              }
+            }
+            return HttpResponse.json({
+              status: "LINKED",
+              link_type: params.linkType,
+              ...body,
+            });
+          }
+        ),
+      ];
+    })(),
+
+    // eConsent Authoring & Controlled Fileshare
+    http.get("*/api/v1/econsent/templates", () =>
+      HttpResponse.json([
+        {
+          template_id: "tmpl-demo-01",
+          study_id: "DEMO-01",
+          template_name: "DEMO-01 Master Informed Consent",
+          protocol_version: "2.0",
+          status: "PUBLISHED",
+          version_index: 1,
+          requires_reconsent: false,
+          notification_channels: ["Email"],
+          clauses: ["Voluntary Participation & Clinical Study Overview"],
+          workflow_steps: [],
+        },
+      ])
+    ),
+    http.get("*/api/v1/econsent/clauses", () => HttpResponse.json([])),
+    http.get("*/api/v1/econsent/translations", () => HttpResponse.json([])),
+    http.get("*/api/v1/fileshare/files", () =>
+      HttpResponse.json([
+        {
+          id: "file-demo-01",
+          filename: "DEMO-01-Protocol-Synopsis.pdf",
+          content_type: "application/pdf",
+          size_bytes: 245760,
+          study_id: "DEMO-01",
+          site_id: "SITE-101",
+          uploaded_by: "designer_demo",
+          created_at: "2026-07-01T10:00:00Z", // deid-ignore
+          is_on_hold: false,
+          approval_status: "APPROVED",
+          version_number: 1,
+        },
+      ])
+    ),
+
+    // Central Lab Governance & Toxicity
+    http.get("*/api/v1/execution/lab-ranges", () =>
+      HttpResponse.json([
+        {
+          id: "lr-demo-01",
+          study_id: "DEMO-01",
+          lab_source: "CENTRAL",
+          test_code: "ALT",
+          test_name: "Alanine Aminotransferase",
+          sex: "ALL",
+          age_low: 18,
+          age_high: 85,
+          ref_low: 7,
+          ref_high: 40,
+          unit: "U/L",
+          loinc_code: "1742-6",
+          is_active: true,
+        },
+      ])
+    ),
+    http.get("*/api/v1/execution/labs/toxicity/review-queue", () =>
+      HttpResponse.json([])
+    ),
+    http.get("*/api/v1/execution/labs/certifications", () =>
+      HttpResponse.json([
+        {
+          id: "cert-demo-01", // deid-ignore
+          site_id: "SITE-101",
+          lab_name: "SITE-101 Clinical Pathology Laboratory",
+          cert_type: "CLIA",
+          cert_number: "CLIA-DEMO-101",
+          effective_date: "2026-01-01", // deid-ignore
+          expiration_date: "2028-01-01", // deid-ignore
+          status: "VERIFIED",
+        },
+      ])
+    ),
+    http.get("*/api/v1/execution/labs/batch-status", () =>
+      HttpResponse.json([
+        {
+          batch_id: "BATCH-DEMO-01",
+          study_id: "DEMO-01",
+          status: "COMPLETED",
+          total_records: 24,
+          ingested_count: 24,
+          staged_aes_count: 0,
+          created_at: "2026-07-15T09:00:00Z", // deid-ignore
+        },
+      ])
+    ),
+    http.get("*/api/v1/execution/labs/loinc-catalog", () =>
+      HttpResponse.json({
+        items: [
+          {
+            loinc_code: "1742-6",
+            test_code: "ALT",
+            component: "Alanine aminotransferase",
+            standard_unit: "U/L",
+            category: "Chemistry",
+          },
+          {
+            loinc_code: "2160-0",
+            test_code: "CREAT",
+            component: "Creatinine",
+            standard_unit: "umol/L",
+            category: "Chemistry",
+          },
+        ],
+      })
+    ),
+    http.post("*/api/v1/execution/labs/convert-unit", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const val = Number(body?.value ?? 1) || 1;
+      const factor = 88.4;
+      return HttpResponse.json({
+        converted_value: Number((val * factor).toFixed(2)),
+        to_unit: body?.to_unit || "umol/L",
+        factor,
+        loinc_code: "2160-0",
+      });
+    }),
+    http.post(
+      "*/api/v1/execution/labs/toxicity/evaluate",
+      async ({ request }) => {
+        const body = await readJsonBody(request);
+        const val = Number(body?.value ?? 25);
+        const uln = Number(body?.ref_high ?? 40) || 40;
+        const grade = val > uln * 5 ? 3 : val > uln * 3 ? 2 : val > uln ? 1 : 0;
+        return HttpResponse.json({
+          ctcae_grade: grade,
+          toxicity_description:
+            grade === 0
+              ? "Within normal reference limits"
+              : `CTCAE v5.0 Grade ${grade} elevation`,
+          is_critical_ae_trigger: grade >= 3,
+          is_hys_law_warning: false,
+        });
+      }
+    ),
+
+    // Sensor Telemetry & Decentralized Clinical Trials (DCT)
+    http.get("*/api/v1/interop/sensors/devices", () =>
+      HttpResponse.json({ data: { devices: [] } })
+    ),
+    http.get("*/api/v1/interop/sensors/daily-summaries", () =>
+      HttpResponse.json({ data: { summaries: [] } })
+    ),
+    http.get("*/api/v1/interop/sensors/safety-alerts", () =>
+      HttpResponse.json({ data: { alerts: [] } })
+    ),
+    http.get("*/api/v1/interop/sensors/metrics/:studyId", () =>
+      HttpResponse.json({
+        data: {
+          metrics: {
+            active_devices: 2,
+            daily_compliance_pct: 96.5,
+            open_safety_alerts: 0,
+            ingested_epochs_24h: 1440,
+          },
+        },
+      })
+    ),
+    http.get("*/api/v1/interop/dct/telehealth/sessions", () =>
+      HttpResponse.json({ sessions: [] })
+    ),
+    http.get("*/api/v1/interop/dct/econsent/pediatric-assent", () =>
+      HttpResponse.json({ assents: [] })
+    ),
+    http.get("*/api/v1/interop/dct/dtp/shipments", () =>
+      HttpResponse.json({ shipments: [] })
+    ),
+    http.get("*/api/v1/interop/dct/home-health/visits", () =>
+      HttpResponse.json({ visits: [] })
+    ),
+    http.get("*/api/v1/interop/dct/metrics/:studyId", () =>
+      HttpResponse.json({
+        total_telehealth_sessions: 1,
+        active_video_rooms: 0,
+        pediatric_assents_completed: 1,
+        total_dtp_shipments: 2,
+        active_cold_chain_shipments: 1,
+        temperature_excursion_alerts: 0,
+      })
+    ),
+
+    // Study Training & Qualification
+    http.get("*/api/v1/training/curricula", () =>
+      HttpResponse.json([
+        {
+          id: "curr-demo-01",
+          study_id: "DEMO-01",
+          title: "DEMO-01 Protocol v2.0 Core Qualification",
+          version: "2.0",
+          status: "ACTIVE",
+          modules: [
+            {
+              id: "mod-01",
+              title: "Protocol Synopsis & Eligibility",
+              content: "Synthetic protocol qualification module.",
+              quiz_questions: [],
+            },
+          ],
+        },
+      ])
+    ),
+    http.get("*/api/v1/training/assignments", () =>
+      HttpResponse.json([
+        {
+          id: "asn-demo-01",
+          study_id: "DEMO-01",
+          curriculum_id: "curr-demo-01",
+          status: "COMPLETED",
+          time_spent_seconds: 180,
+          quiz_score: 100,
+        },
+      ])
+    ),
+    http.get(
+      "*/api/v1/training/assignments/:assignmentId/certificate",
+      ({ params }) =>
+        HttpResponse.json({
+          certificate_id: "cert-trn-01", // deid-ignore
+          assignment_id: params.assignmentId,
+          status: "ISSUED",
+          issued_at: "2026-07-02T12:00:00Z", // deid-ignore
+          sha256_hash: "sha256-demo-trn-cert",
+        })
+    ),
+    http.post("*/api/v1/training/assignments/:assignmentId/progress", () =>
+      HttpResponse.json({ status: "OK" })
+    ),
+    http.get("*/api/v1/training/assignments/:assignmentId", ({ params }) =>
+      HttpResponse.json({
+        id: params.assignmentId,
+        study_id: "DEMO-01",
+        status: "COMPLETED",
+        time_spent_seconds: 180,
+        quiz_score: 100,
+        curriculum: {
+          id: "curr-demo-01",
+          study_id: "DEMO-01",
+          title: "DEMO-01 Protocol v2.0 Core Qualification",
+          version: "2.0",
+          modules: [
+            {
+              id: "mod-01",
+              title: "Protocol Synopsis & Eligibility",
+              content: "Synthetic protocol qualification module.",
+              quiz_questions: [],
+            },
+          ],
+        },
+      })
+    ),
+    http.get("*/api/v1/training/delegations", () => HttpResponse.json([])),
+    http.get("*/api/v1/training/gating-status", () =>
+      HttpResponse.json({ is_gated: false })
     ),
   ];
 }

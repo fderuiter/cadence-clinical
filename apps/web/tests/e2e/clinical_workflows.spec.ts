@@ -11,13 +11,16 @@ test.describe("Clinical Workflows and ePRO Portal Tests", () => {
       await page.goto("ecrf");
 
       // Verify page is loaded
-      await expect(page.locator(".card-title").first()).toContainText(
-        "Subject eCRF Data Entry Form"
-      );
+      await expect(
+        page.locator(".crc-form-renderer .card-title").first()
+      ).toContainText("Subject eCRF Data Entry Form");
 
       // Locate the query flag button next to pulse input
       const queryFlag = page.locator("#query-flag-pulse");
       await expect(queryFlag).toBeVisible();
+      await queryFlag.evaluate((el) =>
+        el.scrollIntoView({ block: "center", inline: "nearest" })
+      );
       await queryFlag.click();
 
       // Open the query panel
@@ -54,21 +57,135 @@ test.describe("Clinical Workflows and ePRO Portal Tests", () => {
       }
       await page.click("button:has-text('Close Query')");
 
-      // Handle Re-authentication step-up PIN signature modal
-      const reauthModal = page.locator("#reauth-modal");
-      await expect(reauthModal).toBeVisible();
-      await page.fill("#reauth-password", "admin_password");
-      await page.click("#btn-confirm-reauth");
-
       // Verify query flag status is updated to closed
       await expect(queryFlag).toHaveClass(/query-status-closed/);
     });
   });
 
   test.describe("ePRO Participant Companion Portal Workflow", () => {
+    test.use({ serviceWorkers: "block" });
+
     test("should complete a daily health diary questionnaire with Part 11 compliant digital signature", async ({
       page,
     }) => {
+      await page.route("**/reconsent/pending/**", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([]),
+        });
+      });
+
+      await page.route("**/assignments/subject/*", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([
+            {
+              id: "assign_01",
+              subject_id: "subject_001",
+              instrument_id: "inst_daily_diary",
+              instrument_name: "Daily Health & Vital Diary",
+              due_at: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
+              end_date: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+              status: "PENDING",
+            },
+          ]),
+        });
+      });
+
+      await page.route("**/instruments", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([
+            {
+              id: "inst_daily_diary",
+              name: "Daily Health & Vital Diary",
+              description:
+                "Please record your systolic/diastolic blood pressure, pulse, and current symptoms.",
+              items: {
+                vssbp: {
+                  label: "Systolic Blood Pressure (mmHg)",
+                  type: "numeric",
+                  required: true,
+                  min: 50,
+                  max: 250,
+                },
+                vsdpb: {
+                  label: "Diastolic Blood Pressure (mmHg)",
+                  type: "numeric",
+                  required: true,
+                  min: 30,
+                  max: 150,
+                },
+                vshr: {
+                  label: "Pulse Rate (bpm)",
+                  type: "numeric",
+                  required: true,
+                  min: 30,
+                  max: 200,
+                },
+                has_symptoms: {
+                  label:
+                    "Are you experiencing any new physical symptoms today?",
+                  type: "choice_single",
+                  options: ["Yes", "No"],
+                },
+              },
+            },
+          ]),
+        });
+      });
+
+      await page.route("**/compliance", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            subject_id: "subject_001",
+            compliance_rate: 100,
+            completed_count: 1,
+            pending_count: 0,
+            overdue_count: 0,
+            assignments: [],
+          }),
+        });
+      });
+
+      await page.route("**/notifications", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([]),
+        });
+      });
+
+      await page.route(
+        "**/api/v1/payments/participant/me/wallet",
+        async (route) => {
+          await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({
+              wallet: {
+                id: "wal_001",
+                study_id: "STUDY-101",
+                current_balance: 75.0,
+                lifetime_stipends: 75.0,
+                lifetime_reimbursements: 0.0,
+                taxable_ytd: 75.0,
+                w9_status: "NOT_REQUIRED",
+                card_status: "ACTIVE",
+                virtual_card_mask: "4111 •••• •••• 8842",
+              },
+              recent_transactions: [],
+              expense_claims: [],
+            }),
+          });
+        }
+      );
+
       // Intercept ePRO sync endpoint
       await page.route("**/epro/sync", async (route) => {
         await route.fulfill({
@@ -90,13 +207,28 @@ test.describe("Clinical Workflows and ePRO Portal Tests", () => {
         });
       });
 
-      // Inject test env mock flag before page load to bypass hanging Keycloak setup
+      // Inject mock session credentials before page load to authenticate without live Keycloak
       await page.addInitScript(() => {
-        (window as any).__MOCK_TEST_ENV__ = true;
+        sessionStorage.setItem("mock_user_id", "subject_001");
+        sessionStorage.setItem("mock_token", "mock_jwt_token_xyz_123");
       });
 
       // Navigate to ePRO portal on port 5174
       await page.goto("http://localhost:5174/subject-portal/");
+
+      // Complete initial AES-GCM PIN wrapper setup when prompted
+      const pinSetupModal = page.locator("#portal-pin-setup-modal");
+      if (
+        await pinSetupModal
+          .waitFor({ state: "visible", timeout: 4000 })
+          .then(() => true)
+          .catch(() => false)
+      ) {
+        await page.fill("#setup-pin", "246810");
+        await page.fill("#confirm-setup-pin", "246810");
+        await page.click("#btn-pin-setup-confirm");
+        await expect(pinSetupModal).toBeHidden();
+      }
 
       // Verify portal header is visible
       await expect(page.locator(".portal-header h1")).toContainText(

@@ -82,7 +82,11 @@
             <div style="display: flex; align-items: center; gap: 8px">
               <span style="font-size: 20px">🟢</span>
               <div>
-                <strong style="color: #28a745; font-size: 14px"
+                <strong
+                  style="
+                    color: var(--semantic-color-success-dark);
+                    font-size: 14px;
+                  "
                   >INTEGRITY VERIFIED</strong
                 >
                 <p
@@ -169,8 +173,8 @@
           </p>
           <div style="display: flex; flex-direction: column; gap: 12px">
             <div class="form-group" style="margin-bottom: 0">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label
+                for="binder-study-id-input"
                 style="
                   font-weight: 600;
                   font-size: 12px;
@@ -179,8 +183,8 @@
                 "
                 >Study Reference ID</label
               >
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
+                id="binder-study-id-input"
                 v-model="binderStudyId"
                 type="text"
                 placeholder="e.g. study_001"
@@ -933,7 +937,7 @@
       <!-- Logs Table with Expandable Inspection Details -->
       <div style="overflow-x: auto">
         <table
-          class="clinical-table"
+          class="clinical-table audit-ledger-table"
           style="width: 100%; border-collapse: collapse; font-size: 13px"
         >
           <thead>
@@ -1151,7 +1155,7 @@
                         <div
                           style="
                             font-weight: 600;
-                            color: #28a745;
+                            color: var(--semantic-color-success-dark);
                             margin-bottom: 6px;
                             display: flex;
                             align-items: center;
@@ -1360,8 +1364,8 @@
           class="form-group"
           style="margin-bottom: 0; flex: 1; min-width: 140px"
         >
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
           <label
+            for="completeness-site-id-input"
             style="
               font-size: 11px;
               font-weight: 600;
@@ -1370,8 +1374,8 @@
             "
             >Site ID (Optional)</label
           >
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <input
+            id="completeness-site-id-input"
             v-model="completenessParams.site_id"
             type="text"
             placeholder="e.g. site_001"
@@ -1465,8 +1469,8 @@
                 <strong
                   :style="{
                     color: completenessResult.is_complete
-                      ? '#28a745'
-                      : '#b28000',
+                      ? 'var(--semantic-color-success-dark)'
+                      : 'var(--semantic-color-text)',
                     fontSize: '15px',
                   }"
                 >

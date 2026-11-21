@@ -12,6 +12,14 @@ export default defineConfig({
   ],
   use: {
     baseURL: "http://localhost:5174/subject-portal/",
+    launchOptions: {
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+      ],
+    },
     trace: "retain-on-failure",
     video: "retain-on-failure",
     screenshot: "only-on-failure",

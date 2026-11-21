@@ -13,7 +13,7 @@ const DEV_PORT = 5174;
 const GATEWAY_URL = process.env.CADENCE_GATEWAY_URL || "http://localhost:8000";
 
 export default defineConfig({
-  base: "/subject-portal/",
+  base: process.env.VITE_BASE_PATH || "/subject-portal/",
   plugins: [
     vue(),
     {
