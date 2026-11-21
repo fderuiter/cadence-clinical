@@ -141,13 +141,18 @@
           </p>
           <p
             v-else-if="simulationError"
+            id="kernel-simulate-error"
             class="inspector-empty"
+            role="alert"
             style="color: var(--semantic-color-error)"
           >
             {{ simulationError }}
           </p>
           <div v-else-if="simulationResult" class="simulation-details">
-            <div class="seal-container reasoning-modal-s-1">
+            <div
+              id="kernel-simulate-hashes"
+              class="seal-container reasoning-modal-s-1"
+            >
               <div>
                 <strong>Input Hash Seal:</strong>
                 {{ simulationResult.input_hash }}
@@ -166,6 +171,7 @@
                 simulationResult.matrix_gaps &&
                 simulationResult.matrix_gaps.length
               "
+              id="kernel-simulate-gaps"
               class="gaps-list"
             >
               <div
@@ -346,6 +352,7 @@ import {
   type KernelCommand,
   type KernelProtocolDraftSummary,
   type KernelProtocolVersion,
+  type KernelSimulationResult,
 } from "../../api/kernelApi";
 import { parseNodeRef } from "../../canvas/nodeRef";
 import { useAiAssistance } from "../../ai/aiAssistance";
@@ -355,8 +362,9 @@ import AssistPanel from "../ai/AssistPanel.vue";
  * The Clinical Canvas inspector (docs/ux/CLINICAL_CANVAS.md §2.4, UX-3, UX-5): the selected object's kind,
  * title and node reference, its verbs and its details. Trace, Impact, Act and Explain read the kernel's lineage,
  * dependents, command catalogue and explanations for a selected participant or protocol version (ADR-2540); on an
- * amendment, Impact is the amendment's impact (K-PROT-2). Simulate is shown disabled, saying what it waits on. Nothing
- * here is computed in the browser (§6.1).
+ * amendment, Impact is the amendment's impact (K-PROT-2). Simulate runs evaluate-only simulation and matrix gap
+ * analysis on a selected protocol version, while participant simulation stays disabled naming #4888. Nothing here is
+ * computed in the browser (§6.1).
  */
 const props = defineProps<{
   studyCode: string;
@@ -430,6 +438,15 @@ const lineageMode = computed(() => {
     : "impact";
 });
 
+/** Simulate runs in-memory evaluation and schedule matrix gap checks on a stored protocol version. */
+const canSimulate = computed(() =>
+  Boolean(
+    !props.participant &&
+    props.protocolVersion?.ref &&
+    parseNodeRef(props.protocolVersion.ref)?.kind === "protocol_version"
+  )
+);
+
 interface Verb {
   id: "trace" | "impact" | "explain" | "simulate" | "act" | "assist";
   label: string;
@@ -459,8 +476,8 @@ const verbs = computed<Verb[]>(() => [
   {
     id: "simulate",
     label: "Simulate",
-    live: false,
-    note: "Simulate waits on engine simulation endpoints (#4888).",
+    live: canSimulate.value,
+    note: "Simulate evaluates protocol versions; participant simulation waits on engine simulation endpoints (#4888).",
   },
   {
     id: "act",
@@ -487,9 +504,10 @@ const currentVerb = ref<VerbId>("details");
 const explained = ref<KernelCommand | null>(null);
 const shownVerb = ref<string | null>(null);
 
-const simulationResult = ref<any>(null);
+const simulationResult = ref<KernelSimulationResult | null>(null);
 const simulationLoading = ref(false);
 const simulationError = ref("");
+let simulationRequest = 0;
 const designSummary = ref<KernelProtocolDraftSummary | null>(null);
 let designSummaryReq = 0;
 
@@ -515,27 +533,34 @@ watch(
 );
 
 async function runSimulation() {
-  if (!kernelRef.value) return;
+  if (!canSimulate.value || !kernelRef.value) return;
+  const request = ++simulationRequest;
   simulationLoading.value = true;
   simulationError.value = "";
   try {
-    simulationResult.value = await kernelApi.simulate({
+    const result = await kernelApi.simulate({
       storedVersionRef: kernelRef.value,
     });
-  } catch (e: any) {
-    simulationError.value = e.message || String(e);
+    if (request !== simulationRequest) return;
+    simulationResult.value = result;
+  } catch (e: unknown) {
+    if (request !== simulationRequest) return;
+    simulationError.value = e instanceof Error ? e.message : String(e);
   } finally {
-    simulationLoading.value = false;
+    if (request === simulationRequest) {
+      simulationLoading.value = false;
+    }
   }
 }
 
 watch(currentVerb, (verb) => {
   if (
     verb === "simulate" &&
+    canSimulate.value &&
     !simulationResult.value &&
     !simulationLoading.value
   ) {
-    runSimulation();
+    void runSimulation();
   }
 });
 const shownVerbNote = computed(
@@ -555,9 +580,13 @@ function explainCommand(command: KernelCommand) {
 watch(
   () => [props.nodeRef, props.protocolVersion?.ref],
   () => {
+    simulationRequest++;
     shownVerb.value = null;
     currentVerb.value = "details";
     explained.value = null;
+    simulationResult.value = null;
+    simulationLoading.value = false;
+    simulationError.value = "";
   }
 );
 

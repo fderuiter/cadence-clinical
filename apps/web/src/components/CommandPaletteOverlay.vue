@@ -87,6 +87,12 @@ function handleAction(action: PaletteWorkspaceAction) {
 }
 
 function handleGo(target: PaletteTarget) {
+  if (target.participant) {
+    if (target.studyCode && target.studyCode !== canvasStore.studyCode) {
+      canvasStore.openStudy(target.studyCode);
+    }
+    canvasStore.rememberParticipants([target.participant]);
+  }
   emit("close");
   executePaletteTarget(target, {
     router,
