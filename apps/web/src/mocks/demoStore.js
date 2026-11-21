@@ -295,7 +295,10 @@ function createInitialForm() {
 function buildSsuSiteEntry(country, siteId, siteName, overrides = {}) {
   const doaReady = overrides.facet_doa_log ?? true;
   const ipReady = overrides.facet_ip_release ?? true;
+  const isReady = doaReady && ipReady;
+  const unfulfilled = overrides.unfulfilled_reasons ?? [];
   return {
+    study_id: overrides.study_id || "DEMO-01",
     site_id: siteId,
     site_name: siteName,
     country_code: country,
@@ -307,12 +310,48 @@ function buildSsuSiteEntry(country, siteId, siteName, overrides = {}) {
     facet_doa_log: doaReady,
     facet_staff_training: true,
     facet_ip_release: ipReady,
-    is_compliant: doaReady && ipReady,
+    is_compliant: isReady,
+    is_ready_for_certification: isReady,
+    facets: [
+      {
+        facet_code: "REGULATORY_IRB",
+        label: "IRB / EC Favorable Opinion",
+        is_satisfied: true,
+      },
+      {
+        facet_code: "CTA_BUDGET",
+        label: "CTA & Budget Executed",
+        is_satisfied: true,
+      },
+      {
+        facet_code: "EISF_BASELINE",
+        label: "eISF Baseline Complete",
+        is_satisfied: true,
+      },
+      {
+        facet_code: "DOA_LOG",
+        label: "PI Delegation Log Signed",
+        is_satisfied: doaReady,
+      },
+      {
+        facet_code: "STAFF_TRAINING",
+        label: "GCP & Protocol Training",
+        is_satisfied: true,
+      },
+      {
+        facet_code: "IP_RELEASE",
+        label: "Investigational Supply Released",
+        is_satisfied: ipReady,
+      },
+    ],
+    blocking_reasons: unfulfilled,
+    certified_by: overrides.greenlight_certified_by ?? null,
+    certified_at: overrides.greenlight_certified_at ?? null,
     greenlight_token: overrides.greenlight_token ?? null,
     greenlight_certified_by: overrides.greenlight_certified_by ?? null,
     greenlight_certified_at: overrides.greenlight_certified_at ?? null,
     is_overridden: false,
-    unfulfilled_reasons: overrides.unfulfilled_reasons ?? [],
+    unfulfilled_reasons: unfulfilled,
   };
 }
 
@@ -636,6 +675,9 @@ export function createWebDemoStore() {
           is_complete: true,
           missing_documents: [],
           activated: true,
+          is_activated: true,
+          activated_at: "2026-07-20T14:00:00Z", // deid-ignore
+          activated_by: "usr-dm-01",
         },
       ],
       [
@@ -647,6 +689,9 @@ export function createWebDemoStore() {
           is_complete: true,
           missing_documents: [],
           activated: false,
+          is_activated: false,
+          activated_at: null,
+          activated_by: null,
         },
       ],
       [
@@ -658,6 +703,9 @@ export function createWebDemoStore() {
           is_complete: false,
           missing_documents: ["05.02.02 Principal Investigator Delegation Log"],
           activated: false,
+          is_activated: false,
+          activated_at: null,
+          activated_by: null,
         },
       ],
     ]);
@@ -733,6 +781,21 @@ export function createWebDemoStore() {
         {
           site_id: "SITE-101",
           pi_name: "Investigator Lead 01, MD",
+          active_delegations: [
+            {
+              record_id: "doa-staff-01",
+              site_id: "SITE-101",
+              staff_user_id: "usr-crc-01",
+              staff_name: "Site Coordinator 01",
+              staff_role: "CRC",
+              task_codes: ["CRF_DATA_ENTRY", "SUBJECT_SCREENING"],
+              status: "ACTIVE",
+              start_date: "2026-07-15", // deid-ignore
+              pi_signed_off_by: "usr-pi-01",
+              pi_signed_off_at: "2026-07-15T10:00:00Z", // deid-ignore
+            },
+          ],
+          revoked_delegations: [],
           delegated_staff: [
             {
               id: "doa-staff-01",
@@ -2477,12 +2540,18 @@ export function createWebDemoStore() {
     ) {
       const existing = state.siteCompliance.get(siteId);
       if (existing) {
+        const isActivated = Boolean(
+          existing.is_activated ?? existing.activated
+        );
         return {
           study_id: studyId || existing.study_id,
           site_id: siteId,
           milestone,
           is_complete: existing.is_complete,
           missing_documents: [...existing.missing_documents],
+          is_activated: isActivated,
+          activated_at: existing.activated_at ?? null,
+          activated_by: existing.activated_by ?? null,
         };
       }
       return {
@@ -2491,6 +2560,9 @@ export function createWebDemoStore() {
         milestone,
         is_complete: true,
         missing_documents: [],
+        is_activated: false,
+        activated_at: null,
+        activated_by: null,
       };
     },
 
@@ -2506,6 +2578,16 @@ export function createWebDemoStore() {
           },
         };
       }
+      const existing = state.siteCompliance.get(siteId);
+      const alreadyActivated = Boolean(
+        existing?.is_activated ?? existing?.activated
+      );
+      const activatedAt = alreadyActivated
+        ? existing.activated_at || new Date().toISOString()
+        : new Date().toISOString();
+      const activatedBy = alreadyActivated
+        ? existing.activated_by || "usr-dm-01"
+        : "usr-dm-01";
       state.siteCompliance.set(siteId, {
         study_id: studyId,
         site_id: siteId,
@@ -2513,6 +2595,9 @@ export function createWebDemoStore() {
         is_complete: true,
         missing_documents: [],
         activated: true,
+        is_activated: true,
+        activated_at: activatedAt,
+        activated_by: activatedBy,
       });
       for (const matrix of state.startupMatrices.values()) {
         const match = matrix.find((s) => s.site_id === siteId);

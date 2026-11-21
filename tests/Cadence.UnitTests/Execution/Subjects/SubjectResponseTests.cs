@@ -181,6 +181,10 @@ public class SubjectResponseTests
         root.TryGetProperty("site_id", out _).Should().BeTrue();
         root.TryGetProperty("milestone", out _).Should().BeTrue();
         root.TryGetProperty("is_complete", out _).Should().BeTrue();
+        root.TryGetProperty("is_activated", out var isActivated).Should().BeTrue();
+        isActivated.GetBoolean().Should().BeFalse();
+        root.TryGetProperty("activated_at", out _).Should().BeTrue();
+        root.TryGetProperty("activated_by", out _).Should().BeTrue();
         root.TryGetProperty("missing_documents", out var missingDocuments).Should().BeTrue();
         missingDocuments.ValueKind.Should().Be(JsonValueKind.Array);
         missingDocuments.GetArrayLength().Should().Be(2);

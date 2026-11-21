@@ -184,6 +184,29 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
       expect(authStore.isAuthenticated).toBe(false);
       expect(authStore.normalizedRoles).toEqual([]);
     });
+
+    it("populates assignedStudies, assignedSites, and hasAllStudiesScope from study_ids and site_id claims and clears them on sign-out", () => {
+      const authStore = useAuthStore();
+      const kc = keycloakWith(["Data Manager"]);
+      kc.tokenParsed.study_ids = ["CAD-101", "CAD-202"];
+      kc.tokenParsed.site_id = "SITE-01, SITE-02";
+
+      authStore.setAuth(kc);
+      expect(authStore.assignedStudies).toEqual(["CAD-101", "CAD-202"]);
+      expect(authStore.assignedSites).toEqual(["SITE-01", "SITE-02"]);
+      expect(authStore.hasAllStudiesScope).toBe(false);
+
+      const wildcardKc = keycloakWith(["Sponsor Admin"]);
+      wildcardKc.tokenParsed.study_ids = "*";
+      authStore.setAuth(wildcardKc);
+      expect(authStore.assignedStudies).toEqual([]);
+      expect(authStore.hasAllStudiesScope).toBe(true);
+
+      authStore.clearAuth();
+      expect(authStore.assignedStudies).toEqual([]);
+      expect(authStore.assignedSites).toEqual([]);
+      expect(authStore.hasAllStudiesScope).toBe(false);
+    });
   });
 
   describe("Keycloak sign-in, sign-out and token refresh", () => {

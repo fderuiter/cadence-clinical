@@ -88,10 +88,7 @@ public static class StartupGreenlightEndpoints
             : throw new InvalidOperationException("GATEWAY_SECRET is not configured; greenlight tokens cannot be sealed.");
 
     private static ProblemHttpResult OutsideStudy() =>
-        TypedResults.Problem(
-            title: "Outside your studies",
-            detail: "You are not assigned to this study.",
-            statusCode: StatusCodes.Status403Forbidden);
+        CtmsScopeGuard.Forbidden("You are not assigned to this study.", "Outside your studies");
 
     private static ProblemHttpResult StudyRequired() =>
         TypedResults.Problem(
@@ -113,9 +110,9 @@ public static class StartupGreenlightEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        if (!CallerScope.CanAccessStudy(httpContext, studyId))
+        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId) is { } scopeDenied)
         {
-            return OutsideStudy();
+            return scopeDenied;
         }
 
         // A site without a recorded gate has no readiness evidence; nothing is invented for it (#5433).
@@ -134,9 +131,9 @@ public static class StartupGreenlightEndpoints
         IConfiguration config,
         CancellationToken ct)
     {
-        if (!CallerScope.CanAccessStudy(httpContext, studyId))
+        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId) is { } scopeDenied)
         {
-            return OutsideStudy();
+            return scopeDenied;
         }
 
         var gate = await FindGateAsync(db.CtmsSiteGreenlightGates, studyId, siteId, countryCode, ct);
@@ -195,9 +192,14 @@ public static class StartupGreenlightEndpoints
         }
 
         countryCode = (countryCode ?? "US").ToUpperInvariant();
-        if (!CallerScope.CanAccessStudy(httpContext, studyId))
+        if (!CtmsScopeGuard.CanAccessStudy(httpContext, studyId))
         {
             return OutsideStudy();
+        }
+
+        if (CtmsScopeGuard.ResolveSiteFilter(httpContext, siteId: null, out var siteFilter) is { } siteDenied)
+        {
+            return siteDenied;
         }
 
         // Reads only: a study and country with no recorded gates is an empty matrix (#5433).
@@ -207,7 +209,8 @@ public static class StartupGreenlightEndpoints
             .OrderBy(g => g.SiteId)
             .ToListAsync(ct);
 
-        var responseDtos = gates.Select(ToResponseDto).ToList();
+        var filteredGates = CtmsScopeGuard.ApplyFilters(gates, studyFilter: null, g => g.StudyId, siteFilter, g => g.SiteId);
+        var responseDtos = filteredGates.Select(ToResponseDto).ToList();
         return TypedResults.Ok(responseDtos);
     }
 
@@ -238,20 +241,20 @@ public static class StartupGreenlightEndpoints
         string countryCode = (request.CountryCode ?? "US").ToUpperInvariant();
         string studyId = request.StudyId;
         var siteIds = request.SiteIds.Distinct(StringComparer.Ordinal).ToList();
-        if (!CallerScope.CanAccessStudy(httpContext, studyId))
+        if (!CtmsScopeGuard.CanAccessStudy(httpContext, studyId))
         {
             return OutsideStudy();
         }
 
+        var principal = CtmsScopeGuard.ResolvePrincipal(httpContext);
         var outsideSites = siteIds
-            .Where(site => !SiteAccessEvaluator.CanAccessSite(CallerScope.Principal(httpContext), site))
+            .Where(site => !SiteAccessEvaluator.CanAccessSite(principal, site))
             .ToList();
         if (outsideSites.Count > 0)
         {
-            return TypedResults.Problem(
-                title: "Outside your sites",
-                detail: $"You are not assigned to: {string.Join(", ", outsideSites)}. Nothing was certified.",
-                statusCode: StatusCodes.Status403Forbidden);
+            return CtmsScopeGuard.Forbidden(
+                $"You are not assigned to: {string.Join(", ", outsideSites)}. Nothing was certified.",
+                "Outside your sites");
         }
 
         var gates = await db.CtmsSiteGreenlightGates

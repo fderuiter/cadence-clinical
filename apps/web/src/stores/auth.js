@@ -21,6 +21,10 @@ import {
   purgeUserScopedStorage,
   storageScopeOf,
 } from "../utils/userScopedStorage.js";
+import {
+  extractAssignedSites,
+  extractAssignedStudies,
+} from "../utils/callerScope";
 
 /**
  * Seeding Gap Documentation Resolved:
@@ -258,6 +262,12 @@ function emptyAuthState() {
     user: null,
     /** @type {string[]} Keycloak realm roles from `realm_access.roles` */
     rawRoles: [],
+    /** @type {string[]} Concrete study codes from `study_ids` claim */
+    assignedStudies: [],
+    /** @type {string[]} Assigned site codes from `site_id` / `site_ids` claims */
+    assignedSites: [],
+    /** @type {boolean} True when `study_ids` carries wildcard `*` */
+    hasAllStudiesScope: false,
     /** @type {string | null} */
     currentPersona: null,
     /** @type {string | null} */
@@ -385,6 +395,10 @@ export const useAuthStore = defineStore("auth", {
       this.rawRoles = Array.isArray(claims.realm_access?.roles)
         ? [...claims.realm_access.roles]
         : [];
+      const studyScope = extractAssignedStudies(claims);
+      this.assignedStudies = studyScope.assignedStudies;
+      this.hasAllStudiesScope = studyScope.hasAllStudiesScope;
+      this.assignedSites = extractAssignedSites(claims);
       this.authError = null;
       webSessionCoordinator.markAuthenticated();
 
@@ -432,6 +446,7 @@ export const useAuthStore = defineStore("auth", {
       this.isLoggingOut = false;
       this.user = { ...DEMO_IDENTITY };
       this.rawRoles = [...DEMO_ROLES];
+      this.hasAllStudiesScope = true;
       this.currentPersona = personasForRoles(this.rawRoles)[0]?.key || null;
       purgeLegacyUnscopedKeys();
       purgeUserScopedStorage(storageScopeOf(this));

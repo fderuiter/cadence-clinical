@@ -405,8 +405,16 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
       expect(site102?.overall_status).toBe("APPROVED");
       expect(site102?.greenlight_token).toContain("SITE-102");
 
+      const preComplianceRes = await fetch(
+        `${origin}/api/v1/execution/sites/SITE-102/compliance-status?study_id=DEMO-01`,
+        { headers: DEMO_HEADERS }
+      );
+      expect(preComplianceRes.status).toBe(200);
+      const preCompliance = await preComplianceRes.json();
+      expect(preCompliance.is_activated).toBe(false);
+
       const activateRes = await fetch(
-        `${origin}/api/v1/execution/sites/SITE-101/activate`,
+        `${origin}/api/v1/execution/sites/SITE-102/activate`,
         {
           method: "POST",
           headers: {
@@ -417,6 +425,32 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
         }
       );
       expect(activateRes.status).toBe(200);
+
+      const postComplianceRes = await fetch(
+        `${origin}/api/v1/execution/sites/SITE-102/compliance-status?study_id=DEMO-01`,
+        { headers: DEMO_HEADERS }
+      );
+      expect(postComplianceRes.status).toBe(200);
+      const postCompliance = await postComplianceRes.json();
+      expect(postCompliance.is_activated).toBe(true);
+      expect(postCompliance.activated_by).toBeTruthy();
+      expect(postCompliance.activated_at).toBeTruthy();
+
+      const schemesRes = await fetch(
+        `${origin}/api/v1/execution/randomization/schemes?study_id=DEMO-01`,
+        { headers: DEMO_HEADERS }
+      );
+      expect(schemesRes.status).toBe(200);
+      const schemes = await schemesRes.json();
+      expect(schemes.length).toBeGreaterThanOrEqual(1);
+
+      const kitsRes = await fetch(
+        `${origin}/api/v1/execution/rtsm/kits/inventory/DEMO-01/SITE-101`,
+        { headers: DEMO_HEADERS }
+      );
+      expect(kitsRes.status).toBe(200);
+      const kits = await kitsRes.json();
+      expect(Array.isArray(kits)).toBe(true);
 
       const helpRes = await fetch(
         `${origin}/api/v1/knowledge/contextual-help?route=/ecrf&persona=super_admin`,
