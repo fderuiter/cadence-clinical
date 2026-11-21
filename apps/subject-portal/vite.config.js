@@ -98,7 +98,7 @@ export default defineConfig(({ mode }) => ({
           if (ctx.bundle && html.includes("/subject-portal/assets/main-")) {
             return html.replace(
               "</body>",
-              '<script type="module">import "/subject-portal/src/index.js";import "/subject-portal/src/sync-queue.js";</script></body>'
+              '<script type="module" src="/subject-portal/src/index.js"></script><script type="module" src="/subject-portal/src/sync-queue.js"></script></body>'
             );
           }
           return html;

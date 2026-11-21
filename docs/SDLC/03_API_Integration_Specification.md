@@ -382,7 +382,7 @@ Extracts the fully resolved, CDISC USDM JSON-compliant representation of a study
     "id": "prt_cadence_001",
     "version": "1.0",
     "status": "APPROVED",
-    "document_url": "https://clinical.cadence.com/protocols/prt_cadence_001.pdf"
+    "document_url": "https://clinical.cadence.clinical/protocols/prt_cadence_001.pdf"
   },
   "study_arms": [
     {
@@ -1086,14 +1086,14 @@ paths:
       summary: Execute AI text generation or structured extraction
       description: |
   Generate completion text or structured JSON data conforming to a requested schema.
-  
+
   Args:
       payload: GenerationRequestDTO containing prompt/messages, tier, and optional schema.
       engine: Injected AIEnginePort adapter.
-  
+
   Returns:
       GenerationResponseDTO with content, structured data, token usage, and telemetry.
-  
+
   Raises:
       HTTPException: If payload is missing prompt/messages or inference fails.
       operationId: generate_completion_api_v1_ai_generate_post
@@ -1123,14 +1123,14 @@ paths:
       summary: Generate dense vector embeddings for input texts
       description: |
   Generate float vector embeddings for input text strings.
-  
+
   Args:
       payload: EmbeddingRequestDTO containing batch of text strings and model tier.
       engine: Injected AIEnginePort adapter.
-  
+
   Returns:
       EmbeddingResponseDTO containing generated float vectors and usage metrics.
-  
+
   Raises:
       HTTPException: If embedding generation encounters an upstream error.
       operationId: generate_embeddings_api_v1_ai_embed_post
@@ -1160,10 +1160,10 @@ paths:
       summary: Retrieve active configuration and model mapping across execution tiers
       description: |
   List all available execution tiers and active model configurations.
-  
+
   Args:
       engine: Injected AIEnginePort adapter.
-  
+
   Returns:
       List of TierInfoDTO describing active tier mappings and capabilities.
       operationId: list_tiers_api_v1_ai_tiers_get
@@ -1184,7 +1184,7 @@ paths:
       summary: Execute grounded Tier 2 protocol RAG triage with citation markers
       description: |
   Executes grounded clinical RAG answering support inquiries with verbatim citations.
-  
+
   Enforces:
   - Verbatim citation markers: `[Protocol v2.1, Section 7.3, Page 42]`
   - Mathematical faithfulness calculation (85% confidence gate)
@@ -1216,7 +1216,7 @@ paths:
       summary: Execute multi-step clinical reasoning planning loop with grounded citations
       description: |
   Executes a multi-step clinical reasoning workflow for protocol synthesis and patient data.
-  
+
   Enforces:
   - Multi-step planning loops breaking down trial queries into discrete steps
   - In-flight PHI masking using temporary surrogate tokens for intermediate steps
@@ -1307,7 +1307,7 @@ paths:
       summary: Delegate Site Tasks
       description: |
   Assign site trial task delegation requiring Principal Investigator sign-off.
-  
+
   Requirements: PRD-SYS-001
       operationId: delegate_site_tasks_api_v1_ctms_doa_delegate_post
       requestBody:
@@ -1338,7 +1338,7 @@ paths:
       summary: Revoke Site Tasks
       description: |
   Revoke or end a delegated trial duty with reason for change.
-  
+
   Requirements: PRD-SYS-001
       operationId: revoke_site_tasks_api_v1_ctms_doa_revoke_post
       requestBody:
@@ -1369,7 +1369,7 @@ paths:
       summary: Sign Off Delegation
       description: |
   Endorse Delegation of Authority task assignment with Principal Investigator eSignature.
-  
+
   Requirements: PRD-SYS-001
       operationId: sign_off_delegation_api_v1_ctms_doa_sign_off_post
       requestBody:
@@ -1400,7 +1400,7 @@ paths:
       summary: Get Site Doa Log
       description: |
   Fetch active and historical DOA log matrix for a site.
-  
+
   Requirements: PRD-SYS-001
       operationId: get_site_doa_log_api_v1_ctms_doa_sites__site_id__log_get
       parameters:
@@ -1430,7 +1430,7 @@ paths:
       summary: Export Site Doa Pdf
       description: |
   Export 21 CFR Part 11 signed DOA PDF log.
-  
+
   Requirements: PRD-SYS-001
       operationId: export_site_doa_pdf_api_v1_ctms_doa_sites__site_id__export_pdf_get
       parameters:
@@ -4156,7 +4156,7 @@ paths:
       summary: Export Synopsis Document
       description: |
   Export authored clinical protocol synopsis into PDF, DOCX, or HTML format.
-  
+
   Requirements: PRD-SYS-001
       operationId: export_synopsis_document_api_v1_synopsis_export_post
       requestBody:
@@ -4185,7 +4185,7 @@ paths:
       summary: Render Synopsis Download
       description: |
   Direct file download endpoint for rendered protocol synopsis documents.
-  
+
   Requirements: PRD-SYS-001
       operationId: render_synopsis_download_api_v1_synopsis_render__study_id__get
       parameters:
@@ -4223,7 +4223,7 @@ paths:
       summary: Evaluate Protocol Quality Endpoint
       description: |
   Evaluate authored protocol specification payload against quality and burden rules.
-  
+
   Requirements: PRD-SYS-001
       operationId: evaluate_protocol_quality_endpoint_api_v1_designer_sentinel_evaluate_post
       requestBody:
@@ -4254,7 +4254,7 @@ paths:
       summary: Propagate Cascade Endpoint
       description: |
   Cascade authored USDM protocol specification changes to downstream eCRFs and SoA matrices.
-  
+
   Requirements: PRD-SYS-001
       operationId: propagate_cascade_endpoint_api_v1_designer_cascade_propagate_post
       parameters:
@@ -4293,7 +4293,7 @@ paths:
       summary: Export Protocol M11 Endpoint
       description: |
   Download authored protocol specification in formatted ICH M11 Word (.docx) or USDM JSON format.
-  
+
   Requirements: PRD-SYS-001
       operationId: export_protocol_m11_endpoint_api_v1_designer_export_m11__study_id__get
       parameters:
@@ -4420,7 +4420,7 @@ paths:
       summary: Extract Protocol Digitization
       description: |
   Extracts structured CDISC USDM v4.0 parameters from an uploaded clinical protocol file.
-  
+
   Accepts PDF, DOCX, or text files.
       operationId: extract_protocol_digitization_api_v1_designer_digitization_extract_post
       requestBody:
@@ -4463,7 +4463,7 @@ paths:
       summary: Commit Usdm To Study
       description: |
   Commits extracted USDM entities to the Neo4j graph and synthesizes CDASH eCRF forms.
-  
+
   Guarantees 21 CFR Part 11 audit attribution and GxP change justification.
       operationId: commit_usdm_to_study_api_v1_designer_studies__study_id__commit_usdm_post
       parameters:
@@ -4499,7 +4499,7 @@ paths:
       summary: Start Digitization Dag Job
       description: |
   Starts an asynchronous multi-stage DAG protocol digitization job.
-  
+
   Decomposes ingestion into checkpointed transformations (layout parsing, SoA extraction,
   biomedical concept mapping, eCRF synthesis, and USDM compilation) with schema validation gates.
       operationId: start_digitization_dag_job_api_v1_designer_digitization_dag_jobs_post
@@ -4662,7 +4662,7 @@ paths:
       summary: Branch Protocol Amendment Endpoint
       description: |
   Create an isolated, immutable protocol amendment working branch from an approved baseline.
-  
+
   Requirements: PRD-SYS-001, PRD-SUB-007
       operationId: branch_protocol_amendment_endpoint_api_v1_designer_amendments_branch_post
       requestBody:
@@ -4691,7 +4691,7 @@ paths:
       summary: Compute Semantic Diff Endpoint
       description: |
   Compute multi-layer visual and semantic protocol diff across USDM Graph, SoA, Eligibility, and eCRF forms.
-  
+
   Requirements: PRD-SYS-001, PRD-SUB-007
       operationId: compute_semantic_diff_endpoint_api_v1_designer_amendments_diff_post
       requestBody:
@@ -4720,7 +4720,7 @@ paths:
       summary: Get Study Semantic Diff Endpoint
       description: |
   Get multi-layer semantic diff for a study between two version tags.
-  
+
   Requirements: PRD-SYS-001, PRD-SUB-007
       operationId: get_study_semantic_diff_endpoint_api_v1_designer_amendments__study_id__diff_get
       parameters:
@@ -4764,7 +4764,7 @@ paths:
       summary: Compute Amendment Impact Endpoint
       description: |
   Compute quantitative Amendment Impact Summary (burden delta, affected visits, schema revisions).
-  
+
   Requirements: PRD-SYS-001, PRD-SUB-007
       operationId: compute_amendment_impact_endpoint_api_v1_designer_amendments_impact_post
       requestBody:
@@ -4793,7 +4793,7 @@ paths:
       summary: Analyze Ripple Effects Endpoint
       description: |
   Analyze ripple-effect deltas across USDM graph, SoA matrix, and narrative to generate ProtocolImpactAssessment.
-  
+
   Requirements: PRD-SYS-001, PRD-SUB-007, PRD-SYS-051
       operationId: analyze_ripple_effects_endpoint_api_v1_designer_amendments_analyze_ripple_post
       requestBody:
@@ -4822,7 +4822,7 @@ paths:
       summary: Dispatch Operational Tickets Endpoint
       description: |
   Generate and dispatch multi-domain operational tickets for a protocol amendment to apps/tickets.
-  
+
   Requirements: PRD-SYS-001, PRD-SUB-007, PRD-SYS-051
       operationId: dispatch_operational_tickets_endpoint_api_v1_designer_amendments_dispatch_tickets_post
       requestBody:
@@ -4849,7 +4849,7 @@ paths:
       summary: Get Legacy Study
       description: |
   Returns the legacy internal projection with no USDM formatting.
-  
+
   Args:
       study_id = get_study_projection(study_id)
       operationId: get_legacy_study_api_v1_studies__study_id__get
@@ -4880,14 +4880,14 @@ paths:
       summary: Get Usdm Study
       description: |
   Dynamically processes the internal projection and returns a compliant USDM structure.
-  
+
   Args:
       study_id (str): The unique identifier of the study.
       format (str, optional): Output format.
-  
+
   Returns:
       Any: Mapped USDM data (as dict or serialized Response).
-  
+
   Raises:
       HTTPException: If the study is not found or validation fails.
       operationId: get_usdm_study_api_v2_studies__study_id__usdm_get
@@ -4925,7 +4925,7 @@ paths:
       summary: Import Usdm Study
       description: |
   Ingests, validates, maps, and persists a USDM JSON/YAML payload for a specific study.
-  
+
   Requirements: Phase 2 Ingestion
       operationId: import_usdm_study_api_v2_studies__study_id__usdm_post
       parameters:
@@ -4962,7 +4962,7 @@ paths:
       summary: Clear Cache
       description: |
   Flushes the controlled terminology cache.
-  
+
   Returns:
       Dict[str, str]: A success message indicating the cache was cleared.
       operationId: clear_cache_api_admin_cache_clear_post
@@ -4981,7 +4981,7 @@ paths:
       summary: Cache Status
       description: |
   Returns the current size and status of the terminology cache.
-  
+
   Returns:
       Dict[str, int]: The status dictionary containing size and max_size.
       operationId: cache_status_api_admin_cache_status_get
@@ -5000,13 +5000,13 @@ paths:
       summary: Validate Study Alignment
       description: |
   Generate an alignment validation report for a specific clinical study.
-  
+
   Analyzes trace links dynamically to ensure the
   Study Data Requirements (SDR) align with Metadata Requirements (MDR).
-  
+
   Args:
       study_id (str): The unique identifier of the study to validate.
-  
+
   Returns:
       StudyAlignmentReport: The structured validation report.
       operationId: validate_study_alignment_api_v1_studies__study_id__alignment_validation_get
@@ -5035,13 +5035,13 @@ paths:
       summary: Validate Study Terminology Endpoint
       description: |
   Generate a terminology validation report for a specific clinical study.
-  
+
   Traverses study concept references and aggregates validation outcomes
   such as identifying affected elements and references.
-  
+
   Args:
       study_id (str): The unique identifier of the study to validate.
-  
+
   Returns:
       StudyTerminologyValidationReport: The structured validation report.
       operationId: validate_study_terminology_endpoint_api_v1_studies__study_id__terminology_validation_get
@@ -5070,13 +5070,13 @@ paths:
       summary: Validate Study Ct Endpoint
       description: |
   Generate a controlled terminology (CT) validation report for a specific clinical study.
-  
+
   Traverses study concept references and aggregates validation outcomes
   such as identifying affected elements and references.
-  
+
   Args:
       study_id (str): The unique identifier of the study to validate.
-  
+
   Returns:
       StudyTerminologyValidationReport: The structured validation report.
       operationId: validate_study_ct_endpoint_api_v1_studies__study_id__ct_validation_get
@@ -5105,10 +5105,10 @@ paths:
       summary: Validate Single Code
       description: |
   Validates a single terminology concept code.
-  
+
   Args:
       code (str): The concept code to validate.
-  
+
   Returns:
       ConceptValidationReport: Validation status and metadata.
       operationId: validate_single_code_api_v1_terminology_validate__code__get
@@ -5137,14 +5137,14 @@ paths:
       summary: Search Terminology
       description: |
   Search or autocomplete terminology concepts by text query.
-  
+
   Args:
       term (str): Search term.
       from_record (int, optional): Record offset.
       page_size (int, optional): Page size.
       bypass_cache (bool, optional): Whether to bypass reading from cache. Defaults to False.
       refresh (bool, optional): Whether to refresh the cache. Defaults to False.
-  
+
   Returns:
       TerminologySearchResponse: Search results and status.
       operationId: search_terminology_api_v1_terminology_search_get
@@ -5203,19 +5203,19 @@ paths:
       summary: Study Differences
       description: |
   Get human-readable field-level differences between two version actions of a study.
-  
+
   This endpoint uses a decoupled, API-first in-memory diffing architecture. Instead of
   relying on a direct database connection (which led to 503 errors and tight coupling),
   it fetches full study payloads from an external registry. The comparison logic runs
   entirely in-memory by flattening nested dictionary structures to dynamically identify
   added, modified, and deleted fields. This ensures high availability and fast execution
   without maintaining direct database connections.
-  
+
   Args:
       study_id (str): The unique identifier of the study.
       action_id1 (str): The ID of the first action version.
       action_id2 (str): The ID of the second action version.
-  
+
   Returns:
       List[DifferenceResult]: A list of field-level differences.
       operationId: study_differences_api_v1_studies__study_id__differences_get
@@ -6836,7 +6836,7 @@ paths:
       summary: Upload Mapping Csv
       description: |
   Validates a CSV mapping configuration to ensure target names meet standard W3C XML naming specifications.
-  
+
   Raises:
       HTTPException: If the CSV format is invalid or if target XML names violate naming rules.
       operationId: upload_mapping_csv_api_v1_mappings_upload_post
@@ -8782,19 +8782,19 @@ paths:
       summary: Trigger multi-criteria cohort reasoning and synthetic feasibility simulation
       description: |
   Executes multi-criteria cohort reasoning and synthetic subject profile feasibility simulation.
-  
+
   Supports:
   - Asynchronous background worker execution guarded by PostgreSQL advisory locks (non-blocking)
   - De-identification scrubbing on evaluation context and prompts (packages/deid)
   - Grounded RAG protocol criteria matching (packages/compliance)
   - Three-valued logic (3VL) evaluation under complete, partial, and missing data scenarios
   - Granular node-level fit trace explanations
-  
+
   Args:
       payload: Inbound CohortFeasibilityRequest payload.
       background_tasks: FastAPI BackgroundTasks queue.
       principal: Authenticated principal security context.
-  
+
   Returns:
       CohortFeasibilityJob when asynchronous background processing is requested,
       or CohortFeasibilityReport when executed synchronously.
@@ -8828,14 +8828,14 @@ paths:
       summary: Poll status and results of an asynchronous cohort feasibility job
       description: |
   Retrieves asynchronous cohort feasibility job status and report.
-  
+
   Args:
       job_id: Unique job identifier to query.
       principal: Authenticated principal security context.
-  
+
   Returns:
       CohortFeasibilityJob status wrapper and report.
-  
+
   Raises:
       HTTPException: If the job with job_id is not found (404).
       operationId: get_feasibility_job_status_endpoint_api_v1_designer_cohort_feasibility_jobs__job_id__get
@@ -8866,11 +8866,11 @@ paths:
       summary: Simulate cohort feasibility under missing data scenarios using 3-valued logic
       description: |
   Directly executes synthetic patient population simulation under missing data conditions.
-  
+
   Args:
       payload: Inbound CohortFeasibilityRequest parameters.
       principal: Authenticated principal security context.
-  
+
   Returns:
       CohortFeasibilityReport containing simulation results.
       operationId: simulate_synthetic_feasibility_endpoint_api_v1_designer_cohort_feasibility_synthetic_simulate_post
@@ -10472,10 +10472,10 @@ paths:
       summary: Compute real-time readability metrics for consent text
       description: |
   Computes Flesch-Kincaid Grade Level, Flesch Reading Ease, and Dale-Chall readability indices.
-  
+
   Args:
       payload: ReadabilityAnalysisRequest containing narrative or clause text.
-  
+
   Returns:
       ReadabilityAnalysisResponse with calculated grade levels, word counts, and target indicators.
       operationId: analyze_readability_api_v1_econsent_readability_analyze_post
@@ -10505,10 +10505,10 @@ paths:
       summary: Generate patient-friendly medical jargon substitutions via AI Gateway Tier 2
       description: |
   Analyzes text for complex clinical jargon and suggests plain-language substitutions.
-  
+
   Args:
       payload: ReadabilityHarmonizationRequest containing original text and target reading level.
-  
+
   Returns:
       ReadabilityHarmonizationResponse with candidate substitutions, harmonized text, and delta scores.
       operationId: harmonize_readability_api_v1_econsent_readability_harmonize_post
@@ -10538,16 +10538,16 @@ paths:
       summary: Apply plain-language readability harmonization to a clause with IRB amendment linking
       description: |
   Applies harmonized text to an ICF clause, incrementing version index and logging 21 CFR Part 11 audit trail.
-  
+
   Args:
       request: Request object for extracting user_id and change_reason.
       clause_id: Identifier of the consent clause being harmonized.
       payload: ClauseHarmonizationApplyRequest with harmonized text and audit reason.
       session: Active asynchronous database session.
-  
+
   Returns:
       ClauseHarmonizationApplyResponse with updated version index and new readability metrics.
-  
+
   Raises:
       HTTPException: If clause_id is not found or auditor role attempts mutation.
       operationId: apply_clause_harmonization_api_v1_econsent_clauses__clause_id__harmonize_post
@@ -11075,7 +11075,7 @@ paths:
       summary: Initiate Study Archival
       description: |
   Initiate background ZIP packaging task.
-  
+
   Requirements: PRD-SYS-001
       operationId: initiate_study_archival_api_v1_archive_studies__study_id__export_post
       parameters:
@@ -11105,7 +11105,7 @@ paths:
       summary: Get Archive Job Status
       description: |
   Check archive package build status.
-  
+
   Requirements: PRD-SYS-001
       operationId: get_archive_job_status_api_v1_archive_jobs__job_id__get
       parameters:
@@ -11135,7 +11135,7 @@ paths:
       summary: Download Archive Package
       description: |
   Download the generated study archival ZIP package.
-  
+
   Requirements: PRD-SYS-001
       operationId: download_archive_package_api_v1_archive_download__job_id__get
       parameters:
@@ -11164,7 +11164,7 @@ paths:
       summary: Get Study Inspection Readiness
       description: |
   Calculates and returns a comprehensive inspection readiness assessment for a study.
-  
+
   Evaluates Expected Document List (EDL) completion, zone matrix distribution,
   QC review bottlenecks, Part 11 electronic signature compliance, and expiration risks.
       operationId: get_study_inspection_readiness_api_v1_etmf_studies__study_id__inspection_readiness_get
@@ -11195,7 +11195,7 @@ paths:
       summary: Export Study Tmf Ems
       description: |
   Exports the eTMF in standard DIA TMF Exchange Mechanism Standard (EMS) format.
-  
+
   Generates a compliant ZIP package containing `tmf-ems.xml`, `tmf-ems.json`,
   `checksums.sha256`, and all document version assets organized in standard DIA hierarchy.
       operationId: export_study_tmf_ems_api_v1_etmf_studies__study_id__ems_export_get
@@ -12599,7 +12599,7 @@ paths:
       summary: Publish Amendment Endpoint
       description: |
   Publish protocol amendment version and compute structural summary of changes.
-  
+
   Requirements: PRD-SYS-001
       operationId: publish_amendment_endpoint_api_v1_execution_amendments_publish_post
       requestBody:
@@ -12628,7 +12628,7 @@ paths:
       summary: Get Amendment Summary Endpoint
       description: |
   Export Summary of Changes report for specified study version.
-  
+
   Requirements: PRD-SYS-001
       operationId: get_amendment_summary_endpoint_api_v1_execution_amendments_summary__study_id___version__get
       parameters:
@@ -12666,7 +12666,7 @@ paths:
       summary: Get Subject Impact Analysis
       description: |
   Calculates subject migration impact for an active protocol amendment.
-  
+
   Requirements: PRD-SYS-001, PRD-SUB-007
       operationId: get_subject_impact_analysis_api_v1_execution_amendments__study_id__subject_impact_get
       parameters:
@@ -12713,7 +12713,7 @@ paths:
       summary: Validate Gating Endpoint
       description: |
   Validates subject re-consent gating before form data entry.
-  
+
   Requirements: PRD-SUB-007
       operationId: validate_gating_endpoint_api_v1_execution_amendments_validate_gating_post
       requestBody:
@@ -12744,7 +12744,7 @@ paths:
       summary: Register Subject Reconsent
       description: |
   Registers subject signed re-consent for an amended version, unlocking gating.
-  
+
   Requirements: PRD-SUB-007, PRD-SYS-001
       operationId: register_subject_reconsent_api_v1_execution_amendments_reconsent_post
       requestBody:
@@ -12775,7 +12775,7 @@ paths:
       summary: Register Bulk Subject Reconsent
       description: |
   Registers batch subject re-consent for an amended version, unlocking gating in bulk.
-  
+
   Requirements: PRD-SUB-007, PRD-SYS-001
       operationId: register_bulk_subject_reconsent_api_v1_execution_amendments_bulk_reconsent_post
       requestBody:
@@ -12806,7 +12806,7 @@ paths:
       summary: Verify Training Gate Endpoint
       description: |
   Programmatically verify training qualification for EDC write and signature permissions.
-  
+
   Requirements: PRD-TRN-002
       operationId: verify_training_gate_endpoint_api_v1_execution_amendments_verify_training_gate_post
       requestBody:
@@ -12950,7 +12950,7 @@ paths:
       summary: Scan Phi Endpoint
       description: |
   Scan text payload for Protected Health Information (PHI) identifiers.
-  
+
   Requirements: PRD-SYS-001
       operationId: scan_phi_endpoint_api_v1_execution_anonymization_scan_phi_post
       requestBody:
@@ -12981,7 +12981,7 @@ paths:
       summary: Redact Pdf Endpoint
       description: |
   Apply non-destructive PHI redaction overlays to PDF document.
-  
+
   Requirements: PRD-SYS-001
       operationId: redact_pdf_endpoint_api_v1_execution_anonymization_redact_pdf_post
       requestBody:
@@ -13012,7 +13012,7 @@ paths:
       summary: Generate Auditor Token Endpoint
       description: |
   Generate temporary time-bounded access token for regulatory auditors.
-  
+
   Requirements: PRD-SYS-001
       operationId: generate_auditor_token_endpoint_api_v1_execution_auditor_token_generate_post
       requestBody:
@@ -13043,7 +13043,7 @@ paths:
       summary: Inspect Study Audit Trail Endpoint
       description: |
   Expose read-only 21 CFR Part 11 audit trail inspection endpoint for study.
-  
+
   Requirements: PRD-SYS-001
       operationId: inspect_study_audit_trail_endpoint_api_v1_execution_auditor_inspect_audit_trail__study_id__get
       parameters:
@@ -13084,7 +13084,7 @@ paths:
       summary: Create And Package Dossier
       description: |
   Compiles and packages a de-identified clinical event dossier for 2+1 blinded adjudication.
-  
+
   @req:PRD-CEC-001, @req:PRD-SYS-124, @req:PRD-ADR-2199
       operationId: create_and_package_dossier_api_v1_execution_cec_dossiers_post
       requestBody:
@@ -13114,7 +13114,7 @@ paths:
       summary: List Dossiers
       description: |
   Lists clinical event dossiers with filtering options.
-  
+
   @req:PRD-CEC-002
       operationId: list_dossiers_api_v1_execution_cec_dossiers_get
       parameters:
@@ -13181,7 +13181,7 @@ paths:
       summary: Get Dossier Blinded View
       description: |
   Retrieves a role-blinded projection of a dossier, enforcing reader isolation.
-  
+
   @req:PRD-CEC-001, @req:PRD-CEC-002, @req:PRD-ADR-2199
       operationId: get_dossier_blinded_view_api_v1_execution_cec_dossiers__dossier_id__get
       parameters:
@@ -13221,7 +13221,7 @@ paths:
       summary: Get Dossier Full
       description: |
   Retrieves unblinded full dossier details for Committee Chair, Data Manager, or Auditor.
-  
+
   @req:PRD-CEC-002, @req:PRD-SYS-001
       operationId: get_dossier_full_api_v1_execution_cec_dossiers__dossier_id__full_get
       parameters:
@@ -13251,7 +13251,7 @@ paths:
       summary: Submit Reader Assessment
       description: |
   Submits an expert reader assessment for Reader 1 or Reader 2 and auto-evaluates consensus.
-  
+
   @req:PRD-CEC-002, @req:PRD-ADR-2199
       operationId: submit_reader_assessment_api_v1_execution_cec_dossiers__dossier_id__assessments_post
       parameters:
@@ -13289,7 +13289,7 @@ paths:
       summary: Adjudicate Chair Tie Breaker
       description: |
   Executes Adjudication Committee Chair tie-breaker ruling with 21 CFR Part 11 electronic signature.
-  
+
   @req:PRD-CEC-002, @req:PRD-SYS-124, @req:PRD-ADR-2199
       operationId: adjudicate_chair_tie_breaker_api_v1_execution_cec_dossiers__dossier_id__chair_adjudicate_post
       parameters:
@@ -13327,7 +13327,7 @@ paths:
       summary: Trigger Edc Writeback
       description: |
   Manually or automatically triggers bi-directional EDC casebook writeback for an adjudicated event.
-  
+
   @req:PRD-CEC-003
       operationId: trigger_edc_writeback_api_v1_execution_cec_dossiers__dossier_id__writeback_post
       parameters:
@@ -13357,7 +13357,7 @@ paths:
       summary: Get Study Charter
       description: |
   Retrieves active CEC charter governance configuration.
-  
+
   @req:PRD-SYS-124
       operationId: get_study_charter_api_v1_execution_cec_charters__study_id__get
       parameters:
@@ -13387,7 +13387,7 @@ paths:
       summary: Create Or Update Charter
       description: |
   Configures or updates committee charter voting rules, quorum, and diagnostic criteria forms.
-  
+
   @req:PRD-SYS-124
       operationId: create_or_update_charter_api_v1_execution_cec_charters_post
       requestBody:
@@ -13416,7 +13416,7 @@ paths:
       summary: Record Meeting Quorum
       description: |
   Records committee meeting attendance, evaluates quorum compliance, and captures minutes.
-  
+
   @req:PRD-SYS-124
       operationId: record_meeting_quorum_api_v1_execution_cec_meetings_post
       requestBody:
@@ -13447,7 +13447,7 @@ paths:
       summary: List Study Meetings
       description: |
   Lists all recorded committee meetings and quorum statuses for a study.
-  
+
   @req:PRD-SYS-124
       operationId: list_study_meetings_api_v1_execution_cec_meetings__study_id__get
       parameters:
@@ -13481,7 +13481,7 @@ paths:
       summary: Compile Sdtm Ce Dataset
       description: |
   Compiles all finalized adjudicated events for a study directly into CDISC SDTM CE dataset.
-  
+
   @req:PRD-CEC-003, @req:PRD-SYS-001
       operationId: compile_sdtm_ce_dataset_api_v1_execution_cec_sdtm_ce_compile_post
       requestBody:
@@ -13510,9 +13510,9 @@ paths:
       summary: Parse Udi
       description: |
   Parses and validates a Unique Device Identifier (UDI) barcode string.
-  
+
   Supports GS1-128, GS1-DataMatrix (AIs 01, 10, 11, 17, 21, 8012), and HIBCC formats.
-  
+
   @req:PRD-DEV-001, @req:PRD-SYS-126, @req:PRD-ADR-2209
       operationId: parse_udi_api_v1_execution_devices_parse_udi_post
       requestBody:
@@ -13541,7 +13541,7 @@ paths:
       summary: Register Inventory
       description: |
   Registers serialized investigational medical device and IVD inventory items in RTSM.
-  
+
   @req:PRD-DEV-001, @req:PRD-SYS-126, @req:PRD-ADR-2209
       operationId: register_inventory_api_v1_execution_devices_inventory_post
       requestBody:
@@ -13572,7 +13572,7 @@ paths:
       summary: List Inventory
       description: |
   Retrieves investigational medical device inventory matching query filters.
-  
+
   @req:PRD-DEV-001, @req:PRD-SYS-126, @req:PRD-ADR-2209
       operationId: list_inventory_api_v1_execution_devices_inventory_get
       parameters:
@@ -13657,9 +13657,9 @@ paths:
       summary: Dispense
       description: |
   Dispenses an investigational medical device to a study participant.
-  
+
   Enforces strict quarantine and expiration blocking rules.
-  
+
   @req:PRD-DEV-001, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209
       operationId: dispense_api_v1_execution_devices_dispense_post
       requestBody:
@@ -13688,7 +13688,7 @@ paths:
       summary: Log Deficiency
       description: |
   Logs a device deficiency/malfunction and triggers automated quarantine + safety cases.
-  
+
   @req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209
       operationId: log_deficiency_api_v1_execution_devices_deficiencies_post
       requestBody:
@@ -13716,7 +13716,7 @@ paths:
       summary: List Deficiencies
       description: |
   Lists reported medical device deficiencies and malfunctions for a study.
-  
+
   @req:PRD-DEV-002, @req:PRD-SYS-126, @req:PRD-ADR-2209
       operationId: list_deficiencies_api_v1_execution_devices_deficiencies_get
       parameters:
@@ -13771,7 +13771,7 @@ paths:
       summary: Get Deficiency
       description: |
   Retrieves a single device deficiency report by ID.
-  
+
   @req:PRD-DEV-002, @req:PRD-SYS-126, @req:PRD-ADR-2209
       operationId: get_deficiency_api_v1_execution_devices_deficiencies__deficiency_id__get
       parameters:
@@ -13801,7 +13801,7 @@ paths:
       summary: Initiate Quarantine
       description: |
   Manually places a device serial or lot into QUARANTINED status with dispensation blocking.
-  
+
   @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209
       operationId: initiate_quarantine_api_v1_execution_devices_quarantine_post
       requestBody:
@@ -13829,7 +13829,7 @@ paths:
       summary: List Quarantines
       description: |
   Lists device quarantine records for a clinical trial study.
-  
+
   @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209
       operationId: list_quarantines_api_v1_execution_devices_quarantine_get
       parameters:
@@ -13884,7 +13884,7 @@ paths:
       summary: Release Quarantine
       description: |
   Releases a device quarantine record under 21 CFR Part 11 electronic signature.
-  
+
   @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209
       operationId: release_quarantine_api_v1_execution_devices_quarantine_release_post
       requestBody:
@@ -13913,7 +13913,7 @@ paths:
       summary: Get Device Summary
       description: |
   Retrieves operational metrics for the Medical Device & IVD Investigation console.
-  
+
   @req:PRD-DEV-001, @req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209
       operationId: get_device_summary_api_v1_execution_devices_summary_get
       parameters:
@@ -13945,7 +13945,7 @@ paths:
       summary: Lookup Gudid Endpoint
       description: |
   Queries device specifications from the FDA AccessGUDID reference registry.
-  
+
   @req:PRD-SYS-187, @req:PRD-DEV-001, @req:PRD-ADR-2209
       operationId: lookup_gudid_endpoint_api_v1_execution_devices_gudid_lookup_post
       requestBody:
@@ -13974,7 +13974,7 @@ paths:
       summary: Verify Udi Endpoint
       description: |
   Validates physical/scanned UDI data (DI + PI lot, serial, expiration) against the FDA GUDID registry.
-  
+
   @req:PRD-SYS-187, @req:PRD-DEV-001, @req:PRD-ADR-2209
       operationId: verify_udi_endpoint_api_v1_execution_devices_verify_udi_post
       parameters:
@@ -14048,7 +14048,7 @@ paths:
       summary: Register Specimen Endpoint
       description: |
   Registers an IVD clinical biospecimen collection in the specimen ledger.
-  
+
   @req:PRD-SYS-188, @req:PRD-DEV-001, @req:PRD-ADR-2209
       operationId: register_specimen_endpoint_api_v1_execution_devices_ivd_specimens_post
       requestBody:
@@ -14076,7 +14076,7 @@ paths:
       summary: List Specimens Endpoint
       description: |
   Lists IVD biospecimens matching query filters.
-  
+
   @req:PRD-SYS-188, @req:PRD-DEV-001, @req:PRD-ADR-2209
       operationId: list_specimens_endpoint_api_v1_execution_devices_ivd_specimens_get
       parameters:
@@ -14143,7 +14143,7 @@ paths:
       summary: Get Specimen Endpoint
       description: |
   Retrieves a single IVD biospecimen record with complete audit logs and history.
-  
+
   @req:PRD-SYS-188, @req:PRD-DEV-001, @req:PRD-ADR-2209
       operationId: get_specimen_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__get
       parameters:
@@ -14173,7 +14173,7 @@ paths:
       summary: Log Custody Endpoint
       description: |
   Logs an auditable chain-of-custody transfer event for an IVD specimen.
-  
+
   @req:PRD-SYS-188, @req:PRD-DEV-001, @req:PRD-ADR-2209
       operationId: log_custody_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__chain_of_custody_post
       parameters:
@@ -14209,7 +14209,7 @@ paths:
       summary: Log Freeze Thaw Endpoint
       description: |
   Logs a freeze-thaw thermal cycle with automated quarantine enforcement upon threshold breach.
-  
+
   @req:PRD-SYS-188, @req:PRD-DEV-003, @req:PRD-ADR-2209
       operationId: log_freeze_thaw_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__freeze_thaw_post
       parameters:
@@ -14245,7 +14245,7 @@ paths:
       summary: Sample Integrity Check Endpoint
       description: |
   Assesses specimen integrity using Hemolysis, Lipemia, and Icterus (HIL) index validation.
-  
+
   @req:PRD-SYS-188, @req:PRD-DEV-002, @req:PRD-ADR-2209
       operationId: sample_integrity_check_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__integrity_check_post
       parameters:
@@ -14281,7 +14281,7 @@ paths:
       summary: Compute Assay Performance Endpoint
       description: |
   Computes and seals diagnostic assay performance statistics (Sensitivity, Specificity, PPV, NPV, CV%, LOD/LOQ).
-  
+
   @req:PRD-SYS-188, @req:PRD-DEV-004, @req:PRD-ADR-2209
       operationId: compute_assay_performance_endpoint_api_v1_execution_devices_ivd_assays_performance_post
       requestBody:
@@ -14757,7 +14757,7 @@ paths:
       summary: Add Doa Assignment Endpoint
       description: |
   Add site personnel task delegation entry to Delegation of Authority log.
-  
+
   Requirements: PRD-SYS-001
       operationId: add_doa_assignment_endpoint_api_v1_execution_doa_assignment_post
       requestBody:
@@ -14786,7 +14786,7 @@ paths:
       summary: Sign Off Doa Assignment Endpoint
       description: |
   Endorse Delegation of Authority task assignment with Principal Investigator eSignature.
-  
+
   Requirements: PRD-SYS-001
       operationId: sign_off_doa_assignment_endpoint_api_v1_execution_doa_sign_off_post
       requestBody:
@@ -14815,7 +14815,7 @@ paths:
       summary: Get Site Doa Log Endpoint
       description: |
   Retrieve site-isolated Delegation of Authority log entries.
-  
+
   Requirements: PRD-SYS-001
       operationId: get_site_doa_log_endpoint_api_v1_execution_doa_log__study_id___site_id__get
       parameters:
@@ -15011,7 +15011,7 @@ paths:
       summary: Upload Document
       description: |
   Upload regulated document, compute SHA-256 hash, and record GxP audit trail.
-  
+
   Requirements: PRD-SYS-001
       operationId: upload_document_api_v1_documents_upload_post
       requestBody:
@@ -15040,7 +15040,7 @@ paths:
       summary: Download Document
       description: |
   Stream file content with dynamic watermarking.
-  
+
   Requirements: PRD-SYS-001
       operationId: download_document_api_v1_documents__doc_id__get
       parameters:
@@ -15069,7 +15069,7 @@ paths:
       summary: List Document Versions
       description: |
   RETURN complete version history list.
-  
+
   Requirements: PRD-SYS-001
       operationId: list_document_versions_api_v1_documents__doc_id__versions_get
       parameters:
@@ -15102,7 +15102,7 @@ paths:
       summary: Upload Eisf Document Endpoint
       description: |
   Upload eISF regulatory binder document and calculate SHA-256 integrity checksum.
-  
+
   Requirements: PRD-SYS-001
       operationId: upload_eisf_document_endpoint_api_v1_execution_eisf_upload_post
       requestBody:
@@ -15131,7 +15131,7 @@ paths:
       summary: Get Site Regulatory Binder Endpoint
       description: |
   Retrieve site-isolated regulatory binder documents for specified study and site.
-  
+
   Requirements: PRD-SYS-001
       operationId: get_site_regulatory_binder_endpoint_api_v1_execution_eisf_binder__study_id___site_id__get
       parameters:
@@ -16258,7 +16258,7 @@ paths:
       summary: Lock Data Endpoint
       description: |
   Execute study, site, subject, visit, form, or field-level data lock or freeze operation.
-  
+
   Requirements: PRD-SYS-001, PRD-SYS-002, Trace-1, Trace-3, Trace-17
       operationId: lock_data_endpoint_api_v1_execution_locks_lock_post
       requestBody:
@@ -16287,7 +16287,7 @@ paths:
       summary: Unlock Data Endpoint
       description: |
   Execute GxP data unlock override operation enforcing >= 50 chars justification.
-  
+
   Requirements: PRD-SYS-001, PRD-SYS-002, Trace-1, Trace-3, Trace-17
       operationId: unlock_data_endpoint_api_v1_execution_locks_unlock_post
       requestBody:
@@ -16316,7 +16316,7 @@ paths:
       summary: Get Form Lock Status Endpoint
       description: |
   Retrieve active data locks for specified eCRF form submission.
-  
+
   Requirements: PRD-SYS-001, Trace-1, Trace-17
       operationId: get_form_lock_status_endpoint_api_v1_execution_locks_status__form_id__get
       parameters:
@@ -17059,7 +17059,7 @@ paths:
       summary: Sync Offline Batch
       description: |
   Ingest batch of queued offline eCRF/ePRO deltas idempotently.
-  
+
   Requirements: PRD-SYS-001
       operationId: sync_offline_batch_api_v1_offline_sync_batch_post
       requestBody:
@@ -17088,7 +17088,7 @@ paths:
       summary: Offline Sync Endpoint
       description: |
   Synchronize queued offline delta transactions.
-  
+
   Requirements: PRD-SYS-001
       operationId: offline_sync_endpoint_api_v1_execution_offline_sync_post
       requestBody:
@@ -19252,7 +19252,7 @@ paths:
       summary: Dispatch Safety Report Endpoint
       description: |
   Dispatch ICH E2B(R3) safety report to external pharmacovigilance gateway.
-  
+
   Requirements: PRD-SYS-001
       operationId: dispatch_safety_report_endpoint_api_v1_execution_safety_dispatch_post
       requestBody:
@@ -19281,7 +19281,7 @@ paths:
       summary: Reconcile Sae Cases Endpoint
       description: |
   Execute automated EDC AE to Safety ICSR case reconciliation.
-  
+
   Requirements: PRD-SYS-001
       operationId: reconcile_sae_cases_endpoint_api_v1_execution_safety_reconcile_post
       requestBody:
@@ -19312,7 +19312,7 @@ paths:
       summary: Create Or Update Tsdv Config
       description: |
   CREATE or UPDATE Targeted SDV (TSDV) configuration for a study.
-  
+
   Restricts config writes to CRA/Data Manager roles WITH GxP change justifications.
       operationId: create_or_update_tsdv_config_api_v1_execution_tsdv_config_post
       requestBody:
@@ -19368,7 +19368,7 @@ paths:
       summary: Evaluate Tsdv Rule
       description: |
   Evaluate Targeted SDV (TSDV) requirement for a given context.
-  
+
   Calculates deterministic sampling decisions and returns component results with an audit explanation.
       operationId: evaluate_tsdv_rule_api_v1_execution_tsdv_required_get
       parameters:
@@ -19498,7 +19498,7 @@ paths:
       summary: Sign Payload Endpoint
       description: |
   Signs a given string payload using the secure backend PKCS#7 signer.
-  
+
   Requirements: PRD-SYS-001
       operationId: sign_payload_endpoint_api_v1_execution_signatures_sign_post
       requestBody:
@@ -19527,7 +19527,7 @@ paths:
       summary: Verify Signature Endpoint
       description: |
   Verifies a PKCS#7 signed document payload using the ESignatureVerifier and trust store.
-  
+
   Requirements: PRD-SYS-001
       operationId: verify_signature_endpoint_api_v1_execution_signatures_verify_post
       requestBody:
@@ -19556,7 +19556,7 @@ paths:
       summary: Batch Signature Sign Off Endpoint
       description: |
   Execute 21 CFR Part 11 batch electronic signature casebook sign-off.
-  
+
   Requirements: PRD-SYS-001
       operationId: batch_signature_sign_off_endpoint_api_v1_execution_signatures_batch_sign_off_post
       requestBody:
@@ -20016,7 +20016,7 @@ paths:
       summary: Unblind Subject
       description: |
   Execute an emergency treatment-allocation unblinding for a randomised subject.
-  
+
   This endpoint implements the GxP / 21 CFR Part 11 compliant emergency
   unblinding workflow: it validates step-up re-authentication, performs
   Shamir dual-custody reconstruction of the encrypted allocation, builds a
@@ -20192,7 +20192,7 @@ paths:
       summary: Get Execution Audit Integrity
       description: |
   Verify the GxP clinical execution ledger integrity via block-sealing validation.
-  
+
   Ensures that chronological audit logs, block-level seals, and sequential chaining
   remain structurally unbroken.
       operationId: get_execution_audit_integrity_api_v1_execution_audit_integrity_get
@@ -20212,7 +20212,7 @@ paths:
       summary: Get Upload Url
       description: |
   Allocate draft file record and generate presigned PUT or multipart upload URLs.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002
       operationId: get_upload_url_api_v1_fileshare_files_upload_presigned_url_post
       requestBody:
@@ -20241,7 +20241,7 @@ paths:
       summary: Get Upload Url
       description: |
   Allocate draft file record and generate presigned PUT or multipart upload URLs.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002
       operationId: get_upload_url_api_v1_fileshare_files_upload_url_post
       requestBody:
@@ -20270,7 +20270,7 @@ paths:
       summary: Complete File Upload
       description: |
   Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002
       operationId: complete_file_upload_api_v1_fileshare_files__file_id__upload_complete_post
       parameters:
@@ -20308,7 +20308,7 @@ paths:
       summary: Complete File Upload
       description: |
   Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002
       operationId: complete_file_upload_api_v1_fileshare_files__file_id__complete_upload_post
       parameters:
@@ -20346,7 +20346,7 @@ paths:
       summary: Complete File Upload
       description: |
   Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002
       operationId: complete_file_upload_api_v1_fileshare_files__file_id__complete_post
       parameters:
@@ -20384,7 +20384,7 @@ paths:
       summary: Abort File Upload
       description: |
   Abort multipart upload session and mark file record deleted.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001
       operationId: abort_file_upload_api_v1_fileshare_files__file_id__abort_upload_post
       parameters:
@@ -20422,12 +20422,12 @@ paths:
       summary: Get Stream Url
       description: |
   Issue short-lived presigned HLS master manifest stream URL for video playback.
-  
+
   Returns HTTP 200 with presigned URL when transcoding is READY,
   HTTP 202 Accepted when transcoding is PENDING or IN_PROGRESS,
   HTTP 409 Conflict when transcoding has FAILED,
   and HTTP 400 Bad Request when transcoding was NOT_REQUIRED.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001
       operationId: get_stream_url_api_v1_fileshare_files__file_id__stream_url_get
       parameters:
@@ -20463,7 +20463,7 @@ paths:
       summary: Get Download Url
       description: |
   Retrieve short-lived presigned GET download URL with permission and watermark verification.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003
       operationId: get_download_url_api_v1_fileshare_files__file_id__download_url_get
       parameters:
@@ -20534,7 +20534,7 @@ paths:
       summary: Get File Record
       description: |
   Retrieve file record metadata.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001
       operationId: get_file_record_api_v1_fileshare_files__file_id__get
       parameters:
@@ -20563,7 +20563,7 @@ paths:
       summary: Delete File Record
       description: |
   Soft delete a file record.
-  
+
   Gated on FileRecord.is_on_hold being False; returns 409 if file is on hold.
   Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
       operationId: delete_file_record_api_v1_fileshare_files__file_id__delete
@@ -20602,7 +20602,7 @@ paths:
       summary: Place File On Hold
       description: |
   Place a file under retention/legal hold preventing deletion or archival.
-  
+
   Requires super_admin or data_manager role.
   Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
       operationId: place_file_on_hold_api_v1_fileshare_files__file_id__hold_post
@@ -20638,7 +20638,7 @@ paths:
       summary: Remove File From Hold
       description: |
   Remove retention/legal hold from a file record.
-  
+
   Requires super_admin or data_manager role.
   Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
       operationId: remove_file_from_hold_api_v1_fileshare_files__file_id__hold_delete
@@ -20677,7 +20677,7 @@ paths:
       summary: Get File Audit Logs
       description: |
   Retrieve immutable Part 11 audit log entries for a file record.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
       operationId: get_file_audit_logs_api_v1_fileshare_files__file_id__audit_logs_get
       parameters:
@@ -20710,7 +20710,7 @@ paths:
       summary: Get File Activity Feed
       description: |
   Retrieve paginated per-document activity feed audit log entries for inspection readiness.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, 21 CFR Part 11
       operationId: get_file_activity_feed_api_v1_fileshare_files__file_id__activity_get
       parameters:
@@ -20778,7 +20778,7 @@ paths:
       summary: Approve Document Endpoint
       description: |
   Execute 21 CFR Part 11 electronic signature document approval with in-product re-authentication.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
       operationId: approve_document_endpoint_api_v1_fileshare_files__file_id__approve_post
       parameters:
@@ -20814,7 +20814,7 @@ paths:
       summary: Reject Document Endpoint
       description: |
   Reject a document for approval.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
       operationId: reject_document_endpoint_api_v1_fileshare_files__file_id__reject_post
       parameters:
@@ -20850,7 +20850,7 @@ paths:
       summary: Rescind Approval Endpoint
       description: |
   Rescind a previous document approval. Requires super_admin.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
       operationId: rescind_approval_endpoint_api_v1_fileshare_files__file_id__rescind_approval_post
       parameters:
@@ -20886,7 +20886,7 @@ paths:
       summary: Upload Revision Endpoint
       description: |
   Initiate upload of a new version/revision for a file record. Blocks if approved and immutable.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, 21 CFR Part 11
       operationId: upload_revision_endpoint_api_v1_fileshare_files__file_id__upload_revision_post
       parameters:
@@ -20922,7 +20922,7 @@ paths:
       summary: List Files
       description: |
   List active file records for an optional study, site, and search query.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001
       operationId: list_files_api_v1_fileshare_files_get
       parameters:
@@ -20987,7 +20987,7 @@ paths:
       summary: List Share Grants
       description: |
   Retrieve active internal share grants for a file record.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003
       operationId: list_share_grants_api_v1_fileshare_files__file_id__grants_get
       parameters:
@@ -21019,7 +21019,7 @@ paths:
       summary: Create Share Grant
       description: |
   Delegate file permissions via an internal share grant.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003
       operationId: create_share_grant_api_v1_fileshare_files__file_id__grants_post
       parameters:
@@ -21055,7 +21055,7 @@ paths:
       summary: List Guest Links
       description: |
   Retrieve active guest links for a file record.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001
       operationId: list_guest_links_api_v1_fileshare_files__file_id__guest_links_get
       parameters:
@@ -21087,7 +21087,7 @@ paths:
       summary: Create Guest Link
       description: |
   Generate a time-bounded external guest link.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001
       operationId: create_guest_link_api_v1_fileshare_files__file_id__guest_links_post
       parameters:
@@ -21123,7 +21123,7 @@ paths:
       summary: Delete Share Grant
       description: |
   Revoke an internal share grant delegation.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003
       operationId: delete_share_grant_api_v1_fileshare_files__file_id__grants__grant_id__delete
       parameters:
@@ -21166,7 +21166,7 @@ paths:
       summary: Revoke Guest Link
       description: |
   Revoke an active external guest link.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001
       operationId: revoke_guest_link_api_v1_fileshare_files__file_id__guest_links__guest_link_id__delete
       parameters:
@@ -21209,7 +21209,7 @@ paths:
       summary: Get Guest File Download
       description: |
   Resolve an external guest link token and issue presigned GET URL.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001
       operationId: get_guest_file_download_api_v1_fileshare_files_guest__token__get
       parameters:
@@ -21239,7 +21239,7 @@ paths:
       summary: Get Upload Url
       description: |
   Allocate draft file record and generate presigned PUT or multipart upload URLs.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002
       operationId: get_upload_url_api_v1_files_upload_presigned_url_post
       requestBody:
@@ -21268,7 +21268,7 @@ paths:
       summary: Get Upload Url
       description: |
   Allocate draft file record and generate presigned PUT or multipart upload URLs.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002
       operationId: get_upload_url_api_v1_files_upload_url_post
       requestBody:
@@ -21297,7 +21297,7 @@ paths:
       summary: Complete File Upload
       description: |
   Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002
       operationId: complete_file_upload_api_v1_files__file_id__upload_complete_post
       parameters:
@@ -21335,7 +21335,7 @@ paths:
       summary: Complete File Upload
       description: |
   Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002
       operationId: complete_file_upload_api_v1_files__file_id__complete_upload_post
       parameters:
@@ -21373,7 +21373,7 @@ paths:
       summary: Complete File Upload
       description: |
   Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002
       operationId: complete_file_upload_api_v1_files__file_id__complete_post
       parameters:
@@ -21411,7 +21411,7 @@ paths:
       summary: Abort File Upload
       description: |
   Abort multipart upload session and mark file record deleted.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001
       operationId: abort_file_upload_api_v1_files__file_id__abort_upload_post
       parameters:
@@ -21449,12 +21449,12 @@ paths:
       summary: Get Stream Url
       description: |
   Issue short-lived presigned HLS master manifest stream URL for video playback.
-  
+
   Returns HTTP 200 with presigned URL when transcoding is READY,
   HTTP 202 Accepted when transcoding is PENDING or IN_PROGRESS,
   HTTP 409 Conflict when transcoding has FAILED,
   and HTTP 400 Bad Request when transcoding was NOT_REQUIRED.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001
       operationId: get_stream_url_api_v1_files__file_id__stream_url_get
       parameters:
@@ -21490,7 +21490,7 @@ paths:
       summary: Get Download Url
       description: |
   Retrieve short-lived presigned GET download URL with permission and watermark verification.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003
       operationId: get_download_url_api_v1_files__file_id__download_url_get
       parameters:
@@ -21561,7 +21561,7 @@ paths:
       summary: Get File Record
       description: |
   Retrieve file record metadata.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001
       operationId: get_file_record_api_v1_files__file_id__get
       parameters:
@@ -21590,7 +21590,7 @@ paths:
       summary: Delete File Record
       description: |
   Soft delete a file record.
-  
+
   Gated on FileRecord.is_on_hold being False; returns 409 if file is on hold.
   Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
       operationId: delete_file_record_api_v1_files__file_id__delete
@@ -21629,7 +21629,7 @@ paths:
       summary: Place File On Hold
       description: |
   Place a file under retention/legal hold preventing deletion or archival.
-  
+
   Requires super_admin or data_manager role.
   Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
       operationId: place_file_on_hold_api_v1_files__file_id__hold_post
@@ -21665,7 +21665,7 @@ paths:
       summary: Remove File From Hold
       description: |
   Remove retention/legal hold from a file record.
-  
+
   Requires super_admin or data_manager role.
   Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
       operationId: remove_file_from_hold_api_v1_files__file_id__hold_delete
@@ -21704,7 +21704,7 @@ paths:
       summary: Get File Audit Logs
       description: |
   Retrieve immutable Part 11 audit log entries for a file record.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
       operationId: get_file_audit_logs_api_v1_files__file_id__audit_logs_get
       parameters:
@@ -21737,7 +21737,7 @@ paths:
       summary: Get File Activity Feed
       description: |
   Retrieve paginated per-document activity feed audit log entries for inspection readiness.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, 21 CFR Part 11
       operationId: get_file_activity_feed_api_v1_files__file_id__activity_get
       parameters:
@@ -21805,7 +21805,7 @@ paths:
       summary: Approve Document Endpoint
       description: |
   Execute 21 CFR Part 11 electronic signature document approval with in-product re-authentication.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
       operationId: approve_document_endpoint_api_v1_files__file_id__approve_post
       parameters:
@@ -21841,7 +21841,7 @@ paths:
       summary: Reject Document Endpoint
       description: |
   Reject a document for approval.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
       operationId: reject_document_endpoint_api_v1_files__file_id__reject_post
       parameters:
@@ -21877,7 +21877,7 @@ paths:
       summary: Rescind Approval Endpoint
       description: |
   Rescind a previous document approval. Requires super_admin.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
       operationId: rescind_approval_endpoint_api_v1_files__file_id__rescind_approval_post
       parameters:
@@ -21913,7 +21913,7 @@ paths:
       summary: Upload Revision Endpoint
       description: |
   Initiate upload of a new version/revision for a file record. Blocks if approved and immutable.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, 21 CFR Part 11
       operationId: upload_revision_endpoint_api_v1_files__file_id__upload_revision_post
       parameters:
@@ -21949,7 +21949,7 @@ paths:
       summary: List Files
       description: |
   List active file records for an optional study, site, and search query.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001
       operationId: list_files_api_v1_files_get
       parameters:
@@ -22014,7 +22014,7 @@ paths:
       summary: List Share Grants
       description: |
   Retrieve active internal share grants for a file record.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003
       operationId: list_share_grants_api_v1_files__file_id__grants_get
       parameters:
@@ -22046,7 +22046,7 @@ paths:
       summary: Create Share Grant
       description: |
   Delegate file permissions via an internal share grant.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003
       operationId: create_share_grant_api_v1_files__file_id__grants_post
       parameters:
@@ -22082,7 +22082,7 @@ paths:
       summary: List Guest Links
       description: |
   Retrieve active guest links for a file record.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001
       operationId: list_guest_links_api_v1_files__file_id__guest_links_get
       parameters:
@@ -22114,7 +22114,7 @@ paths:
       summary: Create Guest Link
       description: |
   Generate a time-bounded external guest link.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001
       operationId: create_guest_link_api_v1_files__file_id__guest_links_post
       parameters:
@@ -22150,7 +22150,7 @@ paths:
       summary: Delete Share Grant
       description: |
   Revoke an internal share grant delegation.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003
       operationId: delete_share_grant_api_v1_files__file_id__grants__grant_id__delete
       parameters:
@@ -22193,7 +22193,7 @@ paths:
       summary: Revoke Guest Link
       description: |
   Revoke an active external guest link.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001
       operationId: revoke_guest_link_api_v1_files__file_id__guest_links__guest_link_id__delete
       parameters:
@@ -22236,7 +22236,7 @@ paths:
       summary: Get External Guest File Download
       description: |
   Public resolution endpoint for external guest access tokens.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001
       operationId: get_external_guest_file_download_api_v1_files_guest__token__get
       parameters:
@@ -22266,7 +22266,7 @@ paths:
       summary: Record Playback Checkpoint
       description: |
   Record a viewer session video playback checkpoint audit event.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
       operationId: record_playback_checkpoint_api_v1_fileshare_audit_playback_post
       requestBody:
@@ -22295,7 +22295,7 @@ paths:
       summary: Record Playback Checkpoint
       description: |
   Record a viewer session video playback checkpoint audit event.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
       operationId: record_playback_checkpoint_api_v1_files_audit_playback_post
       requestBody:
@@ -22324,7 +22324,7 @@ paths:
       summary: Get External Guest File Download
       description: |
   Public resolution endpoint for external guest access tokens.
-  
+
   Requirements: PRD-SYS-001, PRD-DOC-001
       operationId: get_external_guest_file_download_api_v1_fileshare_guest__token__get
       parameters:
@@ -22354,7 +22354,7 @@ paths:
       summary: Upload Dicom
       description: |
   Uploads and de-identifies DICOM file(s) or ZIP archives in-flight before persisting to S3.
-  
+
   @req:PRD-IMG-001
   @req:PRD-IMG-002
       operationId: upload_dicom_api_v1_imaging_upload_post
@@ -22384,9 +22384,9 @@ paths:
       summary: Deidentify In Flight
       description: |
   Performs in-memory de-identification on an uploaded DICOM file without persistent storage.
-  
+
   Returns the clean, de-identified DICOM bytes with certificate metadata headers.
-  
+
   @req:PRD-IMG-002
       operationId: deidentify_in_flight_api_v1_imaging_deidentify_post
       requestBody:
@@ -22414,7 +22414,7 @@ paths:
       summary: List Studies
       description: |
   Lists de-identified study metadata envelopes matching query filters.
-  
+
   @req:PRD-IMG-001
       operationId: list_studies_api_v1_imaging_studies_get
       parameters:
@@ -22506,7 +22506,7 @@ paths:
       summary: Get Study Detail
       description: |
   Retrieves full study envelope hierarchy including series and instance envelopes.
-  
+
   @req:PRD-IMG-001
       operationId: get_study_detail_api_v1_imaging_studies__study_uid__get
       parameters:
@@ -22536,7 +22536,7 @@ paths:
       summary: Download Instance File
       description: |
   Streams the stored de-identified DICOM binary file.
-  
+
   @req:PRD-IMG-001
       operationId: download_instance_file_api_v1_imaging_instances__sop_instance_uid__file_get
       parameters:
@@ -22565,7 +22565,7 @@ paths:
       summary: Get Presigned Download Url
       description: |
   Generates a secure, short-lived presigned URL for direct object storage download.
-  
+
   @req:PRD-IMG-001
       operationId: get_presigned_download_url_api_v1_imaging_instances__sop_instance_uid__presigned_url_get
       parameters:
@@ -22595,7 +22595,7 @@ paths:
       summary: Verify Certificate
       description: |
   Verifies the cryptographic HMAC-SHA256 signature of a de-identification certificate.
-  
+
   @req:PRD-IMG-002
       operationId: verify_certificate_api_v1_imaging_certificates__certificate_id__verify_get
       parameters:
@@ -22625,7 +22625,7 @@ paths:
       summary: Get Series Mpr Metadata
       description: |
   Retrieves 3D volume geometry, voxel spacing, and MPR orientation metadata.
-  
+
   @req:PRD-IMG-001
   @req:PRD-IMG-004
       operationId: get_series_mpr_metadata_api_v1_imaging_series__series_instance_uid__mpr_metadata_get
@@ -22656,7 +22656,7 @@ paths:
       summary: Create Caliper Annotation
       description: |
   Creates a new oncologic caliper annotation with 21 CFR Part 11 audit logging.
-  
+
   @req:PRD-IMG-004
   @req:PRD-SYS-001
       operationId: create_caliper_annotation_api_v1_imaging_annotations_post
@@ -22685,7 +22685,7 @@ paths:
       summary: List Caliper Annotations
       description: |
   Lists caliper annotations matching criteria.
-  
+
   @req:PRD-IMG-004
       operationId: list_caliper_annotations_api_v1_imaging_annotations_get
       parameters:
@@ -22777,7 +22777,7 @@ paths:
       summary: Delete Caliper Annotation
       description: |
   Deletes a caliper annotation with 21 CFR Part 11 reason for change.
-  
+
   @req:PRD-IMG-004
   @req:PRD-SYS-001
       operationId: delete_caliper_annotation_api_v1_imaging_annotations__annotation_id__delete
@@ -22810,7 +22810,7 @@ paths:
       summary: Evaluate Recist Response
       description: |
   Computes automated RECIST 1.1 derivation for target and non-target lesions.
-  
+
   @req:PRD-IMG-004
       operationId: evaluate_recist_response_api_v1_imaging_response_evaluations_recist_post
       requestBody:
@@ -22839,7 +22839,7 @@ paths:
       summary: Evaluate Lugano Response
       description: |
   Computes automated Lugano 2014 & Cheson derivation for lymphoma.
-  
+
   @req:PRD-IMG-004
       operationId: evaluate_lugano_response_api_v1_imaging_response_evaluations_lugano_post
       requestBody:
@@ -22868,7 +22868,7 @@ paths:
       summary: Get Subject Timepoints Trajectory
       description: |
   Retrieves full chronological trajectory of locked oncologic evaluations for a subject.
-  
+
   @req:PRD-IMG-004
       operationId: get_subject_timepoints_trajectory_api_v1_imaging_subjects__subject_id__timepoints_get
       parameters:
@@ -22898,7 +22898,7 @@ paths:
       summary: Evaluate And Lock Timepoint
       description: |
   Evaluates, cryptographically signs, and locks an oncologic timepoint assessment.
-  
+
   @req:PRD-IMG-004
   @req:PRD-SYS-001
       operationId: evaluate_and_lock_timepoint_api_v1_imaging_subjects__subject_id__timepoints_evaluate_post
@@ -22935,7 +22935,7 @@ paths:
       summary: Create Adjudication Session
       description: |
   Instantiates and routes a new Blinded Dual-Reader Independent Review Charter session.
-  
+
   @req:PRD-IMG-003
   @req:PRD-SYS-001
       operationId: create_adjudication_session_api_v1_imaging_adjudication_sessions_post
@@ -22964,7 +22964,7 @@ paths:
       summary: List Adjudication Sessions
       description: |
   Lists adjudication sessions with dynamic blinding enforcement based on requesting role.
-  
+
   @req:PRD-IMG-003
       operationId: list_adjudication_sessions_api_v1_imaging_adjudication_sessions_get
       parameters:
@@ -23023,7 +23023,7 @@ paths:
       summary: Get Adjudication Session
       description: |
   Retrieves an adjudication session with strict blinding isolation between readers.
-  
+
   @req:PRD-IMG-003
       operationId: get_adjudication_session_api_v1_imaging_adjudication_sessions__session_id__get
       parameters:
@@ -23053,7 +23053,7 @@ paths:
       summary: Submit Reader Assessment
       description: |
   Submits a blinded reader assessment and automatically detects response discordance.
-  
+
   @req:PRD-IMG-003
   @req:PRD-IMG-005
       operationId: submit_reader_assessment_api_v1_imaging_adjudication_sessions__session_id__assessments_post
@@ -23090,7 +23090,7 @@ paths:
       summary: Sign Off Adjudication
       description: |
   Executes 21 CFR Part 11 step-up electronic signature sign-off for binding tie-breaker determination.
-  
+
   @req:PRD-IMG-005
   @req:PRD-SYS-001
       operationId: sign_off_adjudication_api_v1_imaging_adjudication_sessions__session_id__sign_off_post
@@ -23127,7 +23127,7 @@ paths:
       summary: Get Edc Ecrf Tumor Binding
       description: |
   Extracts direct EDC eCRF tumor assessment form bindings from verified adjudication measurements.
-  
+
   @req:PRD-IMG-006
       operationId: get_edc_ecrf_tumor_binding_api_v1_imaging_adjudication_sessions__session_id__edc_binding_get
       parameters:
@@ -23157,7 +23157,7 @@ paths:
       summary: Export Adjudication Sdtm Datasets
       description: |
   Exports CDISC SDTM TU (Tumor Identification), TR (Tumor Results), and RS (Disease Response) datasets.
-  
+
   @req:PRD-IMG-006
       operationId: export_adjudication_sdtm_datasets_api_v1_imaging_adjudication_sessions__session_id__export_sdtm_get
       parameters:
@@ -23187,7 +23187,7 @@ paths:
       summary: Export Adjudication Sdtm Datasets
       description: |
   Exports CDISC SDTM TU (Tumor Identification), TR (Tumor Results), and RS (Disease Response) datasets.
-  
+
   @req:PRD-IMG-006
       operationId: export_adjudication_sdtm_datasets_api_v1_imaging_adjudication_sessions__session_id__sdtm_get
       parameters:
@@ -24589,7 +24589,7 @@ paths:
       summary: "Register & map approved medical IoT sensor device"
       description: |
   Register and map an approved medical IoT sensor device (CGM, Actigraphy, Spirometry, BP).
-  
+
   @req:PRD-DCT-002
   @req:PRD-ADR-2199
       operationId: register_device_api_v1_interop_sensors_devices_post
@@ -24618,7 +24618,7 @@ paths:
       summary: List registered medical IoT devices
       description: |
   List registered medical IoT sensor devices for a clinical study.
-  
+
   @req:PRD-DCT-002
   @req:PRD-ADR-2199
       operationId: list_devices_api_v1_interop_sensors_devices_get
@@ -24681,7 +24681,7 @@ paths:
       summary: Ingest continuous biometric IoT sensor telemetry
       description: |
   Ingest continuous time-series telemetry streams from approved medical IoT devices.
-  
+
   Applies:
   1. Automated HMAC-SHA256 pseudonymization & device MAC/UDI mapping
   2. Clock drift correction between device RTC and gateway UTC
@@ -24689,7 +24689,7 @@ paths:
   4. Aggregate daily summary endpoints calculation (Time-in-Range TIR, mean glucose, steps, FEV1)
   5. Automated safety threshold alert evaluation
   6. Automated feeding into the Clinical Data Repository (CDR) Lakehouse
-  
+
   @req:PRD-DCT-002
   @req:PRD-DCT-001
   @req:PRD-ADR-2199
@@ -24720,7 +24720,7 @@ paths:
       summary: Query calculated daily summary endpoints
       description: |
   Retrieve aggregate daily summary endpoints (TIR, glucose, steps, cadence, RHR, FEV1).
-  
+
   @req:PRD-DCT-002
   @req:PRD-ADR-2199
       operationId: list_daily_summaries_api_v1_interop_sensors_daily_summaries_get
@@ -24795,7 +24795,7 @@ paths:
       summary: Query automated safety threshold alerts
       description: |
   Retrieve triggered biometric safety threshold alerts for clinical investigation.
-  
+
   @req:PRD-DCT-002
   @req:PRD-ADR-2199
       operationId: list_safety_alerts_api_v1_interop_sensors_safety_alerts_get
@@ -24868,7 +24868,7 @@ paths:
       summary: Acknowledge safety alert with electronic signature
       description: |
   Acknowledge a safety threshold alert with 21 CFR Part 11 electronic sign-off and clinical notes.
-  
+
   @req:PRD-DCT-002
   @req:PRD-ADR-2199
       operationId: acknowledge_safety_alert_api_v1_interop_sensors_safety_alerts__alert_id__acknowledge_post
@@ -24905,7 +24905,7 @@ paths:
       summary: Get connected IoT sensor dashboard metrics
       description: |
   Retrieve real-time IoT sensor telemetry metrics across a clinical study.
-  
+
   @req:PRD-DCT-002
   @req:PRD-ADR-2199
       operationId: get_sensor_dashboard_metrics_api_v1_interop_sensors_metrics__study_id__get
@@ -24936,7 +24936,7 @@ paths:
       summary: Schedule WebRTC telehealth video visit
       description: |
   Schedule a new WebRTC telehealth video consultation session.
-  
+
   @req:PRD-DCT-005
   @req:PRD-ADR-2199
       operationId: schedule_telehealth_session_api_v1_interop_dct_telehealth_sessions_post
@@ -24965,7 +24965,7 @@ paths:
       summary: List telehealth video consultation sessions
       description: |
   Query scheduled and active telehealth consultation sessions.
-  
+
   @req:PRD-DCT-005
   @req:PRD-ADR-2199
       operationId: list_telehealth_sessions_api_v1_interop_dct_telehealth_sessions_get
@@ -25006,7 +25006,7 @@ paths:
       summary: Retrieve single telehealth session details
       description: |
   Retrieve details of a single telehealth video session by ID or room ID.
-  
+
   @req:PRD-DCT-005
   @req:PRD-ADR-2199
       operationId: get_telehealth_session_api_v1_interop_dct_telehealth_sessions__session_id__get
@@ -25037,7 +25037,7 @@ paths:
       summary: Generate HMAC-SHA256 signed room authorization token
       description: |
   Issue a role-scoped, cryptographic room authorization token for WebRTC video entry.
-  
+
   @req:PRD-DCT-005
   @req:PRD-ADR-2199
       operationId: generate_room_token_api_v1_interop_dct_telehealth_sessions__session_id__token_post
@@ -25074,7 +25074,7 @@ paths:
       summary: Exchange WebRTC session signaling message
       description: |
   Append WebRTC session signaling envelope (SDP offer/answer, ICE candidates).
-  
+
   @req:PRD-DCT-005
   @req:PRD-ADR-2199
       operationId: update_session_signaling_api_v1_interop_dct_telehealth_sessions__session_id__signaling_post
@@ -25111,7 +25111,7 @@ paths:
       summary: Synchronize eConsent interactive co-viewing state
       description: |
   Synchronize eConsent page position, active highlights, and scroll percentage.
-  
+
   @req:PRD-DCT-005
   @req:PRD-ADR-2199
       operationId: sync_co_view_state_api_v1_interop_dct_telehealth_sessions__session_id__co_view_post
@@ -25148,7 +25148,7 @@ paths:
       summary: Archive GxP recording with SHA-256 digital seal (21 CFR Part 11)
       description: |
   Archive telehealth video consultation recording with cryptographic SHA-256 digital seal.
-  
+
   @req:PRD-DCT-005
   @req:PRD-ADR-2199
       operationId: archive_telehealth_recording_api_v1_interop_dct_telehealth_sessions__session_id__archive_recording_post
@@ -25185,7 +25185,7 @@ paths:
       summary: "Submit tiered pediatric assent & LAR dual-signature manifest"
       description: |
   Submit age-appropriate pediatric assent and parent/LAR electronic signature bundle.
-  
+
   @req:PRD-DCT-006
   @req:PRD-ADR-2199
       operationId: submit_pediatric_assent_api_v1_interop_dct_econsent_pediatric_assent_post
@@ -25214,7 +25214,7 @@ paths:
       summary: List executed pediatric assents
       description: |
   Query executed pediatric assent and LAR consent records.
-  
+
   @req:PRD-DCT-006
   @req:PRD-ADR-2199
       operationId: list_pediatric_assents_api_v1_interop_dct_econsent_pediatric_assent_get
@@ -25255,7 +25255,7 @@ paths:
       summary: Verify cryptographic bundle seal of pediatric assent
       description: |
   Validate cryptographic SHA-256 seal integrity for pediatric assent bundle.
-  
+
   @req:PRD-DCT-006
   @req:PRD-ADR-2199
       operationId: verify_pediatric_assent_api_v1_interop_dct_econsent_pediatric_assent__assent_id__verify_get
@@ -25286,7 +25286,7 @@ paths:
       summary: Create Direct-to-Patient (DTP) courier dispatch order
       description: |
   Create a new Direct-to-Patient courier drug shipment with temperature-controlled profile.
-  
+
   @req:PRD-DCT-003
   @req:PRD-ADR-2199
       operationId: create_dtp_shipment_api_v1_interop_dct_dtp_shipments_post
@@ -25315,7 +25315,7 @@ paths:
       summary: List Direct-to-Patient drug shipments
       description: |
   Query DTP shipments with cold-chain indicators and tracking states.
-  
+
   @req:PRD-DCT-003
   @req:PRD-ADR-2199
       operationId: list_dtp_shipments_api_v1_interop_dct_dtp_shipments_get
@@ -25364,7 +25364,7 @@ paths:
       summary: Retrieve single DTP shipment details by tracking number
       description: |
   Retrieve details, temperature telemetry, and Chain of Custody for a DTP shipment.
-  
+
   @req:PRD-DCT-003
   @req:PRD-ADR-2199
       operationId: get_dtp_shipment_api_v1_interop_dct_dtp_shipments__tracking_number__get
@@ -25395,7 +25395,7 @@ paths:
       summary: "Ingest cold-chain temperature telemetry points & calculate MKT"
       description: |
   Ingest cold chain logger data points, compute Arrhenius MKT, and flag excursions.
-  
+
   @req:PRD-DCT-003
   @req:PRD-ADR-2199
       operationId: ingest_dtp_temperature_api_v1_interop_dct_dtp_shipments__tracking_number__temperature_post
@@ -25432,7 +25432,7 @@ paths:
       summary: Record Chain of Custody (CoC) handoff event
       description: |
   Record signed Chain of Custody handoff across depot, courier hubs, and final mile.
-  
+
   @req:PRD-DCT-003
   @req:PRD-ADR-2199
       operationId: record_dtp_handoff_api_v1_interop_dct_dtp_shipments__tracking_number__handoff_post
@@ -25469,7 +25469,7 @@ paths:
       summary: Confirm final delivery with recipient signature
       description: |
   Confirm delivery at subject residence with recipient signature and greenlight checks.
-  
+
   @req:PRD-DCT-003
   @req:PRD-ADR-2199
       operationId: confirm_dtp_delivery_api_v1_interop_dct_dtp_shipments__tracking_number__delivery_post
@@ -25506,7 +25506,7 @@ paths:
       summary: Schedule decentralized in-home nursing visit
       description: |
   Schedule visiting healthcare nurse appointment with protocol procedure tasks.
-  
+
   @req:PRD-DCT-004
   @req:PRD-ADR-2199
       operationId: schedule_in_home_visit_api_v1_interop_dct_home_health_visits_post
@@ -25535,7 +25535,7 @@ paths:
       summary: List in-home visiting clinician appointments
       description: |
   Query in-home nursing visits by study, site, nurse, or subject.
-  
+
   @req:PRD-DCT-004
   @req:PRD-ADR-2199
       operationId: list_in_home_visits_api_v1_interop_dct_home_health_visits_get
@@ -25592,7 +25592,7 @@ paths:
       summary: Retrieve single in-home visit details
       description: |
   Retrieve in-home nursing visit details, procedure progress, and mobile eCRF data.
-  
+
   @req:PRD-DCT-004
   @req:PRD-ADR-2199
       operationId: get_in_home_visit_api_v1_interop_dct_home_health_visits__visit_id__get
@@ -25623,7 +25623,7 @@ paths:
       summary: Update visiting nurse visit progress and completed procedures
       description: |
   Update in-home visit status (EN_ROUTE, ARRIVED_ON_SITE, PROCEDURES_IN_PROGRESS, etc.).
-  
+
   @req:PRD-DCT-004
   @req:PRD-ADR-2199
       operationId: update_in_home_visit_status_api_v1_interop_dct_home_health_visits__visit_id__status_post
@@ -25660,7 +25660,7 @@ paths:
       summary: Reconcile offline-cached mobile eCRF clinical data entry
       description: |
   Reconcile mobile eCRF clinical data entered offline by visiting nurse.
-  
+
   @req:PRD-DCT-004
   @req:PRD-ADR-2199
       operationId: reconcile_mobile_ecrf_sync_api_v1_interop_dct_home_health_visits__visit_id__sync_ecrf_post
@@ -25697,7 +25697,7 @@ paths:
       summary: Retrieve aggregated DCT operational metrics
       description: |
   Retrieve real-time DCT dashboard KPI metrics for study.
-  
+
   @req:PRD-DCT-003
   @req:PRD-DCT-004
   @req:PRD-DCT-005
@@ -26098,7 +26098,7 @@ paths:
       summary: Generate Sdtm Dd Endpoint
       description: |
   Compiles CDISC SDTM DD (Device Deficiencies) dataset from reported device malfunctions.
-  
+
   Requirements: PRD-DEV-004, ISO 14155:2020, PRD-ADR-2209
       operationId: generate_sdtm_dd_endpoint_api_v1_interop_devices_sdtm_dd_post
       requestBody:
@@ -26127,7 +26127,7 @@ paths:
       summary: Generate Sdtm Do Endpoint
       description: |
   Compiles CDISC SDTM DO (Device Tracking and Operations) dataset from serialized inventory.
-  
+
   Requirements: PRD-DEV-004, ISO 14155:2020, PRD-ADR-2209
       operationId: generate_sdtm_do_endpoint_api_v1_interop_devices_sdtm_do_post
       requestBody:
@@ -26156,7 +26156,7 @@ paths:
       summary: Generate Mdr Incident Report Endpoint
       description: |
   Compiles an EU MDR 2017/745 / EU IVDR 2017/746 Manufacturer Incident Report (MIR v7.2).
-  
+
   Requirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, PRD-ADR-2209
       operationId: generate_mdr_incident_report_endpoint_api_v1_interop_devices_mir_report_post
       requestBody:
@@ -26185,7 +26185,7 @@ paths:
       summary: Generate Export Package Endpoint
       description: |
   Compiles a complete regulatory investigation package (SDTM DD, DO, and MIR forms).
-  
+
   Requirements: PRD-SYS-126, PRD-DEV-004, PRD-ADR-2209
       operationId: generate_export_package_endpoint_api_v1_interop_devices_export_package_post
       requestBody:
@@ -26383,7 +26383,7 @@ paths:
       summary: Update Article Draft
       description: |
   Updates the working draft of an article (Issue #4325).
-  
+
   Updates the single KnowledgeArticleVersion row during DRAFT status with markdown
   body, auto-rendered HTML, and GxP audit fields (created_by, reason_for_change, version_index).
   Requires super_admin role.
@@ -26449,7 +26449,7 @@ paths:
       summary: Search Articles
       description: |
   Full-text searches published knowledge articles across titles, tags, and Markdown bodies (Issue #4329).
-  
+
   - Returns relevance-ranked articles with contextual highlighted snippets (<mark>...</mark>).
   - Scopes visibility to categories accessible by the caller's persona roles.
   - PostgreSQL tsvector-indexed in production; multi-dialect lexical fallback in SQLite test harnesses.
@@ -26500,7 +26500,7 @@ paths:
       summary: Search Articles
       description: |
   Full-text searches published knowledge articles across titles, tags, and Markdown bodies (Issue #4329).
-  
+
   - Returns relevance-ranked articles with contextual highlighted snippets (<mark>...</mark>).
   - Scopes visibility to categories accessible by the caller's persona roles.
   - PostgreSQL tsvector-indexed in production; multi-dialect lexical fallback in SQLite test harnesses.
@@ -26649,7 +26649,7 @@ paths:
       summary: Approve Article
       description: |
   Approves an article in IN_REVIEW status (IN_REVIEW -> APPROVED).
-  
+
   Enforces Four-Eyes check: approver cannot be author_user_id or last_edited_by.
   Locks current KnowledgeArticleVersion record as permanently immutable.
       operationId: approve_article_api_v1_knowledge_articles__article_id__approve_post
@@ -26719,7 +26719,7 @@ paths:
       summary: Publish Article
       description: |
   Publishes an APPROVED article (APPROVED -> PUBLISHED).
-  
+
   - Updates fast O(1) lookup pointer KnowledgeArticle.current_published_version_id.
   - Publishing version N+1 automatically sets prior active version N to SUPERSEDED.
       operationId: publish_article_api_v1_knowledge_articles__article_id__publish_post
@@ -27038,7 +27038,7 @@ paths:
       description: |
   Dynamically resolves in-page contextual SOP guidance and relevant articles
   for a given clinical screen route (e.g. '/ecrf/site-101/subjects') and persona role.
-  
+
   Resolution algorithm:
   - Matches exact routes, parameterized routes, prefix wildcards, and global catch-alls.
   - Resolves via hierarchical specificity: priority ASC, persona match, pattern specificity, length, and recency.
@@ -27174,7 +27174,7 @@ paths:
       description: |
   Dynamically resolves in-page contextual SOP guidance and relevant articles
   for a given clinical screen route (e.g. '/ecrf/site-101/subjects') and persona role.
-  
+
   Resolution algorithm:
   - Matches exact routes, parameterized routes, prefix wildcards, and global catch-alls.
   - Resolves via hierarchical specificity: priority ASC, persona match, pattern specificity, length, and recency.
@@ -27215,7 +27215,7 @@ paths:
       summary: Ingest a protocol or SOP document and index dense vector chunks
       description: |
   Ingests protocol text, extracts section/page coordinates, and indexes vector chunks.
-  
+
   Requires sponsor_designer, data_manager, or super_admin role.
       operationId: ingest_protocol_document_api_v1_knowledge_protocols_ingest_post
       requestBody:
@@ -27332,7 +27332,7 @@ paths:
       summary: Generate Amendment Curriculum Endpoint
       description: |
   Generate a delta-training curriculum upon protocol amendment publication.
-  
+
   Requirements: PRD-TRN-001
       operationId: generate_amendment_curriculum_endpoint_api_v1_training_curricula_generate_amendment_post
       requestBody:
@@ -27581,7 +27581,7 @@ paths:
       summary: Submit Quiz Endpoint
       description: |
   Submit comprehension quiz answers and evaluate score (>= 80% passing).
-  
+
   Requirements: PRD-TRN-003
       operationId: submit_quiz_endpoint_api_v1_training_assignments__assignment_id__submit_quiz_post
       parameters:
@@ -27617,7 +27617,7 @@ paths:
       summary: Sign Off Training Endpoint
       description: |
   Capture 21 CFR Part 11 electronic signature, generate sealed PDF certificate, and push to eTMF & eISF.
-  
+
   Requirements: PRD-TRN-003, PRD-TRN-004
       operationId: sign_off_training_endpoint_api_v1_training_assignments__assignment_id__sign_off_post
       parameters:
@@ -27680,7 +27680,7 @@ paths:
       summary: Get Gating Status Endpoint
       description: |
   Check whether a user is qualified for EDC write permissions on a protocol version.
-  
+
   Requirements: PRD-TRN-002
       operationId: get_gating_status_endpoint_api_v1_training_gating_status_get
       parameters:
@@ -27748,7 +27748,7 @@ paths:
       summary: Verify Gate Endpoint
       description: |
   Programmatically verify qualification gate for EDC write operations.
-  
+
   Requirements: PRD-TRN-002
       operationId: verify_gate_endpoint_api_v1_training_verify_gate_post
       requestBody:
@@ -32366,7 +32366,7 @@ paths:
       summary: Execute Quality Surveillance Run
       description: |
   Executes a complete, autonomous cross-domain quality surveillance run.
-  
+
   Harvests clinical data across domains, enforces sample power gating,
   evaluates statistical forensics & computer vision sentinels,
   and idempotently dispatches 21 CFR Part 11 Deviations.
@@ -33231,7 +33231,7 @@ paths:
       summary: Generate Safety Narrative Endpoint
       description: |
   Draft a new FDA MedWatch 3500A / CIOMS-I Serious Adverse Event narrative via Tier 3 model.
-  
+
   Requirements: PRD-SYS-051, PRD-SYS-052
       operationId: generate_safety_narrative_endpoint_api_v1_safety_narratives_generate_post
       requestBody:
@@ -33258,7 +33258,7 @@ paths:
       summary: Get Safety Narrative Endpoint
       description: |
   Retrieve safety narrative details, grounded claims, and review status.
-  
+
   Requirements: PRD-SYS-052
       operationId: get_safety_narrative_endpoint_api_v1_safety_narratives__id__get
       parameters:
@@ -33286,7 +33286,7 @@ paths:
       summary: List Safety Narratives Endpoint
       description: |
   List safety narratives filtered by study, subject, or review status.
-  
+
   Requirements: PRD-SYS-052
       operationId: list_safety_narratives_endpoint_api_v1_safety_narratives_get
       parameters:
@@ -33335,7 +33335,7 @@ paths:
       summary: Sign Safety Narrative Endpoint
       description: |
   Apply a 21 CFR Part 11 cryptographic electronic signature to approve a safety narrative.
-  
+
   Requirements: PRD-SYS-051, PRD-SYS-052
       operationId: sign_safety_narrative_endpoint_api_v1_safety_narratives__id__sign_post
       parameters:
@@ -33369,9 +33369,9 @@ paths:
       summary: Export Safety Narrative E2B Endpoint
       description: |
   Export an approved safety narrative into ICH E2B(R3) XML format.
-  
+
   Requires 21 CFR Part 11 approval status.
-  
+
   Requirements: PRD-SYS-052
       operationId: export_safety_narrative_e2b_endpoint_api_v1_safety_narratives__id__export_e2b_post
       parameters:
@@ -33398,7 +33398,7 @@ paths:
       summary: Evaluate Expedited Safety Rules Endpoint
       description: |
   Evaluate adverse event against global expedited safety reporting rules and persist evaluation.
-  
+
   Requirements: PRD-PVG-001, PRD-PVG-008, PRD-ADR-2199
       operationId: evaluate_expedited_safety_rules_endpoint_api_v1_safety_rules_evaluate_post
       requestBody:
@@ -33425,7 +33425,7 @@ paths:
       summary: Get Expedited Safety Evaluation Endpoint
       description: |
   Retrieve safety reporting evaluation with updated real-time Day 0 countdown clocks.
-  
+
   Requirements: PRD-PVG-001
       operationId: get_expedited_safety_evaluation_endpoint_api_v1_safety_rules_evaluations__id__get
       parameters:
@@ -33453,7 +33453,7 @@ paths:
       summary: List Expedited Safety Evaluations Endpoint
       description: |
   List safety evaluations filtered by study, case, or expedited status with live countdowns.
-  
+
   Requirements: PRD-PVG-001
       operationId: list_expedited_safety_evaluations_endpoint_api_v1_safety_rules_evaluations_get
       parameters:
@@ -33518,7 +33518,7 @@ paths:
       summary: Sign Expedited Safety Evaluation Endpoint
       description: |
   Apply a 21 CFR Part 11 electronic signature by a qualified Safety Physician to approve an ICSR evaluation.
-  
+
   Requirements: PRD-PVG-008
       operationId: sign_expedited_safety_evaluation_endpoint_api_v1_safety_rules_evaluations__id__sign_post
       parameters:
@@ -33552,7 +33552,7 @@ paths:
       summary: Get Safety Countdown Alerts Endpoint
       description: |
   Retrieve all active expedited safety evaluations with WARNING (>=75%), CRITICAL (>=90%), or OVERDUE countdown clocks.
-  
+
   Requirements: PRD-PVG-001
       operationId: get_safety_countdown_alerts_endpoint_api_v1_safety_rules_countdown_alerts_get
       parameters:
@@ -33585,7 +33585,7 @@ paths:
       summary: Send As2 Transmission Endpoint
       description: |
   Dispatch an outbound ICH E2B(R3) XML payload directly to a Regulatory Health Authority AS2 Gateway.
-  
+
   Requirements: PRD-PVG-002, PRD-ADR-2199
       operationId: send_as2_transmission_endpoint_api_v1_safety_as2_transmissions_post
       requestBody:
@@ -33611,7 +33611,7 @@ paths:
       summary: List As2 Transmissions Endpoint
       description: |
   List append-only AS2 B2B transmission ledger records with optional filters.
-  
+
   Requirements: PRD-PVG-002, PRD-ADR-2199
       operationId: list_as2_transmissions_endpoint_api_v1_safety_as2_transmissions_get
       parameters:
@@ -33682,7 +33682,7 @@ paths:
       summary: Get As2 Transmission Endpoint
       description: |
   Retrieve full audit history and status of an AS2 B2B transmission by ID.
-  
+
   Requirements: PRD-PVG-002, PRD-ADR-2199
       operationId: get_as2_transmission_endpoint_api_v1_safety_as2_transmissions__id__get
       parameters:
@@ -33710,7 +33710,7 @@ paths:
       summary: Process Inbound Mdn Endpoint
       description: |
   Process an asynchronous Message Disposition Notification (MDN) callback.
-  
+
   Requirements: PRD-PVG-002, PRD-ADR-2199
       operationId: process_inbound_mdn_endpoint_api_v1_safety_as2_mdn_post
       requestBody:
@@ -33737,7 +33737,7 @@ paths:
       summary: Process Regulatory Ack Endpoint
       description: |
   Process an inbound Regulatory ACK B (Syntactic) or ACK C (Authority Ingestion) receipt.
-  
+
   Requirements: PRD-PVG-002, PRD-ADR-2199
       operationId: process_regulatory_ack_endpoint_api_v1_safety_as2_ack_post
       requestBody:
@@ -33764,7 +33764,7 @@ paths:
       summary: Retry As2 Transmission Endpoint
       description: |
   Retry a failed AS2 transmission.
-  
+
   Requirements: PRD-PVG-002, PRD-ADR-2199
       operationId: retry_as2_transmission_endpoint_api_v1_safety_as2_transmissions__id__retry_post
       parameters:
@@ -33792,7 +33792,7 @@ paths:
       summary: Execute Signal Detection Scan Endpoint
       description: |
   Execute statistical disproportionality signal detection (PRR, ROR, EBGM/MGPS) across PT and SOC pairs.
-  
+
   Requirements: PRD-PVG-003, PRD-ADR-2199
       operationId: execute_signal_detection_scan_endpoint_api_v1_safety_signals_detect_post
       requestBody:
@@ -33819,7 +33819,7 @@ paths:
       summary: List Signal Detection Runs Endpoint
       description: |
   List historical disproportionality signal detection scan runs.
-  
+
   Requirements: PRD-PVG-003, PRD-ADR-2199
       operationId: list_signal_detection_runs_endpoint_api_v1_safety_signals_runs_get
       parameters:
@@ -33861,7 +33861,7 @@ paths:
       summary: Get Signal Detection Run Endpoint
       description: |
   Retrieve full metric tables and details for a signal detection scan run.
-  
+
   Requirements: PRD-PVG-003, PRD-ADR-2199
       operationId: get_signal_detection_run_endpoint_api_v1_safety_signals_runs__id__get
       parameters:
@@ -33891,7 +33891,7 @@ paths:
       summary: List Signal Alerts Endpoint
       description: |
   List safety signal review alerts with optional filtering by status, severity, or study.
-  
+
   Requirements: PRD-PVG-003, PRD-ADR-2199
       operationId: list_signal_alerts_endpoint_api_v1_safety_signals_alerts_get
       parameters:
@@ -33948,7 +33948,7 @@ paths:
       summary: Get Signal Alert Endpoint
       description: |
   Retrieve details of an individual safety signal review alert.
-  
+
   Requirements: PRD-PVG-003, PRD-ADR-2199
       operationId: get_signal_alert_endpoint_api_v1_safety_signals_alerts__id__get
       parameters:
@@ -33976,7 +33976,7 @@ paths:
       summary: Review Signal Alert Endpoint
       description: |
   Review and update the clinical triage disposition of a safety signal alert.
-  
+
   Requirements: PRD-PVG-003, PRD-ADR-2199
       operationId: review_signal_alert_endpoint_api_v1_safety_signals_alerts__id__review_post
       parameters:
@@ -34010,7 +34010,7 @@ paths:
       summary: Sign Signal Alert Endpoint
       description: |
   Apply a 21 CFR Part 11 Electronic Signature to approve a safety signal disposition.
-  
+
   Requirements: PRD-PVG-003, PRD-PVG-008, PRD-ADR-2199
       operationId: sign_signal_alert_endpoint_api_v1_safety_signals_alerts__id__sign_post
       parameters:
@@ -34044,7 +34044,7 @@ paths:
       summary: Calculate Subject Exposure Endpoint
       description: |
   Calculate cumulative and interval patient-years of exposure.
-  
+
   Requirements: PRD-PVG-004, PRD-AGG-001, PRD-ADR-2199
       operationId: calculate_subject_exposure_endpoint_api_v1_safety_exposure_calculate_post
       requestBody:
@@ -34071,7 +34071,7 @@ paths:
       summary: Lock Regulatory Snapshot Endpoint
       description: |
   Lock an immutable point-in-time regulatory dataset snapshot with SHA-256 seal.
-  
+
   Requirements: PRD-AGG-001, 21 CFR Part 11, PRD-ADR-2199
       operationId: lock_regulatory_snapshot_endpoint_api_v1_safety_snapshots_lock_post
       requestBody:
@@ -34098,7 +34098,7 @@ paths:
       summary: Verify Regulatory Snapshot Endpoint
       description: |
   Cryptographically verify the bitwise integrity of a locked regulatory snapshot.
-  
+
   Requirements: PRD-AGG-001, 21 CFR Part 11, PRD-ADR-2199
       operationId: verify_regulatory_snapshot_endpoint_api_v1_safety_snapshots_verify_post
       requestBody:
@@ -34125,7 +34125,7 @@ paths:
       summary: Compile Periodic Safety Report Endpoint
       description: |
   Compile an aggregate periodic safety report (ICH E2F DSUR, ICH E2C(R2) PSUR/PBRER).
-  
+
   Requirements: PRD-PVG-004, PRD-AGG-001, PRD-ADR-2199
       operationId: compile_periodic_safety_report_endpoint_api_v1_safety_periodic_reports_compile_post
       requestBody:
@@ -34152,7 +34152,7 @@ paths:
       summary: List Periodic Safety Reports Endpoint
       description: |
   List compiled periodic regulatory safety reports with optional filters.
-  
+
   Requirements: PRD-PVG-004, PRD-ADR-2199
       operationId: list_periodic_safety_reports_endpoint_api_v1_safety_periodic_reports_get
       parameters:
@@ -34209,7 +34209,7 @@ paths:
       summary: Get Periodic Safety Report Endpoint
       description: |
   Retrieve full structured JSON payload of a periodic regulatory safety report by ID.
-  
+
   Requirements: PRD-PVG-004, PRD-ADR-2199
       operationId: get_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__get
       parameters:
@@ -34237,7 +34237,7 @@ paths:
       summary: Sign Periodic Safety Report Endpoint
       description: |
   Apply a 21 CFR Part 11 Electronic Signature to approve a Periodic Safety Report.
-  
+
   Requirements: PRD-PVG-004, PRD-PVG-008, PRD-AGG-001, PRD-ADR-2199
       operationId: sign_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__sign_post
       parameters:
@@ -34271,7 +34271,7 @@ paths:
       summary: Qppv Sign Periodic Safety Report Endpoint
       description: |
   Executive QPPV Sign-off endpoint for aggregate regulatory safety submissions.
-  
+
   Requirements: PRD-AGG-001, 21 CFR Part 11, PRD-ADR-2199
       operationId: qppv_sign_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__qppv_sign_post
       parameters:
@@ -34305,7 +34305,7 @@ paths:
       summary: Export Periodic Safety Report Endpoint
       description: |
   Export a periodic safety report as HTML, XML, or JSON.
-  
+
   Requirements: PRD-PVG-004, PRD-AGG-001, PRD-ADR-2199
       operationId: export_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__export_get
       parameters:
@@ -34336,7 +34336,7 @@ paths:
       summary: Export Periodic Safety Report Xml Endpoint
       description: |
   Export the structured ICH E2F / E2C(R2) XML submission package.
-  
+
   Requirements: PRD-AGG-001, ICH E2F, ICH E2C(R2)
       operationId: export_periodic_safety_report_xml_endpoint_api_v1_safety_periodic_reports__id__xml_get
       parameters:
@@ -34360,9 +34360,9 @@ paths:
       summary: Open Device Safety Investigation Endpoint
       description: |
   Opens a new Adverse Device Effect (ADE / SADE / USADE) safety investigation case.
-  
+
   Calculates vigilance reporting deadlines according to ISO 14155 and EU MDR / IVDR.
-  
+
   Requirements: PRD-SYS-126, PRD-DEV-003, ISO 14155:2020, PRD-ADR-2209
       operationId: open_device_safety_investigation_endpoint_api_v1_safety_device_investigations_post
       requestBody:
@@ -34388,7 +34388,7 @@ paths:
       summary: List Device Safety Investigations Endpoint
       description: |
   Lists device safety investigation cases matching query parameters.
-  
+
   Requirements: PRD-SYS-126, PRD-DEV-003, PRD-ADR-2209
       operationId: list_device_safety_investigations_endpoint_api_v1_safety_device_investigations_get
       parameters:
@@ -34445,7 +34445,7 @@ paths:
       summary: Get Device Safety Investigation Endpoint
       description: |
   Retrieves a single device safety investigation case by ID.
-  
+
   Requirements: PRD-SYS-126, PRD-DEV-003, PRD-ADR-2209
       operationId: get_device_safety_investigation_endpoint_api_v1_safety_device_investigations__investigation_id__get
       parameters:
@@ -34473,7 +34473,7 @@ paths:
       summary: Adjudicate Device Safety Investigation Endpoint
       description: |
   Formally adjudicates Adverse Device Effect causality and SADE determination with Part 11 e-signature.
-  
+
   Requirements: PRD-SYS-126, PRD-DEV-003, 21 CFR Part 11, ISO 14155:2020, PRD-ADR-2209
       operationId: adjudicate_device_safety_investigation_endpoint_api_v1_safety_device_investigations__investigation_id__adjudicate_put
       parameters:
@@ -34507,7 +34507,7 @@ paths:
       summary: Generate Device Vigilance Report Endpoint
       description: |
   Generates an EU MDR 2017/745 / EU IVDR 2017/746 Manufacturer Incident Report (MIR v7.2 JSON/XML).
-  
+
   Requirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, PRD-ADR-2209
       operationId: generate_device_vigilance_report_endpoint_api_v1_safety_device_investigations__investigation_id__regulatory_report_post
       parameters:
@@ -34535,7 +34535,7 @@ paths:
       summary: Generate Device Fda Medwatch Report Endpoint
       description: |
   Generates an FDA 21 CFR Part 803 Form 3500A (MedWatch) Electronic Report.
-  
+
   Requirements: PRD-SYS-187, PRD-SYS-053, FDA 21 CFR Part 803, 21 CFR Part 11
       operationId: generate_device_fda_medwatch_report_endpoint_api_v1_safety_device_investigations__investigation_id__fda_medwatch_report_post
       parameters:
@@ -35141,7 +35141,7 @@ paths:
       summary: Analyze Diff Endpoint
       description: |
   Analyze proposed setting change and evaluate GxP regulatory risk level.
-  
+
   Requirements: PRD-SYS-001
       operationId: analyze_diff_endpoint_api_v1_compliance_change_requests_analyze_diff_post
       requestBody:
@@ -35168,11 +35168,11 @@ paths:
       summary: Execute Grounded Protocol RAG support triage on an existing ticket
       description: |
   Execute Grounded Protocol RAG Support Triage on an existing ticket.
-  
+
   Applies strict 85% confidence gating:
   - >= 85%: attaches DRAFT_AI suggestion with exact page/section citations.
   - < 85%: suppresses auto-draft and fails closed to human Data Manager queue.
-  
+
   Requirements: PRD-TCK-005, PRD-SYS-051
       operationId: triage_ticket_rag_api_v1_tickets__ticket_id__rag_triage_post
       parameters:
@@ -35217,7 +35217,7 @@ paths:
       summary: Preview Grounded Protocol RAG support triage before ticket submission
       description: |
   Preview Grounded Protocol RAG Support Triage before ticket submission.
-  
+
   Requirements: PRD-TCK-005, PRD-SYS-051
       operationId: preview_ticket_rag_triage_api_v1_tickets_rag_triage_preview_post
       requestBody:
@@ -39893,7 +39893,7 @@ components:
       title: ActivityReport
       description: |
   Detailed report of an activity definition mapped within an epoch schedule.
-  
+
   Attributes:
       epoch_id: The public identifier for the study epoch.
       epoch_internal_id: The internal database ID for the epoch.
@@ -40032,7 +40032,7 @@ components:
       title: AmendmentImpactSummary
       description: |
   Calculated operational and clinical burden impact of a protocol amendment.
-  
+
   Requirements: PRD-SYS-001, PRD-SUB-007
     Designer_ApproveProtocolRequest:
       properties:
@@ -40377,7 +40377,7 @@ components:
       title: BranchAmendmentRequest
       description: |
   Payload to create an immutable amendment branch.
-  
+
   Requirements: PRD-SYS-001, PRD-SUB-007
     Designer_BranchAmendmentResponse:
       properties:
@@ -40436,7 +40436,7 @@ components:
       title: BranchAmendmentResponse
       description: |
   Response after creating an immutable amendment branch.
-  
+
   Requirements: PRD-SYS-001
     Designer_BurdenTraceItem:
       properties:
@@ -40556,7 +40556,7 @@ components:
       title: CascadeSummaryReport
       description: |
   Summary report of downstream eCRF and SoA cascade propagation.
-  
+
   Requirements: PRD-SYS-001
     Designer_CascadedFormTemplate:
       properties:
@@ -40592,7 +40592,7 @@ components:
       title: CascadedFormTemplate
       description: |
   Auto-generated eCRF form template derived from USDM activities.
-  
+
   Requirements: PRD-SYS-001
     Designer_CdiscMetadata:
       properties:
@@ -42045,7 +42045,7 @@ components:
       title: DifferenceResult
       description: |
   Represents a field-level difference between two versions.
-  
+
   Attributes:
       field: The name of the field that changed.
       old_value: The previous value of the field.
@@ -42334,7 +42334,7 @@ components:
       title: EntityDiff
       description: |
   Entity-level visual diff with semantic tokens.
-  
+
   Requirements: PRD-SYS-001
     Designer_EpochProperties:
       properties:
@@ -43051,7 +43051,7 @@ components:
       title: ItemMappingStatus
       description: |
   Represents the mapping status of an individual activity item.
-  
+
   Attributes:
       item_id: The public string identifier of the activity item.
       internal_id: The internal graph database ID of the activity item.
@@ -43340,7 +43340,7 @@ components:
       title: MigrationDirective
       description: |
   Directive for in-flight subject migration and version transition.
-  
+
   Requirements: PRD-SYS-001, PRD-SUB-007
     Designer_MigrationMode:
       type: string
@@ -43973,7 +43973,7 @@ components:
       title: ProtocolQualityScore
       description: |
   Protocol Quality Sentinel evaluation summary report.
-  
+
   Requirements: PRD-SYS-001
     Designer_ProtocolRAGContextChunk:
       properties:
@@ -44116,7 +44116,7 @@ components:
       title: QualityRuleFinding
       description: |
   Specific protocol quality rule finding.
-  
+
   Requirements: PRD-SYS-001
     Designer_ReConsentGatingPlan:
       properties:
@@ -44390,7 +44390,7 @@ components:
       title: SchemaRevisionSummary
       description: |
   Breakdown of schema revisions across USDM domain layers.
-  
+
   Requirements: PRD-SYS-001
     Designer_SectionReviewStatus:
       type: string
@@ -44511,7 +44511,7 @@ components:
       title: SemanticDiffRequest
       description: |
   Request to compute semantic multi-layer amendment diff.
-  
+
   Requirements: PRD-SYS-001
     Designer_SemanticDiffResponse:
       properties:
@@ -44569,7 +44569,7 @@ components:
       title: SemanticDiffResponse
       description: |
   Multi-layer visual and semantic protocol diff response.
-  
+
   Requirements: PRD-SYS-001, PRD-SUB-007
     Designer_SigningReason:
       type: string
@@ -45004,7 +45004,7 @@ components:
       title: StudyAlignmentReport
       description: |
   Comprehensive alignment report analyzing the mapping between study epochs and CRFs.
-  
+
   Attributes:
       study_id: The unique identifier of the study being evaluated.
       complete_activities: Activities where all required items are mapped successfully.
@@ -45339,7 +45339,7 @@ components:
       title: SynopsisExportRequest
       description: |
   Request payload for exporting a clinical protocol synopsis.
-  
+
   Requirements: PRD-SYS-001
     Designer_SynopsisExportResponse:
       properties:
@@ -45368,7 +45368,7 @@ components:
       title: SynopsisExportResponse
       description: |
   Response payload containing base64 encoded document export stream.
-  
+
   Requirements: PRD-SYS-001
     Designer_SynthesizedECRFForm:
       properties:
@@ -46445,7 +46445,7 @@ components:
       title: MigrationDirective
       description: |
   Directive for in-flight subject migration and version transition.
-  
+
   Requirements: PRD-SYS-001, PRD-SUB-007
     Designer_apps__designer__domain__eligibility__models__ExpressionNode-Input:
       properties:
@@ -49328,7 +49328,7 @@ components:
       title: EISFDocumentDetail
       description: |
   Fetch document details and download URL.
-  
+
   Requirements: PRD-SYS-001
     Eisf_EISFDocumentIntelligenceRequest:
       properties:
@@ -49451,7 +49451,7 @@ components:
       title: EISFDocumentUploadRequest
       description: |
   Request payload for uploading a new site document with GxP metadata.
-  
+
   Requirements: PRD-SYS-001
     Eisf_EISFFolderNode:
       properties:
@@ -49481,7 +49481,7 @@ components:
       title: EISFFolderNode
       description: |
   Tree view of eISF folders and document counts.
-  
+
   Requirements: PRD-SYS-001
     Eisf_EISFIngestionRequest:
       properties:
@@ -49778,7 +49778,7 @@ components:
       title: ArchiveJobResponse
       description: |
   Schema representing study archival job details and status.
-  
+
   Requirements: PRD-SYS-001
     ETMF_ArtifactDetail:
       properties:
@@ -52010,7 +52010,7 @@ components:
       title: AddDOAAssignmentRequest
       description: |
   Request payload to add site personnel task delegation record.
-  
+
   Requirements: PRD-SYS-001
     Execution_AdjudicationActionEnum:
       type: string
@@ -52501,7 +52501,7 @@ components:
       title: BatchSignatureRequest
       description: |
   Request payload for Principal Investigator batch eSignature casebook sign-off.
-  
+
   Requirements: PRD-SYS-001
     Execution_BatchSignatureResponse:
       properties:
@@ -52545,7 +52545,7 @@ components:
       title: BatchSignatureResponse
       description: |
   Response payload following successful batch eSignature execution.
-  
+
   Requirements: PRD-SYS-001
     Execution_BindingDeterminationSource:
       type: string
@@ -52735,7 +52735,7 @@ components:
       title: BulkQueryGenerationRequest
       description: |
   Request payload to execute bulk clinical query generation.
-  
+
   Requirements: PRD-SYS-001
     Execution_BulkQueryGenerationResponse:
       properties:
@@ -52781,7 +52781,7 @@ components:
       title: BulkQueryGenerationResponse
       description: |
   Response payload following bulk query generation execution.
-  
+
   Requirements: PRD-SYS-001
     Execution_BulkSdvSignOffRequest:
       properties:
@@ -52828,7 +52828,7 @@ components:
       title: BulkSdvSignOffRequest
       description: |
   Request payload to execute bulk SDV sign-offs.
-  
+
   Requirements: PRD-SYS-001
     Execution_BulkSdvSignOffResponse:
       properties:
@@ -52900,7 +52900,7 @@ components:
       title: BulkSdvSignOffResponse
       description: |
   Response payload following bulk SDV sign-off execution.
-  
+
   Requirements: PRD-SYS-001
     Execution_BulkSubjectReconsentRequest:
       properties:
@@ -55160,12 +55160,12 @@ components:
       title: CustodianEnum
       description: |
   Enumeration of the two permissible dual-custody key holders.
-  
+
   The Shamir secret-sharing scheme used for emergency unblinding mandates
   that exactly one share comes from each of these two custodians.  Any
   other custodian identity is rejected with a 422 validation error before
   the request reaches the cryptographic layer.
-  
+
   Attributes:
       LEAD_UNBLINDED_STATISTICIAN: The lead unblinded statistician who holds
           one half of the Shamir key share.
@@ -55197,12 +55197,12 @@ components:
       title: CustodianShare
       description: |
   A single custodian's Shamir secret share for dual-custody unblinding.
-  
+
   Both shares must be present in the request body before the encrypted
   allocation record can be reconstructed.  Field constraints are enforced
   at the schema boundary so malformed shares produce structured 422
   responses rather than opaque crypto-layer failures.
-  
+
   Attributes:
       custodian: The identity of the key custodian; must be one of the two
           approved dual-custody holders defined by ``CustodianEnum``.
@@ -55276,7 +55276,7 @@ components:
       title: DOAAssignmentRecord
       description: |
   Delegation of Authority (DOA) site personnel assignment log record.
-  
+
   Requirements: PRD-SYS-001
     Execution_DOAAuditLogResponse:
       properties:
@@ -55377,7 +55377,7 @@ components:
       title: DOASignOffRequest
       description: |
   Request payload for PI eSignature endorsement of DOA record.
-  
+
   Requirements: PRD-SYS-001
     Execution_DOATaskDelegationEnum:
       type: string
@@ -55390,7 +55390,7 @@ components:
       title: DOATaskDelegationEnum
       description: |
   Specific clinical trial study tasks delegated to site personnel.
-  
+
   Requirements: PRD-SYS-001
     Execution_DOATaskRoleEnum:
       type: string
@@ -55403,7 +55403,7 @@ components:
       title: DOATaskRoleEnum
       description: |
   Site personnel roles on Delegation of Authority log.
-  
+
   Requirements: PRD-SYS-001
     Execution_DailyDemandProjection:
       properties:
@@ -56761,7 +56761,7 @@ components:
       title: DocumentMetadataResponse
       description: |
   Schema representing complete document metadata.
-  
+
   Requirements: PRD-SYS-001
     Execution_DocumentUploadResponse:
       properties:
@@ -56786,7 +56786,7 @@ components:
       title: DocumentUploadResponse
       description: |
   Schema representing upload response.
-  
+
   Requirements: PRD-SYS-001
     Execution_DoseLevelDef:
       properties:
@@ -57417,7 +57417,7 @@ components:
       title: EISFDocumentRecord
       description: |
   eISF regulatory binder document metadata record.
-  
+
   Requirements: PRD-SYS-001
     Execution_EISFTaxonomyCategoryEnum:
       type: string
@@ -57433,7 +57433,7 @@ components:
       title: EISFTaxonomyCategoryEnum
       description: |
   DIA eISF / Regulatory Binder document taxonomy categories.
-  
+
   Requirements: PRD-SYS-001
     Execution_ETMFCompletenessWebhookPayload:
       properties:
@@ -58006,7 +58006,7 @@ components:
       title: GenerateAuditorTokenRequest
       description: |
   Request payload to generate a temporary auditor access token.
-  
+
   Requirements: PRD-SYS-001
     Execution_GradingScaleEnum:
       type: string
@@ -59295,7 +59295,7 @@ components:
       title: LabReferenceRangeCreate
       description: |
   Payload to create a new clinical laboratory reference range.
-  
+
   Requirements: PRD-SYS-001, PRD-LAB-001
     Execution_LabReferenceRangeResponse:
       properties:
@@ -59401,7 +59401,7 @@ components:
       title: LabReferenceRangeResponse
       description: |
   Response payload representing a registered laboratory reference range.
-  
+
   Requirements: PRD-SYS-001, PRD-LAB-001
     Execution_LabReferenceRangeUpdate:
       properties:
@@ -59505,7 +59505,7 @@ components:
       title: LabReferenceRangeUpdate
       description: |
   Payload to modify an existing laboratory reference range.
-  
+
   Requirements: PRD-SYS-001, PRD-LAB-001
     Execution_LabSourceEnum:
       type: string
@@ -59515,7 +59515,7 @@ components:
       title: LabSourceEnum
       description: |
   Source of the laboratory testing.
-  
+
   Requirements: PRD-SYS-001
     Execution_LabToxicityEvaluateRequest:
       properties:
@@ -59730,7 +59730,7 @@ components:
       title: LocalLabCertificationCreate
       description: |
   Payload to register a new local laboratory accreditation or certification.
-  
+
   Requirements: PRD-LAB-001
     Execution_LocalLabCertificationResponse:
       properties:
@@ -59818,7 +59818,7 @@ components:
       title: LocalLabCertificationResponse
       description: |
   Response representing a local laboratory certification.
-  
+
   Requirements: PRD-LAB-001
     Execution_LocalLabCertificationUpdate:
       properties:
@@ -59893,7 +59893,7 @@ components:
       title: LocalLabCertificationUpdate
       description: |
   Payload to update an existing local laboratory certification.
-  
+
   Requirements: PRD-LAB-001
     Execution_LocalLabCertificationVerifyRequest:
       properties:
@@ -60873,7 +60873,7 @@ components:
       title: OfflineBatchSyncRequest
       description: |
   Request schema for offline batch delta sync.
-  
+
   Requirements: PRD-SYS-001
     Execution_OfflineBatchSyncResponse:
       properties:
@@ -60908,7 +60908,7 @@ components:
       title: OfflineBatchSyncResponse
       description: |
   Response schema for offline batch delta sync.
-  
+
   Requirements: PRD-SYS-001
     Execution_OfflineDeltaItem:
       properties:
@@ -60957,7 +60957,7 @@ components:
       title: OfflineDeltaItem
       description: |
   An individual sync delta item representing an entity mutation.
-  
+
   Requirements: PRD-SYS-001
     Execution_OutlierRecalculateRequest:
       properties:
@@ -61007,7 +61007,7 @@ components:
       title: PHIScanRequest
       description: |
   Request payload to scan text for HIPAA 18 PHI identifiers.
-  
+
   Requirements: PRD-SYS-001
     Execution_PackingManifestCreateRequest:
       properties:
@@ -61438,7 +61438,7 @@ components:
       title: PublishAmendmentRequest
       description: |
   Request payload to publish a new protocol amendment version.
-  
+
   Requirements: PRD-SYS-001
     Execution_PublishAmendmentResponse:
       properties:
@@ -61482,7 +61482,7 @@ components:
       title: PublishAmendmentResponse
       description: |
   Response payload following protocol amendment publishing.
-  
+
   Requirements: PRD-SYS-001
     Execution_QuarantineScope:
       type: string
@@ -61718,7 +61718,7 @@ components:
       title: QueryTargetDescriptor
       description: |
   Coordinate fields representing the specific target of a query.
-  
+
   Requirements: PRD-SYS-001
     Execution_QueryUpdate:
       properties:
@@ -62317,7 +62317,7 @@ components:
       title: RedactPDFRequest
       description: |
   Request payload to apply non-destructive redactions to PDF document.
-  
+
   Requirements: PRD-SYS-001
     Execution_ResupplyEventApprovalRequest:
       properties:
@@ -62406,7 +62406,7 @@ components:
       title: SAEReconcileRequest
       description: |
   Request payload to reconcile EDC AE data against Safety ICSR cases.
-  
+
   Requirements: PRD-SYS-001
     Execution_SDVScopeEnum:
       type: string
@@ -62535,7 +62535,7 @@ components:
       title: SafetyDispatchRequest
       description: |
   Request payload to dispatch ICH E2B(R3) safety report to external PV gateway.
-  
+
   Requirements: PRD-SYS-001
     Execution_SafetyDispatchResponse:
       properties:
@@ -62569,7 +62569,7 @@ components:
       title: SafetyDispatchResponse
       description: |
   Response payload following E2B safety report gateway dispatch.
-  
+
   Requirements: PRD-SYS-001
     Execution_SamplingModelEnum:
       type: string
@@ -64457,11 +64457,11 @@ components:
       title: UnblindRequest
       description: |
   Request body for an emergency treatment-allocation unblinding operation.
-  
+
   The dual-custody contract requires exactly two custodian shares — one from
   each approved custodian.  Requests with fewer or more shares, or with an
   insufficiently detailed justification, are rejected at the schema layer.
-  
+
   Attributes:
       reason_code: One of the three regulatory-approved unblinding scenarios
           from ``UnblindingReasonCode``.
@@ -64480,11 +64480,11 @@ components:
       title: UnblindingReasonCode
       description: |
   Controlled vocabulary of approved reason codes for emergency unblinding.
-  
+
   Only these three regulatory-approved scenarios authorise an emergency
   treatment-allocation disclosure outside of the standard end-of-study
   unblinding process.
-  
+
   Attributes:
       SAE_LIFE_THREATENING_EVENT: Serious Adverse Event that is immediately
           life-threatening and requires knowledge of the treatment assignment.
@@ -64568,7 +64568,7 @@ components:
       title: UploadEISFDocumentRequest
       description: |
   Request payload to upload an eISF document.
-  
+
   Requirements: PRD-SYS-001
     Execution_ValidateGatingRequest:
       properties:
@@ -75416,7 +75416,7 @@ components:
       title: ArticleStatus
       description: |
   Lifecycle states for a KnowledgeArticle controlled document.
-  
+
   Implements a GxP-compliant seven-state machine enforcing four-eyes approval,
   immutable published content, and full audit trail per 21 CFR Part 11.
     Knowledge_ArticleSubmitReviewRequest:

@@ -379,6 +379,8 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         SecretsBaselineCleanerService.IsExcludedFile(
             "packages/kernel/src/Cadence.Kernel.Persistence/Migrations/20261120152149_CommercialSubscriptionsAndEntitlements.cs")
             .Should().BeFalse();
+        SecretsBaselineCleanerService.IsExcludedFile("apps/web/dist/assets/index.js")
+            .Should().BeFalse("ADR-2497 keeps dist/ unexcluded from secret baseline scanning");
     }
 
     private (int ExitCode, string Stderr) RunHook(string hookPath, string pathEnv, string homeDir)

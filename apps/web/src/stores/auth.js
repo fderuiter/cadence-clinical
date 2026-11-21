@@ -30,7 +30,7 @@ import {
 /** Offline identity used only by demo builds (see utils/demoMode.js). */
 export const DEMO_IDENTITY = Object.freeze({
   username: "fderuiter",
-  email: "fderuiter@example.com", // deid-ignore
+  email: "fderuiter@cadence.clinical",
   firstName: "Frans",
   lastName: "de Ruiter",
   id: "fderuiter-id-12345",

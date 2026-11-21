@@ -65,6 +65,13 @@ export default defineConfig({
         find: "pinia",
         replacement: path.resolve(__dirname, "node_modules/pinia"),
       },
+      {
+        find: /^vuedraggable$/,
+        replacement: path.resolve(
+          __dirname,
+          "node_modules/vuedraggable/src/vuedraggable.js"
+        ),
+      },
       { find: "vue", replacement: path.resolve(__dirname, "node_modules/vue") },
     ],
   },
@@ -133,9 +140,10 @@ export default defineConfig({
           // Third-party vendor packages
           if (id.includes("node_modules")) {
             if (
-              id.includes("vue") ||
-              id.includes("vue-router") ||
-              id.includes("pinia")
+              id.includes("/vue/") ||
+              id.includes("/@vue/") ||
+              id.includes("/vue-router/") ||
+              id.includes("/pinia/")
             ) {
               return "vendor-vue";
             }
