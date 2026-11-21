@@ -45,9 +45,15 @@ const auditChecks = {
 };
 
 async function completeInitialPinSetupIfOpen(page, pin = "246810") {
-  await page
-    .locator("#app .skip-link")
-    .waitFor({ state: "attached", timeout: 10000 });
+  const skipLink = page.locator("#app .skip-link");
+  const attached = await skipLink
+    .waitFor({ state: "attached", timeout: 5000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!attached) {
+    await page.reload();
+    await skipLink.waitFor({ state: "attached", timeout: 10000 });
+  }
   const pinSetupModal = page.locator("#portal-pin-setup-modal");
   const pinUnlockModal = page.locator("#portal-pin-unlock-modal");
   await Promise.race([

@@ -214,7 +214,16 @@ test.describe("Clinical Workflows and ePRO Portal Tests", () => {
       });
 
       // Navigate to ePRO portal on port 5174
-      await page.goto("http://localhost:5174/subject-portal/");
+      await page.goto("http://127.0.0.1:5174/subject-portal/");
+      const skipLink = page.locator("#app .skip-link");
+      if (
+        !(await skipLink
+          .waitFor({ state: "attached", timeout: 5000 })
+          .then(() => true)
+          .catch(() => false))
+      ) {
+        await page.reload();
+      }
 
       // Complete initial AES-GCM PIN wrapper setup when prompted
       const pinSetupModal = page.locator("#portal-pin-setup-modal");

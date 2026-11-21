@@ -187,10 +187,11 @@ describe("Subject Portal OIDC Session Resilience, Draft-Safe Logout & Part 11 Mo
     await nextTick();
 
     card.query("#btn-logout").click();
-    await new Promise((r) => setTimeout(r, 20));
-    await nextTick();
-
-    expect(card.query('[data-testid="signout-confirm-modal"]')).not.toBeNull();
+    await vi.waitFor(() => {
+      expect(
+        card.query('[data-testid="signout-confirm-modal"]')
+      ).not.toBeNull();
+    });
     expect(state.activeQuestionnaire).not.toBeNull();
 
     card.query('[data-testid="signout-stay-btn"]').click();
@@ -202,13 +203,14 @@ describe("Subject Portal OIDC Session Resilience, Draft-Safe Logout & Part 11 Mo
     expect(state.session.token).toBe("valid-access-token");
 
     card.query("#btn-logout").click();
-    await new Promise((r) => setTimeout(r, 20));
-    await nextTick();
+    await vi.waitFor(() => {
+      expect(card.query('[data-testid="signout-confirm-btn"]')).not.toBeNull();
+    });
     card.query('[data-testid="signout-confirm-btn"]').click();
-    await new Promise((r) => setTimeout(r, 20));
-
-    expect(state.activeQuestionnaire).toBeNull();
-    expect(state.session.token).toBeNull();
+    await vi.waitFor(() => {
+      expect(state.activeQuestionnaire).toBeNull();
+      expect(state.session.token).toBeNull();
+    });
     card.unmount();
   });
 
@@ -293,8 +295,9 @@ describe("Subject Portal OIDC Session Resilience, Draft-Safe Logout & Part 11 Mo
     expect(state.pinUnlock.isOpen).toBe(false);
     expect(state.activeQuestionnaire).toBeNull();
 
-    await new Promise((r) => setTimeout(r, 20));
-    expect(window.keycloakInstance.logout).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => {
+      expect(window.keycloakInstance.logout).toHaveBeenCalledTimes(1);
+    });
     resolveKeycloakLogout();
     await logoutPromise;
   });

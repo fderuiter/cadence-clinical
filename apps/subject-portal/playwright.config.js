@@ -1,5 +1,15 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const chromiumLaunchOptions = {
+  args: [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--no-proxy-server",
+  ],
+};
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false, // run sequentially to avoid race conditions or database locks
@@ -11,16 +21,8 @@ export default defineConfig({
     ["junit", { outputFile: "playwright-report.xml" }],
   ],
   use: {
-    baseURL: "http://localhost:5174/subject-portal/",
-    launchOptions: {
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--host-resolver-rules=MAP localhost 127.0.0.1",
-      ],
-    },
+    baseURL: "http://127.0.0.1:5174/subject-portal/",
+    launchOptions: chromiumLaunchOptions,
     trace: "retain-on-failure",
     video: "retain-on-failure",
     screenshot: "only-on-failure",
@@ -30,30 +32,21 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
-        channel: "chromium",
-        launchOptions: {
-          args: [
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-gpu",
-            "--host-resolver-rules=MAP localhost 127.0.0.1",
-          ],
-        },
+        launchOptions: chromiumLaunchOptions,
       },
     },
   ],
   webServer: [
     {
       command:
-        "VITE_API_BASE_URL=http://localhost:5174 pnpm --filter subject-portal exec vite build --base=/subject-portal/ --outDir node_modules/.e2e-prod && pnpm --filter subject-portal exec vite preview --outDir node_modules/.e2e-prod --host 127.0.0.1 --port 5174 --strictPort",
+        "VITE_API_BASE_URL=http://127.0.0.1:5174 VITE_KEYCLOAK_URL=http://127.0.0.1:8080/ ./node_modules/.bin/vite build --base=/subject-portal/ --outDir node_modules/.e2e-prod && exec ./node_modules/.bin/vite preview --outDir node_modules/.e2e-prod --host 127.0.0.1 --port 5174 --strictPort",
       url: "http://127.0.0.1:5174/subject-portal/",
       reuseExistingServer: false,
       timeout: 120000,
     },
     {
       command:
-        "pnpm --filter subject-portal exec vite build --mode demo --base=/subject-portal/ --outDir node_modules/.e2e-demo && pnpm --filter subject-portal exec vite preview --outDir node_modules/.e2e-demo --host 127.0.0.1 --port 5175 --strictPort",
+        "VITE_API_BASE_URL=http://127.0.0.1:5175 VITE_KEYCLOAK_URL=http://127.0.0.1:8080/ ./node_modules/.bin/vite build --mode demo --base=/subject-portal/ --outDir node_modules/.e2e-demo && exec ./node_modules/.bin/vite preview --outDir node_modules/.e2e-demo --host 127.0.0.1 --port 5175 --strictPort",
       url: "http://127.0.0.1:5175/subject-portal/",
       reuseExistingServer: false,
       timeout: 120000,

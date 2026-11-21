@@ -17,6 +17,7 @@ const chromiumLaunchOptions = {
     "--disable-setuid-sandbox",
     "--disable-dev-shm-usage",
     "--disable-gpu",
+    "--no-proxy-server",
   ],
 };
 
@@ -25,8 +26,8 @@ const accessibilityProject = {
   testMatch: /web-accessibility\.spec\.ts/,
   use: {
     ...devices["Desktop Chrome"],
-    channel: "chromium",
     baseURL: demoPreviewUrl,
+    serviceWorkers: "block" as const,
     launchOptions: chromiumLaunchOptions,
   },
 };
@@ -43,7 +44,7 @@ export default defineConfig({
   outputDir: process.env.RECORDING_OUTPUT_DIR || "./test-results",
   use: {
     baseURL: webBaseUrl,
-    channel: "chromium",
+    serviceWorkers: useLiveKeycloak ? "allow" : "block",
     launchOptions: chromiumLaunchOptions,
     trace: "retain-on-failure",
     video:
@@ -64,7 +65,7 @@ export default defineConfig({
           testIgnore: /web-accessibility\.spec\.ts/,
           use: {
             ...devices["Desktop Chrome"],
-            channel: "chromium",
+            serviceWorkers: useLiveKeycloak ? "allow" : "block",
             launchOptions: chromiumLaunchOptions,
             storageState: "playwright/.auth/user.json",
           },
@@ -76,7 +77,7 @@ export default defineConfig({
     ? [
         {
           command:
-            "./node_modules/.bin/vite build --mode demo --outDir node_modules/.e2e-demo && exec ./node_modules/.bin/vite preview --outDir node_modules/.e2e-demo --host 127.0.0.1 --port 3001 --strictPort",
+            "CADENCE_E2E_BUILD=1 VITE_E2E_IN_PROCESS_MSW=true ./node_modules/.bin/vite build --mode demo --outDir node_modules/.e2e-demo && exec env CADENCE_E2E_BUILD=1 ./node_modules/.bin/vite preview --outDir node_modules/.e2e-demo --host 127.0.0.1 --port 3001 --strictPort",
           url: demoPreviewUrl,
           reuseExistingServer: false,
           timeout: 120000,
@@ -95,14 +96,15 @@ export default defineConfig({
           : []),
         {
           command:
-            "./node_modules/.bin/vite build --mode demo --outDir node_modules/.e2e-demo && exec ./node_modules/.bin/vite preview --outDir node_modules/.e2e-demo --host 127.0.0.1 --port 3001 --strictPort",
+            "CADENCE_E2E_BUILD=1 VITE_E2E_IN_PROCESS_MSW=true ./node_modules/.bin/vite build --mode demo --outDir node_modules/.e2e-demo && exec env CADENCE_E2E_BUILD=1 ./node_modules/.bin/vite preview --outDir node_modules/.e2e-demo --host 127.0.0.1 --port 3001 --strictPort",
           url: demoPreviewUrl,
           reuseExistingServer: false,
           timeout: 120000,
         },
         {
-          command: "pnpm --filter subject-portal dev",
-          url: "http://localhost:5174/subject-portal/",
+          command:
+            "VITE_KEYCLOAK_URL=http://127.0.0.1:8080/ pnpm --filter subject-portal exec vite --host 127.0.0.1 --port 5174 --strictPort",
+          url: "http://127.0.0.1:5174/subject-portal/",
           reuseExistingServer: !process.env.CI,
           timeout: 120000,
         },
