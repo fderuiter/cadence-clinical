@@ -6,25 +6,25 @@ Generated from the EF Core model of `Cadence.Apps.Ctms.Infrastructure.Persistenc
 
 | Table | Entity | Columns |
 | --- | --- | --- |
-| [`ctms.audit_log_entries`](#ctmsaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`ctms.ctms_audit_logs`](#ctmsctms_audit_logs) | `CtmsAuditLog` | 10 |
-| [`ctms.ctms_budget_line_items`](#ctmsctms_budget_line_items) | `CtmsBudgetLineItem` | 9 |
-| [`ctms.ctms_clinical_queries`](#ctmsctms_clinical_queries) | `CtmsClinicalQuery` | 10 |
-| [`ctms.ctms_cra_allocations`](#ctmsctms_cra_allocations) | `CtmsCraAllocation` | 11 |
-| [`ctms.ctms_defeated_monitoring_visits`](#ctmsctms_defeated_monitoring_visits) | `CtmsDefeatedMonitoringVisit` | 11 |
-| [`ctms.ctms_delegations`](#ctmsctms_delegations) | `CtmsDelegation` | 12 |
-| [`ctms.ctms_generated_letters`](#ctmsctms_generated_letters) | `CtmsGeneratedLetter` | 16 |
-| [`ctms.ctms_investigator_grants`](#ctmsctms_investigator_grants) | `CtmsInvestigatorGrant` | 10 |
-| [`ctms.ctms_investigator_payables`](#ctmsctms_investigator_payables) | `CtmsInvestigatorPayable` | 11 |
-| [`ctms.ctms_monitoring_visit_findings`](#ctmsctms_monitoring_visit_findings) | `CtmsMonitoringVisitFinding` | 11 |
-| [`ctms.ctms_monitoring_visits`](#ctmsctms_monitoring_visits) | `CtmsMonitoringVisit` | 17 |
-| [`ctms.ctms_payment_milestones`](#ctmsctms_payment_milestones) | `CtmsPaymentMilestone` | 11 |
-| [`ctms.ctms_recruitment_records`](#ctmsctms_recruitment_records) | `CtmsRecruitmentRecord` | 11 |
-| [`ctms.ctms_regulatory_forms`](#ctmsctms_regulatory_forms) | `CtmsRegulatoryForm` | 13 |
-| [`ctms.ctms_site_greenlight_gates`](#ctmsctms_site_greenlight_gates) | `CtmsSiteGreenlightGate` | 26 |
-| [`ctms.ctms_site_milestones`](#ctmsctms_site_milestones) | `CtmsSiteMilestone` | 11 |
-| [`ctms.doa_delegation_records`](#ctmsdoa_delegation_records) | `DoaDelegationRecord` | 15 |
-| [`ctms.transactional_outbox`](#ctmstransactional_outbox) | `TransactionalOutboxMessage` | 10 |
+| [`ctms.audit_log_entries`](#ctmsaudit_log_entries) | `AuditLogEntry` | 12 |
+| [`ctms.ctms_audit_logs`](#ctmsctms_audit_logs) | `CtmsAuditLog` | 11 |
+| [`ctms.ctms_budget_line_items`](#ctmsctms_budget_line_items) | `CtmsBudgetLineItem` | 10 |
+| [`ctms.ctms_clinical_queries`](#ctmsctms_clinical_queries) | `CtmsClinicalQuery` | 11 |
+| [`ctms.ctms_cra_allocations`](#ctmsctms_cra_allocations) | `CtmsCraAllocation` | 12 |
+| [`ctms.ctms_defeated_monitoring_visits`](#ctmsctms_defeated_monitoring_visits) | `CtmsDefeatedMonitoringVisit` | 12 |
+| [`ctms.ctms_delegations`](#ctmsctms_delegations) | `CtmsDelegation` | 13 |
+| [`ctms.ctms_generated_letters`](#ctmsctms_generated_letters) | `CtmsGeneratedLetter` | 17 |
+| [`ctms.ctms_investigator_grants`](#ctmsctms_investigator_grants) | `CtmsInvestigatorGrant` | 11 |
+| [`ctms.ctms_investigator_payables`](#ctmsctms_investigator_payables) | `CtmsInvestigatorPayable` | 12 |
+| [`ctms.ctms_monitoring_visit_findings`](#ctmsctms_monitoring_visit_findings) | `CtmsMonitoringVisitFinding` | 12 |
+| [`ctms.ctms_monitoring_visits`](#ctmsctms_monitoring_visits) | `CtmsMonitoringVisit` | 18 |
+| [`ctms.ctms_payment_milestones`](#ctmsctms_payment_milestones) | `CtmsPaymentMilestone` | 12 |
+| [`ctms.ctms_recruitment_records`](#ctmsctms_recruitment_records) | `CtmsRecruitmentRecord` | 12 |
+| [`ctms.ctms_regulatory_forms`](#ctmsctms_regulatory_forms) | `CtmsRegulatoryForm` | 14 |
+| [`ctms.ctms_site_greenlight_gates`](#ctmsctms_site_greenlight_gates) | `CtmsSiteGreenlightGate` | 27 |
+| [`ctms.ctms_site_milestones`](#ctmsctms_site_milestones) | `CtmsSiteMilestone` | 12 |
+| [`ctms.doa_delegation_records`](#ctmsdoa_delegation_records) | `DoaDelegationRecord` | 16 |
+| [`ctms.transactional_outbox`](#ctmstransactional_outbox) | `TransactionalOutboxMessage` | 11 |
 
 ## ctms.audit_log_entries
 
@@ -43,10 +43,12 @@ Entity: `AuditLogEntry`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+- `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
 ## ctms.ctms_audit_logs
 
@@ -64,11 +66,13 @@ Entity: `CtmsAuditLog`
 | `UserId` | `character varying(255)` | no |  |  |
 | `UserRole` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_ctms_audit_logs_Timestamp`: (`Timestamp`)
 - `IX_ctms_audit_logs_UserId`: (`UserId`)
+- `IX_ctms_audit_logs_tenant_id`: (`tenant_id`)
 
 ## ctms.ctms_budget_line_items
 
@@ -85,6 +89,7 @@ Entity: `CtmsBudgetLineItem`
 | `GrantId` | `character varying(36)` | no |  |  |
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Foreign keys:
 
@@ -93,6 +98,7 @@ Foreign keys:
 Indexes:
 
 - `IX_ctms_budget_line_items_GrantId`: (`GrantId`)
+- `IX_ctms_budget_line_items_tenant_id`: (`tenant_id`)
 
 ## ctms.ctms_clinical_queries
 
@@ -110,12 +116,14 @@ Entity: `CtmsClinicalQuery`
 | `StudyId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
 | `VisitId` | `character varying(255)` | yes |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_ctms_clinical_queries_SiteId`: (`SiteId`)
 - `IX_ctms_clinical_queries_StudyId`: (`StudyId`)
 - `IX_ctms_clinical_queries_VisitId`: (`VisitId`)
+- `IX_ctms_clinical_queries_tenant_id`: (`tenant_id`)
 
 ## ctms.ctms_cra_allocations
 
@@ -134,12 +142,14 @@ Entity: `CtmsCraAllocation`
 | `Status` | `character varying(50)` | no |  |  |
 | `StudyId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_ctms_cra_allocations_CraId`: (`CraId`)
 - `IX_ctms_cra_allocations_SiteId`: (`SiteId`)
 - `IX_ctms_cra_allocations_StudyId`: (`StudyId`)
+- `IX_ctms_cra_allocations_tenant_id`: (`tenant_id`)
 
 ## ctms.ctms_defeated_monitoring_visits
 
@@ -158,10 +168,12 @@ Entity: `CtmsDefeatedMonitoringVisit`
 | `Status` | `character varying(100)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
 | `VisitId` | `character varying(255)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_ctms_defeated_monitoring_visits_VisitId`: (`VisitId`)
+- `IX_ctms_defeated_monitoring_visits_tenant_id`: (`tenant_id`)
 
 ## ctms.ctms_delegations
 
@@ -181,11 +193,13 @@ Entity: `CtmsDelegation`
 | `StartDate` | `character varying(50)` | no |  |  |
 | `TaskCodes` | `jsonb` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_ctms_delegations_SiteId`: (`SiteId`)
 - `IX_ctms_delegations_StaffUserId`: (`StaffUserId`)
+- `IX_ctms_delegations_tenant_id`: (`tenant_id`)
 
 ## ctms.ctms_generated_letters
 
@@ -209,10 +223,12 @@ Entity: `CtmsGeneratedLetter`
 | `Status` | `character varying(50)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
 | `VisitId` | `character varying(36)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_ctms_generated_letters_VisitId`: (`VisitId`)
+- `IX_ctms_generated_letters_tenant_id`: (`tenant_id`)
 
 ## ctms.ctms_investigator_grants
 
@@ -230,11 +246,13 @@ Entity: `CtmsInvestigatorGrant`
 | `StudyId` | `character varying(255)` | no |  |  |
 | `TotalBudget` | `double precision` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_ctms_investigator_grants_SiteId`: (`SiteId`)
 - `IX_ctms_investigator_grants_StudyId`: (`StudyId`)
+- `IX_ctms_investigator_grants_tenant_id`: (`tenant_id`)
 
 ## ctms.ctms_investigator_payables
 
@@ -253,6 +271,7 @@ Entity: `CtmsInvestigatorPayable`
 | `PaymentStatus` | `character varying(50)` | no |  |  |
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Foreign keys:
 
@@ -263,6 +282,7 @@ Indexes:
 
 - `IX_ctms_investigator_payables_GrantId`: (`GrantId`)
 - `IX_ctms_investigator_payables_MilestoneId`: (`MilestoneId`)
+- `IX_ctms_investigator_payables_tenant_id`: (`tenant_id`)
 
 ## ctms.ctms_monitoring_visit_findings
 
@@ -281,10 +301,12 @@ Entity: `CtmsMonitoringVisitFinding`
 | `Text` | `character varying(1000)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
 | `VisitId` | `character varying(36)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_ctms_monitoring_visit_findings_VisitId`: (`VisitId`)
+- `IX_ctms_monitoring_visit_findings_tenant_id`: (`tenant_id`)
 
 ## ctms.ctms_monitoring_visits
 
@@ -309,11 +331,13 @@ Entity: `CtmsMonitoringVisit`
 | `SyncStatus` | `character varying(50)` | yes |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
 | `VisitType` | `character varying(50)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_ctms_monitoring_visits_SiteId`: (`SiteId`)
 - `IX_ctms_monitoring_visits_StudyId`: (`StudyId`)
+- `IX_ctms_monitoring_visits_tenant_id`: (`tenant_id`)
 
 ## ctms.ctms_payment_milestones
 
@@ -332,6 +356,7 @@ Entity: `CtmsPaymentMilestone`
 | `TriggerCondition` | `character varying(100)` | no |  |  |
 | `TriggeredAt` | `timestamp with time zone` | yes |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Foreign keys:
 
@@ -340,6 +365,7 @@ Foreign keys:
 Indexes:
 
 - `IX_ctms_payment_milestones_GrantId`: (`GrantId`)
+- `IX_ctms_payment_milestones_tenant_id`: (`tenant_id`)
 
 ## ctms.ctms_recruitment_records
 
@@ -358,11 +384,13 @@ Entity: `CtmsRecruitmentRecord`
 | `StudyId` | `character varying(255)` | no |  |  |
 | `TargetCount` | `integer` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_ctms_recruitment_records_SiteId`: (`SiteId`)
 - `IX_ctms_recruitment_records_StudyId`: (`StudyId`)
+- `IX_ctms_recruitment_records_tenant_id`: (`tenant_id`)
 
 ## ctms.ctms_regulatory_forms
 
@@ -383,11 +411,13 @@ Entity: `CtmsRegulatoryForm`
 | `SiteId` | `character varying(255)` | yes |  |  |
 | `StudyId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_ctms_regulatory_forms_SiteId`: (`SiteId`)
 - `IX_ctms_regulatory_forms_StudyId`: (`StudyId`)
+- `IX_ctms_regulatory_forms_tenant_id`: (`tenant_id`)
 
 ## ctms.ctms_site_greenlight_gates
 
@@ -421,6 +451,7 @@ Entity: `CtmsSiteGreenlightGate`
 | `StudyId` | `character varying(255)` | no |  |  |
 | `UnfulfilledReasons` | `character varying(2000)` | yes |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -428,6 +459,7 @@ Indexes:
 - `IX_ctms_site_greenlight_gates_SiteId`: (`SiteId`)
 - `IX_ctms_site_greenlight_gates_StudyId`: (`StudyId`)
 - `IX_ctms_site_greenlight_gates_StudyId_CountryCode`: (`StudyId`, `CountryCode`)
+- `IX_ctms_site_greenlight_gates_tenant_id`: (`tenant_id`)
 
 ## ctms.ctms_site_milestones
 
@@ -446,12 +478,14 @@ Entity: `CtmsSiteMilestone`
 | `Status` | `character varying(50)` | no |  |  |
 | `StudyId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_ctms_site_milestones_MilestoneType`: (`MilestoneType`)
 - `IX_ctms_site_milestones_SiteId`: (`SiteId`)
 - `IX_ctms_site_milestones_StudyId`: (`StudyId`)
+- `IX_ctms_site_milestones_tenant_id`: (`tenant_id`)
 
 ## ctms.doa_delegation_records
 
@@ -474,12 +508,14 @@ Entity: `DoaDelegationRecord`
 | `Status` | `text` | no |  |  |
 | `TaskCode` | `text` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_doa_delegation_records_SiteId`: (`SiteId`)
 - `IX_doa_delegation_records_StaffUserId`: (`StaffUserId`)
 - `IX_doa_delegation_records_TaskCode`: (`TaskCode`)
+- `IX_doa_delegation_records_tenant_id`: (`tenant_id`)
 
 ## ctms.transactional_outbox
 
@@ -497,8 +533,10 @@ Entity: `TransactionalOutboxMessage`
 | `EventType` | `character varying(255)` | no |  |  |
 | `LastError` | `character varying(2000)` | yes |  |  |
 | `Payload` | `text` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_transactional_outbox_CreatedAt_DispatchedAt`: (`CreatedAt`, `DispatchedAt`)
 - `IX_transactional_outbox_EventId`: (`EventId`)
+- `IX_transactional_outbox_tenant_id`: (`tenant_id`)

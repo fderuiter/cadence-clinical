@@ -144,20 +144,20 @@ public static class TrainingEndpoints
 
         group.MapGet("/curricula", ListCurriculaAsync)
             .WithName("ListCurricula")
-            .RequirePermission("training_log:read")
+            .RequirePermission("training_log:read").RequireCallerStudyScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<List<TrainingCurriculumDto>>(StatusCodes.Status200OK);
 
         group.MapGet("/curricula/{curriculum_id}", GetCurriculumAsync)
             .WithName("GetCurriculum")
-            .RequirePermission("training_log:read")
+            .RequirePermission("training_log:read").RequireCallerStudyScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<TrainingCurriculumDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPost("/curricula/batch-assign", BatchAssignCurriculumAsync)
             .WithName("BatchAssignCurriculum")
-            .RequirePermission("training_curriculum:assign")
+            .RequirePermission("training_curriculum:assign").RequireCallerStudyScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<BatchAssignmentResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -167,26 +167,26 @@ public static class TrainingEndpoints
 
         group.MapGet("/assignments", ListAssignmentsAsync)
             .WithName("ListAssignments")
-            .RequirePermission("training_log:read")
+            .RequirePermission("training_log:read").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<List<TrainingAssignmentDto>>(StatusCodes.Status200OK);
 
         group.MapGet("/assignments/{assignment_id}", GetAssignmentDetailAsync)
             .WithName("GetAssignmentDetail")
-            .RequirePermission("training_log:read")
+            .RequirePermission("training_log:read").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<TrainingAssignmentDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapGet("/delegations", ListDelegationsAsync)
             .WithName("ListDelegations")
-            .RequirePermission("delegation_log:read")
+            .RequirePermission("delegation_log:read").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<List<DelegationSummaryDto>>(StatusCodes.Status200OK);
 
         group.MapPost("/delegations/bulk-signoff", BulkSignOffDelegationsAsync)
             .WithName("BulkSignOffDelegations")
-            .RequirePermission("delegation_log:sign")
+            .RequirePermission("delegation_log:sign").RequireCallerStudyAndSiteScope()
             .RequireElectronicSignature(DelegationSignOffBinding)
             .Produces<BulkDelegationSignOffResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -444,7 +444,11 @@ public static class TrainingEndpoints
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var studies = CallerScope.StudyFilter(httpContext);
+        if (!ClinicalScopeGuard.ResolveStudyAndSiteFilters(httpContext, study_id, site_id, out var studies, out _, out var denied))
+        {
+            return denied!;
+        }
+
         var query = dbContext.TrainingAssignments.AsNoTracking();
         if (studies != null) query = query.Where(a => studies.Contains(a.StudyId));
         if (!string.IsNullOrEmpty(study_id)) query = query.Where(a => a.StudyId == study_id);
@@ -452,7 +456,9 @@ public static class TrainingEndpoints
         if (!string.IsNullOrEmpty(user_id)) query = query.Where(a => a.UserId == user_id);
         if (!string.IsNullOrEmpty(status)) query = query.Where(a => a.Status == status);
 
-        var list = await query.ToListAsync(cancellationToken);
+        var list = (await query.ToListAsync(cancellationToken))
+            .Where(a => ClinicalScopeGuard.CanAccessSite(httpContext, a.SiteId))
+            .ToList();
         var dtos = list.Select(a => new TrainingAssignmentDto(
             a.Id, a.CurriculumId, a.StudyId, a.SiteId, a.UserId, a.UserName, a.UserRole,
             a.Status, a.BatchTransactionId, a.QuizScore, a.TimeSpentSeconds, a.CompletedAt, a.CreatedAt)).ToList();
@@ -467,7 +473,7 @@ public static class TrainingEndpoints
         CancellationToken cancellationToken)
     {
         var asn = await dbContext.TrainingAssignments.AsNoTracking().FirstOrDefaultAsync(a => a.Id == assignment_id, cancellationToken);
-        if (asn == null || !CallerScope.CanAccessStudy(httpContext, asn.StudyId))
+        if (asn == null || !CallerScope.CanAccessStudy(httpContext, asn.StudyId) || !ClinicalScopeGuard.CanAccessSite(httpContext, asn.SiteId))
         {
             return TypedResults.Problem($"Assignment '{assignment_id}' not found.", statusCode: StatusCodes.Status404NotFound);
         }
@@ -485,14 +491,20 @@ public static class TrainingEndpoints
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var studies = CallerScope.StudyFilter(httpContext);
+        if (!ClinicalScopeGuard.ResolveStudyAndSiteFilters(httpContext, study_id, site_id, out var studies, out _, out var denied))
+        {
+            return denied!;
+        }
+
         var query = dbContext.DelegationRecords.AsNoTracking();
         if (studies != null) query = query.Where(d => studies.Contains(d.StudyId));
         if (!string.IsNullOrEmpty(study_id)) query = query.Where(d => d.StudyId == study_id);
         if (!string.IsNullOrEmpty(site_id)) query = query.Where(d => d.SiteId == site_id);
         if (!string.IsNullOrEmpty(status)) query = query.Where(d => d.Status == status);
 
-        var list = await query.ToListAsync(cancellationToken);
+        var list = (await query.ToListAsync(cancellationToken))
+            .Where(d => ClinicalScopeGuard.CanAccessSite(httpContext, d.SiteId))
+            .ToList();
 
         var dtos = list.Select(d => new DelegationSummaryDto(
             d.Id, d.StudyId, d.SiteId, d.StaffUserId, d.StaffName, d.Role, d.TaskCode, d.Duties,
@@ -557,7 +569,7 @@ public static class TrainingEndpoints
                 statusCode: StatusCodes.Status404NotFound);
         }
 
-        if (records.Exists(r => !StudyAccessEvaluator.CanAccessStudy(signer, r.StudyId)))
+        if (records.Exists(r => !StudyAccessEvaluator.CanAccessStudy(signer, r.StudyId) || !SiteAccessEvaluator.CanAccessSite(signer, r.SiteId)))
         {
             return OutsideStudy();
         }

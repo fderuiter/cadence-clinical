@@ -1,7 +1,10 @@
+using System;
+
 using Cadence.Apps.Imaging.Domain;
 using Cadence.Apps.Imaging.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
+using Cadence.Database.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -10,8 +13,12 @@ namespace Cadence.Apps.Imaging.Infrastructure.Persistence;
 /// <summary>
 /// EF Core 10 DbContext for Imaging microservice persistence gateway.
 /// </summary>
-public sealed class ImagingDbContext(DbContextOptions<ImagingDbContext> options) : DbContext(options)
+public sealed class ImagingDbContext(DbContextOptions<ImagingDbContext> options) : DbContext(options), ITenantScopedDbContext
 {
+    public Guid? ActiveInMemoryTenantFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantFilter(this);
+
+    public string? ActiveInMemoryTenantStringFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantStringFilter(this);
+
     public DbSet<ImagingStudyEnvelope> ImagingStudyEnvelopes => Set<ImagingStudyEnvelope>();
     public DbSet<ImagingSeriesEnvelope> ImagingSeriesEnvelopes => Set<ImagingSeriesEnvelope>();
     public DbSet<ImagingInstanceEnvelope> ImagingInstanceEnvelopes => Set<ImagingInstanceEnvelope>();
@@ -35,5 +42,6 @@ public sealed class ImagingDbContext(DbContextOptions<ImagingDbContext> options)
         modelBuilder.ApplyConfiguration(new TumorResponseAssessmentConfiguration());
         modelBuilder.ApplyConfiguration(new ImagingAdjudicationSessionConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+        modelBuilder.ConfigureStandaloneTenancy(this);
     }
 }

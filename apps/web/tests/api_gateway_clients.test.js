@@ -276,19 +276,42 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
     });
   });
 
-  describe("createOpenApiClient dynamic base URL resolution", () => {
-    it("rewrites default client requests dynamically when VITE_API_BASE_URL changes after client creation", async () => {
-      const dynamicClient = createOpenApiClient();
+  describe("createOpenApiClient circular module initialization resilience", () => {
+    it("dynamically rewrites default baseUrl when VITE_API_BASE_URL is populated after client creation", async () => {
+      if (import.meta.env) {
+        delete import.meta.env.VITE_API_BASE_URL;
+      }
+
+      const defaultClient = createOpenApiClient();
+      const explicitClient = createOpenApiClient("https://pinned.example.org");
+
       if (import.meta.env) {
         import.meta.env.VITE_API_BASE_URL = "http://localhost:3000";
       }
 
-      mockFetch.mockResolvedValueOnce(jsonResponse({ status: "ok" }));
-      await dynamicClient.GET("/api/v1/health");
+      mockFetch.mockImplementation(async () => jsonResponse({ status: "ok" }));
 
-      const request = await lastRequest();
-      expect(request.url).toBe("http://localhost:3000/api/v1/health");
       expect(getBaseUrl()).toBe("http://localhost:3000");
+
+      await defaultClient.GET("/health");
+      const defaultReq = await lastRequest();
+      expect(defaultReq.url).toBe("http://localhost:3000/health");
+
+      await defaultClient.POST("/api/v1/etmf/ingest", {
+        body: { file_name: "source.pdf" },
+        changeReason: "Typographical Error: source reads 128",
+      });
+      const postReq = await lastRequest();
+      expect(postReq.url).toBe("http://localhost:3000/api/v1/etmf/ingest");
+      expect(postReq.method).toBe("POST");
+      expect(postReq.body).toEqual({ file_name: "source.pdf" });
+      expect(postReq.headers.get("X-Change-Reason")).toBe(
+        "Typographical Error: source reads 128"
+      );
+
+      await explicitClient.GET("/health");
+      const explicitReq = await lastRequest();
+      expect(explicitReq.url).toBe("https://pinned.example.org/health");
     });
   });
 });

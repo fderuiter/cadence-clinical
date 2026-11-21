@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Cadence.Security.Rbac;
 
@@ -8,11 +10,39 @@ public static class CadencePolicies
     /// <summary>Any signed-in caller; used only through <c>RequireSignedInCaller(reason)</c>.</summary>
     public const string SignedInCaller = "SignedInCaller";
 
+    /// <summary>The signed caller carries an active verified tenant (<c>X-Tenant-Id</c>); used through <c>RequireTenantScope</c>.</summary>
+    public const string TenantScope = "RequireTenantScope";
+
     /// <summary>The signed caller is assigned to the study the route names; used through <c>RequireStudyScope</c>.</summary>
     public const string StudyScope = "RequireStudyScope";
 
     /// <summary>The signed caller may reach the site the route names; used through <c>RequireSiteScope</c>.</summary>
     public const string SiteScope = "RequireSiteScope";
+
+    /// <summary>The signed caller carries a verified tenant and at least one assigned study; handler enforces per-object/body study scope.</summary>
+    public const string CallerStudyScope = "RequireCallerStudyScope";
+
+    /// <summary>The signed caller carries a verified tenant, at least one assigned study, and (when site-scoped) at least one assigned site.</summary>
+    public const string CallerStudyAndSiteScope = "RequireCallerStudyAndSiteScope";
+}
+
+/// <summary>Kinds of explicit endpoint scope declarations required on standalone clinical service routes.</summary>
+public enum EndpointScopeKind
+{
+    Tenant,
+    RouteStudy,
+    RouteSite,
+    CallerStudy,
+    CallerStudyAndSite,
+}
+
+/// <summary>Explicit scope declaration attached to every standalone clinical route.</summary>
+public sealed record EndpointScopeMetadata(EndpointScopeKind Kind, string? RouteParameter = null);
+
+/// <summary>Verifies that a signed tenant code resolves to an active tenant in the backing store.</summary>
+public interface ITenantAccessVerifier
+{
+    ValueTask<bool> IsActiveTenantAsync(string tenantCode, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

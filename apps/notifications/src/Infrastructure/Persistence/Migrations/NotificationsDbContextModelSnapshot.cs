@@ -8,7 +8,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Cadence.Apps.Notifications.Infrastructure.Persistence.Migrations;
+namespace Cadence.Apps.Notifications.Infrastructure.Persistence.Migrations
+{
     [DbContext(typeof(NotificationsDbContext))]
     partial class NotificationsDbContextModelSnapshot : ModelSnapshot
     {
@@ -16,7 +17,7 @@ namespace Cadence.Apps.Notifications.Infrastructure.Persistence.Migrations;
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.11")
+                .HasAnnotation("ProductVersion", "10.0.15")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -37,7 +38,11 @@ namespace Cadence.Apps.Notifications.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<DateTime>("Timestamp")
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("Timestamp")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UserId")
@@ -51,6 +56,8 @@ namespace Cadence.Apps.Notifications.Infrastructure.Persistence.Migrations;
                         .HasColumnType("character varying(255)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("Timestamp");
 
@@ -73,14 +80,14 @@ namespace Cadence.Apps.Notifications.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<DateTime?>("CompletedAt")
+                    b.Property<DateTimeOffset?>("CompletedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("LastError")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<DateTime?>("NextRetryAt")
+                    b.Property<DateTimeOffset?>("NextRetryAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("NotificationId")
@@ -96,9 +103,15 @@ namespace Cadence.Apps.Notifications.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.HasKey("Id");
 
                     b.HasIndex("NotificationId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("notification_deliveries", (string)null);
                 });
@@ -119,7 +132,7 @@ namespace Cadence.Apps.Notifications.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -170,6 +183,10 @@ namespace Cadence.Apps.Notifications.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<int>("VersionIndex")
                         .HasColumnType("integer");
 
@@ -178,6 +195,8 @@ namespace Cadence.Apps.Notifications.Infrastructure.Persistence.Migrations;
                     b.HasIndex("RecipientRoleId");
 
                     b.HasIndex("RecipientUserId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("notification_records", (string)null);
                 });
@@ -221,6 +240,10 @@ namespace Cadence.Apps.Notifications.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("timestamp with time zone");
 
@@ -233,6 +256,8 @@ namespace Cadence.Apps.Notifications.Infrastructure.Persistence.Migrations;
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("EntityName", "Timestamp");
 
@@ -421,3 +446,4 @@ namespace Cadence.Apps.Notifications.Infrastructure.Persistence.Migrations;
 #pragma warning restore 612, 618
         }
     }
+}

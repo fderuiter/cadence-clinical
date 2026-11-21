@@ -100,10 +100,15 @@ public static class TestSecurityContext
     public static IOptionsMonitor<GatewayAuthenticationOptions> GatewayOptions(string? secret = GatewaySecret) =>
         new FixedOptionsMonitor<GatewayAuthenticationOptions>(new GatewayAuthenticationOptions { GatewaySecret = secret });
 
-    /// <summary>An authenticated principal carrying <c>sub</c> and role claims, as the gateway scheme emits.</summary>
+    /// <summary>An authenticated principal carrying <c>sub</c>, <c>tenant_id</c>, and role claims, as the gateway scheme emits.</summary>
     public static ClaimsPrincipal CreatePrincipal(string userId, params string[] roles)
     {
-        var claims = new List<Claim> { new(CadenceClaimTypes.Subject, userId), new(ClaimTypes.NameIdentifier, userId) };
+        var claims = new List<Claim>
+        {
+            new(CadenceClaimTypes.Subject, userId),
+            new(ClaimTypes.NameIdentifier, userId),
+            new(CadenceClaimTypes.TenantId, TenantCode),
+        };
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
         return new ClaimsPrincipal(new ClaimsIdentity(claims, GatewayAuthenticationHandler.SchemeName, CadenceClaimTypes.Subject, ClaimTypes.Role));
     }

@@ -56,6 +56,7 @@ public class EsourceReconciliationTests
             UserId = userName,
             Roles = [role],
             AssignedStudies = studies.Length == 0 ? ["*"] : studies,
+            AssignedSites = string.Equals(role, "crc", StringComparison.OrdinalIgnoreCase) ? ["SITE-01"] : [],
         };
         return context;
     }
@@ -226,7 +227,7 @@ public class EsourceReconciliationTests
         string? configured = key switch
         {
             "public" => rsa.ExportSubjectPublicKeyInfoPem(),
-            "malformed" => "-----BEGIN PRIVATE KEY-----\nnot a key\n-----END PRIVATE KEY-----",
+            "malformed" => "-----BEGIN PRIVATE KEY-----\nnot a key\n-----END PRIVATE KEY-----", // pragma: allowlist secret
             _ => null,
         };
         var keys = configured is null ? Keys() : Keys(("METRO_GENERAL", configured));

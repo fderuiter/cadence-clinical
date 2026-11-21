@@ -1,7 +1,10 @@
+using System;
+
 using Cadence.Apps.Etmf.Domain;
 using Cadence.Apps.Etmf.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
+using Cadence.Database.Tenancy;
 
 using MassTransit;
 
@@ -12,8 +15,12 @@ namespace Cadence.Apps.Etmf.Infrastructure.Persistence;
 /// <summary>
 /// EF Core 10 DbContext for eTMF microservice persistence gateway.
 /// </summary>
-public sealed class EtmfDbContext(DbContextOptions<EtmfDbContext> options) : DbContext(options)
+public sealed class EtmfDbContext(DbContextOptions<EtmfDbContext> options) : DbContext(options), ITenantScopedDbContext
 {
+    public Guid? ActiveInMemoryTenantFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantFilter(this);
+
+    public string? ActiveInMemoryTenantStringFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantStringFilter(this);
+
     public DbSet<TmfDocument> TmfDocuments => Set<TmfDocument>();
     public DbSet<TmfExpectedDocument> TmfExpectedDocuments => Set<TmfExpectedDocument>();
     public DbSet<TmfAuditLedgerSeal> TmfAuditLedgerSeals => Set<TmfAuditLedgerSeal>();
@@ -37,5 +44,6 @@ public sealed class EtmfDbContext(DbContextOptions<EtmfDbContext> options) : DbC
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
 
         modelBuilder.AddTransactionalOutboxEntities();
+        modelBuilder.ConfigureStandaloneTenancy(this);
     }
 }
