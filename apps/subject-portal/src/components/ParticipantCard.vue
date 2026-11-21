@@ -15,12 +15,16 @@
     </div>
     <div v-if="isAuthenticated || isDemo" class="info-row">
       <span class="info-lbl">{{ isDemo ? "Demo Wallet:" : "Wallet:" }}</span>
-      <span id="session-wallet-balance" class="info-val">
-        ${{
-          typeof wallet.walletBalance === "number"
-            ? wallet.walletBalance.toFixed(2)
-            : "0.00"
-        }}
+      <span
+        id="session-wallet-balance"
+        class="info-val"
+        :aria-busy="
+          wallet.walletLoading && wallet.walletBalance === null
+            ? 'true'
+            : undefined
+        "
+      >
+        {{ formattedSessionWalletBalance }}
       </span>
     </div>
     <div
@@ -135,6 +139,7 @@ import {
 import { maskParticipantIdentifier } from "../features/site-support.js";
 import { useSessionStore } from "../stores/session.js";
 import { useWalletStore } from "../stores/wallet.js";
+import { formatWalletCurrency } from "../utils/currency.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 import SiteContactLinks from "./SiteContactLinks.vue";
 
@@ -144,6 +149,15 @@ const activationCodeInput = ref("");
 const redeeming = ref(false);
 const activationMessage = ref("");
 const activationError = ref("");
+
+const formattedSessionWalletBalance = computed(() => {
+  if (wallet.walletLoading && wallet.walletBalance === null) {
+    return "Loading...";
+  }
+  const amount =
+    typeof wallet.walletBalance === "number" ? wallet.walletBalance : 0;
+  return formatWalletCurrency(amount, wallet.currency);
+});
 
 const {
   isConfirmOpen: isSignOutConfirmOpen,
@@ -257,6 +271,7 @@ async function handleRedeemActivation() {
 
 .participant-activation-input {
   width: 100%;
+  min-height: var(--touch-target-min, 48px);
   padding: 6px 8px;
   border: 1px solid var(--border-control);
   border-radius: 6px;

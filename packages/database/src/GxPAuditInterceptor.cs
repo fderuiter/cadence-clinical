@@ -218,31 +218,41 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
 
     /// <summary>
     /// Appends entries to their EntityName chain: the predecessor is the latest entry added in this save for that
-    /// name, otherwise the persisted chain tip (the entry no other entry names as its predecessor).
+    /// name, otherwise the persisted chain tip (the entry no other entry names as its predecessor). When two writes
+    /// on the same chain fall within the same microsecond (or share a frozen test clock), the successor timestamp
+    /// advances by 1 microsecond (10 ticks) past its predecessor so chronological and causal chain order coincide.
     /// </summary>
     private sealed class AuditChainCursor(DbContext context)
     {
-        private readonly Dictionary<string, string> _tips = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, (string BlockHash, DateTime Timestamp)> _tips = new(StringComparer.Ordinal);
 
         public List<AuditLogEntry> Added { get; } = [];
 
         public async Task AppendAsync(AuditLogEntryDraft draft, CancellationToken cancellationToken)
         {
-            if (!_tips.TryGetValue(draft.EntityName, out string? predecessorHash))
+            if (!_tips.TryGetValue(draft.EntityName, out (string BlockHash, DateTime Timestamp) tip))
             {
                 string name = draft.EntityName;
-                predecessorHash = await context.Set<AuditLogEntry>()
+                var persistedTip = await context.Set<AuditLogEntry>()
                     .Where(e => e.EntityName == name)
                     .Where(e => !context.Set<AuditLogEntry>().Any(sub => sub.EntityName == name && sub.PredecessorHash == e.BlockHash))
                     .OrderByDescending(e => e.Timestamp)
                     .ThenByDescending(e => e.VersionIndex)
                     .ThenByDescending(e => e.Id)
-                    .Select(e => e.BlockHash)
-                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false) ?? string.Empty;
+                    .Select(e => new { e.BlockHash, e.Timestamp })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                tip = persistedTip is null
+                    ? (string.Empty, default)
+                    : (persistedTip.BlockHash, AuditLogEntry.NormalizeTimestamp(persistedTip.Timestamp));
             }
 
+            string predecessorHash = tip.BlockHash;
+            DateTime timestamp = !string.IsNullOrEmpty(predecessorHash) && draft.Timestamp <= tip.Timestamp
+                ? tip.Timestamp.AddTicks(10)
+                : draft.Timestamp;
+
             string blockHash = AuditLogEntry.ComputeBlockHash(
-                draft.EntityName, draft.EntityId, draft.Action, draft.Timestamp, draft.UserId,
+                draft.EntityName, draft.EntityId, draft.Action, timestamp, draft.UserId,
                 draft.VersionIndex, draft.ChangesJson, predecessorHash);
 
             var logEntry = new AuditLogEntry
@@ -250,7 +260,7 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
                 EntityName = draft.EntityName,
                 EntityId = draft.EntityId,
                 Action = draft.Action,
-                Timestamp = draft.Timestamp,
+                Timestamp = timestamp,
                 UserId = draft.UserId,
                 ReasonForChange = draft.ReasonForChange,
                 VersionIndex = draft.VersionIndex,
@@ -260,7 +270,7 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
             };
             context.Add(logEntry);
 
-            _tips[draft.EntityName] = blockHash;
+            _tips[draft.EntityName] = (blockHash, timestamp);
             Added.Add(logEntry);
         }
     }

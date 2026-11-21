@@ -236,4 +236,31 @@ public class GxPAuditInterceptorMerkleChainTests
         save.Should().Throw<InvalidOperationException>().WithMessage("*SaveChangesAsync*");
         context.AuditLogEntries.Should().BeEmpty();
     }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-003")]
+    public async Task SaveChangesAsync_GivenSameMicrosecondSequentialSaves_OrdersByTimestampDeterministically()
+    {
+        var clock = new FakeClock(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+        await using var context = CreateContext(Guid.NewGuid().ToString(), clock);
+        var aggregate = new GuidKeyedAggregate(Guid.NewGuid(), "Alpha");
+
+        context.GuidAggregates.Add(aggregate);
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        aggregate.Name = "Beta";
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var entries = await context.AuditLogEntries
+            .Where(e => e.EntityName == nameof(GuidKeyedAggregate))
+            .OrderBy(e => e.Timestamp)
+            .ToListAsync(TestContext.Current.CancellationToken);
+
+        entries.Should().HaveCount(2);
+        entries[0].PredecessorHash.Should().BeEmpty();
+        entries[0].Action.Should().Be("Added");
+        entries[1].Action.Should().Be("Modified");
+        entries[1].PredecessorHash.Should().Be(entries[0].BlockHash);
+        entries[1].Timestamp.Should().BeAfter(entries[0].Timestamp);
+    }
 }
