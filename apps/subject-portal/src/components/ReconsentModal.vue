@@ -94,12 +94,21 @@
             </select>
           </div>
           <div class="form-group mb-12">
-            <label for="reconsent-sign-reason-custom"
-              >Custom Reason Detail (Optional)</label
+            <label
+              id="reconsent-sign-reason-custom-label"
+              for="reconsent-sign-reason-custom"
             >
+              {{
+                isOtherReason
+                  ? "Custom Reason Detail (Required)"
+                  : "Custom Reason Detail (Optional)"
+              }}
+            </label>
             <textarea
               id="reconsent-sign-reason-custom"
               v-model="consent.reconsentForm.customReason"
+              :required="isOtherReason || undefined"
+              :aria-required="isOtherReason ? 'true' : undefined"
               placeholder="Provide extra detail if 'Other' selected..."
             />
           </div>
@@ -109,18 +118,20 @@
               id="reconsent-sign-username"
               v-model="consent.reconsentForm.username"
               type="text"
+              autocomplete="username"
               placeholder="Enter your participant identifier..."
               required
             />
           </div>
           <div class="form-group">
-            <label for="reconsent-sign-password">Security PIN / Password</label>
+            <label for="reconsent-sign-password"
+              >Account Password / Security PIN</label
+            >
             <input
               id="reconsent-sign-password"
               v-model="consent.reconsentForm.password"
-              type="password"
-              inputmode="numeric"
-              placeholder="••••••••"
+              v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+              placeholder="Enter your password or verification credential..."
               required
             />
           </div>
@@ -148,8 +159,12 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
-import { useFocusTrap } from "ui";
+import { computed, ref } from "vue";
+import {
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+  requiresCustomSignatureReason,
+  useFocusTrap,
+} from "ui";
 
 import {
   closeReconsentModal,
@@ -160,6 +175,10 @@ import { state } from "../stores/state.js";
 
 const modalRef = ref(null);
 const consent = useConsentStore();
+
+const isOtherReason = computed(() =>
+  requiresCustomSignatureReason(consent.reconsentForm.reason)
+);
 
 useFocusTrap(modalRef, {
   isOpen: () => consent.reconsentModalOpen,

@@ -1033,6 +1033,10 @@ onUnmounted(() => {
   window.removeEventListener("beforeunload", handleBeforeUnload);
 });
 
+function shouldSuppressUnsavedGuard() {
+  return Boolean(authStore.sessionExpired || authStore.isLoggingOut);
+}
+
 const hasUnsavedChanges = computed(
   () => formPanelDirty.value || (demoBuild && isDirty.value)
 );
@@ -1040,7 +1044,7 @@ const hasUnsavedChanges = computed(
 // Route & Browser Navigation Guards
 if (typeof onBeforeRouteLeave === "function") {
   onBeforeRouteLeave(() => {
-    if (hasUnsavedChanges.value) {
+    if (hasUnsavedChanges.value && !shouldSuppressUnsavedGuard()) {
       const confirmLeave = window.confirm(
         "You have unsaved eCRF draft changes. Are you sure you want to leave?"
       );
@@ -1053,7 +1057,7 @@ if (typeof onBeforeRouteLeave === "function") {
 
 if (typeof onBeforeRouteUpdate === "function") {
   onBeforeRouteUpdate((to, from) => {
-    if (!formPanelDirty.value) return;
+    if (!formPanelDirty.value || shouldSuppressUnsavedGuard()) return;
     const nextFormId = routeQuery("formId", to);
     const currentFormId =
       loadedFormId.value ?? routeQuery("formId", from ?? route);
@@ -1069,7 +1073,7 @@ if (typeof onBeforeRouteUpdate === "function") {
 }
 
 function handleBeforeUnload(event) {
-  if (hasUnsavedChanges.value) {
+  if (hasUnsavedChanges.value && !shouldSuppressUnsavedGuard()) {
     event.preventDefault();
     event.returnValue = "";
     return "";

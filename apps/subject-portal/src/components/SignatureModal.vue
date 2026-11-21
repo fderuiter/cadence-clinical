@@ -17,7 +17,8 @@
         <div class="modal-body">
           <p>
             Please confirm that these answers are your own by choosing a reason
-            below and entering your participant ID and security PIN.
+            below and entering your participant ID and account password or
+            security PIN.
           </p>
           <!-- Accessible modal live error region -->
           <div
@@ -38,7 +39,7 @@
 
           <div class="form-group mb-12">
             <label for="sign-reason">Reason for Signing</label>
-            <select id="sign-reason">
+            <select id="sign-reason" @change="onReasonChange">
               <option value="Initial Questionnaire Completion">
                 Initial Questionnaire Completion
               </option>
@@ -55,9 +56,17 @@
             </select>
           </div>
           <div class="form-group mb-12">
-            <label for="sign-reason-custom">Additional Note (Optional)</label>
+            <label id="sign-reason-custom-label" for="sign-reason-custom">
+              {{
+                isOtherReason
+                  ? "Additional Note (Required)"
+                  : "Additional Note (Optional)"
+              }}
+            </label>
             <textarea
               id="sign-reason-custom"
+              :required="isOtherReason || undefined"
+              :aria-required="isOtherReason ? 'true' : undefined"
               placeholder="Add a brief note if you selected 'Other'..."
             />
           </div>
@@ -66,17 +75,17 @@
             <input
               id="sign-username"
               type="text"
+              autocomplete="username"
               placeholder="Enter your participant ID..."
               required
             />
           </div>
           <div class="form-group">
-            <label for="sign-password">Security PIN</label>
+            <label for="sign-password">Account Password or Security PIN</label>
             <input
               id="sign-password"
-              type="password"
-              inputmode="numeric"
-              placeholder="••••••••"
+              v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+              placeholder="Enter your account password or security PIN..."
               required
             />
           </div>
@@ -95,15 +104,28 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
-import { useFocusTrap } from "ui";
+import { computed, ref } from "vue";
+import {
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+  requiresCustomSignatureReason,
+  useFocusTrap,
+} from "ui";
 
 import { closeSignatureModal } from "../features/signature.js";
 import { state } from "../stores/state.js";
 import { useUiStore } from "../stores/ui.js";
 
 const modalRef = ref(null);
+const selectedReason = ref("Initial Questionnaire Completion");
 const ui = useUiStore();
+
+const isOtherReason = computed(() =>
+  requiresCustomSignatureReason(selectedReason.value)
+);
+
+function onReasonChange(event) {
+  selectedReason.value = event?.target?.value || "";
+}
 
 useFocusTrap(modalRef, {
   isOpen: () => ui.signatureModalOpen,
