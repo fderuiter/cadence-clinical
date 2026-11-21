@@ -85,6 +85,44 @@ public sealed class KeycloakRealmTenantTests
     }
 
     [Fact]
+    public void WebClient_MapsTheSiteAssignmentsIntoTheAccessToken()
+    {
+        var web = Realm().GetProperty("clients").EnumerateArray().Single(c => c.GetProperty("clientId").GetString() == "cadence-web");
+
+        var sites = web.GetProperty("protocolMappers").EnumerateArray()
+            .Single(m => m.GetProperty("name").GetString() == "site assignments").GetProperty("config");
+
+        sites.GetProperty("user.attribute").GetString().Should().Be("site_id");
+        sites.GetProperty("claim.name").GetString().Should().Be("site_id");
+        sites.GetProperty("multivalued").GetString().Should().Be("true");
+        sites.GetProperty("access.token.claim").GetString().Should().Be("true");
+    }
+
+    [Fact]
+    public void Realm_SeedsDeterministicSubjectAccountWithScopedAttributes()
+    {
+        var subject = Realm().GetProperty("users").EnumerateArray()
+            .Single(u => u.GetProperty("username").GetString() == "subject.site101");
+
+        subject.GetProperty("enabled").GetBoolean().Should().BeTrue();
+        System.Guid.TryParse(subject.GetProperty("id").GetString(), out _).Should().BeTrue();
+
+        var roles = subject.GetProperty("realmRoles").EnumerateArray().Select(r => r.GetString()).ToList();
+        roles.Should().Equal("Subject");
+
+        var credentials = subject.GetProperty("credentials").EnumerateArray().ToList();
+        credentials.Should().ContainSingle(c =>
+            c.GetProperty("type").GetString() == "password"
+            && !string.IsNullOrEmpty(c.GetProperty("value").GetString())
+            && !c.GetProperty("temporary").GetBoolean());
+
+        var attributes = subject.GetProperty("attributes");
+        AttributeValues(attributes, "tenant_id").Should().Equal("cadence-local");
+        AttributeValues(attributes, "study_ids").Should().Equal("CADENCE-101");
+        AttributeValues(attributes, "site_id").Should().Equal("SITE-101");
+    }
+
+    [Fact]
     public void WebClient_MapsUnblindedAccessAttributeIntoTheAccessToken()
     {
         var web = Realm().GetProperty("clients").EnumerateArray().Single(c => c.GetProperty("clientId").GetString() == "cadence-web");
@@ -129,6 +167,8 @@ public sealed class KeycloakRealmTenantTests
         pharmacists[0].GetProperty("attributes").GetProperty("unblinded_access")[0].GetString().Should().Be("true");
     }
 
+    private static string[] AttributeValues(JsonElement attributes, string name) =>
+        [.. attributes.GetProperty(name).EnumerateArray().Select(v => v.GetString()!)];
     private static string? TenantOf(JsonElement user) =>
         user.TryGetProperty("attributes", out var attributes)
         && attributes.TryGetProperty("tenant_id", out var tenant)

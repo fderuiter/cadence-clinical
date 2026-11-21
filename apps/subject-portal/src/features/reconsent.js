@@ -1,4 +1,10 @@
 // Protocol amendment re-consent: the pending requirement and its modal.
+import {
+  SEMANTIC_ACTIONS,
+  buildStepUpVerificationPayload,
+  requiresCustomSignatureReason,
+  resolveSignatureReason,
+} from "ui";
 import { nextTick } from "vue";
 
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
@@ -105,6 +111,25 @@ export async function submitReconsentSignature() {
     return;
   }
 
+  const customReasonTrimmed = (state.reconsentForm.customReason || "").trim();
+  const reasonCheck = resolveSignatureReason(
+    state.reconsentForm.reason,
+    customReasonTrimmed
+  );
+  if (!reasonCheck.valid) {
+    state.reconsentModalError = reasonCheck.error;
+    if (
+      typeof document !== "undefined" &&
+      requiresCustomSignatureReason(state.reconsentForm.reason)
+    ) {
+      const customEl = document.getElementById("reconsent-sign-reason-custom");
+      if (customEl && typeof customEl.focus === "function") {
+        customEl.focus();
+      }
+    }
+    return;
+  }
+
   // Credential hygiene: clear password immediately before async network work
   state.reconsentForm.password = "";
   state.reconsentModalError = "";
@@ -112,24 +137,24 @@ export async function submitReconsentSignature() {
   const studyId = state.pendingReconsent?.study_id || "STUDY-01";
   const protocolVersion = state.pendingReconsent?.protocol_version || "2.0";
   const requirementId = state.pendingReconsent?.id;
-  const declReason =
-    state.reconsentForm.reason === "Other" && state.reconsentForm.customReason
-      ? state.reconsentForm.customReason
-      : state.reconsentForm.reason;
+  const declReason = requiresCustomSignatureReason(state.reconsentForm.reason)
+    ? reasonCheck.reason
+    : `${reasonCheck.reason}${customReasonTrimmed ? ": " + customReasonTrimmed : ""}`;
 
   try {
     if (isAuthenticatedSession()) {
       const reconsentActionPath = "/api/v1/execution/amendments/reconsent";
+      const verificationBody = buildStepUpVerificationPayload({
+        username: cleanUsername,
+        password: cleanPassword,
+        action: reconsentActionPath,
+        semanticAction: SEMANTIC_ACTIONS.ECONSENT_RECONSENT_SIGN,
+      });
       const tokenResponse = await dispatchApi(
         "api/v1/auth/signature-verification",
         {
           method: "POST",
-          body: JSON.stringify({
-            username: cleanUsername,
-            password: cleanPassword,
-            action: reconsentActionPath,
-            semantic_action: "econsent.reconsent.sign",
-          }),
+          body: JSON.stringify(verificationBody),
         }
       );
 

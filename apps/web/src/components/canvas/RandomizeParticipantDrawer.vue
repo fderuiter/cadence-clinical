@@ -117,8 +117,7 @@
           <input
             id="randomize-password"
             v-model="password"
-            type="password"
-            autocomplete="current-password"
+            v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
           />
         </div>
         <div class="field">
@@ -168,7 +167,11 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { ClinicalDrawer, useEscapeClose } from "ui";
+import {
+  ClinicalDrawer,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+  useEscapeClose,
+} from "ui";
 import {
   executionApi,
   type RandomizationResult,

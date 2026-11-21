@@ -321,8 +321,7 @@
           <input
             id="approve-scheme-password"
             v-model="approvePassword"
-            type="password"
-            autocomplete="current-password"
+            v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
           />
         </div>
 
@@ -384,7 +383,11 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { ClinicalModal, useEscapeClose } from "ui";
+import {
+  ClinicalModal,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+  useEscapeClose,
+} from "ui";
 import { executionApi, type RandomizationScheme } from "../../api/executionApi";
 import {
   APPROVE_SCHEME_SEMANTIC_ACTION,

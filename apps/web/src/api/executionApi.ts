@@ -1,3 +1,4 @@
+import { buildStepUpVerificationPayload } from "ui";
 import { getBearerToken } from "./authorization.js";
 import { encodeChangeReason } from "./changeReason";
 import {
@@ -104,19 +105,20 @@ export const executionApi = {
     if (bearer) {
       headers.Authorization = `Bearer ${bearer}`;
     }
+    const payload = buildStepUpVerificationPayload({
+      username: input.username,
+      password: input.password,
+      totp: input.totp,
+      action: input.action,
+      semanticAction: input.semanticAction,
+      batchId: input.batchId,
+    });
     const response = await globalThis.fetch(
       `${baseUrl}/api/v1/auth/signature-verification`,
       {
         method: "POST",
         headers,
-        body: JSON.stringify({
-          username: input.username || undefined,
-          password: input.password,
-          totp: input.totp || undefined,
-          action: input.action,
-          semantic_action: input.semanticAction,
-          batch_id: input.batchId || undefined,
-        }),
+        body: JSON.stringify(payload),
       }
     );
     const data = await response.json().catch(() => null);
