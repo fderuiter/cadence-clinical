@@ -187,7 +187,7 @@ jobs:
         run: dotnet build Cadence.sln
 
       - name: Run Cadence quality sentinels
-        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities
+        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle
 
       - name: Run architecture tests
         run: dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build
@@ -268,11 +268,22 @@ jobs:
           path: ./bin/cadence
           key: cadence-cli-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'NuGet.Config', 'BannedSymbols.txt', 'packages/cli/src/**', 'packages/engine_core/src/**', 'packages/database/src/**', 'packages/compliance/src/**', 'packages/security/src/**', 'packages/tooling_core/src/**', 'packages/kernel/src/Cadence.Kernel.Abstractions/**', 'packages/core-models/src/**', 'packages/deid/src/**', 'packages/topology/src/**') }}
 
+      - name: Build UI package
+        run: pnpm --filter ui build
+
       - name: Run documentation compilation
         env:
           CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
           CADENCE_DOCS_SKIP_CHECKS: "1"
         run: pnpm docs:build
+
+      - name: Build and stage co-hosted interactive demos
+        run: pnpm docs:stage-demos
+
+      - name: Verify public bundles
+        env:
+          CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
+        run: node scripts/run-cli.js check public-bundle
 
   security:
     name: Security and Vulnerability Audit
@@ -369,7 +380,7 @@ jobs:
           mapfile -d '' -t CHANGED_FILES < <(git diff --name-only --diff-filter=ACMR -z "$DIFF_RANGE")
           if [ "${#CHANGED_FILES[@]}" -gt 0 ]; then
             rc=0
-            detect-secrets-hook --baseline .secrets.baseline --exclude-files '(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|uv\.lock|docs/CDISC/|docs/NCI/|docs/openapi/|docs/schema/|docs/SDLC/runs/|Migrations/[^/]+\.Designer\.cs$|Migrations/idempotent_migration\.sql$|report.*\.xml|coverage.*\.xml|\.cadence/|dist/|\.(pdf|xlsx|xls|docx|doc|png|jpg|jpeg|gif|svg|ico|woff|woff2|eot|ttf|otf|mp4|webm|mp3|wav|zip|tar\.gz|gz|sqlite|db)$)' "${CHANGED_FILES[@]}" || rc=$?
+            detect-secrets-hook --baseline .secrets.baseline --exclude-files '(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|uv\.lock|docs/CDISC/|docs/NCI/|docs/openapi/|docs/schema/|docs/SDLC/runs/|Migrations/[^/]+\.Designer\.cs$|Migrations/idempotent_migration\.sql$|report.*\.xml|coverage.*\.xml|\.cadence/|\.(pdf|xlsx|xls|docx|doc|png|jpg|jpeg|gif|svg|ico|woff|woff2|eot|ttf|otf|mp4|webm|mp3|wav|zip|tar\.gz|gz|sqlite|db)$)' "${CHANGED_FILES[@]}" || rc=$?
             git checkout -- .secrets.baseline
             if [ "$rc" -ne 0 ] && [ "$rc" -ne 3 ]; then
               exit "$rc"
@@ -385,9 +396,9 @@ jobs:
           git fetch origin main --depth=1 || true
           CHANGED_FILES=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '\.(py|js|ts|tsx|jsx|json|md|log|txt|cs)$' || true)
+            CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '(\.(py|js|mjs|cjs|ts|tsx|jsx|vue|json|md|html|svg|yaml|yml|toml|xml|csv|sql|log|txt|cs)|^(LICENSE|Dockerfile|Makefile))$' || true)
           else
-            CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '\.(py|js|ts|tsx|jsx|json|md|log|txt|cs)$' || true)
+            CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '(\.(py|js|mjs|cjs|ts|tsx|jsx|vue|json|md|html|svg|yaml|yml|toml|xml|csv|sql|log|txt|cs)|^(LICENSE|Dockerfile|Makefile))$' || true)
           fi
           if [ -n "$CHANGED_FILES" ]; then
             echo "Scanning changed files: $CHANGED_FILES"

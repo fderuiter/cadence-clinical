@@ -14,8 +14,7 @@ const DEV_PORT = 3000;
 const GATEWAY_URL = process.env.CADENCE_GATEWAY_URL || "http://localhost:8000";
 const IS_E2E_BUILD = process.env.CADENCE_E2E_BUILD === "1";
 
-const E2E_BOOT_RECOVERY_SNIPPET = `<script>
-(function () {
+const E2E_BOOT_RECOVERY_SCRIPT = `(function () {
   var RETRY_KEY = "__cadence_e2e_boot_retry__";
   var assetFailed = false;
   var reloading = false;
@@ -69,7 +68,7 @@ const E2E_BOOT_RECOVERY_SNIPPET = `<script>
     }, 1500);
   });
 })();
-</script>`;
+`;
 
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || "/cadence-clinical/",
@@ -90,25 +89,39 @@ export default defineConfig({
         }
       },
     },
-    {
-      name: "html-transform",
-      transformIndexHtml(html) {
-        const title = process.env.VITE_APP_TITLE || "Cadence Clinical";
-        const transformed = html.replace(/%VITE_APP_TITLE%/g, title);
-        return IS_E2E_BUILD
-          ? transformed.replace(
-              "</title>",
-              `</title>\n    ${E2E_BOOT_RECOVERY_SNIPPET}`
-            )
-          : transformed;
-      },
-      configurePreviewServer(server) {
-        if (server.httpServer) {
-          server.httpServer.keepAliveTimeout = 65000;
-          server.httpServer.headersTimeout = 66000;
-        }
-      },
-    },
+    (() => {
+      let resolvedBase = "/cadence-clinical/";
+      return {
+        name: "html-transform",
+        configResolved(resolved) {
+          resolvedBase = resolved.base || "/cadence-clinical/";
+        },
+        transformIndexHtml(html) {
+          const title = process.env.VITE_APP_TITLE || "Cadence Clinical";
+          const transformed = html.replace(/%VITE_APP_TITLE%/g, title);
+          return IS_E2E_BUILD
+            ? transformed.replace(
+                "</title>",
+                `</title>\n    <script src="${resolvedBase}e2e-boot-recovery.js"></script>`
+              )
+            : transformed;
+        },
+        generateBundle() {
+          if (!IS_E2E_BUILD) return;
+          this.emitFile({
+            type: "asset",
+            fileName: "e2e-boot-recovery.js",
+            source: E2E_BOOT_RECOVERY_SCRIPT,
+          });
+        },
+        configurePreviewServer(server) {
+          if (server.httpServer) {
+            server.httpServer.keepAliveTimeout = 65000;
+            server.httpServer.headersTimeout = 66000;
+          }
+        },
+      };
+    })(),
     createStripMockWorkerInProdPlugin(__dirname),
     createDemoFixturesPlugin(__dirname),
   ],
@@ -130,6 +143,13 @@ export default defineConfig({
       {
         find: "pinia",
         replacement: path.resolve(__dirname, "node_modules/pinia"),
+      },
+      {
+        find: /^vuedraggable$/,
+        replacement: path.resolve(
+          __dirname,
+          "node_modules/vuedraggable/src/vuedraggable.js"
+        ),
       },
       { find: "vue", replacement: path.resolve(__dirname, "node_modules/vue") },
     ],
@@ -210,9 +230,10 @@ export default defineConfig({
               // Third-party vendor packages
               if (id.includes("node_modules")) {
                 if (
-                  id.includes("vue") ||
-                  id.includes("vue-router") ||
-                  id.includes("pinia")
+                  id.includes("/vue/") ||
+                  id.includes("/@vue/") ||
+                  id.includes("/vue-router/") ||
+                  id.includes("/pinia/")
                 ) {
                   return "vendor-vue";
                 }

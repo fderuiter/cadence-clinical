@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 220" width="560" height="220" role="img" aria-label="Informed Consent Process Diagram">
+  <title>Informed Consent Process Diagram</title>
+  <rect width="560" height="220" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="280" y="34" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif" font-size="15" font-weight="700" fill="#0f172a">
+    Informed Consent Overview (Synthetic Study Diagram)
+  </text>
+  <g font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif" text-anchor="middle">
+    <rect x="28" y="64" width="144" height="116" rx="8" fill="#ffffff" stroke="#0284c7" stroke-width="1.5"/>
+    <circle cx="100" cy="94" r="14" fill="#e0f2fe"/>
+    <text x="100" y="99" font-size="13" font-weight="700" fill="#0369a1">1</text>
+    <text x="100" y="128" font-size="12" font-weight="600" fill="#0f172a">Review Protocol</text>
+    <text x="100" y="148" font-size="11" fill="#475569">Read study purpose,</text>
+    <text x="100" y="164" font-size="11" fill="#475569">visits &amp; safeguards</text>
+
+    <path d="M178 122 L202 122" stroke="#64748b" stroke-width="2" fill="none"/>
+    <polygon points="202,117 210,122 202,127" fill="#64748b"/>
+
+    <rect x="208" y="64" width="144" height="116" rx="8" fill="#ffffff" stroke="#0284c7" stroke-width="1.5"/>
+    <circle cx="280" cy="94" r="14" fill="#e0f2fe"/>
+    <text x="280" y="99" font-size="13" font-weight="700" fill="#0369a1">2</text>
+    <text x="280" y="128" font-size="12" font-weight="600" fill="#0f172a">Ask Questions</text>
+    <text x="280" y="148" font-size="11" fill="#475569">Discuss options with</text>
+    <text x="280" y="164" font-size="11" fill="#475569">study investigator</text>
+
+    <path d="M358 122 L382 122" stroke="#64748b" stroke-width="2" fill="none"/>
+    <polygon points="382,117 390,122 382,127" fill="#64748b"/>
+
+    <rect x="388" y="64" width="144" height="116" rx="8" fill="#ffffff" stroke="#059669" stroke-width="1.5"/>
+    <circle cx="460" cy="94" r="14" fill="#d1fae5"/>
+    <text x="460" y="99" font-size="13" font-weight="700" fill="#047857">3</text>
+    <text x="460" y="128" font-size="12" font-weight="600" fill="#0f172a">Voluntary Decision</text>
+    <text x="460" y="148" font-size="11" fill="#475569">Sign electronically or</text>
+    <text x="460" y="164" font-size="11" fill="#475569">withdraw any time</text>
+  </g>
+</svg>

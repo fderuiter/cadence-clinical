@@ -1,6 +1,8 @@
 // This file is auto-generated from USDM models and OpenAPI specs. DO NOT EDIT DIRECTLY.
 import { z } from "zod";
 
+z.config({ jitless: true });
+
 export const CodeSchema = z.object({
   code: z.string(),
   codeSystem: z.string(),
@@ -43,7 +45,9 @@ export const BiomedicalConceptPropertySchema = z.object({
   gridSpan: z.number().int().default(12),
   unit: z.string().nullable().optional(),
 });
-export type BiomedicalConceptProperty = z.infer<typeof BiomedicalConceptPropertySchema>;
+export type BiomedicalConceptProperty = z.infer<
+  typeof BiomedicalConceptPropertySchema
+>;
 
 export const BiomedicalConceptSchema = z.object({
   id: z.string(),
@@ -148,63 +152,93 @@ export type USDMStudy = z.infer<typeof USDMStudySchema>;
 
 export * from "./graph-validator.js";
 
-export const EPROAnswersSchema = z.record(z.string(), z.any()).superRefine((answers, ctx) => {
-  if (answers == null || typeof answers !== "object") {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Answers payload must be an object",
-    });
-    return;
-  }
-
-  if ("age" in answers && answers.age !== null && answers.age !== undefined && answers.age !== "") {
-    const rawAge = answers.age;
-    const ageNum = typeof rawAge === "number" ? rawAge : Number(rawAge);
-    if (typeof rawAge === "boolean" || isNaN(ageNum) || !Number.isInteger(ageNum)) {
+export const EPROAnswersSchema = z
+  .record(z.string(), z.any())
+  .superRefine((answers, ctx) => {
+    if (answers == null || typeof answers !== "object") {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Demographic Validation Error: Participant age must be a valid integer.",
-        path: ["age"],
+        message: "Answers payload must be an object",
       });
-    } else if (ageNum < 18 || ageNum > 110) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Demographic Validation Error: Participant age must be between 18 and 110.",
-        path: ["age"],
-      });
+      return;
     }
-  }
 
-  if ("gender" in answers && answers.gender !== null && answers.gender !== undefined && answers.gender !== "") {
-    const genderStr = String(answers.gender).toUpperCase();
-    const validGenders = ["M", "F", "O", "MALE", "FEMALE", "OTHER"];
-    if (!validGenders.includes(genderStr)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Demographic Validation Error: Gender must be one of M, F, or O.",
-        path: ["gender"],
-      });
+    if (
+      "age" in answers &&
+      answers.age !== null &&
+      answers.age !== undefined &&
+      answers.age !== ""
+    ) {
+      const rawAge = answers.age;
+      const ageNum = typeof rawAge === "number" ? rawAge : Number(rawAge);
+      if (
+        typeof rawAge === "boolean" ||
+        isNaN(ageNum) ||
+        !Number.isInteger(ageNum)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "Demographic Validation Error: Participant age must be a valid integer.",
+          path: ["age"],
+        });
+      } else if (ageNum < 18 || ageNum > 110) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "Demographic Validation Error: Participant age must be between 18 and 110.",
+          path: ["age"],
+        });
+      }
     }
-  }
 
-  if ("pain_score" in answers && answers.pain_score !== null && answers.pain_score !== undefined && answers.pain_score !== "") {
-    const rawPain = answers.pain_score;
-    const painNum = typeof rawPain === "number" ? rawPain : Number(rawPain);
-    if (typeof rawPain === "boolean" || isNaN(painNum) || !Number.isInteger(painNum)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Clinical Validation Error: Pain score must be a valid integer.",
-        path: ["pain_score"],
-      });
-    } else if (painNum < 0 || painNum > 10) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Clinical Validation Error: Pain score must be between 0 and 10.",
-        path: ["pain_score"],
-      });
+    if (
+      "gender" in answers &&
+      answers.gender !== null &&
+      answers.gender !== undefined &&
+      answers.gender !== ""
+    ) {
+      const genderStr = String(answers.gender).toUpperCase();
+      const validGenders = ["M", "F", "O", "MALE", "FEMALE", "OTHER"];
+      if (!validGenders.includes(genderStr)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "Demographic Validation Error: Gender must be one of M, F, or O.",
+          path: ["gender"],
+        });
+      }
     }
-  }
-});
+
+    if (
+      "pain_score" in answers &&
+      answers.pain_score !== null &&
+      answers.pain_score !== undefined &&
+      answers.pain_score !== ""
+    ) {
+      const rawPain = answers.pain_score;
+      const painNum = typeof rawPain === "number" ? rawPain : Number(rawPain);
+      if (
+        typeof rawPain === "boolean" ||
+        isNaN(painNum) ||
+        !Number.isInteger(painNum)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "Clinical Validation Error: Pain score must be a valid integer.",
+          path: ["pain_score"],
+        });
+      } else if (painNum < 0 || painNum > 10) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "Clinical Validation Error: Pain score must be between 0 and 10.",
+          path: ["pain_score"],
+        });
+      }
+    }
+  });
 export type EPROAnswers = z.infer<typeof EPROAnswersSchema>;
 
 export const EPROSubmissionSchema = z.object({
@@ -217,7 +251,10 @@ export const EPROSubmissionSchema = z.object({
 });
 export type EPROSubmissionPayload = z.infer<typeof EPROSubmissionSchema>;
 
-export function validateEproPayload(answers: Record<string, any>): { valid: boolean; errors: string[] } {
+export function validateEproPayload(answers: Record<string, any>): {
+  valid: boolean;
+  errors: string[];
+} {
   const parseResult = EPROAnswersSchema.safeParse(answers || {});
   if (parseResult.success) {
     return { valid: true, errors: [] };
@@ -228,7 +265,10 @@ export function validateEproPayload(answers: Record<string, any>): { valid: bool
   };
 }
 
-export function validateEproSubmission(submission: Record<string, any>): { valid: boolean; errors: string[] } {
+export function validateEproSubmission(submission: Record<string, any>): {
+  valid: boolean;
+  errors: string[];
+} {
   if (!submission || typeof submission !== "object") {
     return { valid: false, errors: ["Submission payload must be an object"] };
   }

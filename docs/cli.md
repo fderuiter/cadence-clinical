@@ -132,6 +132,7 @@ must make it fail.
 | `rtm`                 | `gxp-rtm-validate`                                                     |                 | Runs                                                                                                                                   |
 | `gxp-snapshot`        | `gxp-snapshot-guard`                                                   |                 | Quick: checks the staged files instead of the branch                                                                                   |
 | `baseline-ratchet`    | `baselines`                                                            |                 | Quick: checks the staged files; `CADENCE_BASELINE_GROWTH="<reason>"` admits growth                                                     |
+| `public-bundle`       | `validate-public-bundle`                                               |                 | Skipped: checks built VitePress, staff demo, and participant demo bundles in CI and deploy-docs after compilation                      |
 
 <!-- quality-gates:end -->
 
@@ -149,10 +150,20 @@ admits the growth; in the pre-commit hook `CADENCE_BASELINE_GROWTH="<reason>"` a
 Without `origin/main` it is skipped, except in CI (`CI` or `GITHUB_ACTIONS` set), where it fails.
 
 The `deid` gate scans the given files, or every file git tracks, with the full de-identification detector
-(`packages/deid`). Tests, docs, scripts and generated folders are skipped. A line containing `deid-ignore` is skipped. Findings print as
-`path:line:column` and category, never the matched value. Findings that predate the full detector are listed in
-`.deid-baseline.txt` (`path|category|line hash`), which may only shrink: a new finding or a stale entry fails the
-gate. Run `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid` to drop stale entries.
+(`packages/deid`), covering application code, authored `docs/`, root portal docs (`README.md`, `ARCHITECTURE.md`,
+`AGENTS.md`, `CONTEXT.md`, `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md`, `LICENSE`), `.vue` templates, and `stores/`. Tests, `scripts/`, vendored
+standards (`docs/CDISC/`, `docs/NCI/`), generated OpenAPI/schema folders, and GxP qualification snapshots
+(`docs/SDLC/runs/`, `Requirements_Traceability_Matrix.md`, `IQ_OQ_PQ_Execution_Report.md`) are skipped. A source line
+containing `deid-ignore` is skipped by `deid` (never by `public-bundle`). Findings print as `path:line:column` and
+category, never the matched value. Findings that predate the full detector are listed in `.deid-baseline.txt`
+(`path|category|line hash`), which may only shrink: a new finding or a stale entry fails the gate. Run
+`CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid` to drop stale entries.
+
+The `public-bundle` gate (also `validate-public-bundle`, ADR-2497) scans every generated text file in
+`docs/.vitepress/dist`, `apps/web/dist`, and `apps/subject-portal/dist` after compilation with zero comment or pragma
+exemptions, rejecting national identifiers, unapproved email domains, secrets, external assets, executable local backend
+URLs, and missing or permissive `Content-Security-Policy` `<meta>` directives. It is skipped by `--pre-commit` and runs
+in `docs-build` and `deploy-docs.yml`.
 
 See [CI.md](CI.md#quality-gates) for the list of gates and what each one checks.
 
@@ -202,7 +213,8 @@ Where it differs from CI:
   browser correction check runs with `CADENCE_TEST_BROWSER=1` in the `accessibility-e2e` job). `--allow-skip` accepts the
   skips.
 - **Checks already run once are not repeated.** `lint-and-static` runs Prettier, ESLint, `markdown` and `api-clients`,
-  `dotnet-quality` runs `cadence check --exclude prettier --exclude eslint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities`,
+  `dotnet-quality` runs `cadence check --exclude prettier --exclude eslint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle`,
+  `docs-build` builds the VitePress portal and co-hosted interactive demos and runs `public-bundle`,
   and `security` runs `detect-secrets` and `vulnerabilities`. Steps in `security` whose gate already ran inside
   `Run Cadence quality sentinels` (the static security audit, secrets and DEID) are reported as _covered_ when
   `Run Cadence quality sentinels` passed; if that step failed, each runs on its own so the summary shows which gate
@@ -292,7 +304,8 @@ Paths are relative to the repository root. "Calls" is the method the command run
 | `validate-markdown`           | Checks workspace links and `#` heading spacing in `docs/**/*.md`.                                                                                                                                                                                                                                                                                                  | `MarkdownValidatorService.ValidateMarkdown`                                               |
 | `query-linter`                | Scans `.cs` files outside `tests/`. Fails on interpolated `FromSqlRaw($...)` or `ExecuteSqlRaw($...)`, and on `== true` or `== false`.                                                                                                                                                                                                                             | `QueryLinterService.LintQueries`                                                          |
 | `extract-env-vars`            | Finds environment variable reads in `.cs` and `.py` files. Fails if `.env.example` is missing. With `--check`, returns exit code 1 when variables missing from `.env.example` or `docs/ENVIRONMENT_VARIABLES.md` are found. It never writes files.                                                                                                                 | `EnvVarExtractorService.ExtractAndValidateEnvVars`                                        |
-| `audit-security`              | Scans every file in the repository for secret patterns.                                                                                                                                                                                                                                                                                                            | `SecurityAuditorService.AuditSecurity`                                                    |
+| `audit-security`              | Scans source files, `.vue` templates and `scripts/` for secret patterns (private keys, cloud credentials, API tokens, hardcoded compliance secrets).                                                                                                                                                                                                               | `SecurityAuditorService.AuditSecurity`                                                    |
+| `validate-public-bundle`      | Verifies built `docs/.vitepress/dist`, `apps/web/dist`, and `apps/subject-portal/dist` text artifacts with zero comment or pragma exemptions, rejecting national IDs, unapproved emails, secrets, external assets, executable localhost URLs, and missing/permissive CSP headers. This is the `public-bundle` gate.                                                | `PublicBundleValidatorService.ValidatePublicBundles`                                      |
 | `validate-vulnerabilities`    | Audits direct and transitive NuGet, pnpm workspace and Python (`pip-audit`) dependencies against active exemptions in `docs/SDLC/vulnerability_exclusions_ledger.json`. Fails closed when any scanner is missing, unrestored, times out or emits invalid JSON, or when unapproved vulnerabilities exist.                                                           | `VulnerabilityAuditorService.AuditVulnerabilities`                                        |
 | `clean-secrets-baseline`      | Rewrites the file exclusion filter in `.secrets.baseline`. Skips if the file is missing.                                                                                                                                                                                                                                                                           | `SecretsBaselineCleanerService.CleanSecretsBaseline`                                      |
 | `validate-architecture-drift` | Lists services in `docker/docker-compose.yml`. Warns when one is not mentioned in `ARCHITECTURE.md` or `docs/SDLC/02_Technical_Design_Document_TDD.md`. Fails only if the compose file is missing or has no services.                                                                                                                                              | `ArchitectureDriftValidatorService.ValidateArchitectureDrift`                             |

@@ -42,6 +42,7 @@ public sealed class DeidComplianceServiceTests : IDisposable
 
     [Theory]
     [InlineData("const docs = \"https://github.com/fderuiter/cadence-clinical\";")]
+    [InlineData("const pages = \"https://fderuiter.github.io/cadence-clinical/demo/\";")]
     [InlineData("const api = \"http://localhost:5000/api\";")]
     [InlineData("const ns = \"https://www.w3.org/2000/svg\";")]
     [InlineData("const mail = \"support@cadence.example\";")]
@@ -50,14 +51,20 @@ public sealed class DeidComplianceServiceTests : IDisposable
     [InlineData("const port = 12345;")]
     [InlineData("const version = \"2024-05-01\";")]
     [InlineData("const ratio = 555.0100;")]
+    [InlineData("const tenantRef = \"tenant:00000000-0000-0000-0000-000000000000\";")]
+    [InlineData("const studyId = \"12345678-1234-4321-8765-123456789012\";")]
     public void ScanText_AllowsKnownDevelopmentValues(string line)
     {
-        DeidComplianceService.ScanText("apps/x/Config.ts", line, Detector).Should().BeEmpty();
+        DeidComplianceService.ScanText("apps/web/src/stores/auth.js", line, Detector).Should().BeEmpty();
     }
 
     [Theory]
     [InlineData("const contact = \"jane.roe@hospital.test\";", DetectorCategory.Email)]
+    [InlineData("const sneaky = \"clinical@gmail.com\";", DetectorCategory.Email)]
+    [InlineData("const phone = \"+1-415-555-0199\";", DetectorCategory.TelephoneFax)]
     [InlineData("const site = \"https://patient-portal.test/records\";", DetectorCategory.Urls)]
+    [InlineData("const unsplash = \"https://images.unsplash.com/photo-1579684385127\";", DetectorCategory.Urls)]
+    [InlineData("const badge = \"https://img.shields.io/badge/.NET-10.0-512BD4.svg\";", DetectorCategory.Urls)]
     [InlineData("const zip = \"90210\";", DetectorCategory.ZipGeographic)]
     [InlineData("const host = \"192.0.2.44\";", DetectorCategory.IpMacAddresses)]
     [InlineData("const dob = \"1971-03-14\";", DetectorCategory.Dates)]
@@ -67,17 +74,45 @@ public sealed class DeidComplianceServiceTests : IDisposable
     }
 
     [Theory]
+    [InlineData("fderuiter@cadence.clinical", true)]
+    [InlineData("ops@sub.cadence-clinical.com", true)]
+    [InlineData("qa@ccrsoft.com", true)]
+    [InlineData("support@cadence.example", true)]
+    [InlineData("fixture@example.invalid", true)]
+    [InlineData("designer.lead@example.com", true)]
+    [InlineData("john.doe@example.com", false)]
+    [InlineData("clinical@gmail.com", false)]
+    [InlineData("cadence@evil-domain.org", false)]
+    public void IsApprovedSyntheticEmail_ValidatesDomainStrictly(string email, bool approved)
+    {
+        DeidComplianceService.IsApprovedSyntheticEmail(email).Should().Be(approved);
+    }
+
+    [Theory]
     [InlineData("tests/Cadence.UnitTests/Fixtures.cs", true)]
-    [InlineData("docs/SDLC/report.md", true)]
+    [InlineData("docs/CDISC/sdtm-ig.json", true)]
+    [InlineData("docs/NCI/thesaurus.xml", true)]
+    [InlineData("docs/SDLC/runs/2026-10-01/run.md", true)]
+    [InlineData("docs/SDLC/Requirements_Traceability_Matrix.md", true)]
+    [InlineData("docs/SDLC/IQ_OQ_PQ_Execution_Report.md", true)]
+    [InlineData("docs/openapi/execution_openapi.json", true)]
+    [InlineData("docs/schema/execution.md", true)]
     [InlineData("apps/web/node_modules/pkg/index.js", true)]
     [InlineData("apps/execution/src/bin/Debug/app.json", true)]
     [InlineData("apps/web/src/views/Home.test.ts", true)]
-    [InlineData("README.md", true)]
     [InlineData(".deid-baseline.txt", true)]
     [InlineData("packages/deid/src/DeidDetector.cs", true)]
+    [InlineData("README.md", false)]
+    [InlineData("AGENTS.md", false)]
+    [InlineData("ARCHITECTURE.md", false)]
+    [InlineData("CONTRIBUTING.md", false)]
+    [InlineData("LICENSE", false)]
+    [InlineData("docs/CI.md", false)]
+    [InlineData("docs/SDLC/07_Operations_Deployment_Guide.md", false)]
+    [InlineData("apps/web/src/stores/auth.js", false)]
     [InlineData("apps/execution/src/Program.cs", false)]
     [InlineData("apps/web/src/views/Home.vue", false)]
-    public void IsExcludedPath_SkipsTestsDocsToolingAndGeneratedFolders(string path, bool excluded)
+    public void IsExcludedPath_ScansAuthoredDocsRootDocsVueAndStores_WhileSkippingVendoredStandardsAndGxpRuns(string path, bool excluded)
     {
         DeidComplianceService.IsExcludedPath(path).Should().Be(excluded);
     }
@@ -91,6 +126,8 @@ public sealed class DeidComplianceServiceTests : IDisposable
 
         DeidComplianceService.ShouldScanFile("apps/x/Program.cs").Should().BeTrue();
         DeidComplianceService.ShouldScanFile("apps/web/src/App.vue").Should().BeTrue();
+        DeidComplianceService.ShouldScanFile("docs/badges/dotnet-10.svg").Should().BeTrue();
+        DeidComplianceService.ShouldScanFile("docs/.vitepress/config.mjs").Should().BeTrue();
         DeidComplianceService.ShouldScanFile("apps/web/public/logo.png").Should().BeFalse();
         DeidComplianceService.ShouldScanFile(text).Should().BeTrue();
         DeidComplianceService.ShouldScanFile(binary).Should().BeFalse();
