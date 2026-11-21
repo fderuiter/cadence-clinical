@@ -1,5 +1,16 @@
 import { defineStore } from "pinia";
+import { flushRegisteredDraftSourcesSync } from "ui";
 import { getKeycloakClient } from "../auth/keycloak.js";
+import {
+  clearWebReturnUrl,
+  getCurrentInAppReturnUrl,
+  notifySessionEnded,
+  peekWebReturnUrl,
+  registerAuthSessionBridge,
+  resolveWebRedirectUri,
+  saveWebReturnUrl,
+  webSessionCoordinator,
+} from "../auth/sessionCoordinator.js";
 import { kernelApi } from "../api/kernelApi";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { isDemoBuild } from "../utils/demoMode.js";
@@ -235,6 +246,8 @@ export function personasForRoles(rawRoles) {
 function emptyAuthState() {
   return {
     isAuthenticated: false,
+    sessionExpired: false,
+    isLoggingOut: false,
     /** @type {string | null} */
     accessToken: null,
     /** @type {string | null} */
@@ -356,6 +369,8 @@ export const useAuthStore = defineStore("auth", {
       }
       const claims = keycloak.tokenParsed || {};
       this.isAuthenticated = true;
+      this.sessionExpired = false;
+      this.isLoggingOut = false;
       this.accessToken = keycloak.token;
       this.idToken = keycloak.idToken || null;
       this.tokenExpiresAt = claims.exp ? claims.exp * 1000 : null;
@@ -371,6 +386,7 @@ export const useAuthStore = defineStore("auth", {
         ? [...claims.realm_access.roles]
         : [];
       this.authError = null;
+      webSessionCoordinator.markAuthenticated();
 
       const entitled = personasForRoles(this.rawRoles);
       if (!entitled.some((p) => p.key === this.currentPersona)) {
@@ -390,6 +406,19 @@ export const useAuthStore = defineStore("auth", {
       this.authError = authError;
     },
     /**
+     * Ends an expired OIDC session without purging account-scoped browser drafts,
+     * flushes any pending debounced form edits while the user scope is still active,
+     * and records the current in-app return path for post-sign-in restoration.
+     */
+    expireSession(returnPath) {
+      const authError = this.authError;
+      flushRegisteredDraftSourcesSync();
+      saveWebReturnUrl(returnPath || getCurrentInAppReturnUrl());
+      Object.assign(this, emptyAuthState());
+      this.authError = authError;
+      this.sessionExpired = true;
+    },
+    /**
      * Signs in the offline demo identity. Only a demo build can do this; in any
      * other build it throws, so no code path can sign in without Keycloak.
      */
@@ -399,6 +428,8 @@ export const useAuthStore = defineStore("auth", {
       }
       Object.assign(this, emptyAuthState());
       this.isAuthenticated = true;
+      this.sessionExpired = false;
+      this.isLoggingOut = false;
       this.user = { ...DEMO_IDENTITY };
       this.rawRoles = [...DEMO_ROLES];
       this.currentPersona = personasForRoles(this.rawRoles)[0]?.key || null;
@@ -420,7 +451,18 @@ export const useAuthStore = defineStore("auth", {
           "Keycloak sign-in is unavailable. The identity provider could not be initialised."
         );
       }
-      await keycloak.login(options);
+      if (options && options.redirectUri) {
+        await keycloak.login(options);
+        return;
+      }
+      const returnPath = peekWebReturnUrl() || getCurrentInAppReturnUrl();
+      if (returnPath) {
+        saveWebReturnUrl(returnPath);
+      }
+      await keycloak.login({
+        ...options,
+        redirectUri: resolveWebRedirectUri(returnPath || "/"),
+      });
     },
     /** Starts the Keycloak authorization code + PKCE S256 self-registration redirect. */
     async register(options = {}) {
@@ -502,8 +544,11 @@ export const useAuthStore = defineStore("auth", {
      */
     async logout(options = {}) {
       const keycloak = getKeycloakClient();
+      webSessionCoordinator.beginVoluntaryLogout();
+      clearWebReturnUrl();
       this.authError = null;
       this.clearAuth();
+      this.isLoggingOut = true;
       purgeLegacyAuthStorage();
       purgeUserScopedStorage(null);
       try {
@@ -517,21 +562,53 @@ export const useAuthStore = defineStore("auth", {
     },
     /**
      * Refreshes the access token when it expires within `minValidity` seconds.
-     * A failed refresh ends the session so the user signs in again.
+     * Deduplicated via `webSessionCoordinator`. A failed refresh ends the
+     * session while preserving local drafts so the user can sign in again.
      */
     async refresh(minValidity = 30) {
       const keycloak = getKeycloakClient();
-      if (!keycloak || !this.isAuthenticated) {
+      if (
+        !keycloak ||
+        typeof keycloak.updateToken !== "function" ||
+        !this.isAuthenticated
+      ) {
         return false;
       }
-      try {
-        const refreshed = await keycloak.updateToken(minValidity);
-        this.setAuth(keycloak);
-        return refreshed;
-      } catch (err) {
-        this.clearAuth();
-        throw err;
+      const result = await webSessionCoordinator.ensureFreshToken(minValidity);
+      if (result.error) {
+        this.expireSession();
+        throw result.error;
       }
+      if (!result.ok) {
+        this.expireSession();
+        return false;
+      }
+      this.setAuth(keycloak);
+      return Boolean(result.refreshed);
+    },
+    /**
+     * Performs a single-flight forced token refresh after an HTTP 401 response.
+     * Preserves local drafts and notifies session listeners if refresh fails.
+     */
+    async refreshAfterUnauthorized() {
+      const keycloak = getKeycloakClient();
+      if (!keycloak) {
+        if (this.isAuthenticated) {
+          const returnUrl = saveWebReturnUrl();
+          this.expireSession(returnUrl);
+          notifySessionEnded({ reason: "unauthorized", returnUrl });
+        }
+        return null;
+      }
+      const result = await webSessionCoordinator.refreshOnUnauthorized();
+      if (result.ok && result.token) {
+        this.setAuth(keycloak);
+        return this.accessToken;
+      }
+      if (this.isAuthenticated) {
+        this.expireSession();
+      }
+      return null;
     },
     /**
      * Returns an access token valid for at least `minValidity` seconds, or
@@ -566,5 +643,24 @@ export const useAuthStore = defineStore("auth", {
       }
       return true;
     },
+  },
+});
+
+registerAuthSessionBridge({
+  onTokenRefreshed: (_token, kc) => {
+    try {
+      if (kc?.authenticated && kc?.token) {
+        useAuthStore().setAuth(kc);
+      }
+    } catch {
+      // Pinia store not active yet
+    }
+  },
+  onSessionExpired: (ctx) => {
+    try {
+      useAuthStore().expireSession(ctx?.returnUrl);
+    } catch {
+      // Pinia store not active yet
+    }
   },
 });

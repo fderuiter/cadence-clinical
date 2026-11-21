@@ -41,7 +41,7 @@
 
           <div class="form-group mb-12">
             <label for="sign-reason">Reason for Action / Declaration</label>
-            <select id="sign-reason">
+            <select id="sign-reason" @change="onReasonChange">
               <option value="Initial Questionnaire Completion">
                 Initial Questionnaire Completion
               </option>
@@ -58,11 +58,17 @@
             </select>
           </div>
           <div class="form-group mb-12">
-            <label for="sign-reason-custom"
-              >Custom Reason Detail (Optional)</label
-            >
+            <label id="sign-reason-custom-label" for="sign-reason-custom">
+              {{
+                isOtherReason
+                  ? "Custom Reason Detail (Required)"
+                  : "Custom Reason Detail (Optional)"
+              }}
+            </label>
             <textarea
               id="sign-reason-custom"
+              :required="isOtherReason || undefined"
+              :aria-required="isOtherReason ? 'true' : undefined"
               placeholder="Provide extra detail if 'Other' selected..."
             />
           </div>
@@ -71,17 +77,17 @@
             <input
               id="sign-username"
               type="text"
+              autocomplete="username"
               placeholder="Enter your participant identifier..."
               required
             />
           </div>
           <div class="form-group">
-            <label for="sign-password">Security PIN / Password</label>
+            <label for="sign-password">Account Password / Security PIN</label>
             <input
               id="sign-password"
-              type="password"
-              inputmode="numeric"
-              placeholder="••••••••"
+              v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+              placeholder="Enter your password or verification credential..."
               required
             />
           </div>
@@ -100,15 +106,28 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
-import { useFocusTrap } from "ui";
+import { computed, ref } from "vue";
+import {
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+  requiresCustomSignatureReason,
+  useFocusTrap,
+} from "ui";
 
 import { closeSignatureModal } from "../features/signature.js";
 import { state } from "../stores/state.js";
 import { useUiStore } from "../stores/ui.js";
 
 const modalRef = ref(null);
+const selectedReason = ref("Initial Questionnaire Completion");
 const ui = useUiStore();
+
+const isOtherReason = computed(() =>
+  requiresCustomSignatureReason(selectedReason.value)
+);
+
+function onReasonChange(event) {
+  selectedReason.value = event?.target?.value || "";
+}
 
 useFocusTrap(modalRef, {
   isOpen: () => ui.signatureModalOpen,
