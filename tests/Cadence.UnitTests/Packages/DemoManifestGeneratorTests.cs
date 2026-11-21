@@ -148,6 +148,32 @@ public sealed class DemoManifestGeneratorTests : IDisposable
         grantErrors.Should().Contain(e => e.Contains("K027", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void TryBuildExpectedArtifacts_ResolvesConstSubjectConstantsAndRejectsUnresolvedIdentifiers()
+    {
+        string repoRoot = QualityGateOrchestrator.FindRepoRoot();
+        CopySeedFilesToTempRepo(repoRoot);
+
+        DemoManifestGeneratorService.TryBuildExpectedArtifacts(_tempRoot, out var snapshot, out _, out _, out var errors).Should().BeTrue();
+        errors.Should().BeEmpty();
+        snapshot!.Personas.Should().ContainSingle(p =>
+            p.Username == "designer.lead" &&
+            p.KeycloakSub == "8808e058-a472-4f72-9970-a027eddf35bc");
+
+        string kernelPath = Path.Combine(_tempRoot, DemoManifestGeneratorService.KernelSeedRelativePath);
+        string originalKernel = File.ReadAllText(kernelPath, Encoding.UTF8);
+        File.WriteAllText(
+            kernelPath,
+            originalKernel.Replace(
+                "(\"designer.lead\", DesignerLeadSubject,",
+                "(\"designer.lead\", UnknownSubjectConst,",
+                StringComparison.Ordinal),
+            Encoding.UTF8);
+
+        DemoManifestGeneratorService.TryBuildExpectedArtifacts(_tempRoot, out _, out _, out _, out var constErrors).Should().BeFalse();
+        constErrors.Should().Contain(e => e.Contains("UnknownSubjectConst", StringComparison.Ordinal));
+    }
+
     private void CopySeedFilesToTempRepo(string repoRoot)
     {
         foreach (string rel in new[]

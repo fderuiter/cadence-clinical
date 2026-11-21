@@ -42,7 +42,6 @@
     "lint": "node ../../scripts/check_duplicate_identifiers.js && eslint .",
     "test": "vitest run --coverage",
     "test:e2e": "playwright test --project=accessibility",
-    "test:e2e:a11y": "playwright test --project=accessibility",
     "test:e2e:stack": "playwright test",
     "test:e2e:workflows": "playwright test --project=setup --project=chromium",
     "typecheck": "node ../../scripts/check_duplicate_identifiers.js && tsc --noEmit"

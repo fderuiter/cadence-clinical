@@ -374,7 +374,7 @@ function cancelPendingRaf() {
 }
 
 function schedulePositionUpdate(delayMs) {
-  if (isDisposed || typeof window === "undefined") return;
+  if (isDisposed) return;
   const timerId = setTimeout(() => {
     pendingTimers.delete(timerId);
     updatePosition();

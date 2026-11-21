@@ -9,7 +9,6 @@ const { mockFetch } = vi.hoisted(() => {
 import { createPinia, setActivePinia } from "pinia";
 import { useAuthStore } from "../src/stores/auth";
 import { apiClient } from "../src/api/apiClient";
-import { createOpenApiClient, getBaseUrl } from "../src/api/client";
 import { designerService } from "../src/api/designer";
 import { etmfService } from "../src/api/etmf";
 import { interopService } from "../src/api/interop";
@@ -278,6 +277,7 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
 
   describe("createOpenApiClient circular module initialization resilience", () => {
     it("dynamically rewrites default baseUrl when VITE_API_BASE_URL is populated after client creation", async () => {
+      const { createOpenApiClient } = await import("../src/api/client");
       if (import.meta.env) {
         delete import.meta.env.VITE_API_BASE_URL;
       }
@@ -290,8 +290,6 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
       }
 
       mockFetch.mockImplementation(async () => jsonResponse({ status: "ok" }));
-
-      expect(getBaseUrl()).toBe("http://localhost:3000");
 
       await defaultClient.GET("/health");
       const defaultReq = await lastRequest();

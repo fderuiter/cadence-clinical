@@ -391,7 +391,7 @@ public static class CiPlan
             new(E2eJob, "Run Web Application E2E Accessibility Tests")
             {
                 Environment = new Dictionary<string, string> { ["CADENCE_TEST_BROWSER"] = "1" },
-                Commands = [Pnpm("--filter", "web", "test:e2e:a11y")],
+                Commands = [Pnpm("--filter", "web", "test:e2e")],
             },
             new(E2eJob, "Run Browser-to-Database Correction Integration Test")
             {

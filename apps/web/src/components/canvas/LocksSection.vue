@@ -236,7 +236,11 @@
             <td>
               <template v-if="entry.masked"> masked </template>
               <template v-else>
-                {{ entry.locked_by ?? "—" }}
+                <NodeRefChip
+                  v-if="entry.locked_by && parseNodeRef(entry.locked_by)"
+                  :node-ref="entry.locked_by"
+                />
+                <template v-else>{{ entry.locked_by ?? "—" }}</template>
                 <span v-if="entry.attestation_meaning" class="meaning-note">
                   ({{ entry.attestation_meaning }})
                 </span>
@@ -315,6 +319,7 @@ import {
   type KernelLockMeaning,
 } from "../../api/kernelApi";
 import { findKernelStudyRef } from "../../canvas/kernelStudy";
+import { parseNodeRef } from "../../canvas/nodeRef";
 import { getNodeDisplay, seedNodeSummary } from "../../canvas/nodeResolver";
 import { useAuthStore } from "../../stores/auth.js";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
