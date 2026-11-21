@@ -139,6 +139,9 @@ export const DEMO_MANIFEST = Object.freeze({
       name: "Study designer",
       roleUuid: "6024f394-caba-8f02-b77d-a115b11fbd78",
       capabilities: Object.freeze([
+        "organization.register",
+        "study.register",
+        "concept.define",
         "protocol.draft",
         "protocol.revise_draft",
         "protocol.submit_for_review",

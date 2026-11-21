@@ -193,6 +193,22 @@ describe("Canonical Demo Manifest & Deterministic Demo Ledger (apps/web)", () =>
     expect(fallbackEntitlements?.tier).toBe("Complete");
 
     const demoStore = createWebDemoStore();
+    expect(demoStore.listOrganizations()[0]).toEqual({
+      ref: `organization:${DEMO_SPONSOR.organizationUuid}@1`,
+      code: DEMO_SPONSOR.code,
+      name: DEMO_SPONSOR.name,
+      kind: "Sponsor",
+    });
+    expect(demoStore.listStudies()[0]).toMatchObject({
+      ref: DEMO_STUDY.ref,
+      code: DEMO_STUDY.code,
+      title: DEMO_STUDY.title,
+      phase: DEMO_STUDY.phase,
+      sponsor_ref: `organization:${DEMO_SPONSOR.organizationUuid}@1`,
+      sponsor_code: DEMO_SPONSOR.code,
+      sponsor_name: DEMO_SPONSOR.name,
+      site_count: DEMO_SITES.length,
+    });
     demoStore.upgradeSubscriptionTier("Select");
     demoStore.upgradeSubscriptionTier("Individual");
     vi.spyOn(kernelApi, "entitlements").mockImplementation(async () =>
