@@ -520,6 +520,12 @@ import Hls from "hls.js";
 import { useFocusTrap } from "ui";
 import { fileshareService } from "../../api/fileshare";
 import { useAuthStore } from "../../stores/auth";
+import {
+  demoNowMs,
+  demoRandomToken,
+  isDemoBuild,
+  nextDemoStep,
+} from "../../utils/demoMode";
 import ReAuthModal from "../shared/ReAuthModal.vue";
 
 const props = defineProps({
@@ -554,9 +560,11 @@ const authStore = useAuthStore();
 
 // Unique session ID for video playback audit telemetry
 const sessionId = ref(
-  typeof crypto !== "undefined" && crypto.randomUUID
-    ? crypto.randomUUID()
-    : `sess-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+  isDemoBuild()
+    ? `sess-${demoNowMs(nextDemoStep("media-preview"))}-${demoRandomToken(7, 36, "media-preview")}`
+    : typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `sess-${Date.now()}-${demoRandomToken(7, 36, "media-preview")}`
 );
 
 // Video HLS playback and transcoding state

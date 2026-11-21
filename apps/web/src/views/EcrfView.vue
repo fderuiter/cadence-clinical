@@ -544,7 +544,7 @@ function onFormPanelClosed() {
 
 // Selected Subject & Visit State
 const selectedSubjectId = ref(
-  demoBuild ? "SUBJ-001" : routeSubjectId.value || ""
+  demoBuild ? store.activeSubjectId || "SUBJ-001" : routeSubjectId.value || ""
 );
 const selectedVisitId = ref("Screening");
 

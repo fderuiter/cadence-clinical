@@ -1,19 +1,40 @@
+import {
+  DEFAULT_DEMO_PARTICIPANT,
+  DEFAULT_DEMO_SITE,
+  DEMO_STUDY,
+} from "demo-fixtures";
 import { http, HttpResponse, passthrough } from "msw";
 import { evaluateDemoBoundaryRequest } from "ui/testing";
-import { isDemoBuild } from "../utils/demoMode.js";
+import { demoNowIso, demoNowMs, isDemoBuild } from "../utils/demoMode.js";
 import { createPortalDemoHandlers } from "./demoHandlers.js";
 
 // Deterministic mock-sandbox state for explicit demo mode / Vitest MSW tests.
 // Never fabricates fallback merchant/amount/confidence when receipt content is unreadable.
 const mockWalletLedger = new Map();
+let mockActionCounter = 0;
 
-function getOrCreateMockWallet(subjectId = "subject_001") {
+function nextMockTimestampMs() {
+  mockActionCounter += 1;
+  return demoNowMs(mockActionCounter);
+}
+
+function nextMockTimestampIso() {
+  mockActionCounter += 1;
+  return demoNowIso(mockActionCounter);
+}
+
+const DEFAULT_MOCK_SUBJECT_ID =
+  DEFAULT_DEMO_PARTICIPANT?.subjectCode || "SUBJ-101-001";
+const DEFAULT_MOCK_STUDY_ID = DEMO_STUDY?.code || "CADENCE-101";
+const DEFAULT_MOCK_SITE_ID = DEFAULT_DEMO_SITE?.code || "SITE-101";
+
+function getOrCreateMockWallet(subjectId = DEFAULT_MOCK_SUBJECT_ID) {
   if (!mockWalletLedger.has(subjectId)) {
     mockWalletLedger.set(subjectId, {
       id: `wallet_${subjectId}`,
       subjectId,
-      studyId: "study_001",
-      siteId: "site_001",
+      studyId: DEFAULT_MOCK_STUDY_ID,
+      siteId: DEFAULT_MOCK_SITE_ID,
       currentBalance: 125.0,
       lifetimeStipends: 125.0,
       lifetimeReimbursements: 0.0,
@@ -272,7 +293,7 @@ function evaluateExpenseSubmission(body) {
   const isMealCompliant = !isMeal || grossAmount <= perDiemCap;
 
   if (isAmountUnderCap && isConfidenceHigh && isMealCompliant) {
-    const timestamp = Date.now();
+    const timestamp = nextMockTimestampMs();
     const disbRef = `DISB-ACH-${timestamp}`;
     return {
       id: `claim_${timestamp}`,
@@ -288,7 +309,7 @@ function evaluateExpenseSubmission(body) {
       netAmount: grossAmount,
       net_amount: grossAmount,
       disbursement_method: "DIRECT_ACH",
-      dispatched_at: new Date().toISOString(),
+      dispatched_at: nextMockTimestampIso(),
     };
   }
 
@@ -309,7 +330,7 @@ function evaluateExpenseSubmission(body) {
     );
   }
   const reviewNotes = `${reasons.join(" ")} Routed to site coordinator review queue.`;
-  const id = `claim_${Date.now()}`;
+  const id = `claim_${nextMockTimestampMs()}`;
   return {
     id,
     claim_id: id,
@@ -331,13 +352,14 @@ function evaluateExpenseSubmission(body) {
 const sharedPortalActionHandlers = [
   http.post("*/api/v1/ai/biometrics/verify-liveness", async ({ request }) => {
     const body = await request.json().catch(() => ({}));
-    const subject = body.subject_pseudonym || "subj-001";
+    const subject = body.subject_pseudonym || DEFAULT_MOCK_SUBJECT_ID;
     const isFallback = Boolean(body.fallback_mode);
     const frames = body.video_frames || [];
     const isLive = isFallback || frames.length > 0;
     const score = isFallback ? 0.92 : isLive ? 0.98 : 0.15;
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-    const token = `mock_liveness_token_${subject}_${isFallback ? "fallback" : "camera"}_${Date.now()}`;
+    const nowMs = nextMockTimestampMs();
+    const expiresAt = new Date(nowMs + 15 * 60 * 1000).toISOString();
+    const token = `mock_liveness_token_${subject}_${isFallback ? "fallback" : "camera"}_${nowMs}`;
 
     if (!isLive) {
       return HttpResponse.json(
@@ -363,7 +385,8 @@ const sharedPortalActionHandlers = [
 
   http.get("*/api/v1/payments/participant/me/wallet", ({ request }) => {
     const url = new URL(request.url);
-    const subjectId = url.searchParams.get("subjectId") || "subject_001";
+    const subjectId =
+      url.searchParams.get("subjectId") || DEFAULT_MOCK_SUBJECT_ID;
     const wallet = getOrCreateMockWallet(subjectId);
     return HttpResponse.json({
       wallet,
@@ -405,7 +428,9 @@ const sharedPortalActionHandlers = [
     "*/api/v1/payments/participant/me/disburse",
     async ({ request }) => {
       const body = await request.json().catch(() => ({}));
-      const wallet = getOrCreateMockWallet(body.subjectId || "subject_001");
+      const wallet = getOrCreateMockWallet(
+        body.subjectId || DEFAULT_MOCK_SUBJECT_ID
+      );
       if (wallet.currentBalance <= 0) {
         return HttpResponse.json(
           {
@@ -418,9 +443,10 @@ const sharedPortalActionHandlers = [
       const amount = wallet.currentBalance;
       wallet.currentBalance = 0;
       wallet.lifetimeDisbursements += amount;
-      const refNum = `DISB-ACH-${Date.now()}`;
+      const nowMs = nextMockTimestampMs();
+      const refNum = `DISB-ACH-${nowMs}`;
       return HttpResponse.json({
-        id: `disb_${Date.now()}`,
+        id: `disb_${nowMs}`,
         walletId: wallet.id,
         subjectId: wallet.subjectId,
         amount,
@@ -431,7 +457,7 @@ const sharedPortalActionHandlers = [
         destinationMask: wallet.achAccountMask,
         referenceNumber: refNum,
         status: "DISPATCHED",
-        createdAt: new Date().toISOString(),
+        createdAt: nextMockTimestampIso(),
       });
     }
   ),
@@ -454,7 +480,9 @@ const sharedPortalActionHandlers = [
           { status: 400 }
         );
       }
-      const wallet = getOrCreateMockWallet(body.subjectId || "subject_001");
+      const wallet = getOrCreateMockWallet(
+        body.subjectId || DEFAULT_MOCK_SUBJECT_ID
+      );
       const key =
         body.idempotencyKey ||
         `diary_${wallet.subjectId}_${body.diaryId || body.assignmentId}_${body.sequenceNumber || 1}`;
@@ -484,7 +512,7 @@ const sharedPortalActionHandlers = [
         walletId: wallet.id,
         subjectId: wallet.subjectId,
         currency: "USD",
-        transactionId: `tx_${Date.now()}`,
+        transactionId: `tx_${nextMockTimestampMs()}`,
         referenceNumber: key,
         idempotencyKey: key,
       });
@@ -493,12 +521,12 @@ const sharedPortalActionHandlers = [
 
   http.post("*/api/v1/payments/disburse", async ({ request }) => {
     const body = await request.json().catch(() => ({}));
-    const subjectId = body.subject_id || "subject_001";
+    const subjectId = body.subject_id || DEFAULT_MOCK_SUBJECT_ID;
     const amount = typeof body.amount === "number" ? body.amount : 25.0;
     const seq = body.sequence_number || 1;
     return HttpResponse.json({
       success: true,
-      id: "disb_" + Date.now(),
+      id: "disb_" + nextMockTimestampMs(),
       wallet_id: "wallet_" + subjectId,
       subject_id: subjectId,
       amount: amount,
@@ -507,7 +535,7 @@ const sharedPortalActionHandlers = [
       status: "COMPLETED",
       reference_number: "DISB-MOCK-" + seq,
       idempotency_key: body.idempotency_key || `seq_${seq}_${subjectId}`,
-      dispatched_at: new Date().toISOString(),
+      dispatched_at: nextMockTimestampIso(),
     });
   }),
 
@@ -515,11 +543,11 @@ const sharedPortalActionHandlers = [
     "*/api/v1/payments/participant/wallets/disburse",
     async ({ request }) => {
       const body = await request.json().catch(() => ({}));
-      const subjectId = body.subject_id || "subject_001";
+      const subjectId = body.subject_id || DEFAULT_MOCK_SUBJECT_ID;
       const amount = typeof body.amount === "number" ? body.amount : 25.0;
       return HttpResponse.json({
         success: true,
-        id: "disb_" + Date.now(),
+        id: "disb_" + nextMockTimestampMs(),
         wallet_id: "wallet_" + subjectId,
         subject_id: subjectId,
         amount: amount,
@@ -528,7 +556,7 @@ const sharedPortalActionHandlers = [
         status: "COMPLETED",
         reference_number: "DISB-MOCK",
         idempotency_key: body.idempotency_key || `disburse_${subjectId}`,
-        dispatched_at: new Date().toISOString(),
+        dispatched_at: nextMockTimestampIso(),
       });
     }
   ),

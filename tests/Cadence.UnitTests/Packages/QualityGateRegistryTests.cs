@@ -268,6 +268,11 @@ public sealed class QualityGateRegistryTests : IDisposable
             Write("docs/unlisted.md", "# Unlisted\n");
             return Context();
         },
+        ["demo-manifest"] = () =>
+        {
+            Write("packages/demo-fixtures/src/manifest.js", "export const DEMO_MANIFEST = {};\n");
+            return Context();
+        },
         ["rtm"] = () =>
         {
             Write("tests/Fixture/FixtureTests.cs",
@@ -316,7 +321,7 @@ public sealed class QualityGateRegistryTests : IDisposable
     [Fact]
     public void EveryGate_HasAFailingFixture()
     {
-        QualityGates.All.Should().HaveCount(36);
+        QualityGates.All.Should().HaveCount(37);
         Fixtures().Keys.Should().BeEquivalentTo(QualityGates.All.Select(g => g.Name));
         FailsClosedOnly.Keys.Should().BeSubsetOf(QualityGates.All.Select(g => g.Name));
     }

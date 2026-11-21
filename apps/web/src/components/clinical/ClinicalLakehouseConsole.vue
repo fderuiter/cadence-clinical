@@ -670,6 +670,11 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import {
+  demoNowIso,
+  demoRandomToken,
+  nextDemoStep,
+} from "../../utils/demoMode";
 import CdiscPipelineConsole from "./CdiscPipelineConsole.vue";
 import StatisticalComputingConsole from "./StatisticalComputingConsole.vue";
 
@@ -899,7 +904,7 @@ function submitCreateSnapshot(): void {
 
   // Emulate creation
   const newSnap: Snapshot = {
-    snapshot_id: `SNAP-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+    snapshot_id: `SNAP-${demoRandomToken(8, 36, "lakehouse-snapshot").toUpperCase()}`,
     study_id: createForm.value.study_id,
     version_tag: createForm.value.version_tag,
     milestone: createForm.value.milestone,
@@ -909,7 +914,7 @@ function submitCreateSnapshot(): void {
     domain_counts: {},
     sha256_digest:
       "a7c9f4d1e2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9", // pragma: allowlist secret
-    created_at: new Date().toISOString(),
+    created_at: demoNowIso(nextDemoStep("lakehouse-snapshot")),
     created_by: "statistician_lead",
     reason_for_snapshot: createForm.value.reason_for_snapshot,
     is_locked: true,

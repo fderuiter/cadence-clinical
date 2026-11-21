@@ -1,6 +1,12 @@
 import { ref, reactive, computed } from "vue";
 import { useNotificationsStore } from "../stores/notifications";
 import { useToastStore } from "../stores/toasts.js";
+import {
+  demoNowIso,
+  demoNowMs,
+  demoRandomToken,
+  nextDemoStep,
+} from "../utils/demoMode";
 
 export function useVerification(activeUserRole) {
   const sdvStates = reactive({}); // keyed by `${subjectId}:${visitId}:${fieldId}`
@@ -73,12 +79,13 @@ export function useVerification(activeUserRole) {
 
       try {
         const notifStore = useNotificationsStore();
+        const step = nextDemoStep("sdv-clear-notif");
         const newNotif = {
           id:
             "notif-sdv-clear-" +
-            Date.now() +
+            demoNowMs(step) +
             "-" +
-            Math.random().toString(36).substr(2, 4),
+            demoRandomToken(4, 36, "sdv-clear-notif"),
           recipient_user_id: store.user?.username || "",
           recipient_role: "monitor",
           category: "ALERTS",
@@ -89,7 +96,7 @@ export function useVerification(activeUserRole) {
           related_entity_type: "FIELD",
           status: "OPEN",
           delivery_state: "DELIVERED",
-          created_at: new Date().toISOString(),
+          created_at: demoNowIso(step),
           created_by: "system",
         };
         notifStore.notifications.unshift(newNotif);

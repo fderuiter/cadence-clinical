@@ -1,34 +1,53 @@
 // Sandbox (demo/offline) fixtures, used when there is no authenticated
-// gateway session. Their dates are computed once, when the portal loads.
+// gateway session. Their dates are anchored to the canonical demo epoch.
+import {
+  DEFAULT_DEMO_PARTICIPANT,
+  DEFAULT_DEMO_SITE,
+  DEMO_EPOCH_MS,
+  DEMO_SPONSOR,
+  DEMO_STUDY,
+} from "demo-fixtures";
+
+const DEMO_BASE_EPOCH_MS = DEMO_EPOCH_MS || Date.UTC(2026, 0, 5, 9, 0, 0);
+const DEMO_SUBJECT_ID = DEFAULT_DEMO_PARTICIPANT?.subjectCode || "";
+const DEMO_STUDY_ID = DEMO_STUDY?.code || "";
+const DEMO_SITE_ID = DEFAULT_DEMO_SITE?.code || "";
+const DEMO_SPONSOR_ID = DEMO_SPONSOR?.code || "";
 
 export const MOCK_ASSIGNMENTS = [
   {
     id: "assign_01",
-    subject_id: "subject_001",
+    subject_id: DEMO_SUBJECT_ID,
+    study_id: DEMO_STUDY_ID,
+    site_id: DEMO_SITE_ID,
     instrument_id: "inst_daily_diary",
     instrument_name: "Daily Health & Vital Diary",
-    due_at: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
-    end_date: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+    due_at: new Date(DEMO_BASE_EPOCH_MS + 4 * 3600 * 1000).toISOString(),
+    end_date: new Date(DEMO_BASE_EPOCH_MS + 24 * 3600 * 1000).toISOString(),
     status: "PENDING",
   },
   {
     id: "assign_02",
-    subject_id: "subject_001",
+    subject_id: DEMO_SUBJECT_ID,
+    study_id: DEMO_STUDY_ID,
+    site_id: DEMO_SITE_ID,
     instrument_id: "inst_weekly_symptoms",
     instrument_name: "Weekly Symptoms & eCOA Checklist",
-    due_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-    end_date: new Date(Date.now() + 12 * 3600 * 1000).toISOString(),
+    due_at: new Date(DEMO_BASE_EPOCH_MS - 2 * 3600 * 1000).toISOString(),
+    end_date: new Date(DEMO_BASE_EPOCH_MS + 12 * 3600 * 1000).toISOString(),
     status: "OVERDUE",
   },
   {
     id: "assign_03",
-    subject_id: "subject_001",
+    subject_id: DEMO_SUBJECT_ID,
+    study_id: DEMO_STUDY_ID,
+    site_id: DEMO_SITE_ID,
     instrument_id: "inst_weekly_symptoms",
     instrument_name: "Weekly Symptoms & eCOA Checklist",
-    due_at: new Date(Date.now() - 48 * 3600 * 1000).toISOString(),
-    end_date: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
+    due_at: new Date(DEMO_BASE_EPOCH_MS - 48 * 3600 * 1000).toISOString(),
+    end_date: new Date(DEMO_BASE_EPOCH_MS - 24 * 3600 * 1000).toISOString(),
     status: "COMPLETED",
-    submitted_at: new Date(Date.now() - 47 * 3600 * 1000).toISOString(),
+    submitted_at: new Date(DEMO_BASE_EPOCH_MS - 47 * 3600 * 1000).toISOString(),
   },
 ];
 
@@ -105,20 +124,22 @@ export const MOCK_INSTRUMENTS = {
 export const MOCK_NOTIFICATIONS = [
   {
     id: "notif_01",
-    subject_id: "subject_001",
+    subject_id: DEMO_SUBJECT_ID,
+    study_id: DEMO_STUDY_ID,
     assignment_id: "assign_01",
     message: "Reminder: Daily Health & Vital Diary is due shortly.",
-    due_at: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
+    due_at: new Date(DEMO_BASE_EPOCH_MS + 4 * 3600 * 1000).toISOString(),
     channel: "IN_APP",
     is_read: false,
   },
   {
     id: "notif_02",
-    subject_id: "subject_001",
+    subject_id: DEMO_SUBJECT_ID,
+    study_id: DEMO_STUDY_ID,
     assignment_id: "assign_02",
     message:
       "ALERT: Weekly Symptoms & eCOA Checklist is OVERDUE! Please complete immediately.",
-    due_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+    due_at: new Date(DEMO_BASE_EPOCH_MS - 2 * 3600 * 1000).toISOString(),
     channel: "SMS",
     is_read: false,
   },
@@ -126,7 +147,9 @@ export const MOCK_NOTIFICATIONS = [
 export const MOCK_APPROVED_CONTENT = {
   template_id: "template-icf",
   template_name: "Main Informed Consent Form",
-  study_id: "study_01",
+  study_id: DEMO_STUDY_ID,
+  site_id: DEMO_SITE_ID,
+  sponsor_code: DEMO_SPONSOR_ID,
   protocol_version: "v1.0",
   language_code: "en",
   version_index: 1,

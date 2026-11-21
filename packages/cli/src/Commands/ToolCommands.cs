@@ -63,6 +63,16 @@ public static class ToolCommands
         command.SetAction(result => DocIndexSyncService.SyncDocIndex(check: result.GetValue(check)));
     }
 
+    public static void ConfigureGenerateDemoManifest(Command command)
+    {
+        var check = new Option<bool>("--check")
+        {
+            Description = "Only check that packages/demo-fixtures matches the backend demo seed without modifying files",
+        };
+        command.Options.Add(check);
+        command.SetAction(result => DemoManifestGeneratorService.GenerateDemoManifest(validateOnly: result.GetValue(check)));
+    }
+
     public static void ConfigureGenerateRtm(Command command)
     {
         var validate = new Option<bool>("--validate") { Description = "Write nothing; fail if a mapped test failed" };

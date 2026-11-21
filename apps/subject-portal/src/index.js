@@ -110,7 +110,11 @@ import { markFieldInvalid } from "./widgets/field-errors.js";
 
 // Auto-run on load in DOM environments
 if (typeof document !== "undefined") {
-  document.addEventListener("DOMContentLoaded", initializeApp);
+  if (import.meta.env?.MODE === "test" || document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initializeApp);
+  } else {
+    initializeApp();
+  }
 }
 
 export {

@@ -72,6 +72,19 @@ public static partial class DeidComplianceService
         "cadence.example",
     ];
 
+    private static readonly HashSet<string> ApprovedCanonicalDemoEmails = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "crc.site101@example.com",
+        "pi.site101@example.com",
+        "cra.monitor@example.com",
+        "dm.lead@example.com",
+        "designer_demo@example.com",
+        "designer.lead@example.com",
+        "safety.officer@example.com",
+        "auditor.lead@example.com",
+        "subject.site101@example.com",
+    };
+
     private static readonly string[] AllowedUrlFragments =
     [
         "localhost", "127.0.0.1", "0.0.0.0", "transmit-mock", "cadence-clinical.com", "ccrsoft.com", "brand_domain",
@@ -286,6 +299,14 @@ public static partial class DeidComplianceService
         if (atIndex <= 0 || atIndex == email.Length - 1)
         {
             return false;
+        }
+
+        string normalizedEmail = email
+            .Trim()
+            .Trim('.', ',', ';', ':', ')', ']', '>', '<', '"', '\'');
+        if (ApprovedCanonicalDemoEmails.Contains(normalizedEmail))
+        {
+            return true;
         }
 
         string domain = email[(atIndex + 1)..]

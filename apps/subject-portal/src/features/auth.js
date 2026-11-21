@@ -1,11 +1,16 @@
 // Participant identity: cached user, PIN-gated session state, Keycloak sign-in, logout.
+import {
+  DEFAULT_DEMO_PARTICIPANT,
+  DEFAULT_DEMO_SITE,
+  DEMO_SPONSOR,
+  DEMO_STUDY,
+} from "demo-fixtures";
 import { createOidcSessionCoordinator, resolveOidcRedirectUri } from "ui";
 import { watch } from "vue";
 
 import { state } from "../stores/state.js";
 import {
   clearInMemoryKey,
-  clearSessionKey,
   clearSessionKeyFromDB,
   getInMemorySessionKey,
   getWrappedMasterKeyConfig,
@@ -198,7 +203,13 @@ export async function signIn() {
     }
 
     if (isDemoBuild()) {
-      state.session.userId = state.session.userId || "subject_001";
+      const demoSubjectCode = DEFAULT_DEMO_PARTICIPANT?.subjectCode || null;
+      state.session.userId = state.session.userId || demoSubjectCode;
+      state.session.studyId = state.session.studyId || DEMO_STUDY?.code || null;
+      state.session.siteId =
+        state.session.siteId || DEFAULT_DEMO_SITE?.code || null;
+      state.session.sponsorCode =
+        state.session.sponsorCode || DEMO_SPONSOR?.code || null;
       state.session.token = null;
       state.session.isOfflineMode = true;
       state.session.isDemoMode = true;
@@ -283,7 +294,12 @@ export async function signIn() {
       } catch {
         cachedUserId = null;
       }
-      if (!cachedUserId && state.session.userId === "subject_001") {
+      const defaultDemoId = DEFAULT_DEMO_PARTICIPANT?.subjectCode || null;
+      if (
+        !cachedUserId &&
+        (state.session.userId === "subject_001" ||
+          (defaultDemoId && state.session.userId === defaultDemoId))
+      ) {
         state.session.userId = null;
       }
       state.session.isOfflineMode = false;
@@ -338,8 +354,14 @@ export async function login(options = {}) {
     }
 
     if (isDemoBuild()) {
-      const demoUserId = state.session.userId || "subject_001";
+      const demoUserId =
+        state.session.userId || DEFAULT_DEMO_PARTICIPANT?.subjectCode || null;
       state.session.userId = demoUserId;
+      state.session.studyId = state.session.studyId || DEMO_STUDY?.code || null;
+      state.session.siteId =
+        state.session.siteId || DEFAULT_DEMO_SITE?.code || null;
+      state.session.sponsorCode =
+        state.session.sponsorCode || DEMO_SPONSOR?.code || null;
       state.session.token = null;
       state.session.isOfflineMode = true;
       state.session.isDemoMode = true;
@@ -426,7 +448,7 @@ export function watchUserIdentity() {
 // User logout clears cached OIDC identity, active in-memory PIN key, and session state.
 export async function logout() {
   portalSessionCoordinator.beginVoluntaryLogout();
-  const wasDemo = isDemoModeActive();
+  const wasDemo = Boolean(state.session.isDemoMode);
   state.authError = "";
   state.session.sessionExpired = false;
 
@@ -444,8 +466,7 @@ export async function logout() {
   }
 
   const prevUserId = state.session.userId;
-  clearSessionKey(prevUserId);
-  await clearSessionKeyFromDB(prevUserId);
+  clearInMemoryKey();
 
   state.pinSetup.isOpen = false;
   state.pinSetup.pin = "";
@@ -464,13 +485,20 @@ export async function logout() {
   state.walletBalance = null;
 
   if (wasDemo) {
-    state.session.userId = "subject_001";
+    const demoUserId = DEFAULT_DEMO_PARTICIPANT?.subjectCode || null;
+    state.session.userId = demoUserId;
+    state.session.studyId = DEMO_STUDY?.code || null;
+    state.session.siteId = DEFAULT_DEMO_SITE?.code || null;
+    state.session.sponsorCode = DEMO_SPONSOR?.code || null;
     state.session.token = null;
     state.session.isOfflineMode = true;
     state.session.isDemoMode = true;
-    setActiveUserId("subject_001");
+    setActiveUserId(demoUserId);
   } else {
     state.session.userId = null;
+    state.session.studyId = null;
+    state.session.siteId = null;
+    state.session.sponsorCode = null;
     state.session.token = null;
     state.session.isOfflineMode = false;
     state.session.isDemoMode = false;
@@ -483,6 +511,8 @@ export async function logout() {
     renderCompliance();
     renderInbox();
   }
+
+  await clearSessionKeyFromDB(prevUserId);
 
   if (
     typeof window !== "undefined" &&

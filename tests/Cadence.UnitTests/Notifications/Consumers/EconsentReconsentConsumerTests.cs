@@ -11,6 +11,7 @@ using Cadence.Contracts;
 using Cadence.Templating;
 using Cadence.Testing;
 using Cadence.Testing.Time;
+using Cadence.UnitTests.Fixtures;
 
 using FluentAssertions;
 
@@ -67,34 +68,38 @@ public class EconsentReconsentConsumerTests
         await using var provider = CreateServiceProvider(options);
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();
+        try
+        {
+            var message = new EconsentReconsentRequired(
+                StudyId: "STUDY-101",
+                TemplateId: "tpl-001",
+                VersionIndex: 2,
+                ChangeSummary: "Updated dosing and procedure risks.",
+                Channels: new[] { "SMS", "Mobile Push", "Email" },
+                ProtocolVersion: "v2.0",
+                OccurredAt: clock.UtcNow);
 
-        var message = new EconsentReconsentRequired(
-            StudyId: "STUDY-101",
-            TemplateId: "tpl-001",
-            VersionIndex: 2,
-            ChangeSummary: "Updated dosing and procedure risks.",
-            Channels: new[] { "SMS", "Mobile Push", "Email" },
-            ProtocolVersion: "v2.0",
-            OccurredAt: clock.UtcNow);
+            await harness.PublishAndWaitForConsumeAsync(message, ct);
 
-        await harness.Bus.Publish(message, ct);
+            var records = await dbContext.NotificationRecords.Where(r => r.RelatedEntityType == "EconsentReconsent").ToListAsync(ct);
+            records.Should().NotBeEmpty();
 
-        (await harness.Consumed.Any<EconsentReconsentRequired>(ct)).Should().BeTrue();
+            var rec = records[0];
+            rec.Category.Should().Be("EconsentReconsent");
+            rec.Priority.Should().Be("URGENT");
+            rec.Channels.Should().Be("SMS,Mobile Push,Email");
 
-        var records = await dbContext.NotificationRecords.Where(r => r.RelatedEntityType == "EconsentReconsent").ToListAsync(ct);
-        records.Should().NotBeEmpty();
+            var deliveries = await dbContext.NotificationDeliveries.Where(d => d.NotificationId == rec.Id).ToListAsync(ct);
+            deliveries.Should().HaveCount(3);
+            deliveries.Select(d => d.Channel).Should().BeEquivalentTo("SMS", "Mobile Push", "Email");
 
-        var rec = records[0];
-        rec.Category.Should().Be("EconsentReconsent");
-        rec.Priority.Should().Be("URGENT");
-        rec.Channels.Should().Be("SMS,Mobile Push,Email");
-
-        var deliveries = await dbContext.NotificationDeliveries.Where(d => d.NotificationId == rec.Id).ToListAsync(ct);
-        deliveries.Should().HaveCount(3);
-        deliveries.Select(d => d.Channel).Should().BeEquivalentTo("SMS", "Mobile Push", "Email");
-
-        var auditLogs = await dbContext.NotificationAuditLogs.Where(a => a.Action == "ECONSENT_RECONSENT_DISPATCH").ToListAsync(ct);
-        auditLogs.Should().NotBeEmpty();
+            var auditLogs = await dbContext.NotificationAuditLogs.Where(a => a.Action == "ECONSENT_RECONSENT_DISPATCH").ToListAsync(ct);
+            auditLogs.Should().NotBeEmpty();
+        }
+        finally
+        {
+            await harness.Stop(ct);
+        }
     }
 
     [Fact]
@@ -110,29 +115,32 @@ public class EconsentReconsentConsumerTests
         await using var provider = CreateServiceProvider(options);
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();
+        try
+        {
+            var message = new EconsentReconsentRequired(
+                StudyId: "STUDY-101",
+                TemplateId: "tpl-002",
+                VersionIndex: 1,
+                ChangeSummary: "Initial version requiring re-consent.",
+                Channels: new[] { "SMS", "Email" },
+                ProtocolVersion: "v1.0",
+                OccurredAt: clock.UtcNow);
 
-        var message = new EconsentReconsentRequired(
-            StudyId: "STUDY-101",
-            TemplateId: "tpl-002",
-            VersionIndex: 1,
-            ChangeSummary: "Initial version requiring re-consent.",
-            Channels: new[] { "SMS", "Email" },
-            ProtocolVersion: "v1.0",
-            OccurredAt: clock.UtcNow);
+            await harness.PublishAndWaitForConsumeAsync(message, ct);
 
-        await harness.Bus.Publish(message, ct);
-        (await harness.Consumed.Any<EconsentReconsentRequired>(ct)).Should().BeTrue();
+            int initialCount = await dbContext.NotificationRecords.CountAsync(r => r.RelatedEntityType == "EconsentReconsent", ct);
+            initialCount.Should().BeGreaterThan(0);
 
-        int initialCount = await dbContext.NotificationRecords.CountAsync(r => r.RelatedEntityType == "EconsentReconsent", ct);
-        initialCount.Should().BeGreaterThan(0);
+            // Publish duplicate message and wait deterministically for consumer completion
+            await harness.PublishAndWaitForConsumeAsync(message, ct);
 
-        // Publish duplicate message
-        var duplicateMessageId = Guid.NewGuid();
-        await harness.Bus.Publish(message, ctx => ctx.MessageId = duplicateMessageId, ct);
-        (await harness.Consumed.Any<EconsentReconsentRequired>(x => x.Context.MessageId == duplicateMessageId, ct)).Should().BeTrue();
-
-        int countAfterDuplicate = await dbContext.NotificationRecords.CountAsync(r => r.RelatedEntityType == "EconsentReconsent", ct);
-        countAfterDuplicate.Should().Be(initialCount);
+            int countAfterDuplicate = await dbContext.NotificationRecords.CountAsync(r => r.RelatedEntityType == "EconsentReconsent", ct);
+            countAfterDuplicate.Should().Be(initialCount);
+        }
+        finally
+        {
+            await harness.Stop(ct);
+        }
     }
 
     [Fact]
@@ -147,17 +155,22 @@ public class EconsentReconsentConsumerTests
         await using var provider = CreateServiceProvider(options);
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();
+        try
+        {
+            var message = new EconsentReconsentRequired(
+                StudyId: "",
+                TemplateId: "",
+                VersionIndex: 1,
+                ChangeSummary: "Empty study and template id.");
 
-        var message = new EconsentReconsentRequired(
-            StudyId: "",
-            TemplateId: "",
-            VersionIndex: 1,
-            ChangeSummary: "Empty study and template id.");
+            await harness.PublishAndWaitForConsumeAsync(message, ct);
 
-        await harness.Bus.Publish(message, ct);
-        (await harness.Consumed.Any<EconsentReconsentRequired>(ct)).Should().BeTrue();
-
-        var count = await dbContext.NotificationRecords.CountAsync(ct);
-        count.Should().Be(0);
+            var count = await dbContext.NotificationRecords.CountAsync(ct);
+            count.Should().Be(0);
+        }
+        finally
+        {
+            await harness.Stop(ct);
+        }
     }
 }

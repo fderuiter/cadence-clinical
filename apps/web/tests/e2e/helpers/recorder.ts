@@ -28,7 +28,8 @@ export function attachTripleSentinel(page: Page): SentinelRecord {
       // Filter out known benign dev server/favicon warnings
       if (
         !text.includes("favicon.ico") &&
-        !text.includes("Download the Vue DevTools")
+        !text.includes("Download the Vue DevTools") &&
+        !text.includes("WebSocket connection to 'ws://localhost:3000/")
       ) {
         record.consoleErrors.push(text);
       }
@@ -88,8 +89,9 @@ export function assertTripleSentinelClean(page: Page): void {
  * Introduce human-perceptible pacing for demonstration video clarity.
  */
 export async function demoPause(page: Page, ms: number = 400): Promise<void> {
-  const isDemo = process.env.DEMO_MODE !== "false";
-  if (isDemo) {
+  const shouldPause =
+    process.env.RECORD_VIDEO === "true" || process.env.DEMO_MODE === "true";
+  if (shouldPause) {
     await page.waitForTimeout(ms);
   }
 }
@@ -162,7 +164,9 @@ export async function setPersonaAndNavigate(
   },
   targetPath: string
 ): Promise<void> {
-  await signInWithKeycloak(page, persona.username);
+  if (process.env.E2E_KEYCLOAK === "true") {
+    await signInWithKeycloak(page, persona.username);
+  }
 
   await page.goto(targetPath);
   await page.waitForLoadState("networkidle");

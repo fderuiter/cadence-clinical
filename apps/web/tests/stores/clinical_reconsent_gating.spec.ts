@@ -35,14 +35,11 @@ describe("Shared Clinical Store State & Reactive Subject Re-Consent Gating Speci
 
   it("Requirement 1 & 2: maintains a unified subject fixture pool matching across amendment and eCRF views", () => {
     const storeSubjectIds = clinicalStore.subjects.map((s: any) => s.id);
-    expect(storeSubjectIds).toContain("SUBJ-101");
-    expect(storeSubjectIds).toContain("SUBJ-102");
-    expect(storeSubjectIds).toContain("SUBJ-103");
-    expect(storeSubjectIds).toContain("SUBJ-104");
-    expect(storeSubjectIds).toContain("SUBJ-105");
-    expect(storeSubjectIds).toContain("SUBJ-001");
-    expect(storeSubjectIds).toContain("SUBJ-002");
-    expect(storeSubjectIds).toContain("SUBJ-003");
+    expect(storeSubjectIds).toEqual([
+      "SUBJ-101-001",
+      "SUBJ-101-002",
+      "SUBJ-102-001",
+    ]);
 
     const amendmentWrapper = mount(AmendmentDiffView, {
       global: { plugins: [pinia] },
@@ -63,7 +60,7 @@ describe("Shared Clinical Store State & Reactive Subject Re-Consent Gating Speci
   });
 
   it("Requirement 3: clearing a re-consent gate in the amendment dashboard automatically updates subject status in the eCRF view and unlocks fields", async () => {
-    const gatedSubjectId = "SUBJ-102";
+    const gatedSubjectId = "SUBJ-101-002";
     expect(clinicalStore.isSubjectGated(gatedSubjectId)).toBe(true);
 
     const ecrfWrapper = mount(EcrfView, {
@@ -98,7 +95,7 @@ describe("Shared Clinical Store State & Reactive Subject Re-Consent Gating Speci
   it("Requirement 3: clearing a re-consent gate via eCRF or eConsent forms reactively unlocks data entry fields (demo build)", async () => {
     // The eCRF records re-consent on local data only in a demo build (#4827); unbacked_actions.test.js covers the refusal.
     vi.stubEnv("VITE_DEMO_MODE", "true");
-    const gatedSubjectId = "SUBJ-002";
+    const gatedSubjectId = "SUBJ-101-002";
     expect(clinicalStore.isSubjectGated(gatedSubjectId)).toBe(true);
 
     const ecrfWrapper = mount(EcrfView, {
@@ -121,7 +118,7 @@ describe("Shared Clinical Store State & Reactive Subject Re-Consent Gating Speci
 
   it("Requirement 4: every re-consent gate clearance action generates a cryptographic audit ledger block", async () => {
     const initialLedgerCount = clinicalStore.ledgerBlocks.length;
-    const testSubjectId = "SUBJ-103";
+    const testSubjectId = "SUBJ-101-002";
 
     await clinicalStore.clearReconsentGate(
       testSubjectId,

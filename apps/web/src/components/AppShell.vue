@@ -81,7 +81,7 @@
             @click="isCommandPaletteOpen = true"
           >
             <span class="palette-trigger-text">Search</span>
-            <kbd class="palette-kbd">⌘K</kbd>
+            <kbd class="palette-kbd" aria-hidden="true">⌘K</kbd>
           </button>
 
           <div

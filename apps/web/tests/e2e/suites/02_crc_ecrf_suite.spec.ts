@@ -32,8 +32,8 @@ test.describe("Suite 2: Site CRC & Clinical Data Capture Golden Path", () => {
       "/cadence-clinical/ecrf"
     );
 
-    // Verify eCRF Runtime Renderer
-    await expect(page.locator("h2")).toContainText("eCRF Runtime Renderer");
+    // Verify eCRF Data Collection Workspace
+    await expect(page.locator("h2")).toContainText("Data collection");
     await demoPause(page, 500);
 
     // Verify Subject Enrollment Section is present

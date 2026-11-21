@@ -77,6 +77,7 @@ public static class Program
         AddCommand(root, "validate-api-clients", "Typechecks the web API clients against their OpenAPI types", () => ApiClientValidatorService.ValidateApiClients());
         AddCommand(root, "generate-cli-docs", "Writes the quality gate tables in docs/cli.md and docs/CI.md; --check verifies them and that every command is documented", ToolCommands.ConfigureGenerateCliDocs);
         AddCommand(root, "generate-doc-index", "Synchronizes docs/DOCUMENTATION_INDEX.md with all repository markdown documents", ToolCommands.ConfigureGenerateDocIndex);
+        AddCommand(root, "generate-demo-manifest", "Exports the canonical synthetic demo study manifest into packages/demo-fixtures; --check verifies parity", ToolCommands.ConfigureGenerateDemoManifest);
         AddCommand(root, "generate-rtm", "Regenerates the Requirements Traceability Matrix", ToolCommands.ConfigureGenerateRtm);
         AddCommand(root, "compliance-utility", "Sanitizes document paths and requirement prefixes", ToolCommands.ConfigureComplianceUtility);
         AddCommand(root, "clean-test-dbs", "Drops leftover integration test databases", () => CleanTestDbsService.CleanTestDatabases());

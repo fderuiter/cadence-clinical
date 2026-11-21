@@ -1,4 +1,10 @@
 // Signed-in participant session and the local security PIN screens.
+import {
+  DEFAULT_DEMO_PARTICIPANT,
+  DEFAULT_DEMO_SITE,
+  DEMO_SPONSOR,
+  DEMO_STUDY,
+} from "demo-fixtures";
 import { defineStore } from "pinia";
 
 function isInitialDemoBuild(env = import.meta.env) {
@@ -14,7 +20,10 @@ export const useSessionStore = defineStore("session", {
     const demo = isInitialDemoBuild();
     return {
       session: {
-        userId: demo ? "subject_001" : null,
+        userId: demo ? DEFAULT_DEMO_PARTICIPANT?.subjectCode || null : null,
+        studyId: demo ? DEMO_STUDY?.code || null : null,
+        siteId: demo ? DEFAULT_DEMO_SITE?.code || null : null,
+        sponsorCode: demo ? DEMO_SPONSOR?.code || null : null,
         roles: "Subject",
         token: null,
         isOfflineMode: demo,

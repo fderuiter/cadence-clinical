@@ -4,6 +4,7 @@ import vue from "@vitejs/plugin-vue";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock-worker.mjs";
+import { createDemoFixturesPlugin } from "../../scripts/vite-strip-demo-fixtures.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,6 +12,63 @@ const __dirname = path.dirname(__filename);
 const DEV_PORT = 3000;
 // Where the dev server's /api proxy forwards: the API gateway (the AppHost passes its endpoint).
 const GATEWAY_URL = process.env.CADENCE_GATEWAY_URL || "http://localhost:8000";
+const IS_E2E_BUILD = process.env.CADENCE_E2E_BUILD === "1";
+
+const E2E_BOOT_RECOVERY_SCRIPT = `(function () {
+  var RETRY_KEY = "__cadence_e2e_boot_retry__";
+  var assetFailed = false;
+  var reloading = false;
+  function retryBoot() {
+    var attempts = Number(sessionStorage.getItem(RETRY_KEY) || "0");
+    if (reloading || attempts >= 3) return;
+    reloading = true;
+    sessionStorage.setItem(RETRY_KEY, String(attempts + 1));
+    window.location.reload();
+  }
+  window.addEventListener(
+    "error",
+    function (e) {
+      var t = e && e.target;
+      if (t && (t.tagName === "SCRIPT" || t.tagName === "LINK")) {
+        assetFailed = true;
+        if (document.readyState === "complete") {
+          setTimeout(retryBoot, 150);
+        }
+      }
+    },
+    true
+  );
+  window.addEventListener("vite:preloadError", function (e) {
+    e.preventDefault();
+    setTimeout(retryBoot, 150);
+  });
+  window.addEventListener("load", function () {
+    var app = document.getElementById("app");
+    if (app) {
+      if (app.childNodes.length > 0) {
+        sessionStorage.removeItem(RETRY_KEY);
+        return;
+      }
+      var obs = new MutationObserver(function () {
+        if (app.childNodes.length > 0) {
+          sessionStorage.removeItem(RETRY_KEY);
+          obs.disconnect();
+        }
+      });
+      obs.observe(app, { childList: true });
+    }
+    if (assetFailed) {
+      setTimeout(retryBoot, 150);
+      return;
+    }
+    setTimeout(function () {
+      if (app && app.childNodes.length === 0) {
+        retryBoot();
+      }
+    }, 1500);
+  });
+})();
+`;
 
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || "/cadence-clinical/",
@@ -31,20 +89,41 @@ export default defineConfig({
         }
       },
     },
-    {
-      name: "html-transform",
-      transformIndexHtml(html) {
-        const title = process.env.VITE_APP_TITLE || "Cadence Clinical";
-        return html.replace(/%VITE_APP_TITLE%/g, title);
-      },
-      configurePreviewServer(server) {
-        if (server.httpServer) {
-          server.httpServer.keepAliveTimeout = 65000;
-          server.httpServer.headersTimeout = 66000;
-        }
-      },
-    },
+    (() => {
+      let resolvedBase = "/cadence-clinical/";
+      return {
+        name: "html-transform",
+        configResolved(resolved) {
+          resolvedBase = resolved.base || "/cadence-clinical/";
+        },
+        transformIndexHtml(html) {
+          const title = process.env.VITE_APP_TITLE || "Cadence Clinical";
+          const transformed = html.replace(/%VITE_APP_TITLE%/g, title);
+          return IS_E2E_BUILD
+            ? transformed.replace(
+                "</title>",
+                `</title>\n    <script src="${resolvedBase}e2e-boot-recovery.js"></script>`
+              )
+            : transformed;
+        },
+        generateBundle() {
+          if (!IS_E2E_BUILD) return;
+          this.emitFile({
+            type: "asset",
+            fileName: "e2e-boot-recovery.js",
+            source: E2E_BOOT_RECOVERY_SCRIPT,
+          });
+        },
+        configurePreviewServer(server) {
+          if (server.httpServer) {
+            server.httpServer.keepAliveTimeout = 65000;
+            server.httpServer.headersTimeout = 66000;
+          }
+        },
+      };
+    })(),
     createStripMockWorkerInProdPlugin(__dirname),
+    createDemoFixturesPlugin(__dirname),
   ],
   resolve: {
     alias: [
@@ -88,6 +167,7 @@ export default defineConfig({
   },
   preview: {
     host: "::",
+    ...(IS_E2E_BUILD ? { proxy: {} } : {}),
   },
   optimizeDeps: {
     entries: ["index.html", "tests/browser/observation.html"],
@@ -96,70 +176,77 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
     rollupOptions: {
-      output: {
-        manualChunks(id) {
-          // Workspace library dependencies
-          if (id.includes("/packages/ui/") || id.includes("packages/ui/")) {
-            return "workspace-ui";
+      output: IS_E2E_BUILD
+        ? {
+            codeSplitting: false,
           }
-          if (
-            id.includes("/packages/usdm-schemas/") ||
-            id.includes("packages/usdm-schemas/")
-          ) {
-            return "workspace-usdm";
-          }
-          if (id.includes("/packages/") || id.includes("packages/")) {
-            return "workspace-packages";
-          }
+        : {
+            manualChunks(id) {
+              // Workspace library dependencies
+              if (id.includes("/packages/ui/") || id.includes("packages/ui/")) {
+                return "workspace-ui";
+              }
+              if (
+                id.includes("/packages/usdm-schemas/") ||
+                id.includes("packages/usdm-schemas/")
+              ) {
+                return "workspace-usdm";
+              }
+              if (id.includes("/packages/") || id.includes("packages/")) {
+                return "workspace-packages";
+              }
 
-          // Core application stores
-          if (id.includes("/src/stores/") || id.includes("src/stores/")) {
-            if (id.includes("stores/clinical") || id.includes("/clinical.")) {
-              return "store-clinical";
-            }
-            if (id.includes("stores/etmf") || id.includes("/etmf.")) {
-              return "store-etmf";
-            }
-            const match = id.match(/src\/stores\/([^/.]+)/);
-            if (match && match[1]) {
-              const name = match[1]
-                .replace(/([a-z])([A-Z])/g, "$1-$2")
-                .toLowerCase();
-              return `store-${name}`;
-            }
-            return "store-core";
-          }
+              // Core application stores
+              if (id.includes("/src/stores/") || id.includes("src/stores/")) {
+                if (
+                  id.includes("stores/clinical") ||
+                  id.includes("/clinical.")
+                ) {
+                  return "store-clinical";
+                }
+                if (id.includes("stores/etmf") || id.includes("/etmf.")) {
+                  return "store-etmf";
+                }
+                const match = id.match(/src\/stores\/([^/.]+)/);
+                if (match && match[1]) {
+                  const name = match[1]
+                    .replace(/([a-z])([A-Z])/g, "$1-$2")
+                    .toLowerCase();
+                  return `store-${name}`;
+                }
+                return "store-core";
+              }
 
-          // Shared API clients and HTTP services
-          if (
-            id.includes("/src/api/") ||
-            id.includes("src/api/") ||
-            id.includes("/src/services/") ||
-            id.includes("src/services/")
-          ) {
-            return "api-services";
-          }
+              // Shared API clients and HTTP services
+              if (
+                id.includes("/src/api/") ||
+                id.includes("src/api/") ||
+                id.includes("/src/services/") ||
+                id.includes("src/services/")
+              ) {
+                return "api-services";
+              }
 
-          // Third-party vendor packages
-          if (id.includes("node_modules")) {
-            if (
-              id.includes("/vue/") ||
-              id.includes("/@vue/") ||
-              id.includes("/vue-router/") ||
-              id.includes("/pinia/")
-            ) {
-              return "vendor-vue";
-            }
-            if (id.includes("hls.js")) {
-              return "vendor-media";
-            }
-            if (id.includes("keycloak-js")) {
-              return "vendor-auth";
-            }
-            return "vendor";
-          }
-        },
-      },
+              // Third-party vendor packages
+              if (id.includes("node_modules")) {
+                if (
+                  id.includes("/vue/") ||
+                  id.includes("/@vue/") ||
+                  id.includes("/vue-router/") ||
+                  id.includes("/pinia/")
+                ) {
+                  return "vendor-vue";
+                }
+                if (id.includes("hls.js")) {
+                  return "vendor-media";
+                }
+                if (id.includes("keycloak-js")) {
+                  return "vendor-auth";
+                }
+                return "vendor";
+              }
+            },
+          },
     },
     chunkSizeWarningLimit: 1000,
   },

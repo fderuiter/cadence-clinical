@@ -79,6 +79,7 @@ public sealed class DeidComplianceServiceTests : IDisposable
     [InlineData("qa@ccrsoft.com", true)]
     [InlineData("support@cadence.example", true)]
     [InlineData("fixture@example.invalid", true)]
+    [InlineData("designer.lead@example.com", true)]
     [InlineData("john.doe@example.com", false)]
     [InlineData("clinical@gmail.com", false)]
     [InlineData("cadence@evil-domain.org", false)]

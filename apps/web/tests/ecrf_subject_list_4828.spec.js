@@ -82,9 +82,9 @@ describe("eCRF subject list from Execution (#4828)", () => {
       vi.stubEnv("VITE_DEMO_MODE", "true");
       const store = createStore();
       expect(store.subjects.length).toBeGreaterThan(0);
-      expect(store.activeStudyId).toBe("STUDY-USDM-001");
+      expect(store.activeStudyId).toBe("CADENCE-101");
 
-      expect(await store.loadSubjects("CAD-101")).toBe(true);
+      expect(await store.loadSubjects("CADENCE-101")).toBe(true);
       expect(executionApi.listSubjects).not.toHaveBeenCalled();
     });
 

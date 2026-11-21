@@ -1,3 +1,6 @@
+import { DEMO_STUDY } from "demo-fixtures";
+import { isDemoBuild } from "../utils/demoMode.js";
+
 export interface NormalizedEpoch {
   epochId: string;
   epochName: string;
@@ -462,10 +465,12 @@ export function normalizeUsdm(rawData: unknown): NormalizedUsdm {
   ) as Record<string, unknown>;
 
   const rawStudyId = data.studyId ?? data.study_id;
+  const fallbackStudyId =
+    isDemoBuild() && DEMO_STUDY.code ? DEMO_STUDY.code : "STUDY-USDM-001";
   const studyId =
     typeof rawStudyId === "string" && rawStudyId.length > 0
       ? rawStudyId
-      : "STUDY-USDM-001";
+      : fallbackStudyId;
 
   const rawStudyTitle = data.studyTitle ?? data.study_title;
   const studyTitle = typeof rawStudyTitle === "string" ? rawStudyTitle : "";
