@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Database.Tenancy;
+using Cadence.IntegrationTests.Database;
 using Cadence.Kernel.Time;
 using Cadence.Testing.Persistence;
 
@@ -117,17 +119,33 @@ public sealed class ExecutionPostgresFixture : IAsyncLifetime
         ConnectionString = _container.GetConnectionString();
     }
 
+    private static readonly CurrentTenantAccessor DefaultFixtureTenantAccessor = CreateFixtureTenantAccessor();
+
+    private static CurrentTenantAccessor CreateFixtureTenantAccessor()
+    {
+        var accessor = new CurrentTenantAccessor(new DeterministicTenantCodeResolver());
+        accessor.UseNonHttpSeedingFallbackTenant("tenant-test");
+        return accessor;
+    }
+
     public static ExecutionDbContext CreateDbContext(string connectionString)
     {
         var optionsBuilder = new DbContextOptionsBuilder<ExecutionDbContext>();
-        optionsBuilder.UseNpgsql(CadenceDatabaseExtensions.WithModuleSchema(connectionString, "execution"));
-        optionsBuilder.AddInterceptors(new GxPAuditInterceptor(() => "svc:integration-test", SystemClock.Instance));
+        optionsBuilder.UseNpgsql(CadenceDatabaseExtensions.WithModuleSchema(connectionString, ExecutionDbContextFactory.Schema));
+        optionsBuilder.UseCadenceStandaloneTenancy(DefaultFixtureTenantAccessor, isRelational: true);
+        optionsBuilder.AddInterceptors(
+            StandaloneTenantConnectionInterceptor.Instance,
+            StandaloneTenantSaveChangesInterceptor.Instance,
+            new GxPAuditInterceptor(() => "svc:integration-test", SystemClock.Instance));
         return new ExecutionDbContext(optionsBuilder.Options);
     }
 
     public static async Task ApplyMigrationsAsync(string connectionString)
     {
+        await ThrowawayPostgresDatabase.BootstrapStandaloneTenantDirectoryAsync(connectionString).ConfigureAwait(false);
+        using var _ = DefaultFixtureTenantAccessor.Suppress();
         await using var context = CreateDbContext(connectionString);
+        await context.Database.ExecuteSqlRawAsync($"CREATE SCHEMA IF NOT EXISTS \"{ExecutionDbContextFactory.Schema}\"").ConfigureAwait(false);
         await context.Database.MigrateAsync().ConfigureAwait(false);
     }
 }

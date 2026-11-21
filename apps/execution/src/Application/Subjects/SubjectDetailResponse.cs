@@ -11,5 +11,14 @@ namespace Cadence.Apps.Execution.Application.Subjects;
 /// <c>SubjectDetailResponse</c> Pydantic model.
 /// @req:PRD-SUB-001
 /// </summary>
-public sealed record SubjectDetailResponse(SubjectCode SubjectId, StudyCode StudyId, string Status,
-    SiteCode? SiteId, string? TreatmentGroup, string? RandomizationSeed, string? InvestigationalProductId);
+public sealed record SubjectDetailResponse(
+    SubjectId Id,
+    SubjectCode SubjectId,
+    StudyCode StudyId,
+    string Status,
+    SiteCode? SiteId,
+    string ActiveProtocolVersion,
+    int EnrollmentIndex,
+    string? TreatmentGroup,
+    string? RandomizationSeed,
+    string? InvestigationalProductId);

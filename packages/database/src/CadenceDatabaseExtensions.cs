@@ -1,10 +1,14 @@
 using System;
 using System.Text.RegularExpressions;
 
+using Cadence.Database.Tenancy;
+using Cadence.Security.Rbac;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 using Npgsql;
@@ -28,18 +32,15 @@ public static partial class CadenceDatabaseExtensions
     [GeneratedRegex("^[a-z][a-z0-9_]{0,62}$")]
     private static partial Regex SchemaNameRegex();
 
+    private const string UnitTestPlaceholderConnectionString =
+        "Host=localhost;Port=5432;Database=cadence_test;Username=cadence_test";
+
     /// <summary>
-    /// Registers <typeparamref name="TDbContext"/> against PostgreSQL with transient-failure retries and a
-    /// readiness health check, and applies migrations when <see cref="CadenceMigrationOptions"/> asks for it.
+    /// Registers <typeparamref name="TDbContext"/> against PostgreSQL with transient-failure retries,
+    /// <c>cadence.tenant_id</c> session binding + SaveChanges tenant stamping (ADR-2250, K-ID-2),
+    /// a readiness health check, and migrations when <see cref="CadenceMigrationOptions"/> asks for it.
     /// The connection string is resolved by <see cref="ResolvePostgresConnectionString"/>.
     /// </summary>
-    /// <param name="builder">The web application builder.</param>
-    /// <param name="schema">The module's PostgreSQL schema; defaults to the context name without "DbContext", lower-cased.</param>
-    /// <param name="connectionName">The <c>ConnectionStrings</c> entry to read.</param>
-    /// <param name="configureOptions">
-    /// Optional per-scope options configuration, run after the provider is set, for example to add a
-    /// <see cref="GxPAuditInterceptor"/> whose actor comes from the scope's request.
-    /// </param>
     public static WebApplicationBuilder AddCadencePostgresDbContext<TDbContext>(
         this WebApplicationBuilder builder,
         string? schema = null,
@@ -49,14 +50,28 @@ public static partial class CadenceDatabaseExtensions
     {
         ArgumentNullException.ThrowIfNull(builder);
 
+        string baseConnectionString = ResolvePostgresConnectionString(builder.Configuration, builder.Environment, connectionName);
         string connectionString = WithModuleSchema(
-            ResolvePostgresConnectionString(builder.Configuration, builder.Environment, connectionName),
+            baseConnectionString,
             schema ?? ModuleSchemaFor<TDbContext>());
+
+        if (string.Equals(baseConnectionString.Trim(), UnitTestPlaceholderConnectionString, StringComparison.Ordinal))
+        {
+            builder.Services.AddCadenceInMemoryTenancy();
+        }
+        else
+        {
+            builder.Services.AddCadencePostgresTenancy(baseConnectionString);
+        }
 
         builder.Services.AddCadenceDbContext<TDbContext>((sp, options) =>
         {
             options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure());
+            options.UseCadenceStandaloneTenancy(sp.GetService<ICurrentTenantAccessor>(), isRelational: true);
             configureOptions?.Invoke(sp, options);
+            options.AddInterceptors(
+                StandaloneTenantConnectionInterceptor.Instance,
+                StandaloneTenantSaveChangesInterceptor.Instance);
         });
 
         builder.Services.AddHealthChecks()
@@ -65,6 +80,45 @@ public static partial class CadenceDatabaseExtensions
         builder.Services.AddCadenceMigrations<TDbContext>(builder.Configuration);
 
         return builder;
+    }
+
+    /// <summary>
+    /// Registers PostgreSQL tenant code resolution (<c>kernel.tenant_id_by_code</c>) and scoped tenant accessors.
+    /// </summary>
+    public static IServiceCollection AddCadencePostgresTenancy(this IServiceCollection services, string connectionString)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+
+        services.AddHttpContextAccessor();
+        services.TryAddSingleton<ITenantCodeResolver>(_ => new PostgresTenantCodeResolver(connectionString));
+        RegisterScopedTenantAccessors(services);
+        return services;
+    }
+
+    /// <summary>
+    /// Registers deterministic tenant code resolution and scoped tenant accessors for in-memory test hosts
+    /// when PostgreSQL Row-Level Security is absent.
+    /// </summary>
+    public static IServiceCollection AddCadenceInMemoryTenancy(
+        this IServiceCollection services,
+        ITenantCodeResolver? resolver = null)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddHttpContextAccessor();
+        services.RemoveAll<ITenantCodeResolver>();
+        services.AddSingleton<ITenantCodeResolver>(resolver ?? new DeterministicTenantCodeResolver());
+        RegisterScopedTenantAccessors(services);
+        return services;
+    }
+
+    private static void RegisterScopedTenantAccessors(IServiceCollection services)
+    {
+        services.TryAddSingleton<CurrentTenantAccessor>();
+        services.TryAddSingleton<ICurrentTenantAccessor>(sp => sp.GetRequiredService<CurrentTenantAccessor>());
+        services.TryAddSingleton<ITenantScope>(sp => sp.GetRequiredService<CurrentTenantAccessor>());
+        services.TryAddSingleton<ITenantAccessVerifier>(sp => sp.GetRequiredService<CurrentTenantAccessor>());
     }
 
     /// <summary>

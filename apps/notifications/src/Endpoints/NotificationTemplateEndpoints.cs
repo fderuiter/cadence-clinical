@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Notifications.Domain;
 using Cadence.Apps.Notifications.Infrastructure;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 using Cadence.Templating;
 
 using Microsoft.AspNetCore.Builder;
@@ -46,7 +47,7 @@ public static class NotificationTemplateEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             // Study alerts are sent by sponsor staff and monitors (#4960, ADR-2511).
-            .RequirePermission(RenderPermission);
+            .RequirePermission(RenderPermission).RequireCallerStudyScope();
 
         return group;
     }
@@ -55,11 +56,23 @@ public static class NotificationTemplateEndpoints
         string templateName,
         NotificationRenderModel request,
         ITemplateRenderer renderer,
-        IOptions<NotificationBrandingOptions> branding)
+        IOptions<NotificationBrandingOptions> branding,
+        HttpContext? httpContext = null)
     {
         if (!Catalog.Contains(templateName))
         {
             return UnknownTemplate(Catalog);
+        }
+
+        if (httpContext is not null
+            && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
+            && !string.IsNullOrWhiteSpace(request.StudyId)
+            && !ClinicalScopeGuard.CanAccessStudy(httpContext, request.StudyId))
+        {
+            return TypedResults.Problem(
+                statusCode: StatusCodes.Status403Forbidden,
+                title: "Forbidden",
+                detail: ClinicalScopeGuard.StudyAccessDeniedDetail);
         }
 
         // Branding and the portal link come from configuration, so a caller cannot point a notification's

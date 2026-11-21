@@ -218,8 +218,14 @@ public class DsurCompilerEngineTests
         using var dbContext = CreateInMemoryDbContext();
         var fakeClock = new FakeClock(new DateTimeOffset(2026, 9, 30, 14, 0, 0, TimeSpan.Zero));
 
-        var compilerContext = new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal("mm-compiler", "Sponsor Medical Monitor") };
-        var approverContext = new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal("mm-approver", "Sponsor Medical Monitor") };
+        var compilerContext = new DefaultHttpContext
+        {
+            User = TestSecurityContext.CreateScopedPrincipal("mm-compiler", ["STUDY-88"], [], "Sponsor Medical Monitor"),
+        };
+        var approverContext = new DefaultHttpContext
+        {
+            User = TestSecurityContext.CreateScopedPrincipal("mm-approver", ["STUDY-88"], [], "Sponsor Medical Monitor"),
+        };
 
         var compileReq = new DsurCompileRequest(
             CompoundName: "Cadence-Compound-88",

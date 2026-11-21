@@ -32,28 +32,28 @@ public static class SynonymEndpoints
             .WithName("ValidateSynonymFile")
             .WithSummary("Pre-flight validation report for bulk synonym dictionary CSV/XLSX file.")
             .DisableAntiforgery()
-            .RequirePermission("medical_coding:manage_synonyms");
+            .RequirePermission("medical_coding:manage_synonyms").RequireCallerStudyScope();
 
         group.MapPost("/import", ImportSynonymFileAsync)
             .WithName("ImportSynonymFile")
             .WithSummary("Ingest validated synonym dictionary rules into persistent store with GxP audit lineage.")
             .DisableAntiforgery()
-            .RequirePermission("medical_coding:manage_synonyms");
+            .RequirePermission("medical_coding:manage_synonyms").RequireCallerStudyScope();
 
         group.MapGet("/", GetActiveSynonymRulesAsync)
             .WithName("GetActiveSynonymRules")
             .WithSummary("Retrieve active synonym rules for study auto-coding engine.")
-            .RequirePermission("medical_coding:read");
+            .RequirePermission("medical_coding:read").RequireCallerStudyScope();
 
         group.MapGet("/jobs", GetSynonymImportJobsAsync)
             .WithName("GetSynonymImportJobs")
             .WithSummary("Retrieve GxP audit ledger of bulk synonym import jobs.")
-            .RequirePermission("medical_coding:read");
+            .RequirePermission("medical_coding:read").RequireCallerStudyScope();
 
         group.MapDelete("/{id:guid}", DeactivateSynonymRuleAsync)
             .WithName("DeactivateSynonymRule")
             .WithSummary("Deactivate an active synonym rule.")
-            .RequirePermission("medical_coding:manage_synonyms");
+            .RequirePermission("medical_coding:manage_synonyms").RequireCallerStudyScope();
 
         return group;
     }

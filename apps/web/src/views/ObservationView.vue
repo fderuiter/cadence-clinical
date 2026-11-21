@@ -2,12 +2,12 @@
   <div id="section-observation" class="dashboard-section active">
     <component
       :is="routerLinkTag"
-      v-if="hasRouter && returnTo"
+      v-if="hasRouter && effectiveReturnTo"
       id="observation-back"
       class="back"
-      :to="returnTo"
+      :to="effectiveReturnTo"
     >
-      {{ returnLabel || "Back to study" }}
+      {{ effectiveReturnLabel }}
     </component>
 
     <div class="card">
@@ -46,6 +46,9 @@
                 {{ held.locked_by }} at {{ held.locked_at }}
               </span>
             </template>
+            <span v-else-if="!canCorrect" data-testid="observation-readonly">
+              Read-only
+            </span>
             <template v-else> Open for correction </template>
           </dd>
         </dl>
@@ -60,7 +63,7 @@
         />
 
         <form
-          v-if="!locked"
+          v-if="!locked && canCorrect"
           class="observation-correction"
           @submit.prevent="askReason"
         >
@@ -210,7 +213,9 @@ import {
   sameObservationValue,
 } from "../api/observationValue";
 import { observationNodeRef } from "../canvas/nodeRef";
+import { canCorrectObservations } from "../canvas/authority";
 import { findKernelStudyRef } from "../canvas/kernelStudy";
+import { useAuthStore } from "../stores/auth";
 
 /**
  * Corrects one kernel observation (ADR-2620). The value shown is always the kernel's: the screen keeps no local
@@ -231,11 +236,40 @@ const emit = defineEmits<{
   (e: "loaded", observation: KernelObservation): void;
 }>();
 
+const authStore = useAuthStore();
+const canCorrect = computed(() => canCorrectObservations(authStore));
+
 const instance = getCurrentInstance();
 const activeRouter = (instance?.appContext.config.globalProperties.$router ??
   null) as Router | null;
 const routerLinkTag = instance?.appContext.components.RouterLink ?? "a";
 const hasRouter = computed(() => activeRouter !== null);
+
+const effectiveReturnTo = computed<RouteLocationRaw | null>(() => {
+  if (props.returnTo) return props.returnTo;
+  if (!activeRouter) return null;
+  const queryReturn = activeRouter.currentRoute.value?.query?.returnTo;
+  if (
+    typeof queryReturn === "string" &&
+    queryReturn.startsWith("/") &&
+    !queryReturn.startsWith("//")
+  ) {
+    return queryReturn;
+  }
+  if (activeRouter.hasRoute("study")) {
+    return { name: "study" };
+  }
+  return "/";
+});
+
+const effectiveReturnLabel = computed(() => {
+  if (props.returnTo) return props.returnLabel || "Back to study";
+  const queryLabel = activeRouter?.currentRoute.value?.query?.returnLabel;
+  if (typeof queryLabel === "string" && queryLabel.trim().length > 0) {
+    return queryLabel.trim();
+  }
+  return props.returnLabel || "Back to studies";
+});
 
 const {
   observation,

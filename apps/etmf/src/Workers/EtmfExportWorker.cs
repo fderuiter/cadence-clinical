@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Apps.Etmf.Services;
+using Cadence.Database.Tenancy;
 using Cadence.Kernel.Time;
 
 using Microsoft.EntityFrameworkCore;
@@ -39,35 +40,29 @@ public sealed class EtmfExportWorker : BackgroundService
         {
             try
             {
-                string? jobId = null;
-
-                if (!_queue.TryDequeue(out var queuedJobId))
+                if (_queue.TryDequeue(out var queuedJobId, out var queuedTenantCode))
                 {
-                    // Fallback polling for QUEUED jobs in DbContext
-                    using var pollScope = _serviceProvider.CreateScope();
-                    var db = pollScope.ServiceProvider.GetRequiredService<EtmfDbContext>();
-                    var queuedJob = await db.TmfExportJobs
-                        .Where(j => j.Status == "QUEUED")
-                        .OrderBy(j => j.CreatedAt)
-                        .FirstOrDefaultAsync(stoppingToken);
-
-                    if (queuedJob != null)
+                    var tenantScope = _serviceProvider.GetService<ITenantScope>();
+                    if (tenantScope is not null && !string.IsNullOrWhiteSpace(queuedTenantCode))
                     {
-                        jobId = queuedJob.Id;
+                        using (tenantScope.Bind(queuedTenantCode))
+                        {
+                            await ProcessJobAsync(queuedJobId, stoppingToken);
+                        }
                     }
-                }
-                else
-                {
-                    jobId = queuedJobId;
-                }
+                    else
+                    {
+                        await ProcessJobAsync(queuedJobId, stoppingToken);
+                    }
 
-                if (string.IsNullOrEmpty(jobId))
-                {
-                    await Task.Delay(1000, stoppingToken);
                     continue;
                 }
 
-                await ProcessJobAsync(jobId, stoppingToken);
+                bool foundAny = await PollNextQueuedJobAsync(stoppingToken);
+                if (!foundAny)
+                {
+                    await Task.Delay(1000, stoppingToken);
+                }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -79,6 +74,53 @@ public sealed class EtmfExportWorker : BackgroundService
                 await Task.Delay(2000, stoppingToken);
             }
         }
+    }
+
+    private async Task<bool> PollNextQueuedJobAsync(CancellationToken stoppingToken)
+    {
+        var resolver = _serviceProvider.GetService<ITenantCodeResolver>();
+        var tenantScope = _serviceProvider.GetService<ITenantScope>();
+        if (resolver is not null && tenantScope is not null)
+        {
+            var tenantIds = await resolver.ListActiveTenantIdsAsync(stoppingToken);
+            if (tenantIds.Count > 0)
+            {
+                foreach (Guid tenantId in tenantIds)
+                {
+                    using (tenantScope.Bind(tenantId))
+                    {
+                        using var tenantPollScope = _serviceProvider.CreateScope();
+                        var tenantDb = tenantPollScope.ServiceProvider.GetRequiredService<EtmfDbContext>();
+                        var tenantJob = await tenantDb.TmfExportJobs
+                            .Where(j => j.Status == "QUEUED")
+                            .OrderBy(j => j.CreatedAt)
+                            .FirstOrDefaultAsync(stoppingToken);
+                        if (tenantJob is not null)
+                        {
+                            await ProcessJobAsync(tenantJob.Id, stoppingToken);
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            }
+        }
+
+        using var pollScope = _serviceProvider.CreateScope();
+        var db = pollScope.ServiceProvider.GetRequiredService<EtmfDbContext>();
+        var queuedJob = await db.TmfExportJobs
+            .Where(j => j.Status == "QUEUED")
+            .OrderBy(j => j.CreatedAt)
+            .FirstOrDefaultAsync(stoppingToken);
+
+        if (queuedJob is null)
+        {
+            return false;
+        }
+
+        await ProcessJobAsync(queuedJob.Id, stoppingToken);
+        return true;
     }
 
     public async Task ProcessJobAsync(string jobId, CancellationToken ct)

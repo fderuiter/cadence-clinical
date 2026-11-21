@@ -682,7 +682,7 @@ jobs:
         run: pnpm --filter subject-portal test:e2e
 
       - name: Run Web Application E2E Accessibility Tests
-        run: pnpm --filter web exec playwright test --project=accessibility
+        run: pnpm --filter web test:e2e
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6

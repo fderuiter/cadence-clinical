@@ -1,4 +1,5 @@
-import { defineConfig, devices } from "@playwright/test";
+import { chromium, defineConfig, devices } from "@playwright/test";
+import { buildChromiumLaunchOptions } from "../../scripts/playwright-chromium-launcher.mjs";
 
 /**
  * The browser-to-database check of the observation correction (ADR-2620), run by
@@ -26,23 +27,20 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
-        launchOptions: {
-          ...(process.env.PLAYWRIGHT_CHROMIUM_PATH
-            ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH }
-            : {}),
+        launchOptions: buildChromiumLaunchOptions(chromium, {
           args: [
             "--no-sandbox",
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
             "--disable-gpu",
           ],
-        },
+        }),
       },
     },
   ],
   webServer: {
     command: "pnpm exec vite",
-    url: "http://localhost:3000/cadence-clinical/",
+    url: "http://localhost:3000/cadence-clinical/tests/browser/observationHarness.ts",
     reuseExistingServer: false,
     timeout: 120000,
     env: { VITE_API_BASE_URL: "http://localhost:3000" },
