@@ -296,3 +296,255 @@ describe("executionApi: adding participants and changing their state", () => {
     });
   });
 });
+
+describe("executionApi: RTSM, consent, subject detail, and step-up signature", () => {
+  let fetchSpy;
+  const isoSample = new Date(Date.UTC(2027, 5, 10)).toISOString();
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    fetchSpy = vi.spyOn(globalThis, "fetch");
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+  });
+
+  it("requests a step-up X-Sig-Token from the gateway signature-verification route", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse(200, { sig_token: "sig-tok-1", expires_in: 60 })
+    );
+
+    const token = await executionApi.requestSignatureToken({
+      password: "Password-123!", // pragma: allowlist secret
+      totp: "654321",
+      username: "stat.approver",
+      action: "/api/v1/execution/randomization/schemes/abc/approve",
+      semanticAction: "execution.form.approve",
+    });
+
+    expect(token).toEqual({ sig_token: "sig-tok-1", expires_in: 60 });
+    const [url, init] = fetchSpy.mock.calls[0];
+    expect(new URL(url, "http://localhost").pathname).toBe(
+      "/api/v1/auth/signature-verification"
+    );
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({
+      password: "Password-123!", // pragma: allowlist secret
+      totp: "654321",
+      username: "stat.approver",
+      action: "/api/v1/execution/randomization/schemes/abc/approve",
+      semantic_action: "execution.form.approve",
+    });
+  });
+
+  it("lists, drafts, and sign-approves randomization schemes", async () => {
+    const scheme = {
+      id: "scheme-1",
+      study_id: "CAD-101",
+      version: 1,
+      method: "permuted_block",
+      status: "DRAFT",
+      arms: { ACTIVE: 1, PLACEBO: 1 },
+      stratification_factors: { AGE: ["ADULT", "SENIOR"] },
+      block_sizes: [4],
+      slots_per_stratum: 16,
+      preferred_arm_probability: 0.8,
+      requires_kit: true,
+      list_size: 32,
+      configuration_hash: "sha256:123",
+      drafted_by: "stat.author",
+      drafted_at: isoSample,
+    };
+    fetchSpy
+      .mockResolvedValueOnce(jsonResponse(200, [scheme]))
+      .mockResolvedValueOnce(jsonResponse(201, scheme))
+      .mockResolvedValueOnce(
+        jsonResponse(200, { ...scheme, status: "APPROVED" })
+      );
+
+    expect(await executionApi.listRandomizationSchemes("CAD-101")).toEqual([
+      scheme,
+    ]);
+    expect(
+      new URL(fetchSpy.mock.calls[0][0].url).pathname +
+        new URL(fetchSpy.mock.calls[0][0].url).search
+    ).toBe("/api/v1/execution/randomization/schemes?study_id=CAD-101");
+
+    await executionApi.draftRandomizationScheme(
+      {
+        study_id: "CAD-101",
+        method: "permuted_block",
+        arms: { ACTIVE: 1, PLACEBO: 1 },
+        requires_kit: true,
+      },
+      "Initial randomization design"
+    );
+    const draftReq = fetchSpy.mock.calls[1][0];
+    expect(draftReq.method).toBe("POST");
+    expect(new URL(draftReq.url).pathname).toBe(
+      "/api/v1/execution/randomization/schemes"
+    );
+    expect(draftReq.headers.get("X-Change-Reason")).toBe(
+      "Initial randomization design"
+    );
+
+    const approved = await executionApi.approveRandomizationScheme("scheme-1", {
+      reason: "Biostatistics sign-off",
+      sigToken: "sig-tok-approve",
+    });
+    expect(approved.status).toBe("APPROVED");
+    const approveReq = fetchSpy.mock.calls[2][0];
+    expect(approveReq.method).toBe("POST");
+    expect(new URL(approveReq.url).pathname).toBe(
+      "/api/v1/execution/randomization/schemes/scheme-1/approve"
+    );
+    expect(approveReq.headers.get("X-Sig-Token")).toBe("sig-tok-approve");
+    expect(approveReq.headers.get("X-Change-Reason")).toBe(
+      "Biostatistics sign-off"
+    );
+  });
+
+  it("randomizes a participant with X-Sig-Token and stratification factors", async () => {
+    const allocation = {
+      randomization_id: "rand-1",
+      subject_uuid: "s-uuid-1",
+      subject_id: "017-0001",
+      study_id: "CAD-101",
+      site_id: "017",
+      scheme_id: "scheme-1",
+      scheme_version: 1,
+      stratum_key: "AGE=ADULT",
+      kit_number: "KIT-0101",
+      status: "RANDOMIZED",
+      randomized_at: isoSample,
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, allocation));
+
+    const result = await executionApi.randomizeSubject("s-uuid-1", {
+      stratificationFactors: { AGE: "ADULT" },
+      reason: "Eligible and consented",
+      sigToken: "sig-tok-rand",
+    });
+
+    expect(result).toEqual(allocation);
+    const req = fetchSpy.mock.calls[0][0];
+    expect(req.method).toBe("POST");
+    expect(new URL(req.url).pathname).toBe(
+      "/api/v1/execution/subjects/s-uuid-1/randomize"
+    );
+    expect(req.headers.get("X-Sig-Token")).toBe("sig-tok-rand");
+    expect(req.headers.get("X-Change-Reason")).toBe("Eligible and consented");
+    expect(await req.json()).toEqual({
+      stratification_factors: { AGE: "ADULT" },
+    });
+  });
+
+  it("records informed consent, loads blind-aware subject detail, and seeds IP kits", async () => {
+    const consentResp = {
+      consent_id: "c-1",
+      subject_uuid: "s-uuid-1",
+      study_id: "CAD-101",
+      version_tag: "1.0",
+      version_index: 1,
+      icf_signed: true,
+      icf_signed_date: isoSample,
+      requires_reconsent: false,
+      is_paper_override: false,
+      recorded_at: isoSample,
+    };
+    const detailResp = {
+      id: "s-uuid-1",
+      subject_id: "017-0001",
+      study_id: "CAD-101",
+      site_id: "017",
+      status: "RANDOMIZED",
+      active_protocol_version: "1.0",
+      enrollment_index: 1,
+      treatment_group: null,
+      investigational_product_id: null,
+    };
+    fetchSpy
+      .mockResolvedValueOnce(jsonResponse(200, consentResp))
+      .mockResolvedValueOnce(jsonResponse(200, detailResp))
+      .mockResolvedValueOnce(jsonResponse(200, []))
+      .mockResolvedValueOnce(
+        jsonResponse(200, [
+          {
+            id: "kit-1",
+            study_id: "CAD-101",
+            site_id: "017",
+            kit_number: "KIT-0101",
+            lot_number: "LOT-A1",
+            expiration_date: isoSample,
+            status: "AVAILABLE",
+            residual_volume_ml: 100,
+            residual_volume_percentage: 100,
+            reconciliation_count: 0,
+          },
+        ])
+      );
+
+    await executionApi.recordSubjectConsent(
+      "s-uuid-1",
+      {
+        protocol_version: {
+          study_id: "CAD-101",
+          version_tag: "1.0",
+          version_index: 1,
+        },
+        icf_signed: true,
+        icf_signed_date: isoSample,
+      },
+      "Signed ICF on file"
+    );
+    const consentReq = fetchSpy.mock.calls[0][0];
+    expect(consentReq.method).toBe("POST");
+    expect(new URL(consentReq.url).pathname).toBe(
+      "/api/v1/execution/subjects/s-uuid-1/consent"
+    );
+    expect(consentReq.headers.get("X-Change-Reason")).toBe(
+      "Signed ICF on file"
+    );
+
+    const detail = await executionApi.getSubjectDetail("017-0001");
+    expect(detail).toEqual(detailResp);
+    expect(new URL(fetchSpy.mock.calls[1][0].url).pathname).toBe(
+      "/api/v1/execution/subjects/017-0001"
+    );
+
+    await executionApi.seedIpKitInventory(
+      {
+        study_id: "CAD-101",
+        site_id: "017",
+        kits: [
+          {
+            kit_number: "KIT-0101",
+            lot_number: "LOT-A1",
+            expiration_date: isoSample,
+            treatment_arm: "ACTIVE",
+          },
+        ],
+      },
+      "Initial site stock"
+    );
+    const seedReq = fetchSpy.mock.calls[2][0];
+    expect(seedReq.method).toBe("POST");
+    expect(new URL(seedReq.url).pathname).toBe(
+      "/api/v1/execution/rtsm/kits/seed-inventory"
+    );
+    expect(seedReq.headers.get("X-Change-Reason")).toBe("Initial site stock");
+
+    const inventory = await executionApi.getSiteIpKitInventory(
+      "CAD-101",
+      "017"
+    );
+    expect(inventory).toHaveLength(1);
+    expect(inventory[0].kit_number).toBe("KIT-0101");
+    const invReq = fetchSpy.mock.calls[3][0];
+    expect(invReq.method).toBe("GET");
+    expect(new URL(invReq.url).pathname).toBe(
+      "/api/v1/execution/rtsm/kits/inventory/CAD-101/017"
+    );
+  });
+});

@@ -52,6 +52,9 @@ describe("Canonical Demo Manifest & Deterministic Demo Ledger (apps/web)", () =>
       "designer.lead",
       "safety.officer",
       "auditor.lead",
+      "stat.author",
+      "stat.approver",
+      "pharmacist.site101",
     ]);
 
     const serialized = JSON.stringify(DEMO_MANIFEST);

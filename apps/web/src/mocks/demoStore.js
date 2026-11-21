@@ -426,6 +426,9 @@ export function createWebDemoStore() {
     rules: [],
     knowledgeCategories: cloneJson(DEFAULT_CATEGORIES),
     knowledgeArticles: cloneJson(DEFAULT_MOCK_ARTICLES),
+    randomizationSchemes: [],
+    consents: new Map(),
+    kitCertificates: new Map(),
     tickets: [],
     ipKits: [],
     locks: [],
@@ -537,7 +540,10 @@ export function createWebDemoStore() {
       status: idx === 2 ? "ENROLLED" : "ACTIVE",
       active_protocol_version: idx === 1 ? "1.0" : "2.0",
       enrollment_index: idx + 1,
-      treatment_group: idx === 1 ? "ARM-B" : "ARM-A",
+      randomization_id:
+        idx === 2 ? null : makeUuidFromIndex("00000000", 9001 + idx),
+      treatment_group: idx === 2 ? null : idx === 1 ? "ARM-B" : "ARM-A",
+      investigational_product_id: idx === 2 ? null : `KIT-200${idx + 1}`,
     }));
 
     state.subjects = [
@@ -550,7 +556,9 @@ export function createWebDemoStore() {
         status: "ENROLLED",
         active_protocol_version: "2.0",
         enrollment_index: 1,
-        treatment_group: "ARM-A",
+        randomization_id: null,
+        treatment_group: null,
+        investigational_product_id: null,
       },
       {
         id: ENROLLMENT_1002_UUID,
@@ -560,9 +568,89 @@ export function createWebDemoStore() {
         status: "SCREENED",
         active_protocol_version: "2.0",
         enrollment_index: 2,
+        randomization_id: null,
         treatment_group: null,
+        investigational_product_id: null,
       },
     ];
+
+    state.consents = new Map([
+      ...DEMO_PARTICIPANTS.map((participant, idx) => [
+        participant.enrollmentUuid,
+        {
+          consent_id: makeUuidFromIndex("00000000", 9110 + idx),
+          subject_uuid: participant.enrollmentUuid,
+          study_id: canonicalStudyCode,
+          version_tag: idx === 1 ? "1.0" : "2.0",
+          version_index: idx === 1 ? 1 : 2,
+          icf_signed: true,
+          icf_signed_date: participant.screenedAt || "2026-01-12T09:00:00Z", // deid-ignore
+          requires_reconsent: false,
+          is_paper_override: false,
+          recorded_at: participant.screenedAt || "2026-01-12T09:00:00Z", // deid-ignore
+        },
+      ]),
+      [
+        ENROLLMENT_1001_UUID,
+        {
+          consent_id: "00000000-0000-4000-8000-000000009101", // deid-ignore
+          subject_uuid: ENROLLMENT_1001_UUID,
+          study_id: "DEMO-01",
+          version_tag: "2.0",
+          version_index: 2,
+          icf_signed: true,
+          icf_signed_date: "2026-08-01T09:00:00Z", // deid-ignore
+          requires_reconsent: false,
+          is_paper_override: false,
+          recorded_at: "2026-08-01T09:05:00Z", // deid-ignore
+        },
+      ],
+    ]);
+
+    state.randomizationSchemes = [
+      {
+        id: "00000000-0000-4000-8000-000000009201", // deid-ignore
+        study_id: "DEMO-01",
+        version: 1,
+        method: "permuted_block",
+        status: "APPROVED",
+        arms: { ACTIVE: 1, PLACEBO: 1 },
+        stratification_factors: { AGE_GROUP: ["ADULT", "SENIOR"] },
+        block_sizes: [4],
+        slots_per_stratum: 16,
+        preferred_arm_probability: 0.8,
+        requires_kit: true,
+        list_size: 32,
+        configuration_hash: "sha256-demo-scheme-v1",
+        drafted_by: "stat.author",
+        drafted_at: "2026-07-18T10:00:00Z", // deid-ignore
+        approved_by: "stat.approver",
+        approved_at: "2026-07-19T14:30:00Z", // deid-ignore
+        retired_at: null,
+      },
+      {
+        id: "00000000-0000-4000-8000-000000009202", // deid-ignore
+        study_id: canonicalStudyCode,
+        version: 1,
+        method: "permuted_block",
+        status: "APPROVED",
+        arms: { "ARM-A": 1, "ARM-B": 1 },
+        stratification_factors: { AGE_GROUP: ["ADULT", "SENIOR"] },
+        block_sizes: [4],
+        slots_per_stratum: 16,
+        preferred_arm_probability: 0.8,
+        requires_kit: true,
+        list_size: 32,
+        configuration_hash: "sha256-cadence-101-scheme-v1",
+        drafted_by: "stat.author",
+        drafted_at: "2026-01-06T10:00:00Z", // deid-ignore
+        approved_by: "stat.approver",
+        approved_at: "2026-01-07T14:30:00Z", // deid-ignore
+        retired_at: null,
+      },
+    ];
+
+    state.kitCertificates = new Map();
 
     const initialForm = createInitialForm();
     state.forms = new Map([[initialForm.form_id, initialForm]]);
@@ -952,7 +1040,11 @@ export function createWebDemoStore() {
         study_id: "DEMO-01",
         site_id: "SITE-101",
         status: "AVAILABLE",
-        expiration_date: "2027-12-31T00:00:00Z",
+        expiration_date: "2027-12-31T00:00:00Z", // deid-ignore
+        residual_volume_ml: 100,
+        residual_volume_percentage: 100,
+        reconciliation_count: 0,
+        _treatment_arm: "ACTIVE",
       },
       {
         id: "kit-0002",
@@ -961,7 +1053,76 @@ export function createWebDemoStore() {
         study_id: "DEMO-01",
         site_id: "SITE-101",
         status: "DISPENSED",
-        expiration_date: "2027-12-31T00:00:00Z",
+        expiration_date: "2027-12-31T00:00:00Z", // deid-ignore
+        residual_volume_ml: 50,
+        residual_volume_percentage: 50,
+        reconciliation_count: 0,
+        _treatment_arm: "ACTIVE",
+      },
+      {
+        id: "kit-0003",
+        kit_number: "KIT-1003",
+        lot_number: "LOT-2026B",
+        study_id: "DEMO-01",
+        site_id: "SITE-101",
+        status: "AVAILABLE",
+        expiration_date: "2027-12-31T00:00:00Z", // deid-ignore
+        residual_volume_ml: 100,
+        residual_volume_percentage: 100,
+        reconciliation_count: 0,
+        _treatment_arm: "PLACEBO",
+      },
+      {
+        id: "kit-2001",
+        kit_number: "KIT-2001",
+        lot_number: "LOT-2026A",
+        study_id: canonicalStudyCode,
+        site_id: "SITE-101",
+        status: "DISPENSED",
+        expiration_date: "2027-12-31T00:00:00Z", // deid-ignore
+        residual_volume_ml: 50,
+        residual_volume_percentage: 50,
+        reconciliation_count: 0,
+        _treatment_arm: "ARM-A",
+      },
+      {
+        id: "kit-2002",
+        kit_number: "KIT-2002",
+        lot_number: "LOT-2026B",
+        study_id: canonicalStudyCode,
+        site_id: "SITE-101",
+        status: "DISPENSED",
+        expiration_date: "2027-12-31T00:00:00Z", // deid-ignore
+        residual_volume_ml: 50,
+        residual_volume_percentage: 50,
+        reconciliation_count: 0,
+        _treatment_arm: "ARM-B",
+      },
+      {
+        id: "kit-2003",
+        kit_number: "KIT-2003",
+        lot_number: "LOT-2026A",
+        study_id: canonicalStudyCode,
+        site_id: "SITE-101",
+        status: "AVAILABLE",
+        expiration_date: "2027-12-31T00:00:00Z", // deid-ignore
+        residual_volume_ml: 100,
+        residual_volume_percentage: 100,
+        reconciliation_count: 0,
+        _treatment_arm: "ARM-A",
+      },
+      {
+        id: "kit-2004",
+        kit_number: "KIT-2004",
+        lot_number: "LOT-2026B",
+        study_id: canonicalStudyCode,
+        site_id: "SITE-102",
+        status: "AVAILABLE",
+        expiration_date: "2027-12-31T00:00:00Z", // deid-ignore
+        residual_volume_ml: 100,
+        residual_volume_percentage: 100,
+        reconciliation_count: 0,
+        _treatment_arm: "ARM-A",
       },
     ];
 
@@ -2481,13 +2642,14 @@ export function createWebDemoStore() {
       };
     },
 
-    getSubjectDetail(subjectId) {
+    getSubjectDetail(subjectId, { unblinded = false } = {}) {
       const found =
         state.subjects.find(
           (s) =>
             s.subject_id.toUpperCase() === String(subjectId).toUpperCase() ||
             s.id === subjectId
         ) || state.subjects[0];
+      const canRevealArm = Boolean(unblinded || found.status === "UNBLINDED");
       return {
         id: found.id,
         subject_id: found.subject_id,
@@ -2496,16 +2658,47 @@ export function createWebDemoStore() {
         site_id: found.site_id,
         active_protocol_version: found.active_protocol_version || "2.0",
         enrollment_index: found.enrollment_index ?? 0,
-        treatment_group: found.treatment_group,
+        treatment_group: canRevealArm ? (found.treatment_group ?? null) : null,
         randomization_seed: null,
-        investigational_product_id: null,
+        investigational_product_id: canRevealArm
+          ? (found.investigational_product_id ?? null)
+          : null,
       };
     },
 
-    updateSubjectState(subjectId, body) {
+    updateSubjectState(subjectId, body, reason = "") {
       const nextStatus = String(
         body?.status || body?.state || body?.target || "ENROLLED"
       ).toUpperCase();
+      if (nextStatus === "RANDOMIZED") {
+        return {
+          error: true,
+          status: 409,
+          problem: {
+            title: "Randomization requires allocation",
+            status: 409,
+            code: "RANDOMIZATION_REQUIRES_ALLOCATION",
+            detail:
+              "Transition to RANDOMIZED must be performed via POST /api/v1/execution/subjects/{subjectId}/randomize.",
+          },
+        };
+      }
+      if (
+        nextStatus === "UNBLINDED" &&
+        String(reason || "").trim().length < 50
+      ) {
+        return {
+          error: true,
+          status: 400,
+          problem: {
+            title: "Emergency unblinding justification too short",
+            status: 400,
+            code: "INVALID_UNBLIND_REASON",
+            detail:
+              "Emergency unblinding requires a clinical justification of at least 50 characters.",
+          },
+        };
+      }
       let found = state.subjects.find(
         (s) =>
           s.subject_id.toUpperCase() === String(subjectId).toUpperCase() ||
@@ -2519,6 +2712,22 @@ export function createWebDemoStore() {
         });
         found = state.subjects.find((s) => s.id === created.id);
       }
+      if (
+        found.status === "RECONSENT_REQUIRED" &&
+        !found.randomization_id &&
+        ["ACTIVE", "UNBLINDED", "COMPLETED"].includes(nextStatus)
+      ) {
+        return {
+          error: true,
+          status: 409,
+          problem: {
+            title: "Invalid state transition",
+            status: 409,
+            code: "INVALID_STATE_TRANSITION",
+            detail: `Cannot transition unrandomized subject from ${found.status} to ${nextStatus}.`,
+          },
+        };
+      }
       found.status = nextStatus;
       recordActivity(
         "execution.subject.state_changed",
@@ -2528,14 +2737,516 @@ export function createWebDemoStore() {
         "usr-crc-01"
       );
       return {
-        id: found.id,
-        subject_id: found.subject_id,
-        study_id: found.study_id,
-        site_id: found.site_id,
-        status: found.status,
-        active_protocol_version: found.active_protocol_version,
-        encrypted_demographics: null,
+        data: {
+          id: found.id,
+          subject_id: found.subject_id,
+          study_id: found.study_id,
+          site_id: found.site_id,
+          status: found.status,
+          active_protocol_version: found.active_protocol_version,
+          encrypted_demographics: null,
+        },
       };
+    },
+
+    listRandomizationSchemes(studyId = "DEMO-01") {
+      const target = String(studyId || "DEMO-01")
+        .trim()
+        .toUpperCase();
+      return cloneJson(
+        state.randomizationSchemes
+          .filter((s) => s.study_id.toUpperCase() === target)
+          .sort((a, b) => Number(b.version) - Number(a.version))
+      );
+    },
+
+    draftRandomizationScheme(
+      body,
+      reason = "Drafted randomization scheme",
+      actorId = "stat.author"
+    ) {
+      const studyId = String(body?.study_id || "DEMO-01").trim();
+      const existing = state.randomizationSchemes.filter(
+        (s) => s.study_id.toUpperCase() === studyId.toUpperCase()
+      );
+      const nextVersion =
+        existing.reduce((max, s) => Math.max(max, Number(s.version) || 0), 0) +
+        1;
+      const idx = nextCounter();
+      const now = demoNowIso(idx);
+      const arms =
+        body?.arms && Object.keys(body.arms).length > 0
+          ? cloneJson(body.arms)
+          : { ACTIVE: 1, PLACEBO: 1 };
+      const factors = body?.stratification_factors
+        ? cloneJson(body.stratification_factors)
+        : null;
+      const slotsPerStratum = Number(body?.slots_per_stratum) || 16;
+      const stratumCount = factors
+        ? Object.values(factors).reduce(
+            (acc, levels) =>
+              acc * Math.max(1, Array.isArray(levels) ? levels.length : 1),
+            1
+          )
+        : 1;
+      const created = {
+        id: makeUuidFromIndex("00009200", idx),
+        study_id: studyId,
+        version: nextVersion,
+        method: body?.method || "permuted_block",
+        status: "DRAFT",
+        arms,
+        stratification_factors: factors,
+        block_sizes: Array.isArray(body?.block_sizes)
+          ? [...body.block_sizes]
+          : [4],
+        slots_per_stratum: slotsPerStratum,
+        preferred_arm_probability:
+          body?.preferred_arm_probability !== undefined
+            ? body.preferred_arm_probability
+            : 0.8,
+        requires_kit: body?.requires_kit ?? true,
+        list_size: slotsPerStratum * stratumCount,
+        configuration_hash: `sha256-demo-scheme-v${nextVersion}-${idx}`,
+        drafted_by: actorId || "stat.author",
+        drafted_at: now,
+        approved_by: null,
+        approved_at: null,
+        retired_at: null,
+        reason_for_change: reason,
+      };
+      state.randomizationSchemes.push(created);
+      recordActivity(
+        "execution.randomization.scheme_drafted",
+        "execution",
+        "study",
+        `study:${studyId}`,
+        created.drafted_by
+      );
+      return cloneJson(created);
+    },
+
+    approveRandomizationScheme(
+      schemeId,
+      { sigToken, actorId = "stat.approver" } = {}
+    ) {
+      if (!sigToken) {
+        return {
+          error: true,
+          status: 401,
+          problem: {
+            title: "Signature verification required",
+            status: 401,
+            detail: "REAUTHENTICATION_REQUIRED",
+          },
+        };
+      }
+      const target = state.randomizationSchemes.find((s) => s.id === schemeId);
+      if (!target) {
+        return {
+          error: true,
+          status: 404,
+          problem: {
+            title: "Scheme not found",
+            status: 404,
+            detail: `Randomization scheme '${schemeId}' was not found.`,
+          },
+        };
+      }
+      if (target.status !== "DRAFT") {
+        return {
+          error: true,
+          status: 409,
+          problem: {
+            title: "Scheme not in draft status",
+            status: 409,
+            detail: `Scheme version ${target.version} is already ${target.status}.`,
+          },
+        };
+      }
+      if (
+        actorId &&
+        target.drafted_by &&
+        actorId.toLowerCase() === target.drafted_by.toLowerCase()
+      ) {
+        return {
+          error: true,
+          status: 403,
+          problem: {
+            title: "Separation of duties violation",
+            status: 403,
+            code: "SEPARATION_OF_DUTIES",
+            detail:
+              "A second independent unblinded statistician must approve the scheme.",
+          },
+        };
+      }
+      const now = demoNowIso(nextCounter());
+      for (const s of state.randomizationSchemes) {
+        if (
+          s.study_id.toUpperCase() === target.study_id.toUpperCase() &&
+          s.status === "APPROVED"
+        ) {
+          s.status = "RETIRED";
+          s.retired_at = now;
+        }
+      }
+      target.status = "APPROVED";
+      target.approved_by = actorId || "stat.approver";
+      target.approved_at = now;
+      recordActivity(
+        "execution.randomization.scheme_approved",
+        "execution",
+        "study",
+        `study:${target.study_id}`,
+        target.approved_by
+      );
+      return { data: cloneJson(target) };
+    },
+
+    recordSubjectConsent(subjectId, body) {
+      const found = state.subjects.find(
+        (s) =>
+          s.id === subjectId ||
+          s.subject_id.toUpperCase() === String(subjectId).toUpperCase()
+      );
+      if (!found) {
+        return {
+          error: true,
+          status: 404,
+          problem: {
+            title: "Subject not found",
+            status: 404,
+            detail: `Subject '${subjectId}' was not found.`,
+          },
+        };
+      }
+      const signedDate = String(body?.icf_signed_date || "").trim();
+      if (!signedDate) {
+        return {
+          error: true,
+          status: 400,
+          problem: {
+            title: "Signed consent date required",
+            status: 400,
+            detail: "Explicit icf_signed_date is required.",
+          },
+        };
+      }
+      const idx = nextCounter();
+      const now = demoNowIso(idx);
+      const versionTag = String(
+        body?.protocol_version?.version_tag ||
+          found.active_protocol_version ||
+          "2.0"
+      );
+      const versionIndex = Number(body?.protocol_version?.version_index) || 1;
+      const consent = {
+        consent_id: makeUuidFromIndex("00009100", idx),
+        subject_uuid: found.id,
+        study_id: body?.protocol_version?.study_id || found.study_id,
+        version_tag: versionTag,
+        version_index: versionIndex,
+        icf_signed: body?.icf_signed ?? true,
+        icf_signed_date: signedDate,
+        requires_reconsent: Boolean(body?.requires_reconsent),
+        is_paper_override: Boolean(body?.is_paper_override),
+        recorded_at: now,
+      };
+      found.active_protocol_version = versionTag;
+      state.consents.set(found.id, consent);
+      recordActivity(
+        "execution.subject.consent_recorded",
+        "execution",
+        "enrollment",
+        `enrollment:${found.id}`,
+        "usr-crc-01"
+      );
+      return { data: cloneJson(consent) };
+    },
+
+    randomizeSubject(subjectId, body, { sigToken } = {}) {
+      if (!sigToken) {
+        return {
+          error: true,
+          status: 401,
+          problem: {
+            title: "Signature verification required",
+            status: 401,
+            detail: "REAUTHENTICATION_REQUIRED",
+          },
+        };
+      }
+      const found = state.subjects.find(
+        (s) =>
+          s.id === subjectId ||
+          s.subject_id.toUpperCase() === String(subjectId).toUpperCase()
+      );
+      if (!found) {
+        return {
+          error: true,
+          status: 404,
+          problem: {
+            title: "Subject not found",
+            status: 404,
+            detail: `Subject '${subjectId}' was not found.`,
+          },
+        };
+      }
+      if (found.status !== "ENROLLED") {
+        return {
+          error: true,
+          status: 409,
+          problem: {
+            title: "Invalid subject state for randomization",
+            status: 409,
+            detail: `Subject ${found.subject_id} must be ENROLLED before randomization (current: ${found.status}).`,
+          },
+        };
+      }
+      const consent = state.consents.get(found.id);
+      if (!consent || !consent.icf_signed || consent.requires_reconsent) {
+        return {
+          error: true,
+          status: 409,
+          problem: {
+            title: "Signed informed consent required",
+            status: 409,
+            code: "CONSENT_REQUIRED",
+            detail: `Subject ${found.subject_id} requires valid signed informed consent before randomization.`,
+          },
+        };
+      }
+      const scheme = state.randomizationSchemes.find(
+        (s) =>
+          s.study_id.toUpperCase() === found.study_id.toUpperCase() &&
+          s.status === "APPROVED"
+      );
+      if (!scheme) {
+        return {
+          error: true,
+          status: 409,
+          problem: {
+            title: "No approved randomization scheme",
+            status: 409,
+            code: "NO_APPROVED_SCHEME",
+            detail: `Study ${found.study_id} has no APPROVED randomization scheme.`,
+          },
+        };
+      }
+      const armNames = Object.keys(scheme.arms || { ACTIVE: 1, PLACEBO: 1 });
+      const chosenArm =
+        armNames[(found.enrollment_index - 1) % armNames.length] || "ACTIVE";
+      let assignedKit = null;
+      if (scheme.requires_kit) {
+        assignedKit =
+          state.ipKits.find(
+            (k) =>
+              k.study_id.toUpperCase() === found.study_id.toUpperCase() &&
+              (!found.site_id || k.site_id === found.site_id) &&
+              k.status === "AVAILABLE" &&
+              (!k._treatment_arm || k._treatment_arm === chosenArm)
+          ) ||
+          state.ipKits.find(
+            (k) =>
+              k.study_id.toUpperCase() === found.study_id.toUpperCase() &&
+              (!found.site_id || k.site_id === found.site_id) &&
+              k.status === "AVAILABLE"
+          );
+        if (!assignedKit) {
+          return {
+            error: true,
+            status: 409,
+            problem: {
+              title: "No available IP kit at site",
+              status: 409,
+              code: "KIT_UNAVAILABLE",
+              detail: `No available investigational product kit at site ${found.site_id} for randomization.`,
+            },
+          };
+        }
+        assignedKit.status = "DISPENSED";
+      }
+      const factors = body?.stratification_factors || {};
+      const stratumKey =
+        Object.keys(factors)
+          .sort()
+          .map((k) => `${k}=${factors[k]}`)
+          .join("|") || "DEFAULT";
+      const idx = nextCounter();
+      const now = demoNowIso(idx);
+      const randomizationId = makeUuidFromIndex("00009300", idx);
+      found.status = "RANDOMIZED";
+      found.randomization_id = randomizationId;
+      found.treatment_group = chosenArm;
+      found.investigational_product_id = assignedKit
+        ? assignedKit.kit_number
+        : null;
+      recordActivity(
+        "execution.subject.randomized",
+        "execution",
+        "enrollment",
+        `enrollment:${found.id}`,
+        "usr-crc-01"
+      );
+      return {
+        data: {
+          randomization_id: randomizationId,
+          subject_uuid: found.id,
+          subject_id: found.subject_id,
+          study_id: found.study_id,
+          site_id: found.site_id,
+          scheme_id: scheme.id,
+          scheme_version: scheme.version,
+          stratum_key: stratumKey,
+          kit_number: assignedKit ? assignedKit.kit_number : null,
+          status: "RANDOMIZED",
+          randomized_at: now,
+        },
+      };
+    },
+
+    getSiteIpKitInventory(studyId, siteId) {
+      const targetStudy = String(studyId || "").toUpperCase();
+      const targetSite = String(siteId || "").toUpperCase();
+      return state.ipKits
+        .filter(
+          (k) =>
+            (!targetStudy || k.study_id.toUpperCase() === targetStudy) &&
+            (!targetSite || k.site_id.toUpperCase() === targetSite)
+        )
+        .map(({ _treatment_arm, ...blindSafe }) => cloneJson(blindSafe));
+    },
+
+    seedIpKitInventory(body) {
+      const studyId = String(body?.study_id || "DEMO-01").trim();
+      const siteId = String(body?.site_id || "SITE-101").trim();
+      const kits = Array.isArray(body?.kits) ? body.kits : [];
+      const created = [];
+      for (const item of kits) {
+        const idx = nextCounter();
+        const kitEntry = {
+          id: `kit-${idx}`,
+          study_id: studyId,
+          site_id: siteId,
+          kit_number: String(item.kit_number || `KIT-${1000 + idx}`).trim(),
+          lot_number: String(item.lot_number || "LOT-2026A").trim(),
+          expiration_date: item.expiration_date || "2027-12-31T00:00:00Z", // deid-ignore
+          status: item.status || "AVAILABLE",
+          residual_volume_ml: Number(item.residual_volume_ml ?? 100),
+          residual_volume_percentage: Number(
+            item.residual_volume_percentage ?? 100
+          ),
+          reconciliation_count: 0,
+          _treatment_arm: item.treatment_arm || "ACTIVE",
+        };
+        const existingIdx = state.ipKits.findIndex(
+          (k) =>
+            k.study_id.toUpperCase() === studyId.toUpperCase() &&
+            k.kit_number.toUpperCase() === kitEntry.kit_number.toUpperCase()
+        );
+        if (existingIdx >= 0) {
+          state.ipKits[existingIdx] = kitEntry;
+        } else {
+          state.ipKits.push(kitEntry);
+        }
+        const { _treatment_arm, ...blindSafe } = kitEntry;
+        created.push(cloneJson(blindSafe));
+      }
+      return created;
+    },
+
+    validateIpKitScan(body) {
+      const raw = String(
+        body?.kit_number || body?.scanned_barcode || ""
+      ).trim();
+      const [kitNum, scannedLot] = raw.split("|");
+      const found = state.ipKits.find(
+        (k) => k.kit_number.toUpperCase() === String(kitNum || "").toUpperCase()
+      );
+      if (!found) {
+        return {
+          valid: false,
+          kit_number: kitNum,
+          message: `Kit ${kitNum} not found in site inventory.`,
+        };
+      }
+      const expectedLot = found.lot_number;
+      const actualLot = scannedLot || body?.scanned_lot_number || expectedLot;
+      const hasLotMismatch = actualLot !== expectedLot;
+      return {
+        valid: !hasLotMismatch,
+        kit_number: found.kit_number,
+        expected_lot_number: expectedLot,
+        scanned_lot_number: actualLot,
+        has_lot_mismatch: hasLotMismatch,
+        status: found.status,
+      };
+    },
+
+    reconcileIpKitBatch(body) {
+      const studyId = String(body?.study_id || "DEMO-01").trim();
+      const siteId = String(body?.site_id || "SITE-101").trim();
+      const processedBy = String(body?.processed_by || "pharmacist.site101");
+      const items = Array.isArray(body?.items) ? body.items : [];
+      const idx = nextCounter();
+      const now = demoNowIso(idx);
+      const batchId = `batch-${idx}`;
+      const certId = `cert-${idx}`;
+      let quarantined = 0;
+      let returnedToSite = 0;
+      let returnedToDepot = 0;
+      const kitNumbers = [];
+      for (const item of items) {
+        kitNumbers.push(item.kit_number);
+        if (item.disposition === "QUARANTINED_FOR_DESTRUCTION") quarantined++;
+        else if (item.disposition === "RETURNED_TO_DEPOT") returnedToDepot++;
+        else returnedToSite++;
+        const target = state.ipKits.find(
+          (k) =>
+            k.kit_number.toUpperCase() ===
+            String(item.kit_number || "").toUpperCase()
+        );
+        if (target) {
+          target.status = item.disposition || "RETURNED_TO_SITE";
+          target.reconciliation_count =
+            Number(target.reconciliation_count || 0) + 1;
+          if (item.residual_volume_ml !== undefined) {
+            target.residual_volume_ml = item.residual_volume_ml;
+          }
+          if (item.residual_volume_percentage !== undefined) {
+            target.residual_volume_percentage = item.residual_volume_percentage;
+          }
+        }
+      }
+      const certificate = {
+        certificate_id: certId,
+        batch_number: batchId,
+        study_id: studyId,
+        site_id: siteId,
+        issued_at: now,
+        issued_by: processedBy,
+        digital_signature: `sha256-demo-cert-${idx}`,
+        verified_by_system: true,
+        kit_numbers: kitNumbers,
+      };
+      state.kitCertificates.set(certId, certificate);
+      return {
+        batch_id: batchId,
+        study_id: studyId,
+        site_id: siteId,
+        reconciled_at: now,
+        processed_by: processedBy,
+        total_kits_reconciled: items.length,
+        quarantined_count: quarantined,
+        returned_to_site_count: returnedToSite,
+        returned_to_depot_count: returnedToDepot,
+        certificate,
+      };
+    },
+
+    getIpKitCertificate(certificateId) {
+      return cloneJson(state.kitCertificates.get(certificateId) || null);
     },
 
     getSiteCompliance(

@@ -63,7 +63,42 @@ public class CadenceSecurityUnitTests
 
         PermissionMatrix.HasPermission(principal, "subject_enrollment:create").Should().BeTrue();
         PermissionMatrix.HasPermission(principal, "subject_enrollment:read").Should().BeTrue();
+        PermissionMatrix.HasPermission(principal, "randomization_scheme:read").Should().BeTrue();
+        PermissionMatrix.HasPermission(principal, "randomization_scheme:draft").Should().BeFalse();
+        PermissionMatrix.HasPermission(principal, "ip_kit_inventory:read").Should().BeTrue();
+        PermissionMatrix.HasPermission(principal, "ip_kit_inventory:seed").Should().BeFalse();
+        PermissionMatrix.HasPermission(principal, "rtsm_supply:write").Should().BeFalse();
         PermissionMatrix.HasPermission(principal, "soa:delete").Should().BeFalse();
+
+        var crc = new Principal
+        {
+            UserId = "crc-101",
+            Roles = new[] { "crc" },
+            RawRoles = new[] { "crc" }
+        };
+        PermissionMatrix.HasPermission(crc, "randomization_scheme:read").Should().BeTrue();
+        PermissionMatrix.HasPermission(crc, "subject_enrollment:randomize").Should().BeTrue();
+
+        var dataManager = new Principal
+        {
+            UserId = "dm-101",
+            Roles = new[] { "sponsor_dm" },
+            RawRoles = new[] { "sponsor_dm" }
+        };
+        PermissionMatrix.HasPermission(dataManager, "ip_kit_inventory:read").Should().BeTrue();
+        PermissionMatrix.HasPermission(dataManager, "ip_kit_inventory:seed").Should().BeTrue();
+        PermissionMatrix.HasPermission(dataManager, "rtsm_supply:write").Should().BeFalse();
+
+        var pharmacist = new Principal
+        {
+            UserId = "pharm-101",
+            Roles = new[] { "pharmacist" },
+            RawRoles = new[] { "pharmacist" }
+        };
+        PermissionMatrix.HasPermission(pharmacist, "ip_kit_inventory:read").Should().BeTrue();
+        PermissionMatrix.HasPermission(pharmacist, "ip_kit_inventory:seed").Should().BeFalse();
+        PermissionMatrix.HasPermission(pharmacist, "rtsm_supply:read").Should().BeTrue();
+        PermissionMatrix.HasPermission(pharmacist, "rtsm_supply:write").Should().BeTrue();
 
         var sysadmin = new Principal
         {

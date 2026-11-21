@@ -184,6 +184,18 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
       expect(authStore.isAuthenticated).toBe(false);
       expect(authStore.normalizedRoles).toEqual([]);
     });
+
+    it("extracts site_id and unblinded_access claims from Keycloak tokens", () => {
+      const authStore = useAuthStore();
+      const kc = keycloakWith(["unblinded_statistician"]);
+      kc.tokenParsed.site_id = ["SITE-101"];
+      kc.tokenParsed.unblinded_access = "true";
+      authStore.setAuth(kc);
+
+      expect(authStore.identity.siteId).toBe("SITE-101");
+      expect(authStore.identity.unblindedAccess).toBe(true);
+      expect(authStore.needsTrialOnboarding).toBe(false);
+    });
   });
 
   describe("Keycloak sign-in, sign-out and token refresh", () => {

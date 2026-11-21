@@ -7,11 +7,18 @@ import {
   parseNodeRef,
   tryNodeRef,
 } from "../../src/canvas/nodeRef";
-import { canManageParticipants } from "../../src/canvas/authority";
+import {
+  canManageParticipants,
+  canManageRandomizationSchemes,
+  canReconcileKitInventory,
+  canSeedKitInventory,
+  canUnblindParticipant,
+} from "../../src/canvas/authority";
 import {
   PARTICIPANT_STATES,
   PARTICIPANT_TRANSITIONS,
   STAGES,
+  isRandomizationWithheld,
   participantStateChanges,
   findSection,
   findStage,
@@ -163,6 +170,12 @@ describe("Canvas lifecycle", () => {
       targets: ["RECONSENT_REQUIRED", "COMPLETED", "WITHDRAWN"],
       unblindingWithheld: true,
     });
+    expect(participantStateChanges("ENROLLED")).toEqual({
+      targets: ["RECONSENT_REQUIRED", "WITHDRAWN"],
+      unblindingWithheld: false,
+    });
+    expect(isRandomizationWithheld("ENROLLED")).toBe(true);
+    expect(isRandomizationWithheld("ACTIVE")).toBe(false);
     expect(participantStateChanges("SCREENING")).toEqual({
       targets: ["SCREEN_FAILED", "ENROLLED", "RECONSENT_REQUIRED", "WITHDRAWN"],
       unblindingWithheld: false,
@@ -170,9 +183,47 @@ describe("Canvas lifecycle", () => {
     expect(participantStateChanges("COMPLETED").targets).toEqual([]);
     expect(participantStateChanges("NOT_A_STATE").targets).toEqual([]);
   });
+
+  it("wires Start -> randomization-schemes and Conduct -> supply sections into the lifecycle", () => {
+    expect(findSection("randomization-schemes")?.stage.id).toBe("start");
+    expect(findSection("randomization-schemes")?.section.label).toBe(
+      "Randomization schemes"
+    );
+    expect(findSection("supply")?.stage.id).toBe("conduct");
+    expect(findSection("supply")?.section.label).toBe("Investigational supply");
+  });
 });
 
 describe("Canvas authority mirror", () => {
+  it("mirrors Execution RTSM role boundaries including pharmacist-only kit reconciliation", () => {
+    expect(
+      canManageRandomizationSchemes({ rawRoles: ["unblinded_statistician"] })
+    ).toBe(true);
+    expect(canManageRandomizationSchemes({ rawRoles: ["crc"] })).toBe(false);
+    expect(canManageRandomizationSchemes({ rawRoles: ["sponsor_dm"] })).toBe(
+      false
+    );
+
+    expect(canSeedKitInventory({ rawRoles: ["sponsor_dm"] })).toBe(true);
+    expect(canSeedKitInventory({ rawRoles: ["sysadmin"] })).toBe(true);
+    expect(canSeedKitInventory({ rawRoles: ["crc"] })).toBe(false);
+
+    // rtsm_supply:read / rtsm_supply:write is pharmacist-only
+    expect(canReconcileKitInventory({ rawRoles: ["pharmacist"] })).toBe(true);
+    expect(canReconcileKitInventory({ rawRoles: ["sponsor_dm"] })).toBe(false);
+    expect(canReconcileKitInventory({ rawRoles: ["crc"] })).toBe(false);
+
+    expect(
+      canUnblindParticipant({ rawRoles: ["Principal Investigator"] })
+    ).toBe(true);
+    expect(
+      canUnblindParticipant({ rawRoles: ["Authorized ER Physician"] })
+    ).toBe(true);
+    expect(canUnblindParticipant({ rawRoles: ["site_investigator"] })).toBe(
+      false
+    );
+    expect(canUnblindParticipant({ rawRoles: ["crc"] })).toBe(false);
+  });
   it("offers participant changes to exactly the roles Execution's SubjectAuthority accepts", () => {
     const source = readFileSync(
       join(

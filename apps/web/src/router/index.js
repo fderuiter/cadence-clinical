@@ -308,7 +308,7 @@ const routes = [
     component: () => import("../views/CtmsView.vue"),
     meta: {
       requiresAuth: true,
-      requiresRole: ["cra", "monitor", "sponsor_admin"],
+      requiresRole: ["cra", "monitor", "sponsor_admin", "pharmacist"],
     },
   },
   {

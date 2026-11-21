@@ -278,7 +278,107 @@
             <dd class="numeric">
               {{ participant.enrollment_index }}
             </dd>
+            <template v-if="isPostRandomized">
+              <dt>Treatment allocation</dt>
+              <dd id="inspector-allocation">
+                {{ allocationLabel }}
+              </dd>
+              <template v-if="assignedKitLabel">
+                <dt>Assigned kit</dt>
+                <dd id="inspector-kit">
+                  {{ assignedKitLabel }}
+                </dd>
+              </template>
+            </template>
           </dl>
+
+          <section
+            v-if="canManageParticipants"
+            id="inspector-consent-capture"
+            class="sdv"
+            aria-labelledby="inspector-consent-title"
+          >
+            <h3 id="inspector-consent-title">Informed consent</h3>
+            <p
+              v-if="recordedConsent"
+              id="inspector-consent-recorded"
+              class="verb-note"
+              role="status"
+            >
+              Signed v{{ recordedConsent.version_tag }} recorded ({{
+                formatShortDate(recordedConsent.icf_signed_date)
+              }})
+            </p>
+            <button
+              v-if="!consentFormOpen"
+              id="btn-open-consent-form"
+              type="button"
+              class="btn btn-secondary"
+              @click="consentFormOpen = true"
+            >
+              Record signed consent
+            </button>
+            <form
+              v-else
+              id="inspector-consent-form"
+              class="consent-form"
+              @submit.prevent="submitConsent"
+            >
+              <label for="inspector-consent-version">Protocol version</label>
+              <input
+                id="inspector-consent-version"
+                v-model="consentVersionTag"
+                type="text"
+                autocomplete="off"
+              />
+              <label for="inspector-consent-date">Signed date</label>
+              <input
+                id="inspector-consent-date"
+                v-model="consentSignedDate"
+                type="date"
+              />
+              <label for="inspector-consent-paper" class="consent-checkbox">
+                <input
+                  id="inspector-consent-paper"
+                  v-model="consentPaperOverride"
+                  type="checkbox"
+                />
+                <span>Paper ICF override</span>
+              </label>
+              <label for="inspector-consent-reason">Reason</label>
+              <input
+                id="inspector-consent-reason"
+                v-model="consentReason"
+                type="text"
+                autocomplete="off"
+                placeholder="Signed informed consent verified at site"
+              />
+              <div class="consent-actions">
+                <button
+                  id="btn-submit-consent"
+                  type="submit"
+                  class="btn btn-primary"
+                  :disabled="
+                    consentBusy ||
+                    !consentVersionTag.trim() ||
+                    !consentSignedDate.trim() ||
+                    !consentReason.trim()
+                  "
+                >
+                  {{ consentBusy ? "Recording..." : "Save consent" }}
+                </button>
+                <button
+                  id="btn-cancel-consent"
+                  type="button"
+                  class="btn btn-secondary"
+                  :disabled="consentBusy"
+                  @click="consentFormOpen = false"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </section>
 
           <ParticipantStateChange
             v-if="canManageParticipants"
@@ -366,6 +466,10 @@ import {
 import { parseNodeRef } from "../../canvas/nodeRef";
 import { useAiAssistance } from "../../ai/aiAssistance";
 import AssistPanel from "../ai/AssistPanel.vue";
+import {
+  isPostRandomizationStatus,
+  useStudyCanvasStore,
+} from "../../stores/studyCanvas";
 
 /**
  * The Clinical Canvas inspector (docs/ux/CLINICAL_CANVAS.md §2.4, UX-3, UX-5): the selected object's kind,
@@ -404,6 +508,119 @@ const emit = defineEmits<{
 }>();
 
 const { enabled: aiEnabled } = useAiAssistance();
+const canvas = useStudyCanvasStore();
+
+const consentFormOpen = ref(false);
+const consentVersionTag = ref("1.0");
+const consentSignedDate = ref("");
+const consentPaperOverride = ref(false);
+const consentReason = ref("");
+const consentBusy = ref(false);
+
+const isPostRandomized = computed(() =>
+  Boolean(
+    props.participant &&
+    (isPostRandomizationStatus(props.participant.status) ||
+      canvas.allocations[props.participant.subject_id])
+  )
+);
+
+const subjectDetail = computed(() =>
+  props.participant
+    ? (canvas.subjectDetails[props.participant.subject_id] ?? null)
+    : null
+);
+
+const localAllocation = computed(() =>
+  props.participant
+    ? (canvas.allocations[props.participant.subject_id] ?? null)
+    : null
+);
+
+const allocationLabel = computed(() =>
+  subjectDetail.value?.treatment_group
+    ? subjectDetail.value.treatment_group
+    : "Randomized, arm masked"
+);
+
+const assignedKitLabel = computed(
+  () =>
+    subjectDetail.value?.investigational_product_id ||
+    localAllocation.value?.kitNumber ||
+    ""
+);
+
+const recordedConsent = computed(() =>
+  props.participant
+    ? (canvas.recordedConsents[props.participant.subject_id] ?? null)
+    : null
+);
+
+function formatShortDate(raw: string | null | undefined): string {
+  if (!raw) return "date recorded";
+  const idx = raw.indexOf("T");
+  return idx > 0 ? raw.slice(0, idx) : raw;
+}
+
+async function submitConsent() {
+  if (!props.participant) return;
+  const versionTag = consentVersionTag.value.trim();
+  const signedDate = consentSignedDate.value.trim();
+  const reason = consentReason.value.trim();
+  if (!versionTag || !signedDate || !reason) return;
+  consentBusy.value = true;
+  try {
+    const parsedIndex = parseInt(versionTag.split(".")[0] || "1", 10);
+    const saved = await canvas.recordParticipantConsent(props.participant, {
+      versionTag,
+      versionIndex:
+        Number.isFinite(parsedIndex) && parsedIndex >= 1 ? parsedIndex : 1,
+      signedDate,
+      requiresReconsent: props.participant.status === "RECONSENT_REQUIRED",
+      isPaperOverride: consentPaperOverride.value,
+      reason,
+    });
+    if (saved) {
+      consentSignedDate.value = "";
+      consentReason.value = "";
+      consentPaperOverride.value = false;
+      consentFormOpen.value = false;
+    }
+  } finally {
+    consentBusy.value = false;
+  }
+}
+
+watch(
+  () => [
+    props.studyCode,
+    props.participant?.subject_id,
+    props.participant?.status,
+  ],
+  () => {
+    if (
+      props.participant &&
+      (isPostRandomizationStatus(props.participant.status) ||
+        canvas.allocations[props.participant.subject_id])
+    ) {
+      canvas.loadSubjectDetail(props.participant);
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => props.participant?.id,
+  () => {
+    consentFormOpen.value = false;
+    consentVersionTag.value =
+      props.participant?.active_protocol_version || "1.0";
+    consentSignedDate.value = "";
+    consentPaperOverride.value = false;
+    consentReason.value = "";
+  },
+  { immediate: true }
+);
 
 const hasActiveContent = computed(() =>
   Boolean(
@@ -819,5 +1036,37 @@ watch(aiEnabled, (on) => {
 
 .sdv button {
   align-self: flex-start;
+}
+
+.consent-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.consent-form label {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.consent-form input[type="text"],
+.consent-form input[type="date"] {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-card);
+  color: var(--text-main);
+}
+
+.consent-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 400;
+}
+
+.consent-actions {
+  display: flex;
+  gap: 6px;
 }
 </style>

@@ -58,15 +58,17 @@ public static partial class PermissionMatrix
 
     /// <summary>
     /// Randomisation (#5607, ADR-2640). The unblinded statistician drafts and approves scheme versions (the service also
-    /// requires the approver to be someone other than the author); data managers and auditors read the configuration,
-    /// which holds no list or allocation. Site staff randomise a participant; the response names the allocation and kit,
-    /// never the arm.
+    /// requires the approver to be someone other than the author); data managers, auditors and site staff read the
+    /// configuration (which holds stratification factors only, never a list or allocation). Site staff randomise a
+    /// participant; the response names the allocation and kit, never the arm.
     /// </summary>
     private static void AddRandomizationGrants()
     {
         Grant(RoleNormalization.ROLE_UNBLINDED_STATISTICIAN, "randomization_scheme", "read", "draft", "approve");
         Grant(RoleNormalization.ROLE_SPONSOR_DM, "randomization_scheme", "read");
         Grant(RoleNormalization.ROLE_AUDITOR_CANONICAL, "randomization_scheme", "read");
+        Grant(RoleNormalization.ROLE_INVESTIGATOR, "randomization_scheme", "read");
+        Grant(RoleNormalization.ROLE_CRC, "randomization_scheme", "read");
         Grant(RoleNormalization.ROLE_INVESTIGATOR, "subject_enrollment", "randomize");
         Grant(RoleNormalization.ROLE_CRC, "subject_enrollment", "randomize");
     }
@@ -102,8 +104,19 @@ public static partial class PermissionMatrix
     /// <summary>IP kits, investigational devices and cell and gene therapy chain of custody.</summary>
     private static void AddSupplyGrants()
     {
-        // IP kit reconciliation reads and writes blinded supply through rtsm_supply (the pharmacist only). Seeding a
-        // site's kit inventory is a sponsor operation.
+        // IP kit reconciliation reads and writes supply accountability through rtsm_supply (the pharmacist only).
+        // Listing blind-safe site kit stock (lot, expiry, status — never treatment arm) is open to clinical, sponsor,
+        // pharmacy and audit roles; seeding a site's kit inventory is a sponsor operation.
+        foreach (string role in new[]
+        {
+            RoleNormalization.ROLE_SYSADMIN, RoleNormalization.ROLE_SPONSOR_DM, RoleNormalization.ROLE_SPONSOR_MM,
+            RoleNormalization.ROLE_INVESTIGATOR, RoleNormalization.ROLE_CRC, RoleNormalization.ROLE_CRA_CANONICAL, "monitor",
+            RoleNormalization.ROLE_PHARMACIST, RoleNormalization.ROLE_AUDITOR_CANONICAL,
+        })
+        {
+            Grant(role, "ip_kit_inventory", "read");
+        }
+
         foreach (string role in new[] { RoleNormalization.ROLE_SYSADMIN, RoleNormalization.ROLE_SPONSOR_DM })
         {
             Grant(role, "ip_kit_inventory", "seed");

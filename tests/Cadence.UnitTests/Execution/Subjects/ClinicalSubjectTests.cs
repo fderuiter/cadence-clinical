@@ -248,6 +248,60 @@ public class ClinicalSubjectTests
         subject.Status.Should().Be(SubjectState.Screening);
     }
 
+    [Theory]
+    [InlineData(SubjectState.Active)]
+    [InlineData(SubjectState.Unblinded)]
+    [InlineData(SubjectState.Completed)]
+    [GxPRequirement("PRD-SUB-001")]
+    public void TransitionTo_FromReconsentRequiredWithoutRandomizationId_RefusesPostRandomizationTargets(SubjectState target)
+    {
+        var subject = CreateScreeningSubject();
+        subject.TransitionTo(SubjectState.ReconsentRequired).IsSuccess.Should().BeTrue();
+        subject.RandomizationId.Should().BeNull();
+
+        var result = subject.TransitionTo(target);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be("INVALID_STATE_TRANSITION");
+        subject.Status.Should().Be(SubjectState.ReconsentRequired);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SUB-001")]
+    public void Unblind_FromReconsentRequiredWithoutRandomizationId_RefusesAndLeavesSubjectBlinded()
+    {
+        var subject = CreateScreeningSubject();
+        subject.TransitionTo(SubjectState.ReconsentRequired).IsSuccess.Should().BeTrue();
+
+        var result = subject.Unblind("pi.site101", "Emergency medical intervention requiring treatment arm", new FakeClock());
+
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be("INVALID_STATE_TRANSITION");
+        subject.Status.Should().Be(SubjectState.ReconsentRequired);
+        subject.IsUnblinded.Should().BeFalse();
+        subject.UnblindedBy.Should().BeNull();
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SUB-001")]
+    public void TransitionTo_FromReconsentRequiredWithRandomizationId_AllowsReturnToActiveAndWithdrawalWithoutIt()
+    {
+        var unrandomized = CreateScreeningSubject();
+        unrandomized.TransitionTo(SubjectState.ReconsentRequired).IsSuccess.Should().BeTrue();
+        unrandomized.TransitionTo(SubjectState.Withdrawn).IsSuccess.Should().BeTrue();
+
+        var randomized = CreateScreeningSubject();
+        randomized.TransitionTo(SubjectState.Enrolled).IsSuccess.Should().BeTrue();
+        randomized.Randomize(Guid.NewGuid(), "KIT-101", new Dictionary<string, object?>()).IsSuccess.Should().BeTrue();
+        randomized.TransitionTo(SubjectState.Active).IsSuccess.Should().BeTrue();
+        randomized.TransitionTo(SubjectState.ReconsentRequired).IsSuccess.Should().BeTrue();
+
+        var backToActive = randomized.TransitionTo(SubjectState.Active);
+
+        backToActive.IsSuccess.Should().BeTrue();
+        randomized.Status.Should().Be(SubjectState.Active);
+    }
+
     // -- Unblind/Withdraw field capture (SCN-008) using a fake IClock --------------------------
 
     [Fact]

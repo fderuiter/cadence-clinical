@@ -104,7 +104,7 @@ public static class IpKitEndpoints
             var result = await service.GetSiteInventoryAsync(studyId, siteId, ct);
             return Results.Ok(result);
         })
-        .RequirePermission("rtsm_supply:read")
+        .RequirePermission("ip_kit_inventory:read")
         .RequireStudyScope("studyId")
         .RequireSiteScope("siteId");
 

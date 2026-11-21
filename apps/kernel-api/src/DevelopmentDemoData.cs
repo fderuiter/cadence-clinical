@@ -83,6 +83,9 @@ internal static class DevelopmentDemoData
         ("designer.lead", DesignerLeadSubject, "DEMO_DESIGNER", null),
         ("safety.officer", "3d290711-4167-4da5-b55a-4c75760bd27c", "DEMO_SAFETY", null), // deid-ignore: a demo realm user's fixed subject id, not a telephone number
         ("auditor.lead", "d43095eb-1912-40dd-a528-fa04335a2342", "DEMO_AUDITOR", null),
+        ("stat.author", "b1a2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5", "DEMO_AUDITOR", null),
+        ("stat.approver", "c2b3d4e5-f6a7-4b8c-9d0e-f1a2b3c4d5e6", "DEMO_AUDITOR", null),
+        ("pharmacist.site101", "d3c4e5f6-a7b8-4c9d-8e1f-a2b3c4d5e6f7", "DEMO_INVESTIGATOR", "SITE-101"),
     ];
 
     /// <summary>

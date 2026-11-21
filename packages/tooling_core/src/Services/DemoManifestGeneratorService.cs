@@ -376,7 +376,7 @@ public static partial class DemoManifestGeneratorService
                 continue;
             }
 
-            var (workflow, workspacePersona) = ResolveWorkflowAndWorkspace(roleCode, realmUser.RealmRoles);
+            var (workflow, workspacePersona) = ResolveWorkflowAndWorkspace(username, roleCode, realmUser.RealmRoles);
             personas.Add(new DemoPersonaEntry(
                 Username: username,
                 KeycloakSub: subjectUuid,
@@ -521,18 +521,35 @@ public static partial class DemoManifestGeneratorService
             return [];
         }
 
-        var users = UserTupleRegex()
-            .Matches(block)
-            .Select(match =>
+        var stringConstants = ConstStringRegex()
+            .Matches(kernelSource)
+            .ToDictionary(
+                m => m.Groups["name"].Value,
+                m => m.Groups["val"].Value,
+                StringComparer.Ordinal);
+
+        var users = new List<(string Username, string SubjectUuid, string RoleCode, string? SiteCode)>();
+        foreach (var groups in UserTupleRegex().Matches(block).Select(match => match.Groups))
+        {
+            string username = groups["user"].Value;
+            string subjectUuid;
+            if (groups["sub"].Success)
             {
-                string? site = match.Groups["site"].Success ? match.Groups["site"].Value : null;
-                return (
-                    match.Groups["user"].Value,
-                    match.Groups["sub"].Value,
-                    match.Groups["role"].Value,
-                    site);
-            })
-            .ToList();
+                subjectUuid = groups["sub"].Value;
+            }
+            else if (stringConstants.TryGetValue(groups["subConst"].Value, out string? resolvedSub))
+            {
+                subjectUuid = resolvedSub;
+            }
+            else
+            {
+                issues.Add($"Kernel demo user '{username}' references unresolved subject constant '{groups["subConst"].Value}' in '{KernelSeedRelativePath}'.");
+                continue;
+            }
+
+            string? site = groups["site"].Success ? groups["site"].Value : null;
+            users.Add((username, subjectUuid, groups["role"].Value, site));
+        }
 
         if (users.Count == 0)
         {
@@ -665,17 +682,21 @@ public static partial class DemoManifestGeneratorService
     }
 
     private static (string Workflow, string WorkspacePersona) ResolveWorkflowAndWorkspace(
+        string username,
         string kernelRoleCode,
         IReadOnlyList<string> realmRoles) =>
         kernelRoleCode switch
         {
             "DEMO_CRC" => ("coordinator", "site_crc"),
+            "DEMO_INVESTIGATOR" when realmRoles.Contains("pharmacist", StringComparer.OrdinalIgnoreCase) => ("pharmacist", "pharmacist"),
             "DEMO_INVESTIGATOR" => ("investigator", "site_investigator"),
             "DEMO_MONITOR" => ("monitor", "cra_monitor"),
             "DEMO_DATA_MANAGER" => ("data_manager", "data_manager"),
             "DEMO_DESIGNER" when realmRoles.Contains("Sponsor Admin", StringComparer.Ordinal) => ("designer_lead", "super_admin"),
             "DEMO_DESIGNER" => ("designer", "sponsor_designer"),
             "DEMO_SAFETY" => ("safety", "safety_officer"),
+            "DEMO_AUDITOR" when string.Equals(username, "stat.approver", StringComparison.OrdinalIgnoreCase) => ("unblinded_statistician_approver", "unblinded_statistician_approver"),
+            "DEMO_AUDITOR" when realmRoles.Contains("unblinded_statistician", StringComparer.OrdinalIgnoreCase) => ("unblinded_statistician", "unblinded_statistician"),
             "DEMO_AUDITOR" => ("auditor", "auditor"),
             _ => (kernelRoleCode.ToLowerInvariant(), "super_admin"),
         };
@@ -1116,7 +1137,12 @@ public static partial class DemoManifestGeneratorService
     private static partial Regex QuotedStringRegex();
 
     [GeneratedRegex(
-        @"\(\s*""(?<user>[^""]+)""\s*,\s*""(?<sub>[^""]+)""\s*,\s*""(?<role>[^""]+)""\s*,\s*(?:""(?<site>[^""]+)""|null)\s*\)",
+        @"const\s+string\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*""(?<val>[^""]+)""\s*;",
+        RegexOptions.CultureInvariant)]
+    private static partial Regex ConstStringRegex();
+
+    [GeneratedRegex(
+        @"\(\s*""(?<user>[^""]+)""\s*,\s*(?:""(?<sub>[^""]+)""|(?<subConst>[A-Za-z_][A-Za-z0-9_]*))\s*,\s*""(?<role>[^""]+)""\s*,\s*(?:""(?<site>[^""]+)""|null)\s*\)",
         RegexOptions.CultureInvariant)]
     private static partial Regex UserTupleRegex();
 
