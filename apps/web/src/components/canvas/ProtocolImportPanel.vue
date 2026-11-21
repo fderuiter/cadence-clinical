@@ -283,6 +283,7 @@ import {
   type KernelProtocolDraftSummary,
   type KernelProtocolTemplate,
 } from "../../api/kernelApi";
+import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
@@ -321,10 +322,13 @@ const summaryLoading = ref(false);
 let summaryRequest = 0;
 
 function makeIdempotencyKey(): string {
+  if (isDemoBuild()) {
+    return `import-${demoRandomToken(12, 36, "protocol-import.idempotency")}`;
+  }
   if (typeof globalThis.crypto?.randomUUID === "function") {
     return globalThis.crypto.randomUUID();
   }
-  return `import-${Math.random().toString(36).slice(2)}`;
+  return `import-${demoRandomToken(12, 36, "protocol-import.idempotency")}`;
 }
 
 const filteredTemplates = computed(() => {

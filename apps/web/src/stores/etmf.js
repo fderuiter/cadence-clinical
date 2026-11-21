@@ -1,45 +1,66 @@
 import { defineStore } from "pinia";
+import { DEMO_STUDY, getDemoPersonaByWorkflow } from "demo-fixtures";
 import { etmfService } from "../api/etmf";
-import { isDemoBuild } from "../utils/demoMode.js";
+import {
+  demoNowIso,
+  demoNowMs,
+  demoRandomToken,
+  isDemoBuild,
+  nextDemoStep,
+} from "../utils/demoMode.js";
 import { useAuthStore } from "./auth.js";
 
-const defaultDocuments = [
-  {
-    id: "DOC-100",
-    study_id: "STUDY-USDM-001",
-    zone: 1,
-    section: "01.01",
-    artifact_code: "01.01.01",
-    artifact_type: "Clinical Trial Protocol",
-    filename: "protocol_v1_draft.pdf",
-    mime_type: "application/pdf",
-    created_at: "2026-08-01T12:00:00Z",
-    created_by: "fderuiter",
-    version_index: 1,
-    status: "DRAFT",
-    reason_for_change: "Initial version",
-  },
-  {
-    id: "DOC-999",
-    study_id: "STUDY-USDM-001",
-    zone: 5,
-    section: "05.02",
-    artifact_code: "05.02.05",
-    artifact_type: "Informed Consent Form",
-    filename: "icf_v1.0_signed.pdf",
-    mime_type: "application/pdf",
-    created_at: "2026-08-15T09:30:00Z",
-    created_by: "fderuiter",
-    version_index: 1,
-    status: "APPROVED",
-    reason_for_change: "Initial signed consent.",
-    signer: "Frans de Ruiter",
-    signing_timestamp: "2026-08-15T09:35:00Z",
-    signature_manifestation: {
-      signing_reason: "Consent approval",
+function buildDefaultDocuments() {
+  const studyId = DEMO_STUDY.code || "CADENCE-101";
+  const leadUsername =
+    getDemoPersonaByWorkflow("designer_lead")?.username || "designer.lead";
+  const piPersona = getDemoPersonaByWorkflow("investigator");
+  const piUsername = piPersona?.username || "pi.site101";
+  const piFullName = piPersona
+    ? `${piPersona.firstName} ${piPersona.lastName}`
+    : "Site 101 Investigator";
+  return [
+    {
+      id: "DOC-100",
+      study_id: studyId,
+      zone: 1,
+      section: "01.01",
+      artifact_code: "01.01.01",
+      artifact_type: "Clinical Trial Protocol",
+      filename: "protocol_v1_draft.pdf",
+      mime_type: "application/pdf",
+      created_at: "2026-01-06T12:00:00Z",
+      created_by: leadUsername,
+      version_index: 1,
+      status: "DRAFT",
+      reason_for_change: "Initial version",
     },
-  },
-];
+    {
+      id: "DOC-999",
+      study_id: studyId,
+      zone: 5,
+      section: "05.02",
+      artifact_code: "05.02.05",
+      artifact_type: "Informed Consent Form",
+      filename: "icf_v1.0_signed.pdf",
+      mime_type: "application/pdf",
+      created_at: "2026-01-10T09:30:00Z",
+      created_by: piUsername,
+      version_index: 1,
+      status: "APPROVED",
+      reason_for_change: "Initial signed consent.",
+      signer: piFullName,
+      signing_timestamp: "2026-01-10T09:35:00Z",
+      signature_manifestation: {
+        signing_reason: "Consent approval",
+      },
+    },
+  ];
+}
+
+function getDefaultDocuments() {
+  return isDemoBuild() ? buildDefaultDocuments() : [];
+}
 
 function localPredictTaxonomy(filename = "", content = "") {
   const text = `${filename} ${content}`.toLowerCase();
@@ -187,7 +208,7 @@ function buildLocalIntelligenceReport(
     filename,
     mime_type: mimeType,
     sha256_hash:
-      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
     modality: mimeType.includes("pdf") ? "PDF_BINARY" : "TEXT",
     primary_classification: primary,
     alternative_candidates: [],
@@ -195,7 +216,7 @@ function buildLocalIntelligenceReport(
     qc_recommendation: tier === "HIGH" ? "AUTO_CLASSIFY" : "CRA_QC_REQUIRED",
     ai_generation_manifest: {
       model: "Cadence-eTMF-Classifier-v3.2",
-      prompt_hash: "a1b2c3d4e5f6",
+      prompt_hash: "a1b2c3d4e5f6", // pragma: allowlist secret
       confidence: primary.confidence,
       confidence_tier: tier,
       timestamp: new Date().toISOString(),
@@ -210,7 +231,8 @@ export const useEtmfStore = defineStore("etmf", {
     documentsList: [],
     activeDocument: null,
     isUploading: false,
-    currentStudyId: "STUDY-USDM-001",
+    currentStudyId:
+      isDemoBuild() && DEMO_STUDY.code ? DEMO_STUDY.code : "STUDY-USDM-001",
     batchQueue: [],
     qcQueue: [],
     isBatchUploading: false,
@@ -248,7 +270,11 @@ export const useEtmfStore = defineStore("etmf", {
   },
 
   actions: {
-    async fetchBinderTree(studyId = "STUDY-USDM-001") {
+    async fetchBinderTree(
+      studyId = isDemoBuild() && DEMO_STUDY.code
+        ? DEMO_STUDY.code
+        : "STUDY-USDM-001"
+    ) {
       this.currentStudyId = studyId;
 
       // Seed hierarchical DIA TMF Reference Model v3.2.0-complete hierarchy
@@ -790,14 +816,14 @@ export const useEtmfStore = defineStore("etmf", {
             if (stored) {
               allDocs = JSON.parse(stored);
             } else {
-              allDocs = JSON.parse(JSON.stringify(defaultDocuments));
+              allDocs = getDefaultDocuments();
               window.localStorage.setItem(
                 "demo_documents",
                 JSON.stringify(allDocs)
               );
             }
           } else {
-            allDocs = JSON.parse(JSON.stringify(defaultDocuments));
+            allDocs = getDefaultDocuments();
           }
 
           // Filter by selected artifact ID
@@ -891,8 +917,9 @@ export const useEtmfStore = defineStore("etmf", {
             };
           }
 
+          const step = nextDemoStep("etmf-upload");
           const newDoc = {
-            id: "DOC-" + Date.now(),
+            id: "DOC-" + demoNowMs(step),
             study_id: body.study_id,
             site_id: body.site_id,
             zone: body.zone,
@@ -901,8 +928,11 @@ export const useEtmfStore = defineStore("etmf", {
             artifact_type: body.artifact_type,
             filename: body.filename,
             mime_type: body.mime_type,
-            created_at: new Date().toISOString(),
-            created_by: authStore.identity?.username || "fderuiter",
+            created_at: demoNowIso(step),
+            created_by:
+              authStore.identity?.username ||
+              getDemoPersonaByWorkflow("designer_lead")?.username ||
+              "designer.lead",
             version_index: 1,
             status: "DRAFT",
             reason_for_change: changeReason,
@@ -914,7 +944,7 @@ export const useEtmfStore = defineStore("etmf", {
             if (stored) {
               allDocs = JSON.parse(stored);
             } else {
-              allDocs = JSON.parse(JSON.stringify(defaultDocuments));
+              allDocs = getDefaultDocuments();
             }
             allDocs.push(newDoc);
             window.localStorage.setItem(
@@ -995,9 +1025,7 @@ export const useEtmfStore = defineStore("etmf", {
       if (typeof window !== "undefined" && window.localStorage) {
         window.localStorage.removeItem("demo_documents");
       }
-      this.documentsList = isDemoBuild()
-        ? JSON.parse(JSON.stringify(defaultDocuments))
-        : [];
+      this.documentsList = getDefaultDocuments();
     },
 
     async classifyIntelligence(
@@ -1032,8 +1060,9 @@ export const useEtmfStore = defineStore("etmf", {
           payload.content,
           payload.mime_type
         );
+        const step = nextDemoStep("etmf-qc-stage");
         const newDoc = {
-          id: "DOC-" + Math.random().toString(36).substring(2, 9).toUpperCase(),
+          id: "DOC-" + demoRandomToken(7, 36, "etmf-qc-stage").toUpperCase(),
           study_id: payload.study_id || this.currentStudyId,
           site_id: payload.site_id || null,
           zone: report.primary_classification.zone,
@@ -1042,8 +1071,8 @@ export const useEtmfStore = defineStore("etmf", {
           artifact_type: report.primary_classification.artifact_type,
           filename: payload.filename,
           mime_type: payload.mime_type || "application/pdf",
-          created_at: new Date().toISOString(),
-          created_by: "site.coordinator",
+          created_at: demoNowIso(step),
+          created_by: "crc.site101",
           version_index: 1,
           status: "TECHNICAL_QC",
           approval_status: "TECHNICAL_QC",

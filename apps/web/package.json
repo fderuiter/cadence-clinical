@@ -1,6 +1,7 @@
 {
   "author": "",
   "dependencies": {
+    "demo-fixtures": "workspace:*",
     "hls.js": "^1.7.4",
     "keycloak-js": "^26.2.5",
     "openapi-fetch": "^0.13.0",

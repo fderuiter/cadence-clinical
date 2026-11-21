@@ -2,6 +2,7 @@
 import { buildLedgerBlock } from "ui";
 
 import { state } from "../stores/state.js";
+import { demoNowIso } from "../utils/demoMode.js";
 
 // 21 CFR Part 11 Compliant Cryptographic Audit Ledger logging
 export async function logAuditRecord(
@@ -9,8 +10,8 @@ export async function logAuditRecord(
   details,
   reason = "Patient action verified"
 ) {
-  const timestamp = new Date().toISOString();
   const index = state.ledgerBlocks.length;
+  const timestamp = demoNowIso(index);
   const prevHash =
     index === 0
       ? "0000000000000000000000000000000000000000000000000000000000000000" // deid-ignore
