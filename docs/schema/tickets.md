@@ -6,11 +6,11 @@ Generated from the EF Core model of `Cadence.Apps.Tickets.Infrastructure.Persist
 
 | Table | Entity | Columns |
 | --- | --- | --- |
-| [`tickets.audit_log_entries`](#ticketsaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`tickets.ticket_attachments`](#ticketsticket_attachments) | `TicketAttachment` | 12 |
-| [`tickets.ticket_audit_logs`](#ticketsticket_audit_logs) | `TicketAuditLog` | 9 |
-| [`tickets.ticket_comments`](#ticketsticket_comments) | `TicketComment` | 8 |
-| [`tickets.tickets`](#ticketstickets) | `Ticket` | 41 |
+| [`tickets.audit_log_entries`](#ticketsaudit_log_entries) | `AuditLogEntry` | 12 |
+| [`tickets.ticket_attachments`](#ticketsticket_attachments) | `TicketAttachment` | 13 |
+| [`tickets.ticket_audit_logs`](#ticketsticket_audit_logs) | `TicketAuditLog` | 10 |
+| [`tickets.ticket_comments`](#ticketsticket_comments) | `TicketComment` | 9 |
+| [`tickets.tickets`](#ticketstickets) | `Ticket` | 42 |
 
 ## tickets.audit_log_entries
 
@@ -29,10 +29,12 @@ Entity: `AuditLogEntry`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+- `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
 ## tickets.ticket_attachments
 
@@ -52,10 +54,12 @@ Entity: `TicketAttachment`
 | `UploadedAt` | `timestamp with time zone` | no |  |  |
 | `UploadedBy` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_ticket_attachments_TicketId`: (`TicketId`)
+- `IX_ticket_attachments_tenant_id`: (`tenant_id`)
 
 ## tickets.ticket_audit_logs
 
@@ -72,12 +76,14 @@ Entity: `TicketAuditLog`
 | `RecordId` | `character varying(255)` | yes |  |  |
 | `TicketId` | `character varying(36)` | yes |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_ticket_audit_logs_CreatedAt`: (`CreatedAt`)
 - `IX_ticket_audit_logs_CreatedBy`: (`CreatedBy`)
 - `IX_ticket_audit_logs_TicketId`: (`TicketId`)
+- `IX_ticket_audit_logs_tenant_id`: (`tenant_id`)
 
 ## tickets.ticket_comments
 
@@ -93,10 +99,12 @@ Entity: `TicketComment`
 | `TicketId` | `character varying(36)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
 | `Visibility` | `character varying(50)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_ticket_comments_TicketId`: (`TicketId`)
+- `IX_ticket_comments_tenant_id`: (`tenant_id`)
 
 ## tickets.tickets
 
@@ -145,6 +153,7 @@ Entity: `Ticket`
 | `Title` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
 | `WorkflowType` | `character varying(100)` | yes |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -152,6 +161,7 @@ Indexes:
 - `IX_tickets_Reference`: unique (`Reference`)
 - `IX_tickets_SiteId`: (`SiteId`)
 - `IX_tickets_StudyId`: (`StudyId`)
+- `IX_tickets_tenant_id`: (`tenant_id`)
 
 Check constraints:
 

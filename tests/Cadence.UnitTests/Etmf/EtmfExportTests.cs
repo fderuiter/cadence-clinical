@@ -236,6 +236,7 @@ public class EtmfExportTests
             UserId = "cra-1",
             Roles = ["cra"],
             AssignedStudies = studies,
+            AssignedSites = ["SITE-1"],
         };
         return context;
     }

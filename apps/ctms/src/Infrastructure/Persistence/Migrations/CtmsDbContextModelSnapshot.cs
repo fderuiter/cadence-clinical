@@ -49,6 +49,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTimeOffset>("Timestamp")
                         .HasColumnType("timestamp with time zone");
 
@@ -66,6 +70,8 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("Timestamp");
 
@@ -111,12 +117,18 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<long>("VersionIndex")
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
                     b.HasIndex("GrantId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("ctms_budget_line_items", (string)null);
                 });
@@ -159,6 +171,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<long>("VersionIndex")
                         .HasColumnType("bigint");
 
@@ -171,6 +187,8 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.HasIndex("SiteId");
 
                     b.HasIndex("StudyId");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("VisitId");
 
@@ -222,6 +240,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<long>("VersionIndex")
                         .HasColumnType("bigint");
 
@@ -232,6 +254,8 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.HasIndex("SiteId");
 
                     b.HasIndex("StudyId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("ctms_cra_allocations", (string)null);
                 });
@@ -273,6 +297,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<long>("VersionIndex")
                         .HasColumnType("bigint");
 
@@ -282,6 +310,8 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(255)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("VisitId");
 
@@ -336,6 +366,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<long>("VersionIndex")
                         .HasColumnType("bigint");
 
@@ -344,6 +378,8 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.HasIndex("SiteId");
 
                     b.HasIndex("StaffUserId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("ctms_delegations", (string)null);
                 });
@@ -407,6 +443,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<long>("VersionIndex")
                         .HasColumnType("bigint");
 
@@ -416,6 +456,8 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(36)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("VisitId");
 
@@ -461,6 +503,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<double>("TotalBudget")
                         .HasColumnType("double precision");
 
@@ -472,6 +518,8 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.HasIndex("SiteId");
 
                     b.HasIndex("StudyId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("ctms_investigator_grants", (string)null);
                 });
@@ -518,6 +566,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<long>("VersionIndex")
                         .HasColumnType("bigint");
 
@@ -526,6 +578,8 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.HasIndex("GrantId");
 
                     b.HasIndex("MilestoneId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("ctms_investigator_payables", (string)null);
                 });
@@ -592,6 +646,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<long>("VersionIndex")
                         .HasColumnType("bigint");
 
@@ -605,6 +663,8 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.HasIndex("SiteId");
 
                     b.HasIndex("StudyId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("ctms_monitoring_visits", (string)null);
                 });
@@ -645,6 +705,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<string>("Text")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -659,6 +723,8 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(36)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("VisitId");
 
@@ -700,6 +766,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<string>("TriggerCondition")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -714,6 +784,8 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("GrantId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("ctms_payment_milestones", (string)null);
                 });
@@ -759,6 +831,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.Property<int>("TargetCount")
                         .HasColumnType("integer");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<long>("VersionIndex")
                         .HasColumnType("bigint");
 
@@ -767,6 +843,8 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.HasIndex("SiteId");
 
                     b.HasIndex("StudyId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("ctms_recruitment_records", (string)null);
                 });
@@ -824,6 +902,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<long>("VersionIndex")
                         .HasColumnType("bigint");
 
@@ -832,6 +914,8 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.HasIndex("SiteId");
 
                     b.HasIndex("StudyId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("ctms_regulatory_forms", (string)null);
                 });
@@ -930,6 +1014,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<string>("UnfulfilledReasons")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
@@ -944,6 +1032,8 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.HasIndex("SiteId");
 
                     b.HasIndex("StudyId");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("StudyId", "CountryCode");
 
@@ -995,6 +1085,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<long>("VersionIndex")
                         .HasColumnType("bigint");
 
@@ -1005,6 +1099,8 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.HasIndex("SiteId");
 
                     b.HasIndex("StudyId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("ctms_site_milestones", (string)null);
                 });
@@ -1059,6 +1155,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<long>("VersionIndex")
                         .HasColumnType("bigint");
 
@@ -1069,6 +1169,8 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.HasIndex("StaffUserId");
 
                     b.HasIndex("TaskCode");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("doa_delegation_records", (string)null);
                 });
@@ -1112,6 +1214,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("timestamp with time zone");
 
@@ -1124,6 +1230,8 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("EntityName", "Timestamp");
 
@@ -1171,9 +1279,15 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.HasKey("Id");
 
                     b.HasIndex("EventId");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("CreatedAt", "DispatchedAt");
 

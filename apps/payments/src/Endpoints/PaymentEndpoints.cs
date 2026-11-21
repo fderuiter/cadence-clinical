@@ -466,188 +466,188 @@ public static class PaymentEndpoints
         // Legacy / Direct endpoints
         group.MapPost("/disburse", DisburseStipendDirect)
             .WithName("DisburseStipendDirect")
-            .RequirePermission("payments_stipend:disburse")
+            .RequirePermission("payments_stipend:disburse").RequireCallerStudyScope()
             .WithSummary("Direct disburse ePRO stipend to participant wallet with strict idempotency and audit trail.");
 
         group.MapPost("/participant/wallets/disburse", DisburseStipendDirect)
             .WithName("DisburseStipendWallet")
-            .RequirePermission("payments_stipend:disburse")
+            .RequirePermission("payments_stipend:disburse").RequireCallerStudyScope()
             .WithSummary("Disburse stipend to participant wallet.");
 
         // Participant Wallets Directory & Management
         group.MapGet("/participant/wallets", ListWallets)
             .WithName("ListWallets")
-            .RequirePermission("payments_wallet:read")
+            .RequirePermission("payments_wallet:read").RequireCallerStudyScope()
             .WithSummary("List all participant wallets.");
 
         group.MapGet("/participant/wallets/subject/{subjectId}", GetSubjectWallet)
             .WithName("GetSubjectWallet")
-            .RequirePermission("payments_wallet:read")
+            .RequirePermission("payments_wallet:read").RequireCallerStudyScope()
             .WithSummary("Retrieve participant wallet balance and details.");
 
         group.MapGet("/participant/wallets/{walletId}", GetWalletById)
             .WithName("GetWalletById")
-            .RequirePermission("payments_wallet:read")
+            .RequirePermission("payments_wallet:read").RequireCallerStudyScope()
             .WithSummary("Retrieve participant wallet details by wallet ID.");
 
         group.MapGet("/participant/wallets/{walletId}/tax-1099-status", GetTax1099Status)
             .WithName("GetTax1099Status")
-            .RequirePermission("payments_wallet:read")
+            .RequirePermission("payments_wallet:read").RequireCallerStudyScope()
             .WithSummary("Retrieve IRS 1099 tax status and threshold monitoring tracer.");
 
         group.MapGet("/participant/wallets/{walletId}/balance", GetBalanceInquiry)
             .WithName("GetBalanceInquiry")
-            .RequirePermission("payments_wallet:read")
+            .RequirePermission("payments_wallet:read").RequireCallerStudyScope()
             .WithSummary("Real-time balance inquiry for participant wallet.");
 
         group.MapPost("/participant/wallets/{walletId}/issue-card", IssueReloadableCard)
             .WithName("IssueReloadableCard")
-            .RequirePermission("payments_wallet:issue_card")
+            .RequirePermission("payments_wallet:issue_card").RequireCallerStudyScope()
             .WithSummary("Issue or re-issue reloadable debit card for participant wallet.");
 
         group.MapPost("/participant/wallets/{walletId}/submit-w9", SubmitW9Form)
             .WithName("SubmitW9Form")
-            .RequirePermission("payments_w9:submit")
+            .RequirePermission("payments_w9:submit").RequireCallerStudyScope()
             .WithSummary("Submit Form W-9 taxpayer identification certification.");
 
         group.MapPost("/participant/wallets/{walletId}/verify-w9", VerifyW9Form)
             .WithName("VerifyW9Form")
-            .RequirePermission("payments_w9:verify")
+            .RequirePermission("payments_w9:verify").RequireCallerStudyScope()
             .WithSummary("Verify participant Form W-9 submission.");
 
         group.MapPost("/participant/wallets/{walletId}/disburse", DisburseParticipantFunds)
             .WithName("DisburseParticipantFunds")
-            .RequirePermission("payments_wallet:disburse")
+            .RequirePermission("payments_wallet:disburse").RequireCallerStudyScope()
             .WithSummary("Disburse digital funds from participant wallet to debit card or bank account.");
 
         // SoA Stipend Rules & Visit Verification Event Trigger
         group.MapGet("/participant/stipend-rules", ListStipendRules)
             .WithName("ListStipendRules")
-            .RequirePermission("payments_stipend_rule:read")
+            .RequirePermission("payments_stipend_rule:read").RequireCallerStudyScope()
             .WithSummary("List SoA protocol visit stipend compensation rules.");
 
         group.MapPost("/participant/stipend-rules", CreateStipendRule)
             .WithName("CreateStipendRule")
-            .RequirePermission("payments_stipend_rule:configure")
+            .RequirePermission("payments_stipend_rule:configure").RequireCallerStudyScope()
             .WithSummary("Configure participant visit compensation rules linked to Schedule of Activities.");
 
         group.MapPost("/participant/events/visit-verified", IngestVisitVerifiedEvent)
             .WithName("IngestVisitVerifiedEvent")
-            .RequirePermission("payments_visit_event:record")
+            .RequirePermission("payments_visit_event:record").RequireCallerStudyScope()
             .WithSummary("Receives verified eCRF visit completion event and evaluates automated stipend disbursement rules.");
 
         // Travel Expenses & OCR Scanner
         group.MapGet("/participant/expenses", ListExpenseClaims)
             .WithName("ListExpenseClaims")
-            .RequirePermission("payments_expense:read")
+            .RequirePermission("payments_expense:read").RequireCallerStudyScope()
             .WithSummary("List travel and meal expense reimbursement claims.");
 
         group.MapPost("/participant/expenses", SubmitExpenseClaim)
             .WithName("SubmitExpenseClaim")
-            .RequirePermission("payments_expense:submit")
+            .RequirePermission("payments_expense:submit").RequireCallerStudyScope()
             .WithSummary("Submit travel/meal expense claim for coordinator review.");
 
         group.MapPost("/participant/expenses/ocr-extract", ExtractReceiptOcr)
             .WithName("ExtractReceiptOcr")
-            .RequirePermission("payments_expense:submit")
+            .RequirePermission("payments_expense:submit").RequireCallerStudyScope()
             .WithSummary("Extract metadata from receipt image/text using rule-based OCR engine.");
 
         group.MapPost("/participant/expenses/{claimId}/review", ReviewExpenseClaim)
             .WithName("ReviewExpenseClaim")
-            .RequirePermission("payments_expense:review")
+            .RequirePermission("payments_expense:review").RequireCallerStudyScope()
             .WithSummary("Coordinator 1-click review and approval/rejection of expense claim.");
 
         // Authenticated Participant Self-Service Wallet, Receipt OCR, Expense Claims, Payouts & Diary Stipends
         group.MapGet("/participant/me/wallet", GetSelfParticipantWallet)
             .WithName("GetSelfParticipantWallet")
-            .RequirePermission("payments_self_wallet:read")
+            .RequirePermission("payments_self_wallet:read").RequireCallerStudyScope()
             .WithSummary("Retrieves the authenticated participant's own study wallet balances, masks, and ledger activity.");
 
         group.MapPost("/participant/me/expenses/ocr-extract", ExtractSelfReceiptOcr)
             .WithName("ExtractSelfReceiptOcr")
-            .RequirePermission("payments_self_expense:ocr_scan")
+            .RequirePermission("payments_self_expense:ocr_scan").RequireCallerStudyScope()
             .WithSummary("Extracts merchant, date, category, and amount from an uploaded receipt image for the signed participant.");
 
         group.MapPost("/participant/me/expenses", SubmitSelfExpenseClaim)
             .WithName("SubmitSelfExpenseClaim")
-            .RequirePermission("payments_self_expense:submit")
+            .RequirePermission("payments_self_expense:submit").RequireCallerStudyScope()
             .WithSummary("Submits a travel or meal expense claim for the signed participant with policy auto-approval and direct ACH dispatch.");
 
         group.MapPost("/participant/me/disburse", DisburseSelfWalletBalance)
             .WithName("DisburseSelfWalletBalance")
-            .RequirePermission("payments_self_wallet:disburse")
+            .RequirePermission("payments_self_wallet:disburse").RequireCallerStudyScope()
             .WithSummary("Triggers an on-demand payout of the signed participant's available wallet balance.");
 
         group.MapPost("/participant/me/diary-stipend", CreditSelfDiaryStipend)
             .WithName("CreditSelfDiaryStipend")
-            .RequirePermission("payments_self_stipend:credit")
+            .RequirePermission("payments_self_stipend:credit").RequireCallerStudyScope()
             .WithSummary("Credits protocol stipend for a synchronized participant diary strictly from server rules.");
 
         // Transactions, Disbursements & Audit Logs
         group.MapGet("/participant/transactions", ListTransactions)
             .WithName("ListTransactions")
-            .RequirePermission("payments_wallet:read")
+            .RequirePermission("payments_wallet:read").RequireCallerStudyScope()
             .WithSummary("List participant wallet transactions ledger.");
 
         group.MapGet("/participant/disbursements", ListDisbursements)
             .WithName("ListDisbursements")
-            .RequirePermission("payments_wallet:read")
+            .RequirePermission("payments_wallet:read").RequireCallerStudyScope()
             .WithSummary("List digital disbursement dispatches.");
 
         group.MapPost("/participant/disbursements/{id}/settle", SettleDisbursement)
             .WithName("SettleDisbursement")
-            .RequirePermission("payments_wallet:disburse")
+            .RequirePermission("payments_wallet:disburse").RequireCallerStudyScope()
             .WithSummary("Marks a dispatched digital disbursement as settled upon confirmation.");
 
         group.MapGet("/audit-logs", GetAuditLogs)
             .WithName("GetPaymentAuditLogs")
-            .RequirePermission("payments_audit_log:read")
+            .RequirePermission("payments_audit_log:read").RequireCallerStudyScope()
             .WithSummary("Retrieve payment audit ledger records.");
 
         // Self-Billing Invoices & Automated Batch Milestone Invoicing
         group.MapGet("/invoices", ListInvoices)
             .WithName("ListInvoices")
-            .RequirePermission("payments_invoice:read")
+            .RequirePermission("payments_invoice:read").RequireCallerStudyScope()
             .WithSummary("Lists compiled self-billing invoices matching filter criteria.");
 
         group.MapGet("/invoices/{id}", GetInvoiceById)
             .WithName("GetInvoiceById")
-            .RequirePermission("payments_invoice:read")
+            .RequirePermission("payments_invoice:read").RequireCallerStudyScope()
             .WithSummary("Retrieve single self-billing invoice details with line items.");
 
         group.MapPost("/invoices/compile", CompileBillingCycle)
             .WithName("CompileBillingCycle")
-            .RequirePermission("payments_invoice:compile")
+            .RequirePermission("payments_invoice:compile").RequireCallerStudyScope()
             .WithSummary("Automates single-site billing cycle compilation into a self-billing invoice.");
 
         group.MapPost("/invoices/batch-compile", BatchCompileBillingCycles)
             .WithName("BatchCompileBillingCycles")
-            .RequirePermission("payments_invoice:compile")
+            .RequirePermission("payments_invoice:compile").RequireCallerStudyScope()
             .WithSummary("Executes study-wide batch milestone invoice compilation across all active trial sites.");
 
         group.MapPost("/invoices/{id}/approve", ApproveInvoice)
             .WithName("ApproveInvoice")
-            .RequirePermission("payments_invoice:approve")
+            .RequirePermission("payments_invoice:approve").RequireCallerStudyScope()
             .WithSummary("Approve draft self-billing invoice for ERP export and settlement.");
 
         group.MapPost("/invoices/{id}/remittance-advice/sign", SignRemittanceAdvice)
             .WithName("SignRemittanceAdvice")
-            .RequirePermission("payments_invoice:sign_remittance")
+            .RequirePermission("payments_invoice:sign_remittance").RequireCallerStudyScope()
             .WithSummary("Applies 21 CFR Part 11 electronic signature to cryptographic remittance advice.");
 
         group.MapGet("/invoices/{id}/remittance-advice/pdf", DownloadRemittancePdf)
             .WithName("DownloadRemittancePdf")
-            .RequirePermission("payments_invoice:read")
+            .RequirePermission("payments_invoice:read").RequireCallerStudyScope()
             .WithSummary("Downloads cryptographic PDF remittance statement.");
 
         group.MapPost("/invoices/{id}/reconcile", ReconcileInvoice)
             .WithName("ReconcileInvoice")
-            .RequirePermission("payments_invoice:reconcile")
+            .RequirePermission("payments_invoice:reconcile").RequireCallerStudyScope()
             .WithSummary("Reconciles invoice settlement against bank wire or ERP clearing statement.");
 
         group.MapPost("/invoices/{id}/erp-export", ExportInvoiceToErp)
             .WithName("ExportInvoiceToErp")
-            .RequirePermission("payments_invoice:export_erp")
+            .RequirePermission("payments_invoice:export_erp").RequireCallerStudyScope()
             .WithSummary("Exports self-billing invoice to ERP gateway (e.g. SAP).");
 
         return routes;

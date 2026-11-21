@@ -41,7 +41,7 @@ public static class LabToxicityEndpoints
             .Produces<IReadOnlyList<StagedAdverseEventReviewResponse>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("lab_toxicity_review:read");
+            .RequirePermission("lab_toxicity_review:read").RequireCallerStudyScope();
 
         group.MapPost("/review/{review_id}/action", ExecuteReviewActionAsync)
             .WithName("ActionStagedAeReview")
@@ -52,7 +52,7 @@ public static class LabToxicityEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .AddEndpointFilter<ChangeReasonHeaderFilter>()
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("lab_toxicity_review:review")
+            .RequirePermission("lab_toxicity_review:review").RequireCallerStudyScope()
             .RequireElectronicSignature(ReviewActionSemanticAction, ReviewActionFor);
 
         group.MapPost("/evaluate", EvaluateToxicityAsync)
@@ -62,7 +62,7 @@ public static class LabToxicityEndpoints
             .Produces<LabToxicityEvaluateResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("lab_range:alert");
+            .RequirePermission("lab_range:alert").RequireCallerStudyScope();
 
         return app;
     }

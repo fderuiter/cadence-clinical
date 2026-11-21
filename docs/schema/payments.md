@@ -6,23 +6,23 @@ Generated from the EF Core model of `Cadence.Apps.Payments.Infrastructure.Persis
 
 | Table | Entity | Columns |
 | --- | --- | --- |
-| [`payments.audit_log_entries`](#paymentsaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`payments.payments_audit_logs`](#paymentspayments_audit_logs) | `PaymentAuditLog` | 13 |
-| [`payments.payments_budget_contracts`](#paymentspayments_budget_contracts) | `BudgetContract` | 17 |
-| [`payments.payments_erp_sync_logs`](#paymentspayments_erp_sync_logs) | `ErpSyncLog` | 13 |
-| [`payments.payments_fee_schedules`](#paymentspayments_fee_schedules) | `FeeSchedule` | 19 |
-| [`payments.payments_holdback_reserves`](#paymentspayments_holdback_reserves) | `HoldbackReserve` | 20 |
-| [`payments.payments_invoice_line_items`](#paymentspayments_invoice_line_items) | `InvoiceLineItem` | 21 |
-| [`payments.payments_participant_disbursements`](#paymentspayments_participant_disbursements) | `ParticipantDisbursement` | 11 |
-| [`payments.payments_participant_expense_claims`](#paymentspayments_participant_expense_claims) | `ParticipantExpenseClaim` | 24 |
-| [`payments.payments_participant_stipend_rules`](#paymentspayments_participant_stipend_rules) | `ParticipantStipendRule` | 19 |
-| [`payments.payments_participant_transactions`](#paymentspayments_participant_transactions) | `ParticipantTransaction` | 12 |
-| [`payments.payments_participant_wallets`](#paymentspayments_participant_wallets) | `ParticipantWallet` | 32 |
-| [`payments.payments_payable_allocations`](#paymentspayments_payable_allocations) | `PayableAllocation` | 16 |
-| [`payments.payments_payables`](#paymentspayments_payables) | `Payable` | 30 |
-| [`payments.payments_remittance_advices`](#paymentspayments_remittance_advices) | `RemittanceAdvice` | 26 |
-| [`payments.payments_self_billing_invoices`](#paymentspayments_self_billing_invoices) | `SelfBillingInvoice` | 33 |
-| [`payments.payments_split_payees`](#paymentspayments_split_payees) | `SplitPayeeConfig` | 14 |
+| [`payments.audit_log_entries`](#paymentsaudit_log_entries) | `AuditLogEntry` | 12 |
+| [`payments.payments_audit_logs`](#paymentspayments_audit_logs) | `PaymentAuditLog` | 14 |
+| [`payments.payments_budget_contracts`](#paymentspayments_budget_contracts) | `BudgetContract` | 18 |
+| [`payments.payments_erp_sync_logs`](#paymentspayments_erp_sync_logs) | `ErpSyncLog` | 14 |
+| [`payments.payments_fee_schedules`](#paymentspayments_fee_schedules) | `FeeSchedule` | 20 |
+| [`payments.payments_holdback_reserves`](#paymentspayments_holdback_reserves) | `HoldbackReserve` | 21 |
+| [`payments.payments_invoice_line_items`](#paymentspayments_invoice_line_items) | `InvoiceLineItem` | 22 |
+| [`payments.payments_participant_disbursements`](#paymentspayments_participant_disbursements) | `ParticipantDisbursement` | 12 |
+| [`payments.payments_participant_expense_claims`](#paymentspayments_participant_expense_claims) | `ParticipantExpenseClaim` | 25 |
+| [`payments.payments_participant_stipend_rules`](#paymentspayments_participant_stipend_rules) | `ParticipantStipendRule` | 20 |
+| [`payments.payments_participant_transactions`](#paymentspayments_participant_transactions) | `ParticipantTransaction` | 13 |
+| [`payments.payments_participant_wallets`](#paymentspayments_participant_wallets) | `ParticipantWallet` | 33 |
+| [`payments.payments_payable_allocations`](#paymentspayments_payable_allocations) | `PayableAllocation` | 17 |
+| [`payments.payments_payables`](#paymentspayments_payables) | `Payable` | 31 |
+| [`payments.payments_remittance_advices`](#paymentspayments_remittance_advices) | `RemittanceAdvice` | 27 |
+| [`payments.payments_self_billing_invoices`](#paymentspayments_self_billing_invoices) | `SelfBillingInvoice` | 34 |
+| [`payments.payments_split_payees`](#paymentspayments_split_payees) | `SplitPayeeConfig` | 15 |
 
 ## payments.audit_log_entries
 
@@ -41,10 +41,12 @@ Entity: `AuditLogEntry`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+- `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
 ## payments.payments_audit_logs
 
@@ -65,6 +67,7 @@ Entity: `PaymentAuditLog`
 | `UserId` | `character varying(255)` | no |  |  |
 | `UserRoles` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -73,6 +76,7 @@ Indexes:
 - `IX_payments_audit_logs_EntityId`: (`EntityId`)
 - `IX_payments_audit_logs_EntityType`: (`EntityType`)
 - `IX_payments_audit_logs_UserId`: (`UserId`)
+- `IX_payments_audit_logs_tenant_id`: (`tenant_id`)
 
 ## payments.payments_budget_contracts
 
@@ -97,12 +101,14 @@ Entity: `BudgetContract`
 | `UpdatedAt` | `timestamp with time zone` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
 | `WithholdingPercentage` | `numeric(18,4)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_payments_budget_contracts_SiteId`: (`SiteId`)
 - `IX_payments_budget_contracts_Status`: (`Status`)
 - `IX_payments_budget_contracts_StudyId`: (`StudyId`)
+- `IX_payments_budget_contracts_tenant_id`: (`tenant_id`)
 
 ## payments.payments_erp_sync_logs
 
@@ -123,6 +129,7 @@ Entity: `ErpSyncLog`
 | `Status` | `character varying(50)` | no |  |  |
 | `SyncDirection` | `character varying(50)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -130,6 +137,7 @@ Indexes:
 - `IX_payments_erp_sync_logs_ExternalReference`: (`ExternalReference`)
 - `IX_payments_erp_sync_logs_InvoiceId`: (`InvoiceId`)
 - `IX_payments_erp_sync_logs_Status`: (`Status`)
+- `IX_payments_erp_sync_logs_tenant_id`: (`tenant_id`)
 
 ## payments.payments_fee_schedules
 
@@ -156,12 +164,14 @@ Entity: `FeeSchedule`
 | `VersionIndex` | `integer` | no |  |  |
 | `VisitCode` | `character varying(100)` | no |  |  |
 | `WithholdingPercentage` | `numeric(18,4)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_payments_fee_schedules_ContractId`: (`ContractId`)
 - `IX_payments_fee_schedules_FormId`: (`FormId`)
 - `IX_payments_fee_schedules_VisitCode`: (`VisitCode`)
+- `IX_payments_fee_schedules_tenant_id`: (`tenant_id`)
 
 ## payments.payments_holdback_reserves
 
@@ -189,6 +199,7 @@ Entity: `HoldbackReserve`
 | `StudyId` | `character varying(255)` | no |  |  |
 | `UpdatedAt` | `timestamp with time zone` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -197,6 +208,7 @@ Indexes:
 - `IX_payments_holdback_reserves_SiteId`: (`SiteId`)
 - `IX_payments_holdback_reserves_Status`: (`Status`)
 - `IX_payments_holdback_reserves_StudyId`: (`StudyId`)
+- `IX_payments_holdback_reserves_tenant_id`: (`tenant_id`)
 
 ## payments.payments_invoice_line_items
 
@@ -225,6 +237,7 @@ Entity: `InvoiceLineItem`
 | `VisitCode` | `character varying(100)` | no |  |  |
 | `WithholdingAmount` | `numeric(18,4)` | no |  |  |
 | `WithholdingRate` | `numeric(18,4)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -232,6 +245,7 @@ Indexes:
 - `IX_payments_invoice_line_items_PayableId`: (`PayableId`)
 - `IX_payments_invoice_line_items_SubjectId`: (`SubjectId`)
 - `IX_payments_invoice_line_items_VisitCode`: (`VisitCode`)
+- `IX_payments_invoice_line_items_tenant_id`: (`tenant_id`)
 
 ## payments.payments_participant_disbursements
 
@@ -250,6 +264,7 @@ Entity: `ParticipantDisbursement`
 | `SubjectId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
 | `WalletId` | `character varying(36)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -258,6 +273,7 @@ Indexes:
 - `IX_payments_participant_disbursements_SubjectId`: (`SubjectId`)
 - `IX_payments_participant_disbursements_WalletId`: (`WalletId`)
 - `IX_payments_participant_disbursements_WalletId_IdempotencyKey`: unique (`WalletId`, `IdempotencyKey`)
+- `IX_payments_participant_disbursements_tenant_id`: (`tenant_id`)
 
 Check constraints:
 
@@ -293,6 +309,7 @@ Entity: `ParticipantExpenseClaim`
 | `UpdatedAt` | `timestamp with time zone` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
 | `WalletId` | `character varying(36)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -302,6 +319,7 @@ Indexes:
 - `IX_payments_participant_expense_claims_SubjectId`: (`SubjectId`)
 - `IX_payments_participant_expense_claims_WalletId`: (`WalletId`)
 - `IX_payments_participant_expense_claims_WalletId_IdempotencyKey`: unique (`WalletId`, `IdempotencyKey`)
+- `IX_payments_participant_expense_claims_tenant_id`: (`tenant_id`)
 
 Check constraints:
 
@@ -332,11 +350,13 @@ Entity: `ParticipantStipendRule`
 | `VersionIndex` | `integer` | no |  |  |
 | `VisitCode` | `character varying(100)` | no |  |  |
 | `VisitName` | `character varying(255)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_payments_participant_stipend_rules_StudyId`: (`StudyId`)
 - `IX_payments_participant_stipend_rules_VisitCode`: (`VisitCode`)
+- `IX_payments_participant_stipend_rules_tenant_id`: (`tenant_id`)
 
 ## payments.payments_participant_transactions
 
@@ -356,6 +376,7 @@ Entity: `ParticipantTransaction`
 | `TransactionType` | `character varying(50)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
 | `WalletId` | `character varying(36)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -364,6 +385,7 @@ Indexes:
 - `IX_payments_participant_transactions_SubjectId`: (`SubjectId`)
 - `IX_payments_participant_transactions_TransactionType`: (`TransactionType`)
 - `IX_payments_participant_transactions_WalletId`: (`WalletId`)
+- `IX_payments_participant_transactions_tenant_id`: (`tenant_id`)
 
 ## payments.payments_participant_wallets
 
@@ -403,6 +425,7 @@ Entity: `ParticipantWallet`
 | `W9Status` | `character varying(50)` | no |  |  |
 | `W9SubmittedAt` | `timestamp with time zone` | yes |  |  |
 | `W9VerifiedAt` | `timestamp with time zone` | yes |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -411,6 +434,7 @@ Indexes:
 - `IX_payments_participant_wallets_StudyId`: (`StudyId`)
 - `IX_payments_participant_wallets_SubjectId`: (`SubjectId`)
 - `IX_payments_participant_wallets_W9Status`: (`W9Status`)
+- `IX_payments_participant_wallets_tenant_id`: (`tenant_id`)
 
 ## payments.payments_payable_allocations
 
@@ -434,11 +458,13 @@ Entity: `PayableAllocation`
 | `UpdatedAt` | `timestamp with time zone` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
 | `WithholdingShare` | `numeric(18,4)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_payments_payable_allocations_PayableId`: (`PayableId`)
 - `IX_payments_payable_allocations_PayeeId`: (`PayeeId`)
+- `IX_payments_payable_allocations_tenant_id`: (`tenant_id`)
 
 ## payments.payments_payables
 
@@ -476,6 +502,7 @@ Entity: `Payable`
 | `VisitCode` | `character varying(100)` | no |  |  |
 | `WithholdingAmount` | `numeric(18,4)` | no |  |  |
 | `WithholdingRate` | `numeric(18,4)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -489,6 +516,7 @@ Indexes:
 - `IX_payments_payables_TriggerEventId`: unique (`TriggerEventId`)
 - `IX_payments_payables_TriggerType`: (`TriggerType`)
 - `IX_payments_payables_VisitCode`: (`VisitCode`)
+- `IX_payments_payables_tenant_id`: (`tenant_id`)
 
 Check constraints:
 
@@ -526,6 +554,7 @@ Entity: `RemittanceAdvice`
 | `StudyId` | `character varying(255)` | no |  |  |
 | `UpdatedAt` | `timestamp with time zone` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -534,6 +563,7 @@ Indexes:
 - `IX_payments_remittance_advices_RemittanceNumber`: unique (`RemittanceNumber`)
 - `IX_payments_remittance_advices_SiteId`: (`SiteId`)
 - `IX_payments_remittance_advices_StudyId`: (`StudyId`)
+- `IX_payments_remittance_advices_tenant_id`: (`tenant_id`)
 
 ## payments.payments_self_billing_invoices
 
@@ -574,6 +604,7 @@ Entity: `SelfBillingInvoice`
 | `TotalTravelReimbursement` | `numeric(18,4)` | no |  |  |
 | `UpdatedAt` | `timestamp with time zone` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -585,6 +616,7 @@ Indexes:
 - `IX_payments_self_billing_invoices_SiteId`: (`SiteId`)
 - `IX_payments_self_billing_invoices_Status`: (`Status`)
 - `IX_payments_self_billing_invoices_StudyId`: (`StudyId`)
+- `IX_payments_self_billing_invoices_tenant_id`: (`tenant_id`)
 
 Check constraints:
 
@@ -610,7 +642,9 @@ Entity: `SplitPayeeConfig`
 | `TaxIdentifier` | `character varying(100)` | yes |  |  |
 | `UpdatedAt` | `timestamp with time zone` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_payments_split_payees_ContractId`: (`ContractId`)
+- `IX_payments_split_payees_tenant_id`: (`tenant_id`)

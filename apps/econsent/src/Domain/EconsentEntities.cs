@@ -154,7 +154,7 @@ public class ConsentAuditLog
     public string? DocumentId { get; set; }
     public string Details { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
-    public string TenantId { get; set; } = "tenant_default";
+    public string TenantId { get; set; } = string.Empty;
     public string? PreviousDigest { get; set; }
     public string? Sha256Digest { get; set; }
 }

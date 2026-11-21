@@ -61,7 +61,8 @@ public interface IImagingSegmentationService
         SegmentRoiRequest request,
         string callerId,
         Func<string, bool> canAccessStudy,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        Func<string?, bool>? canAccessSite = null);
 }
 
 /// <summary>Checks segmentation requests against the stored scan and the caller's scope; measures nothing (#5426).</summary>
@@ -80,7 +81,8 @@ public class ImagingSegmentationService : IImagingSegmentationService
         SegmentRoiRequest request,
         string callerId,
         Func<string, bool> canAccessStudy,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<string?, bool>? canAccessSite = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(canAccessStudy);
@@ -94,7 +96,7 @@ public class ImagingSegmentationService : IImagingSegmentationService
             return new SegmentationOutcome(SegmentationStatus.NotFound);
         }
 
-        if (!canAccessStudy(study.StudyId))
+        if (!canAccessStudy(study.StudyId) || (canAccessSite is not null && !canAccessSite(study.SiteId)))
         {
             return new SegmentationOutcome(SegmentationStatus.OutsideCallerStudies);
         }

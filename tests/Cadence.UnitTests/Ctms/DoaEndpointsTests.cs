@@ -91,20 +91,25 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
 
     private static DefaultHttpContext Caller(string role = RoleNormalization.ROLE_SYSADMIN, string userId = "user-1")
     {
+        bool isSiteRole = SiteAccessEvaluator.SITE_SCOPED_ROLES.Contains(RoleNormalization.NormalizeRole(role));
         var httpContext = new DefaultHttpContext();
         httpContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
         {
             UserId = userId,
             Roles = [role],
             AssignedStudies = [StudyId],
-            AssignedSites = [SiteId],
+            AssignedSites = isSiteRole ? [SiteId] : [],
         };
         return httpContext;
     }
 
     private HttpClient CreateClient(string role = RoleNormalization.ROLE_SYSADMIN, string userId = "admin-1")
     {
-        var identity = TestSecurityContext.Identity(userId, role);
+        bool isSiteRole = SiteAccessEvaluator.SITE_SCOPED_ROLES.Contains(RoleNormalization.NormalizeRole(role));
+        var identity = TestSecurityContext.Identity(userId, role) with
+        {
+            SiteIds = isSiteRole ? [SiteId] : [],
+        };
         var handler = new TestSecurityContext.GatewaySigningHandler(identity)
         {
             InnerHandler = _server.CreateHandler(),

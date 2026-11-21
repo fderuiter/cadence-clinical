@@ -87,19 +87,19 @@ public static class EconsentEndpoints
 
         group.MapPost("/{template_id}/versions/{version_index}/publish", PublishTemplateVersionedAsync)
             .WithName("PublishTemplateVersioned")
-            .RequirePermission("econsent_template:publish")
+            .RequirePermission("econsent_template:publish").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<PublishTemplateResponse>(StatusCodes.Status200OK);
 
         group.MapPost("/{template_id}/publish", PublishTemplateAsync)
             .WithName("PublishTemplate")
-            .RequirePermission("econsent_template:publish")
+            .RequirePermission("econsent_template:publish").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<PublishTemplateResponse>(StatusCodes.Status200OK);
 
         group.MapPost("/{template_id}/versions/{version_index}/capture-consent", CaptureConsentAsync)
             .WithName("CaptureConsentVersioned")
-            .RequirePermission("econsent_consent:capture")
+            .RequirePermission("econsent_consent:capture").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<CaptureConsentResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
@@ -108,7 +108,7 @@ public static class EconsentEndpoints
 
         group.MapPost("/{template_id}/capture-consent", CaptureConsentLegacyAsync)
             .WithName("CaptureConsentLegacy")
-            .RequirePermission("econsent_consent:capture")
+            .RequirePermission("econsent_consent:capture").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<CaptureConsentResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
@@ -180,6 +180,23 @@ public static class EconsentEndpoints
             });
         }
 
+        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext) is { } callerScopeDenied)
+        {
+            return callerScopeDenied;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.StudyId)
+            && ClinicalScopeGuard.RequireStudy(httpContext, request.StudyId) is { } studyDenied)
+        {
+            return studyDenied;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.SiteId)
+            && ClinicalScopeGuard.RequireSite(httpContext, request.SiteId) is { } siteDenied)
+        {
+            return siteDenied;
+        }
+
         var errors = new Dictionary<string, string[]>();
 
         if (string.IsNullOrWhiteSpace(request.SubjectPseudonym))
@@ -224,9 +241,9 @@ public static class EconsentEndpoints
             return TypedResults.ValidationProblem(errors);
         }
 
-        if (!CallerScope.CanAccessStudy(httpContext, request.StudyId))
+        if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is { } denied)
         {
-            return OutsideStudy();
+            return denied;
         }
 
         // The participant or representative signs; the record is attributed to the signed-in staff member who captured it.
@@ -332,7 +349,7 @@ public static class EconsentEndpoints
             DocumentId = consentRecord.Id,
             Details = $"Biometric liveness verified with anti-spoof score {livenessRecord.AntiSpoofScore} for subject {subjectPseudonym}",
             ReasonForChange = "Liveness verification for consent capture",
-            TenantId = "tenant_default",
+            TenantId = ClinicalScopeGuard.ResolvePrincipal(httpContext)?.TenantId ?? CallerScope.TenantId(httpContext) ?? string.Empty,
             Sha256Digest = livenessTokenHash
         };
 
@@ -409,8 +426,8 @@ public static class EconsentEndpoints
             });
         }
 
-        if (!CallerScope.CanAccessStudy(httpContext, targetStudy)
-            || (template is not null && !CallerScope.CanAccessStudy(httpContext, template.StudyId)))
+        if (!ClinicalScopeGuard.CanAccessStudy(httpContext, targetStudy)
+            || (template is not null && !ClinicalScopeGuard.CanAccessStudy(httpContext, template.StudyId)))
         {
             return OutsideStudy();
         }
