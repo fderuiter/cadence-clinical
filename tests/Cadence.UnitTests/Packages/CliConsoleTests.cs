@@ -47,6 +47,7 @@ public sealed class CliConsoleTests
         {
             Ansi = AnsiSupport.Yes,
             ColorSystem = ColorSystemSupport.EightBit,
+            Enrichment = new ProfileEnrichment { UseDefaultEnrichers = false },
             Out = new AnsiConsoleOutput(output),
         });
 
@@ -57,22 +58,32 @@ public sealed class CliConsoleTests
     public void TerminalWithoutAnsi_GetsThePlainConsole()
     {
         using var output = new StringWriter();
-        var detected = AnsiConsole.Create(new AnsiConsoleSettings { Ansi = AnsiSupport.No, Out = new AnsiConsoleOutput(output) });
+        var detected = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Ansi = AnsiSupport.No,
+            Enrichment = new ProfileEnrichment { UseDefaultEnrichers = false },
+            Out = new AnsiConsoleOutput(output),
+        });
 
         var console = CliConsole.Create(output, outputRedirected: false, detected);
 
         console.Should().NotBeSameAs(detected);
+        console.Profile.Capabilities.Ansi.Should().BeFalse();
         console.Profile.Width.Should().Be(CliConsole.PlainWidth);
     }
 
     /// <summary>
     /// The real path: the CLI as a process with standard output redirected and <c>TERM=linux</c>, whose terminfo
-    /// entry gives .NET no column count. Before the fix the failure line was dropped and only the banner printed.
+    /// entry gives .NET no column count, including under <c>GITHUB_ACTIONS=true</c> where Spectre's built-in GitHub
+    /// enricher would otherwise force ANSI escape codes back on. Before the fix the failure line was dropped and only
+    /// the banner printed.
     /// </summary>
     [Theory]
-    [InlineData("linux")]
-    [InlineData(null)]
-    public async Task Cli_WithRedirectedOutput_PrintsAFailingCheck(string? term)
+    [InlineData("linux", false)]
+    [InlineData(null, false)]
+    [InlineData("linux", true)]
+    [InlineData(null, true)]
+    public async Task Cli_WithRedirectedOutput_PrintsAFailingCheck(string? term, bool githubActions)
     {
         string cli = Path.Combine(AppContext.BaseDirectory, "cadence.dll");
         File.Exists(cli).Should().BeTrue($"the test project references the CLI, so {cli} is built next to the tests");
@@ -93,6 +104,17 @@ public sealed class CliConsoleTests
         if (term is not null)
         {
             psi.Environment["TERM"] = term;
+        }
+
+        if (githubActions)
+        {
+            psi.Environment["CI"] = "true";
+            psi.Environment["GITHUB_ACTIONS"] = "true";
+        }
+        else
+        {
+            psi.Environment.Remove("CI");
+            psi.Environment.Remove("GITHUB_ACTIONS");
         }
 
         using var process = Process.Start(psi)!;
