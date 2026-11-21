@@ -11,6 +11,8 @@ export const useTasksStore = defineStore("tasks", {
     tasksError: null,
     instrumentsLoading: false,
     instrumentsError: null,
+    loadingTaskId: null,
+    taskActionError: null,
     activeQuestionnaire: null,
   }),
 });

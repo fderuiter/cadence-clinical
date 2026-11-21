@@ -51,7 +51,81 @@
       </p>
     </div>
 
+    <!-- Loading Skeleton while walletLoading is true -->
+    <div
+      v-else-if="wallet.walletLoading"
+      id="wallet-loading-skeleton"
+      class="card wallet-skeleton-card"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      style="margin-bottom: 20px"
+    >
+      <div class="wallet-skeleton-line wallet-skeleton-title" />
+      <div class="wallet-skeleton-line wallet-skeleton-balance" />
+      <div class="wallet-skeleton-grid">
+        <div class="wallet-skeleton-tile" />
+        <div class="wallet-skeleton-tile" />
+        <div class="wallet-skeleton-tile" />
+        <div class="wallet-skeleton-tile" />
+      </div>
+      <span class="sr-only">Loading participant wallet balances...</span>
+    </div>
+
     <template v-else>
+      <!-- IRS $600 Form W-9 Hold / Warning Banners -->
+      <div
+        v-if="isW9HoldActive"
+        id="wallet-w9-hold-banner"
+        role="alert"
+        aria-live="assertive"
+        style="
+          margin-bottom: 16px;
+          padding: 14px 16px;
+          border-radius: 8px;
+          background: var(--semantic-color-error-bg);
+          border: 1px solid var(--semantic-color-error);
+          color: var(--semantic-color-error-text-dark);
+          font-size: 14px;
+        "
+      >
+        <strong style="display: block; margin-bottom: 4px">
+          ⚠️ IRS $600.00 Form W-9 Verification Hold Active
+        </strong>
+        <span>
+          Your year-to-date taxable study compensation ({{
+            formatCurrency(wallet.taxableYtd)
+          }}) has reached the $600.00 IRS Form 1099 reporting threshold while
+          your Form W-9 status is
+          <strong>{{ wallet.w9Status || "NOT_REQUIRED" }}</strong>. On-demand
+          payouts and automated expense disbursements are paused until site
+          staff verify your Form W-9.
+        </span>
+      </div>
+
+      <div
+        v-else-if="isApproachingW9Threshold"
+        id="wallet-w9-warning-banner"
+        role="status"
+        aria-live="polite"
+        style="
+          margin-bottom: 16px;
+          padding: 12px 16px;
+          border-radius: 8px;
+          background: var(--semantic-color-warning-bg-light);
+          border: 1px solid var(--semantic-color-warning-border-strong);
+          color: var(--semantic-color-warning-text-dark);
+          font-size: 14px;
+          font-weight: 600;
+        "
+      >
+        ℹ️ Year-to-date taxable compensation ({{
+          formatCurrency(wallet.taxableYtd)
+        }}) is approaching the $600.00 IRS Form W-9 threshold (current status:
+        {{ wallet.w9Status || "NOT_REQUIRED" }}). Submit Form W-9 with your
+        study coordinator to avoid payout holds.
+      </div>
+
       <!-- Wallet Summary & On-Demand Balance Disbursement Card -->
       <div
         class="card"
@@ -95,9 +169,12 @@
             type="button"
             class="btn"
             :disabled="
-              wallet.disbursingBalance || !(Number(wallet.walletBalance) > 0)
+              wallet.disbursingBalance ||
+              !(Number(wallet.walletBalance) > 0) ||
+              isW9HoldActive
             "
             :aria-busy="wallet.disbursingBalance ? 'true' : 'false'"
+            aria-haspopup="dialog"
             style="
               background: var(--semantic-color-surface);
               color: var(--semantic-color-primary-dark);
@@ -107,12 +184,14 @@
               border: none;
               cursor: pointer;
             "
-            @click="handleDisburseBalance"
+            @click="handleOpenDisburseModal"
           >
             {{
               wallet.disbursingBalance
                 ? "Processing Payout..."
-                : "Disburse Available Balance"
+                : isW9HoldActive
+                  ? "Payout Paused (W-9 Hold)"
+                  : "Disburse Available Balance"
             }}
           </button>
         </div>
@@ -120,7 +199,7 @@
         <div
           style="
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
             gap: 12px;
             margin-top: 16px;
             padding-top: 12px;
@@ -131,19 +210,25 @@
           <div>
             <div style="font-weight: 600">Lifetime Stipends</div>
             <strong id="wallet-lifetime-stipends" style="font-size: 16px">
-              ${{ Number(wallet.lifetimeStipends || 0).toFixed(2) }}
+              {{ formatCurrency(wallet.lifetimeStipends) }}
             </strong>
           </div>
           <div>
             <div style="font-weight: 600">Lifetime Reimbursements</div>
             <strong id="wallet-lifetime-reimbursements" style="font-size: 16px">
-              ${{ Number(wallet.lifetimeReimbursements || 0).toFixed(2) }}
+              {{ formatCurrency(wallet.lifetimeReimbursements) }}
             </strong>
           </div>
           <div>
             <div style="font-weight: 600">Total Paid Out</div>
             <strong id="wallet-lifetime-disbursements" style="font-size: 16px">
-              ${{ Number(wallet.lifetimeDisbursements || 0).toFixed(2) }}
+              {{ formatCurrency(wallet.lifetimeDisbursements) }}
+            </strong>
+          </div>
+          <div>
+            <div style="font-weight: 600">Taxable YTD (1099)</div>
+            <strong id="wallet-taxable-ytd" style="font-size: 16px">
+              {{ formatCurrency(wallet.taxableYtd) }}
             </strong>
           </div>
           <div>
@@ -165,7 +250,7 @@
           margin-bottom: 20px;
           padding: 14px 16px;
           border-radius: 8px;
-          background: var(--semantic-color-success-bg);
+          background: var(--semantic-color-success-bg-soft);
           border: 1px solid var(--semantic-color-success);
           color: var(--semantic-color-text);
         "
@@ -174,18 +259,19 @@
           style="
             margin: 0 0 4px 0;
             font-size: 16px;
-            color: var(--semantic-color-success);
+            color: var(--semantic-color-success-dark);
           "
         >
           ✅ Balance Payout Dispatched
         </h3>
         <p style="margin: 0; font-size: 14px">
           Transferred
-          <strong
-            >${{
-              Number(wallet.disbursementConfirmation.amount || 0).toFixed(2)
-            }}</strong
-          >
+          <strong>{{
+            formatCurrency(
+              wallet.disbursementConfirmation.amount,
+              wallet.disbursementConfirmation.currency || wallet.currency
+            )
+          }}</strong>
           to
           <strong>{{
             wallet.disbursementConfirmation.destinationMask ||
@@ -314,6 +400,16 @@
           >Tap to capture or upload; OCR extraction detects merchant, date,
           category, and amount from your receipt image</small
         >
+        <div style="margin-top: 10px; text-align: center">
+          <button
+            id="btn-manual-expense-entry"
+            type="button"
+            class="btn btn-secondary"
+            @click="handleOpenManualEntry"
+          >
+            Enter Receipt Details Manually
+          </button>
+        </div>
         <input
           id="receipt-file-input"
           type="file"
@@ -358,9 +454,9 @@
             margin-top: 16px;
             padding: 12px 14px;
             border-radius: 8px;
-            background: var(--semantic-color-warning-bg);
-            border: 1px solid var(--semantic-color-warning);
-            color: var(--semantic-color-warning);
+            background: var(--semantic-color-warning-bg-light);
+            border: 1px solid var(--semantic-color-warning-border-strong);
+            color: var(--semantic-color-warning-text-dark);
             font-size: 14px;
             font-weight: 600;
           "
@@ -368,9 +464,9 @@
           {{ wallet.expenseOcr.warning }}
         </div>
 
-        <!-- OCR Confirmation & Review Card -->
+        <!-- OCR Confirmation & Manual Fallback Review Card -->
         <div
-          v-if="wallet.expenseOcr?.data || wallet.expenseForm?.merchantName"
+          v-if="showExpenseReviewCard"
           id="ocr-review-card"
           style="
             margin-top: 20px;
@@ -391,7 +487,11 @@
             "
           >
             <h4 style="margin: 0; font-size: 16px">
-              OCR Extracted Claim Confirmation
+              {{
+                wallet.expenseManualEntry && !wallet.expenseOcr?.data
+                  ? "Manual Receipt Claim Entry"
+                  : "OCR Extracted Claim Confirmation"
+              }}
             </h4>
             <span id="ocr-confidence-badge" class="badge badge-gxp">
               Confidence:
@@ -425,17 +525,19 @@
           </div>
 
           <div class="form-group mb-12">
-            <label for="ocr-expense-date">Expense Date (YYYY-MM-DD)</label>
+            <label for="ocr-expense-date">Expense Date</label>
             <input
               id="ocr-expense-date"
               v-model="wallet.expenseForm.expenseDate"
-              type="text"
+              type="date"
               required
             />
           </div>
 
           <div class="form-group mb-12">
-            <label for="ocr-gross-amount">Gross Amount ($ USD)</label>
+            <label for="ocr-gross-amount">
+              Gross Amount ({{ normalizedCurrency }})
+            </label>
             <input
               id="ocr-gross-amount"
               v-model.number="wallet.expenseForm.grossAmount"
@@ -451,15 +553,19 @@
             class="form-group mb-12"
             style="
               background: var(--semantic-color-surface-muted);
-              padding: 10px;
+              padding: 8px 12px;
               border-radius: 6px;
             "
           >
             <label
+              for="ocr-meal-allowance-check"
+              class="meal-allowance-label"
               style="
                 display: flex;
                 align-items: center;
-                gap: 8px;
+                gap: var(--spacing-sm);
+                min-height: var(--touch-target-min);
+                margin-bottom: 0;
                 cursor: pointer;
               "
             >
@@ -467,8 +573,22 @@
                 id="ocr-meal-allowance-check"
                 v-model="wallet.expenseForm.isMealAllowance"
                 type="checkbox"
+                style="
+                  width: 24px;
+                  min-width: 24px;
+                  height: var(--touch-target-min);
+                  min-height: var(--touch-target-min);
+                  margin: 0;
+                  cursor: pointer;
+                  accent-color: var(--semantic-color-primary);
+                "
               />
-              <span>Meal Allowance / Per-Diem Cap ($75.00 limit)</span>
+              <span
+                >Meal Allowance / Per-Diem Cap ({{
+                  formatCurrency(wallet.expenseForm.perDiemCap || 75)
+                }}
+                limit)</span
+              >
             </label>
           </div>
 
@@ -515,7 +635,7 @@
             <h4
               style="
                 margin: 0 0 6px 0;
-                color: var(--semantic-color-success);
+                color: var(--semantic-color-success-dark);
                 font-size: 16px;
               "
             >
@@ -560,7 +680,7 @@
             <h4
               style="
                 margin: 0 0 6px 0;
-                color: var(--semantic-color-warning);
+                color: var(--semantic-color-warning-text-dark);
                 font-size: 16px;
               "
             >
@@ -575,6 +695,111 @@
             </p>
           </div>
         </div>
+      </div>
+
+      <!-- Submitted Reimbursement Claims History -->
+      <div id="wallet-expense-claims" class="card" style="margin-top: 20px">
+        <h3 style="margin-top: 0; font-size: 16px">
+          Expense Reimbursement Claims
+        </h3>
+        <p
+          v-if="
+            !Array.isArray(wallet.expenseClaims) ||
+            wallet.expenseClaims.length === 0
+          "
+          id="wallet-expense-claims-empty"
+          style="margin: 0; font-size: 14px; color: var(--text-muted)"
+        >
+          No travel or meal reimbursement claims submitted yet.
+        </p>
+        <ul v-else style="list-style: none; padding: 0; margin: 0">
+          <li
+            v-for="claim in wallet.expenseClaims"
+            :key="claim.id || claim.Id || claim.claim_id"
+            class="wallet-expense-claim-row"
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              padding: 12px 0;
+              border-bottom: 1px solid var(--semantic-color-border);
+              font-size: 14px;
+              gap: 12px;
+              flex-wrap: wrap;
+            "
+          >
+            <div>
+              <div style="font-weight: 700">
+                {{
+                  claim.merchantName ||
+                  claim.merchant_name ||
+                  claim.MerchantName ||
+                  "Expense Claim"
+                }}
+              </div>
+              <div style="font-size: 12px; color: var(--text-muted)">
+                {{ claim.category || claim.Category || "TRAVEL" }} ·
+                {{
+                  claim.expenseDate ||
+                  claim.expense_date ||
+                  claim.ExpenseDate ||
+                  "—"
+                }}
+              </div>
+              <div
+                v-if="
+                  claim.disbursementReference ||
+                  claim.disbursement_reference ||
+                  claim.DisbursementReference
+                "
+                style="font-size: 12px; font-family: monospace; margin-top: 2px"
+              >
+                Ref:
+                {{
+                  claim.disbursementReference ||
+                  claim.disbursement_reference ||
+                  claim.DisbursementReference
+                }}
+              </div>
+              <div
+                v-else-if="
+                  claim.reviewNotes || claim.review_notes || claim.ReviewNotes
+                "
+                style="
+                  font-size: 12px;
+                  color: var(--text-muted);
+                  margin-top: 2px;
+                "
+              >
+                {{
+                  claim.reviewNotes || claim.review_notes || claim.ReviewNotes
+                }}
+              </div>
+            </div>
+            <div style="text-align: right">
+              <strong style="display: block">
+                {{
+                  formatCurrency(
+                    claim.netAmount ??
+                      claim.net_amount ??
+                      claim.NetAmount ??
+                      claim.grossAmount ??
+                      claim.gross_amount ??
+                      claim.GrossAmount ??
+                      0
+                  )
+                }}
+              </strong>
+              <span
+                class="status-pill"
+                :class="claimStatusClass(claim)"
+                style="margin-top: 4px"
+              >
+                {{ claimStatusLabel(claim) }}
+              </span>
+            </div>
+          </li>
+        </ul>
       </div>
 
       <!-- Recent Ledger Activity -->
@@ -618,34 +843,224 @@
                     : 'var(--semantic-color-text)',
               }"
             >
-              {{ Number(tx.amount ?? tx.Amount ?? 0) >= 0 ? "+" : "" }}${{
-                Math.abs(Number(tx.amount ?? tx.Amount ?? 0)).toFixed(2)
-              }}
+              {{ formatSignedCurrency(tx.amount ?? tx.Amount ?? 0) }}
             </strong>
           </li>
         </ul>
+      </div>
+
+      <!-- Accessible Focus-Trapped Payout Confirmation Modal -->
+      <div
+        v-if="wallet.disburseModalOpen"
+        id="wallet-disburse-modal"
+        ref="disburseModalRef"
+        class="modal-overlay"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="disburse-modal-title"
+        aria-describedby="disburse-modal-desc"
+        tabindex="-1"
+      >
+        <div class="modal">
+          <form
+            id="wallet-disburse-form"
+            novalidate
+            @submit.prevent="handleConfirmDisburse"
+          >
+            <div id="disburse-modal-title" class="modal-header">
+              Confirm Wallet Balance Payout
+            </div>
+            <div class="modal-body">
+              <p id="disburse-modal-desc">
+                Choose your payout destination and verify the transfer amount
+                from your available balance of
+                <strong>{{ formattedAvailableBalance }}</strong>.
+              </p>
+
+              <div
+                v-if="disburseModalError"
+                id="disburse-modal-error"
+                role="alert"
+                aria-live="assertive"
+                style="
+                  padding: 10px 12px;
+                  border-radius: 6px;
+                  background: var(--semantic-color-error-bg);
+                  border: 1px solid var(--semantic-color-error);
+                  color: var(--semantic-color-error-text-dark);
+                  font-size: 13px;
+                  font-weight: 600;
+                  margin-bottom: 12px;
+                "
+              >
+                {{ disburseModalError }}
+              </div>
+
+              <fieldset class="clinical-radio-grid" style="margin-bottom: 16px">
+                <legend
+                  style="font-weight: 700; font-size: 13px; padding: 0 4px"
+                >
+                  Payout Destination
+                </legend>
+                <div style="display: flex; flex-direction: column; gap: 8px">
+                  <label
+                    for="disburse-method-ach"
+                    class="radio-option"
+                    style="
+                      min-height: var(--touch-target-min);
+                      padding: 6px 10px;
+                      border: 1px solid var(--semantic-color-border-control);
+                      border-radius: 6px;
+                    "
+                  >
+                    <input
+                      id="disburse-method-ach"
+                      v-model="wallet.disburseForm.disbursementType"
+                      type="radio"
+                      name="disbursementType"
+                      value="DIRECT_ACH"
+                    />
+                    <span>
+                      <strong>Direct ACH Bank Transfer</strong>
+                      ({{ wallet.achAccountMask || "ACH-***4321" }})
+                    </span>
+                  </label>
+
+                  <label
+                    for="disburse-method-card"
+                    class="radio-option"
+                    style="
+                      min-height: var(--touch-target-min);
+                      padding: 6px 10px;
+                      border: 1px solid var(--semantic-color-border-control);
+                      border-radius: 6px;
+                    "
+                  >
+                    <input
+                      id="disburse-method-card"
+                      v-model="wallet.disburseForm.disbursementType"
+                      type="radio"
+                      name="disbursementType"
+                      value="VIRTUAL_CARD"
+                    />
+                    <span>
+                      <strong>Reloadable Study Virtual Card</strong>
+                      ({{ wallet.virtualCardMask || "**** **** **** 4821" }})
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <div class="form-group" style="margin-bottom: 0">
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 6px;
+                    gap: 8px;
+                  "
+                >
+                  <label for="disburse-amount-input" style="margin-bottom: 0">
+                    Payout Amount ({{ normalizedCurrency }})
+                  </label>
+                  <button
+                    id="btn-disburse-full-amount"
+                    type="button"
+                    class="btn btn-secondary"
+                    style="
+                      min-height: var(--touch-target-min);
+                      padding: 6px 12px;
+                      font-size: 12px;
+                    "
+                    @click="fillFullDisburseAmount"
+                  >
+                    Full Balance ({{ formattedAvailableBalance }})
+                  </button>
+                </div>
+                <input
+                  id="disburse-amount-input"
+                  v-model="wallet.disburseForm.amount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  :max="Number(wallet.walletBalance || 0)"
+                  required
+                />
+              </div>
+            </div>
+            <div class="modal-footer modal-footer-wrap">
+              <button
+                id="btn-disburse-cancel"
+                type="button"
+                class="btn btn-secondary"
+                :disabled="wallet.disbursingBalance"
+                @click="handleCloseDisburseModal"
+              >
+                Cancel
+              </button>
+              <button
+                id="btn-disburse-confirm"
+                type="submit"
+                class="btn btn-primary"
+                :disabled="wallet.disbursingBalance || isW9HoldActive"
+              >
+                {{
+                  wallet.disbursingBalance
+                    ? "Processing Payout..."
+                    : "Confirm Payout"
+                }}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </template>
   </section>
 </template>
 
 <script setup>
-import { computed, onMounted, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
+import { useFocusTrap } from "ui";
 
 import {
+  closeDisburseModal,
   disburseAvailableBalance,
   extractReceiptOcr,
   loadParticipantWallet,
+  openDisburseModal,
+  openManualExpenseEntry,
   submitExpenseClaim,
 } from "../features/wallet.js";
+import { state } from "../stores/state.js";
 import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
 import { useWalletStore } from "../stores/wallet.js";
+import {
+  formatSignedWalletCurrency,
+  formatWalletCurrency,
+  normalizeCurrencyCode,
+} from "../utils/currency.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 
 const ui = useUiStore();
 const session = useSessionStore();
 const wallet = useWalletStore();
+const disburseModalRef = ref(null);
+
+useFocusTrap(disburseModalRef, {
+  isOpen: () => wallet.disburseModalOpen,
+  onEscape: handleCloseDisburseModal,
+  initialFocus: () =>
+    wallet.disburseForm?.disbursementType === "VIRTUAL_CARD"
+      ? "#disburse-method-card"
+      : "#disburse-method-ach",
+  restoreFocus: () => {
+    const target = state.initiatingButton;
+    state.initiatingButton = null;
+    return target || "#btn-disburse-balance";
+  },
+});
 
 const isDemo = computed(() => {
   void session.session?.isDemoMode;
@@ -662,15 +1077,75 @@ const isAuthenticated = computed(() =>
 
 const isWalletEnabled = computed(() => isDemo.value || isAuthenticated.value);
 
+const normalizedCurrency = computed(() =>
+  normalizeCurrencyCode(wallet.currency)
+);
+
+function formatCurrency(amount, currencyOverride = null) {
+  return formatWalletCurrency(amount, currencyOverride || wallet.currency);
+}
+
+function formatSignedCurrency(amount) {
+  return formatSignedWalletCurrency(amount, wallet.currency);
+}
+
 const formattedAvailableBalance = computed(() => {
   const amount =
     typeof wallet.walletBalance === "number" ? wallet.walletBalance : 0;
-  return `$${amount.toFixed(2)} ${wallet.currency || "USD"}`;
+  return formatWalletCurrency(amount, wallet.currency);
 });
+
+const isW9HoldActive = computed(() => {
+  const thresholdExceeded =
+    Boolean(wallet.is1099ThresholdExceeded) ||
+    Number(wallet.taxableYtd || 0) >= 600;
+  const verified =
+    String(wallet.w9Status || "")
+      .trim()
+      .toUpperCase() === "VERIFIED";
+  return thresholdExceeded && !verified;
+});
+
+const isApproachingW9Threshold = computed(() => {
+  const ytd = Number(wallet.taxableYtd || 0);
+  const verified =
+    String(wallet.w9Status || "")
+      .trim()
+      .toUpperCase() === "VERIFIED";
+  return !isW9HoldActive.value && ytd >= 450 && ytd < 600 && !verified;
+});
+
+const showExpenseReviewCard = computed(() =>
+  Boolean(
+    wallet.expenseManualEntry ||
+    wallet.expenseOcr?.data ||
+    wallet.expenseForm?.merchantName
+  )
+);
 
 const walletError = computed(
   () => wallet.expenseOcr?.error || wallet.expenseError || ""
 );
+
+const disburseModalError = computed(() => wallet.disburseForm?.error || "");
+
+function claimStatusLabel(claim) {
+  const raw = String(
+    claim.approvalDecision || claim.status || claim.Status || "PENDING_REVIEW"
+  ).toUpperCase();
+  if (raw === "AUTO_APPROVED" || raw === "APPROVED") return "Approved";
+  if (raw === "REJECTED") return "Rejected";
+  return "Pending Review";
+}
+
+function claimStatusClass(claim) {
+  const raw = String(
+    claim.approvalDecision || claim.status || claim.Status || "PENDING_REVIEW"
+  ).toUpperCase();
+  if (raw === "AUTO_APPROVED" || raw === "APPROVED") return "completed";
+  if (raw === "REJECTED") return "overdue";
+  return "pending";
+}
 
 function maybeHydrateWallet() {
   if (
@@ -702,15 +1177,26 @@ function triggerReceiptUpload() {
   }
 }
 
+function handleOpenManualEntry() {
+  openManualExpenseEntry();
+}
+
 async function handleReceiptFileSelected(e) {
   const file = e.target?.files?.[0];
+  if (e.target && "value" in e.target) {
+    try {
+      e.target.value = "";
+    } catch {
+      // Ignore synthetic event targets with read-only value descriptors
+    }
+  }
   if (file) {
     try {
       await extractReceiptOcr(file);
     } catch (err) {
       const msg =
         err?.message ||
-        "Unable to extract receipt details right now. Please try again later.";
+        "Unable to extract receipt details right now. Please enter details manually below.";
       wallet.expenseError = msg;
     }
   }
@@ -727,14 +1213,46 @@ async function handleConfirmReimburse() {
   }
 }
 
-async function handleDisburseBalance() {
+function handleOpenDisburseModal(event) {
+  openDisburseModal(event?.currentTarget || null);
+}
+
+function handleCloseDisburseModal() {
+  closeDisburseModal();
+}
+
+function fillFullDisburseAmount() {
+  if (typeof wallet.walletBalance === "number" && wallet.walletBalance > 0) {
+    wallet.disburseForm.amount = Number(wallet.walletBalance).toFixed(2);
+    wallet.disburseForm.error = null;
+  }
+}
+
+async function handleConfirmDisburse() {
+  wallet.disburseForm.error = null;
+  const rawAmount = wallet.disburseForm.amount;
+  const numericAmount = Number(rawAmount);
+  const available = Number(wallet.walletBalance || 0);
+
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    wallet.disburseForm.error =
+      "Please enter a payout amount greater than zero.";
+    return;
+  }
+  if (numericAmount > available + 0.0001) {
+    wallet.disburseForm.error = `Requested payout (${formatCurrency(numericAmount)}) exceeds your available balance (${formatCurrency(available)}).`;
+    return;
+  }
+
   try {
-    await disburseAvailableBalance("DIRECT_ACH");
+    await disburseAvailableBalance(wallet.disburseForm.disbursementType, {
+      amount: numericAmount,
+    });
   } catch (err) {
     const msg =
       err?.message ||
       "Unable to disburse available wallet balance right now. Please try again later.";
-    wallet.expenseError = msg;
+    wallet.disburseForm.error = msg;
   }
 }
 </script>

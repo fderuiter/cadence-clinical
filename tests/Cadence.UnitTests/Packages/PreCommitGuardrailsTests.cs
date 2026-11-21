@@ -108,6 +108,38 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     }
 
     [Fact]
+    public void PosixProcessLauncher_ExecutesShebangLessScriptsViaShFallback()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string shimPath = Path.Combine(_tempDir, "pnpm-shim-no-shebang");
+        File.WriteAllText(shimPath, "printf '%s:%s' \"$1\" \"$TEST_TOKEN\"\n");
+        File.SetUnixFileMode(shimPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        var psi = new ProcessStartInfo(shimPath)
+        {
+            WorkingDirectory = _tempDir,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        psi.ArgumentList.Add("--version");
+        psi.Environment["TEST_TOKEN"] = "10.28.2";
+
+        using var process = PosixProcessLauncher.Start(psi);
+        process.Should().NotBeNull();
+        string stdout = process!.StandardOutput.ReadToEnd();
+        string stderr = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+
+        process.ExitCode.Should().Be(0, stderr);
+        stdout.Should().Be("--version:10.28.2");
+    }
+
+    [Fact]
     public void SecretsBaselineCleaner_WritesCanonicalExcludeFilter_AndDeletesLegacyExcludeObject()
     {
         string baselinePath = Write(".secrets.baseline",

@@ -157,7 +157,7 @@ public static class FrontendQualityGateService
 
             try
             {
-                using var process = Process.Start(psi);
+                using var process = PosixProcessLauncher.Start(psi);
                 if (process is null)
                 {
                     continue;
@@ -235,7 +235,7 @@ public static class FrontendQualityGateService
 
         try
         {
-            using var process = Process.Start(psi);
+            using var process = PosixProcessLauncher.Start(psi);
             if (process is null)
             {
                 return 1;

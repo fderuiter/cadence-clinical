@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 
@@ -22,13 +23,15 @@ public static class ApiClientValidatorService
             return 1;
         }
 
+        string pnpmCommand = OperatingSystem.IsWindows() ? "pnpm.cmd" : "pnpm";
+
         // A spec change without regenerated web types would leave the typed clients compiling against the old API.
-        if (RunCommand(repoRoot, "pnpm", ["--filter", "web", "run", "generate:api", "--", "--check"], "the generated web API types") != 0)
+        if (RunCommand(repoRoot, pnpmCommand, ["--filter", "web", "run", "generate:api", "--", "--check"], "the generated web API types") != 0)
         {
             return 1;
         }
 
-        if (RunCommand(repoRoot, "pnpm", ["--filter", "web", "exec", "tsc", "--noEmit"], "the web API clients") != 0)
+        if (RunCommand(repoRoot, pnpmCommand, ["--filter", "web", "exec", "tsc", "--noEmit"], "the web API clients") != 0)
         {
             return 1;
         }
@@ -54,9 +57,9 @@ public static class ApiClientValidatorService
         Process? process;
         try
         {
-            process = Process.Start(psi);
+            process = PosixProcessLauncher.Start(psi);
         }
-        catch (System.ComponentModel.Win32Exception ex)
+        catch (Win32Exception ex)
         {
             Console.WriteLine($"[ERROR] Could not run {fileName} ({ex.Message}). Install Node.js and pnpm, then run 'pnpm install'.");
             return 1;
