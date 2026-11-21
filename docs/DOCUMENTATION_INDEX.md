@@ -585,6 +585,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2548: Enforce PostgreSQL Forced RLS and Shared Clinical Scope Guards Across Standalone Services](adr/2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md) | Current | - Status: Accepted |
 | [ADR-2549: Export Canonical Demo Manifest from Kernel Seed](adr/2026-11-20-export-canonical-demo-manifest-from-kernel-seed.md) | Current | - Status: Accepted |
 | [ADR-2551: Share Session Resilience, Draft-Safe Sign-Out, and Part 11 Signature Primitives](adr/2026-11-20-share-session-logout-and-signature-primitives.md) | Current | - Status: Accepted |
+| [ADR-2527: Enforce Dependency Alignment with MSBuild Properties and pnpm Catalogs](adr/2026-11-21-enforce-dependency-alignment-with-msbuild-and-pnpm-catalogs.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
