@@ -377,12 +377,56 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
     private static async Task<(int ExitCode, string Output)> RunBrowserCheckAsync(string observationRef, string detail, CancellationToken ct)
     {
         var web = Path.Combine(RepositoryRoot(), "apps", "web");
-        var start = new ProcessStartInfo("pnpm", "exec playwright test --config playwright.correction-check.config.ts")
+        var start = CreateBrowserCheckStartInfo(web, observationRef, detail, useShellForPnpm: false);
+
+        Process process;
+        try
         {
-            WorkingDirectory = web,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-        };
+            process = Process.Start(start)!;
+        }
+        catch (System.ComponentModel.Win32Exception ex) when (!OperatingSystem.IsWindows() && ex.NativeErrorCode == PosixEnoexec)
+        {
+            // npm's pnpm 10/11 entry script is intentionally shebang-less; fall back to /bin/sh like POSIX execvp.
+            process = Process.Start(CreateBrowserCheckStartInfo(web, observationRef, detail, useShellForPnpm: true))!;
+        }
+
+        using (process)
+        {
+            var stdout = process.StandardOutput.ReadToEndAsync(ct);
+            var stderr = process.StandardError.ReadToEndAsync(ct);
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeout.CancelAfter(TimeSpan.FromMinutes(5));
+            try
+            {
+                await process.WaitForExitAsync(timeout.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                process.Kill(entireProcessTree: true);
+                throw;
+            }
+
+            return (process.ExitCode, await stdout + await stderr);
+        }
+    }
+
+    private const int PosixEnoexec = 8;
+    private const string PreinstalledChromium = "/opt/pw-browsers/chromium";
+
+    private static ProcessStartInfo CreateBrowserCheckStartInfo(string web, string observationRef, string detail, bool useShellForPnpm)
+    {
+        var start = useShellForPnpm
+            ? new ProcessStartInfo("/bin/sh")
+            : new ProcessStartInfo("pnpm", "exec playwright test --config playwright.correction-check.config.ts");
+        start.WorkingDirectory = web;
+        start.RedirectStandardOutput = true;
+        start.RedirectStandardError = true;
+        if (useShellForPnpm)
+        {
+            start.ArgumentList.Add("-c");
+            start.ArgumentList.Add("exec pnpm exec playwright test --config playwright.correction-check.config.ts");
+        }
+
         start.Environment["OBSERVATION_REF"] = observationRef;
         start.Environment["CORRECTION_DETAIL"] = detail;
         if (File.Exists(PreinstalledChromium) && Environment.GetEnvironmentVariable("PLAYWRIGHT_CHROMIUM_PATH") is null)
@@ -390,25 +434,8 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
             start.Environment["PLAYWRIGHT_CHROMIUM_PATH"] = PreinstalledChromium;
         }
 
-        using var process = Process.Start(start)!;
-        var stdout = process.StandardOutput.ReadToEndAsync(ct);
-        var stderr = process.StandardError.ReadToEndAsync(ct);
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(TimeSpan.FromMinutes(5));
-        try
-        {
-            await process.WaitForExitAsync(timeout.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            process.Kill(entireProcessTree: true);
-            throw;
-        }
-
-        return (process.ExitCode, await stdout + await stderr);
+        return start;
     }
-
-    private const string PreinstalledChromium = "/opt/pw-browsers/chromium";
 
     private static string RepositoryRoot()
     {

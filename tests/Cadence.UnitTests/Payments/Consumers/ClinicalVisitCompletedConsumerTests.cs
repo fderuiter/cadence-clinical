@@ -233,9 +233,9 @@ public sealed class ClinicalVisitCompletedConsumerTests : IDisposable
         countFirst.Should().Be(1);
 
         // Second delivery (duplicate replay)
-        var duplicateMessageId = Guid.NewGuid();
-        await harness.Bus.Publish(message, ctx => ctx.MessageId = duplicateMessageId, ct);
-        (await harness.Consumed.Any<ClinicalVisitCompleted>(x => x.Context.MessageId == duplicateMessageId, ct)).Should().BeTrue();
+        Guid replayMessageId = Guid.NewGuid();
+        await harness.Bus.Publish(message, ctx => ctx.MessageId = replayMessageId, ct);
+        (await harness.Consumed.Any<ClinicalVisitCompleted>(x => x.Context.MessageId == replayMessageId, ct)).Should().BeTrue();
 
         // Criterion 2: Duplicate events with identical TriggerEventId values produce no duplicate payables
         var countSecond = await db.Payables.CountAsync(p => p.TriggerEventId == "MVR-VISIT-001", ct);
