@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createApp, nextTick } from "vue";
 import App from "../src/App.vue";
 import { state, refreshSubmissionsState } from "../src/index.js";
+import { pinia } from "../src/stores/pinia.js";
 import {
   initSessionKey,
   queueSubmission,
@@ -110,9 +111,27 @@ describe("Global Floating Drawer and Vue-Reactive State Sync", () => {
     expect(submissionItem.querySelector(".item-name").textContent).toBe(
       "Daily Health & Vital Diary"
     );
-    expect(submissionItem.querySelector(".data-code").textContent).toContain(
-      "vssbp"
-    );
+    expect(submissionItem.textContent).toContain("Saved offline");
+    expect(
+      submissionItem.querySelector(".answer-summary-list").textContent
+    ).toContain("Systolic Blood Pressure (mmHg):");
+    expect(
+      submissionItem.querySelector(".answer-summary-list").textContent
+    ).toContain("120");
+    expect(submissionItem.textContent).not.toContain("vssbp");
+    expect(submissionItem.textContent).not.toContain("Seq: #");
+
+    // Verify plain participant header badges and activity footer heading
+    const headerText = document.querySelector(".portal-header").textContent;
+    expect(headerText).toContain("Study Companion");
+    expect(headerText).toContain("Private & Encrypted");
+    expect(headerText).toContain("Offline Ready");
+    expect(headerText).not.toContain("21 CFR Part 11");
+    expect(headerText).not.toContain("GAMP 5");
+
+    const footerText = document.querySelector(".portal-footer").textContent;
+    expect(footerText).toContain("My Recent Activity");
+    expect(footerText).not.toContain("ALCOA");
   });
 
   it("should trigger manual sync process within the floating drawer", async () => {
@@ -128,5 +147,78 @@ describe("Global Floating Drawer and Vue-Reactive State Sync", () => {
     await nextTick();
 
     expect(syncTriggerBtn).toBeDefined();
+  });
+
+  it("formats W-9 statuses, expense categories, and wallet transaction types in plain participant language", async () => {
+    state.session.userId = "subject_wallet_copy";
+    state.session.token = "wallet_copy_token";
+    state.session.isOfflineMode = false;
+    state.session.isDemoMode = false;
+    state.currentView = "view-wallet";
+    state.walletLoading = false;
+    state.walletLoaded = true;
+    state.walletBalance = 120.0;
+    state.taxableYtd = 520.0;
+    state.is1099ThresholdExceeded = false;
+    state.w9Status = "NOT_REQUIRED";
+    state.expenseClaims = [
+      {
+        id: "claim_copy_01",
+        category: "TRANSIT",
+        merchantName: "Metro Regional Line",
+        expenseDate: "2026-11-18",
+        netAmount: 24.5,
+        status: "AUTO_APPROVED",
+      },
+      {
+        id: "claim_copy_02",
+        category: "LODGING",
+        merchantName: "Harbor Inn",
+        expenseDate: "2026-11-19",
+        netAmount: 140.0,
+        status: "PENDING_REVIEW",
+      },
+    ];
+    state.recentTransactions = [
+      {
+        id: "tx_copy_01",
+        description: "Visit 2 Stipend",
+        transactionType: "STIPEND_CREDIT",
+        amount: 75.0,
+      },
+    ];
+
+    activeApp = createApp(App);
+    activeApp.use(pinia);
+    activeApp.mount("#app");
+    await nextTick();
+
+    const warningBanner = document.getElementById("wallet-w9-warning-banner");
+    expect(warningBanner?.textContent).toContain("Not required");
+    expect(warningBanner?.textContent).not.toContain("NOT_REQUIRED");
+
+    state.taxableYtd = 625.0;
+    state.is1099ThresholdExceeded = true;
+    state.w9Status = "SUBMITTED";
+    await nextTick();
+
+    const holdBanner = document.getElementById("wallet-w9-hold-banner");
+    expect(holdBanner?.textContent).toContain("Submitted");
+    expect(holdBanner?.textContent).not.toContain("SUBMITTED");
+    expect(
+      document.getElementById("wallet-w9-status")?.textContent?.trim()
+    ).toBe("Submitted");
+
+    const claimsText =
+      document.getElementById("wallet-expense-claims")?.textContent || "";
+    expect(claimsText).toContain("Transit");
+    expect(claimsText).toContain("Lodging");
+    expect(claimsText).not.toContain("TRANSIT");
+    expect(claimsText).not.toContain("LODGING");
+
+    const txText =
+      document.getElementById("wallet-recent-transactions")?.textContent || "";
+    expect(txText).toContain("Study stipend");
+    expect(txText).not.toContain("STIPEND_CREDIT");
   });
 });

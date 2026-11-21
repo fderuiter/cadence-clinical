@@ -1,13 +1,15 @@
 // Offline sync status: retry bookkeeping, live countdowns, lifecycle events, and queue list.
-import { MOCK_INSTRUMENTS } from "../data/mock-data.js";
 import { state } from "../stores/state.js";
 import { getAllSubmissions } from "../sync-queue.js";
-import { isDemoModeActive } from "../utils/demoMode.js";
 import {
   COORDINATOR_QUARANTINE_STEPS,
-  formatAnswersSummary,
+  formatAnswerPairs,
+  getInstrumentDisplayName,
   getSiteSupportContact,
-  humanizeValidationError,
+  getSyncStatusBadgeClass,
+  getSyncStatusExplanation,
+  getSyncStatusLabel,
+  isQuarantinedSubmission,
 } from "./site-support.js";
 
 function stopSyncCountdownTimer() {
@@ -141,13 +143,38 @@ export function checkOnline() {
   return typeof navigator !== "undefined" && navigator.onLine;
 }
 
+function escapeQueueHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function renderAnswerPairsList(heading, pairs) {
+  if (!pairs || pairs.length === 0) return "";
+  const items = pairs
+    .map(
+      ({ label, value }) =>
+        `<li><strong>${escapeQueueHtml(label)}:</strong> ${escapeQueueHtml(value)}</li>`
+    )
+    .join("");
+  return `
+    <div class="sync-answers-block" style="margin-top: 6px;">
+      <div style="font-weight: 600; color: var(--semantic-color-text); margin-bottom: 2px;">${escapeQueueHtml(heading)}</div>
+      <ul class="answer-summary-list" style="margin: 0; padding-left: 18px;">${items}</ul>
+    </div>
+  `;
+}
+
 export async function renderSyncQueueList() {
   const listEl = document.getElementById("sync-queue-list");
   if (!listEl) return;
 
   const all = await getAllSubmissions();
   if (all.length === 0) {
-    listEl.innerHTML = `<div class="loading-state" style="padding: 8px 0; text-align: center; color: var(--text-muted);">No submission history in queue.</div>`;
+    listEl.innerHTML = `<div class="loading-state" style="padding: 8px 0; text-align: center; color: var(--text-muted);">No saved surveys waiting to send.</div>`;
     return;
   }
 
@@ -155,103 +182,66 @@ export async function renderSyncQueueList() {
 
   listEl.innerHTML = all
     .map((item) => {
-      const instName =
-        (state.instruments && state.instruments[item.diary_id]?.name) ||
-        (isDemoModeActive() && MOCK_INSTRUMENTS[item.diary_id]?.name) ||
-        item.diary_id;
+      const instName = getInstrumentDisplayName(item.diary_id);
       const submittedTime = new Date(item.device_timestamp).toLocaleString();
-
-      let badgeClass = "pending";
-      let statusLabel = item.status;
-      let statusDesc = "";
+      const badgeClass = getSyncStatusBadgeClass(item);
+      const statusLabel = getSyncStatusLabel(item);
+      const statusDesc = getSyncStatusExplanation(
+        item,
+        describeQueuedSync(state.syncRetryInfo, item)
+      );
       let recoveryGuidanceHtml = "";
 
-      if (item.status === "QUEUED") {
-        badgeClass = "pending";
-        statusLabel = "QUEUED";
-        statusDesc = describeQueuedSync(state.syncRetryInfo, item);
-      } else if (
-        item.status === "CREATED" ||
-        item.status === "UPDATED_CLIENT_WINS"
-      ) {
-        badgeClass = "completed";
-        statusLabel = "SYNCED";
-        statusDesc = "Successfully synchronized with clinical database.";
-      } else if (item.status === "MERGED") {
-        badgeClass = "completed";
-        statusLabel = "MERGED";
-        statusDesc =
-          "Conflict resolved: Local and server entries were combined.";
-      } else if (item.status === "IGNORED_SERVER_WINS") {
-        badgeClass = "overdue";
-        statusLabel = "CONFLICT (Ignored)";
-        statusDesc =
-          "Conflict resolved: Server data was preserved; local entry archived.";
-      } else if (
-        item.status === "QUARANTINED" ||
-        item.status === "LOCAL_QUARANTINED"
-      ) {
-        badgeClass = "overdue";
-        statusLabel = "QUARANTINED";
-        statusDesc = humanizeValidationError(item.error);
+      if (isQuarantinedSubmission(item)) {
         recoveryGuidanceHtml = `
           <div class="quarantine-guidance">
-            <p>${COORDINATOR_QUARANTINE_STEPS}</p>
+            <p>${escapeQueueHtml(COORDINATOR_QUARANTINE_STEPS)}</p>
             <div class="quarantine-contact-links">
-              <a href="${contact.phoneHref}" class="site-contact-inline-link">Call ${contact.phoneDisplay}</a>
-              <a href="${contact.emailHref}" class="site-contact-inline-link">Email Coordinator</a>
+              <a href="${escapeQueueHtml(contact.phoneHref)}" class="site-contact-inline-link">Call ${escapeQueueHtml(contact.phoneDisplay)}</a>
+              <a href="${escapeQueueHtml(contact.emailHref)}" class="site-contact-inline-link">Email Coordinator</a>
             </div>
           </div>
         `;
-      } else if (item.status === "DECRYPTION_ERROR") {
-        badgeClass = "overdue";
-        statusLabel = item.unrecoverable
-          ? "LOCKED (RESET)"
-          : "DECRYPTION_ERROR";
-        statusDesc = item.unrecoverable
-          ? humanizeValidationError(item.error)
-          : "Locked — enter your security PIN to decrypt queued answers.";
-        if (item.unrecoverable) {
-          recoveryGuidanceHtml = `
-            <div class="quarantine-guidance">
-              <div class="quarantine-contact-links">
-                <a href="${contact.phoneHref}" class="site-contact-inline-link">Call ${contact.phoneDisplay}</a>
-                <a href="${contact.emailHref}" class="site-contact-inline-link">Email Coordinator</a>
-              </div>
+      } else if (item.status === "DECRYPTION_ERROR" && item.unrecoverable) {
+        recoveryGuidanceHtml = `
+          <div class="quarantine-guidance">
+            <div class="quarantine-contact-links">
+              <a href="${escapeQueueHtml(contact.phoneHref)}" class="site-contact-inline-link">Call ${escapeQueueHtml(contact.phoneDisplay)}</a>
+              <a href="${escapeQueueHtml(contact.emailHref)}" class="site-contact-inline-link">Email Coordinator</a>
             </div>
-          `;
-        }
+          </div>
+        `;
       }
 
       const hideRawAnswers =
-        item.status === "DECRYPTION_ERROR" ||
-        item.status === "QUARANTINED" ||
-        item.status === "LOCAL_QUARANTINED";
-      const safeAnswers = hideRawAnswers
-        ? ""
-        : formatAnswersSummary(item.answers);
-      let answersDetails = safeAnswers
-        ? `<strong>Recorded Values:</strong> <code class="data-code">${safeAnswers}</code>`
-        : "";
+        item.status === "DECRYPTION_ERROR" || isQuarantinedSubmission(item);
+      const recordedPairs = hideRawAnswers
+        ? []
+        : formatAnswerPairs(item.answers, item.diary_id);
+      let answersDetails = renderAnswerPairsList("Your answers", recordedPairs);
 
       if (item.resolved_answers && item.status === "MERGED") {
-        const mergedSummary = formatAnswersSummary(item.resolved_answers);
-        if (mergedSummary) {
-          answersDetails += `<br/><strong>Merged Result:</strong> <code class="data-code">${mergedSummary}</code>`;
-        }
+        const mergedPairs = formatAnswerPairs(
+          item.resolved_answers,
+          item.diary_id
+        );
+        answersDetails += renderAnswerPairsList(
+          "Combined answers",
+          mergedPairs
+        );
       }
 
       return `
         <div class="task-item" style="flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; border: 1px solid var(--semantic-color-border); border-radius: 8px; background: var(--semantic-color-surface);">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; flex-direction: column;">
-              <span style="font-weight: 700; font-size: 14px;">${instName}</span>
-              <span style="font-size: 11px; color: var(--text-muted);">Seq: #${item.sequence_number} | Device Time: ${submittedTime}</span>
+              <span style="font-weight: 700; font-size: 14px;">${escapeQueueHtml(instName)}</span>
+              <span style="font-size: 11px; color: var(--text-muted);">Saved ${escapeQueueHtml(submittedTime)}</span>
             </div>
-            <span class="status-pill ${badgeClass}">${statusLabel}</span>
+            <span class="status-pill ${badgeClass}">${escapeQueueHtml(statusLabel)}</span>
           </div>
           <div style="font-size: 12px; color: var(--text-muted); border-top: 1px dashed var(--semantic-color-border); padding-top: 6px; margin-top: 4px;">
-            <p style="margin: 0 0 4px 0;">${statusDesc}</p>
+            <p style="margin: 0 0 4px 0;">${escapeQueueHtml(statusDesc)}</p>
             ${recoveryGuidanceHtml}
             ${answersDetails}
           </div>

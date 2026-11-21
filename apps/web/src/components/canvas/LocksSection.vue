@@ -47,17 +47,18 @@
     <p v-if="studyLoading" class="status-line" role="status">
       Looking up {{ studyCode }}…
     </p>
-    <p
+    <div
       v-else-if="studyError"
       id="study-locks-error"
       class="status-line error-banner"
       role="alert"
     >
-      {{ studyCode }}'s locks couldn't be loaded: {{ studyError }}
-    </p>
+      <p class="status-line">{{ studyCode }}'s locks couldn't be loaded.</p>
+      <SupportDetails :detail="studyError" />
+    </div>
     <p v-else-if="!studyRef" id="study-locks-no-study" class="status-line">
-      The kernel has no study {{ studyCode }} that you may see, so its locks
-      cannot be listed here.
+      Study {{ studyCode }} wasn't found or isn't visible to your account, so
+      its locks cannot be listed here.
     </p>
 
     <template v-else>
@@ -167,14 +168,15 @@
       <p v-if="locksLoading" class="status-line" role="status">
         Loading locks for {{ studyCode }}…
       </p>
-      <p
+      <div
         v-else-if="locksError"
         id="study-locks-load-error"
         class="status-line error-banner"
         role="alert"
       >
-        {{ locksError }}
-      </p>
+        <p class="status-line">{{ studyCode }}'s locks couldn't be loaded.</p>
+        <SupportDetails :detail="locksError" />
+      </div>
       <p
         v-else-if="locks.length === 0"
         id="study-locks-empty"
@@ -219,7 +221,13 @@
                 </span>
               </template>
               <template v-else>
-                <code>{{ entry.scope_ref }}</code>
+                <NodeRefChip
+                  v-if="entry.scope_ref"
+                  :node-ref="entry.scope_ref"
+                  :fallback-title="entry.subject_code"
+                  include-kind
+                />
+                <span v-else>—</span>
               </template>
             </td>
             <td>
@@ -228,7 +236,11 @@
             <td>
               <template v-if="entry.masked"> masked </template>
               <template v-else>
-                {{ entry.locked_by ?? "—" }}
+                <NodeRefChip
+                  v-if="entry.locked_by && parseNodeRef(entry.locked_by)"
+                  :node-ref="entry.locked_by"
+                />
+                <template v-else>{{ entry.locked_by ?? "—" }}</template>
                 <span v-if="entry.attestation_meaning" class="meaning-note">
                   ({{ entry.attestation_meaning }})
                 </span>
@@ -307,8 +319,12 @@ import {
   type KernelLockMeaning,
 } from "../../api/kernelApi";
 import { findKernelStudyRef } from "../../canvas/kernelStudy";
+import { parseNodeRef } from "../../canvas/nodeRef";
+import { getNodeDisplay, seedNodeSummary } from "../../canvas/nodeResolver";
 import { useAuthStore } from "../../stores/auth.js";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
+import NodeRefChip from "./NodeRefChip.vue";
+import SupportDetails from "./SupportDetails.vue";
 
 const LOCK_SIGNING_REASONS = ["Approved", "Responsibility"];
 
@@ -453,6 +469,7 @@ watch(
       if (seq !== loadSeq) return;
       studyRef.value = resolved;
       if (!resolved) return;
+      seedNodeSummary(resolved, { kind: "study", code });
 
       applyScopeKind.value = "study";
       applyScopeRef.value = resolved;
@@ -475,7 +492,18 @@ watch(
           kernelApi
             .getChildren(resolved)
             .then((children) => {
-              if (seq === loadSeq) studyChildren.value = children ?? [];
+              if (seq !== loadSeq) return;
+              studyChildren.value = children ?? [];
+              for (const child of studyChildren.value) {
+                if (child.node.ref && !child.node.mask) {
+                  seedNodeSummary(child.node.ref, {
+                    kind: child.node.kind,
+                    code: child.node.code,
+                    title: child.node.title,
+                    status: child.node.status,
+                  });
+                }
+              }
             })
             .catch(() => undefined)
         );
@@ -534,9 +562,10 @@ async function executeModalSign(sigToken: string, signingReason: string) {
         reason: applyReason.value.trim(),
         idempotencyKey: op.idempotencyKey,
       });
+      const scopeDisplay = getNodeDisplay(applyScopeRef.value.trim());
       outcome.value = {
         kind: "ok",
-        message: `${applyKind.value} applied to ${applyScopeRef.value.trim()}.`,
+        message: `${applyKind.value} applied to ${scopeDisplay.label}.`,
       };
       applyReason.value = "";
     } else {
@@ -552,7 +581,7 @@ async function executeModalSign(sigToken: string, signingReason: string) {
       });
       outcome.value = {
         kind: "ok",
-        message: `${op.lockKind} released (${op.lockRef}).`,
+        message: `${op.lockKind} released.`,
       };
       releaseReason.value = "";
     }

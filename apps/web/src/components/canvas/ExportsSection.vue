@@ -8,25 +8,26 @@
     <header class="study-exports-header">
       <h2 id="study-exports-title">Exports</h2>
       <p class="study-exports-subtitle">
-        Stream reproducible clinical snapshots directly from the kernel's
-        bitemporal graph in CSV, CDISC ODM v1.3.2 XML, or CDISC Dataset-JSON.
+        Stream reproducible clinical snapshots in CSV, CDISC ODM v1.3.2 XML, or
+        CDISC Dataset-JSON.
       </p>
     </header>
 
     <p v-if="studyLoading" class="status-line" role="status">
       Looking up {{ studyCode }}…
     </p>
-    <p
+    <div
       v-else-if="studyError"
       id="study-exports-error"
       class="status-line error-banner"
       role="alert"
     >
-      {{ studyCode }}'s exports couldn't be prepared: {{ studyError }}
-    </p>
+      <p class="status-line">{{ studyCode }}'s exports couldn't be prepared.</p>
+      <SupportDetails :detail="studyError" />
+    </div>
     <p v-else-if="!studyRef" id="study-exports-no-study" class="status-line">
-      The kernel has no study {{ studyCode }} that you may see, so snapshot
-      exports cannot be streamed here.
+      Study {{ studyCode }} wasn't found or isn't visible to your account, so
+      snapshot exports cannot be streamed here.
     </p>
 
     <form
@@ -95,9 +96,9 @@
       </div>
 
       <p class="privacy-note">
-        Direct participant identifiers stay in IdentityVault; unauthorized sites
-        and blinded treatment arms emit explicit <code>masked</code>
-        placeholders in-place.
+        Direct participant identifiers stay protected; unauthorized sites and
+        blinded treatment arms appear as explicit <code>masked</code>
+        placeholders in place.
       </p>
 
       <div class="exports-actions">
@@ -137,6 +138,7 @@ import {
   type StudyExportLockFilter,
 } from "../../api/kernelApi";
 import { findKernelStudyRef } from "../../canvas/kernelStudy";
+import SupportDetails from "./SupportDetails.vue";
 
 const props = defineProps<{
   studyCode: string;

@@ -180,7 +180,9 @@
                 </router-link>
               </li>
             </ul>
-            <p v-else class="nav-empty">Nothing here has a service yet.</p>
+            <p v-else class="nav-empty">
+              No sections are available in this stage yet.
+            </p>
           </div>
         </nav>
 
@@ -403,13 +405,12 @@
           :study-code="studyCode"
           :participant="inspectedParticipant"
           :node-ref="inspectedNodeText"
-          :missing="
-            Boolean(selectedNode) &&
-            !selectedParticipant &&
-            !isSelectedParticipantLoading
-          "
+          :missing="isSelectedParticipantMissing"
           :protocol-version="inspectedVersion"
           :protocol-version-error="inspectedVersionError"
+          :generic-node-ref="selectedGenericNodeRef"
+          :generic-node="inspectedGenericNode"
+          :generic-node-loading="inspectedGenericLoading"
           :record-location="
             inspectedParticipant &&
             (inspectedParticipant !== recordParticipant ||
@@ -805,11 +806,17 @@ import type { SubjectSummary } from "../api/executionApi";
 import {
   describeKernelError,
   kernelApi,
+  type KernelNode,
   type KernelObservation,
   type KernelOrganizationSummary,
   type KernelProtocolVersion,
   type KernelStudySummary,
 } from "../api/kernelApi";
+import {
+  canResolveNodesRemotely,
+  resolveNode,
+  seedNodeSummary,
+} from "../canvas/nodeResolver";
 import {
   STAGES,
   findSection,
@@ -1201,14 +1208,17 @@ const queryChangedFilter = computed(() => {
   const changed = single(route.query.changed).toLowerCase();
   return changed === "true" || changed === "false" ? changed : "";
 });
-const selectedNode = computed<NodeRef | null>(() => {
-  const node = parseNodeRef(route.query.node);
-  return node?.kind === "participant" ? node : null;
-});
-const selectedVersionNode = computed<NodeRef | null>(() => {
-  const node = parseNodeRef(route.query.node);
-  return node?.kind === "protocol_version" ? node : null;
-});
+const anySelectedNode = computed<NodeRef | null>(() =>
+  parseNodeRef(route.query.node)
+);
+const selectedNode = computed<NodeRef | null>(() =>
+  anySelectedNode.value?.kind === "participant" ? anySelectedNode.value : null
+);
+const selectedVersionNode = computed<NodeRef | null>(() =>
+  anySelectedNode.value?.kind === "protocol_version"
+    ? anySelectedNode.value
+    : null
+);
 const selectedVersionText = computed(() =>
   selectedVersionNode.value ? formatNodeRef(selectedVersionNode.value) : ""
 );
@@ -1225,7 +1235,15 @@ watch(
     if (!text) return;
     try {
       const version = await kernelApi.getProtocolVersion(text);
-      if (request === versionRequest) inspectedVersion.value = version;
+      if (request === versionRequest) {
+        inspectedVersion.value = version;
+        seedNodeSummary(version.ref, {
+          kind: "protocol_version",
+          code: version.version,
+          title: `Protocol ${version.version}`,
+          status: version.status,
+        });
+      }
     } catch (e) {
       if (request === versionRequest) {
         inspectedVersionError.value =
@@ -1291,6 +1309,55 @@ const isSelectedParticipantLoading = computed(() =>
   isParticipantPending(selectedNode.value?.id)
 );
 
+const selectedGenericNodeRef = computed(() => {
+  const node = anySelectedNode.value;
+  if (!node || node.kind === "protocol_version") return "";
+  if (node.kind === "participant") {
+    if (
+      selectedParticipant.value ||
+      isSelectedParticipantLoading.value ||
+      !canResolveNodesRemotely()
+    ) {
+      return "";
+    }
+  }
+  return formatNodeRef(node);
+});
+const inspectedGenericNode = ref<KernelNode | null>(null);
+const inspectedGenericLoading = ref(false);
+let genericNodeRequest = 0;
+watch(
+  () => (anySelectedNode.value ? formatNodeRef(anySelectedNode.value) : ""),
+  (next, prev) => {
+    if (next && next !== prev) {
+      inspectorRef.value?.expand();
+    }
+  }
+);
+watch(
+  selectedGenericNodeRef,
+  async (text) => {
+    const request = ++genericNodeRequest;
+    inspectedGenericNode.value = null;
+    inspectedGenericLoading.value = false;
+    if (!text) return;
+    inspectedGenericLoading.value = true;
+    const resolved = await resolveNode(text);
+    if (request !== genericNodeRequest) return;
+    inspectedGenericLoading.value = false;
+    inspectedGenericNode.value = resolved;
+  },
+  { immediate: true }
+);
+const isSelectedParticipantMissing = computed(
+  () =>
+    Boolean(selectedNode.value) &&
+    !selectedParticipant.value &&
+    !isSelectedParticipantLoading.value &&
+    !inspectedGenericLoading.value &&
+    !inspectedGenericNode.value
+);
+
 const loadedFormParticipant = computed<SubjectSummary | null>(() => {
   const pid = loadedForm.value?.participant_id;
   return pid ? (canvas.knownParticipants[pid] ?? null) : null;
@@ -1323,14 +1390,16 @@ const activeEnrollmentId = computed(() => {
   return null;
 });
 
-const inspectedParticipant = computed(
-  () =>
-    selectedParticipant.value ??
+const inspectedParticipant = computed(() => {
+  if (anySelectedNode.value) return selectedParticipant.value;
+  return (
     recordParticipant.value ??
     loadedFormParticipant.value ??
     lineageParticipant.value
-);
+  );
+});
 const inspectedNodeText = computed(() => {
+  if (anySelectedNode.value) return formatNodeRef(anySelectedNode.value);
   const participant = inspectedParticipant.value;
   const node = participant ? tryNodeRef("participant", participant.id) : null;
   return node ? formatNodeRef(node) : "";
@@ -1655,6 +1724,14 @@ async function resolveEnrollmentLineage(
 
 function onFormLoaded(form: EcrfForm) {
   loadedForm.value = form;
+  const loadedRef = collectionInstanceRef(form.form_id);
+  if (loadedRef) {
+    seedNodeSummary(loadedRef, {
+      kind: "collection_instance",
+      title: formatFormLabel(form),
+      status: form.complete ? "Complete" : "In progress",
+    });
+  }
   if (isNewForm.value && form.form_id) {
     const formRef = collectionInstanceRef(form.form_id);
     if (formRef) {

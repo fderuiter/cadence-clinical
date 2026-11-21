@@ -5,10 +5,10 @@
     class="card error-state sync-suspended-card"
     role="alert"
   >
-    <p class="sync-suspended-title">⚠️ Outdated Form Structure Detected</p>
+    <p class="sync-suspended-title">⚠️ Survey Updated by Your Study Team</p>
     <p class="sync-suspended-desc">
-      A study survey definition was updated on the clinical server. Automatic
-      background sync is paused until you refresh active survey structures.
+      One of your study surveys has a newer version available. Refresh your
+      surveys so your saved answers can finish sending.
     </p>
     <button
       id="btn-alert-sync-now"
@@ -16,7 +16,7 @@
       class="btn btn-primary"
       @click="triggerManualSync"
     >
-      Manual Sync / Refresh
+      Refresh Surveys
     </button>
   </div>
 </template>

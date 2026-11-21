@@ -368,10 +368,10 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     document.getElementById("sign-password").value = "p123";
     await portal.verifyAndSubmitSignature();
 
-    // Queue has 1 item with QUEUED badge and Seq: #1
+    // Queue has 1 item with plain Saved offline badge (no Seq: #1)
     const syncList = document.getElementById("sync-queue-list");
-    expect(syncList.innerHTML).toContain("QUEUED");
-    expect(syncList.innerHTML).toContain("Seq: #1");
+    expect(syncList.innerHTML).toContain("Saved offline");
+    expect(syncList.innerHTML).not.toContain("Seq: #");
 
     // Mock successful sync payload
     vi.clearAllMocks();
@@ -408,8 +408,8 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     expect(body.submissions).toHaveLength(1);
     expect(body.submissions[0].offline_sync_markers.sequence_number).toBe(1);
 
-    // Status shifts to SYNCED in the queue list
-    expect(syncList.innerHTML).toContain("SYNCED");
+    // Status shifts to Sent in the queue list
+    expect(syncList.innerHTML).toContain("Sent");
   });
 
   it("safeguards queued data on sync network failures", async () => {
@@ -443,7 +443,7 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
 
     // Submissions should remain queued (retained, not dropped)
     const syncList = document.getElementById("sync-queue-list");
-    expect(syncList.innerHTML).toContain("QUEUED");
+    expect(syncList.innerHTML).toContain("Saved offline");
   });
 
   it("verifies and renders sync conflict resolutions (MERGED, IGNORED_SERVER_WINS) cleanly in the UI", async () => {
@@ -490,11 +490,12 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     portal.state.session.isOfflineMode = false;
     await portal.syncOfflineQueue();
 
-    // Renders as MERGED with detail message
+    // Renders as Combined with plain detail message and question-labeled answers
     const syncList = document.getElementById("sync-queue-list");
-    expect(syncList.innerHTML).toContain("MERGED");
+    expect(syncList.innerHTML).toContain("Combined");
+    expect(syncList.innerHTML).toContain("Systolic Blood Pressure (mmHg):");
     expect(syncList.innerHTML).toContain(
-      "Conflict resolved: Local and server entries were combined."
+      "Combined your offline answers with your study record."
     );
   });
 
