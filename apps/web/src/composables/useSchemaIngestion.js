@@ -1,6 +1,7 @@
 import { ref, computed } from "vue";
 import { describeKernelError, kernelApi } from "../api/kernelApi";
 import { useToastStore } from "../stores/toasts.js";
+import { demoRandomToken, isDemoBuild } from "../utils/demoMode.js";
 
 const MAX_SYNC_UPLOAD_BYTES = 10 * 1024 * 1024;
 
@@ -34,10 +35,13 @@ export function useSchemaIngestion(store) {
   });
 
   function makeIdempotencyKey() {
+    if (isDemoBuild()) {
+      return `schema-import-${demoRandomToken(12, 36, "schema-import.idempotency")}`;
+    }
     if (typeof globalThis.crypto?.randomUUID === "function") {
       return globalThis.crypto.randomUUID();
     }
-    return `schema-import-${Math.random().toString(36).slice(2)}`;
+    return `schema-import-${demoRandomToken(12, 36, "schema-import.idempotency")}`;
   }
 
   function resolveTargetStudyRef() {

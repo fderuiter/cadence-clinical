@@ -81,6 +81,7 @@
 </template>
 
 <script setup>
+import { DEFAULT_DEMO_PARTICIPANT } from "demo-fixtures";
 import { SignOutConfirmModal, useSignOutGuard } from "ui";
 import { computed } from "vue";
 
@@ -140,7 +141,7 @@ const isSignedInOrDemo = computed(
 
 const displaySubjectId = computed(() => {
   const raw = isDemo.value
-    ? sessionStore.session.userId || "subject_001"
+    ? sessionStore.session.userId || DEFAULT_DEMO_PARTICIPANT?.subjectCode
     : sessionStore.session.userId;
   return maskParticipantIdentifier(raw) || "Not signed in";
 });

@@ -6,6 +6,7 @@ using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Contracts;
 using Cadence.Kernel.Time;
 using Cadence.Testing.Time;
+using Cadence.UnitTests.Fixtures;
 
 using FluentAssertions;
 
@@ -21,15 +22,17 @@ namespace Cadence.UnitTests.Etmf.Consumers;
 
 public class EtmfConsumersTests
 {
-    private static ServiceProvider CreateEtmfServiceProvider(EtmfDbContext dbContext, IClock? clock = null)
+    private static ServiceProvider CreateEtmfServiceProvider(DbContextOptions<EtmfDbContext> options, IClock? clock = null)
     {
         var services = new ServiceCollection();
-        services.AddSingleton(dbContext);
+        services.AddScoped(_ => new EtmfDbContext(options));
         services.AddSingleton<IClock>(clock ?? new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero)));
         services.AddMassTransitTestHarness(x =>
         {
-            x.AddConsumer<EtmfDocumentFilingRequestedConsumer>();
-            x.AddConsumer<EConsentCompletedConsumer>();
+            x.AddConsumer<EtmfDocumentFilingRequestedConsumer>()
+                .Endpoint(e => e.ConcurrentMessageLimit = 1);
+            x.AddConsumer<EConsentCompletedConsumer>()
+                .Endpoint(e => e.ConcurrentMessageLimit = 1);
         });
         return services.BuildServiceProvider();
     }
@@ -44,32 +47,36 @@ public class EtmfConsumersTests
             .Options;
         await using var dbContext = new EtmfDbContext(options);
 
-        await using var provider = CreateEtmfServiceProvider(dbContext, clock);
+        await using var provider = CreateEtmfServiceProvider(options, clock);
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();
+        try
+        {
+            var message = new EtmfDocumentFilingRequested(
+                DocumentId: "DOC-2001",
+                StudyId: "STUDY-01",
+                SiteId: "SITE-01",
+                ZoneCode: "1",
+                SectionCode: "01.01",
+                ArtifactCode: "PROTOCOL",
+                DocumentTitle: "Protocol_v1.pdf",
+                StoragePath: "s3://etmf/DOC-2001.pdf",
+                RequestedBy: "cra-user-1",
+                RequestedAt: clock.UtcNow);
 
-        var message = new EtmfDocumentFilingRequested(
-            DocumentId: "DOC-2001",
-            StudyId: "STUDY-01",
-            SiteId: "SITE-01",
-            ZoneCode: "1",
-            SectionCode: "01.01",
-            ArtifactCode: "PROTOCOL",
-            DocumentTitle: "Protocol_v1.pdf",
-            StoragePath: "s3://etmf/DOC-2001.pdf",
-            RequestedBy: "cra-user-1",
-            RequestedAt: clock.UtcNow);
+            await harness.PublishAndWaitForConsumeAsync(message, ct);
 
-        await harness.Bus.Publish(message, ct);
-
-        (await harness.Consumed.Any<EtmfDocumentFilingRequested>(ct)).Should().BeTrue();
-
-        var doc = await dbContext.TmfDocuments.FirstOrDefaultAsync(d => d.Id == "DOC-2001" || d.IdempotencyKey == "DOC-2001", ct);
-        doc.Should().NotBeNull();
-        doc!.StudyId.Should().Be("STUDY-01");
-        doc.SiteId.Should().Be("SITE-01");
-        doc.Filename.Should().Be("Protocol_v1.pdf");
-        doc.Status.Should().Be("FILED");
+            var doc = await dbContext.TmfDocuments.FirstOrDefaultAsync(d => d.Id == "DOC-2001" || d.IdempotencyKey == "DOC-2001", ct);
+            doc.Should().NotBeNull();
+            doc!.StudyId.Should().Be("STUDY-01");
+            doc.SiteId.Should().Be("SITE-01");
+            doc.Filename.Should().Be("Protocol_v1.pdf");
+            doc.Status.Should().Be("FILED");
+        }
+        finally
+        {
+            await harness.Stop(ct);
+        }
     }
 
     [Fact]
@@ -82,32 +89,35 @@ public class EtmfConsumersTests
             .Options;
         await using var dbContext = new EtmfDbContext(options);
 
-        await using var provider = CreateEtmfServiceProvider(dbContext, clock);
+        await using var provider = CreateEtmfServiceProvider(options, clock);
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();
+        try
+        {
+            var message = new EtmfDocumentFilingRequested(
+                DocumentId: "DOC-2002",
+                StudyId: "STUDY-01",
+                SiteId: "SITE-01",
+                ZoneCode: "1",
+                SectionCode: "01.01",
+                ArtifactCode: "PROTOCOL",
+                DocumentTitle: "Protocol_v1.pdf",
+                StoragePath: "s3://etmf/DOC-2002.pdf",
+                RequestedBy: "cra-user-1",
+                RequestedAt: clock.UtcNow);
 
-        var message = new EtmfDocumentFilingRequested(
-            DocumentId: "DOC-2002",
-            StudyId: "STUDY-01",
-            SiteId: "SITE-01",
-            ZoneCode: "1",
-            SectionCode: "01.01",
-            ArtifactCode: "PROTOCOL",
-            DocumentTitle: "Protocol_v1.pdf",
-            StoragePath: "s3://etmf/DOC-2002.pdf",
-            RequestedBy: "cra-user-1",
-            RequestedAt: clock.UtcNow);
+            await harness.PublishAndWaitForConsumeAsync(message, ct);
 
-        await harness.Bus.Publish(message, ct);
-        (await harness.Consumed.Any<EtmfDocumentFilingRequested>(ct)).Should().BeTrue();
+            // Publish duplicate message and wait deterministically for consumer completion
+            await harness.PublishAndWaitForConsumeAsync(message, ct);
 
-        // Publish duplicate message
-        await harness.Bus.Publish(message, ct);
-        (await harness.Consumed.Any<EtmfDocumentFilingRequested>(ct)).Should().BeTrue();
-        await Task.Delay(100, ct);
-
-        var count = await dbContext.TmfDocuments.CountAsync(d => d.Id == "DOC-2002" || d.IdempotencyKey == "DOC-2002", ct);
-        count.Should().Be(1);
+            var count = await dbContext.TmfDocuments.CountAsync(d => d.Id == "DOC-2002" || d.IdempotencyKey == "DOC-2002", ct);
+            count.Should().Be(1);
+        }
+        finally
+        {
+            await harness.Stop(ct);
+        }
     }
 
     [Fact]
@@ -120,31 +130,35 @@ public class EtmfConsumersTests
         await using var dbContext = new EtmfDbContext(options);
 
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
-        await using var provider = CreateEtmfServiceProvider(dbContext, clock);
+        await using var provider = CreateEtmfServiceProvider(options, clock);
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();
+        try
+        {
+            var signedAt = new DateTimeOffset(2026, 9, 30, 10, 0, 0, TimeSpan.Zero);
+            var message = new EConsentCompleted(
+                SubjectId: "SUBJ-99",
+                StudyId: "STUDY-01",
+                SiteId: "SITE-01",
+                VersionTag: "v1.0",
+                VersionIndex: 1,
+                SignedAt: signedAt);
 
-        var signedAt = new DateTimeOffset(2026, 9, 30, 10, 0, 0, TimeSpan.Zero);
-        var message = new EConsentCompleted(
-            SubjectId: "SUBJ-99",
-            StudyId: "STUDY-01",
-            SiteId: "SITE-01",
-            VersionTag: "v1.0",
-            VersionIndex: 1,
-            SignedAt: signedAt);
+            await harness.PublishAndWaitForConsumeAsync(message, ct);
 
-        await harness.Bus.Publish(message, ct);
-
-        (await harness.Consumed.Any<EConsentCompleted>(ct)).Should().BeTrue();
-
-        var expectedKey = "SUBJ-99:STUDY-01:1";
-        var doc = await dbContext.TmfDocuments.FirstOrDefaultAsync(d => d.IdempotencyKey == expectedKey, ct);
-        doc.Should().NotBeNull();
-        doc!.Zone.Should().Be(5);
-        doc.ArtifactCode.Should().Be("ICF");
-        doc.ProtocolVersionTag.Should().Be("v1.0");
-        doc.ProtocolVersionIndex.Should().Be(1);
-        doc.SigningTimestamp.Should().Be(signedAt);
+            var expectedKey = "SUBJ-99:STUDY-01:1";
+            var doc = await dbContext.TmfDocuments.FirstOrDefaultAsync(d => d.IdempotencyKey == expectedKey, ct);
+            doc.Should().NotBeNull();
+            doc!.Zone.Should().Be(5);
+            doc.ArtifactCode.Should().Be("ICF");
+            doc.ProtocolVersionTag.Should().Be("v1.0");
+            doc.ProtocolVersionIndex.Should().Be(1);
+            doc.SigningTimestamp.Should().Be(signedAt);
+        }
+        finally
+        {
+            await harness.Stop(ct);
+        }
     }
 
     [Fact]
@@ -157,27 +171,31 @@ public class EtmfConsumersTests
             .Options;
         await using var dbContext = new EtmfDbContext(options);
 
-        await using var provider = CreateEtmfServiceProvider(dbContext, clock);
+        await using var provider = CreateEtmfServiceProvider(options, clock);
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();
+        try
+        {
+            var message = new EConsentCompleted(
+                SubjectId: "SUBJ-100",
+                StudyId: "STUDY-01",
+                SiteId: "SITE-01",
+                VersionTag: "v1.0",
+                VersionIndex: 1,
+                SignedAt: clock.UtcNow);
 
-        var message = new EConsentCompleted(
-            SubjectId: "SUBJ-100",
-            StudyId: "STUDY-01",
-            SiteId: "SITE-01",
-            VersionTag: "v1.0",
-            VersionIndex: 1,
-            SignedAt: clock.UtcNow);
+            await harness.PublishAndWaitForConsumeAsync(message, ct);
 
-        await harness.Bus.Publish(message, ct);
-        (await harness.Consumed.Any<EConsentCompleted>(ct)).Should().BeTrue();
+            // Duplicate publish and wait deterministically for consumer completion
+            await harness.PublishAndWaitForConsumeAsync(message, ct);
 
-        // Duplicate publish
-        await harness.Bus.Publish(message, ct);
-        await Task.Delay(100, ct);
-
-        var expectedKey = "SUBJ-100:STUDY-01:1";
-        var count = await dbContext.TmfDocuments.CountAsync(d => d.IdempotencyKey == expectedKey, ct);
-        count.Should().Be(1);
+            var expectedKey = "SUBJ-100:STUDY-01:1";
+            var count = await dbContext.TmfDocuments.CountAsync(d => d.IdempotencyKey == expectedKey, ct);
+            count.Should().Be(1);
+        }
+        finally
+        {
+            await harness.Stop(ct);
+        }
     }
 }

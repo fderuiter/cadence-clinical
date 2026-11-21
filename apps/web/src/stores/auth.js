@@ -1,4 +1,11 @@
 import { defineStore } from "pinia";
+import {
+  DEMO_PERSONAS,
+  DEMO_ROLES as MANIFEST_DEMO_ROLES,
+  DEMO_TENANT_UUID,
+  getDemoPersonaForWorkspace,
+  toDemoAuthUser,
+} from "demo-fixtures";
 import { flushRegisteredDraftSourcesSync } from "ui";
 import { getKeycloakClient } from "../auth/keycloak.js";
 import {
@@ -22,38 +29,53 @@ import {
   storageScopeOf,
 } from "../utils/userScopedStorage.js";
 
-/**
- * Seeding Gap Documentation Resolved:
- * The "Sponsor Designer" role has been successfully seeded in the Keycloak realm configuration
- * (`cadence-realm.json`) and is centrally mapped in the OIDC normalizer.
- */
-/** Offline identity used only by demo builds (see utils/demoMode.js). */
-export const DEMO_IDENTITY = Object.freeze({
-  username: "fderuiter",
-  email: "fderuiter@example.com", // deid-ignore
-  firstName: "Frans",
-  lastName: "de Ruiter",
-  id: "fderuiter-id-12345",
-  tenantId: "demo",
+const EMPTY_DEMO_IDENTITY = Object.freeze({
+  username: "",
+  email: "",
+  firstName: "",
+  lastName: "",
+  id: "",
+  tenantId: "",
 });
 
-export const DEMO_ROLES = Object.freeze([
-  "Sponsor Admin",
-  "Sponsor Designer",
-  "Data Manager",
-  "Site Investigator",
-  "CRC",
-  "CRA",
-  "Monitor",
-  "Auditor",
-  "TMF Auditor",
-]);
+export function resolveDemoIdentity(workspacePersona = "super_admin") {
+  const mapped = toDemoAuthUser(getDemoPersonaForWorkspace(workspacePersona));
+  return mapped || EMPTY_DEMO_IDENTITY;
+}
+
+/**
+ * Synthetic role-based offline identity used only by demo builds (see utils/demoMode.js).
+ */
+export const DEMO_IDENTITY = resolveDemoIdentity("super_admin");
+
+export const DEMO_ROLES = Object.freeze(
+  MANIFEST_DEMO_ROLES.length > 0 || DEMO_PERSONAS.length > 0
+    ? Array.from(
+        new Set([
+          ...DEMO_PERSONAS.flatMap((p) => p.realmRoles || []),
+          ...MANIFEST_DEMO_ROLES.map((r) =>
+            typeof r === "string" ? r : r.name
+          ),
+          "CRC",
+          "Principal Investigator",
+          "Safety Reviewer",
+          "TMF Auditor",
+        ])
+      )
+    : []
+);
 
 export const ROLE_ALIASES = {
   crc: ["site_investigator", "crc"],
   site_investigator: ["site_investigator", "crc"],
+  principal_investigator: [
+    "principal_investigator",
+    "site_investigator",
+    "crc",
+  ],
   cra: ["cra", "monitor"],
   monitor: ["cra", "monitor"],
+  safety_reviewer: ["safety_reviewer"],
   auditor: ["auditor", "tmf_auditor"],
   tmf_auditor: ["auditor", "tmf_auditor"],
   designer: ["sponsor_designer"],
@@ -63,10 +85,12 @@ export const ROLE_ALIASES = {
     "sponsor_admin",
     "sponsor_designer",
     "data_manager",
+    "principal_investigator",
     "site_investigator",
     "crc",
     "cra",
     "monitor",
+    "safety_reviewer",
     "auditor",
     "tmf_auditor",
   ],
@@ -74,10 +98,12 @@ export const ROLE_ALIASES = {
     "sponsor_admin",
     "sponsor_designer",
     "data_manager",
+    "principal_investigator",
     "site_investigator",
     "crc",
     "cra",
     "monitor",
+    "safety_reviewer",
     "auditor",
     "tmf_auditor",
   ],
@@ -85,10 +111,12 @@ export const ROLE_ALIASES = {
     "sponsor_admin",
     "sponsor_designer",
     "data_manager",
+    "principal_investigator",
     "site_investigator",
     "crc",
     "cra",
     "monitor",
+    "safety_reviewer",
     "auditor",
     "tmf_auditor",
   ],
@@ -124,9 +152,19 @@ export const PERSONA_PRESETS = [
     requires: ["site_investigator", "crc"],
   },
   {
+    key: "site_investigator",
+    label: "🏥 Principal Investigator",
+    requires: ["principal_investigator"],
+  },
+  {
     key: "cra_monitor",
     label: "📊 CRA Clinical Monitor",
     requires: ["cra", "monitor"],
+  },
+  {
+    key: "safety_officer",
+    label: "🛡️ Pharmacovigilance & Safety",
+    requires: ["safety_reviewer"],
   },
   {
     key: "auditor",
@@ -277,7 +315,7 @@ function emptyAuthState() {
  * sign-in: when no one is signed in the store is empty and the router sends the
  * user to the sign-in page. Tokens are kept in memory only. The one exception
  * is a demo build (`isDemoBuild()`), which has no identity provider and signs
- * in a fixed offline demo identity instead (`startDemoSession`).
+ * in a synthetic role-based demo persona instead (`startDemoSession`).
  */
 export const useAuthStore = defineStore("auth", {
   state: () => {
@@ -294,7 +332,11 @@ export const useAuthStore = defineStore("auth", {
       return holdsAnyRole(state.rawRoles, [normalizeRole(role)]);
     },
     isCrc: (state) =>
-      holdsAnyRole(state.rawRoles, ["crc", "site_investigator"]),
+      holdsAnyRole(state.rawRoles, [
+        "crc",
+        "site_investigator",
+        "principal_investigator",
+      ]),
     availablePersonas: (state) => personasForRoles(state.rawRoles),
     /**
      * True for newly self-registered OIDC sessions that have no kernel `tenant_id`
@@ -419,10 +461,10 @@ export const useAuthStore = defineStore("auth", {
       this.sessionExpired = true;
     },
     /**
-     * Signs in the offline demo identity. Only a demo build can do this; in any
+     * Signs in the synthetic demo persona. Only a demo build can do this; in any
      * other build it throws, so no code path can sign in without Keycloak.
      */
-    startDemoSession() {
+    startDemoSession(personaKey) {
       if (!isDemoBuild()) {
         throw new Error("Demo sign-in is only available in a demo build.");
       }
@@ -430,9 +472,14 @@ export const useAuthStore = defineStore("auth", {
       this.isAuthenticated = true;
       this.sessionExpired = false;
       this.isLoggingOut = false;
-      this.user = { ...DEMO_IDENTITY };
       this.rawRoles = [...DEMO_ROLES];
-      this.currentPersona = personasForRoles(this.rawRoles)[0]?.key || null;
+      const entitled = personasForRoles(this.rawRoles);
+      const selectedPersona =
+        personaKey && entitled.some((p) => p.key === personaKey)
+          ? personaKey
+          : entitled[0]?.key || null;
+      this.currentPersona = selectedPersona;
+      this.user = { ...resolveDemoIdentity(selectedPersona || "super_admin") };
       purgeLegacyUnscopedKeys();
       purgeUserScopedStorage(storageScopeOf(this));
       if (this.currentPersona) {
@@ -506,9 +553,11 @@ export const useAuthStore = defineStore("auth", {
         return snapshot;
       } catch {
         if (this.isDemoMode && !this.entitlements) {
+          const demoTenantUuid =
+            DEMO_TENANT_UUID || "00000000-0000-0000-0000-000000000000";
           this.entitlements = {
-            tenant_ref: "tenant:00000000-0000-0000-0000-000000000000",
-            tenant_id: "00000000-0000-0000-0000-000000000000",
+            tenant_ref: `tenant:${demoTenantUuid}`,
+            tenant_id: demoTenantUuid,
             subscription_ref: null,
             tier: "Complete",
             status: "Active",
@@ -635,6 +684,9 @@ export const useAuthStore = defineStore("auth", {
         return false;
       }
       this.currentPersona = personaKey;
+      if (this.isDemoMode && isDemoBuild()) {
+        this.user = { ...resolveDemoIdentity(personaKey) };
+      }
       rehydrateStoresForPersona(personaKey);
       try {
         useNotificationsStore().fetchNotifications();

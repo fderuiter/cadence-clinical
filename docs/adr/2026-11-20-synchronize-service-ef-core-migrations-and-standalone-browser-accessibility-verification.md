@@ -1,4 +1,4 @@
-# ADR-2535: Synchronize Service EF Core Migrations and Standalone Browser Accessibility Verification
+# ADR-2552: Synchronize Service EF Core Migrations and Standalone Browser Accessibility Verification
 
 - **Status:** Accepted
 - **Date:** 2026-11-20

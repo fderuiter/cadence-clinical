@@ -1,6 +1,12 @@
 import { defineStore } from "pinia";
 import { PERSONA_PRESETS, ROLE_ALIASES, useAuthStore } from "./auth";
 import { isScreenAvailable } from "../router/availability";
+import {
+  demoNowIso,
+  demoNowMs,
+  demoRandomToken,
+  nextDemoStep,
+} from "../utils/demoMode";
 
 const DATA_COLLECTION_ROLES = [
   "site_investigator",
@@ -1015,9 +1021,10 @@ export const useOnboardingStore = defineStore("onboarding", {
       this.persist();
     },
     addEvent(type, target, details = "") {
+      const step = nextDemoStep("onboarding-event");
       const event = {
-        id: `ev-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-        timestamp: new Date().toISOString(),
+        id: `ev-${demoNowMs(step)}-${demoRandomToken(4, 36, "onboarding-event")}`,
+        timestamp: demoNowIso(step),
         type,
         target,
         details,

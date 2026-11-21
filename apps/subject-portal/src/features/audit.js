@@ -2,6 +2,7 @@
 import { buildLedgerBlock } from "ui";
 
 import { state } from "../stores/state.js";
+import { demoNowIso } from "../utils/demoMode.js";
 import { getInstrumentDisplayName } from "./site-support.js";
 
 function escapeHtml(value) {
@@ -121,8 +122,8 @@ export async function logAuditRecord(
   details,
   reason = "Patient action verified"
 ) {
-  const timestamp = new Date().toISOString();
   const index = state.ledgerBlocks.length;
+  const timestamp = demoNowIso(index);
   const prevHash =
     index === 0
       ? "0000000000000000000000000000000000000000000000000000000000000000" // deid-ignore

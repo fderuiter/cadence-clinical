@@ -1,6 +1,8 @@
 // Offline-cached study site coordinator contacts and PII-safe display helpers.
+import { DEFAULT_DEMO_SITE } from "demo-fixtures";
 import { MOCK_INSTRUMENTS } from "../data/mock-data.js";
 import { state } from "../stores/state.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
 
 export const SITE_CONTACT_STORAGE_KEY = "cadence_site_contacts_v1";
 
@@ -45,8 +47,16 @@ export function hydrateSiteSupportContact(overrides = null) {
     cached = null;
   }
 
+  const demoSiteContact =
+    isDemoModeActive() && DEFAULT_DEMO_SITE?.name
+      ? {
+          siteName: `${DEFAULT_DEMO_SITE.name} (${DEFAULT_DEMO_SITE.code})`,
+        }
+      : {};
+
   const merged = {
     ...DEFAULT_SITE_CONTACT,
+    ...demoSiteContact,
     ...(cached && typeof cached === "object" ? cached : {}),
     ...(overrides && typeof overrides === "object" ? overrides : {}),
   };
