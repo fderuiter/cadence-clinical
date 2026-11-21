@@ -122,6 +122,9 @@ public sealed class KernelDevelopmentTenantPostgresTests(KernelPostgresFixture f
 
             using var stranger = first.CreateSignedClient(new GatewayIdentity("stranger@dev-tenant.test", [], [], TenantId: code));
             (await GetAsync(stranger, "/api/v1/kernel/search?q=CADENCE-101", ct)).GetArrayLength().Should().Be(0, "a person with no grant sees nothing");
+
+            using var subjectParticipant = first.CreateSignedClient(new GatewayIdentity(SubjectParticipantId, ["Subject"], [], TenantId: code));
+            (await GetAsync(subjectParticipant, "/api/v1/kernel/search?q=CADENCE-101", ct)).GetArrayLength().Should().Be(0, "a participant account holds no staff kernel grant (K027)");
         }
 
         await using (var connection = new NpgsqlConnection(fixture.AdminConnectionString))
@@ -132,8 +135,8 @@ public sealed class KernelDevelopmentTenantPostgresTests(KernelPostgresFixture f
                 connection, "SELECT string_agg(g.grantee_id, ',') FROM kernel.grants g JOIN kernel.tenants t ON t.id = g.tenant_id WHERE t.code = @code", code))!)
                 .Split(',');
             grantees.Should().BeEquivalentTo(
-                RealmUserIds().Append(Operator).Concat(ModuleConsumers),
-                "the seeder grants itself, the Execution module's consumers (until #5566) and each realm user, by the fixed subject id in docker/cadence-realm.json");
+                StaffRealmUserIds().Append(Operator).Concat(ModuleConsumers),
+                "the seeder grants itself, the Execution module's consumers (until #5566) and each staff realm user, by the fixed subject id in docker/cadence-realm.json");
         }
 
         using (var second = Host(code, demoData: true))
@@ -259,12 +262,13 @@ public sealed class KernelDevelopmentTenantPostgresTests(KernelPostgresFixture f
     }
 
     private const string CrcSubject = "1a4345cc-364c-4b8b-881e-93bbea528b0a";
+    private const string SubjectParticipantId = "7a8b9c4d-5e6f-4a1b-8c2d-3e4f5a6b7c8d";
 
     private const string AuditCount =
         "SELECT count(*) FROM kernel.audit_entries a JOIN kernel.tenants t ON t.id = a.tenant_id WHERE t.code = @code";
 
-    /// <summary>The fixed subject ids of the users in <c>docker/cadence-realm.json</c>.</summary>
-    private static IEnumerable<string> RealmUserIds()
+    /// <summary>The fixed subject ids of the staff users in <c>docker/cadence-realm.json</c> (participants hold no staff kernel grants per K027).</summary>
+    private static IEnumerable<string> StaffRealmUserIds()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "docker", "cadence-realm.json")))
@@ -274,7 +278,9 @@ public sealed class KernelDevelopmentTenantPostgresTests(KernelPostgresFixture f
 
         string path = Path.Combine(directory?.FullName ?? throw new InvalidOperationException("docker/cadence-realm.json not found."), "docker", "cadence-realm.json");
         using var realm = JsonDocument.Parse(File.ReadAllText(path));
-        return [.. realm.RootElement.GetProperty("users").EnumerateArray().Select(u => u.GetProperty("id").GetString()!)];
+        return [.. realm.RootElement.GetProperty("users").EnumerateArray()
+            .Where(u => u.GetProperty("realmRoles").EnumerateArray().Any(r => r.GetString() != "Subject"))
+            .Select(u => u.GetProperty("id").GetString()!)];
     }
 
     private static async Task<JsonElement> GetAsync(HttpClient client, string path, CancellationToken ct)

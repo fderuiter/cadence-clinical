@@ -91,6 +91,7 @@ describe("clients send an encoded reason for change (#4895)", () => {
     try {
       delete import.meta.env.VITE_API_BASE_URL;
       const dynamicClient = createOpenApiClient();
+      await dynamicClient.GET("/api/v1/mutations");
 
       import.meta.env.VITE_API_BASE_URL = "http://localhost:3000";
       await dynamicClient.POST("/api/v1/mutations", {
@@ -98,7 +99,7 @@ describe("clients send an encoded reason for change (#4895)", () => {
         changeReason: EM_DASH_AND_CJK,
       });
 
-      const [request] = fetchSpy.mock.calls[0];
+      const [request] = fetchSpy.mock.calls[1];
       expect(request.url).toBe("http://localhost:3000/api/v1/mutations");
       expect(request.method).toBe("POST");
       expect(request.headers.get("X-Change-Reason")).toBe(

@@ -1,4 +1,10 @@
 // Gateway API dispatch and the typed fetch helpers built on it.
+import { isStepUpAuthFailure } from "ui";
+import {
+  ensurePortalSessionToken,
+  expirePortalSession,
+  refreshPortalSessionOnUnauthorized,
+} from "../features/auth.js";
 import { state } from "../stores/state.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 
@@ -76,20 +82,33 @@ export async function dispatchApi(endpoint, options = {}) {
       options.headers["X-Change-Reason"] || options.headers["x-change-reason"];
   }
 
+  const { _retriedAfterRefresh = false, ...fetchOptions } = options;
+
+  if (
+    !_retriedAfterRefresh &&
+    !state.session.isOfflineMode &&
+    !state.session.isDemoMode &&
+    typeof window !== "undefined" &&
+    window.keycloakInstance
+  ) {
+    await ensurePortalSessionToken(30);
+  }
+
   if (state.session.token) {
     defaultHeaders["Authorization"] = `Bearer ${state.session.token}`;
   }
 
   try {
     const res = await fetch(url, {
-      ...options,
+      ...fetchOptions,
       headers: { ...defaultHeaders, ...options.headers },
     });
 
     if (!res.ok) {
       let errBody = "";
+      let parsed = null;
       try {
-        const parsed = await res.json();
+        parsed = await res.json();
         if (Array.isArray(parsed.detail)) {
           errBody = parsed.detail
             .map((entry) => {
@@ -112,6 +131,25 @@ export async function dispatchApi(endpoint, options = {}) {
       } catch {
         // ignored
       }
+
+      if (res.status === 401 && !isStepUpAuthFailure(url, res.status, parsed)) {
+        if (!_retriedAfterRefresh) {
+          const refreshResult = await refreshPortalSessionOnUnauthorized();
+          if (refreshResult.ok && refreshResult.token) {
+            const nextHeaders = { ...(options.headers || {}) };
+            delete nextHeaders.Authorization;
+            delete nextHeaders.authorization;
+            return await dispatchApi(endpoint, {
+              ...options,
+              headers: nextHeaders,
+              _retriedAfterRefresh: true,
+            });
+          }
+        } else {
+          expirePortalSession();
+        }
+      }
+
       const apiErr = new Error(errBody || `HTTP Error ${res.status}`);
       apiErr.status = res.status;
       apiErr.isValidationError = res.status === 400 || res.status === 422;

@@ -49,7 +49,11 @@ public static class CliConsole
         return detected;
     }
 
-    /// <summary>A console that renders markup as plain text of <see cref="PlainWidth"/> columns to <paramref name="output"/>.</summary>
+    /// <summary>
+    /// A console that renders markup as plain text of <see cref="PlainWidth"/> columns to <paramref name="output"/>.
+    /// Default profile enrichers (such as Spectre's GitHub Actions enricher) are disabled so CI environment variables
+    /// cannot re-enable ANSI colour codes when output is redirected.
+    /// </summary>
     public static IAnsiConsole CreatePlain(TextWriter output)
     {
         var console = AnsiConsole.Create(new AnsiConsoleSettings
