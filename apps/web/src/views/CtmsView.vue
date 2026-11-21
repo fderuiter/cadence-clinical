@@ -66,7 +66,7 @@
             style="
               font-size: 0.8rem;
               font-weight: 700;
-              color: #64748b;
+              color: var(--semantic-color-text-secondary);
               text-transform: uppercase;
             "
           >
@@ -77,7 +77,7 @@
             style="
               font-size: 1.75rem;
               font-weight: 800;
-              color: #0f172a;
+              color: var(--semantic-color-text);
               margin-top: 4px;
             "
           >
@@ -85,7 +85,11 @@
           </div>
           <div
             class="stat-subtext"
-            style="font-size: 0.75rem; color: #64748b; margin-top: 2px"
+            style="
+              font-size: 0.75rem;
+              color: var(--semantic-color-text-secondary);
+              margin-top: 2px;
+            "
           >
             {{ totalEnrolledCount }} Enrolled /
             {{ totalScreenedCount }} Screened
@@ -102,7 +106,7 @@
             style="
               font-size: 0.8rem;
               font-weight: 700;
-              color: #64748b;
+              color: var(--semantic-color-text-secondary);
               text-transform: uppercase;
             "
           >
@@ -113,7 +117,7 @@
             style="
               font-size: 1.75rem;
               font-weight: 800;
-              color: #2563eb;
+              color: var(--semantic-color-interactive-primary);
               margin-top: 4px;
             "
           >
@@ -121,7 +125,11 @@
           </div>
           <div
             class="stat-subtext"
-            style="font-size: 0.75rem; color: #64748b; margin-top: 2px"
+            style="
+              font-size: 0.75rem;
+              color: var(--semantic-color-text-secondary);
+              margin-top: 2px;
+            "
           >
             Target: {{ totalTargetCount }} Subjects
           </div>
@@ -137,7 +145,7 @@
             style="
               font-size: 0.8rem;
               font-weight: 700;
-              color: #64748b;
+              color: var(--semantic-color-text-secondary);
               text-transform: uppercase;
             "
           >
@@ -148,7 +156,7 @@
             style="
               font-size: 1.75rem;
               font-weight: 800;
-              color: #166534;
+              color: var(--semantic-color-success-dark);
               margin-top: 4px;
             "
           >
@@ -156,7 +164,11 @@
           </div>
           <div
             class="stat-subtext"
-            style="font-size: 0.75rem; color: #166534; margin-top: 2px"
+            style="
+              font-size: 0.75rem;
+              color: var(--semantic-color-success-dark);
+              margin-top: 2px;
+            "
           >
             ICH GCP Verified
           </div>
@@ -168,7 +180,7 @@
             style="
               font-size: 0.8rem;
               font-weight: 700;
-              color: #64748b;
+              color: var(--semantic-color-text-secondary);
               text-transform: uppercase;
             "
           >
@@ -179,7 +191,7 @@
             style="
               font-size: 1.75rem;
               font-weight: 800;
-              color: #b45309;
+              color: var(--semantic-color-warning);
               margin-top: 4px;
             "
           >
@@ -187,7 +199,11 @@
           </div>
           <div
             class="stat-subtext"
-            style="font-size: 0.75rem; color: #b45309; margin-top: 2px"
+            style="
+              font-size: 0.75rem;
+              color: var(--semantic-color-warning);
+              margin-top: 2px;
+            "
           >
             Discrepancies Awaiting Action
           </div>
@@ -201,13 +217,13 @@
           display: flex;
           gap: 16px;
           margin-bottom: 24px;
-          border-bottom: 2px solid #e2e8f0;
+          border-bottom: 2px solid var(--semantic-color-border);
           padding-bottom: 8px;
         "
       >
         <button
           id="tab-operations"
-          class="tab-btn"
+          class="tab-btn clinical-tab"
           :class="{ active: activeTab === 'operations' }"
           style="
             padding: 8px 16px;
@@ -220,8 +236,11 @@
           "
           :style="
             activeTab === 'operations'
-              ? { borderBottomColor: '#0f4c81', color: '#0f4c81' }
-              : { color: '#64748b' }
+              ? {
+                  borderBottomColor: 'var(--semantic-color-primary-dark)',
+                  color: 'var(--semantic-color-primary-dark)',
+                }
+              : { color: 'var(--semantic-color-text-secondary)' }
           "
           @click="activeTab = 'operations'"
         >
@@ -229,7 +248,7 @@
         </button>
         <button
           id="tab-monitoring"
-          class="tab-btn"
+          class="tab-btn clinical-tab"
           :class="{ active: activeTab === 'monitoring' }"
           style="
             padding: 8px 16px;
@@ -242,8 +261,11 @@
           "
           :style="
             activeTab === 'monitoring'
-              ? { borderBottomColor: '#0f4c81', color: '#0f4c81' }
-              : { color: '#64748b' }
+              ? {
+                  borderBottomColor: 'var(--semantic-color-primary-dark)',
+                  color: 'var(--semantic-color-primary-dark)',
+                }
+              : { color: 'var(--semantic-color-text-secondary)' }
           "
           @click="activeTab = 'monitoring'"
         >
@@ -251,7 +273,7 @@
         </button>
         <button
           id="tab-delegation"
-          class="tab-btn"
+          class="tab-btn clinical-tab"
           :class="{ active: activeTab === 'delegation' }"
           style="
             padding: 8px 16px;
@@ -264,8 +286,11 @@
           "
           :style="
             activeTab === 'delegation'
-              ? { borderBottomColor: '#0f4c81', color: '#0f4c81' }
-              : { color: '#64748b' }
+              ? {
+                  borderBottomColor: 'var(--semantic-color-primary-dark)',
+                  color: 'var(--semantic-color-primary-dark)',
+                }
+              : { color: 'var(--semantic-color-text-secondary)' }
           "
           @click="activeTab = 'delegation'"
         >
@@ -273,7 +298,7 @@
         </button>
         <button
           id="tab-financials"
-          class="tab-btn"
+          class="tab-btn clinical-tab"
           :class="{ active: activeTab === 'financials' }"
           style="
             padding: 8px 16px;
@@ -286,8 +311,11 @@
           "
           :style="
             activeTab === 'financials'
-              ? { borderBottomColor: '#0f4c81', color: '#0f4c81' }
-              : { color: '#64748b' }
+              ? {
+                  borderBottomColor: 'var(--semantic-color-primary-dark)',
+                  color: 'var(--semantic-color-primary-dark)',
+                }
+              : { color: 'var(--semantic-color-text-secondary)' }
           "
           @click="activeTab = 'financials'"
         >
@@ -295,7 +323,7 @@
         </button>
         <button
           id="tab-startup"
-          class="tab-btn"
+          class="tab-btn clinical-tab"
           :class="{ active: activeTab === 'startup' }"
           style="
             padding: 8px 16px;
@@ -308,8 +336,11 @@
           "
           :style="
             activeTab === 'startup'
-              ? { borderBottomColor: '#0f4c81', color: '#0f4c81' }
-              : { color: '#64748b' }
+              ? {
+                  borderBottomColor: 'var(--semantic-color-primary-dark)',
+                  color: 'var(--semantic-color-primary-dark)',
+                }
+              : { color: 'var(--semantic-color-text-secondary)' }
           "
           @click="activeTab = 'startup'"
         >
@@ -317,7 +348,7 @@
         </button>
         <button
           id="tab-rtsm"
-          class="tab-btn"
+          class="tab-btn clinical-tab"
           :class="{ active: activeTab === 'rtsm' }"
           style="
             padding: 8px 16px;
@@ -330,8 +361,11 @@
           "
           :style="
             activeTab === 'rtsm'
-              ? { borderBottomColor: '#0f4c81', color: '#0f4c81' }
-              : { color: '#64748b' }
+              ? {
+                  borderBottomColor: 'var(--semantic-color-primary-dark)',
+                  color: 'var(--semantic-color-primary-dark)',
+                }
+              : { color: 'var(--semantic-color-text-secondary)' }
           "
           @click="activeTab = 'rtsm'"
         >
@@ -343,7 +377,7 @@
       <div
         class="scope-info-bar"
         style="
-          background: #f1f5f9;
+          background: var(--semantic-color-surface-header);
           padding: 10px 16px;
           border-radius: 6px;
           margin-bottom: 20px;
@@ -351,7 +385,7 @@
           gap: 24px;
           align-items: center;
           font-size: 14px;
-          color: #334155;
+          color: var(--semantic-color-text-body);
         "
       >
         <div><strong>Study ID:</strong> {{ studyId }}</div>
@@ -365,7 +399,9 @@
           "
         >
           <strong>eTMF Compliance Status:</strong>
-          <span v-if="loadingCompliance" style="color: #64748b"
+          <span
+            v-if="loadingCompliance"
+            style="color: var(--semantic-color-text-secondary)"
             >Loading...</span
           >
           <span
@@ -375,7 +411,10 @@
             :style="
               complianceStatus.is_complete
                 ? {}
-                : { backgroundColor: '#ef4444', color: '#ffffff' }
+                : {
+                    backgroundColor: 'var(--semantic-color-error)',
+                    color: 'var(--semantic-color-surface)',
+                  }
             "
             :title="
               complianceStatus.is_complete
@@ -429,7 +468,11 @@
                   <tr v-if="milestones.length === 0">
                     <td
                       colspan="4"
-                      style="text-align: center; color: #64748b; padding: 12px"
+                      style="
+                        text-align: center;
+                        color: var(--semantic-color-text-secondary);
+                        padding: 12px;
+                      "
                     >
                       No milestones found. Create one to begin tracking.
                     </td>
@@ -507,7 +550,11 @@
                   <tr v-if="visits.length === 0">
                     <td
                       colspan="6"
-                      style="text-align: center; color: #64748b; padding: 12px"
+                      style="
+                        text-align: center;
+                        color: var(--semantic-color-text-secondary);
+                        padding: 12px;
+                      "
                     >
                       No monitoring visits scheduled.
                     </td>
@@ -560,7 +607,11 @@
                   <tr v-if="allocations.length === 0">
                     <td
                       colspan="4"
-                      style="text-align: center; color: #64748b; padding: 12px"
+                      style="
+                        text-align: center;
+                        color: var(--semantic-color-text-secondary);
+                        padding: 12px;
+                      "
                     >
                       No CRA allocations recorded.
                     </td>
@@ -614,7 +665,11 @@
                   <tr v-if="recruitment.length === 0">
                     <td
                       colspan="5"
-                      style="text-align: center; color: #64748b; padding: 12px"
+                      style="
+                        text-align: center;
+                        color: var(--semantic-color-text-secondary);
+                        padding: 12px;
+                      "
                     >
                       No recruitment records logged.
                     </td>
@@ -659,7 +714,10 @@
             <button
               id="btn-export-pdf"
               class="btn btn-primary"
-              style="background: #0f4c81; color: white"
+              style="
+                background: var(--semantic-color-primary-dark);
+                color: white;
+              "
               @click="exportDoaPdf"
             >
               🖨️ Export GxP PDF
@@ -670,10 +728,10 @@
             style="
               margin-bottom: 16px;
               font-size: 14px;
-              background: #f8fafc;
+              background: var(--semantic-color-surface-muted);
               padding: 12px;
               border-radius: 6px;
-              border: 1px solid #e2e8f0;
+              border: 1px solid var(--semantic-color-border);
             "
           >
             <strong>Principal Investigator (PI):</strong>
@@ -710,7 +768,12 @@
                 >
                   <td>
                     <strong>{{ d.staff_user_id }}</strong>
-                    <div style="font-size: 11px; color: #64748b">
+                    <div
+                      style="
+                        font-size: 11px;
+                        color: var(--semantic-color-text-secondary);
+                      "
+                    >
                       {{ getStaffNameAndRole(d) }}
                     </div>
                   </td>
@@ -720,7 +783,10 @@
                     >
                       <span
                         v-if="getStaffCertificates(d).length === 0"
-                        style="font-size: 11px; color: #64748b"
+                        style="
+                          font-size: 11px;
+                          color: var(--semantic-color-text-secondary);
+                        "
                       >
                         Not recorded
                       </span>
@@ -729,9 +795,12 @@
                         :key="idx"
                         class="badge"
                         style="
-                          background-color: #f0fdf4;
-                          color: #166534;
-                          border: 1px solid #bbf7d0;
+                          background-color: var(
+                            --semantic-color-success-bg-soft
+                          );
+                          color: var(--semantic-color-success-dark);
+                          border: 1px solid
+                            var(--semantic-color-success-border-soft);
                           font-size: 10px;
                           font-weight: 600;
                           padding: 2px 6px;
@@ -752,9 +821,11 @@
                         :key="task"
                         class="badge"
                         style="
-                          background-color: #f1f5f9;
-                          color: #334155;
-                          border: 1px solid #cbd5e1;
+                          background-color: var(
+                            --semantic-color-surface-header
+                          );
+                          color: var(--semantic-color-text-body);
+                          border: 1px solid var(--semantic-color-border-control);
                           font-size: 10px;
                           font-family: monospace;
                         "
@@ -790,8 +861,8 @@
                       style="
                         padding: 2px 8px;
                         font-size: 11px;
-                        border-color: #ef4444;
-                        color: #ef4444;
+                        border-color: var(--semantic-color-error);
+                        color: var(--semantic-color-error);
                       "
                       @click="revokeDelegation(d)"
                     >
@@ -804,7 +875,11 @@
                 >
                   <td
                     colspan="8"
-                    style="text-align: center; color: #64748b; padding: 12px"
+                    style="
+                      text-align: center;
+                      color: var(--semantic-color-text-secondary);
+                      padding: 12px;
+                    "
                   >
                     No delegation assignments logged for this site.
                   </td>
@@ -848,7 +923,10 @@
                   <td>
                     <span
                       class="badge"
-                      style="background: #e2e8f0; color: #334155"
+                      style="
+                        background: var(--semantic-color-surface-header);
+                        color: var(--semantic-color-text-body);
+                      "
                       >{{ audit.action }}</span
                     >
                   </td>
@@ -859,7 +937,11 @@
                 <tr v-if="auditHistory.length === 0">
                   <td
                     colspan="5"
-                    style="text-align: center; color: #64748b; padding: 12px"
+                    style="
+                      text-align: center;
+                      color: var(--semantic-color-text-secondary);
+                      padding: 12px;
+                    "
                   >
                     No audit trail events recorded.
                   </td>
@@ -908,17 +990,17 @@
               grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
               gap: 16px;
               margin-bottom: 16px;
-              background: #f8fafc;
+              background: var(--semantic-color-surface-muted);
               padding: 16px;
               border-radius: 6px;
-              border: 1px solid #e2e8f0;
+              border: 1px solid var(--semantic-color-border);
             "
           >
             <div>
               <div
                 style="
                   font-size: 11px;
-                  color: #64748b;
+                  color: var(--semantic-color-text-secondary);
                   font-weight: 700;
                   text-transform: uppercase;
                 "
@@ -929,7 +1011,7 @@
                 style="
                   font-size: 15px;
                   font-weight: 700;
-                  color: #0f172a;
+                  color: var(--semantic-color-text);
                   margin-top: 2px;
                 "
               >
@@ -937,7 +1019,12 @@
                   investigatorGrant?.contract_title || "Standard Site Agreement"
                 }}
               </div>
-              <div style="font-size: 12px; color: #64748b">
+              <div
+                style="
+                  font-size: 12px;
+                  color: var(--semantic-color-text-secondary);
+                "
+              >
                 Grant ID:
                 {{
                   investigatorGrant?.id
@@ -951,7 +1038,7 @@
               <div
                 style="
                   font-size: 11px;
-                  color: #64748b;
+                  color: var(--semantic-color-text-secondary);
                   font-weight: 700;
                   text-transform: uppercase;
                 "
@@ -962,7 +1049,7 @@
                 style="
                   font-size: 18px;
                   font-weight: 800;
-                  color: #0f4c81;
+                  color: var(--semantic-color-primary-dark);
                   margin-top: 2px;
                 "
               >
@@ -972,7 +1059,12 @@
                     : "$0.00"
                 }}
               </div>
-              <div style="font-size: 12px; color: #166534">
+              <div
+                style="
+                  font-size: 12px;
+                  color: var(--semantic-color-success-dark);
+                "
+              >
                 Status: {{ investigatorGrant?.status || "ACTIVE" }}
               </div>
             </div>
@@ -981,20 +1073,31 @@
               <div
                 style="
                   font-size: 11px;
-                  color: #64748b;
+                  color: var(--semantic-color-text-secondary);
                   font-weight: 700;
                   text-transform: uppercase;
                 "
               >
                 Institutional Rates
               </div>
-              <div style="font-size: 13px; color: #334155; margin-top: 4px">
+              <div
+                style="
+                  font-size: 13px;
+                  color: var(--semantic-color-text-body);
+                  margin-top: 4px;
+                "
+              >
                 <strong>Overhead:</strong>
                 {{ investigatorGrant?.overhead_percentage || 0 }}% |
                 <strong>Withholding:</strong>
                 {{ investigatorGrant?.withholding_percentage || 0 }}%
               </div>
-              <div style="font-size: 12px; color: #64748b">
+              <div
+                style="
+                  font-size: 12px;
+                  color: var(--semantic-color-text-secondary);
+                "
+              >
                 Startup Fee: ${{ investigatorGrant?.fixed_startup_fee || 0 }} |
                 Closeout: ${{ investigatorGrant?.fixed_closeout_fee || 0 }}
               </div>
@@ -1004,7 +1107,7 @@
               <div
                 style="
                   font-size: 11px;
-                  color: #64748b;
+                  color: var(--semantic-color-text-secondary);
                   font-weight: 700;
                   text-transform: uppercase;
                 "
@@ -1092,28 +1195,47 @@
               </thead>
               <tbody>
                 <tr v-for="grid in procedureGrids" :key="grid.id">
-                  <td style="font-weight: 600; color: #0f4c81">
+                  <td
+                    style="
+                      font-weight: 600;
+                      color: var(--semantic-color-primary-dark);
+                    "
+                  >
                     {{ grid.visit_name }}
                   </td>
                   <td>
                     <span
                       v-if="grid.activity_id"
                       class="badge"
-                      style="background: #e0f2fe; color: #0369a1"
+                      style="
+                        background: var(--semantic-color-primary-light);
+                        color: var(--semantic-color-primary);
+                      "
                     >
                       {{ grid.activity_id }}
                     </span>
-                    <span v-else style="color: #94a3b8">—</span>
+                    <span
+                      v-else
+                      style="color: var(--semantic-color-text-secondary)"
+                      >—</span
+                    >
                   </td>
                   <td>
                     <span
                       v-if="grid.form_id"
                       class="badge"
-                      style="background: #f0fdf4; color: #166534"
+                      style="
+                        background: var(--semantic-color-success-bg-soft);
+                        color: var(--semantic-color-success-dark);
+                      "
                     >
                       {{ grid.form_id }}
                     </span>
-                    <span v-else style="color: #94a3b8">—</span>
+                    <span
+                      v-else
+                      style="color: var(--semantic-color-text-secondary)"
+                      >—</span
+                    >
                   </td>
                   <td style="font-family: monospace; font-size: 12px">
                     {{ grid.procedure_code }}
@@ -1129,7 +1251,10 @@
                   <td>
                     <span
                       class="badge"
-                      style="background: #f1f5f9; color: #475569"
+                      style="
+                        background: var(--semantic-color-surface-header);
+                        color: var(--semantic-color-text-secondary);
+                      "
                       >v{{ grid.version_index }}</span
                     >
                   </td>
@@ -1138,8 +1263,14 @@
                       class="badge"
                       :style="
                         grid.is_active
-                          ? { background: '#dcfce7', color: '#166534' }
-                          : { background: '#fee2e2', color: '#991b1b' }
+                          ? {
+                              background: 'var(--semantic-color-success-bg)',
+                              color: 'var(--semantic-color-success-dark)',
+                            }
+                          : {
+                              background: 'var(--semantic-color-error-bg)',
+                              color: 'var(--semantic-color-error-text-dark)',
+                            }
                       "
                     >
                       {{ grid.is_active ? "ACTIVE" : "HISTORICAL" }}
@@ -1149,7 +1280,11 @@
                 <tr v-if="procedureGrids.length === 0">
                   <td
                     colspan="12"
-                    style="text-align: center; color: #64748b; padding: 16px"
+                    style="
+                      text-align: center;
+                      color: var(--semantic-color-text-secondary);
+                      padding: 16px;
+                    "
                   >
                     No procedure fee items configured for this grant. Select a
                     budget template or add procedure items manually.
@@ -1208,10 +1343,10 @@
             <div
               v-if="visitPayableCalc"
               style="
-                background: #f8fafc;
+                background: var(--semantic-color-surface-muted);
                 padding: 16px;
                 border-radius: 6px;
-                border: 1px solid #e2e8f0;
+                border: 1px solid var(--semantic-color-border);
               "
             >
               <div
@@ -1241,7 +1376,7 @@
                 "
               >
                 <span>Institutional Overhead:</span>
-                <span style="color: #2563eb"
+                <span style="color: var(--semantic-color-interactive-primary)"
                   >+${{
                     (visitPayableCalc.overhead_amount || 0).toFixed(2)
                   }}</span
@@ -1256,7 +1391,7 @@
                 "
               >
                 <span>Patient Stipends:</span>
-                <span style="color: #166534"
+                <span style="color: var(--semantic-color-success-dark)"
                   >+${{
                     (visitPayableCalc.patient_stipend_total || 0).toFixed(2)
                   }}</span
@@ -1271,7 +1406,7 @@
                 "
               >
                 <span>Travel Reimbursement:</span>
-                <span style="color: #166534"
+                <span style="color: var(--semantic-color-success-dark)"
                   >+${{
                     (visitPayableCalc.travel_reimbursement_total || 0).toFixed(
                       2
@@ -1285,7 +1420,7 @@
                   justify-content: space-between;
                   font-size: 13px;
                   margin-bottom: 6px;
-                  border-top: 1px dashed #cbd5e1;
+                  border-top: 1px dashed var(--semantic-color-border-control);
                   padding-top: 6px;
                 "
               >
@@ -1305,7 +1440,7 @@
                 "
               >
                 <span>Withholding / Retention Deduction:</span>
-                <span style="color: #dc2626"
+                <span style="color: var(--semantic-color-error)"
                   >-${{
                     (visitPayableCalc.withholding_amount || 0).toFixed(2)
                   }}</span
@@ -1317,8 +1452,8 @@
                   justify-content: space-between;
                   font-size: 16px;
                   font-weight: 800;
-                  color: #0f4c81;
-                  border-top: 2px solid #0f4c81;
+                  color: var(--semantic-color-primary-dark);
+                  border-top: 2px solid var(--semantic-color-primary-dark);
                   padding-top: 8px;
                   margin-top: 8px;
                 "
@@ -1337,16 +1472,16 @@
                 style="
                   margin-top: 8px;
                   padding-top: 8px;
-                  border-top: 1px solid #e2e8f0;
+                  border-top: 1px solid var(--semantic-color-border);
                   font-size: 13px;
-                  color: #475569;
+                  color: var(--semantic-color-text-secondary);
                 "
               >
                 <span
                   >Converted Sponsor Total (FX Rate:
                   {{ visitPayableCalc.exchange_rate }}):
                 </span>
-                <strong style="color: #166534"
+                <strong style="color: var(--semantic-color-success-dark)"
                   >{{ visitPayableCalc.target_currency }}
                   {{
                     (visitPayableCalc.converted_net_amount || 0).toFixed(2)
@@ -1394,8 +1529,14 @@
                         class="badge"
                         :style="
                           adj.amount >= 0
-                            ? { background: '#dcfce7', color: '#166534' }
-                            : { background: '#fee2e2', color: '#991b1b' }
+                            ? {
+                                background: 'var(--semantic-color-success-bg)',
+                                color: 'var(--semantic-color-success-dark)',
+                              }
+                            : {
+                                background: 'var(--semantic-color-error-bg)',
+                                color: 'var(--semantic-color-error-text-dark)',
+                              }
                         "
                       >
                         {{ adj.adjustment_type }}
@@ -1408,8 +1549,8 @@
                       style="font-weight: 700"
                       :style="
                         adj.amount >= 0
-                          ? { color: '#166534' }
-                          : { color: '#dc2626' }
+                          ? { color: 'var(--semantic-color-success-dark)' }
+                          : { color: 'var(--semantic-color-error)' }
                       "
                     >
                       {{ adj.amount >= 0 ? "+" : "" }}${{
@@ -1422,8 +1563,15 @@
                         class="badge"
                         :style="
                           adj.status === 'APPROVED'
-                            ? { background: '#dcfce7', color: '#166534' }
-                            : { background: '#fef3c7', color: '#92400e' }
+                            ? {
+                                background: 'var(--semantic-color-success-bg)',
+                                color: 'var(--semantic-color-success-dark)',
+                              }
+                            : {
+                                background:
+                                  'var(--semantic-color-warning-bg-badge)',
+                                color: 'var(--semantic-color-warning-dark)',
+                              }
                         "
                       >
                         {{ adj.status }}
@@ -1437,7 +1585,13 @@
                       >
                         Approve
                       </button>
-                      <span v-else style="font-size: 11px; color: #64748b">
+                      <span
+                        v-else
+                        style="
+                          font-size: 11px;
+                          color: var(--semantic-color-text-secondary);
+                        "
+                      >
                         ✓ {{ adj.approved_by || "Approved" }}
                       </span>
                     </td>
@@ -1445,7 +1599,11 @@
                   <tr v-if="budgetAdjustments.length === 0">
                     <td
                       colspan="5"
-                      style="text-align: center; color: #64748b; padding: 12px"
+                      style="
+                        text-align: center;
+                        color: var(--semantic-color-text-secondary);
+                        padding: 12px;
+                      "
                     >
                       No passthrough reimbursements or penalty adjustments
                       recorded.
@@ -1479,20 +1637,33 @@
               </thead>
               <tbody>
                 <tr v-for="amend in contractAmendments" :key="amend.id">
-                  <td style="font-weight: 700; color: #0f4c81">
+                  <td
+                    style="
+                      font-weight: 700;
+                      color: var(--semantic-color-primary-dark);
+                    "
+                  >
                     #{{ amend.amendment_number }}
                   </td>
                   <td style="font-size: 12px; white-space: nowrap">
                     {{ new Date(amend.effective_date).toLocaleDateString() }}
                   </td>
                   <td>${{ Number(amend.previous_budget).toLocaleString() }}</td>
-                  <td style="font-weight: 700; color: #166534">
+                  <td
+                    style="
+                      font-weight: 700;
+                      color: var(--semantic-color-success-dark);
+                    "
+                  >
                     ${{ Number(amend.revised_budget).toLocaleString() }}
                   </td>
                   <td>
                     <span
                       class="badge"
-                      style="background: #e0f2fe; color: #0369a1"
+                      style="
+                        background: var(--semantic-color-primary-light);
+                        color: var(--semantic-color-primary);
+                      "
                     >
                       v{{ amend.previous_version_index }} ➔ v{{
                         amend.new_version_index
@@ -1506,7 +1677,10 @@
                   <td>
                     <span
                       class="badge"
-                      style="background: #dcfce7; color: #166534"
+                      style="
+                        background: var(--semantic-color-success-bg);
+                        color: var(--semantic-color-success-dark);
+                      "
                     >
                       {{ amend.status }}
                     </span>
@@ -1515,7 +1689,11 @@
                 <tr v-if="contractAmendments.length === 0">
                   <td
                     colspan="8"
-                    style="text-align: center; color: #64748b; padding: 16px"
+                    style="
+                      text-align: center;
+                      color: var(--semantic-color-text-secondary);
+                      padding: 16px;
+                    "
                   >
                     Initial version (v1) active. No contract amendments executed
                     yet.
@@ -1903,7 +2081,7 @@
             <p
               style="
                 font-size: 13px;
-                color: #475569;
+                color: var(--semantic-color-text-secondary);
                 margin-bottom: 12px;
                 line-height: 1.4;
               "
@@ -1950,7 +2128,7 @@
             <p
               style="
                 font-size: 13px;
-                color: #475569;
+                color: var(--semantic-color-text-secondary);
                 margin-bottom: 16px;
                 line-height: 1.4;
               "
@@ -2358,16 +2536,28 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: #1e293b;
+            background: var(--semantic-color-surface-elevated);
             padding: 16px 20px;
             border-radius: 8px;
           "
         >
           <div>
-            <h3 style="margin: 0; color: #f8fafc; font-size: 16px">
+            <h3
+              style="
+                margin: 0;
+                color: var(--semantic-color-text-inverse);
+                font-size: 16px;
+              "
+            >
               RTSM Site Inventory &amp; Return Accountability
             </h3>
-            <p style="margin: 4px 0 0; color: #94a3b8; font-size: 13px">
+            <p
+              style="
+                margin: 4px 0 0;
+                color: var(--semantic-color-text-inverse-muted);
+                font-size: 13px;
+              "
+            >
               Manage site IP kit returns, barcode scanning, residual volumes,
               and Part 11 e-signatures.
             </p>
@@ -3510,34 +3700,34 @@ async function approveAdjustment(adj) {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--semantic-color-border);
   padding-bottom: 10px;
 }
 
 .live-tab-btn {
   padding: 8px 14px;
   border-radius: 6px;
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  color: #334155;
+  border: 1px solid var(--semantic-color-border-control);
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text-body);
   font-weight: 600;
   font-size: 0.88rem;
   cursor: pointer;
 }
 
 .live-tab-btn.active {
-  background: #0f4c81;
-  border-color: #0f4c81;
-  color: #ffffff;
+  background: var(--semantic-color-primary);
+  border-color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .live-unbacked-note {
   margin: 0;
   padding: 10px 14px;
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  color: #475569;
+  border: 1px solid var(--semantic-color-border);
+  background: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-secondary);
   font-size: 0.88rem;
 }
 
@@ -3552,21 +3742,21 @@ async function approveAdjustment(adj) {
 }
 
 .modal {
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   border-radius: 8px;
   width: 100%;
   max-width: 500px;
   box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
   overflow: hidden;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .modal-header {
   padding: 16px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--semantic-color-border);
   font-weight: 600;
   font-size: 16px;
-  background: #0f4c81;
+  background: var(--semantic-color-primary-dark);
   color: white;
 }
 
@@ -3585,7 +3775,7 @@ label {
   font-weight: 500;
   margin-bottom: 4px;
   font-size: 13px;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 input,
@@ -3593,7 +3783,7 @@ select,
 textarea {
   width: 100%;
   padding: 8px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 13px;
   background: white;
@@ -3607,18 +3797,18 @@ textarea {
 
 .error-msg {
   margin: 8px 0 0;
-  color: #dc2626;
+  color: var(--semantic-color-error);
   font-size: 0.82rem;
   font-weight: 500;
 }
 
 .modal-footer {
   padding: 12px 16px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--semantic-color-border);
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  background: var(--semantic-color-surface-muted, #f8fafc);
+  background: var(--semantic-color-surface-muted);
 }
 
 .btn {
@@ -3635,32 +3825,32 @@ textarea {
 }
 
 .btn-cancel {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   background: white;
 }
 
 .btn-secondary {
-  border: 1px solid #cbd5e1;
-  background: #f8fafc;
+  border: 1px solid var(--semantic-color-border-control);
+  background: var(--semantic-color-surface-muted);
 }
 
 .btn-primary {
-  background: #0f4c81;
+  background: var(--semantic-color-primary-dark);
   color: white;
   border: none;
 }
 
 .tab-btn:hover {
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
 }
 
 .doa-load-error {
   margin-bottom: 16px;
   padding: 12px;
-  border: 1px solid #fecaca;
+  border: 1px solid var(--semantic-color-error-border-soft);
   border-radius: 6px;
-  background: #fef2f2;
-  color: #b91c1c;
+  background: var(--semantic-color-error-bg-soft);
+  color: var(--semantic-color-error);
   font-size: 14px;
 }
 

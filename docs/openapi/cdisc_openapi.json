@@ -7899,6 +7899,541 @@
         }
       }
     },
+    "/api/v1/kernel/studies": {
+      "get": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Lists visible studies in the caller\u0027s tenant.",
+        "operationId": "KernelListStudies",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kernel_KernelStudySummaryResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Registers a new study in the caller\u0027s tenant with a signed reason for change (study.register).",
+        "operationId": "KernelCreateStudy",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Kernel_KernelCreateStudyRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelStudySummaryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Study.StudyCodeTaken\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Study.CodeRequired\u0060, \u0060K.Study.TitleRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Study.SponsorUnknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
+            "status": 403
+          },
+          {
+            "code": "K.Study.SponsorUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Study.StudyCodeTaken",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Study.CodeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Study.TitleRequired",
+            "status": 422
+          }
+        ]
+      }
+    },
+    "/api/v1/kernel/organizations": {
+      "get": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Lists visible organizations in the caller\u0027s tenant.",
+        "operationId": "KernelListOrganizations",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kernel_KernelOrganizationSummaryResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kernel/protocol-templates": {
+      "get": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Lists bundled standard CDISC Library eCRF templates available for protocol draft import.",
+        "operationId": "KernelListProtocolTemplates",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kernel_KernelProtocolTemplateResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kernel/protocol-versions/{versionRef}/design-summary": {
+      "get": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Returns a viewable summary of a protocol version\u0027s forms, ordered items, and import notes.",
+        "operationId": "KernelGetProtocolDesignSummary",
+        "parameters": [
+          {
+            "name": "versionRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelProtocolDraftSummaryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kernel/studies/{studyRef}/protocol-imports": {
+      "post": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Synchronously imports ODM v1.3.2 XML, USDM v4 JSON, or bundled eCRF templates into a protocol draft.",
+        "operationId": "KernelImportProtocolDraft",
+        "parameters": [
+          {
+            "name": "studyRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_KernelImportProtocolJsonRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_KernelImportProtocolJsonRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelProtocolDraftSummaryResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelProtocolDraftSummaryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060, \u0060K.Protocol.StudyUnknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Protocol.FirstVersionExists\u0060, \u0060K.Protocol.InvalidTransition\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Protocol.AmendmentInvalid\u0060, \u0060K.Protocol.AmendmentNotAllowed\u0060, \u0060K.Protocol.ContentInvalid\u0060, \u0060K.Protocol.ContentRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Protocol.StudyUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Protocol.FirstVersionExists",
+            "status": 409
+          },
+          {
+            "code": "K.Protocol.InvalidTransition",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Protocol.AmendmentInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Protocol.AmendmentNotAllowed",
+            "status": 422
+          },
+          {
+            "code": "K.Protocol.ContentInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Protocol.ContentRequired",
+            "status": 422
+          }
+        ]
+      }
+    },
     "/api/v1/kernel/observations/{observationRef}": {
       "get": {
         "tags": [
@@ -11815,6 +12350,167 @@
         }
       }
     },
+    "/api/v1/knowledge/contextual-help": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "operationId": "ResolveContextualHelp",
+        "parameters": [
+          {
+            "name": "route",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "persona",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ContextualHelpResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/categories": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "operationId": "ListKnowledgeCategories",
+        "parameters": [
+          {
+            "name": "persona",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Knowledge_KnowledgeCategoryDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/articles": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "operationId": "ListKnowledgeArticles",
+        "parameters": [
+          {
+            "name": "status_filter",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "persona",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Knowledge_KnowledgeArticleDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/articles/{article_id}": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "operationId": "GetKnowledgeArticle",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_KnowledgeArticleDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/training/curricula": {
       "get": {
         "tags": [
@@ -13943,6 +14639,249 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Tickets_AnonymousTypeOfstringAndstring"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets": {
+      "post": {
+        "tags": [
+          "Tickets"
+        ],
+        "operationId": "CreateTicket",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Tickets_CreateTicketRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_TicketResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Tickets"
+        ],
+        "operationId": "ListTickets",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gxp_severity",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assigned_queue",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Tickets_TicketResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{ticket_id}": {
+      "get": {
+        "tags": [
+          "Tickets"
+        ],
+        "operationId": "GetTicket",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_TicketResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
                 }
               }
             }
@@ -24526,6 +25465,43 @@
           }
         }
       },
+      "Kernel_KernelCreateStudyRequest": {
+        "required": [
+          "study_code",
+          "title",
+          "phase"
+        ],
+        "type": "object",
+        "properties": {
+          "study_code": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "phase": {
+            "type": "string"
+          },
+          "sponsor_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sponsor_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sponsor_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Kernel_KernelDecisionResponse": {
         "required": [
           "capability",
@@ -24793,6 +25769,42 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "Kernel_KernelImportProtocolJsonRequest": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "file_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "content": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "template_ids": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "replace_forms": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -25099,6 +26111,29 @@
           }
         }
       },
+      "Kernel_KernelOrganizationSummaryResponse": {
+        "required": [
+          "ref",
+          "code",
+          "name",
+          "kind"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          }
+        }
+      },
       "Kernel_KernelProposalAffectedResponse": {
         "required": [
           "ref",
@@ -25388,6 +26423,199 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Kernel_KernelProtocolDraftSummaryResponse": {
+        "required": [
+          "version",
+          "title",
+          "form_count",
+          "item_count",
+          "forms",
+          "import_notes"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "$ref": "#/components/schemas/Kernel_KernelProtocolVersionResponse"
+          },
+          "title": {
+            "type": "string"
+          },
+          "form_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "item_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "forms": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelProtocolFormSummaryResponse"
+            }
+          },
+          "import_notes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelProtocolImportNoteResponse"
+            }
+          }
+        }
+      },
+      "Kernel_KernelProtocolFormItemResponse": {
+        "required": [
+          "id",
+          "display_order",
+          "prompt",
+          "concept",
+          "required",
+          "value_kind",
+          "unit"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "display_order": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "concept": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "value_kind": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_KernelProtocolFormSummaryResponse": {
+        "required": [
+          "id",
+          "display_order",
+          "name",
+          "item_count",
+          "required_item_count",
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "display_order": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "item_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "required_item_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelProtocolFormItemResponse"
+            }
+          }
+        }
+      },
+      "Kernel_KernelProtocolImportNoteResponse": {
+        "required": [
+          "source",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "Kernel_KernelProtocolTemplateResponse": {
+        "required": [
+          "id",
+          "category",
+          "form_oid",
+          "form_name",
+          "file_name",
+          "item_count"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "form_oid": {
+            "type": "string"
+          },
+          "form_name": {
+            "type": "string"
+          },
+          "file_name": {
+            "type": "string"
+          },
+          "item_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -25999,6 +27227,50 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "Kernel_KernelStudySummaryResponse": {
+        "required": [
+          "ref",
+          "code",
+          "title",
+          "phase",
+          "sponsor_ref",
+          "sponsor_code",
+          "sponsor_name",
+          "site_count"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "phase": {
+            "type": "string"
+          },
+          "sponsor_ref": {
+            "type": "string"
+          },
+          "sponsor_code": {
+            "type": "string"
+          },
+          "sponsor_name": {
+            "type": "string"
+          },
+          "site_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -27378,6 +28650,106 @@
           }
         }
       },
+      "Knowledge_ContextualHelpMappingDto": {
+        "required": [
+          "id",
+          "route_pattern",
+          "persona",
+          "article_id",
+          "section_anchor",
+          "priority",
+          "is_active"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "route_pattern": {
+            "type": "string"
+          },
+          "persona": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "article_id": {
+            "type": "string"
+          },
+          "section_anchor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "priority": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "is_active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Knowledge_ContextualHelpResponseDto": {
+        "required": [
+          "matched_mapping",
+          "primary_article",
+          "primary_version",
+          "section_anchor",
+          "related_articles"
+        ],
+        "type": "object",
+        "properties": {
+          "matched_mapping": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Knowledge_ContextualHelpMappingDto"
+              }
+            ]
+          },
+          "primary_article": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Knowledge_KnowledgeArticleDto"
+              }
+            ]
+          },
+          "primary_version": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Knowledge_KnowledgeArticleVersionDto"
+              }
+            ]
+          },
+          "section_anchor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "related_articles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Knowledge_KnowledgeArticleDto"
+            }
+          }
+        }
+      },
       "Knowledge_DelegationSummaryDto": {
         "required": [
           "id",
@@ -27458,6 +28830,222 @@
             "type": "string"
           },
           "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "Knowledge_KnowledgeArticleDto": {
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "category_id",
+          "category_name",
+          "status",
+          "version_index",
+          "version_label",
+          "current_published_version_id",
+          "tags",
+          "author_user_id",
+          "last_edited_by",
+          "approved_by",
+          "body_markdown",
+          "body_html",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "category_id": {
+            "type": "string"
+          },
+          "category_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "version_label": {
+            "type": "string"
+          },
+          "current_published_version_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "author_user_id": {
+            "type": "string"
+          },
+          "last_edited_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "approved_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "body_markdown": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "body_html": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Knowledge_KnowledgeArticleVersionDto": {
+        "required": [
+          "id",
+          "article_id",
+          "version_index",
+          "version_label",
+          "body_markdown",
+          "body_html",
+          "status_at_snapshot",
+          "is_locked",
+          "created_at",
+          "created_by",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "article_id": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "version_label": {
+            "type": "string"
+          },
+          "body_markdown": {
+            "type": "string"
+          },
+          "body_html": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status_at_snapshot": {
+            "type": "string"
+          },
+          "is_locked": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": "string"
+          }
+        }
+      },
+      "Knowledge_KnowledgeCategoryDto": {
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "description",
+          "parent_id",
+          "persona_visibility",
+          "is_deleted",
+          "created_at",
+          "created_by"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "parent_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "persona_visibility": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "is_deleted": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
             "type": "string"
           }
         }
@@ -29411,6 +30999,280 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Tickets_CreateTicketRequestDto": {
+        "required": [
+          "title",
+          "description"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "SYSTEM_SUPPORT"
+          },
+          "gxp_severity": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "MINOR"
+          },
+          "priority": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "MEDIUM"
+          },
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "entity_type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "entity_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "source_route": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "persona": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Tickets_ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Tickets_TicketResponseDto": {
+        "required": [
+          "id",
+          "reference",
+          "title",
+          "description",
+          "category",
+          "priority",
+          "gxp_severity",
+          "status",
+          "assigned_queue",
+          "assignee_role",
+          "assignee_user",
+          "reporter",
+          "created_by",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "related_entity_type",
+          "related_entity_id",
+          "source_route",
+          "acknowledge_target_at",
+          "sla_target_at",
+          "sla_breached",
+          "sla_amber_warned",
+          "escalation_count",
+          "reason_for_change",
+          "created_at",
+          "version_index"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "string"
+          },
+          "gxp_severity": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "assigned_queue": {
+            "type": "string"
+          },
+          "assignee_role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "assignee_user": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reporter": {
+            "type": "string"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "related_entity_type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "related_entity_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "source_route": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "acknowledge_target_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "sla_target_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "sla_breached": {
+            "type": "boolean"
+          },
+          "sla_amber_warned": {
+            "type": "boolean"
+          },
+          "escalation_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       }

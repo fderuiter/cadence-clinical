@@ -452,24 +452,24 @@ defineExpose({ checkStatus });
 }
 
 .scope-pill-label {
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   font-weight: 600;
 }
 
 .scope-pill {
   padding: 2px 8px;
   border-radius: 999px;
-  border: 1px solid #cbd5e1;
-  background: #f8fafc;
-  color: #0f172a;
+  border: 1px solid var(--semantic-color-border-control);
+  background: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text);
   font-size: 0.8rem;
   cursor: pointer;
 }
 
 .scope-pill.active {
-  background: #0f4c81;
-  border-color: #0f4c81;
-  color: #ffffff;
+  background: var(--semantic-color-primary);
+  border-color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .activate {
@@ -492,20 +492,20 @@ defineExpose({ checkStatus });
 }
 
 .status-complete {
-  color: #166534;
+  color: var(--semantic-color-success-dark);
 }
 
 .status-incomplete,
 .status-error {
-  color: #b91c1c;
+  color: var(--semantic-color-error);
 }
 
 .status-scope-guidance {
   padding: 12px 14px;
   border-radius: 6px;
-  border: 1px solid #f59e0b;
-  background: #fffbeb;
-  color: #92400e;
+  border: 1px solid var(--semantic-color-warning-border-strong);
+  background: var(--semantic-color-warning-bg-soft);
+  color: var(--semantic-color-warning-dark);
 }
 
 .scope-guidance-text {
@@ -520,9 +520,9 @@ defineExpose({ checkStatus });
   margin-bottom: 10px;
   padding: 10px 12px;
   border-radius: 6px;
-  border: 1px solid #86efac;
-  background: #f0fdf4;
-  color: #14532d;
+  border: 1px solid var(--semantic-color-success-border);
+  background: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success-dark);
   font-size: 0.92rem;
 }
 
@@ -530,8 +530,8 @@ defineExpose({ checkStatus });
   display: inline-block;
   padding: 2px 8px;
   border-radius: 999px;
-  background: #166534;
-  color: #ffffff;
+  background: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -541,15 +541,15 @@ defineExpose({ checkStatus });
   margin: 0;
   padding: 10px 12px;
   border-radius: 6px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  color: #475569;
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
+  color: var(--semantic-color-text-secondary);
   font-size: 0.9rem;
 }
 
 .unavailable-note {
   margin: 0;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   font-size: 0.9rem;
 }
 </style>

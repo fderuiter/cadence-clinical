@@ -504,13 +504,13 @@ onMounted(() => {
 <style scoped>
 .visit-signed_off,
 .visit-completed {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 
 .visit-scheduled {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary-dark);
 }
 
 .card-subheader {
@@ -530,8 +530,8 @@ onMounted(() => {
 
 .letter-item {
   padding: 10px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
 }
 
@@ -539,7 +539,7 @@ onMounted(() => {
   margin: 8px 0 0;
   white-space: pre-wrap;
   font-size: 0.82rem;
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 
 .data-table {

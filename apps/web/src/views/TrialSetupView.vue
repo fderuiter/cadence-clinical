@@ -193,13 +193,13 @@ async function submitOnboarding() {
   max-width: 680px;
   margin: 28px auto 56px;
   padding: 0 20px;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .prerelease-banner {
-  background: #fffbeb;
-  border: 1px solid #f59e0b;
-  color: #92400e;
+  background: var(--semantic-color-warning-bg-light);
+  border: 1px solid var(--semantic-color-warning-border-strong);
+  color: var(--semantic-color-warning-text);
   border-radius: 8px;
   padding: 12px 16px;
   font-size: 0.88rem;
@@ -208,8 +208,8 @@ async function submitOnboarding() {
 }
 
 .setup-card {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border-muted);
   border-radius: 12px;
   padding: 28px;
   box-shadow: 0 4px 12px rgb(15 23 42 / 0.06);
@@ -220,7 +220,7 @@ async function submitOnboarding() {
   letter-spacing: 0.08em;
   font-size: 0.76rem;
   font-weight: 700;
-  color: #1d4ed8;
+  color: var(--semantic-color-interactive-primary);
   margin: 0 0 6px;
 }
 
@@ -230,7 +230,7 @@ async function submitOnboarding() {
 }
 
 .setup-subtitle {
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   font-size: 0.94rem;
   line-height: 1.5;
   margin-bottom: 24px;
@@ -251,21 +251,23 @@ async function submitOnboarding() {
 .form-field input,
 .form-field select {
   padding: 10px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   border-radius: 6px;
   font-size: 0.95rem;
 }
 
 .field-hint {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   line-height: 1.4;
 }
 
 .setup-error {
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg);
+  border: 1px solid var(--semantic-color-error-border);
+  color: var(--semantic-color-error-dark);
   padding: 10px 12px;
   border-radius: 6px;
   font-size: 0.9rem;

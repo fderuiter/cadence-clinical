@@ -378,16 +378,27 @@
           style="
             margin-bottom: 20px;
             padding: 16px;
-            background-color: #fffbeb;
-            border: 1px solid #fde68a;
+            background-color: var(--semantic-color-warning-bg-soft);
+            border: 1px solid var(--semantic-color-warning-border);
             border-radius: 8px;
           "
         >
           <div class="alert-content">
-            <h4 style="margin: 0 0 6px 0; color: #92400e">
+            <h4
+              style="
+                margin: 0 0 6px 0;
+                color: var(--semantic-color-warning-dark);
+              "
+            >
               📥 USDM Concept Staging Required
             </h4>
-            <p style="margin: 0 0 12px 0; font-size: 0.85rem; color: #78350f">
+            <p
+              style="
+                margin: 0 0 12px 0;
+                font-size: 0.85rem;
+                color: var(--semantic-color-warning-dark);
+              "
+            >
               Detected {{ unmappedConceptTokens.length }} unmapped Biomedical
               Concept code(s). Open the concept staging drawer to map NCIt/CDISC
               codes, create tenant aliases, or accept design finding exemptions.
@@ -397,9 +408,9 @@
             type="button"
             class="btn btn-warning btn-open-staging-drawer"
             style="
-              background-color: #d97706;
-              border-color: #d97706;
-              color: #ffffff;
+              background-color: var(--semantic-color-warning-action);
+              border-color: var(--semantic-color-warning-border-strong);
+              color: var(--semantic-color-surface);
               font-weight: 600;
             "
             @click="isConceptStagingOpen = true"
@@ -1259,8 +1270,8 @@ const commitAndActivateEDC = async () => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 24px;
-  background-color: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md, 8px);
   padding: 16px 24px;
 }
@@ -1283,43 +1294,43 @@ const commitAndActivateEDC = async () => {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: #f1f5f9;
-  border: 2px solid #cbd5e1;
+  background-color: var(--semantic-color-surface-header);
+  border: 2px solid var(--semantic-color-border-control);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
   font-size: 0.9rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 .step-item.active .step-circle {
-  background-color: var(--primary, #0f172a);
-  border-color: var(--primary, #0f172a);
-  color: #ffffff;
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: var(--semantic-color-text-inverse);
 }
 
 .step-item.completed .step-circle {
-  background-color: #059669;
-  border-color: #059669;
-  color: #ffffff;
+  background-color: var(--semantic-color-success);
+  border-color: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
 }
 
 .step-label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 
 .step-divider {
   flex: 1;
   height: 2px;
-  background-color: #e2e8f0;
+  background-color: var(--semantic-color-surface-header);
   margin: 0 16px;
 }
 
 .step-divider.completed {
-  background-color: #059669;
+  background-color: var(--semantic-color-success);
 }
 
 .wizard-pane {
@@ -1329,19 +1340,19 @@ const commitAndActivateEDC = async () => {
 }
 
 .dropzone {
-  border: 2px dashed #cbd5e1;
+  border: 2px dashed var(--semantic-color-border-control);
   border-radius: 8px;
   padding: 48px 24px;
   text-align: center;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .dropzone:hover,
 .dropzone.dragging {
-  border-color: var(--primary, #0f172a);
-  background-color: #f1f5f9;
+  border-color: var(--primary);
+  background-color: var(--semantic-color-surface-header);
 }
 
 .dropzone-icon {
@@ -1353,12 +1364,12 @@ const commitAndActivateEDC = async () => {
   font-size: 1.1rem;
   font-weight: 700;
   margin: 0 0 6px 0;
-  color: var(--primary, #0f172a);
+  color: var(--primary);
 }
 
 .dropzone-hint {
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin: 0 0 16px 0;
 }
 
@@ -1369,8 +1380,8 @@ const commitAndActivateEDC = async () => {
 }
 
 .format-tag {
-  background-color: #e2e8f0;
-  color: #334155;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
   padding: 4px 10px;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -1378,8 +1389,8 @@ const commitAndActivateEDC = async () => {
 }
 
 .file-meta-box {
-  background-color: #f8fafc;
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 12px 16px;
   margin-top: 16px;
@@ -1400,14 +1411,14 @@ const commitAndActivateEDC = async () => {
 }
 
 .hash-label {
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .hash-code {
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
   padding: 2px 6px;
   border-radius: 4px;
-  color: #0369a1;
+  color: var(--semantic-color-primary);
 }
 
 .step-action-bar {
@@ -1426,19 +1437,19 @@ const commitAndActivateEDC = async () => {
 .extraction-header h3 {
   margin: 0 0 6px 0;
   font-weight: 700;
-  color: var(--primary, #0f172a);
+  color: var(--primary);
 }
 
 .extraction-header p {
   margin: 0 0 20px 0;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-size: 0.9rem;
 }
 
 .progress-bar-container {
   width: 100%;
   height: 10px;
-  background-color: #e2e8f0;
+  background-color: var(--semantic-color-surface-header);
   border-radius: 6px;
   overflow: hidden;
   margin-bottom: 8px;
@@ -1446,14 +1457,14 @@ const commitAndActivateEDC = async () => {
 
 .progress-bar-fill {
   height: 100%;
-  background-color: #059669;
+  background-color: var(--semantic-color-success);
   transition: width 0.3s ease;
 }
 
 .progress-percentage-label {
   font-size: 0.8rem;
   font-weight: 700;
-  color: #059669;
+  color: var(--semantic-color-success);
   text-align: right;
   margin-bottom: 20px;
 }
@@ -1471,37 +1482,37 @@ const commitAndActivateEDC = async () => {
   gap: 12px;
   padding: 10px 14px;
   border-radius: 6px;
-  background-color: #f8fafc;
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
 }
 
 .stage-row.active {
-  background-color: #eff6ff;
-  border-color: #bfdbfe;
+  background-color: var(--semantic-color-info-bg);
+  border-color: var(--semantic-color-info-border);
 }
 
 .stage-row.completed {
-  background-color: #f0fdf4;
-  border-color: #bbf7d0;
+  background-color: var(--semantic-color-success-bg-soft);
+  border-color: var(--semantic-color-success-border-soft);
 }
 
 .stage-name {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .stage-desc {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .confidence-banner {
   display: flex;
   align-items: center;
   gap: 12px;
-  background-color: #ecfdf5;
-  border: 1px solid #a7f3d0;
+  background-color: var(--semantic-color-success-bg-soft);
+  border: 1px solid var(--semantic-color-success-border);
   padding: 12px 16px;
   border-radius: 6px;
   margin-bottom: 20px;
@@ -1510,31 +1521,31 @@ const commitAndActivateEDC = async () => {
 .confidence-title {
   font-size: 0.85rem;
   font-weight: 700;
-  color: #065f46;
+  color: var(--semantic-color-success-dark);
 }
 
 .confidence-meter {
   flex: 1;
   height: 8px;
-  background-color: #d1fae5;
+  background-color: var(--semantic-color-success-border-soft);
   border-radius: 4px;
   overflow: hidden;
 }
 
 .confidence-meter-fill {
   height: 100%;
-  background-color: #059669;
+  background-color: var(--semantic-color-success);
 }
 
 .confidence-value {
   font-size: 0.85rem;
   font-weight: 700;
-  color: #065f46;
+  color: var(--semantic-color-success-dark);
 }
 
 .study-summary-card {
   padding: 16px;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
 }
 
 .study-meta-grid {
@@ -1556,20 +1567,20 @@ const commitAndActivateEDC = async () => {
 .meta-label {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
 }
 
 .meta-value {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .badge-phase {
   display: inline-block;
-  background-color: #dbeafe;
-  color: #1e40af;
+  background-color: var(--semantic-color-info-light);
+  color: var(--semantic-color-info);
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 0.8rem;
@@ -1584,8 +1595,8 @@ const commitAndActivateEDC = async () => {
 }
 
 .json-code-block {
-  background-color: #0f172a;
-  color: #f8fafc;
+  background-color: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse);
   padding: 16px;
   border-radius: 6px;
   font-size: 0.8rem;
@@ -1600,12 +1611,12 @@ const commitAndActivateEDC = async () => {
 .synthesis-header h3 {
   margin: 0 0 6px 0;
   font-weight: 700;
-  color: var(--primary, #0f172a);
+  color: var(--primary);
 }
 
 .synthesis-header p {
   margin: 0 0 20px 0;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-size: 0.9rem;
 }
 
@@ -1617,8 +1628,8 @@ const commitAndActivateEDC = async () => {
 }
 
 .synthesized-form-card {
-  background-color: #f8fafc;
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 16px;
   position: relative;
@@ -1639,36 +1650,36 @@ const commitAndActivateEDC = async () => {
 }
 
 .badge-vs {
-  background-color: #e0f2fe;
-  color: #0369a1;
+  background-color: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
 }
 .badge-eg {
-  background-color: #fef3c7;
-  color: #b45309;
+  background-color: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning);
 }
 .badge-lb {
-  background-color: #f3e8ff;
-  color: #7e22ce;
+  background-color: var(--semantic-color-purple-bg);
+  color: var(--semantic-color-purple-text);
 }
 .badge-qs {
-  background-color: #dcfce7;
-  color: #15803d;
+  background-color: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
 }
 .badge-pe {
-  background-color: #fee2e2;
-  color: #b91c1c;
+  background-color: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
 }
 
 .field-count {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .form-title {
   margin: 0 0 8px 0;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .form-items-preview {
@@ -1676,7 +1687,7 @@ const commitAndActivateEDC = async () => {
   padding: 0;
   margin: 0 0 12px 0;
   font-size: 0.8rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 .form-items-preview li {
@@ -1692,18 +1703,18 @@ const commitAndActivateEDC = async () => {
 }
 
 .widget-pill.vas {
-  background-color: #ecfdf5;
-  color: #065f46;
+  background-color: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success-dark);
 }
 
 .widget-pill.bodymap {
-  background-color: #fff1f2;
-  color: #9f1239;
+  background-color: var(--semantic-color-error-bg-row);
+  color: var(--semantic-color-rose-text);
 }
 
 .gxp-commit-box {
-  background-color: #f8fafc;
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 16px;
   margin-bottom: 20px;
@@ -1712,21 +1723,21 @@ const commitAndActivateEDC = async () => {
 .gxp-label {
   display: block;
   font-size: 0.85rem;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
   margin-bottom: 8px;
 }
 
 .input-text-gxp {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 0.9rem;
 }
 
 .btn-commit-edc {
-  background-color: #059669;
-  border-color: #059669;
+  background-color: var(--semantic-color-success);
+  border-color: var(--semantic-color-success);
   font-size: 0.95rem;
   padding: 10px 20px;
 }
@@ -1735,8 +1746,8 @@ const commitAndActivateEDC = async () => {
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  background-color: #ecfdf5;
-  border: 1px solid #a7f3d0;
+  background-color: var(--semantic-color-success-bg-soft);
+  border: 1px solid var(--semantic-color-success-border);
   padding: 20px;
   border-radius: 8px;
   margin-top: 24px;
@@ -1748,13 +1759,13 @@ const commitAndActivateEDC = async () => {
 
 .success-title {
   margin: 0 0 6px 0;
-  color: #065f46;
+  color: var(--semantic-color-success-dark);
   font-weight: 700;
 }
 
 .success-desc {
   margin: 0 0 16px 0;
-  color: #047857;
+  color: var(--semantic-color-success);
   font-size: 0.9rem;
 }
 
@@ -1764,8 +1775,8 @@ const commitAndActivateEDC = async () => {
 }
 
 .escalation-alert-card {
-  background-color: #fffbebf5;
-  border: 2px solid #f59e0b;
+  background-color: var(--semantic-color-warning-bg-soft);
+  border: 2px solid var(--semantic-color-warning-border-strong);
   border-radius: 8px;
   padding: 20px;
   margin: 16px 0;
@@ -1780,13 +1791,13 @@ const commitAndActivateEDC = async () => {
 
 .escalation-header h4 {
   margin: 0;
-  color: #92400e;
+  color: var(--semantic-color-warning-dark);
   font-size: 1.1rem;
 }
 
 .badge-escalation {
-  background-color: #f59e0b;
-  color: #ffffff;
+  background-color: var(--semantic-color-warning-action);
+  color: var(--semantic-color-surface);
   padding: 4px 8px;
   border-radius: 4px;
   font-weight: 700;
@@ -1794,13 +1805,13 @@ const commitAndActivateEDC = async () => {
 }
 
 .escalation-description {
-  color: #78350f;
+  color: var(--semantic-color-warning-dark);
   margin-bottom: 12px;
 }
 
 .validation-errors-box {
-  background-color: #fef3c7;
-  border-left: 4px solid #f59e0b;
+  background-color: var(--semantic-color-warning-bg-badge);
+  border-left: 4px solid var(--semantic-color-warning-border-strong);
   padding: 12px;
   margin-bottom: 16px;
   border-radius: 4px;
@@ -1809,7 +1820,7 @@ const commitAndActivateEDC = async () => {
 .validation-errors-box ul {
   margin: 6px 0 0 16px;
   padding: 0;
-  color: #92400e;
+  color: var(--semantic-color-warning-dark);
 }
 
 .correction-fields-grid {
@@ -1820,15 +1831,15 @@ const commitAndActivateEDC = async () => {
 }
 
 .esignature-section {
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   padding: 16px;
 }
 
 .esignature-section h5 {
   margin: 0 0 12px 0;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .esignature-grid {
@@ -1845,8 +1856,8 @@ const commitAndActivateEDC = async () => {
 }
 
 .btn-submit-correction {
-  background-color: #d97706;
-  color: #ffffff;
+  background-color: var(--semantic-color-warning-action);
+  color: var(--semantic-color-surface);
   border: none;
   font-weight: 600;
   padding: 10px 20px;
@@ -1855,7 +1866,7 @@ const commitAndActivateEDC = async () => {
 }
 
 .btn-submit-correction:hover {
-  background-color: #b45309;
+  background-color: var(--semantic-color-warning-action);
 }
 
 .ingestion-mode-tabs {
@@ -1867,12 +1878,12 @@ const commitAndActivateEDC = async () => {
 .btn-mode {
   flex: 1;
   padding: 12px 20px;
-  background-color: #f8fafc;
-  border: 2px solid #e2e8f0;
+  background-color: var(--semantic-color-surface-muted);
+  border: 2px solid var(--semantic-color-border);
   border-radius: 8px;
   font-weight: 700;
   font-size: 0.95rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
@@ -1882,14 +1893,14 @@ const commitAndActivateEDC = async () => {
 }
 
 .btn-mode:hover {
-  background-color: #f1f5f9;
-  border-color: #cbd5e1;
+  background-color: var(--semantic-color-surface-header);
+  border-color: var(--semantic-color-border-control);
 }
 
 .btn-mode.active {
-  background-color: #0f172a;
-  border-color: #0f172a;
-  color: #ffffff;
+  background-color: var(--semantic-color-surface-inverse);
+  border-color: var(--semantic-color-text);
+  color: var(--semantic-color-text-inverse);
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
 }
 </style>

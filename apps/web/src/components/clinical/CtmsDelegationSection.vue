@@ -452,27 +452,27 @@ onMounted(() => {
 .pi-banner {
   margin: 0;
   font-size: 0.9rem;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .role-hint {
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-size: 0.82rem;
 }
 
 .doa-active {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 
 .doa-pending_pi_signature {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-text);
 }
 
 .doa-revoked {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-dark);
 }
 
 .data-table {

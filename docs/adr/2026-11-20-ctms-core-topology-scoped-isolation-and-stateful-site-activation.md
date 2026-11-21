@@ -1,4 +1,4 @@
-# ADR-2641: CTMS Core Topology, Scoped Isolation, and Stateful Site Activation
+# ADR-2642: CTMS Core Topology, Scoped Isolation, and Stateful Site Activation
 
 - **Status:** Accepted
 - **Date:** 2026-11-20

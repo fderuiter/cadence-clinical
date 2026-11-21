@@ -15,7 +15,7 @@
         align-items: center;
         flex-wrap: wrap;
         gap: var(--spacing-sm);
-        background-color: #f8fafc;
+        background-color: var(--semantic-color-surface-muted);
         border: 1px solid var(--border);
         border-radius: 8px;
         padding: 12px 16px;
@@ -108,7 +108,7 @@
             margin-bottom: 16px;
             border: 1px solid var(--border);
             border-radius: 8px;
-            background: var(--semantic-color-surface, #fff);
+            background: var(--semantic-color-surface);
           "
         >
           <div
@@ -133,7 +133,7 @@
                 flex: 1 1 14rem;
                 min-width: 0;
                 padding: 6px 8px;
-                border: 1px solid var(--border);
+                border: 1px solid var(--semantic-color-border-control);
                 border-radius: 4px;
               "
             >
@@ -158,7 +158,7 @@
               style="
                 font-size: 0.85rem;
                 font-weight: 600;
-                color: var(--accent, #2563eb);
+                color: var(--semantic-color-interactive-primary);
                 text-decoration: underline;
               "
             >
@@ -171,7 +171,7 @@
               style="
                 font-size: 0.85rem;
                 font-weight: 600;
-                color: var(--accent, #2563eb);
+                color: var(--semantic-color-interactive-primary);
                 text-decoration: underline;
               "
             >
@@ -283,7 +283,13 @@
         >
           <div>
             <div class="card-title">{{ $t("ecrf.cdashTitle") }}</div>
-            <p style="font-size: 0.85rem; color: #475569; margin-bottom: 8px">
+            <p
+              style="
+                font-size: 0.85rem;
+                color: var(--semantic-color-text-secondary);
+                margin-bottom: 8px;
+              "
+            >
               {{ $t("ecrf.cdashDesc") }}
             </p>
           </div>
@@ -293,7 +299,7 @@
               border: 1px solid var(--border);
               border-radius: 8px;
               padding: 12px;
-              background-color: #f8fafc;
+              background-color: var(--semantic-color-surface-muted);
             "
           >
             <h3
@@ -310,7 +316,7 @@
               style="
                 font-size: 0.8rem;
                 padding-left: 20px;
-                color: #475569;
+                color: var(--semantic-color-text-secondary);
                 display: flex;
                 flex-direction: column;
                 gap: 6px;
@@ -336,7 +342,7 @@
               border: 1px solid var(--border);
               border-radius: 8px;
               padding: 12px;
-              background-color: #f8fafc;
+              background-color: var(--semantic-color-surface-muted);
             "
           >
             <h3
@@ -349,7 +355,13 @@
             >
               {{ $t("ecrf.queryManagementTitle") }}
             </h3>
-            <p style="font-size: 0.8rem; color: #475569; line-height: 1.4">
+            <p
+              style="
+                font-size: 0.8rem;
+                color: var(--semantic-color-text-secondary);
+                line-height: 1.4;
+              "
+            >
               {{ $t("ecrf.queryManagementDesc") }}
             </p>
           </div>
@@ -360,19 +372,28 @@
     <!-- Full-Width Bottom Section: Study Designer Persona Component (demo only) -->
     <div v-if="demoBuild" style="margin-top: 24px">
       <DesignerSchemaPanel
+        v-model:import-change-reason="schema.importChangeReason"
+        v-model:selected-template-ids="schema.selectedTemplateIds"
         v-model:edit-item-value="schema.editItemValue"
         v-model:edit-item-reason="schema.editItemReason"
         v-model:reject-item-reason="schema.rejectItemReason"
         v-model:promote-change-reason="schema.promoteChangeReason"
         :store="store"
         :selected-file-name="schema.selectedFileName"
+        :available-templates="schema.availableTemplates"
+        :importing-draft="schema.importingDraft"
+        :import-success-message="schema.importSuccessMessage"
+        :import-error-message="schema.importErrorMessage"
+        :imported-draft-summary="schema.importedDraftSummary"
         :editing-item-id="schema.editingItemId"
         :rejecting-item-id="schema.rejectingItemId"
         :unreviewed-count="schema.unreviewedCount"
         :get-confidence-class="schema.getConfidenceClass"
         :get-status-class="schema.getStatusClass"
-        @trigger-file-select="schema.triggerFileSelect"
+        @register-file-input="schema.setFileInputElement"
+        @load-templates="schema.loadProtocolTemplates"
         @trigger-document-upload="schema.triggerDocumentUpload"
+        @import-selected-templates="schema.importSelectedTemplates"
         @accept-item="schema.acceptItem"
         @start-edit-item="schema.startEditItem"
         @cancel-edit-item="schema.cancelEditItem"

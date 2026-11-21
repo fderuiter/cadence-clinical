@@ -4,6 +4,16 @@ import {
   getFallbackContextualHelp,
 } from "../api/knowledge";
 import {
+  DEMO_ORGANIZATIONS,
+  DEMO_PROTOCOL_TEMPLATES,
+  buildImportedDraftDesign,
+  createInitialDemoStudyDirectoryEntry,
+} from "./demoStudyImport.js";
+import {
+  routeDemoTicketQueue,
+  validateDemoTicketNoDirectPii,
+} from "../api/ticketsApi";
+import {
   findCommercialTier,
   PRE_RELEASE_ENVIRONMENT_NOTICE,
 } from "../catalog/productCatalog.js";
@@ -401,6 +411,11 @@ export function createWebDemoStore() {
 
   const state = {
     studies: new Map(),
+    organizations: [],
+    importedProtocolVersions: new Map(),
+    protocolDesignSummaries: new Map(),
+    idempotentStudyResponses: new Map(),
+    idempotentImportResponses: new Map(),
     subjects: [],
     observations: createInitialObservations(),
     forms: new Map(),
@@ -422,6 +437,7 @@ export function createWebDemoStore() {
     rules: [],
     knowledgeCategories: cloneJson(DEFAULT_CATEGORIES),
     knowledgeArticles: cloneJson(DEFAULT_MOCK_ARTICLES),
+    tickets: [],
     ipKits: [],
     locks: [],
     participantWallets: [],
@@ -468,7 +484,15 @@ export function createWebDemoStore() {
       ],
     });
 
+    state.organizations = cloneJson(DEMO_ORGANIZATIONS);
+    state.importedProtocolVersions = new Map();
+    state.protocolDesignSummaries = new Map();
+    state.idempotentStudyResponses = new Map();
+    state.idempotentImportResponses = new Map();
+
+    const cadence101 = createInitialDemoStudyDirectoryEntry();
     state.studies = new Map([
+      ["CADENCE-101", cadence101],
       [
         "DEMO-01",
         {
@@ -476,6 +500,11 @@ export function createWebDemoStore() {
           kind: "study",
           code: "DEMO-01",
           title: "Phase II Synthetic Cardiometabolic Demonstration Protocol",
+          phase: "Phase 2",
+          sponsor_ref: DEMO_ORGANIZATIONS[0].ref,
+          sponsor_code: DEMO_ORGANIZATIONS[0].code,
+          sponsor_name: DEMO_ORGANIZATIONS[0].name,
+          site_count: 2,
           status: "ACTIVE",
           mask: null,
         },
@@ -487,6 +516,11 @@ export function createWebDemoStore() {
           kind: "study",
           code: "STUDY-USDM-001",
           title: "USDM v3.0 Synthetic Oncology Reference Trial",
+          phase: "Phase 3",
+          sponsor_ref: DEMO_ORGANIZATIONS[0].ref,
+          sponsor_code: DEMO_ORGANIZATIONS[0].code,
+          sponsor_name: DEMO_ORGANIZATIONS[0].name,
+          site_count: 2,
           status: "ACTIVE",
           mask: null,
         },
@@ -867,6 +901,68 @@ export function createWebDemoStore() {
 
     state.knowledgeCategories = cloneJson(DEFAULT_CATEGORIES);
     state.knowledgeArticles = cloneJson(DEFAULT_MOCK_ARTICLES);
+    state.tickets = [
+      {
+        id: "tk-8801",
+        reference: "SIM-2026-0041",
+        title: "Investigational Product Cold-Chain Excursion at Site 101",
+        description:
+          "Cold-chain continuous temperature logger logged 9.4C during weekend storage.",
+        category: "SUPPLY_EXCURSION",
+        gxp_severity: "CRITICAL",
+        priority: "CRITICAL",
+        status: "OPEN",
+        assigned_queue: "SUBJECT_MANAGEMENT_RTSM",
+        assignee_role: "SUBJECT_MANAGEMENT_RTSM",
+        assignee_user: null,
+        reporter: "cra_monitor",
+        created_by: "cra_monitor",
+        study_id: "STUDY-ONC-202",
+        site_id: "SITE-101",
+        subject_id: null,
+        related_entity_type: "SUPPLY_KIT",
+        related_entity_id: "KIT-9941",
+        source_route: "/ssu",
+        acknowledge_target_at: "2026-08-04T10:30:00Z",
+        sla_target_at: "2026-08-06T09:30:00Z",
+        sla_breached: false,
+        sla_amber_warned: false,
+        escalation_count: 0,
+        reason_for_change: "Initial cold-chain deviation triage",
+        created_at: "2026-08-04T09:30:00Z",
+        version_index: 1,
+      },
+      {
+        id: "tk-8802",
+        reference: "SIM-2026-0042",
+        title: "Missed Scheduled Blood Draw at Cycle 2 Day 1",
+        description:
+          "Subject SUBJ-8812 PK blood sample collection missed due to scheduling conflict.",
+        category: "PROTOCOL_DEVIATION",
+        gxp_severity: "MAJOR",
+        priority: "HIGH",
+        status: "IN_PROGRESS",
+        assigned_queue: "DATA_CAPTURE_ECRF",
+        assignee_role: "DATA_CAPTURE_ECRF",
+        assignee_user: null,
+        reporter: "site_crc",
+        created_by: "site_crc",
+        study_id: "STUDY-ONC-202",
+        site_id: "SITE-102",
+        subject_id: "SUBJ-8812",
+        related_entity_type: "SUBJECT",
+        related_entity_id: "SUBJ-8812",
+        source_route: "/ecrf",
+        acknowledge_target_at: "2026-08-03T13:30:00Z",
+        sla_target_at: "2026-08-05T09:30:00Z",
+        sla_breached: false,
+        sla_amber_warned: false,
+        escalation_count: 0,
+        reason_for_change: "Logged protocol window deviation",
+        created_at: "2026-08-03T09:30:00Z",
+        version_index: 2,
+      },
+    ];
 
     state.ipKits = [
       {
@@ -1048,15 +1144,18 @@ export function createWebDemoStore() {
   }
 
   function getStudyByRefOrCode(refOrCode) {
+    const raw = String(refOrCode || "").trim();
+    const unpinned = raw.split("@")[0];
     for (const study of state.studies.values()) {
       if (
-        study.ref === refOrCode ||
-        study.code.toUpperCase() === String(refOrCode || "").toUpperCase()
+        study.ref === raw ||
+        study.ref.split("@")[0] === unpinned ||
+        study.code.toUpperCase() === raw.toUpperCase()
       ) {
         return study;
       }
     }
-    if (String(refOrCode || "").startsWith("study:")) {
+    if (raw.startsWith("study:")) {
       return state.studies.get("DEMO-01");
     }
     return ensureStudyByCode(refOrCode);
@@ -1261,7 +1360,9 @@ export function createWebDemoStore() {
           },
         ];
       }
-      const study = state.studies.get("DEMO-01");
+      const study = refStr.startsWith("study:")
+        ? getStudyByRefOrCode(refStr)
+        : state.studies.get("DEMO-01");
       const steps = [
         {
           level: "study",
@@ -1270,7 +1371,10 @@ export function createWebDemoStore() {
           mask: null,
         },
       ];
-      if (nodeRef !== study.ref) {
+      if (
+        nodeRef !== study.ref &&
+        refStr.split("@")[0] !== study.ref.split("@")[0]
+      ) {
         const node = this.getNode(nodeRef);
         steps.push({
           level: node.kind,
@@ -1383,7 +1487,12 @@ export function createWebDemoStore() {
 
     listProtocolVersions(studyRef) {
       const study = getStudyByRefOrCode(studyRef);
-      return [
+      const imported = state.importedProtocolVersions.get(study.code) || [];
+      if (study.isCustomCreated) {
+        return cloneJson(imported);
+      }
+      return cloneJson([
+        ...imported,
         {
           ref: VERSION_V2_REF,
           study: study.ref,
@@ -1410,14 +1519,341 @@ export function createWebDemoStore() {
           withdrawal_reason: null,
           mask: null,
         },
-      ];
+      ]);
     },
 
     getProtocolVersion(versionRef) {
+      for (const versions of state.importedProtocolVersions.values()) {
+        const found = versions.find(
+          (v) =>
+            v.ref === versionRef ||
+            v.ref.split("@")[0] === String(versionRef || "").split("@")[0]
+        );
+        if (found) return cloneJson(found);
+      }
       const versions = this.listProtocolVersions(STUDY_REF);
       return cloneJson(
         versions.find((v) => v.ref === versionRef) || versions[0]
       );
+    },
+
+    listStudies() {
+      return [...state.studies.values()].map((study) => ({
+        ref: study.ref,
+        code: study.code,
+        title: study.title,
+        phase: study.phase || "Phase 2",
+        sponsor_ref: study.sponsor_ref || DEMO_ORGANIZATIONS[0].ref,
+        sponsor_code: study.sponsor_code || DEMO_ORGANIZATIONS[0].code,
+        sponsor_name: study.sponsor_name || DEMO_ORGANIZATIONS[0].name,
+        site_count: study.site_count ?? 0,
+      }));
+    },
+
+    listOrganizations() {
+      return cloneJson(state.organizations);
+    },
+
+    createStudy(body = {}, { reason = "", idempotencyKey = "" } = {}) {
+      if (!String(reason || "").trim()) {
+        return {
+          error: {
+            status: 400,
+            problem: {
+              title: "Missing X-Change-Reason",
+              status: 400,
+              code: "Kernel.Audit.MissingReasonForChange",
+              detail:
+                "Header 'X-Change-Reason' is required when creating a study.",
+            },
+          },
+        };
+      }
+      if (
+        idempotencyKey &&
+        state.idempotentStudyResponses.has(idempotencyKey)
+      ) {
+        return {
+          data: cloneJson(state.idempotentStudyResponses.get(idempotencyKey)),
+          replayed: true,
+        };
+      }
+
+      const code = String(body.study_code || "").trim();
+      const title = String(body.title || "").trim();
+      const phase = String(body.phase || "").trim();
+      if (!code || !title || !phase) {
+        return {
+          error: {
+            status: 400,
+            problem: {
+              title: "Invalid study creation request",
+              status: 400,
+              code: "Kernel.Study.InvalidRequest",
+              detail: "Study code, title, and clinical phase are required.",
+            },
+          },
+        };
+      }
+
+      for (const existing of state.studies.values()) {
+        if (existing.code.toUpperCase() === code.toUpperCase()) {
+          return {
+            error: {
+              status: 409,
+              problem: {
+                title: "Duplicate study code",
+                status: 409,
+                code: "Kernel.Study.DuplicateCode",
+                detail: `A study with code '${code}' already exists in this tenant.`,
+              },
+            },
+          };
+        }
+      }
+
+      let org = state.organizations.find(
+        (o) =>
+          (body.sponsor_ref && o.ref === body.sponsor_ref) ||
+          (body.sponsor_code &&
+            o.code.toUpperCase() === String(body.sponsor_code).toUpperCase())
+      );
+      if (!org) {
+        if (!String(body.sponsor_code || "").trim()) {
+          return {
+            error: {
+              status: 400,
+              problem: {
+                title: "Missing sponsor",
+                status: 400,
+                code: "Kernel.Study.MissingSponsor",
+                detail: "Select an existing sponsor or provide a sponsor code.",
+              },
+            },
+          };
+        }
+        const orgIdx = nextCounter();
+        org = {
+          ref: `organization:${makeUuidFromIndex("00000300", orgIdx)}@1`,
+          code: String(body.sponsor_code).trim().toUpperCase(),
+          name:
+            String(body.sponsor_name || "").trim() ||
+            String(body.sponsor_code).trim(),
+          kind: "Sponsor",
+        };
+        state.organizations.push(org);
+      }
+
+      const idx = nextCounter();
+      const created = {
+        ref: `study:${makeUuidFromIndex("00000020", idx)}@1`,
+        kind: "study",
+        code,
+        title,
+        phase,
+        sponsor_ref: org.ref,
+        sponsor_code: org.code,
+        sponsor_name: org.name,
+        site_count: 0,
+        status: "ACTIVE",
+        mask: null,
+        isCustomCreated: true,
+      };
+      state.studies.set(code, created);
+      recordActivity(
+        "kernel.study.create",
+        "protocol",
+        "study",
+        created.ref,
+        "usr-demo-operator"
+      );
+
+      const response = {
+        ref: created.ref,
+        code: created.code,
+        title: created.title,
+        phase: created.phase,
+        sponsor_ref: created.sponsor_ref,
+        sponsor_code: created.sponsor_code,
+        sponsor_name: created.sponsor_name,
+        site_count: 0,
+      };
+      if (idempotencyKey) {
+        state.idempotentStudyResponses.set(idempotencyKey, cloneJson(response));
+      }
+      return { data: response };
+    },
+
+    listProtocolTemplates() {
+      return DEMO_PROTOCOL_TEMPLATES.map((tpl) => ({
+        id: tpl.id,
+        category: tpl.category,
+        form_oid: tpl.form_oid,
+        form_name: tpl.form_name,
+        file_name: tpl.file_name,
+        item_count: tpl.item_count,
+      }));
+    },
+
+    getProtocolDesignSummary(versionRef) {
+      const unpinned = String(versionRef || "").split("@")[0];
+      for (const [key, summary] of state.protocolDesignSummaries.entries()) {
+        if (key === versionRef || key.split("@")[0] === unpinned) {
+          return cloneJson(summary);
+        }
+      }
+      const version = this.getProtocolVersion(versionRef);
+      const vitalsTpl = DEMO_PROTOCOL_TEMPLATES[0];
+      const defaultForm = {
+        id: vitalsTpl.form_oid,
+        display_order: 1,
+        name: vitalsTpl.form_name,
+        item_count: vitalsTpl.items.length,
+        required_item_count: vitalsTpl.items.filter((i) => i.required).length,
+        items: cloneJson(vitalsTpl.items),
+      };
+      return {
+        version,
+        title: `Protocol Version ${version.number} Design`,
+        form_count: 1,
+        item_count: defaultForm.item_count,
+        forms: [defaultForm],
+        import_notes: [],
+      };
+    },
+
+    importProtocolDraft(
+      studyRef,
+      parsedRequest,
+      { reason = "", idempotencyKey = "" } = {}
+    ) {
+      if (!String(reason || "").trim()) {
+        return {
+          error: {
+            status: 400,
+            problem: {
+              title: "Missing X-Change-Reason",
+              status: 400,
+              code: "Kernel.Audit.MissingReasonForChange",
+              detail:
+                "Header 'X-Change-Reason' is required when importing a protocol draft.",
+            },
+          },
+        };
+      }
+      if (
+        idempotencyKey &&
+        state.idempotentImportResponses.has(idempotencyKey)
+      ) {
+        return {
+          data: cloneJson(state.idempotentImportResponses.get(idempotencyKey)),
+        };
+      }
+
+      let foundStudy = null;
+      const rawRef = String(studyRef || "").trim();
+      for (const s of state.studies.values()) {
+        if (
+          s.ref === rawRef ||
+          s.ref.split("@")[0] === rawRef.split("@")[0] ||
+          s.code.toUpperCase() === rawRef.toUpperCase()
+        ) {
+          foundStudy = s;
+          break;
+        }
+      }
+      if (!foundStudy) {
+        return {
+          error: {
+            status: 404,
+            problem: {
+              title: "Study not found",
+              status: 404,
+              code: "Kernel.Study.NotFound",
+              detail: `Study '${rawRef}' was not found in the active tenant.`,
+            },
+          },
+        };
+      }
+
+      const built = buildImportedDraftDesign(parsedRequest);
+      if (built.error) {
+        return built;
+      }
+
+      const existingVersions = this.listProtocolVersions(foundStudy.ref);
+      const existingDraft = existingVersions.find(
+        (v) => String(v.status).toLowerCase() === "draft"
+      );
+
+      let mergedForms = built.forms;
+      let mergedNotes = built.importNotes;
+      let targetVersion = existingDraft;
+
+      if (existingDraft && !parsedRequest.replaceForms) {
+        const prevSummary = state.protocolDesignSummaries.get(
+          existingDraft.ref
+        );
+        if (prevSummary) {
+          const byId = new Map(prevSummary.forms.map((f) => [f.id, f]));
+          for (const nextForm of built.forms) {
+            byId.set(nextForm.id, nextForm);
+          }
+          mergedForms = [...byId.values()].map((f, idx) => ({
+            ...f,
+            display_order: idx + 1,
+          }));
+          mergedNotes = [...prevSummary.import_notes, ...built.importNotes];
+        }
+      }
+
+      if (!targetVersion) {
+        const maxNum = existingVersions.reduce(
+          (acc, v) => Math.max(acc, Number(v.number || 0)),
+          0
+        );
+        const parent = existingVersions.find(
+          (v) => String(v.status).toUpperCase() === "PUBLISHED"
+        );
+        const vIdx = nextCounter();
+        targetVersion = {
+          ref: `protocol_version:${makeUuidFromIndex("00000150", vIdx)}@1`,
+          study: foundStudy.ref,
+          number: maxNum + 1,
+          parent_version: parent ? parent.ref : null,
+          status: "Draft",
+          content_hash: null,
+          amendment_intent: reason,
+          approval_attestation: null,
+          withdrawal_reason: null,
+          mask: null,
+        };
+        const list = state.importedProtocolVersions.get(foundStudy.code) || [];
+        list.unshift(targetVersion);
+        state.importedProtocolVersions.set(foundStudy.code, list);
+      }
+
+      const summary = {
+        version: cloneJson(targetVersion),
+        title: built.title,
+        form_count: mergedForms.length,
+        item_count: mergedForms.reduce((acc, f) => acc + f.item_count, 0),
+        forms: cloneJson(mergedForms),
+        import_notes: cloneJson(mergedNotes),
+      };
+      state.protocolDesignSummaries.set(targetVersion.ref, summary);
+      recordActivity(
+        "kernel.protocol.import",
+        "protocol",
+        "protocol_version",
+        targetVersion.ref,
+        "usr-demo-operator"
+      );
+
+      if (idempotencyKey) {
+        state.idempotentImportResponses.set(idempotencyKey, cloneJson(summary));
+      }
+      return { data: cloneJson(summary) };
     },
 
     getScheduleOfActivities(versionRef) {
@@ -2831,11 +3267,138 @@ export function createWebDemoStore() {
     },
 
     resolveContextualHelp(route, persona) {
-      const matched = getFallbackContextualHelp(route, persona);
-      if (matched && matched.primary_article) {
-        return matched;
+      return cloneJson(getFallbackContextualHelp(route, persona));
+    },
+
+    listTickets(filters = {}) {
+      let results = [...state.tickets];
+      if (filters.status) {
+        results = results.filter((t) => t.status === filters.status);
       }
-      return cloneJson(getFallbackContextualHelp("/ecrf", persona));
+      if (filters.category) {
+        results = results.filter((t) => t.category === filters.category);
+      }
+      if (filters.assigned_queue) {
+        results = results.filter(
+          (t) => t.assigned_queue === filters.assigned_queue
+        );
+      }
+      if (filters.study_id) {
+        results = results.filter((t) => t.study_id === filters.study_id);
+      }
+      if (filters.site_id) {
+        results = results.filter((t) => t.site_id === filters.site_id);
+      }
+      if (filters.search) {
+        const q = String(filters.search).toLowerCase();
+        results = results.filter(
+          (t) =>
+            String(t.title || "")
+              .toLowerCase()
+              .includes(q) ||
+            String(t.reference || "")
+              .toLowerCase()
+              .includes(q)
+        );
+      }
+      return cloneJson(results);
+    },
+
+    getTicket(ticketId) {
+      const found = state.tickets.find(
+        (t) => t.id === ticketId || t.reference === ticketId
+      );
+      return found ? cloneJson(found) : null;
+    },
+
+    createTicket(body, reasonForChange) {
+      const title = String(body?.title || "").trim();
+      const description = String(body?.description || "").trim();
+      const reason = String(reasonForChange || "").trim();
+      if (!title || !description) {
+        return {
+          invalid: true,
+          problem: {
+            title: "Invalid ticket request",
+            status: 400,
+            detail: "Ticket title and description are required.",
+          },
+        };
+      }
+      if (!reason) {
+        return {
+          invalid: true,
+          problem: {
+            title: "Missing X-Change-Reason",
+            status: 400,
+            detail: "X-Change-Reason header is required for ticket creation.",
+          },
+        };
+      }
+      const piiViolation = validateDemoTicketNoDirectPii(body || {});
+      if (piiViolation) {
+        return {
+          invalid: true,
+          problem: {
+            title: "Direct participant PII is prohibited",
+            status: 400,
+            detail: piiViolation,
+          },
+        };
+      }
+
+      const idx = nextCounter();
+      const nowMs = Date.now();
+      const nowIso = new Date(nowMs).toISOString();
+      const year = new Date(nowMs).getUTCFullYear();
+      const seq = String(idx).padStart(4, "0");
+      const category = String(body?.category || "SYSTEM_SUPPORT").toUpperCase();
+      const priority = String(body?.priority || "MEDIUM").toUpperCase();
+      const severity = String(body?.gxp_severity || "MINOR").toUpperCase();
+      const assignedQueue = routeDemoTicketQueue({
+        category,
+        source_route: body?.source_route,
+        persona: body?.persona,
+      });
+
+      const created = {
+        id: makeUuidFromIndex("00007100", idx),
+        reference: `SIM-${year}-${seq}`,
+        title,
+        description,
+        category,
+        priority,
+        gxp_severity: severity,
+        status: "OPEN",
+        assigned_queue: assignedQueue,
+        assignee_role: assignedQueue,
+        assignee_user: null,
+        reporter: body?.persona || "usr-demo-operator",
+        created_by: body?.persona || "usr-demo-operator",
+        study_id: body?.study_id || null,
+        site_id: body?.site_id || null,
+        subject_id: body?.subject_id || null,
+        related_entity_type: body?.entity_type || null,
+        related_entity_id: body?.entity_id || null,
+        source_route: body?.source_route || null,
+        acknowledge_target_at: new Date(nowMs + 4 * 3600_000).toISOString(),
+        sla_target_at: new Date(nowMs + 24 * 3600_000).toISOString(),
+        sla_breached: false,
+        sla_amber_warned: false,
+        escalation_count: 0,
+        reason_for_change: reason,
+        created_at: nowIso,
+        version_index: 1,
+      };
+      state.tickets.unshift(created);
+      recordActivity(
+        "tickets.created",
+        "tickets",
+        "ticket",
+        `ticket:${created.reference}`,
+        created.created_by
+      );
+      return { data: cloneJson(created) };
     },
 
     getEntitlements() {

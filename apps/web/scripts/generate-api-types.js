@@ -20,7 +20,13 @@ export const WEB_DIR = path.resolve(__dirname, "..");
 export const SPEC_DIR = path.resolve(WEB_DIR, "../../docs/openapi");
 export const OUTPUT_DIR = path.resolve(WEB_DIR, "src/api/generated");
 
-export const GENERATED_SERVICES = ["ctms", "execution", "kernel"];
+export const GENERATED_SERVICES = [
+  "ctms",
+  "execution",
+  "kernel",
+  "knowledge",
+  "tickets",
+];
 
 const HEADER =
   "/**\n" +

@@ -488,7 +488,7 @@ onMounted(() => {
   flex-direction: column;
   gap: 10px;
   padding: 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
 }
 
@@ -500,14 +500,14 @@ onMounted(() => {
 .subpanel-meta {
   margin: 0;
   font-size: 0.88rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 .trace-box {
   padding: 10px 12px;
   border-radius: 6px;
-  background: #f0fdf4;
-  border: 1px solid #86efac;
+  background: var(--semantic-color-success-bg-soft);
+  border: 1px solid var(--semantic-color-success-border);
 }
 
 .milestone-list {
@@ -526,7 +526,7 @@ onMounted(() => {
 
 .unavailable-note {
   margin: 0;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   font-size: 0.88rem;
 }
 

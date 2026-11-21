@@ -67,7 +67,18 @@ public sealed record ProtocolDesign
 
     /// <summary>The statistical design (sample size, multiplicity, SAP), referenced as a versioned Artifact.</summary>
     public DesignReference? StatisticalDesign { get; init; }
+
+    /// <summary>
+    /// Readable notes recorded when importing the design from an external format (such as unmapped terminology codes or
+    /// optional vendor attributes). Null when none were recorded so pre-existing designs serialize identically.
+    /// </summary>
+    public IReadOnlyList<ProtocolImportNote>? ImportNotes { get; init; }
 }
+
+/// <summary>A readable note attached to an imported protocol draft about unmapped terminology or vendor metadata.</summary>
+/// <param name="Source">The element id, OID or path in the imported file that produced the note.</param>
+/// <param name="Message">Readable explanation of how the unmapped terminology or optional vendor attribute was handled.</param>
+public sealed record ProtocolImportNote(string Source, string Message);
 
 /// <summary>An element of a <see cref="ProtocolDesign"/> with its stable id (K-PROT-1).</summary>
 public interface IProtocolElement
@@ -192,6 +203,7 @@ public sealed record CollectionSpec(string Id, string Name, IReadOnlyList<Collec
 /// The kind of value the item takes (ADR-2623). When null it follows from the item: a quantity when it has a
 /// <paramref name="Unit"/>, a code when it has a <paramref name="Terminology"/>, otherwise any kind.
 /// </param>
+/// <param name="Prompt">Optional form-specific item prompt or question label preserved from an imported definition.</param>
 public sealed record CollectionItem(
     string Id,
     ConceptRef Concept,
@@ -199,7 +211,8 @@ public sealed record CollectionItem(
     TerminologyBinding? Terminology = null,
     bool Required = false,
     DataPurpose? Purpose = null,
-    ObservationValueKind? ValueKind = null) : IProtocolElement
+    ObservationValueKind? ValueKind = null,
+    string? Prompt = null) : IProtocolElement
 {
     /// <summary>The kind of value the item takes, or null when it takes any kind. Derived, so never serialised.</summary>
     [JsonIgnore]

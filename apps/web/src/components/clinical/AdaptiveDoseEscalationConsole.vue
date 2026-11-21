@@ -571,28 +571,28 @@ function submitCohortTransition(): void {
 
 <style scoped>
 .adaptive-console {
-  background-color: var(--bg-surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 24px;
   font-family: var(
-    --font-family,
+    --semantic-font-family,
     -apple-system,
     BlinkMacSystemFont,
     "Segoe UI",
     Roboto,
     sans-serif
   );
-  color: var(--text-primary, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .unbacked-scope-note {
   margin: 0 0 16px;
   padding: 10px 14px;
   border-radius: 6px;
-  border: 1px solid #f59e0b;
-  background: #fffbeb;
-  color: #92400e;
+  border: 1px solid var(--semantic-color-warning-border-strong);
+  background: var(--semantic-color-warning-bg-soft);
+  color: var(--semantic-color-warning-dark);
   font-size: 0.88rem;
 }
 
@@ -618,8 +618,8 @@ function submitCohortTransition(): void {
   padding: 3px 8px;
   border-radius: 4px;
   text-transform: uppercase;
-  background-color: #e0e7ff;
-  color: #3730a3;
+  background-color: var(--semantic-color-indigo-bg);
+  color: var(--semantic-color-indigo-text);
 }
 
 .badge-status {
@@ -630,26 +630,26 @@ function submitCohortTransition(): void {
 }
 
 .status-active {
-  background-color: #dcfce7;
-  color: #15803d;
+  background-color: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
 }
 
 .status-inactive {
-  background-color: #f1f5f9;
-  color: #64748b;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 
 .title {
   margin: 0 0 4px 0;
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--text-heading, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .subtitle {
   margin: 0;
   font-size: 0.85rem;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 
 .header-metrics {
@@ -659,8 +659,8 @@ function submitCohortTransition(): void {
 }
 
 .metric-box {
-  background-color: var(--bg-subtle, #f8fafc);
-  border: 1px solid var(--border-light, #e2e8f0);
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   padding: 8px 12px;
   display: flex;
@@ -670,18 +670,18 @@ function submitCohortTransition(): void {
 .metric-label {
   font-size: 0.7rem;
   text-transform: uppercase;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   font-weight: 600;
 }
 
 .metric-val {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--text-primary, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .highlight {
-  color: #2563eb;
+  color: var(--semantic-color-interactive-primary);
 }
 
 /* Recommendation Banner */
@@ -696,35 +696,35 @@ function submitCohortTransition(): void {
 }
 
 .banner-escalate {
-  background-color: #f0fdf4;
-  border-color: #bbf7d0;
-  color: #166534;
+  background-color: var(--semantic-color-success-bg-soft);
+  border-color: var(--semantic-color-success-border-soft);
+  color: var(--semantic-color-success-dark);
 }
 
 .banner-de_escalate {
-  background-color: #fef2f2;
-  border-color: #fecaca;
-  color: #991b1b;
+  background-color: var(--semantic-color-error-bg-soft);
+  border-color: var(--semantic-color-error-border-soft);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .banner-stay,
 .banner-expand_cohort {
-  background-color: #eff6ff;
-  border-color: #bfdbfe;
-  color: #1e40af;
+  background-color: var(--semantic-color-info-bg);
+  border-color: var(--semantic-color-info-border);
+  color: var(--semantic-color-info);
 }
 
 .banner-stop_safety {
-  background-color: #450a0a;
-  border-color: #7f1d1d;
-  color: #fef2f2;
+  background-color: var(--semantic-color-error-text-deep);
+  border-color: var(--semantic-color-error-text-deep);
+  color: var(--semantic-color-error-bg-soft);
 }
 
 .banner-stop_success,
 .banner-mtd_found {
-  background-color: #ecfdf5;
-  border-color: #6ee7b7;
-  color: #065f46;
+  background-color: var(--semantic-color-success-bg-soft);
+  border-color: var(--semantic-color-success-border);
+  color: var(--semantic-color-success-dark);
 }
 
 .banner-icon-col {
@@ -776,8 +776,8 @@ function submitCohortTransition(): void {
   border-radius: 6px;
   border: none;
   cursor: pointer;
-  background-color: #0f172a;
-  color: #ffffff;
+  background-color: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse);
   transition: opacity 0.15s ease;
 }
 
@@ -794,12 +794,12 @@ function submitCohortTransition(): void {
   font-size: 1rem;
   font-weight: 700;
   margin: 0 0 12px 0;
-  color: var(--text-heading, #1e293b);
+  color: var(--semantic-color-text);
 }
 
 .table-wrapper {
   overflow-x: auto;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border);
   border-radius: 6px;
 }
 
@@ -811,24 +811,24 @@ function submitCohortTransition(): void {
 }
 
 .dose-table th {
-  background-color: var(--bg-subtle, #f8fafc);
+  background-color: var(--semantic-color-surface-muted);
   padding: 10px 12px;
   font-weight: 600;
-  color: var(--text-secondary, #475569);
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  color: var(--semantic-color-text-secondary);
+  border-bottom: 1px solid var(--border);
 }
 
 .dose-table td {
   padding: 10px 12px;
-  border-bottom: 1px solid var(--border-light, #f1f5f9);
+  border-bottom: 1px solid var(--semantic-color-border);
 }
 
 .row-active {
-  background-color: #f0f9ff;
+  background-color: var(--semantic-color-info-bg-soft);
 }
 
 .row-eliminated {
-  background-color: #fff1f2;
+  background-color: var(--semantic-color-error-bg-row);
   opacity: 0.75;
 }
 
@@ -839,7 +839,7 @@ function submitCohortTransition(): void {
   line-height: 22px;
   text-align: center;
   border-radius: 50%;
-  background-color: #e2e8f0;
+  background-color: var(--semantic-color-surface-header);
   font-weight: 700;
   font-size: 0.75rem;
 }
@@ -849,7 +849,7 @@ function submitCohortTransition(): void {
 }
 
 .dlt-alert {
-  color: #dc2626;
+  color: var(--semantic-color-error);
   font-weight: 700;
 }
 
@@ -867,15 +867,15 @@ function submitCohortTransition(): void {
 }
 
 .bar-green {
-  background-color: #22c55e;
+  background-color: var(--semantic-color-success);
 }
 
 .bar-amber {
-  background-color: #f59e0b;
+  background-color: var(--semantic-color-warning-action);
 }
 
 .bar-red {
-  background-color: #ef4444;
+  background-color: var(--semantic-color-error);
 }
 
 .rate-text {
@@ -885,7 +885,7 @@ function submitCohortTransition(): void {
 }
 
 .overdose-warning {
-  color: #b91c1c;
+  color: var(--semantic-color-error);
   font-weight: 700;
 }
 
@@ -894,8 +894,8 @@ function submitCohortTransition(): void {
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
-  background-color: #fee2e2;
-  color: #991b1b;
+  background-color: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .pill-safe {
@@ -903,8 +903,8 @@ function submitCohortTransition(): void {
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
-  background-color: #dcfce7;
-  color: #166534;
+  background-color: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 
 .pill-current {
@@ -912,8 +912,8 @@ function submitCohortTransition(): void {
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
-  background-color: #dbeafe;
-  color: #1e40af;
+  background-color: var(--semantic-color-info-light);
+  color: var(--semantic-color-info);
 }
 
 .pill-target {
@@ -921,19 +921,19 @@ function submitCohortTransition(): void {
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
-  background-color: #fef3c7;
-  color: #92400e;
+  background-color: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
 }
 
 .text-muted {
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
 }
 
 /* RAR Section */
 .rar-section {
   margin-top: 24px;
   padding-top: 20px;
-  border-top: 1px solid var(--border, #e2e8f0);
+  border-top: 1px solid var(--border);
 }
 
 .rar-header {
@@ -950,8 +950,8 @@ function submitCohortTransition(): void {
 }
 
 .rar-arm-card {
-  background-color: var(--bg-subtle, #f8fafc);
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 14px;
 }
@@ -973,8 +973,8 @@ function submitCohortTransition(): void {
   font-weight: 700;
   padding: 2px 5px;
   border-radius: 3px;
-  background-color: #e2e8f0;
-  color: #334155;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
 }
 
 .status-pill {
@@ -982,18 +982,18 @@ function submitCohortTransition(): void {
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
-  background-color: #dbeafe;
-  color: #1e40af;
+  background-color: var(--semantic-color-info-light);
+  color: var(--semantic-color-info);
 }
 
 .arm-metrics {
   display: flex;
   justify-content: space-between;
   margin-bottom: 12px;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   padding: 6px 10px;
   border-radius: 4px;
-  border: 1px solid var(--border-light, #f1f5f9);
+  border: 1px solid var(--semantic-color-border);
 }
 
 .arm-metric-item {
@@ -1003,7 +1003,7 @@ function submitCohortTransition(): void {
 
 .metric-lbl {
   font-size: 0.65rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
 }
 
@@ -1024,24 +1024,24 @@ function submitCohortTransition(): void {
 }
 
 .prob-title {
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 .prob-val {
   font-weight: 700;
-  color: #2563eb;
+  color: var(--semantic-color-interactive-primary);
 }
 
 .prob-track {
   height: 6px;
-  background-color: #e2e8f0;
+  background-color: var(--semantic-color-surface-header);
   border-radius: 3px;
   overflow: hidden;
 }
 
 .prob-fill {
   height: 100%;
-  background-color: #2563eb;
+  background-color: var(--semantic-color-interactive-primary);
   border-radius: 3px;
 }
 
@@ -1060,7 +1060,7 @@ function submitCohortTransition(): void {
 }
 
 .modal-card {
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   border-radius: 8px;
   width: 100%;
   max-width: 520px;
@@ -1089,12 +1089,12 @@ function submitCohortTransition(): void {
   font-size: 1.5rem;
   line-height: 1;
   cursor: pointer;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .decision-summary-box {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   padding: 10px 14px;
   margin-bottom: 16px;
@@ -1124,7 +1124,7 @@ function submitCohortTransition(): void {
 
 .required::after {
   content: " *";
-  color: #dc2626;
+  color: var(--semantic-color-error);
 }
 
 .form-select,
@@ -1132,7 +1132,7 @@ function submitCohortTransition(): void {
 .form-textarea {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-size: 0.85rem;
   box-sizing: border-box;
@@ -1142,13 +1142,13 @@ function submitCohortTransition(): void {
 .form-input:focus,
 .form-textarea:focus {
   outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 1px #2563eb;
+  border-color: var(--semantic-color-interactive-primary);
+  box-shadow: 0 0 0 1px var(--semantic-color-interactive-primary);
 }
 
 .alert-group {
-  background-color: #fef2f2;
-  border: 1px solid #fecaca;
+  background-color: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border-soft);
   padding: 10px;
   border-radius: 6px;
 }
@@ -1162,8 +1162,8 @@ function submitCohortTransition(): void {
 
 .btn-secondary {
   padding: 8px 14px;
-  border: 1px solid #cbd5e1;
-  background-color: #ffffff;
+  border: 1px solid var(--semantic-color-border-control);
+  background-color: var(--semantic-color-surface);
   border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 600;
@@ -1173,8 +1173,8 @@ function submitCohortTransition(): void {
 .btn-submit {
   padding: 8px 16px;
   border: none;
-  background-color: #2563eb;
-  color: #ffffff;
+  background-color: var(--semantic-color-interactive-primary);
+  color: var(--semantic-color-surface);
   border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 700;
