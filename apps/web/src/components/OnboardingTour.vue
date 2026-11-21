@@ -361,6 +361,26 @@ const popoverStyle = ref({
 });
 
 let currentRafId = null;
+let isDisposed = false;
+const pendingTimers = new Set();
+
+function cancelPendingRaf() {
+  if (currentRafId !== null) {
+    if (typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(currentRafId);
+    }
+    currentRafId = null;
+  }
+}
+
+function schedulePositionUpdate(delayMs) {
+  if (isDisposed || typeof window === "undefined") return;
+  const timerId = setTimeout(() => {
+    pendingTimers.delete(timerId);
+    updatePosition();
+  }, delayMs);
+  pendingTimers.add(timerId);
+}
 
 async function syncStepRoute() {
   if (!onboardingStore.isActive || onboardingStore.disabled) return;
@@ -409,21 +429,9 @@ async function syncStepRoute() {
   }
 }
 
-const pendingTimerIds = new Set();
-let isTourUnmounted = false;
-
-const schedulePositionUpdate = (delayMs) => {
-  if (isTourUnmounted || typeof window === "undefined") return;
-  const timerId = setTimeout(() => {
-    pendingTimerIds.delete(timerId);
-    updatePosition();
-  }, delayMs);
-  pendingTimerIds.add(timerId);
-};
-
 const updatePosition = () => {
   if (
-    isTourUnmounted ||
+    isDisposed ||
     typeof document === "undefined" ||
     !onboardingStore.isActive ||
     onboardingStore.disabled
@@ -431,10 +439,7 @@ const updatePosition = () => {
     return;
   }
 
-  if (currentRafId !== null && typeof cancelAnimationFrame === "function") {
-    cancelAnimationFrame(currentRafId);
-    currentRafId = null;
-  }
+  cancelPendingRaf();
 
   const config = currentStepConfig.value;
   const selector = config?.targetSelector;
@@ -455,7 +460,7 @@ const updatePosition = () => {
   let attempts = 0;
 
   const checkAndPosition = () => {
-    if (isTourUnmounted || typeof document === "undefined") {
+    if (isDisposed || typeof document === "undefined") {
       currentRafId = null;
       return;
     }
@@ -571,7 +576,7 @@ watch(
 );
 
 onMounted(async () => {
-  isTourUnmounted = false;
+  isDisposed = false;
   window.addEventListener("resize", updatePosition);
   await syncStepRoute();
   updatePosition();
@@ -590,17 +595,14 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  isTourUnmounted = true;
+  isDisposed = true;
   if (typeof window !== "undefined") {
     window.removeEventListener("resize", updatePosition);
   }
-  for (const timerId of pendingTimerIds) {
+  for (const timerId of pendingTimers) {
     clearTimeout(timerId);
   }
-  pendingTimerIds.clear();
-  if (currentRafId !== null && typeof cancelAnimationFrame === "function") {
-    cancelAnimationFrame(currentRafId);
-    currentRafId = null;
-  }
+  pendingTimers.clear();
+  cancelPendingRaf();
 });
 </script>
