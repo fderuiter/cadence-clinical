@@ -744,4 +744,3 @@
   - Superseded pre-remediation scaffold dead code (`apps/execution/src/Domain/Subjects/SubjectState.cs`, `Domain/Exceptions/`, `Domain/Rules/SubjectStateMachine.cs`, `tests/SubjectStateMachineTests.cs`) purged and cleanly removed.
 - **Git Commit Message Recommendation:**
   `feat(execution-subjects): implement MIG-SUBJ-028 - integration concurrency tests and execution domain architecture sentinels`
-

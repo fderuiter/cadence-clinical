@@ -137,23 +137,9 @@ public static class AdrValidatorService
         "## 6. Implementation & Verification"
     ];
 
-    public static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln")))
-            {
-                return current;
-            }
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
-    }
+    public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 
-    public static bool ValidateAdrs(bool checkGitDiff = true, string[]? targets = null, string? repoRoot = null)
+    public static bool ValidateAdrs(bool checkGitDiff = true, string[]? targets = null, string? repoRoot = null, bool preCommit = false)
     {
         repoRoot ??= FindRepoRoot();
         string adrDir = Path.Combine(repoRoot, "docs", "adr");
@@ -236,7 +222,7 @@ public static class AdrValidatorService
             }
         }
 
-        if (checkGitDiff && !CheckArchitecturalChangesRequireAdr(repoRoot))
+        if (checkGitDiff && !CheckArchitecturalChangesRequireAdr(repoRoot, preCommit))
         {
             allPassed = false;
         }
@@ -247,6 +233,71 @@ public static class AdrValidatorService
         }
 
         return allPassed;
+    }
+
+    /// <summary>
+    /// Appends any unlisted numbered ADR markdown files in <c>docs/adr/</c> to <c>docs/adr/index.md</c>.
+    /// </summary>
+    public static int SyncAdrIndex(string? repoRoot = null)
+    {
+        repoRoot ??= FindRepoRoot();
+        string adrDir = Path.Combine(repoRoot, "docs", "adr");
+        string indexFile = Path.Combine(adrDir, "index.md");
+        if (!Directory.Exists(adrDir) || !File.Exists(indexFile))
+        {
+            return 0;
+        }
+
+        string[] indexLines = File.ReadAllLines(indexFile);
+        var listed = new HashSet<string>(StringComparer.Ordinal);
+        foreach (string line in indexLines)
+        {
+            var entry = IndexEntryPattern.Match(line);
+            if (entry.Success)
+            {
+                listed.Add(entry.Groups[1].Value.Split('#')[0]);
+            }
+        }
+
+        var adrFiles = Directory.GetFiles(adrDir, "*.md", SearchOption.TopDirectoryOnly)
+            .Select(Path.GetFileName)
+            .OfType<string>()
+            .Where(name => !IgnoreFiles.Contains(name) && FilenamePattern.IsMatch(name) && !listed.Contains(name))
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        if (adrFiles.Count == 0)
+        {
+            return 0;
+        }
+
+        string indexContent = File.ReadAllText(indexFile);
+        var additions = new List<string>();
+        foreach (string name in adrFiles)
+        {
+            string firstLine = File.ReadLines(Path.Combine(adrDir, name)).FirstOrDefault()?.TrimEnd('\r') ?? "";
+            int? number = ParseAdrNumber(firstLine);
+            if (number is null)
+            {
+                continue;
+            }
+
+            int colonIdx = firstLine.IndexOf(':', StringComparison.Ordinal);
+            string title = colonIdx >= 0 ? firstLine[(colonIdx + 1)..].Trim() : name;
+            string datePart = name.Length >= 10 ? name[..10] : "";
+            additions.Add(string.IsNullOrEmpty(datePart)
+                ? $"- [ADR-{number.Value}: {title}]({name})"
+                : $"- [ADR-{number.Value}: {title}]({name}) ({datePart})");
+        }
+
+        if (additions.Count > 0)
+        {
+            string separator = indexContent.EndsWith('\n') ? "" : "\n";
+            File.AppendAllText(indexFile, $"{separator}{string.Join('\n', additions)}\n");
+            AnsiConsole.MarkupLine($"  [green][[OK]] Added {additions.Count} missing ADR entry(ies) to docs/adr/index.md.[/]");
+        }
+
+        return 0;
     }
 
     /// <summary>
@@ -357,13 +408,24 @@ public static class AdrValidatorService
         return errors;
     }
 
-    private static bool CheckArchitecturalChangesRequireAdr(string repoRoot)
+    private static readonly HashSet<string> FrontendExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        var changedFiles = GetChangedFiles(repoRoot);
-        var architecturalChanges = changedFiles.Where(f => IsArchitecturalFile(f, repoRoot)).ToList();
+        ".vue", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".css", ".scss", ".html",
+    };
+
+    private static bool CheckArchitecturalChangesRequireAdr(string repoRoot, bool preCommit = false)
+    {
+        var changedFiles = GetChangedFiles(repoRoot, preCommit);
+        var architecturalChanges = changedFiles.Where(f => IsArchitecturalFile(f, repoRoot, preCommit)).ToList();
         if (architecturalChanges.Count == 0) return true;
 
-        bool newAdrAdded = changedFiles.Any(f => f.StartsWith("docs/adr/") && FilenamePattern.IsMatch(Path.GetFileName(f)) && (File.Exists(f) || File.Exists(Path.Combine(repoRoot, f))));
+        bool newAdrAdded = changedFiles.Any(f =>
+        {
+            string norm = f.Replace('\\', '/');
+            return norm.StartsWith("docs/adr/", StringComparison.OrdinalIgnoreCase) &&
+                   FilenamePattern.IsMatch(Path.GetFileName(norm)) &&
+                   (File.Exists(f) || File.Exists(Path.Combine(repoRoot, norm)));
+        });
         if (!newAdrAdded)
         {
             AnsiConsole.MarkupLine("[red]Error: Architectural changes detected, but no corresponding ADR found in docs/adr/.[/]");
@@ -378,22 +440,44 @@ public static class AdrValidatorService
         return true;
     }
 
-    private static bool IsArchitecturalFile(string filepath, string repoRoot)
+    public static bool IsArchitecturalFile(string filepath, string repoRoot, bool preCommit = false)
     {
-        if (filepath.StartsWith("tests/") || filepath.Contains("/tests/") ||
-            filepath.StartsWith("docs/") || filepath.StartsWith("scripts/") ||
-            filepath.StartsWith(".github/") || filepath.EndsWith(".md") ||
-            filepath.EndsWith(".txt") || (Path.GetFileName(filepath).StartsWith('.') && filepath.EndsWith("ignore")) ||
-            filepath.EndsWith(".d.ts"))
+        filepath = filepath.Replace('\\', '/');
+
+        if (filepath.StartsWith("tests/", StringComparison.OrdinalIgnoreCase) ||
+            filepath.Contains("/tests/", StringComparison.OrdinalIgnoreCase) ||
+            filepath.StartsWith("docs/", StringComparison.OrdinalIgnoreCase) ||
+            filepath.StartsWith("scripts/", StringComparison.OrdinalIgnoreCase) ||
+            filepath.StartsWith(".github/", StringComparison.OrdinalIgnoreCase) ||
+            filepath.EndsWith(".md", StringComparison.OrdinalIgnoreCase) ||
+            filepath.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) ||
+            (Path.GetFileName(filepath).StartsWith('.') && filepath.EndsWith("ignore", StringComparison.OrdinalIgnoreCase)) ||
+            filepath.EndsWith(".d.ts", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
 
-        if (filepath == "package.json") return RootPackageJsonDependenciesChanged(repoRoot);
-        if (filepath.StartsWith("apps/gateway/")) return true;
-        if (filepath.StartsWith("packages/security/") || filepath.StartsWith("packages/ui/")) return true;
+        if (string.Equals(filepath, "package.json", StringComparison.OrdinalIgnoreCase))
+        {
+            return RootPackageJsonDependenciesChanged(repoRoot, preCommit);
+        }
 
-        if (filepath.StartsWith("apps/") && Regex.IsMatch(filepath, @"(?:database|schema|model|migration|\bdb\b)", RegexOptions.IgnoreCase))
+        if (filepath.StartsWith("apps/gateway/", StringComparison.OrdinalIgnoreCase)) return true;
+        if (filepath.StartsWith("packages/security/", StringComparison.OrdinalIgnoreCase) ||
+            filepath.StartsWith("packages/ui/", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (filepath.StartsWith("apps/web/", StringComparison.OrdinalIgnoreCase) ||
+            filepath.StartsWith("apps/subject-portal/", StringComparison.OrdinalIgnoreCase) ||
+            FrontendExtensions.Contains(Path.GetExtension(filepath)))
+        {
+            return false;
+        }
+
+        if (filepath.StartsWith("apps/", StringComparison.OrdinalIgnoreCase) &&
+            Regex.IsMatch(filepath, @"(?:database|schema|model|migration|\bdb\b)", RegexOptions.IgnoreCase))
         {
             return true;
         }
@@ -427,24 +511,35 @@ public static class AdrValidatorService
         }
     }
 
-    private static bool RootPackageJsonDependenciesChanged(string repoRoot)
+    private static bool RootPackageJsonDependenciesChanged(string repoRoot, bool preCommit = false)
     {
-        string workingPath = Path.Combine(repoRoot, "package.json");
-        string? after = File.Exists(workingPath) ? File.ReadAllText(workingPath) : null;
-        return PackageJsonDependenciesChanged(ReadCommittedFile(repoRoot, "package.json"), after);
+        string? after;
+        if (preCommit && (Directory.Exists(Path.Combine(repoRoot, ".git")) || File.Exists(Path.Combine(repoRoot, ".git"))))
+        {
+            after = ReadGitObject(repoRoot, ":package.json");
+        }
+        else
+        {
+            string workingPath = Path.Combine(repoRoot, "package.json");
+            after = File.Exists(workingPath) ? File.ReadAllText(workingPath) : null;
+        }
+
+        return PackageJsonDependenciesChanged(ReadGitObject(repoRoot, "HEAD:package.json"), after);
     }
 
-    private static string? ReadCommittedFile(string repoRoot, string relativePath)
+    private static string? ReadGitObject(string repoRoot, string objectSpec)
     {
         try
         {
-            var psi = new ProcessStartInfo("git", $"show HEAD:{relativePath}")
+            var psi = new ProcessStartInfo("git")
             {
                 WorkingDirectory = repoRoot,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false
             };
+            psi.ArgumentList.Add("show");
+            psi.ArgumentList.Add(objectSpec);
             using var proc = Process.Start(psi);
             if (proc == null) return null;
             string output = proc.StandardOutput.ReadToEnd();
@@ -453,12 +548,12 @@ public static class AdrValidatorService
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Failed to read committed {relativePath}: {ex.Message}");
+            Debug.WriteLine($"Failed to read git object {objectSpec}: {ex.Message}");
             return null;
         }
     }
 
-    private static HashSet<string> GetChangedFiles(string repoRoot)
+    private static HashSet<string> GetChangedFiles(string repoRoot, bool preCommit = false)
     {
         var changed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -467,9 +562,22 @@ public static class AdrValidatorService
         {
             foreach (var line in File.ReadAllLines(changedFilesTxt))
             {
-                if (!string.IsNullOrWhiteSpace(line)) changed.Add(line.Trim());
+                if (!string.IsNullOrWhiteSpace(line)) changed.Add(line.Trim().Replace('\\', '/'));
             }
             if (changed.Count > 0) return changed;
+        }
+
+        if (preCommit)
+        {
+            foreach (string staged in PreCommitOpenApiService.GetStagedFiles(repoRoot))
+            {
+                if (!string.IsNullOrWhiteSpace(staged))
+                {
+                    changed.Add(staged.Trim().Replace('\\', '/'));
+                }
+            }
+
+            return changed;
         }
 
         try
@@ -490,8 +598,8 @@ public static class AdrValidatorService
                     if (line.Length > 3)
                     {
                         string filepath = line[3..].Trim().Trim('"');
-                        if (filepath.Contains(" -> ")) filepath = filepath.Split(" -> ")[1].Trim();
-                        if (!string.IsNullOrWhiteSpace(filepath)) changed.Add(filepath);
+                        if (filepath.Contains(" -> ")) filepath = filepath.Split(" -> ")[1].Trim().Trim('"');
+                        if (!string.IsNullOrWhiteSpace(filepath)) changed.Add(filepath.Replace('\\', '/'));
                     }
                 }
             }

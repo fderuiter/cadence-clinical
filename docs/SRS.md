@@ -5,11 +5,11 @@
 
 ## Cadence Clinical Research Software Platform
 
-**Document Identifier:** CAD-SRS-001  
-**Document Version:** 2.0.0-RELEASE  
-**Effective Date:** 2026-09-09  
-**GxP Status:** Qualified / Baseline Specification  
-**Classification:** GxP Validated / Single Source of Functional Truth  
+**Document Identifier:** CAD-SRS-001
+**Document Version:** 2.0.0-RELEASE
+**Effective Date:** 2026-09-09
+**GxP Status:** Qualified / Baseline Specification
+**Classification:** GxP Validated / Single Source of Functional Truth
 **Formal Standard Compliance:**
 
 - **ISO/IEC/IEEE 29148:2018:** Systems and software engineering — Life cycle processes — Requirements engineering (Clauses 9.5 & 9.6)
@@ -33,7 +33,7 @@ It establishes the unambiguous, testable, verifiable, and traceably managed func
 
 In conformance with ISO/IEC/IEEE 29148:2018:
 
-1. **Requirements Syntax:** All functional requirement statements are formulated using the formal syntactic rule:  
+1. **Requirements Syntax:** All functional requirement statements are formulated using the formal syntactic rule:
    $$\text{[Condition]} \;\; \textbf{The [Subject] shall} \;\; \text{[Action]} \;\; \text{[Object]} \;\; \text{[Constraint]}$$
 2. **Singularity & Verifiability:** Each requirement clause asserts exactly one verifiable functional behavior.
 3. **Modal Verb Standard:** The auxiliary verb **shall** denotes a mandatory binding requirement. The verbs **should** (recommendation) and **may** (permission) are non-binding.

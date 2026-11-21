@@ -26,7 +26,7 @@ public static partial class YamlSyntaxValidatorService
         IReadOnlyList<string> yamlFiles;
         if (preCommit)
         {
-            var staged = targetFiles is { Length: > 0 }
+            var staged = targetFiles is not null
                 ? (IEnumerable<string>)targetFiles
                 : PreCommitOpenApiService.GetStagedFiles(repoRoot);
             yamlFiles = ResolveTargetFiles(repoRoot, staged);

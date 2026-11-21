@@ -13,9 +13,9 @@ Structure raw ideas into a logical journey of beats where each concept is introd
 
 ## Antigravity Tool Execution Matrix
 
-| Phase | Antigravity Tool | Invocation Pattern | Objective |
-| :--- | :--- | :--- | :--- |
-| **Beat Structuring** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/beats_outline.md` | Emit topological concept outline |
+| Phase                | Antigravity Tool | Invocation Pattern                                              | Objective                        |
+| :------------------- | :--------------- | :-------------------------------------------------------------- | :------------------------------- |
+| **Beat Structuring** | `write_to_file`  | Target: `<appDataDir>/brain/<conversation-id>/beats_outline.md` | Emit topological concept outline |
 
 ---
 
@@ -24,4 +24,3 @@ Structure raw ideas into a logical journey of beats where each concept is introd
 1. List the essential concepts to convey.
 2. Order them topologically: prerequisites first, dependent conclusions last.
 3. Verify that every beat transitions naturally to the next.
-
