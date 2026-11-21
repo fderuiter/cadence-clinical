@@ -78,6 +78,35 @@ function storage() {
 }
 
 /**
+ * True when account-scoped browser storage currently holds any saved eCRF draft
+ * (`ecrf_form_draft` or `ecrf_draft`) that `purgeUserScopedStorage(null)` would delete.
+ *
+ * @param {{ tenantId: string, userId: string } | null} [scope]
+ * @returns {boolean}
+ */
+export function hasUserScopedDrafts(scope = null) {
+  const ls = storage();
+  if (!ls) return false;
+  const prefix = scope ? scopePrefix(scope) : USER_SCOPED_ROOT;
+  if (!prefix) return false;
+  try {
+    for (let i = 0; i < ls.length; i++) {
+      const key = ls.key(i);
+      if (!key || !key.startsWith(prefix)) continue;
+      if (key.includes(":ecrf_form_draft:") || key.includes(":ecrf_draft:")) {
+        const raw = ls.getItem(key);
+        if (typeof raw === "string" && raw.trim().length > 0) {
+          return true;
+        }
+      }
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+/**
  * Removes account-scoped values that do not belong to `keepScope`, and every
  * legacy value whose owner can't be established. With no `keepScope` (sign-out)
  * every account's values are removed.
