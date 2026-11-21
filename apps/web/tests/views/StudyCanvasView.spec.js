@@ -21,6 +21,9 @@ vi.mock("../../src/api/kernelApi", () => ({
     listProtocolVersions: vi.fn(async () => []),
     getScheduleOfActivities: vi.fn(),
     getCommands: vi.fn(),
+    getNode: vi.fn(async () => {
+      throw new Error("Not found");
+    }),
     getObservation: vi.fn(),
     getZoomPath: vi.fn(async () => []),
   },
@@ -431,7 +434,10 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       const button = wrapper.find(`#verb-${verb}`);
       expect(button.attributes("aria-disabled")).toBe("true");
       await button.trigger("click");
-      expect(wrapper.find("#verb-note").text()).toMatch(/#48\d\d/);
+      expect(wrapper.find("#verb-note").text()).toContain(
+        "Protocol simulation isn't available in this workspace yet."
+      );
+      expect(wrapper.find("#verb-note").text()).not.toMatch(/#\d+/);
       expect(button.attributes("aria-describedby")).toBe("verb-note");
     }
     expect(wrapper.find("#verb-details").attributes("aria-pressed")).toBe(
@@ -797,6 +803,26 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       await flushPromises();
       expect(panes.classes()).toContain("panes--inspector-collapsed");
       expect(inspector.attributes("data-collapsed")).toBe("true");
+
+      // Navigating to a generic NodeRef auto-expands the adaptive rail with a human header and secondary ref disclosure.
+      const siteUuid = "0192f3c4-5e6a-7b8c-9d0e-000000000077";
+      vi.mocked(kernelApi.getNode).mockResolvedValueOnce({
+        ref: `study_site:${siteUuid}@1`,
+        kind: "study_site",
+        code: "017",
+        title: "Site 017",
+        status: "ACTIVE",
+        mask: null,
+      });
+      await router.push(`/studies/CAD-101?node=study_site:${siteUuid}`);
+      await flushPromises();
+
+      expect(panes.classes()).not.toContain("panes--inspector-collapsed");
+      expect(inspector.attributes("data-collapsed")).toBe("false");
+      expect(wrapper.find("#canvas-inspector-title").text()).toBe("Site 017");
+      expect(wrapper.find("#canvas-inspector-ref").text()).toContain(
+        `study_site:${siteUuid}@1`
+      );
     });
   });
 });

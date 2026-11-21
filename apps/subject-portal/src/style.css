@@ -701,9 +701,23 @@ body {
   color: var(--semantic-color-surface-header);
 }
 
+.ledger-verification-details {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--semantic-color-text-inverse-muted);
+}
+
+.ledger-verification-details summary {
+  cursor: pointer;
+  user-select: none;
+  font-weight: 500;
+}
+
 .ledger-hash {
   color: var(--semantic-color-accent-inverse);
   font-size: 11px;
+  margin-top: 4px;
+  word-break: break-all;
 }
 
 .loading-state {
@@ -1051,6 +1065,23 @@ a:focus-visible,
 
 .item-data {
   color: var(--text-main);
+}
+
+.answer-summary-list {
+  margin: 4px 0 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-main);
+}
+
+.answer-summary-row {
+  margin-bottom: 2px;
+}
+
+.answer-question {
+  font-weight: 600;
+  margin-right: 4px;
 }
 
 .data-code {

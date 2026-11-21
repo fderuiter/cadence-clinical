@@ -119,9 +119,9 @@ export function renderConsentUI() {
 
   const metaDisplay = document.getElementById("consent-metadata-display");
   metaDisplay.innerHTML = `
-    <span><strong>Study ID:</strong> ${tpl.study_id}</span> |
-    <span><strong>Protocol Version:</strong> ${tpl.protocol_version}</span> |
-    <span><strong>Version Index:</strong> ${tpl.version_index}</span> |
+    <span><strong>Study:</strong> ${tpl.study_id}</span> |
+    <span><strong>Protocol:</strong> ${tpl.protocol_version}</span> |
+    <span><strong>Document Version:</strong> ${tpl.version_index}</span> |
     <span><strong>Language:</strong> ${tpl.language_code.toUpperCase()}</span>
   `;
 
@@ -227,7 +227,9 @@ export async function verifyBiometricLiveness(isFallback = false) {
       state.livenessVerified = true;
 
       if (banner) {
-        banner.textContent = `Liveness Verification Successful (${isFallback ? "Coordinator Fallback Mode" : "Camera Anti-Spoof Score: " + (response.anti_spoof_score * 100).toFixed(0) + "%"}). Liveness token issued for 15 minutes.`;
+        banner.textContent = isFallback
+          ? "Identity confirmed with your study coordinator (valid for 15 minutes)."
+          : "Camera check complete — identity confirmed for the next 15 minutes.";
         banner.style.display = "block";
         banner.style.backgroundColor = "var(--semantic-color-success-bg-soft)";
         banner.style.color = "var(--semantic-color-success-dark)";
@@ -238,7 +240,7 @@ export async function verifyBiometricLiveness(isFallback = false) {
       state.consentLivenessToken = null;
       if (banner) {
         banner.textContent =
-          "Biometric liveness verification failed. Please retry or select Study Coordinator Video Fallback.";
+          "We could not complete the camera check. Please try again or verify with your study coordinator instead.";
         banner.style.display = "block";
         banner.style.backgroundColor = "var(--semantic-color-error-bg-soft)";
         banner.style.color = "var(--semantic-color-error-text-dark)";
@@ -251,8 +253,7 @@ export async function verifyBiometricLiveness(isFallback = false) {
     state.livenessVerified = false;
     state.consentLivenessToken = null;
     if (banner) {
-      banner.textContent =
-        "Liveness verification error: " + (err.message || err);
+      banner.textContent = "Camera check unavailable: " + (err.message || err);
       banner.style.display = "block";
       banner.style.backgroundColor = "var(--semantic-color-error-bg-soft)";
       banner.style.color = "var(--semantic-color-error-text-dark)";

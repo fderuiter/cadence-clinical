@@ -23,9 +23,17 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
-        launchOptions: process.env.PLAYWRIGHT_CHROMIUM_PATH
-          ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH }
-          : {},
+        launchOptions: {
+          ...(process.env.PLAYWRIGHT_CHROMIUM_PATH
+            ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH }
+            : {}),
+          args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+          ],
+        },
       },
     },
   ],

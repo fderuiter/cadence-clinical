@@ -270,7 +270,7 @@ describe("Clinical Canvas: a participant's data", () => {
     await openRecord();
 
     expect(wrapper.find("#record-queries-no-enrollment").text()).toContain(
-      "no enrollment for 017-0001"
+      "No enrollment record is visible for 017-0001"
     );
     expect(ecrfQueriesApi.listForEnrollment).not.toHaveBeenCalled();
   });
@@ -424,7 +424,8 @@ describe("Clinical Canvas: a participant's data", () => {
       const item = wrapper.find(`#query-${QUERY_ID}`);
       expect(item.text()).toContain("Open");
       expect(item.text()).toContain("SYSBP, revision 1");
-      expect(item.text()).toContain(`form ${FORM_ID}`);
+      expect(item.text()).toContain("Vital Signs · WEEK2");
+      expect(item.text()).not.toContain(`form ${FORM_ID}`);
       expect(item.text()).toContain("Value differs from the source note");
       expect(
         wrapper.find(`#query-open-form-${QUERY_ID}`).attributes("href")

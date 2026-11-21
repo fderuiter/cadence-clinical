@@ -18,28 +18,31 @@
     </div>
 
     <p v-if="!enrollmentId" id="record-forms-no-enrollment" class="status-line">
-      The kernel has no enrollment for {{ subjectCode }} that you may see, so
-      its forms can't be listed or opened here.
+      There is no enrollment for {{ subjectCode }} visible to your account, so
+      forms can't be listed or opened here.
     </p>
     <p v-else-if="loading" class="status-line" role="status">
       Loading {{ subjectCode }}'s forms…
     </p>
-    <p
+    <div
       v-else-if="loadError"
       id="record-forms-error"
       class="status-line"
       role="alert"
     >
-      {{ subjectCode }}'s forms couldn't be loaded: {{ loadError }}
-      <button
-        id="btn-retry-forms"
-        type="button"
-        class="btn btn-secondary"
-        @click="loadForms"
-      >
-        Try again
-      </button>
-    </p>
+      <p class="status-line">
+        {{ subjectCode }}'s forms couldn't be loaded.
+        <button
+          id="btn-retry-forms"
+          type="button"
+          class="btn btn-secondary"
+          @click="loadForms"
+        >
+          Try again
+        </button>
+      </p>
+      <SupportDetails :detail="loadError" />
+    </div>
     <p
       v-else-if="forms.length === 0"
       id="record-forms-empty"
@@ -93,10 +96,11 @@
 import { ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import { ecrfFormsApi, type EcrfFormSummary } from "../../api/ecrfFormsApi";
+import { seedNodeSummary } from "../../canvas/nodeResolver";
+import SupportDetails from "./SupportDetails.vue";
 
 /**
- * Lists the case report forms opened for a participant's kernel enrollment and links each form — plus opening a new
- * form with pre-filled enrollment context — directly inside Clinical Canvas.
+ * Lists the case report forms opened for a participant's enrollment and links each form directly inside Clinical Canvas.
  */
 const props = defineProps<{
   subjectCode: string;
@@ -105,10 +109,21 @@ const props = defineProps<{
   newFormLocation?: RouteLocationRaw | null;
 }>();
 
+const emit = defineEmits<{
+  (e: "forms-loaded", forms: EcrfFormSummary[]): void;
+}>();
+
 const forms = ref<EcrfFormSummary[]>([]);
 const loading = ref(false);
 const loadError = ref("");
 let requestSeq = 0;
+
+function formDisplayTitle(summary: EcrfFormSummary): string {
+  const base = summary.collection_title || summary.collection_spec_id;
+  return summary.planned_activity_id
+    ? `${base} · ${summary.planned_activity_id}`
+    : base;
+}
 
 async function loadForms() {
   const enrollmentId = props.enrollmentId;
@@ -116,10 +131,12 @@ async function loadForms() {
     forms.value = [];
     loading.value = false;
     loadError.value = "";
+    emit("forms-loaded", []);
     return;
   }
   if (typeof ecrfFormsApi?.listForEnrollment !== "function") {
     forms.value = [];
+    emit("forms-loaded", []);
     return;
   }
   const seq = ++requestSeq;
@@ -127,7 +144,16 @@ async function loadForms() {
   loadError.value = "";
   try {
     const result = await ecrfFormsApi.listForEnrollment(enrollmentId);
-    if (seq === requestSeq) forms.value = result ?? [];
+    if (seq === requestSeq) {
+      forms.value = result ?? [];
+      for (const summary of forms.value) {
+        seedNodeSummary(`collection_instance:${summary.form_id}`, {
+          kind: "collection_instance",
+          title: formDisplayTitle(summary),
+        });
+      }
+      emit("forms-loaded", forms.value);
+    }
   } catch (err) {
     if (seq === requestSeq) {
       forms.value = [];

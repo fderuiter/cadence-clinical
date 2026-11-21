@@ -10,7 +10,21 @@ import {
   type StudyScheduleOptions,
 } from "../canvas/kernelStudy";
 import { PARTICIPANT_STATES, participantStateLabel } from "../canvas/lifecycle";
+import {
+  clearNodeResolutionCache,
+  resetNodeResolutionSession,
+  seedNodeSummary,
+} from "../canvas/nodeResolver";
 import { useToastStore } from "./toasts.js";
+
+function seedParticipantNode(participant: SubjectSummary): void {
+  seedNodeSummary(`participant:${participant.id}`, {
+    kind: "participant",
+    code: participant.subject_id,
+    title: participant.subject_id,
+    status: participant.status,
+  });
+}
 
 /** Participants shown per page in the Participants section. */
 export const PARTICIPANT_PAGE_SIZE = 50;
@@ -145,6 +159,8 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       palettePromiseKey = "";
       this.$reset();
       this.studyCode = studyCode;
+      clearNodeResolutionCache();
+      resetNodeResolutionSession(studyCode);
       this.scheduleOptionsByStudy = cachedSchedules;
       if (
         studyCode &&
@@ -239,6 +255,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       for (const participant of items) {
         if (participant.study_id && participant.study_id !== studyId) continue;
         this.knownParticipants[participant.id] = participant;
+        seedParticipantNode(participant);
         delete this.failedParticipantIds[participant.id];
         changed = true;
       }
@@ -739,6 +756,13 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
         );
         if (request !== recordRequest) return false;
         this.record.enrollmentId = enrollment?.id ?? null;
+        if (enrollment?.id) {
+          seedNodeSummary(`enrollment:${enrollment.id}`, {
+            kind: "enrollment",
+            code: subjectCode,
+            title: `Enrollment ${subjectCode}`,
+          });
+        }
         return true;
       } catch (err) {
         if (request !== recordRequest) return false;

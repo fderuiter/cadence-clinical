@@ -79,6 +79,7 @@ describe("CTMS site activation (Execution)", () => {
       wrapper.find("#btn-check-site-compliance").attributes()
     ).toHaveProperty("disabled");
     expect(wrapper.text()).toContain("aren't available yet");
+    expect(wrapper.text()).not.toContain("#4829");
   });
 
   it("starts with no study or site outside a demo build", () => {

@@ -24,6 +24,9 @@ const accessibilityProject = {
     ...devices["Desktop Chrome"],
     baseURL: "http://127.0.0.1:3001/cadence-clinical/",
     launchOptions: {
+      ...(process.env.PLAYWRIGHT_CHROMIUM_PATH
+        ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH }
+        : {}),
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",

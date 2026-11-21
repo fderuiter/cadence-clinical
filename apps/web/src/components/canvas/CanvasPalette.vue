@@ -73,8 +73,9 @@
         {{ kernelNote }}
       </p>
       <p class="palette-footnote">
-        Studies are found by code or title among those the kernel lets you see.
-        A participant's commands are under Act in the inspector.
+        Studies are found by code or title among those visible to your account.
+        Available actions for a selected participant are under Act in the
+        inspector.
       </p>
     </div>
   </div>

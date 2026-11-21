@@ -38,9 +38,9 @@
 
     <template v-else-if="!formId && !enrollmentId">
       <p id="canvas-form-no-enrollment" class="status-line" role="status">
-        The kernel has no enrollment for
-        {{ participant?.subject_id || "this participant" }} that you may see, so
-        forms can't be opened here yet.
+        There is no enrollment for
+        {{ participant?.subject_id || "this participant" }} visible to your
+        account, so forms can't be opened here yet.
       </p>
     </template>
 

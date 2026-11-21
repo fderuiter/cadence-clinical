@@ -110,9 +110,27 @@ describe("Global Floating Drawer and Vue-Reactive State Sync", () => {
     expect(submissionItem.querySelector(".item-name").textContent).toBe(
       "Daily Health & Vital Diary"
     );
-    expect(submissionItem.querySelector(".data-code").textContent).toContain(
-      "vssbp"
-    );
+    expect(submissionItem.textContent).toContain("Saved offline");
+    expect(
+      submissionItem.querySelector(".answer-summary-list").textContent
+    ).toContain("Systolic Blood Pressure (mmHg):");
+    expect(
+      submissionItem.querySelector(".answer-summary-list").textContent
+    ).toContain("120");
+    expect(submissionItem.textContent).not.toContain("vssbp");
+    expect(submissionItem.textContent).not.toContain("Seq: #");
+
+    // Verify plain participant header badges and activity footer heading
+    const headerText = document.querySelector(".portal-header").textContent;
+    expect(headerText).toContain("Study Companion");
+    expect(headerText).toContain("Private & Encrypted");
+    expect(headerText).toContain("Offline Ready");
+    expect(headerText).not.toContain("21 CFR Part 11");
+    expect(headerText).not.toContain("GAMP 5");
+
+    const footerText = document.querySelector(".portal-footer").textContent;
+    expect(footerText).toContain("My Recent Activity");
+    expect(footerText).not.toContain("ALCOA");
   });
 
   it("should trigger manual sync process within the floating drawer", async () => {

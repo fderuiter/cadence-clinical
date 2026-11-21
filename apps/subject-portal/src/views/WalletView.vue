@@ -10,8 +10,9 @@
     <div class="view-header">
       <h2>Participant Financial Wallet &amp; Stipends</h2>
       <p>
-        Track verified study stipends, submit travel or meal receipts via OCR,
-        and disburse your available balance to your linked payout method.
+        Track your study stipends, upload travel or meal receipts for
+        reimbursement, and transfer your available balance to your linked payout
+        method.
       </p>
     </div>
 
@@ -147,9 +148,9 @@
             </strong>
           </div>
           <div>
-            <div style="font-weight: 600">IRS W-9 Status</div>
+            <div style="font-weight: 600">Tax Form (W-9)</div>
             <strong id="wallet-w9-status" style="font-size: 15px">
-              {{ wallet.w9Status || "NOT_REQUIRED" }}
+              {{ formatEnumLabel(wallet.w9Status || "NOT_REQUIRED") }}
             </strong>
           </div>
         </div>
@@ -267,9 +268,9 @@
           📷 Travel &amp; Meal Receipt Reimbursement
         </h3>
         <p style="font-size: 14px; color: var(--text-muted)">
-          Upload a receipt photo or PDF to extract merchant, date, category, and
-          amount via OCR. Routine claims under $100.00 (meals up to $75.00) with
-          high scan confidence are auto-approved for direct ACH reimbursement.
+          Upload a receipt photo or PDF and we will fill in the merchant, date,
+          category, and amount for you to review. Routine claims under $100.00
+          (meals up to $75.00) with clear receipts are approved automatically.
         </p>
         <div
           id="receipt-upload-dropzone"
@@ -311,8 +312,8 @@
             text-align: center;
             color: var(--text-muted);
           "
-          >Tap to capture or upload; OCR extraction detects merchant, date,
-          category, and amount from your receipt image</small
+          >Tap to capture or upload a receipt; we will pre-fill the merchant,
+          date, category, and amount for you to check</small
         >
         <input
           id="receipt-file-input"
@@ -390,11 +391,9 @@
               flex-wrap: wrap;
             "
           >
-            <h4 style="margin: 0; font-size: 16px">
-              OCR Extracted Claim Confirmation
-            </h4>
+            <h4 style="margin: 0; font-size: 16px">Review Receipt Details</h4>
             <span id="ocr-confidence-badge" class="badge badge-gxp">
-              Confidence:
+              Read clarity:
               {{ Math.round((wallet.expenseForm.ocrConfidence || 0) * 100) }}%
             </span>
           </div>
@@ -403,14 +402,14 @@
             <label for="ocr-category">Expense Category</label>
             <select id="ocr-category" v-model="wallet.expenseForm.category">
               <option value="TRANSIT">
-                TRANSIT (Public Transit / Ride Share / Cab)
+                Public Transit, Ride Share, or Taxi
               </option>
-              <option value="FUEL">FUEL (Gas / Fuel Station)</option>
-              <option value="MILEAGE">MILEAGE (Personal Auto Mileage)</option>
-              <option value="PARKING">PARKING (Parking Garage / Lot)</option>
-              <option value="MEAL">MEAL (Per-Diem Allowance)</option>
-              <option value="LODGING">LODGING (Hotel / Accommodation)</option>
-              <option value="OTHER">OTHER (Study Travel Expense)</option>
+              <option value="FUEL">Gas or Fuel</option>
+              <option value="MILEAGE">Personal Auto Mileage</option>
+              <option value="PARKING">Parking</option>
+              <option value="MEAL">Meals (Per-Diem Allowance)</option>
+              <option value="LODGING">Hotel or Lodging</option>
+              <option value="OTHER">Other Study Travel Expense</option>
             </select>
           </div>
 
@@ -604,10 +603,14 @@
           >
             <div>
               <div style="font-weight: 600">
-                {{ tx.description || tx.Description || tx.transactionType }}
+                {{
+                  tx.description ||
+                  tx.Description ||
+                  formatEnumLabel(tx.transactionType || tx.TransactionType)
+                }}
               </div>
               <div style="font-size: 12px; color: var(--text-muted)">
-                {{ tx.transactionType || tx.TransactionType }}
+                {{ formatEnumLabel(tx.transactionType || tx.TransactionType) }}
               </div>
             </div>
             <strong
@@ -667,6 +670,32 @@ const formattedAvailableBalance = computed(() => {
     typeof wallet.walletBalance === "number" ? wallet.walletBalance : 0;
   return `$${amount.toFixed(2)} ${wallet.currency || "USD"}`;
 });
+
+const WALLET_ENUM_LABELS = Object.freeze({
+  NOT_REQUIRED: "Not required",
+  REQUIRED: "Required",
+  SUBMITTED: "Submitted",
+  VERIFIED: "Verified",
+  PENDING_REVIEW: "Pending review",
+  AUTO_APPROVED: "Approved",
+  APPROVED: "Approved",
+  PAID: "Paid",
+  STIPEND_CREDIT: "Study stipend",
+  EXPENSE_REIMBURSEMENT: "Expense reimbursement",
+  BALANCE_DISBURSEMENT: "Balance payout",
+});
+
+function formatEnumLabel(rawValue) {
+  const key = String(rawValue || "").trim();
+  if (!key) return "";
+  if (WALLET_ENUM_LABELS[key]) return WALLET_ENUM_LABELS[key];
+  const words = key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[._-]+/g, " ")
+    .trim()
+    .toLowerCase();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : key;
+}
 
 const walletError = computed(
   () => wallet.expenseOcr?.error || wallet.expenseError || ""

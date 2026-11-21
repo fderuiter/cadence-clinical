@@ -11,20 +11,21 @@
       id="record-queries-no-enrollment"
       class="status-line"
     >
-      The kernel has no enrollment for {{ subjectCode }} that you may see, so
-      its queries can't be listed here.
+      No enrollment record is visible for {{ subjectCode }}, so queries aren't
+      available here.
     </p>
     <p v-else-if="queries.loading" class="status-line" role="status">
       Loading {{ subjectCode }}'s queries…
     </p>
-    <p
+    <div
       v-else-if="queries.loadError"
       id="record-queries-error"
       class="status-line"
       role="alert"
     >
-      {{ subjectCode }}'s queries couldn't be loaded: {{ queries.loadError }}
-    </p>
+      <p>{{ subjectCode }}'s queries couldn't be loaded right now.</p>
+      <SupportDetails :detail="queries.loadError" />
+    </div>
     <p
       v-else-if="!queries.queries.length"
       id="record-queries-empty"
@@ -65,18 +66,18 @@ import type { RouteLocationRaw } from "vue-router";
 import type { FormQueryResponse } from "../../api/ecrfQueriesApi";
 import { useFormQueries } from "../../composables/useFormQueries";
 import FormQueryList from "../ecrf/FormQueryList.vue";
+import SupportDetails from "./SupportDetails.vue";
 
 /**
- * A participant's queries across their forms, read from the Execution module by kernel enrollment (#5461), with
- * the transitions the module allows from each state. Each query links directly to its target form and observation
- * inside Clinical Canvas.
+ * A participant's queries across their forms, read by enrollment, with links directly to target forms and observations.
  */
 const props = defineProps<{
   studyCode?: string;
   subjectCode: string;
-  /** The participant's kernel enrollment id, or null when the kernel has none the reader may see. */
+  /** The participant's enrollment id, or null when none is visible. */
   enrollmentId: string | null;
   canManage: boolean;
+  formTitles?: Record<string, string>;
   formLocation?: (formId: string) => RouteLocationRaw | null;
   observationLocation?: (
     observationId: string,

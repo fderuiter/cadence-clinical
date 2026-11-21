@@ -7,9 +7,9 @@
       <p class="role-badge">Participant Companion Portal</p>
     </div>
     <div class="compliance-badges">
-      <span class="badge badge-epro">ePRO Companion</span>
-      <span class="badge badge-gxp">21 CFR Part 11</span>
-      <span class="badge badge-gamp">GAMP 5</span>
+      <span class="badge badge-epro">Study Companion</span>
+      <span class="badge badge-gxp">Private &amp; Encrypted</span>
+      <span class="badge badge-gamp">Offline Ready</span>
 
       <!-- Persistent dynamic sync status button -->
       <button

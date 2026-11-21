@@ -124,13 +124,13 @@
         style="margin-bottom: 24px"
       >
         <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px">
-          <span>🧠</span> Step 1: Comprehension Verification Check
+          <span>🧠</span> Step 1: Quick Understanding Check
         </h3>
         <p
           style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px"
         >
-          Please answer the following brief questions to verify your
-          understanding of the trial risks and procedures.
+          Please answer these short questions to confirm the key study details,
+          benefits, and risks.
         </p>
 
         <!-- Status Feedback region -->
@@ -166,18 +166,17 @@
       </div>
 
       <!-- Signature Section -->
-      <!-- Biometric Liveness Check Form Section -->
+      <!-- Camera Identity Check Section -->
       <div id="consent-liveness-card" class="card" style="margin-bottom: 24px">
         <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px">
-          <span>📹</span> Step 2: Biometric Facial Liveness Verification
+          <span>📹</span> Step 2: Quick Camera Check
         </h3>
         <p
           style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px"
         >
-          To ensure 21 CFR Part 11 identity verification and prevent spoofing,
-          please complete a short camera video liveness check. Video frames are
-          processed strictly in temporary memory and zero frames are persisted
-          to disk.
+          Please complete a quick camera check so we can confirm it is really
+          you signing. Your camera preview stays in temporary memory and no
+          photos or videos are saved.
         </p>
 
         <!-- Status Feedback region -->
@@ -210,13 +209,12 @@
         >
           <div style="font-size: 32px; margin-bottom: 8px">📷</div>
           <p style="margin: 0; font-size: 14px; font-weight: 500">
-            Camera Active - Anti-Spoofing Frame Capture Simulator
+            Camera Ready for Quick Check
           </p>
           <p
             style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted)"
           >
-            Ensure your face is clearly visible in the frame before clicking
-            verify.
+            Center your face in view, then select Complete Camera Check.
           </p>
         </div>
 
@@ -229,7 +227,7 @@
             type="button"
             class="btn btn-primary"
           >
-            Verify Biometric Liveness
+            Complete Camera Check
           </button>
 
           <button
@@ -241,7 +239,7 @@
               background: var(--semantic-color-surface);
             "
           >
-            Study Coordinator Video Fallback
+            Verify with Study Coordinator Instead
           </button>
         </div>
       </div>

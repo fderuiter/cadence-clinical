@@ -434,7 +434,8 @@ describe("Client-side ePRO sync, draft preservation, PIN recovery, and offline s
     // Drawer displays plain-language reason + coordinator steps, zero raw JSON, and masks PII
     const drawerHtml =
       document.getElementById("global-sync-drawer").textContent;
-    expect(drawerHtml).toContain("QUARANTINED");
+    expect(drawerHtml).toContain("Needs review");
+    expect(drawerHtml).not.toContain("QUARANTINED");
     expect(drawerHtml).toContain("between 70 and 250 mmHg");
     expect(drawerHtml).toContain("contact your study coordinator");
     expect(drawerHtml).not.toContain("{");
@@ -849,7 +850,9 @@ describe("Client-side ePRO sync, draft preservation, PIN recovery, and offline s
         email: "pat.smith@example.com", // deid-ignore
         full_name: "Pat Smith",
       })
-    ).toBe("vssbp: 118, email: [Protected], full_name: [Protected]");
+    ).toBe(
+      "Systolic Blood Pressure (mmHg): 118, Email: [Protected], Full Name: [Protected]"
+    );
     expect(
       humanizeValidationError(
         'Local schema quarantine: Pain score must be <= 10 {"raw":"json"}'
