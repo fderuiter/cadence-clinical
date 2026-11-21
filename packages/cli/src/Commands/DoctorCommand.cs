@@ -99,26 +99,12 @@ public static class DoctorCommand
         return false;
     }
 
+    private const int PosixEnoexec = 8;
+
     private static bool CheckPnpm()
     {
         string? pinned = File.Exists("package.json") ? PnpmPin.PinnedVersion(File.ReadAllText("package.json")) : null;
-        string? installed = null;
-        try
-        {
-            var psi = new ProcessStartInfo("pnpm", "--version") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
-            using var p = Process.Start(psi);
-            if (p is not null)
-            {
-                string output = p.StandardOutput.ReadToEnd().Trim();
-                p.StandardError.ReadToEnd();
-                p.WaitForExit();
-                installed = p.ExitCode == 0 ? output : null;
-            }
-        }
-        catch (Win32Exception)
-        {
-            // pnpm is not on the PATH; reported as unusable below.
-        }
+        string? installed = ReadPnpmVersion(useShellFallback: false);
 
         switch (PnpmPin.Compare(pinned, installed))
         {
@@ -135,5 +121,39 @@ public static class DoctorCommand
                 AnsiConsole.MarkupLine("  pnpm: [red]package.json declares no packageManager pin[/]");
                 return false;
         }
+    }
+
+    private static string? ReadPnpmVersion(bool useShellFallback)
+    {
+        try
+        {
+            var psi = useShellFallback
+                ? new ProcessStartInfo("/bin/sh") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false }
+                : new ProcessStartInfo("pnpm", "--version") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+            if (useShellFallback)
+            {
+                psi.ArgumentList.Add("-c");
+                psi.ArgumentList.Add("exec pnpm --version");
+            }
+
+            using var p = Process.Start(psi);
+            if (p is not null)
+            {
+                string output = p.StandardOutput.ReadToEnd().Trim();
+                p.StandardError.ReadToEnd();
+                p.WaitForExit();
+                return p.ExitCode == 0 ? output : null;
+            }
+        }
+        catch (Win32Exception ex) when (!useShellFallback && !OperatingSystem.IsWindows() && ex.NativeErrorCode == PosixEnoexec)
+        {
+            return ReadPnpmVersion(useShellFallback: true);
+        }
+        catch (Win32Exception)
+        {
+            // pnpm is not on the PATH; reported as unusable by caller.
+        }
+
+        return null;
     }
 }
