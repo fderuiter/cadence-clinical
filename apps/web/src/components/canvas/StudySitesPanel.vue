@@ -300,6 +300,7 @@ import {
   type KernelStudySiteSummary,
 } from "../../api/kernelApi";
 import { useAuthStore } from "../../stores/auth.js";
+import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
 
 const authStore = useAuthStore();
 
@@ -344,10 +345,13 @@ const registerSiteReason = ref("");
 let requestEpoch = 0;
 
 function nextIdempotencyKey(prefix: string): string {
+  if (isDemoBuild()) {
+    return `${prefix}-${demoRandomToken(12, 36, "study-sites.idempotency")}`;
+  }
   if (typeof globalThis.crypto?.randomUUID === "function") {
     return `${prefix}-${globalThis.crypto.randomUUID()}`;
   }
-  return `${prefix}-${Math.random().toString(36).slice(2)}`;
+  return `${prefix}-${demoRandomToken(12, 36, "study-sites.idempotency")}`;
 }
 
 async function syncCallerSiteScope(siteCode: string) {

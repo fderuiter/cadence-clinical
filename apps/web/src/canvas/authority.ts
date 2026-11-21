@@ -46,14 +46,22 @@ export function holdsParticipantRole(auth: RawRoleHolder): boolean {
   );
 }
 
+const PARTICIPANT_MUTATION_PERSONAS = new Set([
+  "site_crc",
+  "site_investigator",
+]);
+
 /**
  * Add participants and change their state. Sponsor lenses (`super_admin`, `sponsor_designer`, `data_manager`)
- * stay read-only for participant records; when a workspace persona is active, switching to the Site Coordinator
- * lens (`site_crc`) reveals participant mutations for authorized site staff.
+ * stay read-only for participant records; when a workspace persona is active, switching to a site clinical
+ * lens (`site_crc` or `site_investigator`) reveals participant mutations for authorized site staff.
  */
 export function canManageParticipants(auth: RawRoleHolder): boolean {
   if (!holdsParticipantRole(auth)) return false;
-  if (auth.currentPersona && auth.currentPersona !== "site_crc") {
+  if (
+    auth.currentPersona &&
+    !PARTICIPANT_MUTATION_PERSONAS.has(auth.currentPersona)
+  ) {
     return false;
   }
   return true;

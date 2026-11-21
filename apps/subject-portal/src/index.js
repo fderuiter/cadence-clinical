@@ -93,9 +93,13 @@ import {
 } from "./features/sync-status.js";
 import { hydrateDraftPresence, renderTasks } from "./features/tasks.js";
 import {
+  closeDisburseModal,
   disburseAvailableBalance,
   extractReceiptOcr,
   loadParticipantWallet,
+  openDisburseModal,
+  openManualExpenseEntry,
+  resetExpenseClaimForm,
   submitExpenseClaim,
 } from "./features/wallet.js";
 import { isScreenAvailable } from "./router/availability.js";
@@ -105,12 +109,21 @@ import {
   flagLockedEntriesForPinReset,
   getDraftAssignmentIds,
 } from "./sync-queue.js";
+import {
+  formatSignedWalletCurrency,
+  formatWalletCurrency,
+  normalizeCurrencyCode,
+} from "./utils/currency.js";
 import { isDemoBuild, isDemoModeActive } from "./utils/demoMode.js";
 import { markFieldInvalid } from "./widgets/field-errors.js";
 
 // Auto-run on load in DOM environments
 if (typeof document !== "undefined") {
-  document.addEventListener("DOMContentLoaded", initializeApp);
+  if (import.meta.env?.MODE === "test" || document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initializeApp);
+  } else {
+    initializeApp();
+  }
 }
 
 export {
@@ -178,9 +191,16 @@ export {
   unmountApp,
   describeQueuedSync,
   extractReceiptOcr,
+  openManualExpenseEntry,
+  resetExpenseClaimForm,
   submitExpenseClaim,
   loadParticipantWallet,
+  openDisburseModal,
+  closeDisburseModal,
   disburseAvailableBalance,
+  normalizeCurrencyCode,
+  formatWalletCurrency,
+  formatSignedWalletCurrency,
   isDemoBuild,
   isDemoModeActive,
   isScreenAvailable,

@@ -290,7 +290,11 @@ const canSwitchToCoordinatorLens = computed(
   () =>
     !props.canManageParticipants &&
     holdsParticipantRole(authStore) &&
-    Boolean(authStore.currentPersona && authStore.currentPersona !== "site_crc")
+    Boolean(
+      authStore.currentPersona &&
+      authStore.currentPersona !== "site_crc" &&
+      authStore.currentPersona !== "site_investigator"
+    )
 );
 
 function switchToCoordinatorLens() {

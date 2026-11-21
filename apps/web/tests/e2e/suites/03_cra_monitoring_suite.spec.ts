@@ -32,10 +32,8 @@ test.describe("Suite 3: CRA Clinical Monitor Golden Path", () => {
       "/cadence-clinical/ctms"
     );
 
-    // Verify CTMS Dashboard Header & KPIs
-    await expect(page.locator("h2")).toContainText(
-      "Clinical Trial Management System"
-    );
+    // Verify CTMS Site Readiness Header & KPIs
+    await expect(page.locator("h2")).toContainText("Site readiness");
     await expect(
       page.locator("#kpi-total-subjects, .stat-card").first()
     ).toBeVisible();

@@ -1,4 +1,4 @@
-# ADR-2549: Kernel Site Setup, Sandbox Site Provisioning, and Execution Tenant-Scoped Subject Uniqueness
+# ADR-2552: Kernel Site Setup, Sandbox Site Provisioning, and Execution Tenant-Scoped Subject Uniqueness
 
 - **Status:** Accepted
 - **Date:** 2026-11-21

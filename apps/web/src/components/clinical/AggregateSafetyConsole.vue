@@ -1341,7 +1341,12 @@ import { useFocusTrap } from "ui";
 
 import { useToastStore } from "../../stores/toasts.js";
 import { ensureOk } from "../../utils/apiErrors.js";
-import { isDemoBuild } from "../../utils/demoMode.js";
+import {
+  demoNowIso,
+  demoRandomToken,
+  isDemoBuild,
+  nextDemoStep,
+} from "../../utils/demoMode.js";
 import { allowUnbackedAction } from "../../utils/unbackedActions.js";
 
 const toasts = useToastStore();
@@ -1772,8 +1777,8 @@ async function executeQppvSignoff() {
       qppv_name: qppvUserId.value,
       qppv_role: qppvRole.value,
       meaning_of_signature: qppvMeaning.value,
-      signed_at: new Date().toISOString(),
-      manifest_id: `sig_qppv_${Math.random().toString(16).substring(2, 10)}`,
+      signed_at: demoNowIso(nextDemoStep("qppv-sign")),
+      manifest_id: `sig_qppv_${demoRandomToken(8, 16, "qppv-sign")}`,
       snapshot_hash: snapshotHash.value,
       verification_status: "VALID",
     };

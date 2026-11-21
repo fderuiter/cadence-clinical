@@ -1,5 +1,9 @@
-const CADENCE_101_UUID = "00000000-0000-0000-0000-000000000101"; // deid-ignore
-const SPONSOR_CADENCE_UUID = "00000000-0000-0000-0000-000000000301"; // deid-ignore
+import { DEMO_SITES, DEMO_SPONSOR, DEMO_STUDY } from "demo-fixtures";
+
+const CADENCE_101_UUID =
+  DEMO_STUDY.uuid || "00000000-0000-0000-0000-000000000101"; // deid-ignore
+const SPONSOR_CADENCE_UUID =
+  DEMO_SPONSOR.organizationUuid || "00000000-0000-0000-0000-000000000301"; // deid-ignore
 const SPONSOR_METRO_UUID = "00000000-0000-0000-0000-000000000302"; // deid-ignore
 
 const MAX_SYNC_IMPORT_BYTES = 10 * 1024 * 1024;
@@ -7,8 +11,8 @@ const MAX_SYNC_IMPORT_BYTES = 10 * 1024 * 1024;
 export const DEMO_ORGANIZATIONS = [
   {
     ref: `organization:${SPONSOR_CADENCE_UUID}@1`,
-    code: "CADENCE-PHARMA",
-    name: "Cadence Biopharmaceuticals",
+    code: DEMO_SPONSOR.code || "CADENCE-PHARMA",
+    name: DEMO_SPONSOR.name || "Cadence Pharma (demo sponsor)",
     kind: "Sponsor",
   },
   {
@@ -633,15 +637,15 @@ function parseUsdmJsonText(jsonText) {
 
 export function createInitialDemoStudyDirectoryEntry() {
   return {
-    ref: `study:${CADENCE_101_UUID}@1`,
+    ref: DEMO_STUDY.ref || `study:${CADENCE_101_UUID}@1`,
     kind: "study",
-    code: "CADENCE-101",
-    title: "Phase II Adaptive Oncology Demonstration Study",
-    phase: "Phase 2",
+    code: DEMO_STUDY.code || "CADENCE-101",
+    title: DEMO_STUDY.title || "Cadence demo study: cardiovascular outcomes",
+    phase: DEMO_STUDY.phase || "Phase 3",
     sponsor_ref: DEMO_ORGANIZATIONS[0].ref,
     sponsor_code: DEMO_ORGANIZATIONS[0].code,
     sponsor_name: DEMO_ORGANIZATIONS[0].name,
-    site_count: 2,
+    site_count: DEMO_SITES.length || 2,
     status: "ACTIVE",
     mask: null,
   };

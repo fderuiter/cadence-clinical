@@ -214,7 +214,8 @@ public record SelfServiceSubmitExpenseRequestDto(
     [property: JsonPropertyName("studyId")] string? StudyCode = null,
     [property: JsonPropertyName("siteId")] string? SiteCode = null,
     string? SubjectId = null,
-    string? WalletId = null
+    string? WalletId = null,
+    string? IdempotencyKey = null
 );
 
 public record SelfServiceExpenseClaimResponseDto(
@@ -2185,11 +2186,19 @@ public static class PaymentEndpoints
         SelfServiceSubmitExpenseRequestDto request,
         PaymentsDbContext dbContext,
         [FromServices] IClock clock,
-        ClaimsPrincipal user)
+        ClaimsPrincipal user,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKeyHeader = null)
     {
         if (PaymentsCaller.From(user) is not { } caller)
         {
             return NoSignedCaller();
+        }
+
+        string? idempotencyKey = NormalizeIdempotencyKey(idempotencyKeyHeader, request.IdempotencyKey);
+
+        if (idempotencyKey is { Length: > 255 })
+        {
+            return Results.BadRequest(new { detail = "Idempotency-Key must not exceed 255 characters." });
         }
 
         DateTimeOffset now = clock.UtcNow;
@@ -2211,6 +2220,19 @@ public static class PaymentEndpoints
         if (wallet == null)
         {
             return OutsideScope();
+        }
+
+        if (!string.IsNullOrEmpty(idempotencyKey))
+        {
+            var existingClaim = await dbContext.ParticipantExpenseClaims.AsNoTracking()
+                .FirstOrDefaultAsync(c =>
+                    c.WalletId == wallet.Id
+                    && c.SubjectId == caller.UserId
+                    && c.IdempotencyKey == idempotencyKey);
+            if (existingClaim != null)
+            {
+                return BuildSelfServiceExpenseClaimResponse(existingClaim, wallet, caller.UserId);
+            }
         }
 
         if (request.GrossAmount <= 0m)
@@ -2290,6 +2312,7 @@ public static class PaymentEndpoints
             Status = initialStatus,
             ReceiptImageName = !string.IsNullOrWhiteSpace(request.ReceiptImageName) ? request.ReceiptImageName : "receipt.png",
             ReceiptOcrDataJson = request.ReceiptOcrData != null ? JsonSerializer.Serialize(request.ReceiptOcrData) : null,
+            IdempotencyKey = idempotencyKey,
             ReviewedBy = canAutoApprove ? PaymentsCaller.AutoApprovalSystemUser : null,
             ReviewedAt = canAutoApprove ? now : null,
             ReviewNotes = reviewNotes,
@@ -2323,6 +2346,7 @@ public static class PaymentEndpoints
             });
 
             string achRef = $"DISB-ACH-{Guid.NewGuid():N}"[..18].ToUpperInvariant();
+            claim.RecordWalletCredit();
             claim.RecordDisbursement(achRef);
 
             wallet.CurrentBalance -= net;
@@ -2434,7 +2458,26 @@ public static class PaymentEndpoints
         }
 
         dbContext.ParticipantExpenseClaims.Add(claim);
-        await dbContext.SaveChangesAsync();
+        try
+        {
+            await dbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateException) when (!string.IsNullOrEmpty(idempotencyKey))
+        {
+            dbContext.ChangeTracker.Clear();
+            var racedWallet = await dbContext.ParticipantWallets.AsNoTracking()
+                .FirstOrDefaultAsync(w => w.Id == wallet.Id);
+            var racedClaim = await dbContext.ParticipantExpenseClaims.AsNoTracking()
+                .FirstOrDefaultAsync(c =>
+                    c.WalletId == wallet.Id
+                    && c.SubjectId == caller.UserId
+                    && c.IdempotencyKey == idempotencyKey);
+            if (racedWallet != null && racedClaim != null)
+            {
+                return BuildSelfServiceExpenseClaimResponse(racedClaim, racedWallet, caller.UserId);
+            }
+            throw;
+        }
 
         return Results.Ok(new SelfServiceExpenseClaimResponseDto(
             Id: claim.Id,
@@ -2462,15 +2505,61 @@ public static class PaymentEndpoints
         ));
     }
 
+    private static IResult BuildSelfServiceExpenseClaimResponse(
+        ParticipantExpenseClaim existingClaim,
+        ParticipantWallet wallet,
+        string subjectId)
+    {
+        bool wasAutoApproved = !string.IsNullOrEmpty(existingClaim.DisbursementReference)
+            && string.Equals(
+                existingClaim.Status,
+                ParticipantExpenseClaimStatus.APPROVED.ToString(),
+                StringComparison.OrdinalIgnoreCase);
+        string existingDecision = wasAutoApproved ? "AUTO_APPROVED" : existingClaim.Status;
+
+        return Results.Ok(new SelfServiceExpenseClaimResponseDto(
+            Id: existingClaim.Id,
+            WalletId: wallet.Id,
+            SubjectId: subjectId,
+            StudyCode: wallet.StudyId,
+            SiteCode: wallet.SiteId,
+            ExpenseDate: existingClaim.ExpenseDate,
+            Category: existingClaim.Category,
+            MerchantName: existingClaim.MerchantName,
+            GrossAmount: existingClaim.GrossAmount,
+            TaxDeduction: existingClaim.TaxDeduction,
+            NetAmount: existingClaim.NetAmount,
+            Status: existingClaim.Status,
+            ApprovalDecision: existingDecision,
+            AutoApproved: wasAutoApproved,
+            DisbursementReference: existingClaim.DisbursementReference,
+            ReviewNotes: existingClaim.ReviewNotes,
+            ReceiptImageName: existingClaim.ReceiptImageName,
+            WalletCurrentBalance: wallet.CurrentBalance,
+            LifetimeStipends: wallet.LifetimeStipends,
+            LifetimeReimbursements: wallet.LifetimeReimbursements,
+            LifetimeDisbursements: wallet.LifetimeDisbursements,
+            CreatedAt: existingClaim.CreatedAt
+        ));
+    }
+
     private static async Task<IResult> DisburseSelfWalletBalance(
         SelfServiceDisburseRequestDto request,
         PaymentsDbContext dbContext,
         [FromServices] IClock clock,
-        ClaimsPrincipal user)
+        ClaimsPrincipal user,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKeyHeader = null)
     {
         if (PaymentsCaller.From(user) is not { } caller)
         {
             return NoSignedCaller();
+        }
+
+        string? idempotencyKey = NormalizeIdempotencyKey(idempotencyKeyHeader, request.IdempotencyKey);
+
+        if (idempotencyKey is { Length: > 255 })
+        {
+            return Results.BadRequest(new { detail = "Idempotency-Key must not exceed 255 characters." });
         }
 
         DateTimeOffset now = clock.UtcNow;
@@ -2492,6 +2581,19 @@ public static class PaymentEndpoints
         if (wallet == null)
         {
             return Results.NotFound(new { detail = "No active participant wallet found for the signed-in participant." });
+        }
+
+        if (!string.IsNullOrEmpty(idempotencyKey))
+        {
+            var existingDisbursement = await dbContext.ParticipantDisbursements.AsNoTracking()
+                .FirstOrDefaultAsync(d =>
+                    d.WalletId == wallet.Id
+                    && d.SubjectId == caller.UserId
+                    && d.IdempotencyKey == idempotencyKey);
+            if (existingDisbursement != null)
+            {
+                return BuildSelfServiceDisburseResponse(existingDisbursement, wallet, caller.UserId);
+            }
         }
 
         if (wallet.TaxableYtd >= 600.00m && !string.Equals(wallet.W9Status, "VERIFIED", StringComparison.OrdinalIgnoreCase))
@@ -2561,6 +2663,7 @@ public static class PaymentEndpoints
             Amount = payoutAmount,
             DisbursementType = disbursementType,
             ReferenceNumber = refNumber,
+            IdempotencyKey = idempotencyKey,
             Status = "DISPATCHED",
             CreatedAt = now,
             CreatedBy = caller.UserId,
@@ -2608,19 +2711,67 @@ public static class PaymentEndpoints
             VersionIndex = wallet.VersionIndex
         });
 
-        await dbContext.SaveChangesAsync();
+        try
+        {
+            await dbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateException) when (!string.IsNullOrEmpty(idempotencyKey))
+        {
+            dbContext.ChangeTracker.Clear();
+            var racedWallet = await dbContext.ParticipantWallets.AsNoTracking()
+                .FirstOrDefaultAsync(w => w.Id == wallet.Id);
+            var racedDisbursement = await dbContext.ParticipantDisbursements.AsNoTracking()
+                .FirstOrDefaultAsync(d =>
+                    d.WalletId == wallet.Id
+                    && d.SubjectId == caller.UserId
+                    && d.IdempotencyKey == idempotencyKey);
+            if (racedWallet != null && racedDisbursement != null)
+            {
+                return BuildSelfServiceDisburseResponse(racedDisbursement, racedWallet, caller.UserId);
+            }
+            throw;
+        }
+
+        return BuildSelfServiceDisburseResponse(disbursement, wallet, caller.UserId, destinationMask);
+    }
+
+    private static string? NormalizeIdempotencyKey(string? headerValue, string? bodyValue)
+    {
+        if (!string.IsNullOrWhiteSpace(headerValue))
+        {
+            return headerValue.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(bodyValue))
+        {
+            return bodyValue.Trim();
+        }
+
+        return null;
+    }
+
+    private static IResult BuildSelfServiceDisburseResponse(
+        ParticipantDisbursement disbursement,
+        ParticipantWallet wallet,
+        string subjectId,
+        string? explicitDestinationMask = null)
+    {
+        string destinationMask = explicitDestinationMask ?? (
+            string.Equals(disbursement.DisbursementType, "VIRTUAL_CARD", StringComparison.OrdinalIgnoreCase)
+                ? (MaskCardIdentifier(wallet.VirtualCardMask) ?? "**** **** **** 4821")
+                : (MaskAccountIdentifier(wallet.AchAccountMask) ?? "ACH-***4321"));
 
         return Results.Ok(new SelfServiceDisburseResponseDto(
             Id: disbursement.Id,
             WalletId: wallet.Id,
-            SubjectId: caller.UserId,
-            Amount: payoutAmount,
+            SubjectId: subjectId,
+            Amount: disbursement.Amount,
             CurrentBalance: wallet.CurrentBalance,
             LifetimeDisbursements: wallet.LifetimeDisbursements,
             Currency: wallet.Currency,
-            DisbursementType: disbursementType,
+            DisbursementType: disbursement.DisbursementType,
             DestinationMask: destinationMask,
-            ReferenceNumber: refNumber,
+            ReferenceNumber: disbursement.ReferenceNumber,
             Status: disbursement.Status,
             CreatedAt: disbursement.CreatedAt
         ));

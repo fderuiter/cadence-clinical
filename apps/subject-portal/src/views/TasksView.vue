@@ -15,6 +15,25 @@
       </p>
     </div>
 
+    <div
+      v-if="tasksStore.taskActionError"
+      id="tasks-action-error"
+      role="alert"
+      aria-live="assertive"
+      style="
+        margin-bottom: 16px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        background: var(--semantic-color-error-bg);
+        border: 1px solid var(--semantic-color-error);
+        color: var(--semantic-color-error);
+        font-size: 14px;
+        font-weight: 600;
+      "
+    >
+      {{ tasksStore.taskActionError }}
+    </div>
+
     <!-- Tasks Loading Placeholder -->
     <div id="tasks-loading" class="loading-state" style="display: none">
       Loading your assigned tasks...
@@ -97,7 +116,9 @@
 </template>
 
 <script setup>
+import { useTasksStore } from "../stores/tasks.js";
 import { useUiStore } from "../stores/ui.js";
 
 const ui = useUiStore();
+const tasksStore = useTasksStore();
 </script>

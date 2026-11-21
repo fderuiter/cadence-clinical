@@ -390,7 +390,7 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       // fixed time, which fails when the suite runs under load.
       await vi.waitFor(
         () => expect(wrapper.text()).toContain("Search Results (1)"),
-        { timeout: 2000 }
+        { timeout: 5000 }
       );
       expect(wrapper.text()).toContain("SOP-SAF-301: Adverse Events");
 
@@ -581,7 +581,7 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
           expect(wrapper.find("#contextual-help-error-alert").exists()).toBe(
             true
           ),
-        { timeout: 2000 }
+        { timeout: 5000 }
       );
       const alertEl = wrapper.find("#contextual-help-error-alert");
       expect(alertEl.attributes("role")).toBe("alert");

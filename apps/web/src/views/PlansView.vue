@@ -232,6 +232,7 @@ import {
   PRODUCT_FAMILIES,
 } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
+import { demoNowMs } from "../utils/demoMode.js";
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -302,7 +303,7 @@ async function handleSelectTier(tierCode) {
 
   isBusy.value = true;
   try {
-    const idempotencyKey = `web-tier-upgrade-${authStore.identity?.tenantId || "tenant"}-${tierCode.toLowerCase()}-${Date.now()}`;
+    const idempotencyKey = `web-tier-upgrade-${authStore.identity?.tenantId || "tenant"}-${tierCode.toLowerCase()}-${demoNowMs()}`;
     const updated = await kernelApi.upgradeSubscriptionTier({
       tier: tierCode,
       idempotencyKey,
