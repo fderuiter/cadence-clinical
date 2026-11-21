@@ -5,6 +5,7 @@ import {
   DEMO_SPONSOR,
   DEMO_STUDY,
 } from "demo-fixtures";
+import { createOidcSessionCoordinator, resolveOidcRedirectUri } from "ui";
 import { watch } from "vue";
 
 import { state } from "../stores/state.js";
@@ -21,8 +22,126 @@ import { isDemoBuild, isDemoModeActive } from "../utils/demoMode.js";
 import { renderCompliance } from "./compliance.js";
 import { renderInbox } from "./inbox.js";
 import { checkPINWrapper } from "./pin.js";
+import { showView } from "./navigation.js";
 import { checkOnline } from "./sync-status.js";
 import { renderTasks } from "./tasks.js";
+
+function getPortalCurrentReturnUrl() {
+  if (typeof window === "undefined" || !window.location) {
+    return null;
+  }
+  const defaultBase = import.meta.env?.BASE_URL || "/subject-portal/";
+  return `${window.location.pathname || defaultBase}${window.location.search || ""}${window.location.hash || ""}`;
+}
+
+function applyRestoredReturnUrl(savedReturnUrl) {
+  if (
+    !savedReturnUrl ||
+    typeof window === "undefined" ||
+    !window.history?.replaceState
+  ) {
+    return;
+  }
+  const currentUrl = getPortalCurrentReturnUrl();
+  if (savedReturnUrl !== currentUrl) {
+    try {
+      window.history.replaceState(null, "", savedReturnUrl);
+    } catch {
+      // Ignore history errors in restricted test environments.
+    }
+  }
+  const hashIdx = savedReturnUrl.indexOf("#");
+  if (hashIdx >= 0) {
+    const hashTarget = savedReturnUrl.slice(hashIdx + 1).replace(/^\/+/, "");
+    if (hashTarget.startsWith("view-")) {
+      showView(hashTarget);
+    }
+  }
+}
+
+export const portalSessionCoordinator = createOidcSessionCoordinator({
+  minValiditySeconds: 30,
+  getKeycloak: () =>
+    typeof window !== "undefined" ? window.keycloakInstance || null : null,
+  getCurrentReturnUrl: getPortalCurrentReturnUrl,
+  onTokenRefreshed: (nextToken) => {
+    if (nextToken) {
+      state.session.token = nextToken;
+      state.session.sessionExpired = false;
+      state.authError = "";
+    }
+  },
+  onSessionExpired: ({ returnUrl }) => {
+    expirePortalSession({ returnUrl, fromCoordinator: true });
+  },
+});
+
+/**
+ * Transitions the portal out of Authenticated when token refresh or HTTP 401
+ * recovery fails, clearing the stale bearer token while preserving active
+ * questionnaires and encrypted IndexedDB drafts.
+ */
+export function expirePortalSession({
+  message,
+  returnUrl,
+  fromCoordinator = false,
+} = {}) {
+  state.session.token = null;
+  state.session.isDemoMode = false;
+  state.session.sessionExpired = true;
+  state.authError =
+    message ||
+    "Your session has expired. Sign in again to continue — your local survey drafts remain saved on this device.";
+
+  if (!fromCoordinator) {
+    portalSessionCoordinator.markSessionExpired({
+      reason: "expired",
+      returnUrl,
+    });
+  }
+}
+
+export async function ensurePortalSessionToken(minValidity = 30) {
+  if (typeof window !== "undefined" && window.keycloakInstance) {
+    if (
+      portalSessionCoordinator.resolveKeycloak() !== window.keycloakInstance
+    ) {
+      portalSessionCoordinator.attachKeycloak(window.keycloakInstance);
+    }
+    return await portalSessionCoordinator.ensureFreshToken(minValidity);
+  }
+  return {
+    ok: Boolean(state.session.token),
+    refreshed: false,
+    token: state.session.token || null,
+  };
+}
+
+export async function refreshPortalSessionOnUnauthorized({ returnUrl } = {}) {
+  if (typeof window !== "undefined" && window.keycloakInstance) {
+    if (
+      portalSessionCoordinator.resolveKeycloak() !== window.keycloakInstance
+    ) {
+      portalSessionCoordinator.attachKeycloak(window.keycloakInstance);
+    }
+    const result = await portalSessionCoordinator.refreshOnUnauthorized({
+      returnUrl,
+    });
+    if (result.ok && result.token) {
+      state.session.token = result.token;
+      state.session.sessionExpired = false;
+      state.authError = "";
+      return result;
+    }
+    if (!state.session.sessionExpired) {
+      expirePortalSession({ returnUrl, fromCoordinator: true });
+    }
+    return result;
+  }
+
+  expirePortalSession({ returnUrl });
+  return { ok: false, refreshed: false, token: null };
+}
 
 // Restores the cached user identity without persisting or pre-populating unwrapped keys in production.
 export async function restoreSession() {
@@ -77,7 +196,10 @@ export async function signIn() {
       state.session.token = storageToken;
       state.session.isOfflineMode = false;
       state.session.isDemoMode = false;
+      state.session.sessionExpired = false;
+      portalSessionCoordinator.markAuthenticated(storageToken);
       setActiveUserId(storageUser);
+      applyRestoredReturnUrl(portalSessionCoordinator.consumeReturnUrl());
       return;
     }
 
@@ -92,6 +214,7 @@ export async function signIn() {
       state.session.token = null;
       state.session.isOfflineMode = true;
       state.session.isDemoMode = true;
+      state.session.sessionExpired = false;
       setActiveUserId(state.session.userId);
       return;
     }
@@ -106,8 +229,11 @@ export async function signIn() {
           clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || "cadence-web",
         });
         window.keycloakInstance = keycloak;
+        portalSessionCoordinator.attachKeycloak(keycloak);
         keycloak.onAuthLogout = () => {
-          logout();
+          if (!portalSessionCoordinator.isSessionExpired()) {
+            expirePortalSession();
+          }
         };
 
         await keycloak.init({
@@ -124,6 +250,8 @@ export async function signIn() {
           state.session.token = keycloak.token;
           state.session.isOfflineMode = false;
           state.session.isDemoMode = false;
+          state.session.sessionExpired = false;
+          portalSessionCoordinator.markAuthenticated(keycloak.token);
           setActiveUserId(authenticatedUserId);
 
           if (authenticatedUserId) {
@@ -133,6 +261,7 @@ export async function signIn() {
               console.warn("Failed to save oidc_user_id to localStorage:", err);
             }
           }
+          applyRestoredReturnUrl(portalSessionCoordinator.consumeReturnUrl());
           return;
         }
       }
@@ -180,8 +309,16 @@ export async function signIn() {
 }
 
 // Initiates interactive OIDC sign-in when an unauthenticated participant clicks Sign In.
-export async function login() {
+export async function login(options = {}) {
   state.authError = "";
+  const candidateReturnUrl =
+    options?.returnUrl ||
+    portalSessionCoordinator.peekReturnUrl() ||
+    getPortalCurrentReturnUrl();
+  const savedReturnUrl =
+    portalSessionCoordinator.saveReturnUrl(candidateReturnUrl) ||
+    portalSessionCoordinator.peekReturnUrl();
+
   try {
     let storageUser = null;
     let storageToken = null;
@@ -207,7 +344,10 @@ export async function login() {
       state.session.token = storageToken;
       state.session.isOfflineMode = false;
       state.session.isDemoMode = false;
+      state.session.sessionExpired = false;
+      portalSessionCoordinator.markAuthenticated(storageToken);
       setActiveUserId(resolvedUser);
+      applyRestoredReturnUrl(portalSessionCoordinator.consumeReturnUrl());
       return;
     }
 
@@ -223,11 +363,13 @@ export async function login() {
       state.session.token = null;
       state.session.isOfflineMode = true;
       state.session.isDemoMode = true;
+      state.session.sessionExpired = false;
       setActiveUserId(demoUserId);
       return;
     }
 
-    let keycloak = window.keycloakInstance;
+    let keycloak =
+      typeof window !== "undefined" ? window.keycloakInstance : null;
     if (!keycloak && typeof window !== "undefined") {
       const KeycloakClass =
         window.Keycloak || (await import("keycloak-js")).default;
@@ -238,12 +380,23 @@ export async function login() {
           clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || "cadence-web",
         });
         window.keycloakInstance = keycloak;
+        portalSessionCoordinator.attachKeycloak(keycloak);
         await keycloak.init({ pkceMethod: "S256" });
       }
+    } else if (
+      keycloak &&
+      portalSessionCoordinator.resolveKeycloak() !== keycloak
+    ) {
+      portalSessionCoordinator.attachKeycloak(keycloak);
     }
 
     if (keycloak && typeof keycloak.login === "function") {
-      await keycloak.login();
+      const redirectUri =
+        options?.redirectUri ||
+        resolveOidcRedirectUri(savedReturnUrl, {
+          basePath: import.meta.env?.BASE_URL || "/subject-portal/",
+        });
+      await keycloak.login({ redirectUri });
       return;
     }
 
@@ -289,7 +442,10 @@ export function watchUserIdentity() {
 
 // User logout clears cached OIDC identity, active in-memory PIN key, and session state.
 export async function logout() {
+  portalSessionCoordinator.beginVoluntaryLogout();
   const wasDemo = isDemoModeActive();
+  state.authError = "";
+  state.session.sessionExpired = false;
 
   try {
     localStorage.removeItem("oidc_user_id");

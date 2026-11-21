@@ -29,6 +29,7 @@ import {
   parseFormEntry,
   type KernelObservationValue,
 } from "../api/observationValue";
+import { registerDraftSource } from "ui";
 import { useAuthStore } from "../stores/auth.js";
 import { scopedKey, storageScopeOf } from "../utils/userScopedStorage.js";
 
@@ -425,8 +426,16 @@ export function useEcrfForm(
     { deep: true }
   );
 
+  const unregisterDraftSource = registerDraftSource({
+    flush: flushDraft,
+    hasDrafts: () => Boolean(form.value && !locked.value && dirty.value),
+  });
+
   if (getCurrentInstance()) {
-    onUnmounted(flushDraft);
+    onUnmounted(() => {
+      flushDraft();
+      unregisterDraftSource();
+    });
   }
 
   /** A form can be signed as read: it has values (a content hash) and no unsaved entries. */

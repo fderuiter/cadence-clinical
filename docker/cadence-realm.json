@@ -77,7 +77,8 @@
       "serviceAccountsEnabled": false,
       "redirectUris": [
         "http://localhost:3000/cadence-clinical/*",
-        "http://localhost:5174/subject-portal/*"
+        "http://localhost:5174/subject-portal/*",
+        "http://localhost:5174/*"
       ],
       "webOrigins": ["+"],
       "attributes": {
@@ -304,6 +305,27 @@
       ],
       "realmRoles": ["Auditor", "Sponsor Admin"],
       "attributes": { "tenant_id": ["cadence-local"], "study_ids": ["*"] }
+    },
+    {
+      "id": "7a8b9c4d-5e6f-4a1b-8c2d-3e4f5a6b7c8d",
+      "username": "subject.site101",
+      "enabled": true,
+      "email": "subject.site101@example.com",
+      "firstName": "Study",
+      "lastName": "Participant",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["Subject"],
+      "attributes": {
+        "tenant_id": ["cadence-local"],
+        "study_ids": ["CADENCE-101"],
+        "site_id": ["SITE-101"]
+      }
     }
   ]
 }

@@ -1,10 +1,13 @@
-import { TOKEN_MIN_VALIDITY_SECONDS } from "../api/authorization.js";
 import { resolveAssetUrl } from "../utils/url";
 import {
   KEYCLOAK_BUILD_ENV,
   resolveKeycloakConfig,
   setKeycloakClient,
 } from "./keycloak.js";
+import {
+  setSessionEndedHandler,
+  syncKeycloakClientWithCoordinator,
+} from "./sessionCoordinator.js";
 
 /**
  * Creates the Keycloak client, restores an existing SSO session (check-sso,
@@ -37,18 +40,12 @@ export async function initKeycloakAuth({
   }
 
   const keycloak = new Keycloak(config);
-  setKeycloakClient(keycloak);
-
-  const endSession = () => {
-    authStore.clearAuth();
+  setSessionEndedHandler(() => {
+    authStore.expireSession();
     onSessionEnded();
-  };
-
-  keycloak.onAuthRefreshSuccess = () => authStore.setAuth(keycloak);
-  keycloak.onAuthLogout = endSession;
-  keycloak.onTokenExpired = () => {
-    authStore.refresh(TOKEN_MIN_VALIDITY_SECONDS).catch(endSession);
-  };
+  });
+  setKeycloakClient(keycloak);
+  syncKeycloakClientWithCoordinator(keycloak);
 
   try {
     const authenticated = await keycloak.init({
@@ -61,6 +58,7 @@ export async function initKeycloakAuth({
   } catch (err) {
     console.error("Keycloak initialisation failed:", err);
     setKeycloakClient(null);
+    syncKeycloakClientWithCoordinator(null);
     authStore.authError =
       "The sign-in service is unavailable. Try again later or contact your administrator.";
     authStore.clearAuth();

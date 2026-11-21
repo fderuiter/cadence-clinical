@@ -116,6 +116,38 @@ public sealed class DemoManifestGeneratorTests : IDisposable
         DemoManifestGeneratorService.GenerateDemoManifest(validateOnly: true, repoRoot: _tempRoot).Should().Be(0);
     }
 
+    [Fact]
+    public void TryBuildExpectedArtifacts_RejectsDriftedParticipantRealmSiteOrStaffGrantViolation()
+    {
+        string repoRoot = QualityGateOrchestrator.FindRepoRoot();
+        CopySeedFilesToTempRepo(repoRoot);
+
+        string realmPath = Path.Combine(_tempRoot, DemoManifestGeneratorService.RealmRelativePath);
+        string originalRealm = File.ReadAllText(realmPath, Encoding.UTF8);
+
+        // Participant realm user pointing to a drifted site code must fail validation
+        File.WriteAllText(
+            realmPath,
+            originalRealm.Replace("\"site_id\": [\"SITE-101\"]", "\"site_id\": [\"SITE-999\"]", StringComparison.Ordinal),
+            Encoding.UTF8);
+        DemoManifestGeneratorService.TryBuildExpectedArtifacts(_tempRoot, out _, out _, out _, out var siteErrors).Should().BeFalse();
+        siteErrors.Should().Contain(e => e.Contains("SITE-999", StringComparison.Ordinal));
+
+        // Granting a Subject-only realm account a staff kernel role must fail K027 validation
+        File.WriteAllText(realmPath, originalRealm, Encoding.UTF8);
+        string kernelPath = Path.Combine(_tempRoot, DemoManifestGeneratorService.KernelSeedRelativePath);
+        string originalKernel = File.ReadAllText(kernelPath, Encoding.UTF8);
+        File.WriteAllText(
+            kernelPath,
+            originalKernel.Replace(
+                "(\"auditor.lead\", \"d43095eb-1912-40dd-a528-fa04335a2342\", \"DEMO_AUDITOR\", null),",
+                "(\"auditor.lead\", \"d43095eb-1912-40dd-a528-fa04335a2342\", \"DEMO_AUDITOR\", null),\n        (\"subject.site101\", \"7a8b9c4d-5e6f-4a1b-8c2d-3e4f5a6b7c8d\", \"DEMO_CRC\", \"SITE-101\"),",
+                StringComparison.Ordinal),
+            Encoding.UTF8);
+        DemoManifestGeneratorService.TryBuildExpectedArtifacts(_tempRoot, out _, out _, out _, out var grantErrors).Should().BeFalse();
+        grantErrors.Should().Contain(e => e.Contains("K027", StringComparison.Ordinal));
+    }
+
     private void CopySeedFilesToTempRepo(string repoRoot)
     {
         foreach (string rel in new[]

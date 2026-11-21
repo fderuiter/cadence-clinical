@@ -351,6 +351,13 @@ public static partial class DemoManifestGeneratorService
             }
 
             seenRealmUsers.Add(username);
+            if (IsSubjectParticipantRealmUser(realmUser))
+            {
+                issues.Add(
+                    $"Participant realm user '{username}' in '{RealmRelativePath}' holds 'Subject' role and must not have a staff kernel grant in '{KernelSeedRelativePath}' (K027).");
+                continue;
+            }
+
             if (!string.Equals(realmUser.KeycloakSub, subjectUuid, StringComparison.OrdinalIgnoreCase))
             {
                 issues.Add(
@@ -387,10 +394,34 @@ public static partial class DemoManifestGeneratorService
 
         foreach (string realmUsername in realmUsers.Keys.OrderBy(k => k, StringComparer.Ordinal))
         {
-            if (!seenRealmUsers.Contains(realmUsername))
+            if (seenRealmUsers.Contains(realmUsername))
             {
-                issues.Add($"Realm user '{realmUsername}' in '{RealmRelativePath}' has no role grant in '{KernelSeedRelativePath}'.");
+                continue;
             }
+
+            var realmUser = realmUsers[realmUsername];
+            if (IsSubjectParticipantRealmUser(realmUser))
+            {
+                if (realmUser.AssignedSiteCode is not null && !siteSet.Contains(realmUser.AssignedSiteCode))
+                {
+                    issues.Add(
+                        $"Participant realm user '{realmUsername}' in '{RealmRelativePath}' references unknown site '{realmUser.AssignedSiteCode}'.");
+                }
+
+                foreach (string assignedStudy in realmUser.StudyIds)
+                {
+                    if (!string.Equals(assignedStudy, "*", StringComparison.Ordinal) &&
+                        !string.Equals(assignedStudy, studyCode, StringComparison.Ordinal))
+                    {
+                        issues.Add(
+                            $"Participant realm user '{realmUsername}' in '{RealmRelativePath}' references study '{assignedStudy}', expected '{studyCode}'.");
+                    }
+                }
+
+                continue;
+            }
+
+            issues.Add($"Realm user '{realmUsername}' in '{RealmRelativePath}' has no role grant in '{KernelSeedRelativePath}'.");
         }
 
         return issues.Count > 0
@@ -610,10 +641,12 @@ public static partial class DemoManifestGeneratorService
 
             string tenantCode = "cadence-local";
             string? siteCode = null;
+            IReadOnlyList<string> studyIds = [];
             if (userEl.TryGetProperty("attributes", out var attrsEl) && attrsEl.ValueKind == JsonValueKind.Object)
             {
                 tenantCode = GetFirstAttribute(attrsEl, "tenant_id") ?? tenantCode;
                 siteCode = GetFirstAttribute(attrsEl, "site_id");
+                studyIds = GetAttributeList(attrsEl, "study_ids");
             }
 
             result[username] = new RealmUserSeed(
@@ -624,6 +657,7 @@ public static partial class DemoManifestGeneratorService
                 LastName: lastName,
                 TenantCode: tenantCode,
                 AssignedSiteCode: siteCode,
+                StudyIds: studyIds,
                 RealmRoles: realmRoles);
         }
 
@@ -962,6 +996,29 @@ public static partial class DemoManifestGeneratorService
             ? val.GetString() ?? string.Empty
             : string.Empty;
 
+    private static bool IsSubjectParticipantRealmUser(RealmUserSeed realmUser) =>
+        realmUser.RealmRoles.Count > 0 &&
+        realmUser.RealmRoles.All(role => string.Equals(role, "Subject", StringComparison.Ordinal));
+
+    private static IReadOnlyList<string> GetAttributeList(JsonElement attrs, string key)
+    {
+        if (!attrs.TryGetProperty(key, out var arr) || arr.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var values = new List<string>();
+        foreach (var item in arr.EnumerateArray())
+        {
+            if (item.ValueKind == JsonValueKind.String && item.GetString() is { Length: > 0 } value)
+            {
+                values.Add(value);
+            }
+        }
+
+        return values;
+    }
+
     private static string? GetFirstAttribute(JsonElement attrs, string key)
     {
         if (!attrs.TryGetProperty(key, out var arr) || arr.ValueKind != JsonValueKind.Array)
@@ -1081,6 +1138,7 @@ public static partial class DemoManifestGeneratorService
         string LastName,
         string TenantCode,
         string? AssignedSiteCode,
+        IReadOnlyList<string> StudyIds,
         IReadOnlyList<string> RealmRoles);
 }
 
