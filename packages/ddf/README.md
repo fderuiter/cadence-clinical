@@ -25,6 +25,7 @@ USDM ids become element ids. Each Biomedical Concept resolves to the tenant's cu
 - Item text (`ItemText` in `DdfRules.cs`): an item's `label` (default: its own name), `description` and `hint` are in `CompileOptions.DefaultLanguage`; `localizations` adds languages as `{"fr": {"label": "…", "hint": "…", "description": "…"}}`. The form gets one label and hint per language; the ODM `ItemDef` gets a `Question` and, when there are descriptions, a `Description`. A missing study id or name, or an item without an id, is filled in and reported in `Warnings`.
 - `IAccessibilityValidator`, `AccessibilityStatus`, `AccessibilityValidationException` (`Accessibility.cs`) and `XFormsAccessibilityValidator`: the accessibility check. The built-in validator is a structural WCAG 2.1 review of the XForm (title, labels, label languages, choice labels, and every control bound once); pass another `IAccessibilityValidator` to replace it.
 - `UsdmDesignImporter` (with `UsdmImportOptions`, `UsdmImportResult`, `UsdmImportNote`, `BiomedicalConceptResolver`): USDM 4 into a `ProtocolDesign`. `UsdmDesignReader`, `UsdmSchedule` and `UsdmDuration` (`UsdmJson.cs`) are internal.
+- `OdmDesignImporter`, `CdiscLibraryTemplateCatalog`, and `ProtocolDesignImporterService`: synchronous ODM v1.3.2 XML and USDM v4 JSON import into `ProtocolDesign`, bundled CDISC Library eCRF template catalog (`docs/CDISC/Library/Data_Collection/eCRFs`), 10 MB payload enforcement, DTD/XXE blocking, and readable `ProtocolImportNote` generation.
 - `Models.cs`: `DDFStudyIR`, `DDFItemIR`, `DDFCompilationResult`, `CompileOptions`, `CompilerWarning`, `AccessibilityReport`, `ItemLocalization`.
 - `Templates/`: `odm_template.xml.liquid` and `openrosa_template.xml.liquid`, embedded into the assembly.
 - Python reference sources remain for behaviour the C# port lacks or does not test yet: `dataset_json_etl.py` (#5042). It is not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what it needs before it goes.
@@ -36,7 +37,7 @@ USDM ids become element ids. Each Biomedical Concept resolves to the tenant's cu
 
 ## Referenced by
 
-[apps/designer](../../apps/designer/README.md) (`POST /api/v1/protocols/compile`), `tests/Cadence.UnitTests/Cadence.UnitTests.csproj` (internals visible), `tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj`, `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`.
+[apps/designer](../../apps/designer/README.md) (`POST /api/v1/protocols/compile`), [apps/kernel-api](../../apps/kernel-api/README.md) (`POST /api/v1/kernel/studies/{studyRef}/protocol-imports`), `tests/Cadence.UnitTests/Cadence.UnitTests.csproj` (internals visible), `tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj`, `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`.
 
 ## Tests
 

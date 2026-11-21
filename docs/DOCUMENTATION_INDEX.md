@@ -575,6 +575,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2817: Caller-Bound Participant Self-Service Wallet and Receipt OCR Capabilities](adr/2026-11-19-caller-bound-participant-self-service-wallet-and-receipt-ocr-capabilities.md) | Current | - Status: Accepted |
 | [ADR-2818: Clinical and Gateway Endpoints Take Time From IClock and Ban TimeProvider](adr/2026-11-20-clinical-and-gateway-endpoints-take-time-from-iclock-and-ban-timeprovider.md) | Current | - Status: Accepted |
 | [ADR-2820: Recalibrate Shared Color Tokens and WCAG 2.2 AA Contrast Gates](adr/2026-11-19-recalibrate-shared-color-tokens-and-wcag-22-aa-contrast-gates.md) | Current | - Status: Accepted |
+| [ADR-2476: Synchronous CDISC ODM v1.3.2 and USDM v4 Protocol Draft Import and Self-Service Study Registration](adr/2026-11-20-synchronous-odm-usdm-protocol-draft-import.md) | Current | - Status: Accepted |
 | [ADR-2550: Co-Host Interactive Demos on GitHub Pages Subpaths](adr/2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.md) | Current | - Status: Accepted |
 | [ADR-2497: Dual-Layer Gates for Source and Public Bundles](adr/2026-11-20-dual-layer-gates-for-source-and-public-bundles.md) | Current | - Status: Accepted |
 | [ADR-2547: Keycloak Self-Registration and Clinical Kernel Trial Bootstrap](adr/2026-11-20-keycloak-self-registration-and-clinical-kernel-trial-bootstrap.md) | Current | - Status: Accepted |

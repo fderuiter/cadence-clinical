@@ -10,9 +10,9 @@ root="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 cd "$root"
 
 # Opt-in tests skipped by design in dotnet-tests unless their dedicated environment flag is set (DatabaseTestEvidence.OptInTests):
-# - BenchmarkTenMillionEdgesTraceLatency (CADENCE_LINEAGE_BENCHMARK=1)
+# - BenchmarkTenMillionEdgesTraceLatency / Benchmark_TenMillionEdges_TraceLatency (CADENCE_LINEAGE_BENCHMARK=1)
 # - BrowserCorrectionReachesTheDatabaseWithItsReason / BrowserCorrection_ReachesTheDatabaseWithItsReason (CADENCE_TEST_BROWSER=1, run in accessibility-e2e)
-optin='BenchmarkTenMillionEdgesTraceLatency|BrowserCorrection_?ReachesTheDatabaseWithItsReason'
+optin='Benchmark_?TenMillionEdges_?TraceLatency|BrowserCorrection_?ReachesTheDatabaseWithItsReason'
 
 if [ -d "TestResults/gxp" ]; then
   mapfile -t gxp_trx < <(find TestResults/gxp -maxdepth 2 -name '*.trx' 2>/dev/null | sort)
