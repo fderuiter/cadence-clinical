@@ -38,6 +38,8 @@ function landingRouteFor(roles) {
   return "mdr";
 }
 
+const PRIMARY_FALLBACK_SCREENS = new Set(["ecrf", "ctms", "ssu"]);
+
 const routes = [
   {
     path: "/",
@@ -60,12 +62,11 @@ const routes = [
         return { name: preferred };
       }
       // The preferred screen has no .NET backend yet: land on the first
-      // role-authorized workflow screen that does, or open the study workspace
-      // so every authenticated persona lands on a live screen.
+      // role-authorized primary workflow screen that does, or open the study
+      // workspace so every authenticated persona lands on a live screen.
       const fallback = routes.find(
         (route) =>
-          route.name !== "study" &&
-          route.name !== "observation" &&
+          PRIMARY_FALLBACK_SCREENS.has(route.name) &&
           AVAILABLE_SCREENS.has(route.name) &&
           (!route.meta?.requiresRole?.length ||
             hasRequiredRole(roles, route.meta.requiresRole))
@@ -299,7 +300,7 @@ const routes = [
     component: () => import("../views/CtmsView.vue"),
     meta: {
       requiresAuth: true,
-      requiresRole: ["cra", "monitor", "sponsor_admin"],
+      requiresRole: ["cra", "monitor", "data_manager", "sponsor_admin"],
     },
   },
   {
@@ -311,6 +312,7 @@ const routes = [
       requiresRole: [
         "cra",
         "monitor",
+        "data_manager",
         "sponsor_admin",
         "site_investigator",
         "crc",
@@ -486,6 +488,9 @@ const routes = [
       requiresRole: [
         "cra",
         "monitor",
+        "data_manager",
+        "site_investigator",
+        "crc",
         "auditor",
         "tmf_auditor",
         "sponsor_admin",

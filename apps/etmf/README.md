@@ -17,6 +17,7 @@ Electronic trial master file scaffold. It holds the TMF document, expected-docum
 
 - `GET /healthz`, `GET /healthz/live`, `GET /healthz/ready` (anonymous; mapped by `MapCadenceHealthAndStatusEndpoints` and `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready` checks `EtmfDbContext`.
 - `GET /api/v1/etmf/status` (anonymous status payload).
+- `POST /api/v1/etmf/intelligence/stage-qc`, `GET /api/v1/etmf/intelligence/qc-queue`, and `POST /api/v1/etmf/intelligence/qc-review/{docId}` stage and transition eTMF QC documents, publishing signed `SITE_ACTIVATION` completeness updates to `POST /api/v1/execution/webhooks/etmf` via `IEtmfCompletenessWebhookPublisher` (`EXECUTION_SERVICE_URL`).
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
 - The gateway forwards `/api/v1/etmf/**` to this service. Compose publishes host port 8003 (container port 8080).
 

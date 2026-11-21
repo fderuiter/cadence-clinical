@@ -24,6 +24,7 @@ using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Commands;
 using Cadence.Testing.Security;
+using Cadence.ToolingCore.Services;
 
 using FluentAssertions;
 
@@ -377,12 +378,18 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
     private static async Task<(int ExitCode, string Output)> RunBrowserCheckAsync(string observationRef, string detail, CancellationToken ct)
     {
         var web = Path.Combine(RepositoryRoot(), "apps", "web");
-        var start = new ProcessStartInfo("pnpm", "exec playwright test --config playwright.correction-check.config.ts")
+        var start = new ProcessStartInfo("pnpm")
         {
             WorkingDirectory = web,
+            UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
+        start.ArgumentList.Add("exec");
+        start.ArgumentList.Add("playwright");
+        start.ArgumentList.Add("test");
+        start.ArgumentList.Add("--config");
+        start.ArgumentList.Add("playwright.correction-check.config.ts");
         start.Environment["OBSERVATION_REF"] = observationRef;
         start.Environment["CORRECTION_DETAIL"] = detail;
         if (File.Exists(PreinstalledChromium) && Environment.GetEnvironmentVariable("PLAYWRIGHT_CHROMIUM_PATH") is null)
@@ -390,7 +397,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
             start.Environment["PLAYWRIGHT_CHROMIUM_PATH"] = PreinstalledChromium;
         }
 
-        using var process = Process.Start(start)!;
+        using var process = PosixScriptProcessHelper.StartWithPosixScriptFallback(start)!;
         var stdout = process.StandardOutput.ReadToEndAsync(ct);
         var stderr = process.StandardError.ReadToEndAsync(ct);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);

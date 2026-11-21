@@ -1,3 +1,4 @@
+import { resolveGatewayBaseUrl } from "../utils/demoMode.js";
 import { encodeChangeReason } from "./changeReason";
 import createClient, { type Middleware } from "openapi-fetch";
 import type { paths } from "./types";
@@ -16,15 +17,7 @@ export function getBaseUrl(): string {
   const env = import.meta.env as Record<string, string | undefined> | undefined;
   const configured = env?.VITE_API_BASE_URL;
   if (configured) return configured;
-  const isDemo = env?.MODE === "demo" || env?.VITE_DEMO_MODE === "true";
-  if (
-    isDemo &&
-    typeof globalThis.location?.origin === "string" &&
-    globalThis.location.origin.startsWith("http")
-  ) {
-    return globalThis.location.origin;
-  }
-  return "http://localhost:8000";
+  return resolveGatewayBaseUrl();
 }
 
 export class ApiError extends Error {

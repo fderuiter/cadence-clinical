@@ -14,6 +14,7 @@ const isAccessibilityOnly =
   process.env.CADENCE_TEST_BROWSER === "1" ||
   process.argv.some((arg) => arg.includes("accessibility")) ||
   (process.env.E2E_KEYCLOAK !== "true" &&
+    !process.env.VITE_KEYCLOAK_URL &&
     process.env.RECORD_VIDEO !== "true" &&
     !hasExplicitFullStackTarget);
 

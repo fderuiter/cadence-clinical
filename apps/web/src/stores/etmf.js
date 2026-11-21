@@ -187,7 +187,7 @@ function buildLocalIntelligenceReport(
     filename,
     mime_type: mimeType,
     sha256_hash:
-      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
     modality: mimeType.includes("pdf") ? "PDF_BINARY" : "TEXT",
     primary_classification: primary,
     alternative_candidates: [],
@@ -195,7 +195,7 @@ function buildLocalIntelligenceReport(
     qc_recommendation: tier === "HIGH" ? "AUTO_CLASSIFY" : "CRA_QC_REQUIRED",
     ai_generation_manifest: {
       model: "Cadence-eTMF-Classifier-v3.2",
-      prompt_hash: "a1b2c3d4e5f6",
+      prompt_hash: "a1b2c3d4e5f6", // pragma: allowlist secret
       confidence: primary.confidence,
       confidence_tier: tier,
       timestamp: new Date().toISOString(),
@@ -1021,12 +1021,18 @@ export const useEtmfStore = defineStore("etmf", {
     },
 
     async stageQcDocument(payload) {
+      const authStore = useAuthStore();
+      const offlineDemo =
+        isDemoBuild() && authStore.isDemoMode && !authStore.token;
       try {
         const result = await etmfService.stageQcDocument(payload);
         await this.fetchQcQueue(payload.study_id || this.currentStudyId);
         return result;
-      } catch {
-        // Fallback for demo or offline mode
+      } catch (err) {
+        if (!offlineDemo) {
+          throw err;
+        }
+        // Fallback for offline demo builds only
         const report = buildLocalIntelligenceReport(
           payload.filename,
           payload.content,
@@ -1075,12 +1081,23 @@ export const useEtmfStore = defineStore("etmf", {
     },
 
     async fetchQcQueue(studyId = this.currentStudyId) {
+      const authStore = useAuthStore();
+      const offlineDemo =
+        isDemoBuild() && authStore.isDemoMode && !authStore.token;
+      if (typeof etmfService.getQcQueue !== "function") {
+        this.qcQueue = [];
+        return this.qcQueue;
+      }
       try {
         const queue = await etmfService.getQcQueue(studyId);
-        this.qcQueue = queue || [];
+        this.qcQueue = Array.isArray(queue) ? queue : [];
         return this.qcQueue;
-      } catch {
-        // Fallback: derive from documentsList in local state
+      } catch (err) {
+        if (!offlineDemo) {
+          this.qcQueue = [];
+          throw err;
+        }
+        // Fallback: derive from documentsList in offline demo state only
         this.qcQueue = this.documentsList
           .filter((d) => d.status === "TECHNICAL_QC")
           .map((d) => {
@@ -1116,6 +1133,9 @@ export const useEtmfStore = defineStore("etmf", {
         discrepancy_comment,
       }
     ) {
+      const authStore = useAuthStore();
+      const offlineDemo =
+        isDemoBuild() && authStore.isDemoMode && !authStore.token;
       try {
         const res = await etmfService.submitQcReview(docId, {
           decision,
@@ -1126,8 +1146,11 @@ export const useEtmfStore = defineStore("etmf", {
         await this.fetchQcQueue(this.currentStudyId);
         await this.fetchDocuments(this.selectedArtifactId);
         return res;
-      } catch {
-        // Fallback for local state update
+      } catch (err) {
+        if (!offlineDemo) {
+          throw err;
+        }
+        // Fallback for offline demo state only
         const doc = this.documentsList.find((d) => d.id === docId);
         if (doc) {
           if (decision === "ACCEPT" || decision === "OVERRIDE") {

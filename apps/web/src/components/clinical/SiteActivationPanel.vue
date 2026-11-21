@@ -22,6 +22,20 @@
           placeholder="Study code"
         />
       </template>
+      <label for="site-activation-site-picker">Pick site</label>
+      <select
+        id="site-activation-site-picker"
+        :value="pickerValue"
+        class="site-picker"
+        aria-label="Pick a study site"
+        @focus="loadStudySites"
+        @change="onPickSite"
+      >
+        <option value="">Custom / enter site code</option>
+        <option v-for="code in siteOptions" :key="code" :value="code">
+          {{ code }}
+        </option>
+      </select>
       <label for="site-activation-site">Site</label>
       <input
         id="site-activation-site"
@@ -87,13 +101,23 @@
         id="site-activation-reason"
         v-model="reason"
         rows="2"
+        :disabled="!canActivate"
         placeholder="Why the site is being activated (recorded in the audit trail)"
       />
+      <p
+        v-if="!canActivate"
+        id="site-activation-role-note"
+        class="role-note"
+        role="note"
+      >
+        {{ SITE_ACTIVATION_ROLE_REASON }}
+      </p>
       <button
         id="btn-activate-site"
         type="button"
         class="btn btn-primary"
-        :disabled="!reason.trim() || activating"
+        :disabled="!canActivate || !reason.trim() || activating"
+        :title="!canActivate ? SITE_ACTIVATION_ROLE_REASON : undefined"
         @click="activate"
       >
         {{
@@ -101,46 +125,41 @@
         }}
       </button>
     </div>
-
-    <p v-if="!props.studyCode" class="unavailable-note">
-      Milestones, monitoring visits, delegation, financials, start-up and RTSM
-      aren't available yet in this pre-release environment (Orbit and Allocate
-      roadmap). See
-      <component
-        :is="routerLinkComponent ?? 'a'"
-        v-bind="
-          routerLinkComponent ? { to: '/plans' } : { href: fallbackPlansHref }
-        "
-        >plans &amp; product-family roadmap</component
-      >.
-    </p>
   </section>
 </template>
 
 <script setup>
-import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
+import { ctmsApi } from "../../api/ctmsApi";
 import { executionApi } from "../../api/executionApi";
+import {
+  SITE_ACTIVATION_ROLE_REASON,
+  canActivateSite,
+} from "../../canvas/authority";
+import { useAuthStore } from "../../stores/auth";
 import { useClinicalStore } from "../../stores/clinical";
 import { useToastStore } from "../../stores/toasts.js";
 
 /**
  * Site activation against Execution: the site's eTMF completeness for SITE_ACTIVATION, and activation once
  * it is complete. Execution refuses activation for an incomplete site and audits every attempt, with the
- * reason given here as the change reason.
+ * reason given here as the change reason. Only callers holding site_compliance:activate (sysadmin or
+ * sponsor_dm) can submit activation.
  */
+const DEFAULT_KNOWN_SITES = ["SITE-101", "SITE-102"];
+
 const props = defineProps({
   /** Fixes the study (the Clinical Canvas passes the study it shows); without it the user types the study. */
   studyCode: { type: String, default: "" },
 });
 
+const authStore = useAuthStore();
 const store = useClinicalStore();
 const toasts = useToastStore();
-const instance = getCurrentInstance();
-const routerLinkComponent = instance?.appContext.components.RouterLink;
-const fallbackPlansHref = `${(import.meta.env.BASE_URL || "/").replace(/\/?$/, "/")}plans`;
 
 const studyCode = ref(props.studyCode || store.activeStudyId);
 const siteCode = ref(store.activeSiteId);
+const discoveredSites = ref([]);
 const compliance = ref(null);
 const checked = ref(false);
 const loading = ref(false);
@@ -148,12 +167,53 @@ const loadError = ref(false);
 const reason = ref("");
 const activating = ref(false);
 
+const canActivate = computed(() => canActivateSite(authStore));
+
+const siteOptions = computed(() => {
+  const merged = new Set(DEFAULT_KNOWN_SITES);
+  for (const s of discoveredSites.value) {
+    if (s) merged.add(s);
+  }
+  if (siteCode.value?.trim()) {
+    merged.add(siteCode.value.trim());
+  }
+  return [...merged].sort((a, b) => a.localeCompare(b));
+});
+
+const pickerValue = computed(() => {
+  const trimmed = siteCode.value?.trim() || "";
+  return siteOptions.value.includes(trimmed) ? trimmed : "";
+});
+
+function onPickSite(event) {
+  const chosen = event.target?.value || "";
+  if (chosen) {
+    siteCode.value = chosen;
+  }
+}
+
+async function loadStudySites() {
+  const study = studyCode.value?.trim();
+  if (!study) return;
+  try {
+    const milestones = await ctmsApi.listSiteMilestones({ study_id: study });
+    if (Array.isArray(milestones)) {
+      discoveredSites.value = milestones
+        .map((m) => m.site_id)
+        .filter((s) => Boolean(s));
+    }
+  } catch {
+    // Optional site discovery should never block manual site entry.
+  }
+}
+
 // The canvas switched study: the status shown was for the previous one.
 watch(
   () => props.studyCode,
   (value) => {
     if (!value) return;
     studyCode.value = value;
+    discoveredSites.value = [];
     compliance.value = null;
     checked.value = false;
     loadError.value = false;
@@ -185,6 +245,7 @@ async function checkStatus() {
 }
 
 async function activate() {
+  if (!canActivate.value) return;
   const current = compliance.value;
   const why = reason.value.trim();
   if (!current?.is_complete || !why || !current.site_id) return;
@@ -213,7 +274,7 @@ onMounted(() => {
   if (canCheck.value) checkStatus();
 });
 
-defineExpose({ checkStatus });
+defineExpose({ checkStatus, loadStudySites });
 </script>
 
 <style scoped>
@@ -237,12 +298,14 @@ defineExpose({ checkStatus });
   font-weight: bold;
 }
 
-.scope input {
+.scope input,
+.site-picker {
   flex: 0 1 12rem;
   min-width: 0;
   padding: 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
+  background: var(--semantic-color-surface);
 }
 
 .activate {
@@ -266,16 +329,26 @@ defineExpose({ checkStatus });
 
 .status-complete {
   color: var(--semantic-color-success-dark);
+  font-weight: 600;
 }
 
-.status-incomplete,
+.status-incomplete {
+  color: var(--semantic-color-warning-dark);
+  font-weight: 600;
+}
+
 .status-error {
   color: var(--semantic-color-error);
+  font-weight: 600;
 }
 
-.unavailable-note {
+.role-note {
   margin: 0;
-  color: var(--semantic-color-text-secondary);
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  color: var(--semantic-color-warning-dark);
+  background: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-border);
+  border-radius: 4px;
+  padding: 8px 12px;
 }
 </style>

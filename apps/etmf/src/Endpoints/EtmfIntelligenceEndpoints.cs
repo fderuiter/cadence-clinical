@@ -14,6 +14,7 @@ using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Apps.Etmf.Services;
 using Cadence.Apps.Etmf.Workers;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 
@@ -86,7 +87,8 @@ public static class EtmfIntelligenceEndpoints
         [FromServices] EtmfDbContext dbContext,
         [FromServices] IClock clock,
         HttpContext httpContext,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromServices] IEtmfCompletenessWebhookPublisher? webhookPublisher = null)
     {
         if (string.IsNullOrWhiteSpace(request.ReasonForChange) || request.ReasonForChange.Length < 10)
         {
@@ -154,6 +156,18 @@ public static class EtmfIntelligenceEndpoints
         dbContext.TmfAuditLogs.Add(audit);
 
         await dbContext.SaveChangesAsync(ct);
+
+        if (webhookPublisher is not null && !string.IsNullOrWhiteSpace(request.SiteId))
+        {
+            string? tenantId = httpContext.User.FindFirst(CadenceClaimTypes.TenantId)?.Value;
+            await webhookPublisher.PublishSiteActivationCompletenessAsync(
+                dbContext,
+                request.StudyId,
+                request.SiteId,
+                tenantId,
+                request.ReasonForChange,
+                ct);
+        }
 
         var stagingItem = new CraqcStagingItem(
             DocumentId: docId,
@@ -235,7 +249,8 @@ public static class EtmfIntelligenceEndpoints
         [FromServices] EtmfDbContext dbContext,
         [FromServices] IClock clock,
         HttpContext httpContext,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromServices] IEtmfCompletenessWebhookPublisher? webhookPublisher = null)
     {
         if (string.IsNullOrWhiteSpace(request.ReasonForChange) || request.ReasonForChange.Length < 10)
         {
@@ -315,6 +330,18 @@ public static class EtmfIntelligenceEndpoints
         dbContext.TmfAuditLogs.Add(audit);
 
         await dbContext.SaveChangesAsync(ct);
+
+        if (webhookPublisher is not null)
+        {
+            string? tenantId = httpContext.User.FindFirst(CadenceClaimTypes.TenantId)?.Value;
+            await webhookPublisher.PublishSiteActivationCompletenessAsync(
+                dbContext,
+                doc.StudyId,
+                doc.SiteId,
+                tenantId,
+                request.ReasonForChange,
+                ct);
+        }
 
         return TypedResults.Ok(doc);
     }

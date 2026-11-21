@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 
 using Cadence.Compliance;
+using Cadence.ToolingCore.Services;
 
 using Npgsql;
 
@@ -120,7 +121,7 @@ public sealed class LocalCiEnvironment
 
         try
         {
-            using var process = Process.Start(psi);
+            using var process = PosixScriptProcessHelper.StartWithPosixScriptFallback(psi, variables);
             if (process is null) return 1;
             process.WaitForExit();
             return process.ExitCode;

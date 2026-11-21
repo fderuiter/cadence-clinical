@@ -54,7 +54,7 @@ public static class ApiClientValidatorService
         Process? process;
         try
         {
-            process = Process.Start(psi);
+            process = PosixScriptProcessHelper.StartWithPosixScriptFallback(psi);
         }
         catch (System.ComponentModel.Win32Exception ex)
         {

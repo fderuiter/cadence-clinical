@@ -105,8 +105,9 @@ public static class DoctorCommand
         string? installed = null;
         try
         {
-            var psi = new ProcessStartInfo("pnpm", "--version") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
-            using var p = Process.Start(psi);
+            var psi = new ProcessStartInfo("pnpm") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+            psi.ArgumentList.Add("--version");
+            using var p = PosixScriptProcessHelper.StartWithPosixScriptFallback(psi);
             if (p is not null)
             {
                 string output = p.StandardOutput.ReadToEnd().Trim();
