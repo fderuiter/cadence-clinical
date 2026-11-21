@@ -10,6 +10,7 @@
     <ProjectReference Include="..\..\..\packages\kernel\src\Cadence.Kernel.Application\Cadence.Kernel.Application.csproj" />
     <ProjectReference Include="..\..\..\packages\kernel\src\Cadence.Kernel.Persistence\Cadence.Kernel.Persistence.csproj" />
     <ProjectReference Include="..\..\..\packages\kernel\src\Cadence.Kernel.Api\Cadence.Kernel.Api.csproj" />
+    <ProjectReference Include="..\..\..\packages\ddf\src\Cadence.Ddf.csproj" />
     <ProjectReference Include="..\..\intelligence\src\Cadence.Modules.Intelligence.csproj" />
     <ProjectReference Include="..\..\execution\module\Cadence.Modules.Execution.csproj" />
     <ProjectReference Include="..\..\org\src\Cadence.Modules.Org.csproj" />

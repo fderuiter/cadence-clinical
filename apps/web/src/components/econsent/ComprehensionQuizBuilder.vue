@@ -499,7 +499,7 @@ defineExpose({
 .subtitle {
   margin: 0;
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .header-actions {
@@ -567,7 +567,7 @@ defineExpose({
   font-weight: bold;
   font-size: 0.85rem;
   pointer-events: none;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 /* Authoring Mode Styles */
@@ -587,7 +587,7 @@ defineExpose({
 
 .no-questions {
   text-align: center;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-style: italic;
   padding: 20px 0;
 }
@@ -627,7 +627,7 @@ defineExpose({
 }
 
 .btn-delete:hover {
-  background-color: #fef2f2;
+  background-color: var(--semantic-color-error-bg-soft);
 }
 
 .form-group {
@@ -679,7 +679,7 @@ defineExpose({
 
 .btn-remove-opt {
   background-color: transparent;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   border: none;
   font-size: 1.1rem;
   cursor: pointer;
@@ -719,12 +719,12 @@ defineExpose({
 
 /* Interactive Assessment Styles */
 .assessment-instructions {
-  background-color: #eff6ff;
+  background-color: var(--semantic-color-info-bg);
   border-left: 4px solid var(--primary);
   padding: 12px 16px;
   border-radius: 4px;
   font-size: 0.9rem;
-  color: #1e3a8a;
+  color: var(--semantic-color-info);
 }
 
 .assessment-instructions p {
@@ -740,15 +740,15 @@ defineExpose({
 }
 
 .assessment-result-card.passed {
-  background-color: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #166534;
+  background-color: var(--semantic-color-success-bg-soft);
+  border: 1px solid var(--semantic-color-success-border-soft);
+  color: var(--semantic-color-success-dark);
 }
 
 .assessment-result-card.failed {
-  background-color: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
+  background-color: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border-soft);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .result-icon {
@@ -816,24 +816,24 @@ defineExpose({
 }
 
 .assessment-option-label:hover {
-  background-color: #f8fafc;
-  border-color: #cbd5e1;
+  background-color: var(--semantic-color-surface-muted);
+  border-color: var(--semantic-color-border-control);
 }
 
 .assessment-option-label.selected {
   border-color: var(--primary);
-  background-color: #f0f9ff;
+  background-color: var(--semantic-color-info-bg-soft);
 }
 
 .assessment-option-label.correct {
-  border-color: #22c55e;
-  background-color: #f0fdf4;
+  border-color: var(--semantic-color-success);
+  background-color: var(--semantic-color-success-bg-soft);
   font-weight: 600;
 }
 
 .assessment-option-label.incorrect {
-  border-color: #ef4444;
-  background-color: #fef2f2;
+  border-color: var(--semantic-color-error);
+  background-color: var(--semantic-color-error-bg-soft);
 }
 
 .assessment-option-label input[type="radio"] {
@@ -854,22 +854,22 @@ defineExpose({
 }
 
 .correct-badge {
-  background-color: #dcfce7;
-  color: #15803d;
+  background-color: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
 }
 
 .incorrect-badge {
-  background-color: #fee2e2;
-  color: #b91c1c;
+  background-color: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
 }
 
 .instant-hint-box {
   display: flex;
   gap: 8px;
   align-items: center;
-  background-color: #fffbeb;
-  border: 1px solid #fef3c7;
-  color: #92400e;
+  background-color: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.85rem;
@@ -886,12 +886,12 @@ defineExpose({
 }
 
 .btn-success {
-  background-color: #16a34a;
+  background-color: var(--semantic-color-success);
   color: white;
   border: none;
 }
 
 .btn-success:hover {
-  background-color: #15803d;
+  background-color: var(--semantic-color-success);
 }
 </style>

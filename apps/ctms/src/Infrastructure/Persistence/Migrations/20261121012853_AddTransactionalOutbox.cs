@@ -7,18 +7,11 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations;
 
 /// <inheritdoc />
-public partial class AddDelegationKernelGrantIds : Migration
+public partial class AddTransactionalOutbox : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.AddColumn<string>(
-            name: "KernelGrantIds",
-            table: "ctms_delegations",
-            type: "character varying(2000)",
-            maxLength: 2000,
-            nullable: true);
-
         migrationBuilder.CreateTable(
             name: "transactional_outbox",
             columns: table => new
@@ -55,9 +48,5 @@ public partial class AddDelegationKernelGrantIds : Migration
     {
         migrationBuilder.DropTable(
             name: "transactional_outbox");
-
-        migrationBuilder.DropColumn(
-            name: "KernelGrantIds",
-            table: "ctms_delegations");
     }
 }

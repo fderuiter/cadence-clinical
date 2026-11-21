@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CtmsDbContext))]
-    [Migration("20261120211009_AddDelegationKernelGrantIds")]
-    partial class AddDelegationKernelGrantIds
+    [Migration("20261121012853_AddTransactionalOutbox")]
+    partial class AddTransactionalOutbox
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -311,10 +311,6 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
-
-                    b.Property<string>("KernelGrantIds")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
 
                     b.Property<string>("ReasonForChange")
                         .IsRequired()

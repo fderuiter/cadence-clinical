@@ -103,7 +103,7 @@ public sealed class KeycloakOidcUserProvisionerTests
             AdminBaseUrl = "http://keycloak.local",
             Realm = "cadence",
             ClientId = "cadence-admin",
-            ClientSecret = "secret",
+            ClientSecret = "secret", // pragma: allowlist secret
             SendWelcomeEmail = true,
         };
 
@@ -207,7 +207,7 @@ public sealed class KeycloakOidcUserProvisionerTests
                 AdminBaseUrl = "http://keycloak.local",
                 Realm = "cadence",
                 ClientId = "cadence-admin",
-                ClientSecret = "secret",
+                ClientSecret = "secret", // pragma: allowlist secret
             },
             clock,
             logger);
@@ -231,7 +231,7 @@ public sealed class KeycloakOidcUserProvisionerTests
                 ["KeycloakAdmin:Realm"] = "cadence-shared",
                 ["KeycloakAdmin:ClientId"] = "shared-admin",
                 ["KeycloakAdmin:AdminUsername"] = "kc-admin",
-                ["KeycloakAdmin:AdminPassword"] = "kc-secret",
+                ["KeycloakAdmin:AdminPassword"] = "kc-secret", // pragma: allowlist secret
             })
             .Build();
 
@@ -246,7 +246,7 @@ public sealed class KeycloakOidcUserProvisionerTests
         opts.Realm.Should().Be("cadence-shared");
         opts.ClientId.Should().Be("shared-admin");
         opts.AdminUsername.Should().Be("kc-admin");
-        opts.AdminPassword.Should().Be("kc-secret");
+        opts.AdminPassword.Should().Be("kc-secret"); // pragma: allowlist secret
         provider.GetRequiredService<IOidcUserProvisioner>().Should().BeOfType<KeycloakOidcUserProvisioner>();
     }
 

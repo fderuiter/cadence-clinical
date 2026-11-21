@@ -160,7 +160,7 @@ const enrollmentContext = computed<CanvasFormEnrollmentContext | null>(() => {
 
 .back {
   align-self: flex-start;
-  color: var(--accent, #2563eb);
+  color: var(--semantic-color-interactive-primary);
   font-size: 0.85rem;
 }
 
@@ -179,7 +179,7 @@ const enrollmentContext = computed<CanvasFormEnrollmentContext | null>(() => {
 .workspace-meta,
 .status-line {
   margin: 0;
-  color: var(--neutral-dark);
+  color: var(--semantic-color-text-secondary);
   font-size: 0.85rem;
 }
 </style>

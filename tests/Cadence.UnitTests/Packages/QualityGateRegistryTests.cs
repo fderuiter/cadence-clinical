@@ -31,6 +31,8 @@ public sealed class QualityGateRegistryTests : IDisposable
     /// </summary>
     private static readonly Dictionary<string, string> FailsClosedOnly = new(StringComparer.Ordinal)
     {
+        ["prettier"] = "runs `pnpm exec prettier` against workspace node_modules; the fixture has no node_modules",
+        ["eslint"] = "runs `pnpm exec eslint` against workspace node_modules; the fixture has no node_modules",
         ["api-clients"] = "runs `pnpm --filter web` and `tsc` over the real web workspace; the fixture has no apps/web/tsconfig.json",
         ["schema-doc"] = "builds Cadence.SchemaDocExporter and every module's EF Core model; the fixture has no exporter project " +
                          "(the rendering is covered by SchemaDocumentationTests)",
@@ -76,9 +78,36 @@ public sealed class QualityGateRegistryTests : IDisposable
                 "namespace Fixture\n{\n    public static class Bad\n    {\n        public static int Value => 1;\n    }\n}\n");
             return Context();
         },
+        ["prettier"] = () => Context(),
+        ["eslint"] = () => Context(),
+        ["yaml"] = () =>
+        {
+            Write(".github/workflows/broken.yml", "name: \"unclosed\njobs:\n\tbad: true\n");
+            return Context();
+        },
+        ["trailing-whitespace"] = () =>
+        {
+            Write("docs/note.md", "# Note   \n");
+            return Context();
+        },
+        ["end-of-file"] = () =>
+        {
+            Write("docs/note.md", "# Note without newline");
+            return Context();
+        },
         ["clean-secrets"] = () =>
         {
             Write(".secrets.baseline", "{ \"results\": ");
+            return Context();
+        },
+        ["detect-secrets"] = () =>
+        {
+            Write(".secrets.baseline",
+                "{\n  \"version\": \"1.5.0\",\n  \"plugins_used\": [{ \"name\": \"PrivateKeyDetector\" }],\n  \"filters_used\": [],\n  \"results\": {}\n}\n");
+            CommitOnMainThenBranch();
+            Write("config/leak.txt", $"{PrivateKeyHeader}\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC\n");
+            Git("add", "config/leak.txt");
+            Git("commit", "-q", "-m", "leak secret on branch");
             return Context();
         },
         ["duplication"] = () =>
@@ -279,7 +308,7 @@ public sealed class QualityGateRegistryTests : IDisposable
     [Fact]
     public void EveryGate_HasAFailingFixture()
     {
-        QualityGates.All.Should().HaveCount(29);
+        QualityGates.All.Should().HaveCount(35);
         Fixtures().Keys.Should().BeEquivalentTo(QualityGates.All.Select(g => g.Name));
         FailsClosedOnly.Keys.Should().BeSubsetOf(QualityGates.All.Select(g => g.Name));
     }

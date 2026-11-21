@@ -171,7 +171,7 @@
               style="
                 padding: 24px;
                 text-align: center;
-                color: var(--text-muted);
+                color: var(--semantic-color-text-secondary);
                 font-style: italic;
               "
             >
@@ -189,7 +189,7 @@
                 padding: 12px 16px;
                 font-family: monospace;
                 font-size: 12px;
-                color: var(--text-muted);
+                color: var(--semantic-color-text-secondary);
               "
             >
               {{ formatTimestamp(event.timestamp) }}

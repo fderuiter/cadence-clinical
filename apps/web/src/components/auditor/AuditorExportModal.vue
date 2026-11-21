@@ -149,7 +149,7 @@
               for="auditor-export-start-date"
               style="
                 font-size: 11px;
-                color: var(--text-muted);
+                color: var(--semantic-color-text-secondary);
                 display: block;
                 margin-bottom: 4px;
               "
@@ -176,7 +176,7 @@
               for="auditor-export-end-date"
               style="
                 font-size: 11px;
-                color: var(--text-muted);
+                color: var(--semantic-color-text-secondary);
                 display: block;
                 margin-bottom: 4px;
               "

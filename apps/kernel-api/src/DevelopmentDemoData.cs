@@ -56,7 +56,7 @@ internal static class DevelopmentDemoData
         ("DEMO_INVESTIGATOR", "Site investigator", ["participant.register", "participant.screen", "enrollment.change_status", "observation.record", "observation.correct", "collection.open", "collection.record", "collection.sign", "execution.query.answer", "grant.delegate", "grant.revoke"]),
         ("DEMO_MONITOR", "Clinical research associate", ["validation_finding.investigate", "validation_finding.classify", "validation_finding.explain", "observation.verify", "assertion.retract", "collection.record_unasked", "execution.query.raise", "execution.query.manage"]),
         ("DEMO_DATA_MANAGER", "Data manager", ["validation_run.record", "validation_finding.accept", "validation_finding.reopen", "observation.lock", "observation.verify", "assertion.retract", "collection.record_unasked", "execution.query.raise", "execution.query.manage"]),
-        ("DEMO_DESIGNER", "Study designer", ["protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.amend"]),
+        ("DEMO_DESIGNER", "Study designer", ["organization.register", "study.register", "concept.define", "protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.amend"]),
         ("DEMO_SAFETY", "Safety reviewer", ["validation_finding.investigate", "validation_finding.classify"]),
         ("DEMO_AUDITOR", "Auditor", ["validation_finding.investigate"]),
     ];
@@ -71,7 +71,7 @@ internal static class DevelopmentDemoData
         ("pi.site101", "cf64a3b4-33cc-4925-8452-75e29ca9526e", "Principal", "Investigator", "DEMO_INVESTIGATOR", "SITE-101", false, true),
         ("cra.monitor", "ee2cfdb6-d893-4fb4-a10f-d50830b6728a", "CRA", "Monitor", "DEMO_MONITOR", "SITE-101", false, false),
         ("dm.lead", "47a9d88f-73d7-4aca-9fd6-14b8e6e9284f", "Data", "Manager", "DEMO_DATA_MANAGER", null, false, false),
-        ("designer_demo", "d0b6257b-57fe-420b-9526-366e83c756aa", "Designer", "Demo", "DEMO_DESIGNER", null, false, false),
+        ("designer_demo", "d0b6257b-57fe-420b-9526-366e83c756aa", "Designer", "Demo", "DEMO_DESIGNER", null, true, false),
         ("designer.lead", "8808e058-a472-4f72-9970-a027eddf35bc", "Designer", "Lead", "DEMO_SPONSOR_ADMIN", null, true, true),
         ("safety.officer", "3d290711-4167-4da5-b55a-4c75760bd27c", "Safety", "Officer", "DEMO_SAFETY", null, false, false), // deid-ignore: a demo realm user's fixed subject id, not a telephone number
         ("auditor.lead", "d43095eb-1912-40dd-a528-fa04335a2342", "Auditor", "Lead", "DEMO_AUDITOR", null, false, false),
