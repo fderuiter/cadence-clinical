@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
+using Cadence.Apps.Ctms.Infrastructure.Kernel;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Compliance;
 using Cadence.Kernel.Time;
@@ -559,5 +560,125 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
         var piSignOffResponse = await piClient.PostAsJsonAsync(
             "/api/v1/ctms/doa/sign-off", signOffPayload, TestContext.Current.CancellationToken);
         piSignOffResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task DelegateAndRevokeByEmail_BridgesKernelGrants_PersistsPseudonymousPersonId_AndNeverLogsPii()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await SeedSiteAsync();
+
+        var resolvedPersonId = Guid.Parse("01950000-4444-7000-8000-000000000077");
+        var grantedId = Guid.Parse("01950000-5555-7000-8000-000000000088");
+        var bridge = new RecordingKernelDelegationBridge(
+            KernelBridgeOutcome<KernelDelegatedStaffResult>.Success(
+                new KernelDelegatedStaffResult(resolvedPersonId, [grantedId], ReusedExistingAccount: false, WelcomeEmailSent: true)));
+
+        var sp = new ServiceCollection()
+            .AddSingleton<IKernelDelegationBridge>(bridge)
+            .BuildServiceProvider();
+
+        var caller = Caller(RoleNormalization.ROLE_INVESTIGATOR, "pi-site101");
+        caller.RequestServices = sp;
+        caller.Request.Headers["X-Change-Reason"] = "Delegate eCRF data entry to new coordinator";
+
+        string syntheticEmail = "crc.new@example.com"; // deid-ignore: synthetic unit test email
+        string syntheticName = "Coordinator Synthetic"; // deid-ignore: synthetic unit test name
+        var request = new DelegationTaskRequest(
+            Site: SiteId,
+            StaffUserId: null,
+            TaskCodes: ["SUBJECT_INFORMED_CONSENT", "CRF_DATA_ENTRY"],
+            StartDate: "2026-11-20",
+            ReasonForChange: "Delegate eCRF data entry to new coordinator",
+            StaffEmail: syntheticEmail,
+            StaffName: syntheticName,
+            EndDate: "2027-06-30");
+
+        var delegateResult = await DoaEndpoints.DelegateTasksAsync(request, _db, caller, _clock, ct);
+        var created = delegateResult.Should().BeOfType<Created<DelegationResponseDto>>().Subject;
+        created.Value!.StaffUserId.Should().Be(resolvedPersonId.ToString("D"));
+        created.Value.EndDate.Should().Be("2027-06-30");
+
+        var stored = await _db.CtmsDelegations.SingleAsync(d => d.Id == created.Value.RecordId, ct);
+        stored.StaffUserId.Should().Be(resolvedPersonId.ToString("D"));
+        stored.KernelGrantIds.Should().Contain(grantedId.ToString("D"));
+
+        var auditLogs = await _db.CtmsAuditLogs.ToListAsync(ct);
+        auditLogs.Should().AllSatisfy(a =>
+        {
+            a.Details.Should().NotContain(syntheticEmail);
+            a.Details.Should().NotContain(syntheticName);
+        });
+
+        caller.Request.Headers["X-Change-Reason"] = "Coordinator rotated to different study";
+        var revokeResult = await DoaEndpoints.RevokeDelegationAsync(
+            new RevokeDelegationRequest(created.Value.RecordId, "Coordinator rotated to different study"),
+            _db,
+            caller,
+            _clock,
+            ct);
+        var ok = revokeResult.Should().BeOfType<Ok<DelegationResponseDto>>().Subject;
+        ok.Value!.IsActive.Should().BeFalse();
+        bridge.RevokedGrantIds.Should().Equal(grantedId);
+    }
+
+    [Fact]
+    public async Task DelegateByEmail_WhenKernelRefusesBounds_PropagatesProblemDetailsWithExplanationWithoutPersisting()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await SeedSiteAsync();
+
+        const string problemPayload = "{\"title\":\"K.Authority.ExceedsParent\",\"status\":422,\"explanation\":{\"claim\":\"Delegation exceeds parent grant bounds.\"}}";
+        var bridge = new RecordingKernelDelegationBridge(
+            KernelBridgeOutcome<KernelDelegatedStaffResult>.Failure(StatusCodes.Status422UnprocessableEntity, "application/problem+json", problemPayload));
+
+        var sp = new ServiceCollection()
+            .AddSingleton<IKernelDelegationBridge>(bridge)
+            .BuildServiceProvider();
+
+        var caller = Caller(RoleNormalization.ROLE_INVESTIGATOR, "pi-site101");
+        caller.RequestServices = sp;
+        caller.Request.Headers["X-Change-Reason"] = "Attempt out-of-bounds delegation";
+
+        var request = new DelegationTaskRequest(
+            Site: SiteId,
+            StaffUserId: null,
+            TaskCodes: ["CRF_DATA_ENTRY"],
+            StartDate: "2026-11-20",
+            ReasonForChange: "Attempt out-of-bounds delegation",
+            StaffEmail: "blocked@example.com"); // deid-ignore: synthetic unit test email
+
+        var result = await DoaEndpoints.DelegateTasksAsync(request, _db, caller, _clock, ct);
+        var content = result.Should().BeOfType<ContentHttpResult>().Subject;
+        content.StatusCode.Should().Be(StatusCodes.Status422UnprocessableEntity);
+        content.ResponseContent.Should().Contain("Delegation exceeds parent grant bounds.");
+
+        (await _db.CtmsDelegations.CountAsync(ct)).Should().Be(0);
+    }
+
+    private sealed class RecordingKernelDelegationBridge(
+        KernelBridgeOutcome<KernelDelegatedStaffResult> delegateOutcome) : IKernelDelegationBridge
+    {
+        public bool IsEnabled => true;
+
+        public List<Guid> RevokedGrantIds { get; } = [];
+
+        public Task<KernelBridgeOutcome<KernelDelegatedStaffResult>> DelegateDutiesAsync(
+            HttpContext callerContext,
+            KernelDelegateDutiesInput input,
+            string reasonForChange,
+            System.Threading.CancellationToken ct) =>
+            Task.FromResult(delegateOutcome);
+
+        public Task<KernelBridgeOutcome<bool>> RevokeGrantsAsync(
+            HttpContext callerContext,
+            IReadOnlyList<Guid> grantIds,
+            string reasonForChange,
+            System.Threading.CancellationToken ct)
+        {
+            RevokedGrantIds.AddRange(grantIds);
+            return Task.FromResult(KernelBridgeOutcome<bool>.Success(true));
+        }
     }
 }

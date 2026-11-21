@@ -1,3 +1,6 @@
+using System;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 using Cadence.Database;
@@ -7,6 +10,7 @@ using Cadence.Kernel.Application.Activity;
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Events;
+using Cadence.Kernel.Application.Identity;
 using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Application.Search;
 using Cadence.Kernel.Application.Simulation;
@@ -25,11 +29,13 @@ using Cadence.Modules.Execution;
 using Cadence.Modules.Intelligence;
 using Cadence.Modules.Intelligence.Mcp;
 using Cadence.Modules.Intelligence.Tools;
+using Cadence.Modules.Org;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
@@ -91,6 +97,25 @@ builder.Services
     // replicas one runs it at a time.
     .AddKernelInProcessEvents()
     .AddKernelBackgroundJobs();
+
+string? configuredVaultKey = builder.Configuration["IdentityVault:MasterKey"]
+    ?? builder.Configuration["CADENCE_IDENTITY_VAULT_KEY"];
+if (string.IsNullOrWhiteSpace(configuredVaultKey)
+    && (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment(OrgModule.TestingEnvironment)))
+{
+    configuredVaultKey = Convert.ToBase64String(
+        SHA256.HashData(Encoding.UTF8.GetBytes("cadence-development-identity-vault-master-key-v1")));
+}
+
+if (!string.IsNullOrWhiteSpace(configuredVaultKey))
+{
+    string? vaultRegion = builder.Configuration["IdentityVault:Region"]
+        ?? builder.Configuration["CADENCE_IDENTITY_VAULT_REGION"];
+    builder.Services
+        .AddKernelIdentityVault()
+        .AddKernelIdentityVaultPersistence(configuredVaultKey, string.IsNullOrWhiteSpace(vaultRegion) ? null : vaultRegion.Trim());
+}
+
 builder.Services.AddScoped<ServiceActorScope>();
 builder.Services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
 builder.Services.AddSingleton<IKernelChangeReason, SignedChangeReason>();
@@ -107,6 +132,9 @@ builder.Services.AddCadenceIntelligenceModule(builder.Configuration, builder.Env
 
 // The Execution module: eCRF forms over kernel form instances (ADR-2622).
 builder.Services.AddCadenceExecutionModule(connectionString);
+
+// The Organization Administration module: OIDC seat provisioning, IdentityVault sealing, and grant/delegation workflows (ADR-2611).
+builder.Services.AddCadenceOrgModule(builder.Configuration, builder.Environment);
 
 // The agents' read tools over the kernel reads above, and the MCP server that serves them to outside agents (ADR-2633).
 builder.Services.AddIntelligenceTools().AddIntelligenceMcp();
@@ -138,6 +166,7 @@ app.MapKernelApi()
     .MapTrialOnboarding();
 app.MapIntelligenceModule();
 app.MapExecutionModule();
+app.MapOrgModule();
 app.MapIntelligenceMcp();
 
 await app.RunAsync();

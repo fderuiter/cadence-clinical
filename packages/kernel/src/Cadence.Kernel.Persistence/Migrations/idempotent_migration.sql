@@ -3294,6 +3294,18 @@ BEGIN
         WHERE r.tenant_id = identity_vault.require_tenant() AND r.layer = p_layer AND r.subject_id = p_subject
     $fn$;
 
+    CREATE FUNCTION identity_vault.find_subject_by_blind_index(p_layer text, p_blind_index bytea) RETURNS uuid
+    LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $fn$
+        SELECT r.subject_id
+        FROM identity_vault.identity_records r
+        WHERE r.tenant_id = identity_vault.require_tenant()
+          AND r.layer = p_layer
+          AND r.blind_index = p_blind_index
+          AND r.erased_at IS NULL
+        ORDER BY r.recorded_at ASC, r.subject_id ASC
+        LIMIT 1
+    $fn$;
+
     CREATE FUNCTION identity_vault.put_link(p_participant uuid, p_person uuid, p_linked_at timestamptz) RETURNS void
     LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $fn$
     DECLARE t uuid := identity_vault.require_tenant();
@@ -3324,6 +3336,7 @@ BEGIN
     REVOKE ALL ON FUNCTION identity_vault.put_record(text, uuid, text, bytea, bytea, bytea, timestamptz) FROM PUBLIC;
     REVOKE ALL ON FUNCTION identity_vault.shred_record(text, uuid, timestamptz) FROM PUBLIC;
     REVOKE ALL ON FUNCTION identity_vault.get_record(text, uuid) FROM PUBLIC;
+    REVOKE ALL ON FUNCTION identity_vault.find_subject_by_blind_index(text, bytea) FROM PUBLIC;
     REVOKE ALL ON FUNCTION identity_vault.put_link(uuid, uuid, timestamptz) FROM PUBLIC;
     REVOKE ALL ON FUNCTION identity_vault.linked_person(uuid) FROM PUBLIC;
     REVOKE ALL ON FUNCTION identity_vault.linked_participants(uuid) FROM PUBLIC;
@@ -4372,6 +4385,50 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN -- pragma: allowlist secret
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
     VALUES ('20261120152149_CommercialSubscriptionsAndEntitlements', '10.0.15'); -- pragma: allowlist secret
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120203000_IdentityVaultBlindIndexLookup') THEN -- pragma: allowlist secret
+    CREATE OR REPLACE FUNCTION identity_vault.find_subject_by_blind_index(p_layer text, p_blind_index bytea) RETURNS uuid
+    LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $fn$
+        SELECT r.subject_id
+        FROM identity_vault.identity_records r
+        WHERE r.tenant_id = identity_vault.require_tenant()
+          AND r.layer = p_layer
+          AND r.blind_index = p_blind_index
+          AND r.erased_at IS NULL
+        ORDER BY r.recorded_at ASC, r.subject_id ASC
+        LIMIT 1
+    $fn$;
+    REVOKE ALL ON FUNCTION identity_vault.find_subject_by_blind_index(text, bytea) FROM PUBLIC;
+    DO $grant$
+    DECLARE r record;
+    BEGIN
+        FOR r IN
+            SELECT DISTINCT grantee
+            FROM information_schema.routine_privileges
+            WHERE specific_schema = 'identity_vault'
+              AND routine_name = 'get_record'
+              AND privilege_type = 'EXECUTE'
+              AND grantee NOT IN ('PUBLIC', current_user)
+        LOOP
+            EXECUTE format('GRANT EXECUTE ON FUNCTION identity_vault.find_subject_by_blind_index(text, bytea) TO %I', r.grantee);
+        END LOOP;
+    END
+    $grant$;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120203000_IdentityVaultBlindIndexLookup') THEN -- pragma: allowlist secret
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20261120203000_IdentityVaultBlindIndexLookup', '10.0.15'); -- pragma: allowlist secret
     END IF;
 END $EF$;
 COMMIT;

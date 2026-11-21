@@ -125,11 +125,11 @@ public sealed partial class ContainerImagePinTests
     public void ComposeAndCiAppNameTargets_ResolveToExistingServiceProjects()
     {
         string compose = File.ReadAllText(Path.Combine(Root, "docker", "docker-compose.yml"));
-        ComposeDotnetBuilds().Matches(compose).Should().HaveCount(19,
-            "docker-compose.yml builds all 18 .NET services plus dotnet-dev from docker/Dockerfile.dotnet");
+        ComposeDotnetBuilds().Matches(compose).Should().HaveCount(18,
+            "docker-compose.yml builds all 17 .NET services plus dotnet-dev from docker/Dockerfile.dotnet");
 
         var composeApps = ComposeAppName().Matches(compose).Select(m => m.Groups["app"].Value).ToList();
-        composeApps.Should().HaveCount(18).And.OnlyHaveUniqueItems();
+        composeApps.Should().HaveCount(17).And.OnlyHaveUniqueItems();
 
         string ci = File.ReadAllText(Path.Combine(Root, ".github", "workflows", "ci.yml"));
         var ciTargets = CiMatrixTarget().Matches(ci).Select(m => m.Groups["target"].Value).ToList();

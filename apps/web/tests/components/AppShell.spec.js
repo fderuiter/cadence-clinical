@@ -16,6 +16,7 @@ const router = createRouter({
     { path: "/ecrf", name: "ecrf", component: DummyView },
     { path: "/ctms", name: "ctms", component: DummyView },
     { path: "/ssu", name: "ssu", component: DummyView },
+    { path: "/team", name: "team", component: DummyView },
   ],
 });
 

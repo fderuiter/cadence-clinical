@@ -53,6 +53,16 @@
           >
             Site readiness
           </router-link>
+          <router-link
+            v-if="showTeamNav"
+            id="nav-team"
+            to="/team"
+            class="primary-nav-link"
+            :class="{ active: isTeamRoute }"
+            :aria-current="isTeamRoute ? 'page' : undefined"
+          >
+            Team &amp; access
+          </router-link>
         </nav>
       </div>
 
@@ -220,6 +230,14 @@
         >
           Site readiness
         </router-link>
+        <router-link
+          v-if="showTeamNav"
+          to="/team"
+          class="mobile-nav-link"
+          @click="isMobileMenuOpen = false"
+        >
+          Team &amp; access
+        </router-link>
       </div>
 
       <div
@@ -278,6 +296,7 @@ import { isScreenAvailable } from "../router/availability";
 import {
   buildDataCollectionPath,
   canAccessDataCollection,
+  canAccessTeamManagement,
   resolveCanvasParticipantContext,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
@@ -347,6 +366,9 @@ const showDataCollectionNav = computed(() =>
 const siteReadinessPath = computed(() =>
   resolveSiteReadinessPath(normalizedRoles.value)
 );
+const showTeamNav = computed(() =>
+  canAccessTeamManagement(normalizedRoles.value)
+);
 
 const isStudiesRoute = computed(
   () =>
@@ -365,6 +387,9 @@ const isSiteReadinessRoute = computed(
     route?.name === "ssu" ||
     route?.path === "/ctms" ||
     route?.path === "/ssu"
+);
+const isTeamRoute = computed(
+  () => route?.name === "team" || route?.path === "/team"
 );
 
 const activeTab = computed(() => String(route?.name || "study"));

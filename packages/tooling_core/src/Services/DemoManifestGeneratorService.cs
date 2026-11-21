@@ -700,6 +700,7 @@ public static partial class DemoManifestGeneratorService
             "DEMO_INVESTIGATOR" => ("investigator", "site_investigator"),
             "DEMO_MONITOR" => ("monitor", "cra_monitor"),
             "DEMO_DATA_MANAGER" => ("data_manager", "data_manager"),
+            "DEMO_SPONSOR_ADMIN" => ("designer_lead", "super_admin"),
             "DEMO_DESIGNER" when realmRoles.Contains("Sponsor Admin", StringComparer.Ordinal) => ("designer_lead", "super_admin"),
             "DEMO_DESIGNER" => ("designer", "sponsor_designer"),
             "DEMO_SAFETY" => ("safety", "safety_officer"),

@@ -66,6 +66,7 @@ const routes = [
         (route) =>
           route.name !== "study" &&
           route.name !== "observation" &&
+          route.name !== "team" &&
           AVAILABLE_SCREENS.has(route.name) &&
           (!route.meta?.requiresRole?.length ||
             hasRequiredRole(roles, route.meta.requiresRole))
@@ -94,6 +95,12 @@ const routes = [
     path: "/onboarding/trial",
     name: "trial-onboarding",
     component: () => import("../views/TrialSetupView.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/team",
+    name: "team",
+    component: () => import("../views/TeamManagementView.vue"),
     meta: { requiresAuth: true },
   },
   {

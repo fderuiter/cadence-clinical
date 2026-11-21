@@ -1,5 +1,7 @@
+import { DEMO_STUDY } from "demo-fixtures";
 import { http, HttpResponse } from "msw";
 import { isValidSemanticAction, isValidStepUpAction } from "ui";
+import { demoNowIso } from "../utils/demoMode.js";
 import { webDemoStore } from "./demoStore.js";
 import { parseDemoProtocolImportRequest } from "./demoStudyImport.js";
 
@@ -38,6 +40,63 @@ async function readJsonBody(request) {
 }
 
 export function createWebDemoHandlers(store = webDemoStore) {
+  const orgDemoState = {
+    members: [
+      {
+        person_id: "cf64a3b4-33cc-4925-8452-75e29ca9526e", // deid-ignore
+        display_name: "Member cf64a3b4",
+        email: null,
+        identity_revealed: false,
+        has_sealed_identity: true,
+        can_reveal_identity: true,
+        joined_at: "2026-01-05T09:00:00Z", // deid-ignore
+        active_grants: [
+          {
+            grant_id: "01950000-0000-7000-8000-000000000102", // deid-ignore
+            kind: "role",
+            summary: "Site investigator (DEMO_INVESTIGATOR)",
+            role_id: "01950000-0000-7000-8000-000000000202", // deid-ignore
+            role_code: "DEMO_INVESTIGATOR",
+            capability: null,
+            capabilities: [
+              "participant.register",
+              "participant.screen",
+              "collection.record",
+              "collection.sign",
+            ],
+            scope_level: "StudySite",
+            scope_target_id: "00000000-0000-0000-0000-000000000201", // deid-ignore
+            scope_country: null,
+            scope_code: "SITE-101",
+            scope_label: "StudySite: SITE-101",
+            parent_grant_id: null,
+            with_grant_option: true,
+            issued_by: "person:01950000-0000-7000-8000-000000000001", // deid-ignore
+            issued_at: "2026-01-05T09:00:00Z", // deid-ignore
+            reason_for_change: "Demo workspace baseline site investigator",
+            valid_from: "2026-01-05T09:00:00Z", // deid-ignore
+            valid_to: null,
+            is_active: true,
+            is_revoked: false,
+            can_revoke: true,
+          },
+        ],
+        historical_grants: [],
+      },
+    ],
+    sealed: new Map([
+      [
+        "cf64a3b4-33cc-4925-8452-75e29ca9526e", // deid-ignore
+        {
+          person_id: "cf64a3b4-33cc-4925-8452-75e29ca9526e", // deid-ignore
+          display_name: "Principal Investigator",
+          email: "pi.site101@example.com", // deid-ignore
+          given_name: "Principal",
+          family_name: "Investigator",
+        },
+      ],
+    ]),
+  };
   const etmfDocuments = [
     {
       id: "doc-demo-01",
@@ -131,6 +190,219 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.post("*/api/v1/kernel/onboarding/trial", async ({ request }) => {
       const body = await readJsonBody(request);
       return HttpResponse.json(store.bootstrapTrial(body));
+    }),
+    http.get("*/api/v1/org/team", () =>
+      HttpResponse.json({
+        tenant_code: "demo-workspace",
+        tenant_name: "Demo Workspace",
+        actor_id: "person:01950000-0000-7000-8000-000000000001", // deid-ignore
+        can_invite: true,
+        can_delegate: true,
+        can_reveal_identity: true,
+        roles: [
+          {
+            role_id: "01950000-0000-7000-8000-000000000201", // deid-ignore
+            code: "DEMO_SPONSOR_ADMIN",
+            name: "Sponsor administrator",
+            capabilities: ["grant.issue", "grant.revoke", "person.register"],
+          },
+          {
+            role_id: "01950000-0000-7000-8000-000000000202", // deid-ignore
+            code: "DEMO_INVESTIGATOR",
+            name: "Site investigator",
+            capabilities: ["collection.sign", "collection.record"],
+          },
+          {
+            role_id: "01950000-0000-7000-8000-000000000203", // deid-ignore
+            code: "DEMO_CRC",
+            name: "Clinical research coordinator",
+            capabilities: ["participant.screen", "collection.record"],
+          },
+        ],
+        scopes: [
+          {
+            key: "Tenant",
+            level: "Tenant",
+            target_id: null,
+            country: null,
+            code: "demo-workspace",
+            label: "Entire workspace (Tenant)",
+            parent_label: null,
+            can_issue_grants: true,
+          },
+          {
+            key: "Study:00000000-0000-0000-0000-000000000001", // deid-ignore
+            level: "Study",
+            target_id: "00000000-0000-0000-0000-000000000001", // deid-ignore
+            country: null,
+            code: DEMO_STUDY.code,
+            label: `Study: ${DEMO_STUDY.code}`,
+            parent_label: "Entire workspace (Tenant)",
+            can_issue_grants: true,
+          },
+          {
+            key: "StudySite:00000000-0000-0000-0000-000000000201", // deid-ignore
+            level: "StudySite",
+            target_id: "00000000-0000-0000-0000-000000000201", // deid-ignore
+            country: null,
+            code: "SITE-101",
+            label: "StudySite: SITE-101",
+            parent_label: `Study: ${DEMO_STUDY.code}`,
+            can_issue_grants: true,
+          },
+        ],
+        delegable_grants: [],
+        duty_catalog: [
+          {
+            duty: "CRF_DATA_ENTRY",
+            label: "CRF Data Entry",
+            capabilities: ["collection.record"],
+          },
+          {
+            duty: "SUBJECT_SCREENING",
+            label: "Subject Screening",
+            capabilities: ["participant.screen"],
+          },
+          {
+            duty: "INFORMED_CONSENT",
+            label: "Informed Consent",
+            capabilities: ["participant.register"],
+          },
+        ],
+        members: orgDemoState.members,
+      })
+    ),
+    http.post("*/api/v1/org/invitations", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const suffix = String(orgDemoState.members.length + 10).padStart(2, "0");
+      const personId = `01950000-0000-7000-8000-0000000099${suffix}`; // deid-ignore
+      const grantId = `01950000-0000-7000-8000-0000000088${suffix}`; // deid-ignore
+      const scopeLevel = body?.scope_level || body?.scope_kind || "Tenant";
+      const nowIso = demoNowIso();
+      orgDemoState.sealed.set(personId, {
+        person_id: personId,
+        display_name: body?.full_name || "Workspace Member",
+        email: body?.email || "member@example.com", // deid-ignore
+        given_name: body?.full_name || "Workspace",
+        family_name: "Member",
+      });
+      orgDemoState.members.push({
+        person_id: personId,
+        display_name: `Member ${personId.slice(0, 8)}`,
+        email: null,
+        identity_revealed: false,
+        has_sealed_identity: true,
+        can_reveal_identity: true,
+        joined_at: nowIso,
+        active_grants: [
+          {
+            grant_id: grantId,
+            kind: "role",
+            summary: body?.role_code || "DEMO_CRC",
+            role_id: "01950000-0000-7000-8000-000000000203", // deid-ignore
+            role_code: body?.role_code || "DEMO_CRC",
+            capability: null,
+            capabilities: ["collection.record"],
+            scope_level: scopeLevel,
+            scope_target_id: body?.scope_target_id || null,
+            scope_country: body?.scope_country || null,
+            scope_code: scopeLevel,
+            scope_label: scopeLevel,
+            parent_grant_id: null,
+            with_grant_option: Boolean(body?.with_grant_option),
+            issued_by: "person:01950000-0000-7000-8000-000000000001", // deid-ignore
+            issued_at: nowIso,
+            reason_for_change: decodeReasonHeader(request),
+            valid_from: body?.valid_from || nowIso,
+            valid_to: body?.valid_to || null,
+            is_active: true,
+            is_revoked: false,
+            can_revoke: true,
+          },
+        ],
+        historical_grants: [],
+      });
+      return HttpResponse.json(
+        {
+          person_id: personId,
+          grant_id: grantId,
+          reused_existing_account: false,
+          reused_existing_grant: false,
+          welcome_email_sent: true,
+          scope_label: scopeLevel,
+          valid_from: body?.valid_from || nowIso,
+          valid_to: body?.valid_to || null,
+        },
+        { status: 201 }
+      );
+    }),
+    http.post("*/api/v1/org/delegations", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const suffix = String(orgDemoState.members.length + 30).padStart(2, "0");
+      const personId = `01950000-0000-7000-8000-0000000077${suffix}`; // deid-ignore
+      const grantId = `01950000-0000-7000-8000-0000000066${suffix}`; // deid-ignore
+      const parentGrantId =
+        body?.parent_grant_id || "01950000-0000-7000-8000-000000000102"; // deid-ignore
+      const nowIso = demoNowIso();
+      orgDemoState.sealed.set(personId, {
+        person_id: personId,
+        display_name: body?.full_name || "Delegated Staff",
+        email: body?.email || "delegate@example.com", // deid-ignore
+        given_name: body?.full_name || "Delegated",
+        family_name: "Staff",
+      });
+      return HttpResponse.json(
+        {
+          person_id: personId,
+          parent_grant_id: parentGrantId,
+          primary_grant_id: grantId,
+          grant_ids: [grantId],
+          capabilities: ["collection.record"],
+          reused_existing_account: false,
+          welcome_email_sent: true,
+          scope_label: `StudySite: ${body?.site_code || "SITE-101"}`,
+          valid_from: nowIso,
+          valid_to: body?.valid_to || null,
+        },
+        { status: 201 }
+      );
+    }),
+    http.post("*/api/v1/org/grants/:grantId/revoke", ({ params }) => {
+      const grantId = String(params.grantId);
+      const nowIso = demoNowIso();
+      for (const member of orgDemoState.members) {
+        const idx = member.active_grants.findIndex(
+          (g) => g.grant_id === grantId
+        );
+        if (idx >= 0) {
+          const [removed] = member.active_grants.splice(idx, 1);
+          member.historical_grants.push({
+            ...removed,
+            is_active: false,
+            is_revoked: true,
+            can_revoke: false,
+            valid_to: nowIso,
+          });
+        }
+      }
+      return HttpResponse.json({
+        grant_id: grantId,
+        revoked: true,
+        valid_from: null,
+        valid_to: nowIso,
+      });
+    }),
+    http.post("*/api/v1/org/members/:personId/reveal", ({ params }) => {
+      const personId = String(params.personId);
+      return HttpResponse.json(
+        orgDemoState.sealed.get(personId) || {
+          person_id: personId,
+          display_name: "Disclosed Member",
+          email: "disclosed.member@example.com", // deid-ignore
+          given_name: "Disclosed",
+          family_name: "Member",
+        }
+      );
     }),
     http.get("*/api/v1/kernel/search", ({ request }) => {
       const url = new URL(request.url);

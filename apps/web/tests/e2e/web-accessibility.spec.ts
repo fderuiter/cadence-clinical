@@ -178,4 +178,29 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await expect(page.locator(".plans-view")).toBeVisible();
     await expectNoWcagViolations(page, "PlansView");
   });
+
+  test("TeamManagementView invite form, member directory, and duty delegation modal pass WCAG 2.2 AA", async ({
+    page,
+  }) => {
+    await gotoHashRoute(page, "/team");
+    await expect(page.locator("#section-team-management")).toBeVisible({
+      timeout: 30000,
+    });
+    await expect(
+      page.locator("[data-testid='seat-invite-form']")
+    ).toBeVisible();
+    await expectNoWcagViolations(page, "TeamManagementView");
+
+    const delegateBtn = page.locator("#btn-open-delegate-modal");
+    if (await delegateBtn.isVisible().catch(() => false)) {
+      await delegateBtn.click();
+      await expect(
+        page.locator("[data-testid='org-delegate-modal']")
+      ).toBeVisible();
+      await expectNoWcagViolations(
+        page,
+        "TeamManagementView (Delegate duties modal)"
+      );
+    }
+  });
 });

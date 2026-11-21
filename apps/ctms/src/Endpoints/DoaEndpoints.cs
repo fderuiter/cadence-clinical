@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Ctms.Domain;
+using Cadence.Apps.Ctms.Infrastructure.Kernel;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Compliance;
 using Cadence.Kernel.Time;
@@ -22,6 +23,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cadence.Apps.Ctms.Endpoints;
 
@@ -45,7 +47,10 @@ public static class DoaEndpoints
             .WithSummary("Assign site trial task delegation requiring Principal Investigator sign-off.")
             .Produces<DelegationResponseDto>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission(AssignPermission).RequireCallerStudyAndSiteScope();
 
         doa.MapPost("/revoke", RevokeDelegationAsync)
@@ -53,7 +58,9 @@ public static class DoaEndpoints
             .WithSummary("Revoke or end a delegated trial duty with reason for change.")
             .Produces<DelegationResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission(RevokePermission).RequireCallerStudyAndSiteScope();
 
         doa.MapPost("/sign-off", SignOffDelegationAsync)
@@ -106,11 +113,11 @@ public static class DoaEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        if (string.IsNullOrWhiteSpace(request.StaffUserId))
+        if (string.IsNullOrWhiteSpace(request.StaffUserId) && string.IsNullOrWhiteSpace(request.StaffEmail))
         {
             return TypedResults.Problem(
                 title: "Staff User ID required",
-                detail: "Staff User ID is required.",
+                detail: "Either Staff User ID or colleague email address is required.",
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
@@ -140,12 +147,47 @@ public static class DoaEndpoints
             return delegateSiteDenied;
         }
 
-        if (!await SiteExistsAsync(db, request.Site, ct))
+        var siteGate = await db.CtmsSiteGreenlightGates.AsNoTracking()
+            .FirstOrDefaultAsync(g => g.SiteId == request.Site, ct);
+        if (siteGate is null && !await SiteExistsAsync(db, request.Site, ct))
         {
             return TypedResults.Problem(
                 title: "Site not found",
                 detail: $"Site '{request.Site}' does not exist.",
                 statusCode: StatusCodes.Status404NotFound);
+        }
+
+        string resolvedStaffUserId = request.StaffUserId?.Trim() ?? string.Empty;
+        IReadOnlyList<Guid> kernelGrantIds = [];
+        if (!string.IsNullOrWhiteSpace(request.StaffEmail))
+        {
+            var bridge = httpContext.RequestServices?.GetService<IKernelDelegationBridge>() ?? new NoOpKernelDelegationBridge();
+            var bridgeOutcome = await bridge.DelegateDutiesAsync(
+                httpContext,
+                new KernelDelegateDutiesInput(
+                    Email: request.StaffEmail.Trim(),
+                    FullName: request.StaffName,
+                    SiteCode: request.Site.Trim(),
+                    StudyCode: !string.IsNullOrWhiteSpace(request.StudyCode) ? request.StudyCode.Trim() : siteGate?.StudyId,
+                    Duties: request.TaskCodes,
+                    StartDate: request.StartDate.Trim(),
+                    EndDate: request.EndDate),
+                reason,
+                ct);
+            if (!bridgeOutcome.IsSuccess)
+            {
+                return Results.Text(
+                    bridgeOutcome.RawProblemJson,
+                    contentType: bridgeOutcome.ContentType,
+                    statusCode: bridgeOutcome.StatusCode);
+            }
+
+            if (string.IsNullOrWhiteSpace(resolvedStaffUserId))
+            {
+                resolvedStaffUserId = bridgeOutcome.Value!.PersonId.ToString("D");
+            }
+
+            kernelGrantIds = bridgeOutcome.Value!.GrantIds;
         }
 
         var now = clock.UtcNow;
@@ -154,12 +196,13 @@ public static class DoaEndpoints
         var delegation = new CtmsDelegation
         {
             SiteId = request.Site.Trim(),
-            StaffUserId = request.StaffUserId.Trim(),
+            StaffUserId = resolvedStaffUserId,
             TaskCodes = JsonSerializer.Serialize(request.TaskCodes),
             StartDate = request.StartDate.Trim(),
-            EndDate = null,
+            EndDate = string.IsNullOrWhiteSpace(request.EndDate) ? null : request.EndDate.Trim(),
             IsActive = true,
             SignedOff = false,
+            KernelGrantIds = kernelGrantIds.Count > 0 ? JsonSerializer.Serialize(kernelGrantIds) : null,
             CreatedAt = now.UtcDateTime,
             CreatedBy = user,
             ReasonForChange = reason,
@@ -227,6 +270,19 @@ public static class DoaEndpoints
                 title: "Already revoked",
                 detail: $"Delegation record '{request.RecordId}' is already inactive or revoked.",
                 statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        var linkedGrantIds = ParseKernelGrantIds(delegation.KernelGrantIds);
+        if (linkedGrantIds.Count > 0 && httpContext.RequestServices?.GetService<IKernelDelegationBridge>() is { } bridge)
+        {
+            var revokeOutcome = await bridge.RevokeGrantsAsync(httpContext, linkedGrantIds, reason, ct);
+            if (!revokeOutcome.IsSuccess)
+            {
+                return Results.Text(
+                    revokeOutcome.RawProblemJson,
+                    contentType: revokeOutcome.ContentType,
+                    statusCode: revokeOutcome.StatusCode);
+            }
         }
 
         var now = clock.UtcNow;
@@ -560,6 +616,23 @@ public static class DoaEndpoints
         }
     }
 
+    private static List<Guid> ParseKernelGrantIds(string? grantIdsJson)
+    {
+        if (string.IsNullOrWhiteSpace(grantIdsJson))
+        {
+            return [];
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<Guid>>(grantIdsJson) ?? [];
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
     public static DelegationResponseDto ToResponseDto(CtmsDelegation d) =>
         new(
             RecordId: d.Id,
@@ -572,7 +645,8 @@ public static class DoaEndpoints
             SignedOff: d.SignedOff,
             ReasonForChange: d.ReasonForChange,
             CreatedBy: d.CreatedBy,
-            VersionIndex: d.VersionIndex);
+            VersionIndex: d.VersionIndex,
+            KernelGrantIds: ParseKernelGrantIds(d.KernelGrantIds));
 
     public static DoaAuditHistoryItemDto ToAuditDto(CtmsAuditLog a) =>
         new(
@@ -586,10 +660,14 @@ public static class DoaEndpoints
 
 public record DelegationTaskRequest(
     [property: JsonPropertyName("site_id")] string Site,
-    [property: JsonPropertyName("staff_user_id")] string StaffUserId,
+    [property: JsonPropertyName("staff_user_id")] string? StaffUserId,
     [property: JsonPropertyName("task_codes")] List<string> TaskCodes,
     [property: JsonPropertyName("start_date")] string StartDate,
-    [property: JsonPropertyName("reason_for_change")] string? ReasonForChange
+    [property: JsonPropertyName("reason_for_change")] string? ReasonForChange,
+    [property: JsonPropertyName("staff_email")] string? StaffEmail = null,
+    [property: JsonPropertyName("staff_name")] string? StaffName = null,
+    [property: JsonPropertyName("end_date")] string? EndDate = null,
+    [property: JsonPropertyName("study_id")] string? StudyCode = null
 );
 
 public record RevokeDelegationRequest(
@@ -613,7 +691,8 @@ public record DelegationResponseDto(
     [property: JsonPropertyName("signed_off")] bool SignedOff,
     [property: JsonPropertyName("reason_for_change")] string ReasonForChange,
     [property: JsonPropertyName("created_by")] string CreatedBy,
-    [property: JsonPropertyName("version_index")] long VersionIndex
+    [property: JsonPropertyName("version_index")] long VersionIndex,
+    [property: JsonPropertyName("kernel_grant_ids")] IReadOnlyList<Guid>? KernelGrantIds = null
 );
 
 public record DoaAuditHistoryItemDto(

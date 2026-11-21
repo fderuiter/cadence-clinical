@@ -23,7 +23,6 @@ schema, including its own `__EFMigrationsHistory` table.
 | interop | `interop` | `InteropDbContext` |
 | knowledge | `knowledge` | `KnowledgeDbContext` |
 | notifications | `notifications` | `NotificationsDbContext` |
-| org | `org` | `OrgDbContext` |
 | payments | `payments` | `PaymentsDbContext` |
 | quality | `quality` | `QualityDbContext` |
 | safety | `safety` | `SafetyDbContext` |

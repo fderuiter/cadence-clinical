@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Explanations;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -88,8 +90,46 @@ public static class KernelErrorEndpoints
             extensions["errors"] = fields;
         }
 
+        if (error.Explanation is { } explanation)
+        {
+            extensions["explanation"] = ProblemExplanationDto.From(explanation);
+        }
+
         return TypedResults.Problem(title: error.Code, detail: error.Message, statusCode: error.HttpStatus, extensions: extensions);
     }
+
+    private sealed record ProblemExplanationDto(
+        [property: JsonPropertyName("subject")] string? Subject,
+        [property: JsonPropertyName("claim")] string Claim,
+        [property: JsonPropertyName("producer")] string Producer,
+        [property: JsonPropertyName("steps")] IReadOnlyList<ProblemExplanationStepDto> Steps,
+        [property: JsonPropertyName("conditions")] IReadOnlyList<ProblemConditionDto> Conditions,
+        [property: JsonPropertyName("next_actions")] IReadOnlyList<ProblemNextActionDto> NextActions)
+    {
+        public static ProblemExplanationDto From(Explanation explanation) =>
+            new(
+                explanation.Subject?.ToString(),
+                explanation.Claim,
+                explanation.Producer,
+                [.. explanation.Steps.Select(s => new ProblemExplanationStepDto(s.Claim, [.. s.Evidence.Select(e => e.ToString())]))],
+                [.. explanation.Conditions.Select(c => new ProblemConditionDto(c.Code, c.Description, c.Met, [.. c.Evidence.Select(e => e.ToString())]))],
+                [.. explanation.NextActions.Select(a => new ProblemNextActionDto(a.Description, a.Capability, a.Target?.ToString()))]);
+    }
+
+    private sealed record ProblemExplanationStepDto(
+        [property: JsonPropertyName("claim")] string Claim,
+        [property: JsonPropertyName("evidence")] IReadOnlyList<string> Evidence);
+
+    private sealed record ProblemConditionDto(
+        [property: JsonPropertyName("code")] string Code,
+        [property: JsonPropertyName("description")] string Description,
+        [property: JsonPropertyName("met")] bool Met,
+        [property: JsonPropertyName("evidence")] IReadOnlyList<string> Evidence);
+
+    private sealed record ProblemNextActionDto(
+        [property: JsonPropertyName("description")] string Description,
+        [property: JsonPropertyName("capability")] string? Capability,
+        [property: JsonPropertyName("target")] string? Target);
 
     private static KernelError[] Declare(IEnumerable<KernelError> errors)
     {

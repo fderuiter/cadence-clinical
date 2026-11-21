@@ -29,7 +29,6 @@
     <ProjectReference Include="..\..\tickets\src\Cadence.Apps.Tickets.csproj" />
     <ProjectReference Include="..\..\eisf\src\Cadence.Apps.Eisf.csproj" />
     <ProjectReference Include="..\..\econsent\src\Cadence.Apps.Econsent.csproj" />
-    <ProjectReference Include="..\..\org\src\Cadence.Apps.Org.csproj" />
     <ProjectReference Include="..\..\fileshare\src\Cadence.Apps.Fileshare.csproj" />
     <ProjectReference Include="..\..\imaging\src\Cadence.Apps.Imaging.csproj" />
     <ProjectReference Include="..\..\knowledge\src\Cadence.Apps.Knowledge.csproj" />

@@ -2352,23 +2352,58 @@
       </div>
 
       <!-- Modal 6: Delegate New Authority Task -->
-      <div v-if="showDelegateModal" class="modal-overlay">
+      <div
+        v-if="showDelegateModal"
+        class="modal-overlay"
+        data-testid="ctms-delegate-modal"
+      >
         <div class="modal">
           <div class="modal-header">Delegate Site Trial Task</div>
           <div class="modal-body">
             <div class="form-group">
-              <label for="del-staff-id">Staff User ID</label>
+              <label for="del-staff-email"
+                >Colleague Work Email (OIDC &amp; Kernel Grant)</label
+              >
+              <input
+                id="del-staff-email"
+                v-model="delStaffEmail"
+                type="email"
+                placeholder="Work email address"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="del-staff-name"
+                >Colleague Full Name (Optional, Sealed in IdentityVault)</label
+              >
+              <input
+                id="del-staff-name"
+                v-model="delStaffName"
+                type="text"
+                placeholder="Optional display name"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="del-staff-id"
+                >Existing Staff Person ID (Optional when email supplied)</label
+              >
               <input
                 id="del-staff-id"
                 v-model="delStaffId"
                 type="text"
-                placeholder="e.g. kc-crc-001"
+                placeholder="Optional pseudonymous PersonId"
               />
             </div>
 
             <div class="form-group">
               <label for="del-start-date">Start Date</label>
               <input id="del-start-date" v-model="delStartDate" type="date" />
+            </div>
+
+            <div class="form-group">
+              <label for="del-end-date">End Date (Optional)</label>
+              <input id="del-end-date" v-model="delEndDate" type="date" />
             </div>
 
             <div class="form-group">
@@ -2416,7 +2451,45 @@
               />
             </div>
 
-            <div v-if="delError" class="error-msg">⚠️ {{ delError }}</div>
+            <div v-if="delError" class="error-msg" role="alert">
+              ⚠️ {{ delError }}
+            </div>
+            <div
+              v-if="delExplanation"
+              class="error-msg"
+              role="alert"
+              data-testid="ctms-refusal-explanation"
+              style="margin-top: 8px; text-align: left"
+            >
+              <div>
+                <strong>{{ delExplanation.claim }}</strong>
+              </div>
+              <ul
+                v-if="
+                  delExplanation.conditions &&
+                  delExplanation.conditions.length > 0
+                "
+                style="margin: 6px 0 0 18px; padding: 0"
+              >
+                <li v-for="cond in delExplanation.conditions" :key="cond.code">
+                  <code>{{ cond.code }}</code>: {{ cond.description }}
+                </li>
+              </ul>
+              <div
+                v-if="
+                  delExplanation.next_actions &&
+                  delExplanation.next_actions.length > 0
+                "
+                style="margin-top: 6px"
+              >
+                <span
+                  v-for="(act, idx) in delExplanation.next_actions"
+                  :key="idx"
+                >
+                  {{ act.action || act.description }}
+                </span>
+              </div>
+            </div>
           </div>
           <div class="modal-footer">
             <button class="btn btn-cancel" @click="showDelegateModal = false">
@@ -2775,11 +2848,15 @@ const recReason = ref("");
 const recError = ref("");
 
 const showDelegateModal = ref(false);
+const delStaffEmail = ref("");
+const delStaffName = ref("");
 const delStaffId = ref("");
 const delStartDate = ref("");
+const delEndDate = ref("");
 const delTaskCodes = ref([]);
 const delReason = ref("");
 const delError = ref("");
+const delExplanation = ref(null);
 
 const showCreateMilestoneModal = ref(false);
 const newMsType = ref("SITE_ACTIVATION");
@@ -3237,17 +3314,21 @@ async function confirmRecruitment() {
 
 // 6. Delegate Trial Task
 function openDelegate() {
+  delStaffEmail.value = "";
+  delStaffName.value = "";
   delStaffId.value = "";
   delStartDate.value = new Date().toISOString().slice(0, 10);
+  delEndDate.value = "";
   delTaskCodes.value = [];
   delReason.value = "";
   delError.value = "";
+  delExplanation.value = null;
   showDelegateModal.value = true;
 }
 
 async function confirmDelegate() {
-  if (!delStaffId.value.trim()) {
-    delError.value = "Staff User ID is required.";
+  if (!delStaffEmail.value.trim() && !delStaffId.value.trim()) {
+    delError.value = "Colleague work email or Staff Person ID is required.";
     return;
   }
   if (delTaskCodes.value.length === 0) {
@@ -3258,12 +3339,18 @@ async function confirmDelegate() {
     delError.value = "Reason for change justification is required.";
     return;
   }
+  delError.value = "";
+  delExplanation.value = null;
   try {
     const payload = {
       site_id: siteId.value,
-      staff_user_id: delStaffId.value,
+      study_id: studyId.value,
+      staff_user_id: delStaffId.value.trim() || null,
+      staff_email: delStaffEmail.value.trim() || null,
+      staff_name: delStaffName.value.trim() || null,
       task_codes: delTaskCodes.value,
       start_date: delStartDate.value,
+      end_date: delEndDate.value || null,
       reason_for_change: delReason.value,
     };
     await apiClient.post("/api/v1/ctms/doa/delegate", payload, {
@@ -3273,6 +3360,7 @@ async function confirmDelegate() {
     await loadDelegationData();
   } catch (err) {
     delError.value = err.message || "Failed to request delegation assignment.";
+    delExplanation.value = err?.data?.explanation || null;
   }
 }
 

@@ -40,7 +40,6 @@ public sealed class KernelErrorContractTests
         "KernelGenerateProtocolProposal",
         "KernelMatrixGapCheck",
         "RouteAiIntent",
-        "AiVerifyLiveness",
     };
 
     private static KernelErrorCatalog KernelCatalog() => KernelErrorCatalog.From(
@@ -52,6 +51,7 @@ public sealed class KernelErrorContractTests
         // Modules composed into the kernel host publish their routes in the kernel contract (ADR-2601).
         typeof(Cadence.Modules.Intelligence.Domain.IntelligenceErrors).Assembly,
         typeof(Cadence.Modules.Execution.Application.FormErrors).Assembly,
+        typeof(Cadence.Modules.Org.OrgErrors).Assembly,
     ]);
 
     /// <summary>

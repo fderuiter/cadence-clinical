@@ -10,6 +10,7 @@ using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
+using Cadence.Kernel.Identity;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
@@ -59,8 +60,9 @@ internal static class DevelopmentDemoData
     /// <summary>The roles the realm's users are granted: code, name and capabilities.</summary>
     internal static readonly (string Code, string Name, string[] Capabilities)[] Roles =
     [
+        ("DEMO_SPONSOR_ADMIN", "Sponsor administrator", ["organization.register", "person.register", "tenant.enroll_member", "identity.record.person", "identity.reveal.person", "role.define", "grant.issue", "grant.delegate", "grant.revoke", "study.register", "site.register", "study_site.link", "study_site.activate", "concept.define", "protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.approve", "protocol.amend", "attestation.sign"]),
         ("DEMO_CRC", "Clinical research coordinator", ["participant.register", "participant.screen", "enrollment.change_status", "observation.record", "observation.correct", "collection.open", "collection.record", "execution.query.answer"]),
-        ("DEMO_INVESTIGATOR", "Site investigator", ["participant.screen", "observation.record", "observation.correct", "collection.open", "collection.record", "collection.sign", "execution.query.answer"]),
+        ("DEMO_INVESTIGATOR", "Site investigator", ["participant.register", "participant.screen", "enrollment.change_status", "observation.record", "observation.correct", "collection.open", "collection.record", "collection.sign", "execution.query.answer", "grant.delegate", "grant.revoke"]),
         ("DEMO_MONITOR", "Clinical research associate", ["validation_finding.investigate", "validation_finding.classify", "validation_finding.explain", "observation.verify", "assertion.retract", "collection.record_unasked", "execution.query.raise", "execution.query.manage"]),
         ("DEMO_DATA_MANAGER", "Data manager", ["validation_run.record", "validation_finding.accept", "validation_finding.reopen", "observation.lock", "observation.verify", "assertion.retract", "collection.record_unasked", "execution.query.raise", "execution.query.manage"]),
         ("DEMO_DESIGNER", "Study designer", ["organization.register", "study.register", "concept.define", "protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.approve", "protocol.amend", "attestation.sign"]),
@@ -70,8 +72,8 @@ internal static class DevelopmentDemoData
 
     /// <summary>
     /// The local realm's users (<c>docker/cadence-realm.json</c>) by their fixed Keycloak subject id, with the role and
-    /// the site they are granted at; a null site grants the role for the whole study (or the tenant for the lead designer
-    /// who attests protocol approvals).
+    /// the site they are granted at; a null site grants the role for the whole study (or the tenant for sponsor admin and
+    /// the lead designer who attests protocol approvals).
     /// </summary>
     internal static readonly (string Username, string Subject, string Role, string? Site)[] Users =
     [
@@ -80,7 +82,7 @@ internal static class DevelopmentDemoData
         ("cra.monitor", "ee2cfdb6-d893-4fb4-a10f-d50830b6728a", "DEMO_MONITOR", "SITE-101"),
         ("dm.lead", "47a9d88f-73d7-4aca-9fd6-14b8e6e9284f", "DEMO_DATA_MANAGER", null),
         ("designer_demo", "d0b6257b-57fe-420b-9526-366e83c756aa", "DEMO_DESIGNER", null),
-        ("designer.lead", DesignerLeadSubject, "DEMO_DESIGNER", null),
+        ("designer.lead", DesignerLeadSubject, "DEMO_SPONSOR_ADMIN", null),
         ("safety.officer", "3d290711-4167-4da5-b55a-4c75760bd27c", "DEMO_SAFETY", null), // deid-ignore: a demo realm user's fixed subject id, not a telephone number
         ("auditor.lead", "d43095eb-1912-40dd-a528-fa04335a2342", "DEMO_AUDITOR", null),
     ];
@@ -106,6 +108,9 @@ internal static class DevelopmentDemoData
         "study_site.activate",
         "participant.register",
         "participant.screen",
+        "person.register",
+        "tenant.enroll_member",
+        "identity.record.person",
         "concept.define",
         "protocol.draft",
         "protocol.submit_for_review",
@@ -162,24 +167,33 @@ internal static class DevelopmentDemoData
                 cancellationToken).ConfigureAwait(false);
         }
 
+        bool hasVault = await seeder.HasIdentityVaultAsync().ConfigureAwait(false);
         foreach (var (username, subject, role, site) in Users)
         {
-            AuthorityScope scope;
-            if (site is not null)
+            var (givenName, familyName, tenantScope, withGrantOption) = ResolveDemoUserMetadata(username, role);
+            var personId = PersonId.FromGuid(Guid.Parse(subject));
+            await seeder.SendIgnoreAlreadyExistsAsync(
+                new RegisterPerson(tenant, personId, Key($"person:{username}"), Reason),
+                cancellationToken).ConfigureAwait(false);
+            await seeder.SendIgnoreAlreadyExistsAsync(
+                new RegisterTenantMembership(tenant, ids.Membership(username), personId, Key($"membership:{username}"), Reason),
+                cancellationToken).ConfigureAwait(false);
+            if (hasVault)
             {
-                scope = AuthorityScope.StudySite(studySites[site]);
-            }
-            else if (string.Equals(role, "DEMO_DESIGNER", StringComparison.Ordinal))
-            {
-                scope = AuthorityScope.Tenant();
-            }
-            else
-            {
-                scope = AuthorityScope.Study(study);
+                var details = new IdentityDetails
+                {
+                    GivenName = givenName,
+                    FamilyName = familyName,
+                    Email = $"{username}@example.com", // deid-ignore: RFC 2606 synthetic local realm email from docker/cadence-realm.json
+                };
+                await seeder.SendAsync(
+                    new RecordPersonIdentity(tenant, personId, details, Key($"identity:{username}"), Reason),
+                    cancellationToken).ConfigureAwait(false);
             }
 
+            var scope = ResolveDemoScope(tenantScope, site, study, studySites);
             await seeder.SendAsync(
-                new IssueGrant(tenant, ids.Grant(username), Actor.Person(subject), null, roles[role], scope, Epoch, null, false, Key($"grant:{username}"), Reason),
+                new IssueGrant(tenant, ids.Grant(username), Actor.Person(subject), null, roles[role], scope, Epoch, null, withGrantOption, Key($"grant:{username}"), Reason),
                 cancellationToken).ConfigureAwait(false);
         }
 
@@ -195,6 +209,41 @@ internal static class DevelopmentDemoData
                 new ScreenParticipant(tenant, ids.Enrollment(subjectCode), participant, studySites[site], code, Epoch.AddDays(7 + i), Key($"enrollment:{subjectCode}"), Reason),
                 cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    private static (string GivenName, string FamilyName, bool TenantScope, bool WithGrantOption) ResolveDemoUserMetadata(
+        string username,
+        string role)
+    {
+        var (givenName, familyName) = username switch
+        {
+            "crc.site101" => ("Site", "Coordinator"),
+            "pi.site101" => ("Principal", "Investigator"),
+            "cra.monitor" => ("CRA", "Monitor"),
+            "dm.lead" => ("Data", "Manager"),
+            "designer_demo" => ("Designer", "Demo"),
+            "designer.lead" => ("Designer", "Lead"),
+            "safety.officer" => ("Safety", "Officer"),
+            "auditor.lead" => ("Auditor", "Lead"),
+            _ => ("Demo", "Member"),
+        };
+        bool tenantScope = role is "DEMO_DESIGNER" or "DEMO_SPONSOR_ADMIN";
+        bool withGrantOption = username is "pi.site101" or "designer.lead";
+        return (givenName, familyName, tenantScope, withGrantOption);
+    }
+
+    private static AuthorityScope ResolveDemoScope(
+        bool tenantScope,
+        string? site,
+        StudyId study,
+        IReadOnlyDictionary<string, StudySiteId> studySites)
+    {
+        if (tenantScope)
+        {
+            return AuthorityScope.Tenant();
+        }
+
+        return site is null ? AuthorityScope.Study(study) : AuthorityScope.StudySite(studySites[site]);
     }
 
     private static async Task SeedEffectiveProtocolAsync(
@@ -426,6 +475,25 @@ internal static class DevelopmentDemoData
     /// <summary>Sends each command in its own scope as the bootstrap's service account; a refusal stops the host.</summary>
     private sealed class Sender(TenantId tenant, IServiceScopeFactory scopes)
     {
+        public async Task<bool> HasIdentityVaultAsync()
+        {
+            await using var scope = scopes.CreateAsyncScope();
+            return scope.ServiceProvider.GetService<IIdentityVault>() is not null;
+        }
+
+        public async Task SendIgnoreAlreadyExistsAsync<TResult>(ICommand<TResult> command, CancellationToken cancellationToken)
+        {
+            await using var scope = scopes.CreateAsyncScope();
+            var services = scope.ServiceProvider;
+            services.GetRequiredService<ServiceActorScope>().Actor = DevelopmentTenantBootstrap.Operator;
+            var result = await services.GetRequiredService<IKernelCommandSender>().SendAsync(command, cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (!result.IsSuccess && result.Error?.Code != KernelErrors.AlreadyExists.Code)
+            {
+                throw new InvalidOperationException(
+                    $"Could not seed the demo study in tenant {tenant}: {command.GetType().Name} was refused with {result.Error?.Code} ({result.Error?.Message}).");
+            }
+        }
+
         public Task<TResult> SendAsync<TResult>(ICommand<TResult> command, CancellationToken cancellationToken) =>
             SendAsAsync(DevelopmentTenantBootstrap.Operator, command, cancellationToken);
 
@@ -459,6 +527,8 @@ internal static class DevelopmentDemoData
         public ParticipantId Participant(string name) => ParticipantId.FromGuid(Derive("participant", name));
 
         public EnrollmentId Enrollment(string name) => EnrollmentId.FromGuid(Derive("enrollment", name));
+
+        public TenantMembershipId Membership(string name) => TenantMembershipId.FromGuid(Derive("membership", name));
 
         public RoleId Role(string name) => RoleId.FromGuid(Derive("role", name));
 

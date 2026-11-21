@@ -103,6 +103,7 @@ public sealed class CtmsDelegationConfiguration : IEntityTypeConfiguration<CtmsD
         builder.Property(x => x.EndDate).HasMaxLength(50);
         builder.Property(x => x.IsActive).IsRequired();
         builder.Property(x => x.SignedOff).IsRequired();
+        builder.Property(x => x.KernelGrantIds).HasMaxLength(2000);
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();

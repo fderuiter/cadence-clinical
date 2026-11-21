@@ -12,7 +12,7 @@ Generated from the EF Core model of `Cadence.Apps.Ctms.Infrastructure.Persistenc
 | [`ctms.ctms_clinical_queries`](#ctmsctms_clinical_queries) | `CtmsClinicalQuery` | 11 |
 | [`ctms.ctms_cra_allocations`](#ctmsctms_cra_allocations) | `CtmsCraAllocation` | 12 |
 | [`ctms.ctms_defeated_monitoring_visits`](#ctmsctms_defeated_monitoring_visits) | `CtmsDefeatedMonitoringVisit` | 12 |
-| [`ctms.ctms_delegations`](#ctmsctms_delegations) | `CtmsDelegation` | 13 |
+| [`ctms.ctms_delegations`](#ctmsctms_delegations) | `CtmsDelegation` | 14 |
 | [`ctms.ctms_generated_letters`](#ctmsctms_generated_letters) | `CtmsGeneratedLetter` | 17 |
 | [`ctms.ctms_investigator_grants`](#ctmsctms_investigator_grants) | `CtmsInvestigatorGrant` | 11 |
 | [`ctms.ctms_investigator_payables`](#ctmsctms_investigator_payables) | `CtmsInvestigatorPayable` | 12 |
@@ -186,6 +186,7 @@ Entity: `CtmsDelegation`
 | `CreatedBy` | `character varying(255)` | no |  |  |
 | `EndDate` | `character varying(50)` | yes |  |  |
 | `IsActive` | `boolean` | no |  |  |
+| `KernelGrantIds` | `character varying(2000)` | yes |  |  |
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `SignedOff` | `boolean` | no |  |  |
 | `SiteId` | `character varying(255)` | no |  |  |

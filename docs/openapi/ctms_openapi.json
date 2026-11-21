@@ -955,8 +955,38 @@
               }
             }
           },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1006,8 +1036,28 @@
               }
             }
           },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1347,6 +1397,16 @@
               "string"
             ],
             "format": "int64"
+          },
+          "kernel_grant_ids": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -1364,7 +1424,10 @@
             "type": "string"
           },
           "staff_user_id": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "task_codes": {
             "type": "array",
@@ -1376,6 +1439,30 @@
             "type": "string"
           },
           "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "staff_email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "staff_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "end_date": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "study_id": {
             "type": [
               "null",
               "string"

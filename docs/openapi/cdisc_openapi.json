@@ -961,8 +961,38 @@
               }
             }
           },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1012,8 +1042,28 @@
               }
             }
           },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -13036,6 +13086,762 @@
         ]
       }
     },
+    "/api/v1/org/team": {
+      "get": {
+        "tags": [
+          "Organization Administration"
+        ],
+        "operationId": "GetOrgTeam",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_OrgTeamViewResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          }
+        ]
+      }
+    },
+    "/api/v1/org/invitations": {
+      "post": {
+        "tags": [
+          "Organization Administration"
+        ],
+        "operationId": "InviteOrgMember",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_InviteMemberRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_InviteMemberResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_InviteMemberResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Authority.RoleUnknown\u0060, \u0060K.Authority.ScopeUnknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060M.Org.Identity.CrossTenantConflict\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Authority.CapabilityInvalid\u0060, \u0060K.Authority.ScopeInvalid\u0060, \u0060K.Authority.ValidityInvalid\u0060, \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060M.Org.Authority.UnblindingForbidden\u0060, \u0060M.Org.Invitation.EmailInvalid\u0060, \u0060M.Org.Invitation.NameRequired\u0060, \u0060M.Org.Invitation.TargetInvalid\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway. Kernel errors: \u0060M.Org.Identity.ProvisioningFailed\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable. Kernel errors: \u0060M.Org.Identity.VaultUnavailable\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
+            "status": 403
+          },
+          {
+            "code": "K.Authority.RoleUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Authority.ScopeUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "M.Org.Identity.CrossTenantConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Authority.CapabilityInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Authority.ScopeInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Authority.ValidityInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "M.Org.Authority.UnblindingForbidden",
+            "status": 422
+          },
+          {
+            "code": "M.Org.Invitation.EmailInvalid",
+            "status": 422
+          },
+          {
+            "code": "M.Org.Invitation.NameRequired",
+            "status": 422
+          },
+          {
+            "code": "M.Org.Invitation.TargetInvalid",
+            "status": 422
+          },
+          {
+            "code": "M.Org.Identity.ProvisioningFailed",
+            "status": 502
+          },
+          {
+            "code": "M.Org.Identity.VaultUnavailable",
+            "status": 503
+          }
+        ]
+      }
+    },
+    "/api/v1/org/delegations": {
+      "post": {
+        "tags": [
+          "Organization Administration"
+        ],
+        "operationId": "DelegateOrgDuties",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_DelegateDutiesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_DelegateDutiesResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_DelegateDutiesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authority.GrantOptionRequired\u0060, \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060, \u0060M.Org.Authority.NoDelegableGrant\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060, \u0060K.Authority.RoleUnknown\u0060, \u0060K.Authority.ScopeUnknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Authority.ParentInactive\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060M.Org.Identity.CrossTenantConflict\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Authority.DelegationExceedsParent\u0060, \u0060K.Authority.ScopeInvalid\u0060, \u0060K.Authority.SelfDelegation\u0060, \u0060K.Authority.ValidityInvalid\u0060, \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060M.Org.Authority.UnblindingForbidden\u0060, \u0060M.Org.Invitation.EmailInvalid\u0060, \u0060M.Org.Invitation.TargetInvalid\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway. Kernel errors: \u0060M.Org.Identity.ProvisioningFailed\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable. Kernel errors: \u0060M.Org.Identity.VaultUnavailable\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authority.GrantOptionRequired",
+            "status": 403
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
+            "status": 403
+          },
+          {
+            "code": "M.Org.Authority.NoDelegableGrant",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Authority.RoleUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Authority.ScopeUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Authority.ParentInactive",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "M.Org.Identity.CrossTenantConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Authority.DelegationExceedsParent",
+            "status": 422
+          },
+          {
+            "code": "K.Authority.ScopeInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Authority.SelfDelegation",
+            "status": 422
+          },
+          {
+            "code": "K.Authority.ValidityInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "M.Org.Authority.UnblindingForbidden",
+            "status": 422
+          },
+          {
+            "code": "M.Org.Invitation.EmailInvalid",
+            "status": 422
+          },
+          {
+            "code": "M.Org.Invitation.TargetInvalid",
+            "status": 422
+          },
+          {
+            "code": "M.Org.Identity.ProvisioningFailed",
+            "status": 502
+          },
+          {
+            "code": "M.Org.Identity.VaultUnavailable",
+            "status": 503
+          }
+        ]
+      }
+    },
+    "/api/v1/org/grants/{grantId}/revoke": {
+      "post": {
+        "tags": [
+          "Organization Administration"
+        ],
+        "operationId": "RevokeOrgGrant",
+        "parameters": [
+          {
+            "name": "grantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Kernel_RevokeOrgGrantRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_RevokeOrgGrantResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Authority.RevocationInvalid\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Authority.RevocationInvalid",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          }
+        ]
+      }
+    },
+    "/api/v1/org/members/{personId}/reveal": {
+      "post": {
+        "tags": [
+          "Organization Administration"
+        ],
+        "operationId": "RevealOrgMemberIdentity",
+        "parameters": [
+          {
+            "name": "personId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_RevealMemberIdentityResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.IdentityVault.Erased\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable. Kernel errors: \u0060M.Org.Identity.VaultUnavailable\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.IdentityVault.Erased",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "M.Org.Identity.VaultUnavailable",
+            "status": 503
+          }
+        ]
+      }
+    },
     "/api/v1/knowledge/status": {
       "get": {
         "tags": [
@@ -13711,27 +14517,6 @@
               "application/problem\u002Bjson": {
                 "schema": {
                   "$ref": "#/components/schemas/Notifications_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/org/status": {
-      "get": {
-        "tags": [
-          "Cadence.Apps.Org"
-        ],
-        "summary": "Returns Organization directory operational status.",
-        "operationId": "OrgStatus",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Org_AnonymousTypeOfstringAndstring"
                 }
               }
             }
@@ -15796,6 +16581,16 @@
               "string"
             ],
             "format": "int64"
+          },
+          "kernel_grant_ids": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -15813,7 +16608,10 @@
             "type": "string"
           },
           "staff_user_id": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "task_codes": {
             "type": "array",
@@ -15825,6 +16623,30 @@
             "type": "string"
           },
           "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "staff_email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "staff_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "end_date": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "study_id": {
             "type": [
               "null",
               "string"
@@ -24758,6 +25580,190 @@
           null
         ]
       },
+      "Kernel_DelegateDutiesRequest": {
+        "required": [
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "full_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "given_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "family_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "parent_grant_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "duties": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "capabilities": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "role_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "role_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "scope_level": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "scope_target_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "scope_country": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "study_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "valid_from": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "valid_to": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "with_grant_option": {
+            "type": "boolean",
+            "default": false
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_DelegateDutiesResponse": {
+        "required": [
+          "person_id",
+          "parent_grant_id",
+          "primary_grant_id",
+          "grant_ids",
+          "capabilities",
+          "reused_existing_account",
+          "welcome_email_sent",
+          "scope_label",
+          "valid_from",
+          "valid_to"
+        ],
+        "type": "object",
+        "properties": {
+          "person_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parent_grant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "primary_grant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "grant_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reused_existing_account": {
+            "type": "boolean"
+          },
+          "welcome_email_sent": {
+            "type": "boolean"
+          },
+          "scope_label": {
+            "type": "string"
+          },
+          "valid_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "valid_to": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "Kernel_DependentGroup": {
         "required": [
           "kind",
@@ -25992,6 +26998,141 @@
             "items": {
               "$ref": "#/components/schemas/Kernel_IntentRecommendation"
             }
+          }
+        }
+      },
+      "Kernel_InviteMemberRequest": {
+        "required": [
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "full_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "given_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "family_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "role_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "role_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "capability": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "scope_level": {
+            "type": "string",
+            "default": "Study"
+          },
+          "scope_target_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "scope_country": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "valid_from": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "valid_to": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "with_grant_option": {
+            "type": "boolean",
+            "default": false
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_InviteMemberResponse": {
+        "required": [
+          "person_id",
+          "grant_id",
+          "reused_existing_account",
+          "reused_existing_grant",
+          "welcome_email_sent",
+          "scope_label",
+          "valid_from",
+          "valid_to"
+        ],
+        "type": "object",
+        "properties": {
+          "person_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "grant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reused_existing_account": {
+            "type": "boolean"
+          },
+          "reused_existing_grant": {
+            "type": "boolean"
+          },
+          "welcome_email_sent": {
+            "type": "boolean"
+          },
+          "scope_label": {
+            "type": "string"
+          },
+          "valid_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "valid_to": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -29004,6 +30145,419 @@
           }
         }
       },
+      "Kernel_OrgDelegableGrantDto": {
+        "required": [
+          "grant_id",
+          "label",
+          "scope_key",
+          "scope_level",
+          "scope_target_id",
+          "scope_country",
+          "scope_label",
+          "capabilities",
+          "valid_from",
+          "valid_to"
+        ],
+        "type": "object",
+        "properties": {
+          "grant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label": {
+            "type": "string"
+          },
+          "scope_key": {
+            "type": "string"
+          },
+          "scope_level": {
+            "type": "string"
+          },
+          "scope_target_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "scope_country": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "scope_label": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "valid_from": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "valid_to": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "Kernel_OrgDutyOptionDto": {
+        "required": [
+          "duty",
+          "label",
+          "capabilities"
+        ],
+        "type": "object",
+        "properties": {
+          "duty": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Kernel_OrgMemberGrantDto": {
+        "required": [
+          "grant_id",
+          "kind",
+          "summary",
+          "role_id",
+          "role_code",
+          "capability",
+          "capabilities",
+          "scope_level",
+          "scope_target_id",
+          "scope_country",
+          "scope_code",
+          "scope_label",
+          "parent_grant_id",
+          "with_grant_option",
+          "issued_by",
+          "issued_at",
+          "reason_for_change",
+          "valid_from",
+          "valid_to",
+          "is_active",
+          "is_revoked",
+          "can_revoke"
+        ],
+        "type": "object",
+        "properties": {
+          "grant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "role_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "role_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "capability": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "scope_level": {
+            "type": "string"
+          },
+          "scope_target_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "scope_country": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "scope_code": {
+            "type": "string"
+          },
+          "scope_label": {
+            "type": "string"
+          },
+          "parent_grant_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "with_grant_option": {
+            "type": "boolean"
+          },
+          "issued_by": {
+            "type": "string"
+          },
+          "issued_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "valid_from": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "valid_to": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "is_revoked": {
+            "type": "boolean"
+          },
+          "can_revoke": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Kernel_OrgRoleDto": {
+        "required": [
+          "role_id",
+          "code",
+          "name",
+          "capabilities"
+        ],
+        "type": "object",
+        "properties": {
+          "role_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Kernel_OrgScopeOptionDto": {
+        "required": [
+          "key",
+          "level",
+          "target_id",
+          "country",
+          "code",
+          "label",
+          "parent_label",
+          "can_issue_grants"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "level": {
+            "type": "string"
+          },
+          "target_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "country": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "code": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "parent_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "can_issue_grants": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Kernel_OrgTeamMemberDto": {
+        "required": [
+          "person_id",
+          "display_name",
+          "email",
+          "identity_revealed",
+          "has_sealed_identity",
+          "can_reveal_identity",
+          "joined_at",
+          "active_grants",
+          "historical_grants"
+        ],
+        "type": "object",
+        "properties": {
+          "person_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "identity_revealed": {
+            "type": "boolean"
+          },
+          "has_sealed_identity": {
+            "type": "boolean"
+          },
+          "can_reveal_identity": {
+            "type": "boolean"
+          },
+          "joined_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "active_grants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_OrgMemberGrantDto"
+            }
+          },
+          "historical_grants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_OrgMemberGrantDto"
+            }
+          }
+        }
+      },
+      "Kernel_OrgTeamViewResponse": {
+        "required": [
+          "tenant_code",
+          "tenant_name",
+          "actor_id",
+          "can_invite",
+          "can_delegate",
+          "can_reveal_identity",
+          "roles",
+          "scopes",
+          "delegable_grants",
+          "duty_catalog",
+          "members"
+        ],
+        "type": "object",
+        "properties": {
+          "tenant_code": {
+            "type": "string"
+          },
+          "tenant_name": {
+            "type": "string"
+          },
+          "actor_id": {
+            "type": "string"
+          },
+          "can_invite": {
+            "type": "boolean"
+          },
+          "can_delegate": {
+            "type": "boolean"
+          },
+          "can_reveal_identity": {
+            "type": "boolean"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_OrgRoleDto"
+            }
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_OrgScopeOptionDto"
+            }
+          },
+          "delegable_grants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_OrgDelegableGrantDto"
+            }
+          },
+          "duty_catalog": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_OrgDutyOptionDto"
+            }
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_OrgTeamMemberDto"
+            }
+          }
+        }
+      },
       "Kernel_PlannedVisit": {
         "required": [
           "activity_id",
@@ -29207,6 +30761,93 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Kernel_RevealMemberIdentityResponse": {
+        "required": [
+          "person_id",
+          "display_name",
+          "email",
+          "given_name",
+          "family_name"
+        ],
+        "type": "object",
+        "properties": {
+          "person_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "given_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "family_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_RevokeOrgGrantRequest": {
+        "type": "object",
+        "properties": {
+          "effective_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_RevokeOrgGrantResponse": {
+        "required": [
+          "grant_id",
+          "revoked",
+          "valid_from",
+          "valid_to"
+        ],
+        "type": "object",
+        "properties": {
+          "grant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revoked": {
+            "type": "boolean"
+          },
+          "valid_from": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "valid_to": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -30553,27 +32194,6 @@
           },
           "content": {
             "type": "string"
-          }
-        }
-      },
-      "Org_AnonymousTypeOfstringAndstring": {
-        "required": [
-          "status",
-          "service"
-        ],
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "service": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },

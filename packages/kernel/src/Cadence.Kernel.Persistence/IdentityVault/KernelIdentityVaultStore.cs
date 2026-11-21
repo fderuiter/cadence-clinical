@@ -57,6 +57,15 @@ internal sealed class KernelIdentityVaultStore(KernelTenantDbContextFactory cont
         return [.. ids.Select(ParticipantId.FromGuid)];
     }
 
+    public async Task<Guid?> FindSubjectByBlindIndexAsync(TenantId tenant, IdentityLayer layer, byte[] blindIndex, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(blindIndex);
+        await using var db = contexts.Create(tenant);
+        return await db.Database
+            .SqlQuery<Guid?>($"SELECT identity_vault.find_subject_by_blind_index({IdentitySealer.LayerToken(layer)}, {blindIndex}) AS \"Value\"")
+            .SingleAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     private sealed record RecordRow(
         string? KeyId, byte[]? WrappedDataKey, byte[]? Ciphertext, byte[]? BlindIndex, DateTimeOffset RecordedAt, DateTimeOffset? ErasedAt);
 }

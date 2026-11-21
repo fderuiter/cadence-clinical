@@ -199,13 +199,13 @@ if (full)
         .WithEnvironment("CADENCE_SCE_SIGNING_KEY", sceSigningKey);
     Service(builder.AddProject<Projects.Cadence_Apps_Quality>("quality"));
     Service(builder.AddProject<Projects.Cadence_Apps_Notifications>("notifications"));
-    Service(builder.AddProject<Projects.Cadence_Apps_Ctms>("ctms"));
+    Service(builder.AddProject<Projects.Cadence_Apps_Ctms>("ctms"))
+        .WithEnvironment("KERNEL_SERVICE_URL", kernel.GetEndpoint("http"));
     Service(builder.AddProject<Projects.Cadence_Apps_Safety>("safety"));
     Service(builder.AddProject<Projects.Cadence_Apps_Tickets>("tickets"));
     Service(builder.AddProject<Projects.Cadence_Apps_Eisf>("eisf"));
     Service(builder.AddProject<Projects.Cadence_Apps_Econsent>("econsent"))
         .WithEnvironment("FIELD_ENCRYPTION_KEY", fieldEncryptionKey);
-    Service(builder.AddProject<Projects.Cadence_Apps_Org>("org"));
     Service(builder.AddProject<Projects.Cadence_Apps_Fileshare>("fileshare"));
     Service(builder.AddProject<Projects.Cadence_Apps_Imaging>("imaging"))
         .WithEnvironment("CADENCE_IMAGING_DEID_SIGNING_KEY", imagingDeidSigningKey)

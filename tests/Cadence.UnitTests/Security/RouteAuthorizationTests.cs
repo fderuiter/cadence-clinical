@@ -73,6 +73,11 @@ public sealed class RouteAuthorizationTests
         ("kernel", "PUT /api/v1/ai/controls/{scope}", "Sends SetAgentControl, which the kernel authority evaluator authorizes against agent_control.set (ADR-2630)."),
         ("kernel", "POST /api/v1/ai/mcp", "Read-only agent tools for outside agents (ADR-2633): every read runs as the signed-in caller, masked for both the caller and the agent, and no tool writes."),
         ("kernel", "POST /api/v1/ai/biometrics/verify-liveness", "Anti-spoof facial liveness verification generates short-lived HMAC signed tokens for consent capture."),
+        ("kernel", "GET /api/v1/org/team", "Lists only pseudonymous PersonIds, TenantMemberships, Roles and Grants of the caller's tenant under Row-Level Security, with scope options filtered by IKernelReadAccess; never unseals IdentityVault (ADR-2611)."),
+        ("kernel", "POST /api/v1/org/invitations", "Dispatches RegisterPerson, RegisterTenantMembership, RecordPersonIdentity and IssueGrant through IKernelCommandSender, which AuthorityEvaluator authorizes against the caller's grant.issue or WithGrantOption authority (ADR-2611)."),
+        ("kernel", "POST /api/v1/org/delegations", "Dispatches RegisterPerson, RegisterTenantMembership, RecordPersonIdentity and child IssueGrant commands through IKernelCommandSender, bounded by the caller's active WithGrantOption parent grant (ADR-2611)."),
+        ("kernel", "POST /api/v1/org/grants/{grantId:guid}/revoke", "Sends RevokeGrant through IKernelCommandSender, which AuthorityEvaluator authorizes against grant.revoke on the grant's scope (ADR-2611)."),
+        ("kernel", "POST /api/v1/org/members/{personId:guid}/reveal", "Sends RevealIdentity through IKernelCommandSender, which AuthorityEvaluator authorizes against identity.reveal.person and records an immutable disclosure audit entry (ADR-2611)."),
     ];
 
     private const string ProbeHeader = "X-Authorization-Probe";

@@ -54,7 +54,6 @@ public sealed class StandaloneTenantIsolationPostgresTests(ThrowawayPostgresData
         "interop",
         "knowledge",
         "notifications",
-        "org",
         "payments",
         "quality",
         "safety",

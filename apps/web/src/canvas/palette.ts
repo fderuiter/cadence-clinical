@@ -43,6 +43,11 @@ const DATA_COLLECTION_ROLES = [
 
 const SITE_READINESS_SPONSOR_ROLES = ["cra", "monitor", "sponsor_admin"];
 const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
+const TEAM_MANAGEMENT_ROLES = [
+  "sponsor_admin",
+  "super_admin",
+  "site_investigator",
+];
 
 export function resolveSiteReadinessPath(
   normalizedRoles: string[]
@@ -66,6 +71,13 @@ export function canAccessDataCollection(normalizedRoles: string[]): boolean {
   return (
     isScreenAvailable("ecrf") &&
     hasRequiredRole(normalizedRoles, DATA_COLLECTION_ROLES)
+  );
+}
+
+export function canAccessTeamManagement(normalizedRoles: string[]): boolean {
+  return (
+    isScreenAvailable("team") &&
+    hasRequiredRole(normalizedRoles, TEAM_MANAGEMENT_ROLES)
   );
 }
 
@@ -180,6 +192,17 @@ export function buildWorkspacePaletteItems(options: {
       label: "Site readiness",
       detail: "Site activation, milestones, and readiness workflows",
       target: { routePath: siteReadinessPath },
+    });
+  }
+
+  if (canAccessTeamManagement(roles)) {
+    items.push({
+      key: "workspace:team",
+      group: "Workspace",
+      label: "Team & access",
+      detail:
+        "Invite workspace members, delegate site duties, and manage grants",
+      target: { routePath: "/team" },
     });
   }
 

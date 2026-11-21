@@ -264,6 +264,24 @@ internal sealed class IdentityVaultService(IKernelCommandSender sender, IIdentit
             : CommandResult<IReadOnlyList<ParticipantId>>.Success(
                 await store.LinkedParticipantsAsync(command.TenantId, command.PersonId, cancellationToken).ConfigureAwait(false));
     }
+
+    public async Task<PersonId?> FindPersonByEmailAsync(TenantId tenant, string email, CancellationToken cancellationToken = default)
+    {
+        if (tenant.IsEmpty || string.IsNullOrWhiteSpace(email))
+        {
+            return null;
+        }
+
+        var normalized = new IdentityDetails { Email = email }.LookupValue(IdentityLayer.Person);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return null;
+        }
+
+        var blindIndex = sealer.BlindIndex(tenant, IdentityLayer.Person, normalized);
+        var subject = await store.FindSubjectByBlindIndexAsync(tenant, IdentityLayer.Person, blindIndex, cancellationToken).ConfigureAwait(false);
+        return subject is { } id ? PersonId.FromGuid(id) : null;
+    }
 }
 
 /// <summary>Registers the IdentityVault's handlers and <see cref="IIdentityVault"/>.</summary>

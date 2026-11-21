@@ -185,6 +185,7 @@ public sealed class CtmsDelegation : AggregateRoot<string>
     public string? EndDate { get; set; }
     public bool IsActive { get; set; } = true;
     public bool SignedOff { get; set; }
+    public string? KernelGrantIds { get; set; }
 
     public CtmsDelegation() : base(Guid.NewGuid().ToString()) { }
     public CtmsDelegation(string id) : base(id) { }

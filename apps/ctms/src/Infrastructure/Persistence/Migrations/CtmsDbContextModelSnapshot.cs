@@ -339,6 +339,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("KernelGrantIds")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<string>("ReasonForChange")
                         .IsRequired()
                         .HasMaxLength(1000)

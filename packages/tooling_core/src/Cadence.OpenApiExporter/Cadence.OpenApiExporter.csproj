@@ -28,7 +28,6 @@
     <ProjectReference Include="..\..\..\..\apps\interop\src\Cadence.Apps.Interop.csproj" Aliases="interop" />
     <ProjectReference Include="..\..\..\..\apps\knowledge\src\Cadence.Apps.Knowledge.csproj" Aliases="knowledge" />
     <ProjectReference Include="..\..\..\..\apps\notifications\src\Cadence.Apps.Notifications.csproj" Aliases="notifications" />
-    <ProjectReference Include="..\..\..\..\apps\org\src\Cadence.Apps.Org.csproj" Aliases="org" />
     <ProjectReference Include="..\..\..\..\apps\payments\src\Cadence.Apps.Payments.csproj" Aliases="payments" />
     <ProjectReference Include="..\..\..\..\apps\quality\src\Cadence.Apps.Quality.csproj" Aliases="quality" />
     <ProjectReference Include="..\..\..\..\apps\safety\src\Cadence.Apps.Safety.csproj" Aliases="safety" />

@@ -151,8 +151,8 @@ public sealed class DemoManifestGeneratorTests : IDisposable
         File.WriteAllText(
             kernelPath,
             originalKernel.Replace(
-                "(\"designer.lead\", DesignerLeadSubject, \"DEMO_DESIGNER\", null),",
-                "(\"designer.lead\", MissingSubjectConst, \"DEMO_DESIGNER\", null),",
+                "(\"designer.lead\", DesignerLeadSubject, \"DEMO_SPONSOR_ADMIN\", null),",
+                "(\"designer.lead\", MissingSubjectConst, \"DEMO_SPONSOR_ADMIN\", null),",
                 StringComparison.Ordinal),
             Encoding.UTF8);
         DemoManifestGeneratorService.TryBuildExpectedArtifacts(_tempRoot, out _, out _, out _, out var constErrors).Should().BeFalse();
