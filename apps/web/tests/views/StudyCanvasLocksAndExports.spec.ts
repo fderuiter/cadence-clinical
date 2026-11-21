@@ -347,8 +347,7 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
   });
 
   it("renders inline participant lock controls and streams casebook with X-Content-Sha256 verification", async () => {
-    const sha =
-      "45b953e5235e834d92e5ac25d5667f70ee7edc615d937f0452a5679868d977a5";
+    const sha = "a".repeat(64);
     mockStreamEnrollmentCasebook.mockResolvedValue({
       blob: new Blob(["<html></html>"], { type: "text/html" }),
       filename: "CAD-101-SUBJ-A.casebook.html",
