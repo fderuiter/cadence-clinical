@@ -391,12 +391,10 @@ defineExpose({
 }
 
 .modal-dialog {
-  background: var(--color-surface, #ffffff);
-  border-radius: 8px;
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--semantic-color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--semantic-color-border);
   display: flex;
   flex-direction: column;
   max-width: 580px;
@@ -409,21 +407,21 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  border-bottom: 1px solid var(--semantic-color-border);
 }
 
 .modal-title {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: var(--color-text, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .close-btn {
   background: transparent;
   border: none;
   font-size: 18px;
-  color: var(--color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
   cursor: pointer;
 }
 
@@ -435,27 +433,27 @@ defineExpose({
 
 .error-alert {
   padding: 10px 14px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
-  border-radius: 6px;
+  background: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border-soft);
+  color: var(--semantic-color-error-text-dark);
+  border-radius: var(--radius-sm);
   font-size: 13px;
 }
 
 .dropzone {
-  border: 2px dashed var(--color-border, #cbd5e1);
-  border-radius: 8px;
+  border: 2px dashed var(--semantic-color-border-control);
+  border-radius: var(--radius-md);
   padding: 24px;
   text-align: center;
-  background: var(--color-surface-muted, #f8fafc);
+  background: var(--semantic-color-surface-muted);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .dropzone:hover,
 .dropzone.is-dragging {
-  border-color: var(--color-primary, #026597);
-  background: #f0f9ff;
+  border-color: var(--semantic-color-primary);
+  background: var(--semantic-color-info-bg-soft);
 }
 
 .hidden-file-input {
@@ -477,13 +475,13 @@ defineExpose({
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-text, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .dropzone-hint {
   margin: 0;
   font-size: 12px;
-  color: var(--color-text-muted, #64748b);
+  color: var(--semantic-color-text-muted);
 }
 
 .dropzone-file-info {
@@ -507,7 +505,7 @@ defineExpose({
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-text, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .file-meta,
@@ -515,7 +513,7 @@ defineExpose({
 .file-hashing {
   margin: 0;
   font-size: 12px;
-  color: var(--color-text-muted, #64748b);
+  color: var(--semantic-color-text-muted);
 }
 
 .form-group {
@@ -527,18 +525,18 @@ defineExpose({
 .form-label {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-text, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .required-star {
-  color: #dc2626;
+  color: var(--semantic-color-error);
 }
 
 .form-textarea {
   width: 100%;
   padding: 10px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--color-border, #cbd5e1);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--semantic-color-border-control);
   font-size: 13px;
   font-family: inherit;
   resize: vertical;
@@ -546,13 +544,13 @@ defineExpose({
 }
 
 .form-textarea:focus {
-  border-color: var(--color-primary, #026597);
+  border-color: var(--semantic-color-primary);
   box-shadow: 0 0 0 2px rgba(2, 101, 151, 0.15);
 }
 
 .hint-text {
   font-size: 11px;
-  color: var(--color-text-muted, #64748b);
+  color: var(--semantic-color-text-muted);
 }
 
 .progress-bar-wrapper {
@@ -564,20 +562,20 @@ defineExpose({
 .progress-track {
   width: 100%;
   height: 6px;
-  background: #e2e8f0;
+  background: var(--semantic-color-border);
   border-radius: 3px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: var(--color-primary, #026597);
+  background: var(--semantic-color-primary);
   transition: width 0.2s ease;
 }
 
 .progress-text {
   font-size: 11px;
-  color: var(--color-text-muted, #64748b);
+  color: var(--semantic-color-text-muted);
   text-align: right;
 }
 
@@ -586,17 +584,17 @@ defineExpose({
   justify-content: flex-end;
   gap: 12px;
   padding: 14px 20px;
-  border-top: 1px solid var(--color-border, #e2e8f0);
-  background: var(--color-surface-muted, #f8fafc);
-  border-bottom-left-radius: 8px;
-  border-bottom-right-radius: 8px;
+  border-top: 1px solid var(--semantic-color-border);
+  background: var(--semantic-color-surface-muted);
+  border-bottom-left-radius: var(--radius-md);
+  border-bottom-right-radius: var(--radius-md);
 }
 
 .btn {
   padding: 8px 16px;
   font-size: 13px;
   font-weight: 500;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.15s ease;
@@ -608,21 +606,21 @@ defineExpose({
 }
 
 .btn-secondary {
-  background: var(--color-surface, #ffffff);
-  border-color: var(--color-border, #cbd5e1);
-  color: var(--color-text, #0f172a);
+  background: var(--semantic-color-surface);
+  border-color: var(--semantic-color-border-control);
+  color: var(--semantic-color-text);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
 }
 
 .btn-primary {
-  background: var(--color-primary, #026597);
-  color: #ffffff;
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-surface);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--color-primary-dark, #014d76);
+  background: var(--semantic-color-primary-dark);
 }
 </style>

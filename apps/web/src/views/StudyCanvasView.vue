@@ -1869,7 +1869,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: var(--semantic-color-surface-muted, #f8fafc);
+  background: var(--semantic-color-surface-muted);
   color: var(--primary);
   font-family: var(--font);
 }
@@ -1899,7 +1899,7 @@ onUnmounted(() => {
   gap: 16px;
   padding: 8px 16px;
   border-bottom: 1px solid var(--border);
-  background: var(--semantic-color-surface, #fff);
+  background: var(--semantic-color-surface);
 }
 
 .zoom-path {
@@ -1953,9 +1953,9 @@ onUnmounted(() => {
 }
 
 .ai-toggle[aria-pressed="true"] {
-  border-color: var(--semantic-color-ai-border, #c4b5fd);
-  background: var(--semantic-color-ai-bg, #f5f3ff);
-  color: var(--semantic-color-ai, #6d28d9);
+  border-color: var(--semantic-color-ai-border);
+  background: var(--semantic-color-ai-bg);
+  color: var(--semantic-color-ai);
 }
 
 .sr-only {
@@ -1986,7 +1986,7 @@ onUnmounted(() => {
   gap: 8px 24px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
-  background: var(--semantic-color-surface, #fff);
+  background: var(--semantic-color-surface);
 }
 
 .study-header h1 {
@@ -2038,7 +2038,7 @@ onUnmounted(() => {
   max-height: calc(100vh - var(--canvas-pane-top));
   overflow-y: auto;
   padding: 12px;
-  background: var(--semantic-color-surface, #fff);
+  background: var(--semantic-color-surface);
 }
 
 .nav-group-title {
@@ -2088,7 +2088,7 @@ onUnmounted(() => {
   align-self: start;
   max-height: calc(100vh - var(--canvas-pane-top));
   overflow-y: auto;
-  background: var(--semantic-color-surface, #fff);
+  background: var(--semantic-color-surface);
 }
 
 .stage-overview h2 {
@@ -2134,7 +2134,7 @@ onUnmounted(() => {
   flex: 1 1 12rem;
   min-width: 0;
   padding: 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
 }
 
@@ -2145,7 +2145,7 @@ onUnmounted(() => {
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--semantic-color-surface, #fff);
+  background: var(--semantic-color-surface);
 }
 
 .directory-section h2 {
@@ -2184,7 +2184,7 @@ onUnmounted(() => {
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--semantic-color-surface-muted, #f8fafc);
+  background: var(--semantic-color-surface-muted);
 }
 
 .study-card-main {
@@ -2208,8 +2208,8 @@ onUnmounted(() => {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 999px;
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary-dark);
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -2241,21 +2241,21 @@ onUnmounted(() => {
 }
 
 .inline-banner-progress {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1e3a8a;
+  background: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-info-border);
+  color: var(--semantic-color-info);
 }
 
 .inline-banner-success {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #166534;
+  background: var(--semantic-color-success-bg-soft);
+  border: 1px solid var(--semantic-color-success-border-soft);
+  color: var(--semantic-color-success-dark);
 }
 
 .inline-banner-error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border-soft);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .create-study-form {
@@ -2290,7 +2290,7 @@ onUnmounted(() => {
 .create-field input,
 .create-field select {
   padding: 8px 10px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font: inherit;
   font-size: 0.9rem;

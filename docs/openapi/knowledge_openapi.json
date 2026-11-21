@@ -52,6 +52,167 @@
         }
       }
     },
+    "/api/v1/knowledge/contextual-help": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "operationId": "ResolveContextualHelp",
+        "parameters": [
+          {
+            "name": "route",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "persona",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ContextualHelpResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/categories": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "operationId": "ListKnowledgeCategories",
+        "parameters": [
+          {
+            "name": "persona",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Knowledge_KnowledgeCategoryDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/articles": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "operationId": "ListKnowledgeArticles",
+        "parameters": [
+          {
+            "name": "status_filter",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "persona",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Knowledge_KnowledgeArticleDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/articles/{article_id}": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "operationId": "GetKnowledgeArticle",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_KnowledgeArticleDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/training/curricula": {
       "get": {
         "tags": [
@@ -708,6 +869,106 @@
           }
         }
       },
+      "Knowledge_ContextualHelpMappingDto": {
+        "required": [
+          "id",
+          "route_pattern",
+          "persona",
+          "article_id",
+          "section_anchor",
+          "priority",
+          "is_active"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "route_pattern": {
+            "type": "string"
+          },
+          "persona": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "article_id": {
+            "type": "string"
+          },
+          "section_anchor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "priority": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "is_active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Knowledge_ContextualHelpResponseDto": {
+        "required": [
+          "matched_mapping",
+          "primary_article",
+          "primary_version",
+          "section_anchor",
+          "related_articles"
+        ],
+        "type": "object",
+        "properties": {
+          "matched_mapping": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Knowledge_ContextualHelpMappingDto"
+              }
+            ]
+          },
+          "primary_article": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Knowledge_KnowledgeArticleDto"
+              }
+            ]
+          },
+          "primary_version": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Knowledge_KnowledgeArticleVersionDto"
+              }
+            ]
+          },
+          "section_anchor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "related_articles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Knowledge_KnowledgeArticleDto"
+            }
+          }
+        }
+      },
       "Knowledge_DelegationSummaryDto": {
         "required": [
           "id",
@@ -788,6 +1049,222 @@
             "type": "string"
           },
           "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "Knowledge_KnowledgeArticleDto": {
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "category_id",
+          "category_name",
+          "status",
+          "version_index",
+          "version_label",
+          "current_published_version_id",
+          "tags",
+          "author_user_id",
+          "last_edited_by",
+          "approved_by",
+          "body_markdown",
+          "body_html",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "category_id": {
+            "type": "string"
+          },
+          "category_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "version_label": {
+            "type": "string"
+          },
+          "current_published_version_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "author_user_id": {
+            "type": "string"
+          },
+          "last_edited_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "approved_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "body_markdown": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "body_html": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Knowledge_KnowledgeArticleVersionDto": {
+        "required": [
+          "id",
+          "article_id",
+          "version_index",
+          "version_label",
+          "body_markdown",
+          "body_html",
+          "status_at_snapshot",
+          "is_locked",
+          "created_at",
+          "created_by",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "article_id": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "version_label": {
+            "type": "string"
+          },
+          "body_markdown": {
+            "type": "string"
+          },
+          "body_html": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status_at_snapshot": {
+            "type": "string"
+          },
+          "is_locked": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": "string"
+          }
+        }
+      },
+      "Knowledge_KnowledgeCategoryDto": {
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "description",
+          "parent_id",
+          "persona_visibility",
+          "is_deleted",
+          "created_at",
+          "created_by"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "parent_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "persona_visibility": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "is_deleted": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
             "type": "string"
           }
         }
@@ -993,6 +1470,9 @@
   "tags": [
     {
       "name": "Cadence.Apps.Knowledge"
+    },
+    {
+      "name": "Knowledge"
     },
     {
       "name": "Study Training \u0026 Gating"

@@ -35,7 +35,7 @@ public static partial class DeidComplianceService
 
     private static readonly HashSet<string> ExcludedDirectories = new(StringComparer.Ordinal)
     {
-        "tests", "test", "testing", "node_modules", ".git", ".venv", "env", "build", "dist", ".github", ".ruff_cache",
+        "tests", "test", "testing", "node_modules", ".git", ".venv", ".cadence", "env", "build", "dist", ".github", ".ruff_cache",
         ".pytest_cache", "docs", "scripts", "docker", "verification", "stores", "alembic", "deid", "coverage",
         ".agents", ".jules", "bin", "obj",
     };

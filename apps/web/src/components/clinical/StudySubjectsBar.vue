@@ -89,7 +89,7 @@ async function submit() {
 }
 
 .study-subjects-bar .status {
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   font-size: 0.9rem;
 }
 </style>

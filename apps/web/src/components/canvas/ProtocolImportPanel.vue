@@ -515,7 +515,7 @@ defineExpose({
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--semantic-color-surface, #fff);
+  background: var(--semantic-color-surface);
 }
 
 .import-card-header h3 {
@@ -536,21 +536,21 @@ defineExpose({
 }
 
 .banner-progress {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1e3a8a;
+  background: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-info-border);
+  color: var(--semantic-color-info);
 }
 
 .banner-success {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #166534;
+  background: var(--semantic-color-success-bg-soft);
+  border: 1px solid var(--semantic-color-success-border-soft);
+  color: var(--semantic-color-success-dark);
 }
 
 .banner-error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border-soft);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .file-chooser-box {
@@ -560,7 +560,7 @@ defineExpose({
   padding: 12px;
   border: 1px dashed var(--border);
   border-radius: 6px;
-  background: var(--semantic-color-surface-muted, #f8fafc);
+  background: var(--semantic-color-surface-muted);
 }
 
 .hidden-file-input {
@@ -586,7 +586,7 @@ defineExpose({
 .btn-link {
   background: transparent;
   border: none;
-  color: var(--accent, #2563eb);
+  color: var(--semantic-color-interactive-primary);
   cursor: pointer;
   padding: 4px 8px;
   font-size: 0.85rem;
@@ -620,7 +620,7 @@ defineExpose({
 
 .text-input {
   padding: 8px 10px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font: inherit;
   font-size: 0.85rem;
@@ -641,7 +641,7 @@ defineExpose({
   padding: 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--semantic-color-surface-muted, #f8fafc);
+  background: var(--semantic-color-surface-muted);
 }
 
 .template-option {
@@ -658,8 +658,8 @@ defineExpose({
   display: inline-block;
   padding: 1px 5px;
   border-radius: 4px;
-  background: #e2e8f0;
-  color: #334155;
+  background: var(--semantic-color-border);
+  color: var(--semantic-color-text-body);
   font-size: 0.72rem;
   font-weight: 600;
 }
@@ -719,8 +719,8 @@ defineExpose({
   display: inline-block;
   padding: 2px 6px;
   border-radius: 4px;
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-text-dark);
   font-weight: 600;
 }
 
@@ -744,14 +744,14 @@ defineExpose({
 .import-notes-box {
   padding: 10px 12px;
   border-radius: 6px;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
+  background: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-border);
 }
 
 .notes-heading {
   margin: 0 0 6px;
   font-size: 0.85rem;
-  color: #92400e;
+  color: var(--semantic-color-warning-text);
 }
 
 .notes-list {
@@ -761,7 +761,7 @@ defineExpose({
   flex-direction: column;
   gap: 4px;
   font-size: 0.82rem;
-  color: #78350f;
+  color: var(--semantic-color-warning-text-dark);
 }
 
 .note-item {
@@ -771,7 +771,7 @@ defineExpose({
 }
 
 .note-source {
-  background: rgb(254 243 199);
+  background: var(--semantic-color-warning-bg-badge);
   padding: 1px 4px;
   border-radius: 3px;
 }
@@ -786,7 +786,7 @@ defineExpose({
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--semantic-color-surface-muted, #f8fafc);
+  background: var(--semantic-color-surface-muted);
 }
 
 .draft-form-header {
@@ -824,7 +824,7 @@ defineExpose({
   align-items: center;
   gap: 8px;
   padding: 3px 0;
-  border-bottom: 1px solid rgb(226 232 240 / 70%);
+  border-bottom: 1px solid var(--semantic-color-border);
 }
 
 .draft-item-row:last-child {
@@ -842,13 +842,13 @@ defineExpose({
 .badge-mandatory {
   padding: 1px 6px;
   border-radius: 999px;
-  background: #e2e8f0;
-  color: #475569;
+  background: var(--semantic-color-border);
+  color: var(--semantic-color-text-secondary);
 }
 
 .badge-mandatory.required {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--semantic-color-info-light);
+  color: var(--semantic-color-info);
   font-weight: 600;
 }
 

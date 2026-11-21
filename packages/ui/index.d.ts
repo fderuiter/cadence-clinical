@@ -163,6 +163,17 @@ export const ModalErrorAlert: DefineComponent<
   any
 >;
 
+export const EmptyState: DefineComponent<
+  {
+    icon?: string;
+    title?: string;
+    message?: string;
+    actionText?: string;
+  },
+  {},
+  any
+>;
+
 export const ClinicalModal: DefineComponent<
   {
     modelValue?: boolean;
@@ -261,17 +272,6 @@ export const ClinicalFieldLayout: DefineComponent<
     extraClass?: string;
     canManageQueries?: boolean;
     queryLabel?: string;
-  },
-  {},
-  any
->;
-
-export const EmptyState: DefineComponent<
-  {
-    icon?: string;
-    title?: string;
-    message?: string;
-    actionText?: string;
   },
   {},
   any

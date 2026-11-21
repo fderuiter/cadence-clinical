@@ -439,7 +439,7 @@ onMounted(() => {
 
 .view-mode-toggle-group {
   display: flex;
-  background-color: #e2e8f0;
+  background-color: var(--semantic-color-surface-header);
   border-radius: 6px;
   padding: 3px;
   gap: 2px;
@@ -451,7 +451,7 @@ onMounted(() => {
   padding: 6px 12px;
   font-size: 0.82rem;
   font-weight: 600;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -475,21 +475,21 @@ onMounted(() => {
 }
 
 .alert-success {
-  background-color: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #166534;
+  background-color: var(--semantic-color-success-bg-soft);
+  border: 1px solid var(--semantic-color-success-border-soft);
+  color: var(--semantic-color-success-dark);
 }
 
 .alert-warning {
-  background-color: #fffbeb;
-  border: 1px solid #fef08a;
-  color: #854d0e;
+  background-color: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-border);
+  color: var(--semantic-color-warning);
 }
 
 .alert-info {
-  background-color: #f0f9ff;
-  border: 1px solid #bae6fd;
-  color: #075985;
+  background-color: var(--semantic-color-info-bg-soft);
+  border: 1px solid var(--semantic-color-info-border-accent);
+  color: var(--semantic-color-primary-dark);
 }
 
 .alert-content {
@@ -566,7 +566,7 @@ onMounted(() => {
 
 .stat-active {
   border-color: var(--accent) !important;
-  background-color: #f0f9ff !important;
+  background-color: var(--semantic-color-info-bg-soft) !important;
   box-shadow: 0 0 0 2px var(--accent-bg);
 }
 
@@ -584,11 +584,11 @@ onMounted(() => {
 }
 
 .stat-uncoded .stat-number {
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .stat-suggested .stat-number {
-  color: #0284c7;
+  color: var(--semantic-color-primary);
 }
 
 .stat-coded .stat-number {
@@ -600,7 +600,7 @@ onMounted(() => {
 }
 
 .stat-instances .stat-number {
-  color: #4f46e5;
+  color: var(--semantic-color-accent);
 }
 
 .toolbar-card {
@@ -624,7 +624,7 @@ onMounted(() => {
 
 .status-tab-group {
   display: flex;
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
   padding: 3px;
   border-radius: 6px;
   gap: 2px;
@@ -636,7 +636,7 @@ onMounted(() => {
   padding: 6px 12px;
   font-size: 0.82rem;
   font-weight: 600;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -663,9 +663,9 @@ onMounted(() => {
 
 .confidence-select {
   font-weight: 600;
-  color: #0369a1;
-  border-color: #7dd3fc;
-  background-color: #f0f9ff;
+  color: var(--semantic-color-primary);
+  border-color: var(--semantic-color-divider-accent);
+  background-color: var(--semantic-color-info-bg-soft);
 }
 
 .search-box {

@@ -1,6 +1,6 @@
 # Tickets service
 
-Support ticket scaffold. It holds the ticket, comment, attachment and audit log model; no business endpoints are mapped yet.
+Support ticket service. It serves authenticated support ticket creation (`POST /api/v1/tickets`), study/site-scoped listing (`GET /api/v1/tickets`), and ticket detail lookup (`GET /api/v1/tickets/{ticket_id}`) with deterministic 6-queue routing, Dual-Target SLA timestamps from `IClock`, participant PII rejection, mandatory `X-Change-Reason` headers, and shared `audit_log_entries` Merkle-chain auditing ([ADR-2641](../../docs/adr/2026-11-20-contextual-sop-resolution-and-audited-ticket-escalation.md)).
 
 **Status:** a standalone ASP.NET Core 10 scaffold service. Under [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and the [clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map, §15 roadmap) it becomes an application module over the clinical kernel. The disposition of the scaffold services is tracked in issue #4787.
 
@@ -17,6 +17,8 @@ Support ticket scaffold. It holds the ticket, comment, attachment and audit log 
 
 - `GET /healthz`, `GET /healthz/live`, `GET /healthz/ready` (anonymous; mapped by `MapCadenceHealthAndStatusEndpoints` and `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready` checks `TicketsDbContext`.
 - `GET /api/v1/tickets/status` (anonymous status payload).
+- `POST /api/v1/tickets` (`tickets:create`, requires `X-Change-Reason`, rejects direct participant PII, derives reporter/creator strictly from verified gateway claims, enforces study/site `CallerScope`, and computes Dual-Target SLA deadlines via `IClock`).
+- `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticket_id}` (`tickets:read`, filtered to the caller's authorized study and site scope).
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
 - The gateway forwards `/api/v1/tickets/**` to this service. Compose publishes host port 8009 (container port 8080).
 
@@ -30,12 +32,13 @@ Support ticket scaffold. It holds the ticket, comment, attachment and audit log 
 
 ## Key dependencies
 
-- Project references: `Cadence.Core.Domain`, `Cadence.Kernel.Abstractions`, `Cadence.Security`, `Cadence.Telemetry`, `Cadence.Contracts`, `Cadence.Database`.
+- Project references: `Cadence.Core.Domain`, `Cadence.Kernel.Abstractions`, `Cadence.Security`, `Cadence.Telemetry`, `Cadence.Contracts`, `Cadence.Database`, `Cadence.Deid`.
 - Packages: `Microsoft.AspNetCore.OpenApi`, `Scalar.AspNetCore`, `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.EntityFrameworkCore`, `FluentValidation` (versions in `Directory.Packages.props`).
 
 ## Tests
 
-- No service-specific tests exist yet.
+- Unit and endpoint tests: `tests/Cadence.UnitTests/Tickets/TicketEndpointsTests.cs` and `tests/Cadence.UnitTests/Tickets/TicketLifecycleTests.cs`.
+- PostgreSQL integration tests: `tests/Cadence.IntegrationTests/Tickets/TicketPersistenceAndAuditPostgresTests.cs`.
 - Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 
 ## Run locally

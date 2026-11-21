@@ -381,8 +381,8 @@ const outcomeBadgeText = computed(() => {
 
 <style scoped>
 .subject-enrollment-card {
-  background-color: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md, 8px);
   padding: var(--spacing-md, 16px);
   margin-bottom: var(--spacing-md, 20px);
@@ -403,7 +403,7 @@ const outcomeBadgeText = computed(() => {
   margin: 0;
   font-size: 1.15rem;
   font-weight: 700;
-  color: var(--text-primary, #0f172a);
+  color: var(--semantic-color-text);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -412,7 +412,7 @@ const outcomeBadgeText = computed(() => {
 .card-subtitle {
   margin: 4px 0 0 0;
   font-size: 0.85rem;
-  color: var(--text-secondary, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 
 .enrollment-form-body {
@@ -440,26 +440,26 @@ const outcomeBadgeText = computed(() => {
 .screening-evaluation-pane {
   padding: 12px 16px;
   border-radius: var(--radius-md, 6px);
-  border: 1px solid var(--border, #e2e8f0);
-  background-color: var(--surface-secondary, #f8fafc);
+  border: 1px solid var(--border);
+  background-color: var(--semantic-color-surface-header);
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
 .eligible-pane {
-  background-color: #f0fdf4;
-  border-color: #86efac;
+  background-color: var(--semantic-color-success-bg-soft);
+  border-color: var(--semantic-color-success-border);
 }
 
 .ineligible-pane {
-  background-color: #fef2f2;
-  border-color: #fca5a5;
+  background-color: var(--semantic-color-error-bg-soft);
+  border-color: var(--semantic-color-error-border);
 }
 
 .indeterminate-pane {
-  background-color: #fffbeb;
-  border-color: #fde68a;
+  background-color: var(--semantic-color-warning-bg-soft);
+  border-color: var(--semantic-color-warning-border);
 }
 
 .screening-header-row {
@@ -482,7 +482,7 @@ const outcomeBadgeText = computed(() => {
 
 .criteria-list-title {
   font-weight: 600;
-  color: var(--text-secondary, #475569);
+  color: var(--semantic-color-text-secondary);
   margin-bottom: 4px;
 }
 
@@ -503,7 +503,7 @@ const outcomeBadgeText = computed(() => {
   justify-content: flex-end;
   gap: var(--spacing-sm, 12px);
   padding-top: var(--spacing-sm, 8px);
-  border-top: 1px solid var(--border, #f1f5f9);
+  border-top: 1px solid var(--border);
 }
 
 .btn {
@@ -520,22 +520,22 @@ const outcomeBadgeText = computed(() => {
 }
 
 .btn-primary {
-  background-color: var(--primary, #2563eb);
-  color: #ffffff;
+  background-color: var(--primary);
+  color: var(--semantic-color-surface);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: var(--primary-hover, #1d4ed8);
+  background-color: var(--semantic-color-interactive-primary-hover);
 }
 
 .btn-secondary {
-  background-color: var(--surface, #ffffff);
-  border-color: var(--border, #cbd5e1);
-  color: var(--text-primary, #334155);
+  background-color: var(--semantic-color-surface);
+  border-color: var(--border);
+  color: var(--semantic-color-text);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background-color: var(--surface-hover, #f8fafc);
+  background-color: var(--semantic-color-surface-header);
 }
 
 .btn:disabled {
@@ -553,22 +553,22 @@ const outcomeBadgeText = computed(() => {
 }
 
 .badge-success {
-  background-color: #dcfce7;
-  color: #15803d;
+  background-color: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
 }
 
 .badge-danger {
-  background-color: #fee2e2;
-  color: #b91c1c;
+  background-color: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
 }
 
 .badge-warning {
-  background-color: #fef3c7;
-  color: #b45309;
+  background-color: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning);
 }
 
 .badge-secondary {
-  background-color: #f1f5f9;
-  color: #64748b;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 </style>
