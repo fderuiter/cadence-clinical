@@ -37,20 +37,23 @@ signatures and audit digests shared by every Cadence service.
   printable ASCII, or RFC 8187 `UTF-8''` percent-encoded UTF-8 for any other text. Every reader decodes the
   header with it, so the audit trail stores what the user typed
   ([ADR-2495](../../docs/adr/2026-09-30-reason-for-change-header-encoding.md)). A signed request without `X-Tenant-Id` authenticates with no
-  `tenant_id` claim; there is no default tenant, and `GatewayIdentity.TenantId` is null when the sign-in names none
-  ([ADR-2514](../../docs/adr/2026-09-30-the-tenant-comes-from-sign-in-with-no-fallback.md)).
-- **Authorization:** `PermissionMatrix`, `RoleNormalization`, `Principal`, site/study access evaluators
-  and the permission, role, study-scope, change-justification and auditor-read-only handlers.
+  `tenant_id` claim; there is no default tenant, and `GatewayIdentity.TenantId`, `Principal.TenantId`, and `CallerScope.TenantId` are null when
+  the sign-in names none ([ADR-2514](../../docs/adr/2026-09-30-the-tenant-comes-from-sign-in-with-no-fallback.md)).
+- **Authorization:** `PermissionMatrix`, `RoleNormalization`, `Principal`, `ClinicalScopeGuard`, site/study access evaluators
+  and the permission, role, tenant-scope, study-scope, site-scope, change-justification and auditor-read-only handlers.
   `RequirePermission("resource:action")` on a route requires that permission in `PermissionMatrix`; the
   `PermissionPolicyProvider` registered by `AddCadenceSecurity()` builds the policy and a caller without it
   gets `403` ([ADR-2510](../../docs/adr/2026-09-30-endpoint-permissions-from-the-permission-matrix.md)).
   Routes are denied by default: the fallback policy refuses any route that declares neither a permission,
   `RequireSignedInCaller(reason)` (any signed caller, with the reason kept on the endpoint) nor `AllowAnonymous()`.
   Module permissions live in `PermissionMatrix.<Module>.cs`, and a permission no role holds is refused.
-  `RequireStudyScope(routeParameter)` and `RequireSiteScope(routeParameter)` admit a caller only for the study or
-  site the route names; study assignments arrive signed in `X-Study-Ids` from the sign-in token's `study_ids` claim.
-  Handlers check scope the route cannot name (a body field, a stored record, a list) through `CallerScope`, which
-  fails closed ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
+  Standalone routes also declare explicit `EndpointScopeMetadata` via `RequireTenantScope()`, `RequireCallerStudyScope()`,
+  `RequireCallerStudyAndSiteScope()`, `RequireStudyScope(routeParameter)` and `RequireSiteScope(routeParameter)`; study assignments
+  arrive signed in `X-Study-Ids` from the sign-in token's `study_ids` claim. Handlers check scope that the route path cannot name
+  (query/body parameters, stored records, or filtered matrix lists) through `ClinicalScopeGuard` (`EnsureTenant`, `EnsureStudy`,
+  `EnsureSite`, `EnsureStudyAndSite`, `FilterAuthorizedSiteIds`) and `CallerScope`, failing closed with HTTP 403
+  ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md),
+  [ADR-2548](../../docs/adr/2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md)).
 - **Blinding:** `BlindedFieldAttribute`, `FieldMasker`.
 - **Signatures:** `CanonicalSigner` (canonical JSON + HMAC-SHA256) and `AsymmetricSigner` (RSA/X.509),
   used by `Cadence.Deid` for redaction manifests and de-identification certificates.

@@ -46,7 +46,7 @@ public static class DoaEndpoints
             .Produces<DelegationResponseDto>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(AssignPermission);
+            .RequirePermission(AssignPermission).RequireCallerStudyAndSiteScope();
 
         doa.MapPost("/revoke", RevokeDelegationAsync)
             .WithName("RevokeSiteTasks")
@@ -54,7 +54,7 @@ public static class DoaEndpoints
             .Produces<DelegationResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(RevokePermission);
+            .RequirePermission(RevokePermission).RequireCallerStudyAndSiteScope();
 
         doa.MapPost("/sign-off", SignOffDelegationAsync)
             .WithName("SignOffDelegation")
@@ -62,21 +62,23 @@ public static class DoaEndpoints
             .Produces<DelegationResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(SignOffPermission);
+            .RequirePermission(SignOffPermission).RequireCallerStudyAndSiteScope();
 
         doa.MapGet("/sites/{site_id}/log", GetSiteDoaLogAsync)
             .WithName("GetSiteDoaLog")
             .WithSummary("Fetch active and historical DOA log matrix for a site.")
             .Produces<DoaLogResponseDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(ReadPermission);
+            .RequirePermission(ReadPermission).RequireSiteScope("site_id");
 
         doa.MapGet("/sites/{site_id}/export-pdf", ExportSiteDoaPdfAsync)
             .WithName("ExportSiteDoaPdf")
             .WithSummary("Export 21 CFR Part 11 signed DOA PDF log.")
             .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(ReadPermission);
+            .RequirePermission(ReadPermission).RequireSiteScope("site_id");
 
         return group;
     }
@@ -131,6 +133,11 @@ public static class DoaEndpoints
         if (!TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
         {
             return problem!;
+        }
+
+        if (await AuthorizeSiteAccessAsync(db, httpContext, request.Site, ct) is { } delegateSiteDenied)
+        {
+            return delegateSiteDenied;
         }
 
         if (!await SiteExistsAsync(db, request.Site, ct))
@@ -209,6 +216,11 @@ public static class DoaEndpoints
                 statusCode: StatusCodes.Status404NotFound);
         }
 
+        if (await AuthorizeSiteAccessAsync(db, httpContext, delegation.SiteId, ct) is { } revokeSiteDenied)
+        {
+            return revokeSiteDenied;
+        }
+
         if (!delegation.IsActive)
         {
             return TypedResults.Problem(
@@ -273,6 +285,11 @@ public static class DoaEndpoints
                 statusCode: StatusCodes.Status404NotFound);
         }
 
+        if (await AuthorizeSiteAccessAsync(db, httpContext, delegation.SiteId, ct) is { } signOffSiteDenied)
+        {
+            return signOffSiteDenied;
+        }
+
         if (!delegation.IsActive)
         {
             return TypedResults.Problem(
@@ -318,8 +335,14 @@ public static class DoaEndpoints
     public static async Task<IResult> GetSiteDoaLogAsync(
         [FromRoute(Name = "site_id")] string siteId,
         CtmsDbContext db,
-        CancellationToken ct)
+        CancellationToken ct,
+        HttpContext? httpContext = null)
     {
+        if (httpContext is not null && await AuthorizeSiteAccessAsync(db, httpContext, siteId, ct) is { } logSiteDenied)
+        {
+            return logSiteDenied;
+        }
+
         if (string.IsNullOrWhiteSpace(siteId) || !await SiteExistsAsync(db, siteId, ct))
         {
             return TypedResults.Problem(
@@ -361,6 +384,11 @@ public static class DoaEndpoints
         [FromServices] IClock clock,
         CancellationToken ct)
     {
+        if (await AuthorizeSiteAccessAsync(db, httpContext, siteId, ct) is { } exportSiteDenied)
+        {
+            return exportSiteDenied;
+        }
+
         if (string.IsNullOrWhiteSpace(siteId) || !await SiteExistsAsync(db, siteId, ct))
         {
             return TypedResults.Problem(
@@ -451,6 +479,42 @@ public static class DoaEndpoints
         await db.SaveChangesAsync(ct);
 
         return Results.File(signedPdfBytes, "application/pdf", $"DOA_Log_{siteId}.pdf");
+    }
+
+    private static async Task<IResult?> AuthorizeSiteAccessAsync(
+        CtmsDbContext db,
+        HttpContext httpContext,
+        string siteId,
+        CancellationToken ct)
+    {
+        if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is null)
+        {
+            return null;
+        }
+
+        if (ClinicalScopeGuard.RequireAnyStudyScope(httpContext) is { } noStudy)
+        {
+            return noStudy;
+        }
+
+        if (!string.IsNullOrWhiteSpace(siteId) && ClinicalScopeGuard.RequireSite(httpContext, siteId) is { } siteDenied)
+        {
+            return siteDenied;
+        }
+
+        if (!string.IsNullOrWhiteSpace(siteId))
+        {
+            var gate = await db.CtmsSiteGreenlightGates.AsNoTracking()
+                .FirstOrDefaultAsync(g => g.SiteId == siteId, ct);
+            if (gate is not null
+                && !string.IsNullOrWhiteSpace(gate.StudyId)
+                && ClinicalScopeGuard.RequireStudy(httpContext, gate.StudyId) is { } studyDenied)
+            {
+                return studyDenied;
+            }
+        }
+
+        return null;
     }
 
     public static async Task<bool> SiteExistsAsync(CtmsDbContext db, string siteId, CancellationToken ct)

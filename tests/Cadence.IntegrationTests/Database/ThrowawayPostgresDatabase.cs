@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Database.Tenancy;
 using Cadence.Testing.Persistence;
 
 using Npgsql;
@@ -41,6 +42,8 @@ public sealed class ThrowawayPostgresDatabase : IAsyncLifetime
 
     public string? ConnectionString { get; private set; }
 
+    public string? AdminDatabaseConnectionString { get; private set; }
+
     public void SkipIfUnavailable() => Assert.SkipWhen(ConnectionString is null, SkipReason);
 
     public async ValueTask InitializeAsync()
@@ -69,12 +72,20 @@ public sealed class ThrowawayPostgresDatabase : IAsyncLifetime
             _adminConnectionString,
             $"CREATE ROLE \"{_roleName}\" LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE PASSWORD '{password}'").ConfigureAwait(false);
         await ExecuteAsync(_adminConnectionString, $"CREATE DATABASE \"{_databaseName}\" OWNER \"{_roleName}\"").ConfigureAwait(false);
+
+        AdminDatabaseConnectionString = new NpgsqlConnectionStringBuilder(_adminConnectionString)
+        {
+            Database = _databaseName,
+        }.ConnectionString;
+
         ConnectionString = new NpgsqlConnectionStringBuilder(_adminConnectionString)
         {
             Database = _databaseName,
             Username = _roleName,
             Password = password,
         }.ConnectionString;
+
+        await BootstrapStandaloneTenantDirectoryAsync(AdminDatabaseConnectionString, _roleName).ConfigureAwait(false);
     }
 
     public async ValueTask DisposeAsync()
@@ -98,5 +109,78 @@ public sealed class ThrowawayPostgresDatabase : IAsyncLifetime
         await connection.OpenAsync().ConfigureAwait(false);
         await using var command = new NpgsqlCommand(sql, connection);
         await command.ExecuteNonQueryAsync().ConfigureAwait(false);
+    }
+
+    public static async Task BootstrapStandaloneTenantDirectoryAsync(string adminDbConnectionString, string? ownerRole = null)
+    {
+        await using var conn = new NpgsqlConnection(adminDbConnectionString);
+        await conn.OpenAsync().ConfigureAwait(false);
+
+        string ownerGrantSql = string.IsNullOrWhiteSpace(ownerRole)
+            ? string.Empty
+            : $"""
+                GRANT USAGE ON SCHEMA "kernel" TO "{ownerRole}";
+                GRANT SELECT, INSERT, UPDATE ON TABLE "kernel"."tenants" TO "{ownerRole}";
+                GRANT EXECUTE ON FUNCTION "kernel".current_tenant_id() TO "{ownerRole}";
+                GRANT EXECUTE ON FUNCTION "kernel".tenant_id_by_code(text) TO "{ownerRole}";
+                GRANT EXECUTE ON FUNCTION "kernel".tenant_ids() TO "{ownerRole}";
+                """;
+
+        await using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = $"""
+                CREATE SCHEMA IF NOT EXISTS "kernel";
+                CREATE TABLE IF NOT EXISTS "kernel"."tenants" (
+                    id uuid PRIMARY KEY,
+                    code text NOT NULL UNIQUE,
+                    name text NOT NULL,
+                    is_active boolean NOT NULL DEFAULT true
+                );
+                CREATE OR REPLACE FUNCTION "kernel".current_tenant_id() RETURNS uuid
+                LANGUAGE sql STABLE PARALLEL SAFE AS $fn$
+                    SELECT NULLIF(pg_catalog.current_setting('cadence.tenant_id', true), '')::uuid
+                $fn$;
+                CREATE OR REPLACE FUNCTION "kernel".tenant_id_by_code(tenant_code text) RETURNS uuid
+                LANGUAGE sql STABLE SECURITY DEFINER
+                SET search_path = pg_catalog, pg_temp
+                AS $fn$
+                    SELECT t.id FROM "kernel"."tenants" t WHERE t.code = tenant_code AND t.is_active
+                $fn$;
+                CREATE OR REPLACE FUNCTION "kernel".tenant_ids() RETURNS SETOF uuid
+                LANGUAGE sql STABLE SECURITY DEFINER
+                SET search_path = pg_catalog, pg_temp
+                AS $fn$
+                    SELECT t.id FROM "kernel"."tenants" t WHERE t.is_active ORDER BY t.id
+                $fn$;
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'cadence_app') THEN
+                        CREATE ROLE cadence_app LOGIN PASSWORD 'cadence_app' NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+                    END IF;
+                END
+                $$;
+                GRANT USAGE ON SCHEMA "kernel" TO cadence_app;
+                GRANT SELECT ON TABLE "kernel"."tenants" TO cadence_app;
+                GRANT EXECUTE ON FUNCTION "kernel".current_tenant_id() TO cadence_app;
+                GRANT EXECUTE ON FUNCTION "kernel".tenant_id_by_code(text) TO cadence_app;
+                GRANT EXECUTE ON FUNCTION "kernel".tenant_ids() TO cadence_app;
+                {ownerGrantSql}
+                """;
+            await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+        }
+
+        foreach (string code in new[] { "tenant-test", "tenant-alpha", "tenant-beta", "tenant-a", "tenant-b" })
+        {
+            Guid id = DeterministicTenantCodeResolver.ComputeDeterministicGuid(code);
+            await using var ins = conn.CreateCommand();
+            ins.CommandText = """
+                INSERT INTO "kernel"."tenants" (id, code, name, is_active)
+                VALUES (@id, @code, @code, true)
+                ON CONFLICT (code) DO NOTHING;
+                """;
+            ins.Parameters.AddWithValue("id", id);
+            ins.Parameters.AddWithValue("code", code);
+            await ins.ExecuteNonQueryAsync().ConfigureAwait(false);
+        }
     }
 }

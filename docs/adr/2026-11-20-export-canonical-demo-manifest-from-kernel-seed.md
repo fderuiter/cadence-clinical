@@ -1,4 +1,4 @@
-# ADR-2548: Export Canonical Demo Manifest from Kernel Seed
+# ADR-2549: Export Canonical Demo Manifest from Kernel Seed
 
 - **Status:** Accepted
 - **Date:** 2026-11-20

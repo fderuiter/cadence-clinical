@@ -30,6 +30,35 @@ export const worker = workerInstance;
 
 let startPromise = null;
 
+export async function ensureServiceWorkerController(timeoutMs = 1500) {
+  if (
+    typeof navigator === "undefined" ||
+    !("serviceWorker" in navigator) ||
+    typeof navigator.serviceWorker?.addEventListener !== "function" ||
+    navigator.serviceWorker.controller
+  ) {
+    return;
+  }
+  await new Promise((resolve) => {
+    let timer = null;
+    const done = () => {
+      if (timer !== null) {
+        clearTimeout(timer);
+      }
+      navigator.serviceWorker?.removeEventListener?.("controllerchange", done);
+      resolve();
+    };
+    navigator.serviceWorker.addEventListener("controllerchange", done, {
+      once: true,
+    });
+    if (navigator.serviceWorker.controller) {
+      done();
+      return;
+    }
+    timer = setTimeout(done, timeoutMs);
+  });
+}
+
 export async function startMswWorker(customOptions = {}) {
   const activeWorker = customOptions.worker ?? worker;
   if (typeof window === "undefined" || !activeWorker) return null;
@@ -46,6 +75,7 @@ export async function startMswWorker(customOptions = {}) {
         serviceWorker,
       });
       await waitForMswController();
+      await ensureServiceWorkerController();
       console.log(
         "[MSW] Mock Service Worker started for Web App API Gateway simulation."
       );

@@ -9,10 +9,10 @@ Generated from the EF Core model of `Cadence.Apps.Notifications.Infrastructure.P
 | [`notifications.InboxState`](#notificationsinboxstate) | `InboxState` | 11 |
 | [`notifications.OutboxMessage`](#notificationsoutboxmessage) | `OutboxMessage` | 21 |
 | [`notifications.OutboxState`](#notificationsoutboxstate) | `OutboxState` | 6 |
-| [`notifications.audit_log_entries`](#notificationsaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`notifications.notification_audit_logs`](#notificationsnotification_audit_logs) | `NotificationAuditLog` | 6 |
-| [`notifications.notification_deliveries`](#notificationsnotification_deliveries) | `NotificationDelivery` | 9 |
-| [`notifications.notification_records`](#notificationsnotification_records) | `NotificationRecord` | 16 |
+| [`notifications.audit_log_entries`](#notificationsaudit_log_entries) | `AuditLogEntry` | 12 |
+| [`notifications.notification_audit_logs`](#notificationsnotification_audit_logs) | `NotificationAuditLog` | 7 |
+| [`notifications.notification_deliveries`](#notificationsnotification_deliveries) | `NotificationDelivery` | 10 |
+| [`notifications.notification_records`](#notificationsnotification_records) | `NotificationRecord` | 17 |
 
 ## notifications.InboxState
 
@@ -111,10 +111,12 @@ Entity: `AuditLogEntry`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+- `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
 ## notifications.notification_audit_logs
 
@@ -128,11 +130,13 @@ Entity: `NotificationAuditLog`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `UserRole` | `character varying(255)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_notification_audit_logs_Timestamp`: (`Timestamp`)
 - `IX_notification_audit_logs_UserId`: (`UserId`)
+- `IX_notification_audit_logs_tenant_id`: (`tenant_id`)
 
 ## notifications.notification_deliveries
 
@@ -149,10 +153,12 @@ Entity: `NotificationDelivery`
 | `NotificationId` | `character varying(36)` | no |  |  |
 | `RetryEligible` | `boolean` | no |  |  |
 | `Status` | `character varying(50)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_notification_deliveries_NotificationId`: (`NotificationId`)
+- `IX_notification_deliveries_tenant_id`: (`tenant_id`)
 
 ## notifications.notification_records
 
@@ -176,8 +182,10 @@ Entity: `NotificationRecord`
 | `Retries` | `integer` | no |  |  |
 | `Status` | `character varying(50)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_notification_records_RecipientRoleId`: (`RecipientRoleId`)
 - `IX_notification_records_RecipientUserId`: (`RecipientUserId`)
+- `IX_notification_records_tenant_id`: (`tenant_id`)

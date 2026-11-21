@@ -6,23 +6,40 @@ namespace Cadence.Apps.Etmf.Workers;
 
 public sealed class EtmfExportQueue
 {
-    private readonly Channel<string> _channel = Channel.CreateBounded<string>(new BoundedChannelOptions(100)
-    {
-        FullMode = BoundedChannelFullMode.Wait
-    });
+    private readonly Channel<(string JobId, string? TenantCode)> _channel =
+        Channel.CreateBounded<(string JobId, string? TenantCode)>(new BoundedChannelOptions(100)
+        {
+            FullMode = BoundedChannelFullMode.Wait,
+        });
 
-    public async ValueTask EnqueueAsync(string jobId, CancellationToken ct = default)
+    public ValueTask EnqueueAsync(string jobId, CancellationToken ct = default) =>
+        EnqueueAsync(jobId, tenantCode: null, ct);
+
+    public async ValueTask EnqueueAsync(string jobId, string? tenantCode, CancellationToken ct = default)
     {
-        await _channel.Writer.WriteAsync(jobId, ct);
+        await _channel.Writer.WriteAsync((jobId, tenantCode), ct);
     }
 
-    public ValueTask<string> DequeueAsync(CancellationToken ct = default)
+    public async ValueTask<string> DequeueAsync(CancellationToken ct = default)
     {
-        return _channel.Reader.ReadAsync(ct);
+        var item = await _channel.Reader.ReadAsync(ct);
+        return item.JobId;
     }
 
-    public bool TryDequeue(out string jobId)
+    public bool TryDequeue(out string jobId) =>
+        TryDequeue(out jobId, out _);
+
+    public bool TryDequeue(out string jobId, out string? tenantCode)
     {
-        return _channel.Reader.TryRead(out jobId!);
+        if (_channel.Reader.TryRead(out var item))
+        {
+            jobId = item.JobId;
+            tenantCode = item.TenantCode;
+            return true;
+        }
+
+        jobId = default!;
+        tenantCode = null;
+        return false;
     }
 }

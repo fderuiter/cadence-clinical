@@ -8,9 +8,11 @@ using System.Threading.Tasks;
 using Cadence.Apps.Knowledge.Domain;
 using Cadence.Apps.Knowledge.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Database.Tenancy;
 using Cadence.Kernel.Time;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Cadence.Apps.Knowledge.Application;
 
@@ -72,12 +74,18 @@ public static class KnowledgeCatalogSeeder
         "auditor",
     ];
 
+    private static readonly Guid DefaultTestTenantGuid =
+        DeterministicTenantCodeResolver.ComputeDeterministicGuid("tenant-test");
+
     public static async Task EnsureSeededAsync(KnowledgeDbContext db, IClock clock, CancellationToken ct = default)
     {
-        // Fast path: once our canonical SSU + Studies + eCRF + CTMS SOPs exist, skip locking and writes entirely.
+        string tenantSuffix = await ResolveSeedTenantSuffixAsync(db, ct).ConfigureAwait(false);
+        string ssuSentinelId = $"art-ssu-sop{tenantSuffix}";
+
+        // Fast path: once our canonical SSU + Studies + eCRF + CTMS SOPs exist for this tenant, skip locking and writes entirely.
         bool alreadySeeded = await db.KnowledgeArticles
             .AsNoTracking()
-            .AnyAsync(a => a.Id == "art-ssu-sop", ct)
+            .AnyAsync(a => a.Id == ssuSentinelId, ct)
             .ConfigureAwait(false);
         if (alreadySeeded)
         {
@@ -89,7 +97,7 @@ public static class KnowledgeCatalogSeeder
         {
             bool recheck = await db.KnowledgeArticles
                 .AsNoTracking()
-                .AnyAsync(a => a.Id == "art-ssu-sop", ct)
+                .AnyAsync(a => a.Id == ssuSentinelId, ct)
                 .ConfigureAwait(false);
             if (recheck)
             {
@@ -99,7 +107,7 @@ public static class KnowledgeCatalogSeeder
             using var _ = KnowledgeAuditActorScope.Begin(CatalogServiceAccount);
             DateTimeOffset seededAt = clock.UtcNow;
 
-            var categories = BuildCategories(seededAt);
+            var categories = BuildCategories(seededAt, tenantSuffix);
             var existingCategoryIds = await db.KnowledgeCategories
                 .Select(c => c.Id)
                 .ToHashSetAsync(StringComparer.Ordinal, ct)
@@ -110,7 +118,7 @@ public static class KnowledgeCatalogSeeder
                 db.KnowledgeCategories.Add(category);
             }
 
-            var seeds = BuildSopSeeds(seededAt);
+            var seeds = BuildSopSeeds(seededAt, tenantSuffix);
             var existingArticleIds = await db.KnowledgeArticles
                 .Select(a => a.Id)
                 .ToHashSetAsync(StringComparer.Ordinal, ct)
@@ -162,12 +170,35 @@ public static class KnowledgeCatalogSeeder
         }
     }
 
+    private static async Task<string> ResolveSeedTenantSuffixAsync(KnowledgeDbContext db, CancellationToken ct)
+    {
+        var ext = db.GetService<IDbContextOptions>()?.FindExtension<StandaloneTenantOptionsExtension>();
+        Guid? tenantId = ext?.TenantAccessor is not null
+            ? await ext.TenantAccessor.GetCurrentTenantIdAsync(ct).ConfigureAwait(false)
+            : null;
+        if (tenantId is null || tenantId.Value == Guid.Empty || tenantId.Value == DefaultTestTenantGuid)
+        {
+            return string.Empty;
+        }
+
+        return $"-{tenantId.Value.ToString("N")[..8]}";
+    }
+
     private sealed record SopSeed(
         KnowledgeArticle Article,
         KnowledgeArticleVersion Version,
         IReadOnlyList<ContextualHelpMapping> Mappings);
 
-    private static List<KnowledgeCategory> BuildCategories(DateTimeOffset createdAt) =>
+    private static List<KnowledgeCategory> BuildCategories(DateTimeOffset createdAt, string tenantSuffix) =>
+        BuildBaseCategories(createdAt)
+            .Select(c =>
+            {
+                c.Id = $"{c.Id}{tenantSuffix}";
+                return c;
+            })
+            .ToList();
+
+    private static List<KnowledgeCategory> BuildBaseCategories(DateTimeOffset createdAt) =>
     [
         NewCategory(
             "cat-clinical-ops",
@@ -223,7 +254,35 @@ public static class KnowledgeCatalogSeeder
             VersionIndex = 1,
         };
 
-    private static List<SopSeed> BuildSopSeeds(DateTimeOffset baseTime)
+    private static List<SopSeed> BuildSopSeeds(DateTimeOffset baseTime, string tenantSuffix) =>
+        BuildBaseSopSeeds(baseTime)
+            .Select(seed => ApplyTenantSuffix(seed, tenantSuffix))
+            .ToList();
+
+    private static SopSeed ApplyTenantSuffix(SopSeed seed, string tenantSuffix)
+    {
+        if (tenantSuffix.Length == 0)
+        {
+            return seed;
+        }
+
+        seed.Article.Id = $"{seed.Article.Id}{tenantSuffix}";
+        seed.Article.CategoryId = $"{seed.Article.CategoryId}{tenantSuffix}";
+        seed.Article.CurrentPublishedVersionId = $"{seed.Article.CurrentPublishedVersionId}{tenantSuffix}";
+
+        seed.Version.Id = $"{seed.Version.Id}{tenantSuffix}";
+        seed.Version.ArticleId = seed.Article.Id;
+
+        foreach (var mapping in seed.Mappings)
+        {
+            mapping.Id = $"{mapping.Id}{tenantSuffix}";
+            mapping.ArticleId = seed.Article.Id;
+        }
+
+        return seed;
+    }
+
+    private static List<SopSeed> BuildBaseSopSeeds(DateTimeOffset baseTime)
     {
         var list = new List<SopSeed>
         {

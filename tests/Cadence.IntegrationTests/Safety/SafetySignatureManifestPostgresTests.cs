@@ -12,6 +12,8 @@ using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Endpoints;
 using Cadence.Apps.Safety.Infrastructure.Persistence;
 using Cadence.Compliance;
+using Cadence.Database;
+using Cadence.Database.Tenancy;
 using Cadence.Security.Authentication;
 using Cadence.Testing.Security;
 using Cadence.Testing.Time;
@@ -244,7 +246,17 @@ public sealed class SafetySignatureManifestPostgresTests(SafetyPostgresApiFactor
     /// </summary>
     private SafetyDbContext CreateContext()
     {
-        string connectionString = factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("cadence")!;
-        return new SafetyDbContext(new DbContextOptionsBuilder<SafetyDbContext>().UseNpgsql(connectionString).Options);
+        string baseConnectionString = factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("cadence")!;
+        string connectionString = Cadence.Database.CadenceDatabaseExtensions.WithModuleSchema(
+            baseConnectionString,
+            SafetyDbContextFactory.Schema);
+        var tenantAccessor = factory.Services.GetRequiredService<Cadence.Database.Tenancy.ICurrentTenantAccessor>();
+        var optionsBuilder = new DbContextOptionsBuilder<SafetyDbContext>();
+        optionsBuilder.UseNpgsql(connectionString);
+        optionsBuilder.UseCadenceStandaloneTenancy(tenantAccessor, isRelational: true);
+        optionsBuilder.AddInterceptors(
+            StandaloneTenantConnectionInterceptor.Instance,
+            StandaloneTenantSaveChangesInterceptor.Instance);
+        return new SafetyDbContext(optionsBuilder.Options);
     }
 }

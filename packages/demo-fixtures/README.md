@@ -10,7 +10,7 @@ Canonical synthetic trial catalog shared across the public static demos (`apps/w
 
 `src/manifest.js` and `src/manifest.d.ts` are generated from the authoritative backend seed sources:
 
-- `apps/kernel-api/src/DevelopmentDemoData.cs` (ADR-2543, ADR-2548)
+- `apps/kernel-api/src/DevelopmentDemoData.cs` (ADR-2543, ADR-2549)
 - `apps/execution/src/Infrastructure/Persistence/ExecutionDbSeeder.cs`
 - `docker/cadence-realm.json`
 
