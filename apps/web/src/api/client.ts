@@ -13,8 +13,8 @@ export function getBaseUrl(): string {
   const configured = import.meta.env?.VITE_API_BASE_URL;
   if (configured) return configured;
   const isDemo =
-    import.meta.env.MODE === "demo" ||
-    import.meta.env.VITE_DEMO_MODE === "true";
+    import.meta.env?.MODE === "demo" ||
+    import.meta.env?.VITE_DEMO_MODE === "true";
   if (
     isDemo &&
     typeof globalThis.location?.origin === "string" &&
@@ -72,7 +72,7 @@ export function getAuthMiddleware(): Middleware {
   };
 }
 
-function dispatchOpenApiFetch(
+async function dispatchOpenApiFetch(
   initialBaseUrl: string,
   input: RequestInfo | URL,
   init?: RequestInit
@@ -85,7 +85,25 @@ function dispatchOpenApiFetch(
     input.url.startsWith(`${initialBase}/`)
   ) {
     const rewrittenUrl = `${currentBase}${input.url.slice(initialBase.length)}`;
-    return globalThis.fetch(new Request(rewrittenUrl, input), init);
+    const rawBody =
+      input.method === "GET" || input.method === "HEAD"
+        ? null
+        : await input.arrayBuffer();
+    return globalThis.fetch(
+      new Request(rewrittenUrl, {
+        method: input.method,
+        headers: input.headers,
+        body: rawBody && rawBody.byteLength > 0 ? rawBody : undefined,
+        credentials: input.credentials,
+        mode: input.mode,
+        redirect: input.redirect,
+        referrer: input.referrer,
+        referrerPolicy: input.referrerPolicy,
+        integrity: input.integrity,
+        signal: input.signal,
+      }),
+      init
+    );
   }
   return globalThis.fetch(input, init);
 }
