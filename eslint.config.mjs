@@ -63,6 +63,7 @@ export default [
       "**/dist/**",
       "**/node_modules/**",
       "**/.venv/**",
+      "**/.cadence/**",
       "**/venv/**",
       "**/.pytest_cache/**",
       "**/playwright-report/**",
