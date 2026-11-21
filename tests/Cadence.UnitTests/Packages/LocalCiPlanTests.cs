@@ -397,6 +397,118 @@ public partial class LocalCiPlanTests
         CiPlan.AotRuntimeIdentifier.Should().MatchRegex("^(linux|osx|win)-(x64|arm64|x86|arm)$");
     }
 
+    [Fact]
+    public void SetupNodePnpmCache_IsUsedOnlyInJobsThatRunPnpmInstall()
+    {
+        string workflowsDir = Path.Combine(RepoRoot(), ".github", "workflows");
+        var violations = Directory.EnumerateFiles(workflowsDir, "*.yml")
+            .OrderBy(p => p, StringComparer.Ordinal)
+            .SelectMany(path => FindJobsWithUnpopulatedPnpmCache(Path.GetFileName(path), File.ReadAllLines(path)))
+            .ToList();
+
+        violations.Should().BeEmpty(
+            "actions/setup-node with 'cache: pnpm' fails its post-job saveCache step with a Path Validation Error whenever pnpm-lock.yaml changes and no step runs 'pnpm install' to create the pnpm store directory");
+
+        string[] driftedWorkflow =
+        [
+            "jobs:",
+            "  security:",
+            "    name: Security and Vulnerability Audit",
+            "    steps:",
+            "      - name: Set up Node.js",
+            "        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7",
+            "        with:",
+            "          node-version: \"22\"",
+            "          cache: \"pnpm\"",
+            "      - name: Run dependency audit",
+            "        run: node scripts/run-cli.js check vulnerabilities",
+        ];
+
+        FindJobsWithUnpopulatedPnpmCache("ci.yml", driftedWorkflow)
+            .Should().Equal("ci.yml:security");
+    }
+
+    private static List<string> FindJobsWithUnpopulatedPnpmCache(string workflowFile, string[] lines)
+    {
+        var violations = new List<string>();
+        foreach (var job in ParseWorkflow(lines))
+        {
+            if (!JobUsesSetupNodePnpmCache(lines, job.Key))
+            {
+                continue;
+            }
+
+            bool installsPackages = job.Steps.Any(
+                s => s.Run?.Contains("pnpm install", StringComparison.Ordinal) is true);
+            if (!installsPackages)
+            {
+                violations.Add($"{workflowFile}:{job.Key}");
+            }
+        }
+
+        return violations;
+    }
+
+    private static bool JobUsesSetupNodePnpmCache(string[] lines, string jobKey)
+    {
+        foreach (string stepBlock in ExtractJobStepBlocks(lines, jobKey))
+        {
+            if (stepBlock.Contains("actions/setup-node", StringComparison.Ordinal) &&
+                SetupNodePnpmCacheLine().IsMatch(stepBlock))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static List<string> ExtractJobStepBlocks(string[] lines, string jobKey)
+    {
+        string jobHeader = $"  {jobKey}:";
+        int start = Array.FindIndex(lines, l => l.TrimEnd() == jobHeader);
+        if (start < 0)
+        {
+            return [];
+        }
+
+        var blocks = new List<string>();
+        var current = new List<string>();
+        for (int i = start + 1; i < lines.Length; i++)
+        {
+            string line = lines[i];
+            if (TryMatch(line, @"^  ([A-Za-z0-9_-]+):\s*$", out _))
+            {
+                break;
+            }
+
+            if (line.StartsWith("      - ", StringComparison.Ordinal))
+            {
+                if (current.Count > 0)
+                {
+                    blocks.Add(string.Join('\n', current));
+                    current.Clear();
+                }
+
+                current.Add(line);
+            }
+            else if (current.Count > 0)
+            {
+                current.Add(line);
+            }
+        }
+
+        if (current.Count > 0)
+        {
+            blocks.Add(string.Join('\n', current));
+        }
+
+        return blocks;
+    }
+
+    [GeneratedRegex(@"(?m)^\s+cache:\s*[""']?pnpm[""']?\s*(?:#.*)?$")]
+    private static partial Regex SetupNodePnpmCacheLine();
+
     private static IEnumerable<(CiJob Job, CiStep Step, WorkflowStep WorkflowStep)> PlanStepsWithWorkflowSteps() =>
         CiPlan.Jobs.SelectMany(job => job.Steps.Select(step =>
             (job, step, WorkflowJobFor(job).Steps.Single(s => s.Name == step.Name))));
