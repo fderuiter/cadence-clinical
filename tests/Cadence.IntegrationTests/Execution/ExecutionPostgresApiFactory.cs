@@ -3,12 +3,15 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
+using Cadence.Database.Tenancy;
 using Cadence.IntegrationTests.Database;
 using Cadence.Testing.Security;
 
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 using Xunit;
@@ -58,8 +61,20 @@ public sealed class ExecutionPostgresApiFactory : WebApplicationFactory<Cadence.
             builder.UseSetting("Database:MigrateOnStartup", "true");
         }
 
-        builder.ConfigureServices(services => services.AddLogging(logging =>
-            logging.AddProvider(new WarningCaptureProvider(_serverWarnings))));
+        builder.ConfigureServices(services =>
+        {
+            services.RemoveAll<CurrentTenantAccessor>();
+            services.AddSingleton<CurrentTenantAccessor>(sp =>
+            {
+                var accessor = new CurrentTenantAccessor(
+                    sp.GetRequiredService<ITenantCodeResolver>(),
+                    sp.GetService<IHttpContextAccessor>());
+                accessor.UseNonHttpSeedingFallbackTenant(TestSecurityContext.TenantCode);
+                return accessor;
+            });
+            services.AddLogging(logging =>
+                logging.AddProvider(new WarningCaptureProvider(_serverWarnings)));
+        });
 
         base.ConfigureWebHost(builder);
     }

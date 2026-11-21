@@ -6,6 +6,7 @@ using Cadence.Apps.Interop.Endpoints;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
 using Cadence.Apps.Interop.Infrastructure.Security;
 using Cadence.Database;
+using Cadence.Database.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.FieldProtection;
@@ -49,6 +50,8 @@ app.MapEproEndpoints();
 if (args.Contains("--seed"))
 {
     using var scope = app.Services.CreateScope();
+    var tenantScope = scope.ServiceProvider.GetRequiredService<ITenantScope>();
+    using var boundTenant = tenantScope.Bind(builder.Configuration["SEED_TENANT_CODE"] ?? "cadence-local");
     var dbContext = scope.ServiceProvider.GetRequiredService<InteropDbContext>();
     var clock = scope.ServiceProvider.GetRequiredService<IClock>();
     await InteropDbSeeder.SeedAsync(dbContext, clock);

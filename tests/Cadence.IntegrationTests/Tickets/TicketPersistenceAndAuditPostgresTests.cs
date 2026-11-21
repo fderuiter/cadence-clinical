@@ -13,6 +13,7 @@ using Cadence.Apps.Tickets.Endpoints;
 using Cadence.Apps.Tickets.Infrastructure.Persistence;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database;
+using Cadence.Database.Tenancy;
 using Cadence.IntegrationTests.Database;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
@@ -132,23 +133,29 @@ public sealed class TicketPersistenceAndAuditPostgresTests(TicketsAndKnowledgePo
         listed.Should().NotBeNull();
         listed!.Select(t => t.Reference).Should().Contain([firstTicket.Reference, secondTicket.Reference]);
 
-        // Reload via an independent fresh Npgsql DbContext in the tickets schema and verify Merkle audit chain
-        var dbOptions = new DbContextOptionsBuilder<TicketsDbContext>()
-            .UseNpgsql($"{connectionString};Search Path=tickets", npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "tickets"))
-            .Options;
-        await using var freshDb = new TicketsDbContext(dbOptions);
+        // Reload via an independent fresh Npgsql DbContext in the tickets schema (bound to the tenant RLS session) and verify Merkle audit chain
+        var tenantAccessor = factory.Services.GetRequiredService<ICurrentTenantAccessor>();
+        var tenantScope = factory.Services.GetRequiredService<ITenantScope>();
+        using (tenantScope.Bind(TestSecurityContext.TenantCode))
+        {
+            var optionsBuilder = new DbContextOptionsBuilder<TicketsDbContext>();
+            optionsBuilder.UseNpgsql($"{connectionString};Search Path=tickets", npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "tickets"));
+            optionsBuilder.UseCadenceStandaloneTenancy(tenantAccessor, isRelational: true);
+            optionsBuilder.AddInterceptors(StandaloneTenantConnectionInterceptor.Instance);
+            await using var freshDb = new TicketsDbContext(optionsBuilder.Options);
 
-        var persistedRows = await freshDb.Tickets.AsNoTracking()
-            .Where(t => t.StudyId == studyCode)
-            .ToListAsync(Ct);
-        persistedRows.Should().HaveCount(2);
+            var persistedRows = await freshDb.Tickets.AsNoTracking()
+                .Where(t => t.StudyId == studyCode)
+                .ToListAsync(Ct);
+            persistedRows.Should().HaveCount(2);
 
-        var auditEntries = await freshDb.AuditLogEntries.AsNoTracking()
-            .OrderBy(e => e.Timestamp)
-            .ToListAsync(Ct);
-        auditEntries.Should().HaveCountGreaterThanOrEqualTo(2);
-        VerifyMerkleChain(auditEntries);
-        (await freshDb.TicketAuditLogs.CountAsync(Ct)).Should().Be(0);
+            var auditEntries = await freshDb.AuditLogEntries.AsNoTracking()
+                .OrderBy(e => e.Timestamp)
+                .ToListAsync(Ct);
+            auditEntries.Should().HaveCountGreaterThanOrEqualTo(2);
+            VerifyMerkleChain(auditEntries);
+            (await freshDb.TicketAuditLogs.CountAsync(Ct)).Should().Be(0);
+        }
     }
 
     [Fact]
@@ -183,13 +190,29 @@ public sealed class TicketPersistenceAndAuditPostgresTests(TicketsAndKnowledgePo
         studyParamResp.Should().NotBeNull();
         studyParamResp!.MatchedMapping!.RoutePattern.Should().Be("/studies/:studyCode");
 
-        var dbOptions = new DbContextOptionsBuilder<KnowledgeDbContext>()
-            .UseNpgsql($"{connectionString};Search Path=knowledge", npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "knowledge"))
-            .Options;
-        await using var freshDb = new KnowledgeDbContext(dbOptions);
-        var auditEntries = await freshDb.AuditLogEntries.AsNoTracking().ToListAsync(Ct);
-        auditEntries.Should().NotBeEmpty();
-        VerifyMerkleChain(auditEntries);
+        // Also verify a second tenant ("tenant-b") seeds and resolves its own isolated SOP catalog without unique-index collisions
+        var tenantBIdentity = TestSecurityContext.Identity("usr-pg-cra-tenant-b", "CRA") with { TenantId = "tenant-b" };
+        using var tenantBClient = factory.CreateDefaultClient(new TestSecurityContext.GatewaySigningHandler(tenantBIdentity));
+        var tenantBSsuResp = await tenantBClient.GetFromJsonAsync<ContextualHelpResponseDto>(
+            "/api/v1/knowledge/contextual-help?route=/ssu&persona=cra_monitor",
+            Ct);
+        tenantBSsuResp.Should().NotBeNull();
+        tenantBSsuResp!.PrimaryArticle.Should().NotBeNull();
+        tenantBSsuResp.PrimaryArticle!.Status.Should().Be("PUBLISHED");
+
+        var tenantAccessor = factory.Services.GetRequiredService<ICurrentTenantAccessor>();
+        var tenantScope = factory.Services.GetRequiredService<ITenantScope>();
+        using (tenantScope.Bind(TestSecurityContext.TenantCode))
+        {
+            var optionsBuilder = new DbContextOptionsBuilder<KnowledgeDbContext>();
+            optionsBuilder.UseNpgsql($"{connectionString};Search Path=knowledge", npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "knowledge"));
+            optionsBuilder.UseCadenceStandaloneTenancy(tenantAccessor, isRelational: true);
+            optionsBuilder.AddInterceptors(StandaloneTenantConnectionInterceptor.Instance);
+            await using var freshDb = new KnowledgeDbContext(optionsBuilder.Options);
+            var auditEntries = await freshDb.AuditLogEntries.AsNoTracking().ToListAsync(Ct);
+            auditEntries.Should().NotBeEmpty();
+            VerifyMerkleChain(auditEntries);
+        }
     }
 
     private static void VerifyMerkleChain(IReadOnlyList<AuditLogEntry> entries)

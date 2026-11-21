@@ -5,6 +5,7 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Serialization;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Database.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Testing.Hosting;
@@ -68,7 +69,9 @@ public sealed class ExecutionApiFactory : WebApplicationFactory<Cadence.Apps.Exe
             services.RemoveAll<IDbContextOptionsConfiguration<ExecutionDbContext>>();
             services.AddDbContext<ExecutionDbContext>((sp, options) =>
             {
-                options.UseInMemoryDatabase(_databaseName);
+                options.UseInMemoryDatabase(_databaseName)
+                    .UseCadenceStandaloneTenancy(sp.GetService<ICurrentTenantAccessor>(), isRelational: false)
+                    .AddInterceptors(StandaloneTenantSaveChangesInterceptor.Instance);
                 options.UseInternalServiceProvider(inMemoryServices);
                 options.AddInterceptors(
                     new ConcurrencyTokenIncrementInterceptor(),

@@ -10,6 +10,7 @@ namespace Cadence.Security.Rbac;
 public record Principal
 {
     public string UserId { get; init; } = string.Empty;
+    public string? TenantId { get; init; }
     public IReadOnlyList<string> Roles { get; init; } = Array.Empty<string>();
     public IReadOnlyList<string> AssignedSites { get; init; } = Array.Empty<string>();
     public IReadOnlyList<string> AssignedStudies { get; init; } = Array.Empty<string>();

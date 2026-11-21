@@ -129,6 +129,7 @@ public sealed class GatewayAuthenticationHandler(
         Context.Items[PrincipalItemKey] = new Principal
         {
             UserId = userId,
+            TenantId = tenantId,
             Roles = normalizedRoles,
             RawRoles = rawRoles,
             AssignedSites = sites,

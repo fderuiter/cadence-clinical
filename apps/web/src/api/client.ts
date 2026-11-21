@@ -80,7 +80,8 @@ async function rebuildRequest(
   url: string = source.url,
   headers: HeadersInit = source.headers
 ): Promise<Request> {
-  const hasBody = source.method !== "GET" && source.method !== "HEAD";
+  const hasBody =
+    source.body !== null && source.method !== "GET" && source.method !== "HEAD";
   const body = hasBody ? await source.arrayBuffer() : undefined;
   return new Request(url, {
     method: source.method,

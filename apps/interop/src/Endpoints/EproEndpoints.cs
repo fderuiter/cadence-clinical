@@ -64,18 +64,21 @@ public static class EproEndpoints
         group.MapGet("/assignments/subject/{subjectId}", ListSubjectAssignmentsAsync)
             .WithName("ListSubjectAssignments")
             .RequirePermission("ecoa_schedule:read")
+            .RequireTenantScope()
             .Produces<IReadOnlyList<EproAssignmentDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden);
 
         group.MapGet("/subjects/{subjectId}/instruments", ListSubjectInstrumentsAsync)
             .WithName("ListSubjectInstruments")
             .RequirePermission("ecoa_diary:read")
+            .RequireTenantScope()
             .Produces<IReadOnlyList<EproInstrumentDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden);
 
         group.MapGet("/instruments/{id}", GetInstrumentByIdAsync)
             .WithName("GetEproInstrument")
             .RequirePermission("ecoa_diary:read")
+            .RequireTenantScope()
             .Produces<EproInstrumentDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
@@ -83,18 +86,21 @@ public static class EproEndpoints
         group.MapGet("/subjects/{subjectId}/compliance", GetSubjectComplianceAsync)
             .WithName("GetSubjectCompliance")
             .RequirePermission("ecoa_submission:read")
+            .RequireTenantScope()
             .Produces<EproComplianceResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden);
 
         group.MapGet("/subjects/{subjectId}/notifications", ListSubjectNotificationsAsync)
             .WithName("ListSubjectNotifications")
             .RequirePermission("ecoa_notification:read")
+            .RequireTenantScope()
             .Produces<IReadOnlyList<EproNotificationDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden);
 
         group.MapPost("/notifications/{notificationId}/acknowledge", AcknowledgeNotificationAsync)
             .WithName("AcknowledgeSubjectNotification")
             .RequirePermission("ecoa_notification:acknowledge")
+            .RequireTenantScope()
             .Produces<EproNotificationDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -103,6 +109,7 @@ public static class EproEndpoints
         group.MapPost("/epro/submit", SubmitEproDiaryAsync)
             .WithName("SubmitEproDiary")
             .RequirePermission("ecoa_submission:create")
+            .RequireTenantScope()
             .Produces<EproReconciliationResultDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -111,6 +118,7 @@ public static class EproEndpoints
         group.MapPost("/epro/sync", SyncEproBatchAsync)
             .WithName("SyncEproBatch")
             .RequirePermission("ecoa_submission:create")
+            .RequireTenantScope()
             .Produces<EproSyncBatchResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)

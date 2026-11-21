@@ -8,6 +8,7 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Serialization;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Database.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Persistence;
@@ -124,13 +125,19 @@ public class ExecutionE2EFactory : WebApplicationFactory<Cadence.Apps.Execution.
         {
             if (_connectionString is not null)
             {
+                string scopedConnection = CadenceDatabaseExtensions.WithModuleSchema(_connectionString, ExecutionDbContextFactory.Schema);
+                services.RemoveAll<ITenantCodeResolver>();
+                services.AddCadencePostgresTenancy(_connectionString);
                 services.RemoveAll<DbContextOptions<ExecutionDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<ExecutionDbContext>>();
                 services.AddDbContext<ExecutionDbContext>((sp, options) =>
                 {
-                    options.UseNpgsql(_connectionString);
+                    options.UseNpgsql(scopedConnection);
+                    options.UseCadenceStandaloneTenancy(sp.GetService<ICurrentTenantAccessor>(), isRelational: true);
                     options.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
                     options.AddInterceptors(
+                        StandaloneTenantConnectionInterceptor.Instance,
+                        StandaloneTenantSaveChangesInterceptor.Instance,
                         new ConcurrencyTokenIncrementInterceptor(),
                         new GxPAuditInterceptor(() => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId, sp.GetRequiredService<IClock>()));
                 });
@@ -148,7 +155,9 @@ public class ExecutionE2EFactory : WebApplicationFactory<Cadence.Apps.Execution.
                 {
                     options.UseInMemoryDatabase(_inMemoryDbName);
                     options.UseInternalServiceProvider(inMemoryServices);
+                    options.UseCadenceStandaloneTenancy(sp.GetService<ICurrentTenantAccessor>(), isRelational: false);
                     options.AddInterceptors(
+                        StandaloneTenantSaveChangesInterceptor.Instance,
                         new ConcurrencyTokenIncrementInterceptor(),
                         new GxPAuditInterceptor(() => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId, sp.GetRequiredService<IClock>()));
                 });
@@ -171,6 +180,9 @@ public class ExecutionE2EFactory : WebApplicationFactory<Cadence.Apps.Execution.
         var db = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
         if (UsesPostgres)
         {
+            BootstrapE2ETenantDirectory(_connectionString!);
+            using var _ = scope.ServiceProvider.GetService<ITenantScope>()?.Suppress();
+            db.Database.ExecuteSqlRaw("CREATE SCHEMA IF NOT EXISTS \"edc\"");
             db.Database.Migrate();
         }
         else
@@ -178,6 +190,52 @@ public class ExecutionE2EFactory : WebApplicationFactory<Cadence.Apps.Execution.
             db.Database.EnsureCreated();
         }
         return host;
+    }
+
+    private static void BootstrapE2ETenantDirectory(string connectionString)
+    {
+        using var conn = new NpgsqlConnection(connectionString);
+        conn.Open();
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = """
+                CREATE SCHEMA IF NOT EXISTS "kernel";
+                CREATE TABLE IF NOT EXISTS "kernel"."tenants" (
+                    id uuid PRIMARY KEY,
+                    code text NOT NULL UNIQUE,
+                    name text NOT NULL,
+                    is_active boolean NOT NULL DEFAULT true
+                );
+                CREATE OR REPLACE FUNCTION "kernel".current_tenant_id() RETURNS uuid
+                LANGUAGE sql STABLE PARALLEL SAFE AS $fn$
+                    SELECT NULLIF(pg_catalog.current_setting('cadence.tenant_id', true), '')::uuid
+                $fn$;
+                CREATE OR REPLACE FUNCTION "kernel".tenant_id_by_code(tenant_code text) RETURNS uuid
+                LANGUAGE sql STABLE SECURITY DEFINER
+                SET search_path = pg_catalog, pg_temp
+                AS $fn$
+                    SELECT t.id FROM "kernel"."tenants" t WHERE t.code = tenant_code AND t.is_active
+                $fn$;
+                CREATE OR REPLACE FUNCTION "kernel".tenant_ids() RETURNS SETOF uuid
+                LANGUAGE sql STABLE SECURITY DEFINER
+                SET search_path = pg_catalog, pg_temp
+                AS $fn$
+                    SELECT t.id FROM "kernel"."tenants" t WHERE t.is_active ORDER BY t.id
+                $fn$;
+                """;
+            cmd.ExecuteNonQuery();
+        }
+
+        Guid testTenantId = DeterministicTenantCodeResolver.ComputeDeterministicGuid(TestSecurityContext.TenantCode);
+        using var ins = conn.CreateCommand();
+        ins.CommandText = """
+            INSERT INTO "kernel"."tenants" (id, code, name, is_active)
+            VALUES (@id, @code, @code, true)
+            ON CONFLICT (code) DO NOTHING;
+            """;
+        ins.Parameters.AddWithValue("id", testTenantId);
+        ins.Parameters.AddWithValue("code", TestSecurityContext.TenantCode);
+        ins.ExecuteNonQuery();
     }
 
     private static JsonSerializerOptions CreateJsonOptions()

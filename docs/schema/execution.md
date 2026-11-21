@@ -6,36 +6,36 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 
 | Table | Entity | Columns |
 | --- | --- | --- |
-| [`edc.AuditLogEntries`](#edcauditlogentries) | `AuditLogEntry` | 11 |
+| [`edc.AuditLogEntries`](#edcauditlogentries) | `AuditLogEntry` | 12 |
 | [`edc.InboxState`](#edcinboxstate) | `InboxState` | 11 |
 | [`edc.OutboxMessage`](#edcoutboxmessage) | `OutboxMessage` | 21 |
 | [`edc.OutboxState`](#edcoutboxstate) | `OutboxState` | 6 |
-| [`edc.bulk_lab_range_import_jobs`](#edcbulk_lab_range_import_jobs) | `BulkLabRangeImportJob` | 18 |
-| [`edc.bulk_synonym_import_jobs`](#edcbulk_synonym_import_jobs) | `BulkSynonymImportJob` | 14 |
-| [`edc.cec_chair_adjudications`](#edccec_chair_adjudications) | `CecChairAdjudication` | 17 |
-| [`edc.cec_dossiers`](#edccec_dossiers) | `CecDossier` | 26 |
-| [`edc.cgt_bedside_verifications`](#edccgt_bedside_verifications) | `CgtBedsideVerification` | 23 |
-| [`edc.cgt_chains_of_custody`](#edccgt_chains_of_custody) | `CgtChainOfCustody` | 20 |
-| [`edc.cgt_destruction_certificates`](#edccgt_destruction_certificates) | `CgtDestructionCertificate` | 32 |
-| [`edc.cgt_milestone_events`](#edccgt_milestone_events) | `CgtMilestoneEvent` | 25 |
-| [`edc.cgt_vial_return_reconciliations`](#edccgt_vial_return_reconciliations) | `CgtVialReturnReconciliation` | 20 |
-| [`edc.clinical_subjects`](#edcclinical_subjects) | `ClinicalSubject` | 22 |
+| [`edc.bulk_lab_range_import_jobs`](#edcbulk_lab_range_import_jobs) | `BulkLabRangeImportJob` | 19 |
+| [`edc.bulk_synonym_import_jobs`](#edcbulk_synonym_import_jobs) | `BulkSynonymImportJob` | 15 |
+| [`edc.cec_chair_adjudications`](#edccec_chair_adjudications) | `CecChairAdjudication` | 18 |
+| [`edc.cec_dossiers`](#edccec_dossiers) | `CecDossier` | 27 |
+| [`edc.cgt_bedside_verifications`](#edccgt_bedside_verifications) | `CgtBedsideVerification` | 24 |
+| [`edc.cgt_chains_of_custody`](#edccgt_chains_of_custody) | `CgtChainOfCustody` | 21 |
+| [`edc.cgt_destruction_certificates`](#edccgt_destruction_certificates) | `CgtDestructionCertificate` | 33 |
+| [`edc.cgt_milestone_events`](#edccgt_milestone_events) | `CgtMilestoneEvent` | 26 |
+| [`edc.cgt_vial_return_reconciliations`](#edccgt_vial_return_reconciliations) | `CgtVialReturnReconciliation` | 21 |
+| [`edc.clinical_subjects`](#edcclinical_subjects) | `ClinicalSubject` | 23 |
 | [`edc.consumed_signature_tokens`](#edcconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
-| [`edc.device_deficiencies`](#edcdevice_deficiencies) | `DeviceDeficiency` | 30 |
-| [`edc.device_inventory_items`](#edcdevice_inventory_items) | `DeviceInventoryItem` | 28 |
-| [`edc.device_quarantine_records`](#edcdevice_quarantine_records) | `DeviceQuarantineRecord` | 19 |
-| [`edc.ip_kit_inventory_items`](#edcip_kit_inventory_items) | `IpKitInventoryItem` | 21 |
-| [`edc.ip_kit_reconciliation_batches`](#edcip_kit_reconciliation_batches) | `IpKitReconciliationBatch` | 15 |
-| [`edc.ip_kit_reconciliation_certificates`](#edcip_kit_reconciliation_certificates) | `IpKitReconciliationCertificate` | 15 |
-| [`edc.lab_reference_ranges`](#edclab_reference_ranges) | `LabReferenceRange` | 22 |
-| [`edc.randomization_allocations`](#edcrandomization_allocations) | `RandomizationAllocation` | 18 |
-| [`edc.randomization_list_slots`](#edcrandomization_list_slots) | `RandomizationListSlot` | 6 |
-| [`edc.randomization_schemes`](#edcrandomization_schemes) | `RandomizationScheme` | 23 |
-| [`edc.site_compliance_caches`](#edcsite_compliance_caches) | `SiteComplianceCache` | 12 |
-| [`edc.staged_adverse_event_reviews`](#edcstaged_adverse_event_reviews) | `StagedAdverseEventReview` | 27 |
-| [`edc.subject_activation_tokens`](#edcsubject_activation_tokens) | `SubjectActivationToken` | 13 |
-| [`edc.subject_consents`](#edcsubject_consents) | `SubjectConsent` | 14 |
-| [`edc.synonym_rules`](#edcsynonym_rules) | `SynonymRule` | 15 |
+| [`edc.device_deficiencies`](#edcdevice_deficiencies) | `DeviceDeficiency` | 31 |
+| [`edc.device_inventory_items`](#edcdevice_inventory_items) | `DeviceInventoryItem` | 29 |
+| [`edc.device_quarantine_records`](#edcdevice_quarantine_records) | `DeviceQuarantineRecord` | 20 |
+| [`edc.ip_kit_inventory_items`](#edcip_kit_inventory_items) | `IpKitInventoryItem` | 22 |
+| [`edc.ip_kit_reconciliation_batches`](#edcip_kit_reconciliation_batches) | `IpKitReconciliationBatch` | 16 |
+| [`edc.ip_kit_reconciliation_certificates`](#edcip_kit_reconciliation_certificates) | `IpKitReconciliationCertificate` | 16 |
+| [`edc.lab_reference_ranges`](#edclab_reference_ranges) | `LabReferenceRange` | 23 |
+| [`edc.randomization_allocations`](#edcrandomization_allocations) | `RandomizationAllocation` | 19 |
+| [`edc.randomization_list_slots`](#edcrandomization_list_slots) | `RandomizationListSlot` | 7 |
+| [`edc.randomization_schemes`](#edcrandomization_schemes) | `RandomizationScheme` | 24 |
+| [`edc.site_compliance_caches`](#edcsite_compliance_caches) | `SiteComplianceCache` | 13 |
+| [`edc.staged_adverse_event_reviews`](#edcstaged_adverse_event_reviews) | `StagedAdverseEventReview` | 28 |
+| [`edc.subject_activation_tokens`](#edcsubject_activation_tokens) | `SubjectActivationToken` | 14 |
+| [`edc.subject_consents`](#edcsubject_consents) | `SubjectConsent` | 15 |
+| [`edc.synonym_rules`](#edcsynonym_rules) | `SynonymRule` | 16 |
 
 ## edc.AuditLogEntries
 
@@ -54,6 +54,11 @@ Entity: `AuditLogEntry`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `text` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Indexes:
+
+- `IX_AuditLogEntries_tenant_id`: (`tenant_id`)
 
 ## edc.InboxState
 
@@ -159,11 +164,13 @@ Entity: `BulkLabRangeImportJob`
 | `SuccessRows` | `integer` | no |  |  |
 | `TotalRows` | `integer` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_bulk_lab_range_import_jobs_JobId`: unique (`JobId`)
 - `IX_bulk_lab_range_import_jobs_StudyId_SubmittedAt`: (`StudyId`, `SubmittedAt`)
+- `IX_bulk_lab_range_import_jobs_tenant_id`: (`tenant_id`)
 
 ## edc.bulk_synonym_import_jobs
 
@@ -185,10 +192,12 @@ Entity: `BulkSynonymImportJob`
 | `TotalRows` | `integer` | no |  |  |
 | `ValidRows` | `integer` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_bulk_synonym_import_jobs_CreatedAt`: (`CreatedAt`)
+- `IX_bulk_synonym_import_jobs_tenant_id`: (`tenant_id`)
 
 ## edc.cec_chair_adjudications
 
@@ -213,9 +222,11 @@ Entity: `CecChairAdjudication`
 | `_version` | `bigint` | no | `0` |  |
 | `criteria_confirmed` | `jsonb` | no |  |  |
 | `signature_manifest` | `jsonb` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
+- `IX_cec_chair_adjudications_tenant_id`: (`tenant_id`)
 - `ix_cec_chair_adjudications_dossier_id`: (`DossierId`)
 
 ## edc.cec_dossiers
@@ -250,9 +261,11 @@ Entity: `CecDossier`
 | `_version` | `bigint` | no | `0` |  |
 | `discordance_reasons` | `jsonb` | no |  |  |
 | `signature_manifest` | `jsonb` | yes |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
+- `IX_cec_dossiers_tenant_id`: (`tenant_id`)
 - `ix_cec_dossiers_study_id`: (`StudyId`)
 - `ix_cec_dossiers_workflow_status`: (`WorkflowStatus`)
 
@@ -285,11 +298,13 @@ Entity: `CgtBedsideVerification`
 | `UnlockToken` | `character varying(512)` | no |  |  |
 | `VerifiedAt` | `timestamp with time zone` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_cgt_bedside_verifications_StudyId_SubjectId`: (`StudyId`, `SubjectId`)
 - `IX_cgt_bedside_verifications_UnlockToken`: (`UnlockToken`)
+- `IX_cgt_bedside_verifications_tenant_id`: (`tenant_id`)
 
 ## edc.cgt_chains_of_custody
 
@@ -317,11 +332,13 @@ Entity: `CgtChainOfCustody`
 | `SubjectId` | `character varying(255)` | no |  |  |
 | `UnlockToken` | `character varying(512)` | yes |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_cgt_chains_of_custody_Din`: (`Din`)
 - `IX_cgt_chains_of_custody_StudyId_SubjectId`: unique (`StudyId`, `SubjectId`)
+- `IX_cgt_chains_of_custody_tenant_id`: (`tenant_id`)
 
 ## edc.cgt_destruction_certificates
 
@@ -361,11 +378,13 @@ Entity: `CgtDestructionCertificate`
 | `Witness2Name` | `character varying(255)` | yes |  |  |
 | `Witness2Role` | `character varying(128)` | yes |  |  |
 | `Witness2SignatureToken` | `character varying(512)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_cgt_destruction_certificates_CertificateNumber`: unique (`CertificateNumber`)
 - `IX_cgt_destruction_certificates_StudyId`: (`StudyId`)
+- `IX_cgt_destruction_certificates_tenant_id`: (`tenant_id`)
 
 ## edc.cgt_milestone_events
 
@@ -398,11 +417,13 @@ Entity: `CgtMilestoneEvent`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `TrackingNumber` | `character varying(255)` | yes |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_cgt_milestone_events_ChainOfCustodyId`: (`ChainOfCustodyId`)
 - `IX_cgt_milestone_events_StudyId`: (`StudyId`)
+- `IX_cgt_milestone_events_tenant_id`: (`tenant_id`)
 
 ## edc.cgt_vial_return_reconciliations
 
@@ -430,11 +451,13 @@ Entity: `CgtVialReturnReconciliation`
 | `UsedVials` | `integer` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
 | `VialIdentifier` | `character varying(255)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_cgt_vial_return_reconciliations_StudyId`: (`StudyId`)
 - `IX_cgt_vial_return_reconciliations_VialIdentifier`: (`VialIdentifier`)
+- `IX_cgt_vial_return_reconciliations_tenant_id`: (`tenant_id`)
 
 ## edc.clinical_subjects
 
@@ -464,6 +487,7 @@ Entity: `ClinicalSubject`
 | `WithdrawnAt` | `timestamp with time zone` | yes |  |  |
 | `_version` | `bigint` | no | `0` |  |
 | `strat_factors` | `jsonb` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -471,6 +495,7 @@ Indexes:
 - `IX_clinical_subjects_StudyCode_SiteCode_Status_EnrollmentIndex`: (`StudyCode`, `SiteCode`, `Status`, `EnrollmentIndex`)
 - `IX_clinical_subjects_StudyCode_Status_EnrollmentIndex`: (`StudyCode`, `Status`, `EnrollmentIndex`)
 - `IX_clinical_subjects_SubjectCode`: unique (`SubjectCode`)
+- `IX_clinical_subjects_tenant_id`: (`tenant_id`)
 
 ## edc.consumed_signature_tokens
 
@@ -522,11 +547,13 @@ Entity: `DeviceDeficiency`
 | `SubjectId` | `character varying(128)` | yes |  |  |
 | `UdiDi` | `character varying(128)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_device_deficiencies_SafetyCaseId`: (`SafetyCaseId`)
 - `IX_device_deficiencies_StudyId_SiteId`: (`StudyId`, `SiteId`)
+- `IX_device_deficiencies_tenant_id`: (`tenant_id`)
 
 ## edc.device_inventory_items
 
@@ -562,6 +589,7 @@ Entity: `DeviceInventoryItem`
 | `UdiDi` | `character varying(128)` | no |  |  |
 | `UdiPi` | `character varying(256)` | yes |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -569,6 +597,7 @@ Indexes:
 - `IX_device_inventory_items_StudyId_SiteId`: (`StudyId`, `SiteId`)
 - `IX_device_inventory_items_StudyId_Status`: (`StudyId`, `Status`)
 - `IX_device_inventory_items_UdiDi_LotNumber`: (`UdiDi`, `LotNumber`)
+- `IX_device_inventory_items_tenant_id`: (`tenant_id`)
 
 ## edc.device_quarantine_records
 
@@ -595,11 +624,13 @@ Entity: `DeviceQuarantineRecord`
 | `Status` | `character varying(64)` | no |  |  |
 | `StudyId` | `character varying(128)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_device_quarantine_records_DeviceInventoryId`: (`DeviceInventoryId`)
 - `IX_device_quarantine_records_StudyId_Status`: (`StudyId`, `Status`)
+- `IX_device_quarantine_records_tenant_id`: (`tenant_id`)
 
 ## edc.ip_kit_inventory_items
 
@@ -628,11 +659,13 @@ Entity: `IpKitInventoryItem`
 | `StudyId` | `character varying(255)` | no |  |  |
 | `TreatmentArmCiphertext` | `text` | yes |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_ip_kit_inventory_items_AssignedRandomizationId`: unique (`AssignedRandomizationId`) where `"AssignedRandomizationId" IS NOT NULL`
 - `IX_ip_kit_inventory_items_StudyId_SiteId_KitNumber`: unique (`StudyId`, `SiteId`, `KitNumber`)
+- `IX_ip_kit_inventory_items_tenant_id`: (`tenant_id`)
 
 ## edc.ip_kit_reconciliation_batches
 
@@ -655,10 +688,12 @@ Entity: `IpKitReconciliationBatch`
 | `StudyId` | `character varying(255)` | no |  |  |
 | `TotalKits` | `integer` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_ip_kit_reconciliation_batches_BatchNumber`: unique (`BatchNumber`)
+- `IX_ip_kit_reconciliation_batches_tenant_id`: (`tenant_id`)
 
 ## edc.ip_kit_reconciliation_certificates
 
@@ -681,10 +716,12 @@ Entity: `IpKitReconciliationCertificate`
 | `StudyId` | `character varying(255)` | no |  |  |
 | `SummaryJson` | `text` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_ip_kit_reconciliation_certificates_CertificateId`: unique (`CertificateId`)
+- `IX_ip_kit_reconciliation_certificates_tenant_id`: (`tenant_id`)
 
 ## edc.lab_reference_ranges
 
@@ -714,11 +751,13 @@ Entity: `LabReferenceRange`
 | `TestName` | `character varying(500)` | no |  |  |
 | `Unit` | `character varying(100)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_lab_reference_ranges_StudyId_IsActive`: (`StudyId`, `IsActive`)
 - `IX_lab_reference_ranges_StudyId_TestCode_Source_SiteId_IsActive`: (`StudyId`, `TestCode`, `Source`, `SiteId`, `IsActive`)
+- `IX_lab_reference_ranges_tenant_id`: (`tenant_id`)
 
 ## edc.randomization_allocations
 
@@ -744,6 +783,7 @@ Entity: `RandomizationAllocation`
 | `StudyCode` | `character varying(255)` | no |  |  |
 | `SubjectId` | `uuid` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Foreign keys:
 
@@ -755,6 +795,7 @@ Indexes:
 - `IX_randomization_allocations_SchemeId_StratumKey_Sequence`: unique (`SchemeId`, `StratumKey`, `Sequence`)
 - `IX_randomization_allocations_StudyCode_AllocatedAt`: (`StudyCode`, `AllocatedAt`)
 - `IX_randomization_allocations_SubjectId`: unique (`SubjectId`)
+- `IX_randomization_allocations_tenant_id`: (`tenant_id`)
 
 ## edc.randomization_list_slots
 
@@ -768,6 +809,7 @@ Entity: `RandomizationListSlot`
 | `SchemeId` | `uuid` | no |  |  |
 | `Sequence` | `integer` | no |  |  |
 | `StratumKey` | `character varying(1024)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Foreign keys:
 
@@ -777,6 +819,7 @@ Indexes:
 
 - `IX_randomization_list_slots_AllocationId`: unique (`AllocationId`) where `"AllocationId" IS NOT NULL`
 - `IX_randomization_list_slots_SchemeId_StratumKey_Sequence`: unique (`SchemeId`, `StratumKey`, `Sequence`)
+- `IX_randomization_list_slots_tenant_id`: (`tenant_id`)
 
 ## edc.randomization_schemes
 
@@ -807,11 +850,13 @@ Entity: `RandomizationScheme`
 | `StudyCode` | `character varying(255)` | no |  |  |
 | `Version` | `integer` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_randomization_schemes_StudyCode_Approved`: unique (`StudyCode`) where `"Status" = 'Approved'`
 - `IX_randomization_schemes_StudyCode_Version`: unique (`StudyCode`, `Version`)
+- `IX_randomization_schemes_tenant_id`: (`tenant_id`)
 
 ## edc.site_compliance_caches
 
@@ -831,6 +876,11 @@ Entity: `SiteComplianceCache`
 | `VersionIndex` | `bigint` | no |  |  |
 | `_version` | `bigint` | no | `0` |  |
 | `missing_documents` | `text[]` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Indexes:
+
+- `IX_site_compliance_caches_tenant_id`: (`tenant_id`)
 
 ## edc.staged_adverse_event_reviews
 
@@ -859,6 +909,7 @@ Entity: `StagedAdverseEventReview`
 | `site_id` | `text` | yes |  |  |
 | `study_id` | `text` | no |  |  |
 | `subject_id` | `text` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 | `test_code` | `text` | no |  |  |
 | `test_name` | `text` | no |  |  |
 | `toxicity_term` | `text` | no |  |  |
@@ -870,6 +921,7 @@ Indexes:
 
 - `IX_staged_adverse_event_reviews_study_id_review_status`: (`study_id`, `review_status`)
 - `IX_staged_adverse_event_reviews_subject_id`: (`subject_id`)
+- `IX_staged_adverse_event_reviews_tenant_id`: (`tenant_id`)
 
 ## edc.subject_activation_tokens
 
@@ -890,12 +942,14 @@ Entity: `SubjectActivationToken`
 | `SubjectCode` | `character varying(255)` | no |  |  |
 | `TokenHash` | `character varying(64)` | no |  |  |
 | `_version` | `bigint` | no | `0` |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_subject_activation_tokens_RedeemedByPrincipalHash`: (`RedeemedByPrincipalHash`)
 - `IX_subject_activation_tokens_SubjectCode`: (`SubjectCode`)
 - `IX_subject_activation_tokens_TokenHash`: unique (`TokenHash`)
+- `IX_subject_activation_tokens_tenant_id`: (`tenant_id`)
 
 ## edc.subject_consents
 
@@ -917,6 +971,11 @@ Entity: `SubjectConsent`
 | `SubjectCode` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
 | `_version` | `bigint` | no | `0` |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Indexes:
+
+- `IX_subject_consents_tenant_id`: (`tenant_id`)
 
 ## edc.synonym_rules
 
@@ -939,8 +998,10 @@ Entity: `SynonymRule`
 | `TargetTerm` | `character varying(500)` | no |  |  |
 | `VerbatimText` | `character varying(500)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_synonym_rules_Scope_StudyId_Status`: (`Scope`, `StudyId`, `Status`)
 - `IX_synonym_rules_VerbatimText_DictionaryType`: (`VerbatimText`, `DictionaryType`)
+- `IX_synonym_rules_tenant_id`: (`tenant_id`)

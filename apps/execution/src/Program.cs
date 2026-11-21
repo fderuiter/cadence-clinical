@@ -141,25 +141,17 @@ builder.Services.AddCadenceLookupHashing();
 //
 // The connection string comes from ConnectionStrings:cadence or POSTGRES_CONNECTION_STRING; there is no
 // hardcoded fallback in any environment, so a missing value fails at startup naming both keys.
-string executionDbConnectionString = CadenceDatabaseExtensions.WithModuleSchema(
-    CadenceDatabaseExtensions.ResolvePostgresConnectionString(builder.Configuration, builder.Environment),
-    ExecutionDbContextFactory.Schema);
 var concurrencyTokenIncrementInterceptor = new ConcurrencyTokenIncrementInterceptor();
-builder.Services.AddCadenceDbContext<ExecutionDbContext>((sp, options) =>
-{
-    // Transient failures are retried by EF Core's execution strategy, around a whole SaveChanges or a whole
-    // ExecuteInTransactionAsync unit of work; concurrency conflicts are not, and surface as 409 (#4766, #5383).
-    options.UseNpgsql(executionDbConnectionString, npgsql => npgsql.EnableRetryOnFailure());
-    options.AddInterceptors(
-        concurrencyTokenIncrementInterceptor,
-        new Cadence.Database.GxPAuditInterceptor(
-            () => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId,
-            sp.GetRequiredService<IClock>()));
-});
-
-builder.Services.AddHealthChecks()
-    .AddDbContextCheck<ExecutionDbContext>(name: nameof(ExecutionDbContext), tags: [CadenceDatabaseExtensions.ReadinessTag]);
-builder.Services.AddCadenceMigrations<ExecutionDbContext>(builder.Configuration);
+builder.AddCadencePostgresDbContext<ExecutionDbContext>(
+    ExecutionDbContextFactory.Schema,
+    configureOptions: (sp, options) =>
+    {
+        options.AddInterceptors(
+            concurrencyTokenIncrementInterceptor,
+            new Cadence.Database.GxPAuditInterceptor(
+                () => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId,
+                sp.GetRequiredService<IClock>()));
+    });
 
 // E-signature step-up tokens are single use across every instance and restart: their use is recorded in
 // consumed_signature_tokens, not in process memory (#5311, ADR-2515).
