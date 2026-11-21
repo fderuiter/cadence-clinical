@@ -1,7 +1,10 @@
 import { encodeChangeReason } from "./changeReason";
 import createClient, { type Middleware } from "openapi-fetch";
 import type { paths } from "./types";
-import { getBearerToken } from "./authorization.js";
+import {
+  getBearerToken,
+  refreshBearerTokenOnUnauthorized,
+} from "./authorization.js";
 
 declare global {
   interface ImportMeta {
@@ -71,12 +74,72 @@ export function getAuthMiddleware(): Middleware {
   };
 }
 
-const INITIAL_BASE_URL = getBaseUrl();
+async function rebuildRequest(
+  source: Request,
+  url: string = source.url,
+  headers: HeadersInit = source.headers
+): Promise<Request> {
+  const hasBody =
+    source.body !== null && source.method !== "GET" && source.method !== "HEAD";
+  const body = hasBody ? await source.arrayBuffer() : undefined;
+  return new Request(url, {
+    method: source.method,
+    headers,
+    body: body && body.byteLength > 0 ? body : undefined,
+    credentials: source.credentials,
+    mode: source.mode,
+    cache: source.cache,
+    redirect: source.redirect,
+    referrer: source.referrer,
+    referrerPolicy: source.referrerPolicy,
+    integrity: source.integrity,
+    keepalive: source.keepalive,
+    signal: source.signal,
+  });
+}
 
-async function dispatchOpenApiFetch(
+async function executeWithSingleFlightRetry(
   input: RequestInfo | URL,
-  init?: RequestInit,
-  initialBaseUrl: string = INITIAL_BASE_URL
+  init?: RequestInit
+): Promise<Response> {
+  const url = input instanceof Request ? input.url : String(input);
+  const retryClone = input instanceof Request ? input.clone() : null;
+  const response = await globalThis.fetch(input, init);
+  if (response.status !== 401) {
+    return response;
+  }
+  const errBody = await response
+    .clone()
+    .json()
+    .catch(() => null);
+  const freshToken = await refreshBearerTokenOnUnauthorized(url, errBody);
+  if (!freshToken) {
+    return response;
+  }
+  if (retryClone) {
+    const retryHeaders = new Headers(retryClone.headers);
+    if (init?.headers) {
+      new Headers(init.headers).forEach((value, key) => {
+        retryHeaders.set(key, value);
+      });
+    }
+    retryHeaders.set("Authorization", `Bearer ${freshToken}`);
+    const retriedRequest = await rebuildRequest(
+      retryClone,
+      retryClone.url,
+      retryHeaders
+    );
+    return globalThis.fetch(retriedRequest, init);
+  }
+  const retryHeaders = new Headers(init?.headers);
+  retryHeaders.set("Authorization", `Bearer ${freshToken}`);
+  return globalThis.fetch(input, { ...init, headers: retryHeaders });
+}
+
+async function dispatchWithDynamicBase(
+  initialBaseUrl: string,
+  input: RequestInfo | URL,
+  init?: RequestInit
 ): Promise<Response> {
   const currentBase = getBaseUrl().replace(/\/+$/, "");
   const initialBase = initialBaseUrl.replace(/\/+$/, "");
@@ -86,53 +149,50 @@ async function dispatchOpenApiFetch(
     input.url.startsWith(`${initialBase}/`)
   ) {
     const rewrittenUrl = `${currentBase}${input.url.slice(initialBase.length)}`;
-    const hasBody =
-      input.body !== null && input.method !== "GET" && input.method !== "HEAD";
-    const body = hasBody ? await input.clone().arrayBuffer() : undefined;
-    const rewritten = new Request(rewrittenUrl, {
-      method: input.method,
-      headers: input.headers,
-      body: body && body.byteLength > 0 ? body : undefined,
-      credentials: input.credentials,
-      mode: input.mode,
-      cache: input.cache,
-      redirect: input.redirect,
-      referrer: input.referrer,
-      referrerPolicy: input.referrerPolicy,
-      integrity: input.integrity,
-      keepalive: input.keepalive,
-      signal: input.signal,
-    });
-    return globalThis.fetch(rewritten, init);
+    const rewrittenRequest = await rebuildRequest(input.clone(), rewrittenUrl);
+    return executeWithSingleFlightRetry(rewrittenRequest, init);
   }
-  return globalThis.fetch(input, init);
+  return executeWithSingleFlightRetry(input, init);
 }
-
-function createDynamicBaseFetch(initialBaseUrl: string) {
-  return (input: RequestInfo | URL, init?: RequestInit): Promise<Response> =>
-    dispatchOpenApiFetch(input, init, initialBaseUrl);
-}
-
-export const openApiClient = createClient<paths>({
-  baseUrl: INITIAL_BASE_URL,
-  fetch: createDynamicBaseFetch(INITIAL_BASE_URL),
-});
-
-openApiClient.use(getAuthMiddleware());
 
 export function createOpenApiClient<T extends {} = paths>(baseUrl?: string) {
-  const resolvedBaseUrl = baseUrl ?? getBaseUrl();
-  // Resolve fetch per call, as openApiClient does, so tests, Vite circular module init, and the MSW worker see the current global/base URL.
-  const client = createClient<T>({
-    baseUrl: resolvedBaseUrl,
-    fetch:
-      baseUrl === undefined
-        ? createDynamicBaseFetch(resolvedBaseUrl)
-        : (...args) => globalThis.fetch(...args),
+  const hasExplicitBaseUrl = baseUrl !== undefined;
+  let inner: ReturnType<typeof createClient<T>> | null = null;
+  const pendingMiddleware: Middleware[] = [];
+
+  const getInner = () => {
+    if (!inner) {
+      const initialClientBase = baseUrl ?? getBaseUrl();
+      inner = createClient<T>({
+        baseUrl: initialClientBase,
+        fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+          hasExplicitBaseUrl
+            ? executeWithSingleFlightRetry(input, init)
+            : dispatchWithDynamicBase(initialClientBase, input, init),
+      });
+      inner.use(getAuthMiddleware());
+      for (const mw of pendingMiddleware) {
+        inner.use(mw);
+      }
+    }
+    return inner;
+  };
+
+  return new Proxy({} as ReturnType<typeof createClient<T>>, {
+    get(_target, prop, receiver) {
+      if (prop === "use" && !inner) {
+        return (...middlewares: Middleware[]) => {
+          pendingMiddleware.push(...middlewares);
+        };
+      }
+      const target = getInner();
+      const value = Reflect.get(target, prop, receiver);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
   });
-  client.use(getAuthMiddleware());
-  return client;
 }
+
+export const openApiClient = createOpenApiClient<paths>();
 
 export async function unwrapResponse<T>(
   promise: Promise<{ data?: T; error?: unknown; response: Response }>

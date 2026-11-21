@@ -1,5 +1,13 @@
 // 21 CFR Part 11 electronic signature modal for ePRO and eConsent.
-import { getFocusableElements, sha256, trapTabFocus } from "ui";
+import {
+  SEMANTIC_ACTIONS,
+  buildStepUpVerificationPayload,
+  getFocusableElements,
+  requiresCustomSignatureReason,
+  resolveSignatureReason,
+  sha256,
+  trapTabFocus,
+} from "ui";
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
 import {
@@ -184,10 +192,28 @@ export async function verifyAndSubmitSignature() {
     return;
   }
 
-  const finalReason =
-    reasonSelect === "Other" && reasonCustom
-      ? reasonCustom
-      : `${reasonSelect}${reasonCustom ? ": " + reasonCustom : ""}`;
+  const reasonCheck = resolveSignatureReason(reasonSelect, reasonCustom);
+  if (!reasonCheck.valid) {
+    if (errorBanner) {
+      errorBanner.textContent = reasonCheck.error;
+      errorBanner.style.display = "block";
+    } else {
+      alert(reasonCheck.error);
+    }
+    const customInput = document.getElementById("sign-reason-custom");
+    if (
+      requiresCustomSignatureReason(reasonSelect) &&
+      customInput &&
+      typeof customInput.focus === "function"
+    ) {
+      customInput.focus();
+    }
+    return;
+  }
+
+  const finalReason = requiresCustomSignatureReason(reasonSelect)
+    ? reasonCheck.reason
+    : `${reasonCheck.reason}${reasonCustom ? ": " + reasonCustom : ""}`;
 
   // Preserve credentials into local variables and clear reactive DOM fields immediately before async call
   const cleanUsername = username;
@@ -208,16 +234,17 @@ export async function verifyAndSubmitSignature() {
     if (isAuthenticatedSession()) {
       try {
         // Step 1: obtain short-lived sig_token bound to exact gateway action & semantic_action
+        const verificationBody = buildStepUpVerificationPayload({
+          username: cleanUsername,
+          password: cleanPassword,
+          action: captureActionPath,
+          semanticAction: SEMANTIC_ACTIONS.ECONSENT_CAPTURE,
+        });
         const tokenResponse = await dispatchApi(
           "api/v1/auth/signature-verification",
           {
             method: "POST",
-            body: JSON.stringify({
-              username: cleanUsername,
-              password: cleanPassword,
-              action: captureActionPath,
-              semantic_action: "econsent.consent.capture",
-            }),
+            body: JSON.stringify(verificationBody),
           }
         );
 
