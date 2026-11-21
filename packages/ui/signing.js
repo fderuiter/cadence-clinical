@@ -565,3 +565,354 @@ export async function deriveKeyFromPIN(pin, salt, iterations = 100000) {
   );
   return new Uint8Array(derivedBits);
 }
+
+/**
+ * Cryptographic Contract v3: governed `semantic_action` grammar enforced by
+ * `SignatureTokenEndpoints.cs` (`^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){1,4}$`).
+ */
+export const SEMANTIC_ACTION_PATTERN =
+  /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){1,4}$/;
+
+/**
+ * Maximum `/api/v1/...` target path length accepted by the gateway step-up endpoint.
+ */
+export const STEP_UP_ACTION_MAX_LENGTH = 512;
+
+/**
+ * Canonical `semantic_action` identifiers shared across Cadence Clinical workflows.
+ */
+export const SEMANTIC_ACTIONS = Object.freeze({
+  CTMS_DOA_SIGN_OFF: "ctms.doa.sign_off",
+  ECONSENT_CAPTURE: "econsent.consent.capture",
+  ECONSENT_RECONSENT_SIGN: "econsent.reconsent.sign",
+  CEC_CHAIR_ADJUDICATE: "execution.cec.chair_adjudicate",
+  ETMF_DOCUMENT_SIGN_OFF: "etmf.document.sign_off",
+  COLLECTION_SIGN: "collection.sign",
+  SOA_APPROVE: "designer.soa.approve",
+});
+
+/**
+ * Validates that a step-up `action` path conforms to `SignatureTokenEndpoints.IsValidActionPath`:
+ * starts with `/api/v1/`, length `<= 512`, no whitespace, and no `..` traversal segment.
+ *
+ * @param {string|null|undefined} action
+ * @returns {boolean}
+ */
+export function isValidStepUpAction(action) {
+  if (typeof action !== "string") {
+    return false;
+  }
+  if (action.length === 0 || action.length > STEP_UP_ACTION_MAX_LENGTH) {
+    return false;
+  }
+  if (!action.startsWith("/api/v1/")) {
+    return false;
+  }
+  if (/\s/.test(action) || action.includes("..")) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Validates that a step-up `semantic_action` conforms to the v3 dot-separated snake_case contract.
+ *
+ * @param {string|null|undefined} semanticAction
+ * @returns {boolean}
+ */
+export function isValidSemanticAction(semanticAction) {
+  if (typeof semanticAction !== "string") {
+    return false;
+  }
+  return SEMANTIC_ACTION_PATTERN.test(semanticAction);
+}
+
+function createStepUpPayloadError(message) {
+  const err = new Error(message);
+  err.code = "INVALID_STEP_UP_PAYLOAD";
+  return err;
+}
+
+/**
+ * Builds and validates a Version 3 `/api/v1/auth/signature-verification` request body
+ * per `docs/SDLC/Signature_Token_Cryptographic_Contract.md` and `SignatureTokenEndpoints.cs`.
+ *
+ * @param {{
+ *   username?: string | null,
+ *   password: string,
+ *   totp?: string | null,
+ *   action: string,
+ *   semanticAction?: string,
+ *   semantic_action?: string,
+ *   batchId?: string | null,
+ *   batch_id?: string | null,
+ * }} input
+ * @returns {{
+ *   username?: string,
+ *   password: string,
+ *   totp?: string,
+ *   action: string,
+ *   semantic_action: string,
+ *   batch_id?: string,
+ * }}
+ */
+export function buildStepUpVerificationPayload(input = {}) {
+  const candidate = input?.password;
+  if (typeof candidate !== "string" || candidate.length === 0) {
+    throw createStepUpPayloadError(
+      "Step-up verification requires a non-empty password."
+    );
+  }
+
+  const action = typeof input?.action === "string" ? input.action : "";
+  if (!isValidStepUpAction(action)) {
+    throw createStepUpPayloadError(
+      "Step-up verification requires an action path starting with '/api/v1/' (max 512 chars, no whitespace or '..')."
+    );
+  }
+
+  const rawSemantic = input?.semanticAction ?? input?.semantic_action ?? "";
+  const semanticAction =
+    typeof rawSemantic === "string" ? rawSemantic.trim() : "";
+  if (!isValidSemanticAction(semanticAction)) {
+    throw createStepUpPayloadError(
+      "Step-up verification requires a valid semantic_action (e.g. 'ctms.doa.sign_off')."
+    );
+  }
+
+  const payload = {
+    password: candidate,
+    action,
+    semantic_action: semanticAction,
+  };
+
+  if (typeof input?.username === "string" && input.username.trim().length > 0) {
+    payload.username = input.username.trim();
+  }
+  if (typeof input?.totp === "string" && input.totp.trim().length > 0) {
+    payload.totp = input.totp.trim();
+  }
+  const rawBatchId = input?.batchId ?? input?.batch_id;
+  if (typeof rawBatchId === "string" && rawBatchId.trim().length > 0) {
+    payload.batch_id = rawBatchId.trim();
+  }
+
+  return payload;
+}
+
+/**
+ * Controlled signing reason sentinel requiring free-text specification.
+ */
+export const SIGNATURE_OTHER_REASON = "Other";
+
+/**
+ * Shared HTML input attributes for 21 CFR Part 11 re-authentication password fields.
+ * Uses alphanumeric `inputmode="text"` so mobile virtual keyboards never lock out
+ * Keycloak account passwords with digits-only keypads.
+ */
+export const SIGNATURE_PASSWORD_INPUT_ATTRS = Object.freeze({
+  type: "password",
+  inputmode: "text",
+  autocomplete: "current-password",
+  autocapitalize: "off",
+  autocorrect: "off",
+  spellcheck: "false",
+});
+
+/**
+ * Returns true when the selected controlled signing reason requires custom text.
+ *
+ * @param {string|null|undefined} selectedReason
+ * @returns {boolean}
+ */
+export function requiresCustomSignatureReason(selectedReason) {
+  return (
+    typeof selectedReason === "string" &&
+    selectedReason.trim() === SIGNATURE_OTHER_REASON
+  );
+}
+
+/**
+ * Validates and resolves the effective 21 CFR Part 11 signing reason, rejecting
+ * blank or whitespace-only custom explanations when `"Other"` is selected.
+ *
+ * @param {string|null|undefined} selectedReason
+ * @param {string|null|undefined} [customReason=""]
+ * @returns {{ valid: boolean, reason: string, error: string | null }}
+ */
+export function resolveSignatureReason(selectedReason, customReason = "") {
+  const normalizedSelected =
+    typeof selectedReason === "string" ? selectedReason.trim() : "";
+  if (!normalizedSelected) {
+    return {
+      valid: false,
+      reason: "",
+      error: "Please select a signing reason.",
+    };
+  }
+
+  if (normalizedSelected === SIGNATURE_OTHER_REASON) {
+    const normalizedCustom =
+      typeof customReason === "string" ? customReason.trim() : "";
+    if (!normalizedCustom) {
+      return {
+        valid: false,
+        reason: "",
+        error:
+          "Please specify a custom signing reason when 'Other' is selected.",
+      };
+    }
+    return {
+      valid: true,
+      reason: normalizedCustom,
+      error: null,
+    };
+  }
+
+  return {
+    valid: true,
+    reason: normalizedSelected,
+    error: null,
+  };
+}
+
+const CLAIM_TO_SIGNER_ROLE_PRIORITY = [
+  {
+    matches: ["pi", "principal_investigator", "principal investigator"],
+    signerRole: "PI",
+  },
+  {
+    matches: ["site_investigator", "site investigator", "investigator"],
+    signerRole: "Investigator",
+  },
+  {
+    matches: [
+      "crc",
+      "site_crc",
+      "site crc",
+      "clinical_research_coordinator",
+      "clinical research coordinator",
+    ],
+    signerRole: "Site CRC",
+  },
+  {
+    matches: [
+      "sponsor_designer",
+      "sponsor designer",
+      "study_designer",
+      "study designer",
+      "designer",
+      "sponsor_admin",
+      "sponsor admin",
+    ],
+    signerRole: "Sponsor Designer",
+  },
+  {
+    matches: ["data_manager", "data manager"],
+    signerRole: "Data Manager",
+  },
+  {
+    matches: ["auditor", "cra", "monitor"],
+    signerRole: "Auditor",
+  },
+  {
+    matches: ["subject", "participant"],
+    signerRole: "Subject",
+  },
+];
+
+function extractRoleStrings(claimsOrRoles) {
+  if (!claimsOrRoles) {
+    return [];
+  }
+  if (Array.isArray(claimsOrRoles)) {
+    return claimsOrRoles
+      .map((r) =>
+        String(r || "")
+          .trim()
+          .toLowerCase()
+      )
+      .filter(Boolean);
+  }
+  if (typeof claimsOrRoles === "string") {
+    return claimsOrRoles
+      .split(",")
+      .map((r) => r.trim().toLowerCase())
+      .filter(Boolean);
+  }
+  if (typeof claimsOrRoles === "object") {
+    const collected = [];
+    if (Array.isArray(claimsOrRoles.roles)) {
+      collected.push(...claimsOrRoles.roles);
+    } else if (typeof claimsOrRoles.roles === "string") {
+      collected.push(...claimsOrRoles.roles.split(","));
+    }
+    if (Array.isArray(claimsOrRoles.realm_access?.roles)) {
+      collected.push(...claimsOrRoles.realm_access.roles);
+    }
+    if (typeof claimsOrRoles.role === "string") {
+      collected.push(claimsOrRoles.role);
+    }
+    return collected
+      .map((r) =>
+        String(r || "")
+          .trim()
+          .toLowerCase()
+      )
+      .filter(Boolean);
+  }
+  return [];
+}
+
+/**
+ * Derives the default `SignatureCaptureModal` signer role option from OIDC role claims
+ * so authenticated clinicians do not default to `"Subject"`.
+ *
+ * @param {string[] | string | Record<string, any> | null | undefined} claimsOrRoles
+ * @param {string} [fallback="Subject"]
+ * @returns {string}
+ */
+export function deriveSignerRoleFromClaims(
+  claimsOrRoles,
+  fallback = "Subject"
+) {
+  const normalizedRoles = extractRoleStrings(claimsOrRoles);
+  if (normalizedRoles.length === 0) {
+    return fallback;
+  }
+
+  const usernameHint =
+    claimsOrRoles &&
+    typeof claimsOrRoles === "object" &&
+    !Array.isArray(claimsOrRoles)
+      ? String(claimsOrRoles.username || claimsOrRoles.preferred_username || "")
+          .trim()
+          .toLowerCase()
+      : "";
+
+  if (
+    (usernameHint === "pi" || usernameHint.startsWith("pi.")) &&
+    normalizedRoles.some((r) =>
+      [
+        "pi",
+        "principal_investigator",
+        "principal investigator",
+        "site_investigator",
+        "site investigator",
+        "investigator",
+      ].includes(r)
+    )
+  ) {
+    return "PI";
+  }
+
+  for (const mapping of CLAIM_TO_SIGNER_ROLE_PRIORITY) {
+    if (
+      mapping.matches.some((candidate) => normalizedRoles.includes(candidate))
+    ) {
+      return mapping.signerRole;
+    }
+  }
+
+  return fallback;
+}

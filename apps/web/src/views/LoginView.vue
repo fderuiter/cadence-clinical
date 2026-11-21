@@ -212,6 +212,12 @@
 <script setup>
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { sanitizeReturnUrl } from "ui";
+import {
+  consumeWebReturnUrl,
+  peekWebReturnUrl,
+  saveWebReturnUrl,
+} from "../auth/sessionCoordinator.js";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
 
@@ -225,14 +231,15 @@ const errorMessage = computed(() => authStore.authError || signInError.value);
 
 /** In-app path to return to after sign-in; never an external URL. */
 function redirectTarget() {
-  const target = route.query.redirect;
-  if (
-    typeof target === "string" &&
-    target.startsWith("/") &&
-    !target.startsWith("//") &&
-    !target.startsWith("/\\")
-  ) {
-    return target;
+  const fromQuery = sanitizeReturnUrl(
+    typeof route.query.redirect === "string" ? route.query.redirect : ""
+  );
+  if (fromQuery) {
+    return fromQuery;
+  }
+  const fromSession = peekWebReturnUrl();
+  if (fromSession) {
+    return fromSession;
   }
   return "/";
 }
@@ -247,7 +254,9 @@ async function signIn() {
   }
   isRedirecting.value = true;
   try {
-    const href = router.resolve(redirectTarget()).href;
+    const target = redirectTarget();
+    saveWebReturnUrl(target);
+    const href = router.resolve(target).href;
     await authStore.login({
       redirectUri: new URL(href, window.location.origin).toString(),
     });
@@ -285,10 +294,12 @@ function retry() {
 }
 
 function goToLanding() {
+  const target = redirectTarget();
+  consumeWebReturnUrl();
   if (authStore.needsTrialOnboarding) {
     router.push("/onboarding/trial");
     return;
   }
-  router.push(redirectTarget());
+  router.push(target);
 }
 </script>
