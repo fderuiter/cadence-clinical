@@ -578,6 +578,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2550: Co-Host Interactive Demos on GitHub Pages Subpaths](adr/2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.md) | Current | - Status: Accepted |
 | [ADR-2547: Keycloak Self-Registration and Clinical Kernel Trial Bootstrap](adr/2026-11-20-keycloak-self-registration-and-clinical-kernel-trial-bootstrap.md) | Current | - Status: Accepted |
 | [ADR-2819: Focus Active eCRF View on Backed Kernel Forms Outside Demo Mode](adr/2026-11-20-focus-active-ecrf-view-on-backed-kernel-forms-outside-demo-mode.md) | Current | - Status: Accepted |
+| [ADR-2641: Contextual SOP Specificity Resolution and Audited Support Ticket Escalation](adr/2026-11-20-contextual-sop-resolution-and-audited-ticket-escalation.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
