@@ -1,8 +1,26 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const isAccessibilityOnly = process.argv.some((arg) =>
-  arg.includes("accessibility")
-);
+const isAccessibilityOnly =
+  process.env.CADENCE_TEST_BROWSER === "1" ||
+  process.argv.some((arg) => arg.includes("accessibility"));
+
+const accessibilityProject = {
+  name: "accessibility",
+  testMatch: /web-accessibility\.spec\.ts/,
+  use: {
+    ...devices["Desktop Chrome"],
+    channel: "chromium",
+    baseURL: "http://127.0.0.1:3001/cadence-clinical/",
+    launchOptions: {
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+      ],
+    },
+  },
+};
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -23,37 +41,24 @@ export default defineConfig({
         : "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [
-    {
-      name: "setup",
-      testMatch: /auth\.setup\.ts/,
-    },
-    {
-      name: "chromium",
-      testIgnore: /web-accessibility\.spec\.ts/,
-      use: {
-        ...devices["Desktop Chrome"],
-        storageState: "playwright/.auth/user.json",
-      },
-      dependencies: ["setup"],
-    },
-    {
-      name: "accessibility",
-      testMatch: /web-accessibility\.spec\.ts/,
-      use: {
-        ...devices["Desktop Chrome"],
-        channel: "chromium",
-        baseURL: "http://127.0.0.1:3001/cadence-clinical/",
-        launchOptions: {
-          args: [
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-dev-shm-usage",
-          ],
+  projects: isAccessibilityOnly
+    ? [accessibilityProject]
+    : [
+        {
+          name: "setup",
+          testMatch: /auth\.setup\.ts/,
         },
-      },
-    },
-  ],
+        {
+          name: "chromium",
+          testIgnore: /web-accessibility\.spec\.ts/,
+          use: {
+            ...devices["Desktop Chrome"],
+            storageState: "playwright/.auth/user.json",
+          },
+          dependencies: ["setup"],
+        },
+        accessibilityProject,
+      ],
   webServer: isAccessibilityOnly
     ? [
         {

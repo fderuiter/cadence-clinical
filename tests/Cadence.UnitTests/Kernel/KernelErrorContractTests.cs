@@ -36,6 +36,7 @@ public sealed class KernelErrorContractTests
     /// </summary>
     private static readonly HashSet<string> ComputationOnly = new(StringComparer.Ordinal)
     {
+        "AiVerifyLiveness",
         "KernelGenerateProtocolProposal",
         "KernelMatrixGapCheck",
         "RouteAiIntent",

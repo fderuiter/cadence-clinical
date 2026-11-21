@@ -18,6 +18,7 @@ passing_trx='<TestRun><Results><UnitTestResult testName="Kernel.Passes" outcome=
 
 benchmark_only_trx='<TestRun><Results>
 <UnitTestResult testName="LineageBenchmarkPostgresTests.BenchmarkTenMillionEdgesTraceLatency" outcome="NotExecuted" />
+<UnitTestResult testName="Benchmark_TenMillionEdges_TraceLatency" outcome="NotExecuted" />
 </Results></TestRun>'
 
 benchmark_display_name_trx='<TestRun><Results>

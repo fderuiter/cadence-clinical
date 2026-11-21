@@ -32,6 +32,7 @@ public partial class EnforceTenantRowLevelSecurity : Migration
         "payments_split_payees",
     ];
 
+    /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.AddColumn<Guid>(
@@ -163,11 +164,6 @@ public partial class EnforceTenantRowLevelSecurity : Migration
             table: "payments_self_billing_invoices",
             column: "tenant_id");
 
-        migrationBuilder.AddCheckConstraint(
-            name: "ck_payments_self_billing_invoices_status",
-            table: "payments_self_billing_invoices",
-            sql: "\"Status\" IN ('DRAFT', 'APPROVED', 'RECONCILED', 'CANCELLED')");
-
         migrationBuilder.CreateIndex(
             name: "IX_payments_remittance_advices_tenant_id",
             table: "payments_remittance_advices",
@@ -177,11 +173,6 @@ public partial class EnforceTenantRowLevelSecurity : Migration
             name: "IX_payments_payables_tenant_id",
             table: "payments_payables",
             column: "tenant_id");
-
-        migrationBuilder.AddCheckConstraint(
-            name: "ck_payments_payables_status",
-            table: "payments_payables",
-            sql: "\"Status\" IN ('TRIGGERED', 'VERIFIED', 'INVOICED', 'CANCELLED')");
 
         migrationBuilder.CreateIndex(
             name: "IX_payments_payable_allocations_tenant_id",
@@ -208,20 +199,10 @@ public partial class EnforceTenantRowLevelSecurity : Migration
             table: "payments_participant_expense_claims",
             column: "tenant_id");
 
-        migrationBuilder.AddCheckConstraint(
-            name: "ck_payments_participant_expense_claims_status",
-            table: "payments_participant_expense_claims",
-            sql: "\"Status\" IN ('PENDING_REVIEW', 'APPROVED', 'REJECTED')");
-
         migrationBuilder.CreateIndex(
             name: "IX_payments_participant_disbursements_tenant_id",
             table: "payments_participant_disbursements",
             column: "tenant_id");
-
-        migrationBuilder.AddCheckConstraint(
-            name: "ck_payments_participant_disbursements_status",
-            table: "payments_participant_disbursements",
-            sql: "\"Status\" IN ('DISPATCHED', 'SETTLED', 'FAILED', 'CANCELLED')");
 
         migrationBuilder.CreateIndex(
             name: "IX_payments_invoice_line_items_tenant_id",
@@ -257,9 +238,11 @@ public partial class EnforceTenantRowLevelSecurity : Migration
             name: "IX_audit_log_entries_tenant_id",
             table: "audit_log_entries",
             column: "tenant_id");
+
         migrationBuilder.EnableStandaloneTenantIsolation("payments", TenantTables);
     }
 
+    /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DisableStandaloneTenantIsolation("payments", TenantTables);
@@ -272,20 +255,12 @@ public partial class EnforceTenantRowLevelSecurity : Migration
             name: "IX_payments_self_billing_invoices_tenant_id",
             table: "payments_self_billing_invoices");
 
-        migrationBuilder.DropCheckConstraint(
-            name: "ck_payments_self_billing_invoices_status",
-            table: "payments_self_billing_invoices");
-
         migrationBuilder.DropIndex(
             name: "IX_payments_remittance_advices_tenant_id",
             table: "payments_remittance_advices");
 
         migrationBuilder.DropIndex(
             name: "IX_payments_payables_tenant_id",
-            table: "payments_payables");
-
-        migrationBuilder.DropCheckConstraint(
-            name: "ck_payments_payables_status",
             table: "payments_payables");
 
         migrationBuilder.DropIndex(
@@ -308,16 +283,8 @@ public partial class EnforceTenantRowLevelSecurity : Migration
             name: "IX_payments_participant_expense_claims_tenant_id",
             table: "payments_participant_expense_claims");
 
-        migrationBuilder.DropCheckConstraint(
-            name: "ck_payments_participant_expense_claims_status",
-            table: "payments_participant_expense_claims");
-
         migrationBuilder.DropIndex(
             name: "IX_payments_participant_disbursements_tenant_id",
-            table: "payments_participant_disbursements");
-
-        migrationBuilder.DropCheckConstraint(
-            name: "ck_payments_participant_disbursements_status",
             table: "payments_participant_disbursements");
 
         migrationBuilder.DropIndex(

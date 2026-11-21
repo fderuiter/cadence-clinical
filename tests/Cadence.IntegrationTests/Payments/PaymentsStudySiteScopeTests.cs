@@ -171,7 +171,7 @@ public sealed class PaymentsStudySiteScopeTests(PaymentsPostgresApiFactory facto
     }
 
     /// <summary>
-    /// The same flows still work in scope: a finance officer assigned to the study approves, reconciles and exports its
+    /// The same flows still work in scope: a finance officer assigned to the study approves, exports and reconciles its
     /// invoice and reads the resulting audit rows, and a site-A CRC credits a stipend at site A.
     /// </summary>
     [Fact]
