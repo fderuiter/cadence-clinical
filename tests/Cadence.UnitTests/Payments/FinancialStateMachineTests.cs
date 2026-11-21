@@ -373,6 +373,28 @@ public sealed class FinancialStateMachineTests : IDisposable
     }
 
     [Fact]
+    public void SelfBillingInvoice_ExportToErp_WhenReconciled_Succeeds()
+    {
+        var invoice = new SelfBillingInvoice
+        {
+            InvoiceNumber = "INV-001",
+            CreatedAt = _now,
+            CreatedBy = "user-1",
+            UpdatedAt = _now
+        };
+        invoice.Approve("finance-mgr", _now);
+        invoice.Reconcile("treasury-1", _now, "WIRE-REF-999", "Cleared in full");
+
+        invoice.ExportToErp("SAP", "ERP-SAP-98766", _now);
+
+        invoice.Status.Should().Be("RECONCILED");
+        invoice.ErpSystem.Should().Be("SAP");
+        invoice.ErpReferenceId.Should().Be("ERP-SAP-98766");
+        invoice.ErpSyncStatus.Should().Be("EXPORTED");
+        invoice.ErpSyncedAt.Should().Be(_now);
+    }
+
+    [Fact]
     public void SelfBillingInvoice_ExportToErp_WhenDraft_BlocksExport()
     {
         // Criterion 2: The SelfBillingInvoice entity blocks ERP export until authorized users approve the invoice.

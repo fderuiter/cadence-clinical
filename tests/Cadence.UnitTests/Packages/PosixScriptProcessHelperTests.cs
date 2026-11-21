@@ -71,6 +71,45 @@ public sealed class PosixScriptProcessHelperTests : IDisposable
     }
 
     [Fact]
+    public void StartWithPosixScriptFallback_StringArgumentsOverload_ForwardsParsedArgumentsViaSh()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string binDir = Path.Combine(_tempDir, "bin2");
+        Directory.CreateDirectory(binDir);
+        string shimPath = Path.Combine(binDir, "pnpm");
+        File.WriteAllText(shimPath, "# Shebang-less on purpose\necho \"shim-args:$*\"\n");
+        File.SetUnixFileMode(
+            shimPath,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        var env = new Dictionary<string, string>
+        {
+            ["PATH"] = $"{binDir}{Path.PathSeparator}{Environment.GetEnvironmentVariable("PATH")}",
+        };
+        var psi = new ProcessStartInfo("pnpm", "exec playwright test --config playwright.correction-check.config.ts")
+        {
+            WorkingDirectory = _tempDir,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        psi.Environment["PATH"] = env["PATH"];
+
+        using var process = PosixScriptProcessHelper.StartWithPosixScriptFallback(psi, env);
+        process.Should().NotBeNull();
+        string stdout = process!.StandardOutput.ReadToEnd().Trim();
+        string stderr = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+
+        process.ExitCode.Should().Be(0, stderr);
+        stdout.Should().Be("shim-args:exec playwright test --config playwright.correction-check.config.ts");
+    }
+
+    [Fact]
     public void ResolveExecutablePath_FindsBareToolInOverridePath_AndRelativeScript()
     {
         string binDir = Path.Combine(_tempDir, "tools");

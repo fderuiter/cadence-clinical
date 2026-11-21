@@ -372,7 +372,7 @@ public static class QualityGates
 
         try
         {
-            using var process = Process.Start(psi);
+            using var process = PosixScriptProcessHelper.StartWithPosixScriptFallback(psi);
             if (process is null)
             {
                 return 1;

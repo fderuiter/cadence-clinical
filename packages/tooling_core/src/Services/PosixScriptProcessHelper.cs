@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 
 namespace Cadence.ToolingCore.Services;
 
@@ -53,9 +54,19 @@ public static class PosixScriptProcessHelper
             };
 
             shPsi.ArgumentList.Add(resolvedScript);
-            foreach (string arg in psi.ArgumentList)
+            if (psi.ArgumentList.Count > 0)
             {
-                shPsi.ArgumentList.Add(arg);
+                foreach (string arg in psi.ArgumentList)
+                {
+                    shPsi.ArgumentList.Add(arg);
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(psi.Arguments))
+            {
+                foreach (string arg in SplitArguments(psi.Arguments))
+                {
+                    shPsi.ArgumentList.Add(arg);
+                }
             }
 
             if (environment is not null)
@@ -116,5 +127,55 @@ public static class PosixScriptProcessHelper
         }
 
         return null;
+    }
+
+    private static List<string> SplitArguments(string arguments)
+    {
+        var result = new List<string>();
+        var current = new StringBuilder();
+        bool inQuotes = false;
+        bool tokenStarted = false;
+
+        int index = 0;
+        while (index < arguments.Length)
+        {
+            char c = arguments[index];
+            if (c == '\\' && index + 1 < arguments.Length && (arguments[index + 1] == '"' || arguments[index + 1] == '\\'))
+            {
+                current.Append(arguments[index + 1]);
+                tokenStarted = true;
+                index += 2;
+                continue;
+            }
+
+            if (c == '"')
+            {
+                inQuotes = !inQuotes;
+                tokenStarted = true;
+            }
+            else if (!inQuotes && char.IsWhiteSpace(c))
+            {
+                if (tokenStarted)
+                {
+                    result.Add(current.ToString());
+                    current.Clear();
+                    tokenStarted = false;
+                }
+            }
+            else
+            {
+                current.Append(c);
+                tokenStarted = true;
+            }
+
+            index++;
+        }
+
+        if (tokenStarted)
+        {
+            result.Add(current.ToString());
+        }
+
+        return result;
     }
 }
