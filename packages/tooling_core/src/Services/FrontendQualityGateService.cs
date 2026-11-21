@@ -221,12 +221,14 @@ public static class FrontendQualityGateService
         return [.. selected];
     }
 
-    private static int RunProcess(string workingDirectory, string fileName, IReadOnlyList<string> arguments)
+    private static int RunProcess(string workingDirectory, string fileName, IReadOnlyList<string> arguments, bool suppressOutput = false)
     {
         var psi = new ProcessStartInfo(fileName)
         {
             WorkingDirectory = workingDirectory,
             UseShellExecute = false,
+            RedirectStandardOutput = suppressOutput,
+            RedirectStandardError = suppressOutput,
         };
         foreach (string arg in arguments)
         {
@@ -241,7 +243,18 @@ public static class FrontendQualityGateService
                 return 1;
             }
 
-            process.WaitForExit();
+            if (suppressOutput)
+            {
+                var stderrTask = process.StandardError.ReadToEndAsync();
+                _ = process.StandardOutput.ReadToEnd();
+                process.WaitForExit();
+                _ = stderrTask.GetAwaiter().GetResult();
+            }
+            else
+            {
+                process.WaitForExit();
+            }
+
             return process.ExitCode;
         }
         catch (Win32Exception ex)

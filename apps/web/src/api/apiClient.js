@@ -1,5 +1,9 @@
 import { encodeChangeReason } from "./changeReason";
-import { getApiBaseUrl, getBearerToken } from "./authorization.js";
+import {
+  getApiBaseUrl,
+  getBearerToken,
+  refreshBearerTokenOnUnauthorized,
+} from "./authorization.js";
 
 // Helper to get the current API base URL dynamically
 export const getBaseUrl = getApiBaseUrl;
@@ -92,7 +96,23 @@ async function request(path, options = {}) {
   }
 
   try {
-    const response = await fetch(url, fetchOptions);
+    let response = await fetch(url, fetchOptions);
+    if (response.status === 401 && !options._retriedAfterRefresh) {
+      const errBody = await response
+        .clone()
+        .json()
+        .catch(() => null);
+      const freshToken = await refreshBearerTokenOnUnauthorized(url, errBody);
+      if (freshToken) {
+        response = await fetch(url, {
+          ...fetchOptions,
+          headers: {
+            ...requestHeaders,
+            Authorization: `Bearer ${freshToken}`,
+          },
+        });
+      }
+    }
     if (!response.ok) {
       let data = null;
       try {

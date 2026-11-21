@@ -16,6 +16,16 @@ namespace Cadence.Kernel.Commands;
 /// <para><c>Method</c>: How the signer authenticated, for example the token's <c>amr</c> values (<c>pwd+otp</c>).</para>
 /// </remarks>
 [KernelCapability("attestation.sign", VerbClass.Execute, InCatalogue = false)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(TrustErrors),
+    nameof(TrustErrors.PersonRequired),
+    nameof(TrustErrors.MethodRequired),
+    nameof(TrustErrors.AuthenticationStale),
+    nameof(TrustErrors.TargetKindUnsupported),
+    nameof(TrustErrors.TargetUnknown),
+    nameof(TrustErrors.TargetNotSignable),
+    nameof(TrustErrors.TargetContentChanged))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 [BaselineKernelCommand]
 public sealed record Attest(

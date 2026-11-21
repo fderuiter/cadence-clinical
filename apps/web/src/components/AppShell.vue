@@ -247,6 +247,12 @@
       :is-open="isCommandPaletteOpen && authStore.isAuthenticated"
       @close="isCommandPaletteOpen = false"
     />
+    <SignOutConfirmModal
+      id="shell-signout-confirm-modal"
+      v-model="isSignOutConfirmOpen"
+      @confirm="confirmSignOut"
+      @cancel="cancelSignOut"
+    />
   </div>
 </template>
 
@@ -261,8 +267,10 @@ import {
   watch,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { SignOutConfirmModal, useSignOutGuard } from "ui";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
+import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
@@ -404,9 +412,17 @@ async function handleRegister() {
   }
 }
 
-async function handleLogout() {
-  await authStore.logout();
-}
+const {
+  isConfirmOpen: isSignOutConfirmOpen,
+  requestSignOut: handleLogout,
+  confirmSignOut,
+  cancelSignOut,
+} = useSignOutGuard({
+  hasExternalDrafts: () => hasUserScopedDrafts(),
+  onConfirmSignOut: async () => {
+    await authStore.logout();
+  },
+});
 
 function handleGlobalKeydown(event) {
   if (!authStore.isAuthenticated) return;

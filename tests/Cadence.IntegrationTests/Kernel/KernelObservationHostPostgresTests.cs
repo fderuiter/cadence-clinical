@@ -1,5 +1,4 @@
 using System;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -374,34 +373,21 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
         return request;
     }
 
-    private const int PosixEnoexec = 8;
-
     /// <summary>Runs the Playwright half of the browser check (apps/web/playwright.correction-check.config.ts).</summary>
     private static async Task<(int ExitCode, string Output)> RunBrowserCheckAsync(string observationRef, string detail, CancellationToken ct)
     {
         var web = Path.Combine(RepositoryRoot(), "apps", "web");
-        string pnpmCommand = OperatingSystem.IsWindows() ? "pnpm.cmd" : "pnpm";
-        string[] pnpmArgs = ["exec", "playwright", "test", "--config", "playwright.correction-check.config.ts"];
-        var start = CreateBrowserCheckStartInfo(web, pnpmCommand, pnpmArgs, observationRef, detail);
+        var start = CreateBrowserCheckStartInfo(web, observationRef, detail, useShellForPnpm: false);
 
         Process process;
         try
         {
             process = Process.Start(start)!;
         }
-        catch (Win32Exception ex) when (!OperatingSystem.IsWindows() && ex.NativeErrorCode == PosixEnoexec)
+        catch (System.ComponentModel.Win32Exception ex) when (!OperatingSystem.IsWindows() && ex.NativeErrorCode == PosixEnoexec)
         {
-            string? resolved = (Environment.GetEnvironmentVariable("PATH") ?? "")
-                .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
-                .Select(dir => Path.Combine(dir, pnpmCommand))
-                .FirstOrDefault(File.Exists);
-            if (resolved is null)
-            {
-                throw;
-            }
-
-            start = CreateBrowserCheckStartInfo(web, "/bin/sh", [resolved, .. pnpmArgs], observationRef, detail);
-            process = Process.Start(start)!;
+            // npm's pnpm 10/11 entry script is intentionally shebang-less; fall back to /bin/sh like POSIX execvp.
+            process = Process.Start(CreateBrowserCheckStartInfo(web, observationRef, detail, useShellForPnpm: true))!;
         }
 
         using (process)
@@ -424,23 +410,21 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
         }
     }
 
-    private static ProcessStartInfo CreateBrowserCheckStartInfo(
-        string workingDirectory,
-        string fileName,
-        string[] arguments,
-        string observationRef,
-        string detail)
+    private const int PosixEnoexec = 8;
+    private const string PreinstalledChromium = "/opt/pw-browsers/chromium";
+
+    private static ProcessStartInfo CreateBrowserCheckStartInfo(string web, string observationRef, string detail, bool useShellForPnpm)
     {
-        var start = new ProcessStartInfo(fileName)
+        var start = useShellForPnpm
+            ? new ProcessStartInfo("/bin/sh")
+            : new ProcessStartInfo("pnpm", "exec playwright test --config playwright.correction-check.config.ts");
+        start.WorkingDirectory = web;
+        start.RedirectStandardOutput = true;
+        start.RedirectStandardError = true;
+        if (useShellForPnpm)
         {
-            WorkingDirectory = workingDirectory,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
-        foreach (string arg in arguments)
-        {
-            start.ArgumentList.Add(arg);
+            start.ArgumentList.Add("-c");
+            start.ArgumentList.Add("exec pnpm exec playwright test --config playwright.correction-check.config.ts");
         }
 
         start.Environment["OBSERVATION_REF"] = observationRef;
@@ -452,8 +436,6 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
 
         return start;
     }
-
-    private const string PreinstalledChromium = "/opt/pw-browsers/chromium";
 
     private static string RepositoryRoot()
     {
