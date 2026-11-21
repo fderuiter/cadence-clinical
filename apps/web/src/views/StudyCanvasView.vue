@@ -246,6 +246,8 @@
               :enrollment-id="activeEnrollmentId"
               :record-loading="canvas.record.loading"
               :form-id="openFormId"
+              :collection-spec-id="initialSpecId || null"
+              :planned-activity-id="initialVisitId || null"
               :form-label="
                 loadedForm && loadedForm.form_id === openFormId
                   ? formatFormLabel(loadedForm)
@@ -255,6 +257,11 @@
               :can-verify-source="canVerify"
               :back-location="formBackLocation"
               :back-label="formBackLabel"
+              :handoff-location="
+                activeFormParticipant
+                  ? ecrfHandoffLocationFor(activeFormParticipant)
+                  : null
+              "
               :form-location="formLocationById"
               :observation-location="observationLocationFromForm"
               @dirty-change="formWorkspaceDirty = $event"
@@ -270,6 +277,11 @@
               :can-manage="canManage"
               :form-location="formLocationById"
               :new-form-location="newFormLocationFor(recordParticipant)"
+              :new-form-cell-location="
+                (specId, visitId) =>
+                  newFormCellLocationFor(recordParticipant!, specId, visitId)
+              "
+              :handoff-location="ecrfHandoffLocationFor(recordParticipant)"
               :observation-location="observationLocationFromRecord"
               @retry="canvas.loadRecord(recordParticipant)"
             />
@@ -306,6 +318,7 @@
             v-else-if="section?.id === 'participants'"
             :status="statusFilter"
             :site-id="siteFilter"
+            :query="participantSearchFilter"
             :selected-id="selectedNode?.id ?? ''"
             :can-manage-participants="canChangeParticipants"
             @select="selectParticipant"
@@ -445,6 +458,11 @@
             inspectedParticipant &&
             !(isNewForm && inspectedParticipant === recordParticipant)
               ? dataEntryLocationFor(inspectedParticipant)
+              : null
+          "
+          :handoff-location="
+            inspectedParticipant
+              ? ecrfHandoffLocationFor(inspectedParticipant)
               : null
           "
           :can-manage-participants="canChangeParticipants"
@@ -894,11 +912,14 @@ interface StudyQuery {
   section?: string;
   status?: string;
   site?: string;
+  q?: string;
   subject?: string;
   changed?: string;
   node?: string;
   participant?: string;
   form?: string;
+  spec?: string;
+  visit?: string;
   observation?: string;
   proposal?: string;
   ask?: string;
@@ -1209,6 +1230,7 @@ const queryStatusFilter = computed(() => {
     : "";
 });
 const siteFilter = computed(() => single(route.query.site).trim());
+const participantSearchFilter = computed(() => single(route.query.q).trim());
 const queryParticipantFilter = computed(() =>
   single(route.query.subject).trim()
 );
@@ -1264,6 +1286,8 @@ const recordRef = computed(() => participantRef(route.query.participant));
 const formQuery = computed(() => single(route.query.form).trim());
 const isNewForm = computed(() => formQuery.value === "new");
 const openFormId = computed(() => collectionInstanceId(formQuery.value));
+const initialSpecId = computed(() => single(route.query.spec).trim());
+const initialVisitId = computed(() => single(route.query.visit).trim());
 const hasOpenForm = computed(
   () => isNewForm.value || Boolean(openFormId.value)
 );
@@ -1391,7 +1415,15 @@ function formatFormLabel(form: EcrfForm): string {
 }
 
 const zoomFormLabel = computed(() => {
-  if (isNewForm.value) return "Forms";
+  if (isNewForm.value) {
+    if (initialSpecId.value && initialVisitId.value) {
+      return `Forms · ${initialSpecId.value} · ${initialVisitId.value}`;
+    }
+    if (initialSpecId.value) {
+      return `Forms · ${initialSpecId.value}`;
+    }
+    return "Forms";
+  }
   if (loadedForm.value && loadedForm.value.form_id === openFormId.value) {
     return formatFormLabel(loadedForm.value);
   }
@@ -1437,6 +1469,7 @@ function selectParticipant(participant: SubjectSummary) {
       section: "participants",
       status: statusFilter.value,
       site: siteFilter.value,
+      q: participantSearchFilter.value,
       node: formatNodeRef(node),
     })
   );
@@ -1459,6 +1492,66 @@ function newFormLocationFor(participant: SubjectSummary) {
   const node = tryNodeRef("participant", participant.id);
   const text = node ? formatNodeRef(node) : "";
   return studyLocation({ stage: "conduct", participant: text, form: "new" });
+}
+
+function newFormCellLocationFor(
+  participant: SubjectSummary,
+  specId: string,
+  visitId?: string | null
+) {
+  const node = tryNodeRef("participant", participant.id);
+  const text = node ? formatNodeRef(node) : "";
+  return studyLocation({
+    stage: "conduct",
+    participant: text,
+    form: "new",
+    spec: specId || undefined,
+    visit: visitId || undefined,
+  });
+}
+
+function ecrfHandoffLocationFor(participant: SubjectSummary) {
+  const query: LocationQueryRaw = {
+    studyId: studyCode.value,
+    subjectId: participant.subject_id,
+  };
+  if (participant.site_id) {
+    query.siteId = participant.site_id;
+  }
+  const enrollmentForParticipant =
+    canvas.record.subjectCode === participant.subject_id
+      ? canvas.record.enrollmentId
+      : loadedForm.value?.participant_id === participant.id
+        ? loadedForm.value.enrollment_id
+        : null;
+  if (enrollmentForParticipant) {
+    query.enrollmentId = enrollmentForParticipant;
+  }
+  const activeParticipantMatch =
+    activeFormParticipant.value?.id === participant.id;
+  if (activeParticipantMatch && openFormId.value) {
+    query.formId = openFormId.value;
+  }
+  const specId =
+    activeParticipantMatch && loadedForm.value?.collection_spec_id
+      ? loadedForm.value.collection_spec_id
+      : activeParticipantMatch && initialSpecId.value
+        ? initialSpecId.value
+        : "";
+  if (specId) {
+    query.collectionSpecId = specId;
+  }
+  const visitId =
+    activeParticipantMatch && loadedForm.value?.planned_activity_id
+      ? loadedForm.value.planned_activity_id
+      : activeParticipantMatch && initialVisitId.value
+        ? initialVisitId.value
+        : "";
+  if (visitId) {
+    query.plannedActivityId = visitId;
+    query.visitId = visitId;
+  }
+  return { name: "ecrf", query };
 }
 
 function dataEntryLocationFor(participant: SubjectSummary) {
@@ -1669,16 +1762,29 @@ function selectVersion(version: KernelProtocolVersion) {
   );
 }
 
-function applyParticipantFilter(filter: { status: string; siteId: string }) {
-  router.push(
-    studyLocation({
-      stage: "conduct",
-      section: "participants",
-      status: filter.status,
-      site: filter.siteId,
-      node: single(route.query.node),
-    })
-  );
+function applyParticipantFilter(filter: {
+  status: string;
+  siteId: string;
+  q?: string;
+}) {
+  const nextSearch = (filter.q ?? "").trim();
+  const location = studyLocation({
+    stage: "conduct",
+    section: "participants",
+    status: filter.status,
+    site: filter.siteId,
+    q: nextSearch,
+    node: single(route.query.node),
+  });
+  const onlySearchChanged =
+    filter.status === statusFilter.value &&
+    filter.siteId === siteFilter.value &&
+    nextSearch !== participantSearchFilter.value;
+  if (onlySearchChanged) {
+    router.replace(location);
+  } else {
+    router.push(location);
+  }
 }
 
 function applyStudyQueryFilter(filter: StudyQueriesFilterState) {
@@ -1713,6 +1819,10 @@ function goToPaletteTarget(target: PaletteTarget) {
     return;
   }
   if (target.participant) {
+    if (target.studyCode && target.studyCode !== canvas.studyCode) {
+      canvas.openStudy(target.studyCode);
+    }
+    canvas.rememberParticipants([target.participant]);
     inspectorRef.value?.expand();
   }
   const node = target.participant
@@ -1739,6 +1849,7 @@ function openTypedStudy() {
 watch(
   studyCode,
   (code) => {
+    formWorkspaceDirty.value = false;
     loadedForm.value = null;
     loadedObservation.value = null;
     resolvedLineage.value = null;
@@ -1824,6 +1935,7 @@ watch(
     () => section.value?.id,
     statusFilter,
     siteFilter,
+    participantSearchFilter,
   ],
   () => {
     if (
@@ -1838,17 +1950,23 @@ watch(
       return;
     }
     if (section.value?.id !== "participants") return;
-    const filter = { status: statusFilter.value, siteId: siteFilter.value };
+    const filter = {
+      status: statusFilter.value,
+      siteId: siteFilter.value,
+      q: participantSearchFilter.value,
+    };
     const loaded = canvas.participantsFilter;
     const sameFilter =
       (loaded.status ?? "") === filter.status &&
-      (loaded.siteId ?? "") === filter.siteId;
+      (loaded.siteId ?? "") === filter.siteId &&
+      (loaded.q ?? "") === filter.q;
     const hasPage =
       canvas.participants.length > 0 || canvas.participantsTotal > 0;
     if (!sameFilter || (!hasPage && !canvas.participantsLoading)) {
       canvas.loadParticipants({
         status: filter.status || undefined,
         siteId: filter.siteId || undefined,
+        q: filter.q || undefined,
       });
     }
   },
@@ -1906,6 +2024,7 @@ if (typeof onBeforeRouteUpdate === "function") {
   onBeforeRouteUpdate((to) => {
     if (
       formWorkspaceDirty.value &&
+      !shouldSuppressUnsavedGuard() &&
       leavesActiveForm(to) &&
       !confirmDiscardUnsavedForm()
     ) {

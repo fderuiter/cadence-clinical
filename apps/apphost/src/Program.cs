@@ -153,7 +153,7 @@ IResourceBuilder<ProjectResource> Service(IResourceBuilder<ProjectResource> proj
     return project;
 }
 
-Service(builder.AddProject<Projects.Cadence_Apps_Execution>("execution"))
+var execution = Service(builder.AddProject<Projects.Cadence_Apps_Execution>("execution"))
     .WithEnvironment("DemographicsEncryption__KeyBase64", demographicsEncryptionKey)
     .WithEnvironment("RANDOMIZATION_ALLOCATION_KEY", randomizationAllocationKey);
 Service(builder.AddProject<Projects.Cadence_Apps_Ctms>("ctms"));
@@ -164,6 +164,7 @@ Service(builder.AddProject<Projects.Cadence_Apps_Ctms>("ctms"));
 var kernel = Service(builder.AddProject<Projects.Cadence_Kernel_Host>("kernel"))
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName);
 useKeycloakAdminOnKernel(kernel);
+execution.WithEnvironment("KERNEL_SERVICE_URL", kernel.GetEndpoint("http"));
 if (builder.Environment.IsDevelopment())
 {
     kernel.WithEnvironment("Kernel__DevelopmentTenant__Code", "cadence-local");

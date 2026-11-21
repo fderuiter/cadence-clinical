@@ -176,6 +176,9 @@ function resolveCollectionTitle(collectionSpecId) {
   if (normalized === "form-chem-panel") {
     return "Clinical Chemistry Panel (CDASH LB)";
   }
+  if (normalized === "form-adverse-event") {
+    return "Adverse Event (CDASH AE)";
+  }
   return null;
 }
 
@@ -1929,6 +1932,15 @@ export function createWebDemoStore() {
             frequency: 2,
             footnotes: [],
           },
+          {
+            collection_spec_id: "form-adverse-event",
+            name: "Adverse Event (CDASH AE)",
+            item_ids: ["item-aeterm", "item-aesev"],
+            concepts: ["AETERM", "AESEV"],
+            columns: [],
+            frequency: 0,
+            footnotes: [],
+          },
         ],
         footnotes: [
           {
@@ -2382,7 +2394,7 @@ export function createWebDemoStore() {
       };
     },
 
-    listSubjects({ studyId, siteId, status, limit = 50, offset = 0 } = {}) {
+    listSubjects({ studyId, siteId, status, q, limit = 50, offset = 0 } = {}) {
       let filtered = [...state.subjects];
       if (studyId) {
         const byStudy = filtered.filter(
@@ -2401,6 +2413,12 @@ export function createWebDemoStore() {
       if (status) {
         filtered = filtered.filter(
           (s) => s.status.toUpperCase() === String(status).toUpperCase()
+        );
+      }
+      if (q && String(q).trim()) {
+        const needle = String(q).trim().toLowerCase();
+        filtered = filtered.filter((s) =>
+          s.subject_id.toLowerCase().includes(needle)
         );
       }
       const numOffset = Number(offset) || 0;
@@ -2487,10 +2505,13 @@ export function createWebDemoStore() {
             s.id === subjectId
         ) || state.subjects[0];
       return {
+        id: found.id,
         subject_id: found.subject_id,
         study_id: found.study_id,
         status: found.status,
         site_id: found.site_id,
+        active_protocol_version: found.active_protocol_version || "2.0",
+        enrollment_index: found.enrollment_index ?? 0,
         treatment_group: found.treatment_group,
         randomization_seed: null,
         investigational_product_id: null,
@@ -2627,14 +2648,20 @@ export function createWebDemoStore() {
     openForm(body) {
       const enrollmentId = body?.enrollment_id || ENROLLMENT_1001_UUID;
       const collectionSpecId = body?.collection_spec_id || "form-vital-signs";
-      const plannedActivityId = body?.planned_activity_id ?? "visit-baseline";
+      const plannedActivityId =
+        body &&
+        Object.prototype.hasOwnProperty.call(body, "planned_activity_id")
+          ? (body.planned_activity_id ?? null)
+          : "visit-baseline";
 
       for (const existing of state.forms.values()) {
         if (
           (body?.form_id && existing.form_id === body.form_id) ||
           (existing.enrollment_id === enrollmentId &&
             existing.collection_spec_id === collectionSpecId &&
-            existing.planned_activity_id === plannedActivityId)
+            existing.planned_activity_id === plannedActivityId &&
+            (!body?.collected_at ||
+              existing.collected_at === body.collected_at))
         ) {
           return {
             form_id: existing.form_id,
@@ -2736,12 +2763,104 @@ export function createWebDemoStore() {
         );
       return matches.map((f) => {
         const itemsList = Array.isArray(f.items) ? f.items : [];
-        const recordedCount = itemsList.filter(
+        const recordedItems = itemsList.filter(
           (it) =>
             it.value !== null &&
             it.value !== undefined &&
             !(it.value.type === "missing" && it.value.reason === "not_asked")
+        );
+        const recordedCount = recordedItems.length;
+        const missingRequiredCount = Array.isArray(f.missing_required)
+          ? f.missing_required.length
+          : itemsList.filter(
+              (it) =>
+                it.required &&
+                (!it.value ||
+                  (it.value.type === "missing" &&
+                    it.value.reason === "not_asked"))
+            ).length;
+
+        const formQueries = [...state.queries.values()].filter(
+          (q) => q.form_id === f.form_id
+        );
+        const openQueryCount = formQueries.filter(
+          (q) => String(q.status).toLowerCase() === "open"
         ).length;
+        const answeredQueryCount = formQueries.filter(
+          (q) => String(q.status).toLowerCase() === "answered"
+        ).length;
+
+        const formAssertions = Array.isArray(f.assertions) ? f.assertions : [];
+        const activeFormVerified = formAssertions.some(
+          (a) =>
+            !a.retracted_at &&
+            String(a.kind).toLowerCase() === "verified" &&
+            !String(a.target || "").startsWith("observation:")
+        );
+        let verifiedCount = 0;
+        for (const it of recordedItems) {
+          if (activeFormVerified) {
+            verifiedCount += 1;
+            continue;
+          }
+          const obsRef = `observation:${it.observation_id}`;
+          const obs = state.observations.get(obsRef);
+          const obsAssertions = Array.isArray(obs?.assertions)
+            ? obs.assertions
+            : [];
+          const isObsVerified =
+            obsAssertions.some(
+              (a) =>
+                !a.retracted_at &&
+                String(a.kind).toLowerCase() === "verified" &&
+                (a.revision === undefined ||
+                  Number(a.revision) === Number(it.revision))
+            ) ||
+            formAssertions.some(
+              (a) =>
+                !a.retracted_at &&
+                String(a.kind).toLowerCase() === "verified" &&
+                a.target === obsRef &&
+                (a.revision === undefined ||
+                  Number(a.revision) === Number(it.revision))
+            );
+          if (isObsVerified) {
+            verifiedCount += 1;
+          }
+        }
+        const unverifiedCount = Math.max(0, recordedCount - verifiedCount);
+
+        const formLocks = Array.isArray(f.locks) ? f.locks : [];
+        const studyLocked = state.locks.some(
+          (lk) => String(lk.status || "").toUpperCase() === "LOCKED"
+        );
+        const hasHardLock =
+          studyLocked ||
+          formLocks.some(
+            (lk) =>
+              !lk.released_at &&
+              String(lk.level || lk.kind || "locked").toLowerCase() !== "frozen"
+          );
+        const hasFreeze =
+          formLocks.some(
+            (lk) =>
+              !lk.released_at &&
+              String(lk.level || lk.kind || "").toLowerCase() === "frozen"
+          ) ||
+          formAssertions.some(
+            (a) => !a.retracted_at && String(a.kind).toLowerCase() === "frozen"
+          );
+        const activeLockCount =
+          formLocks.filter((lk) => !lk.released_at).length +
+          (studyLocked ? 1 : 0);
+
+        const sigs = Array.isArray(f.signatures) ? f.signatures : [];
+        const signatureCount = sigs.length;
+        const signed =
+          signatureCount > 0 &&
+          sigs.some((s) => !s.superseded && s.content_hash === f.content_hash);
+        const signatureSuperseded = signatureCount > 0 && !signed;
+
         return {
           form_id: f.form_id,
           enrollment_id: f.enrollment_id,
@@ -2758,6 +2877,17 @@ export function createWebDemoStore() {
           complete: Boolean(f.complete),
           item_count: itemsList.length,
           recorded_count: recordedCount,
+          missing_required_count: missingRequiredCount,
+          open_query_count: openQueryCount,
+          answered_query_count: answeredQueryCount,
+          verified_count: verifiedCount,
+          unverified_count: unverifiedCount,
+          locked: hasHardLock,
+          frozen: !hasHardLock && hasFreeze,
+          lock_count: activeLockCount,
+          signed,
+          signature_superseded: signatureSuperseded,
+          signature_count: signatureCount,
           collection_title:
             f.collection_title ?? resolveCollectionTitle(f.collection_spec_id),
         };

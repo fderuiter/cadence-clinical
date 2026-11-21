@@ -104,6 +104,20 @@ public sealed class SubjectRepository(ExecutionDbContext context)
             query = query.Where(s => s.Status == status);
         }
 
+        if (!string.IsNullOrWhiteSpace(criteria.Query))
+        {
+            string trimmed = criteria.Query.Trim();
+            if (Context.Database.IsRelational())
+            {
+                string pattern = $"%{EscapeLikePattern(trimmed.ToLowerInvariant())}%";
+                query = query.Where(s => EF.Functions.Like(((string)(object)s.SubjectCode).ToLower(), pattern, "\\"));
+            }
+            else
+            {
+                query = query.Where(s => s.SubjectCode.Value.Contains(trimmed, StringComparison.OrdinalIgnoreCase));
+            }
+        }
+
         int total = await query.CountAsync(cancellationToken).ConfigureAwait(false);
         var items = await query
             .OrderBy(s => s.EnrollmentIndex)
@@ -115,6 +129,12 @@ public sealed class SubjectRepository(ExecutionDbContext context)
 
         return new SubjectPage(items, total);
     }
+
+    private static string EscapeLikePattern(string value) =>
+        value
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("%", "\\%", StringComparison.Ordinal)
+            .Replace("_", "\\_", StringComparison.Ordinal);
 
     public async Task AddAsync(ClinicalSubject subject, CancellationToken cancellationToken) =>
         await Context.ClinicalSubjects.AddAsync(subject, cancellationToken).ConfigureAwait(false);
