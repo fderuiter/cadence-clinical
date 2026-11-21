@@ -1,4 +1,7 @@
-import { getBearerToken } from "./authorization.js";
+import {
+  getBearerToken,
+  refreshBearerTokenOnUnauthorized,
+} from "./authorization.js";
 import { encodeChangeReason } from "./changeReason";
 import {
   ApiError,
@@ -332,14 +335,25 @@ export const ctmsApi = {
   async exportSiteDoaPdf(siteId: string): Promise<Blob> {
     const token = await getBearerToken();
     const baseUrl = getBaseUrl().replace(/\/+$/, "");
+    const url = `${baseUrl}/api/v1/ctms/doa/sites/${encodeURIComponent(siteId)}/export-pdf`;
     const headers: Record<string, string> = {};
     if (token) {
       headers.Authorization = `Bearer ${token}`;
     }
-    const response = await globalThis.fetch(
-      `${baseUrl}/api/v1/ctms/doa/sites/${encodeURIComponent(siteId)}/export-pdf`,
-      { method: "GET", headers }
-    );
+    let response = await globalThis.fetch(url, { method: "GET", headers });
+    if (response.status === 401) {
+      const errBody = await response
+        .clone()
+        .json()
+        .catch(() => null);
+      const freshToken = await refreshBearerTokenOnUnauthorized(url, errBody);
+      if (freshToken) {
+        response = await globalThis.fetch(url, {
+          method: "GET",
+          headers: { ...headers, Authorization: `Bearer ${freshToken}` },
+        });
+      }
+    }
     if (!response.ok) {
       const errData = await response.json().catch(() => null);
       const detail =

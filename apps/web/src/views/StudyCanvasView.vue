@@ -116,7 +116,7 @@
           id="btn-canvas-logout"
           type="button"
           class="btn btn-secondary"
-          @click="authStore.logout()"
+          @click="requestCanvasSignOut"
         >
           Sign out
         </button>
@@ -776,6 +776,14 @@
       @close="paletteOpen = false"
       @go="goToPaletteTarget"
     />
+
+    <SignOutConfirmModal
+      v-if="!inAppShell"
+      id="canvas-signout-confirm-modal"
+      v-model="isCanvasSignOutConfirmOpen"
+      @confirm="confirmCanvasSignOut"
+      @cancel="cancelCanvasSignOut"
+    />
   </div>
 </template>
 
@@ -828,8 +836,10 @@ import {
   canVerifySource,
 } from "../canvas/authority";
 import type { PaletteTarget } from "../canvas/palette";
+import { SignOutConfirmModal, useSignOutGuard } from "ui";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import CanvasFormWorkspace from "../components/canvas/CanvasFormWorkspace.vue";
 import CanvasInspector from "../components/canvas/CanvasInspector.vue";
 import CanvasPalette from "../components/canvas/CanvasPalette.vue";
@@ -1594,6 +1604,18 @@ function onFormLoaded(form: EcrfForm) {
   }
 }
 
+const {
+  isConfirmOpen: isCanvasSignOutConfirmOpen,
+  requestSignOut: requestCanvasSignOut,
+  confirmSignOut: confirmCanvasSignOut,
+  cancelSignOut: cancelCanvasSignOut,
+} = useSignOutGuard({
+  hasExternalDrafts: () => hasUserScopedDrafts(),
+  onConfirmSignOut: async () => {
+    await authStore.logout();
+  },
+});
+
 function onFormClosed() {
   formWorkspaceDirty.value = false;
   loadedForm.value = null;
@@ -1836,8 +1858,12 @@ function leavesActiveForm(to: RouteLocationNormalized): boolean {
   return Boolean(currentFormId && nextFormId !== currentFormId);
 }
 
+function shouldSuppressUnsavedGuard(): boolean {
+  return Boolean(authStore.sessionExpired || authStore.isLoggingOut);
+}
+
 function handleBeforeUnload(event: BeforeUnloadEvent) {
-  if (formWorkspaceDirty.value) {
+  if (formWorkspaceDirty.value && !shouldSuppressUnsavedGuard()) {
     event.preventDefault();
     event.returnValue = "";
     return "";
@@ -1851,7 +1877,11 @@ function confirmDiscardUnsavedForm(): boolean {
 
 if (typeof onBeforeRouteLeave === "function") {
   onBeforeRouteLeave(() => {
-    if (formWorkspaceDirty.value && !confirmDiscardUnsavedForm()) {
+    if (
+      formWorkspaceDirty.value &&
+      !shouldSuppressUnsavedGuard() &&
+      !confirmDiscardUnsavedForm()
+    ) {
       return false;
     }
   });

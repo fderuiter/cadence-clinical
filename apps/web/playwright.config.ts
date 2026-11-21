@@ -1,8 +1,21 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const hasExplicitFullStackTarget = process.argv.some(
+  (arg) =>
+    arg.includes("chromium") ||
+    arg.includes("setup") ||
+    arg.includes("clinical_workflows") ||
+    arg.includes("crf_authoring") ||
+    arg.includes("etmf_workflow") ||
+    arg.includes("suites")
+);
+
 const isAccessibilityOnly =
   process.env.CADENCE_TEST_BROWSER === "1" ||
-  process.argv.some((arg) => arg.includes("accessibility"));
+  process.argv.some((arg) => arg.includes("accessibility")) ||
+  (process.env.E2E_KEYCLOAK !== "true" &&
+    process.env.RECORD_VIDEO !== "true" &&
+    !hasExplicitFullStackTarget);
 
 const accessibilityProject = {
   name: "accessibility",
@@ -77,8 +90,8 @@ export default defineConfig({
         },
         {
           command:
-            "pnpm --filter web build:demo && pnpm --filter web exec vite preview --port 3001 --strictPort",
-          url: "http://localhost:3001/cadence-clinical/",
+            "./node_modules/.bin/vite build --mode demo --outDir node_modules/.e2e-demo && exec ./node_modules/.bin/vite preview --outDir node_modules/.e2e-demo --host 127.0.0.1 --port 3001 --strictPort",
+          url: "http://127.0.0.1:3001/cadence-clinical/",
           reuseExistingServer: !process.env.CI,
           timeout: 120000,
         },
