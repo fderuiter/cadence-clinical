@@ -56,6 +56,7 @@ public static class CliConsole
         {
             Ansi = AnsiSupport.No,
             ColorSystem = ColorSystemSupport.NoColors,
+            Enrichment = new ProfileEnrichment { UseDefaultEnrichers = false },
             Interactive = InteractionSupport.No,
             Out = new AnsiConsoleOutput(output),
         });
