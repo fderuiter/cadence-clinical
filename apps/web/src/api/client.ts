@@ -74,7 +74,7 @@ export function getAuthMiddleware(): Middleware {
 
 function createDynamicBaseFetch(seedBaseUrl: string) {
   const normalizedSeed = seedBaseUrl.replace(/\/+$/, "");
-  return (input: RequestInfo | URL, init?: RequestInit) => {
+  return async (input: RequestInfo | URL, init?: RequestInit) => {
     const currentBase = getBaseUrl().replace(/\/+$/, "");
     if (
       currentBase !== normalizedSeed &&
@@ -82,7 +82,29 @@ function createDynamicBaseFetch(seedBaseUrl: string) {
       input.url.startsWith(`${normalizedSeed}/`)
     ) {
       const rewrittenUrl = `${currentBase}${input.url.slice(normalizedSeed.length)}`;
-      return globalThis.fetch(new Request(rewrittenUrl, input), init);
+      const method = init?.method ?? input.method;
+      const canHaveBody = method !== "GET" && method !== "HEAD";
+      const body =
+        init?.body !== undefined
+          ? init.body
+          : canHaveBody && input.body !== null
+            ? await input.clone().arrayBuffer()
+            : undefined;
+      const rewrittenRequest = new Request(rewrittenUrl, {
+        method,
+        headers: init?.headers ?? input.headers,
+        body,
+        credentials: init?.credentials ?? input.credentials,
+        cache: init?.cache ?? input.cache,
+        redirect: init?.redirect ?? input.redirect,
+        referrer: init?.referrer ?? input.referrer,
+        referrerPolicy: init?.referrerPolicy ?? input.referrerPolicy,
+        integrity: init?.integrity ?? input.integrity,
+        keepalive: init?.keepalive ?? input.keepalive,
+        mode: init?.mode ?? input.mode,
+        signal: init?.signal ?? input.signal,
+      });
+      return globalThis.fetch(rewrittenRequest);
     }
     return globalThis.fetch(input, init);
   };
