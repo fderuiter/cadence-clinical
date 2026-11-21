@@ -6,8 +6,26 @@ const hasKeycloakRealm =
   process.argv.some((arg) => arg.includes("chromium") || arg.includes("setup"));
 
 const isAccessibilityOnly =
+  process.env.CADENCE_TEST_BROWSER === "1" ||
   !hasKeycloakRealm ||
   process.argv.some((arg) => arg.includes("accessibility"));
+
+const accessibilityProject = {
+  name: "accessibility",
+  testMatch: /web-accessibility\.spec\.ts/,
+  use: {
+    ...devices["Desktop Chrome"],
+    baseURL: "http://127.0.0.1:3001/cadence-clinical/",
+    launchOptions: {
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+      ],
+    },
+  },
+};
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -28,41 +46,24 @@ export default defineConfig({
         : "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [
-    ...(isAccessibilityOnly
-      ? []
-      : [
-          {
-            name: "setup",
-            testMatch: /auth\.setup\.ts/,
-          },
-          {
-            name: "chromium",
-            testIgnore: /web-accessibility\.spec\.ts/,
-            use: {
-              ...devices["Desktop Chrome"],
-              storageState: "playwright/.auth/user.json",
-            },
-            dependencies: ["setup"],
-          },
-        ]),
-    {
-      name: "accessibility",
-      testMatch: /web-accessibility\.spec\.ts/,
-      use: {
-        ...devices["Desktop Chrome"],
-        baseURL: "http://127.0.0.1:3001/cadence-clinical/",
-        launchOptions: {
-          args: [
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-gpu",
-          ],
+  projects: isAccessibilityOnly
+    ? [accessibilityProject]
+    : [
+        {
+          name: "setup",
+          testMatch: /auth\.setup\.ts/,
         },
-      },
-    },
-  ],
+        {
+          name: "chromium",
+          testIgnore: /web-accessibility\.spec\.ts/,
+          use: {
+            ...devices["Desktop Chrome"],
+            storageState: "playwright/.auth/user.json",
+          },
+          dependencies: ["setup"],
+        },
+        accessibilityProject,
+      ],
   webServer: isAccessibilityOnly
     ? [
         {

@@ -126,4 +126,40 @@ public sealed class PosixScriptProcessHelperTests : IDisposable
         PosixScriptProcessHelper.ResolveExecutablePath("nonexistent-tool", _tempDir, env)
             .Should().BeNull();
     }
+
+    [Fact]
+    public void StartWithPosixScriptFallback_StartInfoEnvironmentPathOnly_ResolvesWithoutParentPathEntry()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string binDir = Path.Combine(_tempDir, "isolated-bin");
+        Directory.CreateDirectory(binDir);
+        string shimPath = Path.Combine(binDir, "isolated-posix-shim");
+        File.WriteAllText(shimPath, "# Shebang-less shim not present on parent PATH\necho \"isolated:$*\"\n");
+        File.SetUnixFileMode(
+            shimPath,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        var psi = new ProcessStartInfo("isolated-posix-shim")
+        {
+            WorkingDirectory = _tempDir,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        psi.ArgumentList.Add("check");
+        psi.Environment["PATH"] = $"{binDir}{Path.PathSeparator}/bin{Path.PathSeparator}/usr/bin";
+
+        using var process = PosixScriptProcessHelper.StartWithPosixScriptFallback(psi);
+        process.Should().NotBeNull();
+        string stdout = process!.StandardOutput.ReadToEnd().Trim();
+        string stderr = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+
+        process.ExitCode.Should().Be(0, stderr);
+        stdout.Should().Be("isolated:check");
+    }
 }

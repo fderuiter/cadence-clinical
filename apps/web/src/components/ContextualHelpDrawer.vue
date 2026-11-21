@@ -1135,7 +1135,7 @@ onUnmounted(() => {
 }
 
 .btn-retry {
-  border-color: var(--semantic-color-error);
+  border-color: var(--semantic-color-error-dark);
   color: var(--semantic-color-error-text-deep);
 }
 

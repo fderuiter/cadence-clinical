@@ -26,33 +26,29 @@ public static class PosixScriptProcessHelper
     {
         ArgumentNullException.ThrowIfNull(psi);
 
+        string workingDirectory = string.IsNullOrWhiteSpace(psi.WorkingDirectory)
+            ? Directory.GetCurrentDirectory()
+            : psi.WorkingDirectory;
+        string? preResolved = !OperatingSystem.IsWindows()
+            ? ResolveExecutablePath(psi.FileName, workingDirectory, environment, psi.Environment)
+            : null;
+        ProcessStartInfo effectivePsi = preResolved is not null && !string.Equals(preResolved, psi.FileName, StringComparison.Ordinal)
+            ? CloneStartInfo(psi, preResolved, environment)
+            : psi;
+
         try
         {
-            return Process.Start(psi);
+            return Process.Start(effectivePsi);
         }
         catch (Win32Exception ex) when (!OperatingSystem.IsWindows() && ex.NativeErrorCode == PosixEnoexec && psi.FileName != "/bin/sh")
         {
-            string workingDirectory = string.IsNullOrWhiteSpace(psi.WorkingDirectory)
-                ? Directory.GetCurrentDirectory()
-                : psi.WorkingDirectory;
-            string? resolvedScript = ResolveExecutablePath(psi.FileName, workingDirectory, environment);
+            string? resolvedScript = preResolved ?? ResolveExecutablePath(psi.FileName, workingDirectory, environment, psi.Environment);
             if (resolvedScript is null)
             {
                 throw;
             }
 
-            var shPsi = new ProcessStartInfo("/bin/sh")
-            {
-                WorkingDirectory = psi.WorkingDirectory,
-                UseShellExecute = false,
-                RedirectStandardOutput = psi.RedirectStandardOutput,
-                RedirectStandardError = psi.RedirectStandardError,
-                RedirectStandardInput = psi.RedirectStandardInput,
-                CreateNoWindow = psi.CreateNoWindow,
-                StandardOutputEncoding = psi.StandardOutputEncoding,
-                StandardErrorEncoding = psi.StandardErrorEncoding,
-            };
-
+            var shPsi = CloneStartInfo(psi, "/bin/sh", environment, includeOriginalArguments: false);
             shPsi.ArgumentList.Add(resolvedScript);
             if (psi.ArgumentList.Count > 0)
             {
@@ -69,21 +65,6 @@ public static class PosixScriptProcessHelper
                 }
             }
 
-            if (environment is not null)
-            {
-                foreach (var (key, value) in environment)
-                {
-                    shPsi.Environment[key] = value;
-                }
-            }
-            else if (psi.Environment.Count > 0)
-            {
-                foreach (var (key, value) in psi.Environment)
-                {
-                    shPsi.Environment[key] = value;
-                }
-            }
-
             return Process.Start(shPsi);
         }
     }
@@ -95,7 +76,14 @@ public static class PosixScriptProcessHelper
     public static string? ResolveExecutablePath(
         string fileName,
         string workingDirectory,
-        IReadOnlyDictionary<string, string>? environment = null)
+        IReadOnlyDictionary<string, string>? environment = null) =>
+        ResolveExecutablePath(fileName, workingDirectory, environment, startInfoEnvironment: null);
+
+    private static string? ResolveExecutablePath(
+        string fileName,
+        string workingDirectory,
+        IReadOnlyDictionary<string, string>? environment,
+        IDictionary<string, string?>? startInfoEnvironment)
     {
         if (string.IsNullOrWhiteSpace(fileName))
         {
@@ -109,9 +97,20 @@ public static class PosixScriptProcessHelper
             return File.Exists(candidate) ? candidate : null;
         }
 
-        string? pathValue = environment is not null && environment.TryGetValue("PATH", out string? overridePath)
-            ? overridePath
-            : Environment.GetEnvironmentVariable("PATH");
+        string? pathValue = null;
+        if (environment is not null && environment.TryGetValue("PATH", out string? overridePath))
+        {
+            pathValue = overridePath;
+        }
+        else if (startInfoEnvironment is not null && startInfoEnvironment.TryGetValue("PATH", out string? psiPath))
+        {
+            pathValue = psiPath;
+        }
+        else
+        {
+            pathValue = Environment.GetEnvironmentVariable("PATH");
+        }
+
         if (string.IsNullOrWhiteSpace(pathValue))
         {
             return null;
@@ -127,6 +126,58 @@ public static class PosixScriptProcessHelper
         }
 
         return null;
+    }
+
+    private static ProcessStartInfo CloneStartInfo(
+        ProcessStartInfo source,
+        string fileName,
+        IReadOnlyDictionary<string, string>? environment,
+        bool includeOriginalArguments = true)
+    {
+        var clone = new ProcessStartInfo(fileName)
+        {
+            WorkingDirectory = source.WorkingDirectory,
+            UseShellExecute = false,
+            RedirectStandardOutput = source.RedirectStandardOutput,
+            RedirectStandardError = source.RedirectStandardError,
+            RedirectStandardInput = source.RedirectStandardInput,
+            CreateNoWindow = source.CreateNoWindow,
+            StandardOutputEncoding = source.StandardOutputEncoding,
+            StandardErrorEncoding = source.StandardErrorEncoding,
+        };
+
+        if (includeOriginalArguments)
+        {
+            if (source.ArgumentList.Count > 0)
+            {
+                foreach (string arg in source.ArgumentList)
+                {
+                    clone.ArgumentList.Add(arg);
+                }
+            }
+            else if (!string.IsNullOrEmpty(source.Arguments))
+            {
+                clone.Arguments = source.Arguments;
+            }
+        }
+
+        if (source.Environment.Count > 0)
+        {
+            foreach (var (key, value) in source.Environment)
+            {
+                clone.Environment[key] = value;
+            }
+        }
+
+        if (environment is not null)
+        {
+            foreach (var (key, value) in environment)
+            {
+                clone.Environment[key] = value;
+            }
+        }
+
+        return clone;
     }
 
     private static List<string> SplitArguments(string arguments)
