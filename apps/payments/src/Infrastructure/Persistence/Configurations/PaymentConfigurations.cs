@@ -470,6 +470,8 @@ public class ParticipantExpenseClaimConfiguration : IEntityTypeConfiguration<Par
         builder.HasIndex(x => x.Status);
         builder.Property(x => x.ReceiptImageName).HasMaxLength(255);
         builder.Property(x => x.ReceiptOcrDataJson).HasColumnType("jsonb");
+        builder.Property(x => x.IdempotencyKey).HasMaxLength(255);
+        builder.HasIndex(x => new { x.WalletId, x.IdempotencyKey }).IsUnique();
         builder.Property(x => x.ReviewedBy).HasMaxLength(255);
         builder.Property(x => x.ReviewNotes).HasMaxLength(1000);
         builder.Property(x => x.DisbursementReference).HasMaxLength(100);
@@ -498,6 +500,8 @@ public class ParticipantDisbursementConfiguration : IEntityTypeConfiguration<Par
         builder.Property(x => x.DisbursementType).HasMaxLength(50).IsRequired();
         builder.Property(x => x.ReferenceNumber).HasMaxLength(100).IsRequired();
         builder.HasIndex(x => x.ReferenceNumber).IsUnique();
+        builder.Property(x => x.IdempotencyKey).HasMaxLength(255);
+        builder.HasIndex(x => new { x.WalletId, x.IdempotencyKey }).IsUnique();
         builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
         builder.HasIndex(x => x.Status);
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();

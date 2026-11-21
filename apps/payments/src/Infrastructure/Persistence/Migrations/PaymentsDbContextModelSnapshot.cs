@@ -497,6 +497,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<string>("ReferenceNumber")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -537,6 +541,9 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("WalletId");
 
+                    b.HasIndex("WalletId", "IdempotencyKey")
+                        .IsUnique();
+
                     b.ToTable("payments_participant_disbursements", null, t =>
                         {
                             t.HasCheckConstraint("ck_payments_participant_disbursements_status", "\"Status\" IN ('DISPATCHED', 'SETTLED', 'FAILED', 'CANCELLED')");
@@ -573,6 +580,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
 
                     b.Property<decimal>("GrossAmount")
                         .HasColumnType("numeric(18,4)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("MerchantName")
                         .IsRequired()
@@ -655,6 +666,9 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId");
 
                     b.HasIndex("WalletId");
+
+                    b.HasIndex("WalletId", "IdempotencyKey")
+                        .IsUnique();
 
                     b.ToTable("payments_participant_expense_claims", null, t =>
                         {

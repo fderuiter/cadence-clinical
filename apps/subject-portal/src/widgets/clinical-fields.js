@@ -46,7 +46,7 @@ export function createClinicalSlider(
         value="${initialValue}"
         data-touched="${initialTouched}"
         class="vas-slider-input"
-        style="width: 100%; cursor: pointer; accent-color: var(--semantic-color-interactive-primary); height: 8px;"
+        style="width: 100%; cursor: pointer; accent-color: var(--semantic-color-interactive-primary); min-height: var(--touch-target-min); height: var(--touch-target-min);"
         oninput="this.setAttribute('data-touched', 'true'); const disp = document.getElementById('${id}_display'); if (disp) disp.textContent = 'Value: ' + this.value;"
       />
       ${queryFlagHTML}
@@ -108,10 +108,10 @@ export function createClinicalRadioGrid(
       const isChecked = optVal === selectedValue ? " checked" : "";
       const optionId = `${id}_option_${idx}`;
       return `
-      <div class="radio-option">
+      <label class="radio-option" for="${optionId}">
         <input type="radio" id="${optionId}" name="${id}" value="${optVal}"${isChecked} />
-        <label for="${optionId}">${optLabel}</label>
-      </div>
+        <span class="radio-option-label">${optLabel}</span>
+      </label>
       `.trim();
     })
     .join("\n");

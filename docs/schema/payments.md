@@ -13,8 +13,8 @@ Generated from the EF Core model of `Cadence.Apps.Payments.Infrastructure.Persis
 | [`payments.payments_fee_schedules`](#paymentspayments_fee_schedules) | `FeeSchedule` | 20 |
 | [`payments.payments_holdback_reserves`](#paymentspayments_holdback_reserves) | `HoldbackReserve` | 21 |
 | [`payments.payments_invoice_line_items`](#paymentspayments_invoice_line_items) | `InvoiceLineItem` | 22 |
-| [`payments.payments_participant_disbursements`](#paymentspayments_participant_disbursements) | `ParticipantDisbursement` | 11 |
-| [`payments.payments_participant_expense_claims`](#paymentspayments_participant_expense_claims) | `ParticipantExpenseClaim` | 24 |
+| [`payments.payments_participant_disbursements`](#paymentspayments_participant_disbursements) | `ParticipantDisbursement` | 12 |
+| [`payments.payments_participant_expense_claims`](#paymentspayments_participant_expense_claims) | `ParticipantExpenseClaim` | 25 |
 | [`payments.payments_participant_stipend_rules`](#paymentspayments_participant_stipend_rules) | `ParticipantStipendRule` | 20 |
 | [`payments.payments_participant_transactions`](#paymentspayments_participant_transactions) | `ParticipantTransaction` | 13 |
 | [`payments.payments_participant_wallets`](#paymentspayments_participant_wallets) | `ParticipantWallet` | 33 |
@@ -258,6 +258,7 @@ Entity: `ParticipantDisbursement`
 | `CreatedAt` | `timestamp with time zone` | no |  |  |
 | `CreatedBy` | `character varying(255)` | no |  |  |
 | `DisbursementType` | `character varying(50)` | no |  |  |
+| `IdempotencyKey` | `character varying(255)` | yes |  |  |
 | `ReferenceNumber` | `character varying(100)` | no |  |  |
 | `Status` | `character varying(50)` | no |  |  |
 | `SubjectId` | `character varying(255)` | no |  |  |
@@ -271,6 +272,7 @@ Indexes:
 - `IX_payments_participant_disbursements_Status`: (`Status`)
 - `IX_payments_participant_disbursements_SubjectId`: (`SubjectId`)
 - `IX_payments_participant_disbursements_WalletId`: (`WalletId`)
+- `IX_payments_participant_disbursements_WalletId_IdempotencyKey`: unique (`WalletId`, `IdempotencyKey`)
 - `IX_payments_participant_disbursements_tenant_id`: (`tenant_id`)
 
 Check constraints:
@@ -290,6 +292,7 @@ Entity: `ParticipantExpenseClaim`
 | `DisbursementReference` | `character varying(100)` | yes |  |  |
 | `ExpenseDate` | `character varying(50)` | no |  |  |
 | `GrossAmount` | `numeric(18,4)` | no |  |  |
+| `IdempotencyKey` | `character varying(255)` | yes |  |  |
 | `MerchantName` | `character varying(255)` | no |  |  |
 | `NetAmount` | `numeric(18,4)` | no |  |  |
 | `ReasonForChange` | `character varying(1000)` | yes |  |  |
@@ -315,6 +318,7 @@ Indexes:
 - `IX_payments_participant_expense_claims_StudyId`: (`StudyId`)
 - `IX_payments_participant_expense_claims_SubjectId`: (`SubjectId`)
 - `IX_payments_participant_expense_claims_WalletId`: (`WalletId`)
+- `IX_payments_participant_expense_claims_WalletId_IdempotencyKey`: unique (`WalletId`, `IdempotencyKey`)
 - `IX_payments_participant_expense_claims_tenant_id`: (`tenant_id`)
 
 Check constraints:

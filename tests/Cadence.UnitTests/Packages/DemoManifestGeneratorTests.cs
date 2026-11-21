@@ -146,6 +146,17 @@ public sealed class DemoManifestGeneratorTests : IDisposable
             Encoding.UTF8);
         DemoManifestGeneratorService.TryBuildExpectedArtifacts(_tempRoot, out _, out _, out _, out var grantErrors).Should().BeFalse();
         grantErrors.Should().Contain(e => e.Contains("K027", StringComparison.Ordinal));
+
+        // Referencing an undefined C# constant identifier in Users must fail closed with a clear diagnostic
+        File.WriteAllText(
+            kernelPath,
+            originalKernel.Replace(
+                "(\"designer.lead\", DesignerLeadSubject, \"DEMO_DESIGNER\", null),",
+                "(\"designer.lead\", MissingSubjectConst, \"DEMO_DESIGNER\", null),",
+                StringComparison.Ordinal),
+            Encoding.UTF8);
+        DemoManifestGeneratorService.TryBuildExpectedArtifacts(_tempRoot, out _, out _, out _, out var constErrors).Should().BeFalse();
+        constErrors.Should().Contain(e => e.Contains("MissingSubjectConst", StringComparison.Ordinal));
     }
 
     private void CopySeedFilesToTempRepo(string repoRoot)

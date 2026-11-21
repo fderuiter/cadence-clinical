@@ -133,13 +133,21 @@ export function renderTasks() {
       const dueText = task.due_at
         ? new Date(task.due_at).toLocaleString()
         : "—";
-      const ctaLabel = hasDraft ? "Resume Survey" : "Start Survey";
+      const isTaskLoading = state.loadingTaskId === task.id;
+      const isAnyTaskLoading = Boolean(state.loadingTaskId);
+      const ctaLabel = isTaskLoading
+        ? "Loading Survey..."
+        : hasDraft
+          ? "Resume Survey"
+          : "Start Survey";
       const ctaClasses = hasDraft
         ? "btn btn-primary btn-start-task btn-resume-task"
         : "btn btn-primary btn-start-task";
+      const disabledAttr = isAnyTaskLoading ? " disabled" : "";
+      const ariaBusyAttr = isTaskLoading ? ' aria-busy="true"' : "";
       const actionHtml = isPendingSync
         ? `<span class="task-queued-note" style="font-size: 13px; color: var(--text-muted);">Awaiting server confirmation</span>`
-        : `<button type="button" class="${ctaClasses}" data-id="${task.id}">${ctaLabel}</button>`;
+        : `<button type="button" class="${ctaClasses}" data-id="${task.id}"${disabledAttr}${ariaBusyAttr}>${ctaLabel}</button>`;
 
       return `
         <div class="task-item" id="task-card-${task.id}">
@@ -156,11 +164,35 @@ export function renderTasks() {
     })
     .join("");
 
-  // Attach events
+  // Attach events with duplicate-click busy guard during instrument fetch
   container.querySelectorAll(".btn-start-task").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
+      if (state.loadingTaskId || btn.disabled) return;
       const taskId = btn.getAttribute("data-id");
-      startQuestionnaire(taskId);
+      if (!taskId) return;
+
+      const originalText = btn.textContent;
+      state.loadingTaskId = taskId;
+      btn.disabled = true;
+      btn.setAttribute("aria-busy", "true");
+      btn.textContent = "Loading Survey...";
+      container.querySelectorAll(".btn-start-task").forEach((otherBtn) => {
+        otherBtn.disabled = true;
+      });
+
+      try {
+        await startQuestionnaire(taskId);
+      } finally {
+        state.loadingTaskId = null;
+        if (btn.isConnected) {
+          btn.disabled = false;
+          btn.removeAttribute("aria-busy");
+          btn.textContent = originalText;
+        }
+        if (state.currentView === "view-tasks") {
+          renderTasks();
+        }
+      }
     });
   });
 }
