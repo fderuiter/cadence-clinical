@@ -6,11 +6,11 @@ Generated from the EF Core model of `Cadence.Apps.Org.Infrastructure.Persistence
 
 | Table | Entity | Columns |
 | --- | --- | --- |
-| [`org.audit_log_entries`](#orgaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`org.delegations_of_authority`](#orgdelegations_of_authority) | `DelegationOfAuthority` | 20 |
-| [`org.org_audit_logs`](#orgorg_audit_logs) | `OrgAuditLog` | 8 |
-| [`org.org_training_logs`](#orgorg_training_logs) | `TrainingLog` | 13 |
-| [`org.personnel_assignments`](#orgpersonnel_assignments) | `PersonnelAssignment` | 9 |
+| [`org.audit_log_entries`](#orgaudit_log_entries) | `AuditLogEntry` | 12 |
+| [`org.delegations_of_authority`](#orgdelegations_of_authority) | `DelegationOfAuthority` | 21 |
+| [`org.org_audit_logs`](#orgorg_audit_logs) | `OrgAuditLog` | 9 |
+| [`org.org_training_logs`](#orgorg_training_logs) | `TrainingLog` | 14 |
+| [`org.personnel_assignments`](#orgpersonnel_assignments) | `PersonnelAssignment` | 10 |
 
 ## org.audit_log_entries
 
@@ -29,10 +29,12 @@ Entity: `AuditLogEntry`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+- `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
 ## org.delegations_of_authority
 
@@ -60,11 +62,13 @@ Entity: `DelegationOfAuthority`
 | `StartDate` | `timestamp with time zone` | no |  |  |
 | `StudyId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_delegations_of_authority_SiteId`: (`SiteId`)
 - `IX_delegations_of_authority_StudyId`: (`StudyId`)
+- `IX_delegations_of_authority_tenant_id`: (`tenant_id`)
 
 ## org.org_audit_logs
 
@@ -80,12 +84,14 @@ Entity: `OrgAuditLog`
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `RecordId` | `character varying(255)` | yes |  |  |
 | `Timestamp` | `timestamp with time zone` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_org_audit_logs_ActorId`: (`ActorId`)
 - `IX_org_audit_logs_RecordId`: (`RecordId`)
 - `IX_org_audit_logs_Timestamp`: (`Timestamp`)
+- `IX_org_audit_logs_tenant_id`: (`tenant_id`)
 
 ## org.org_training_logs
 
@@ -106,12 +112,14 @@ Entity: `TrainingLog`
 | `StudyId` | `character varying(255)` | no |  |  |
 | `TrainingTopic` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_org_training_logs_PersonnelId`: (`PersonnelId`)
 - `IX_org_training_logs_SiteId`: (`SiteId`)
 - `IX_org_training_logs_StudyId`: (`StudyId`)
+- `IX_org_training_logs_tenant_id`: (`tenant_id`)
 
 ## org.personnel_assignments
 
@@ -128,8 +136,10 @@ Entity: `PersonnelAssignment`
 | `SiteId` | `character varying(255)` | no |  |  |
 | `StudyId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_personnel_assignments_SiteId`: (`SiteId`)
 - `IX_personnel_assignments_StudyId`: (`StudyId`)
+- `IX_personnel_assignments_tenant_id`: (`tenant_id`)

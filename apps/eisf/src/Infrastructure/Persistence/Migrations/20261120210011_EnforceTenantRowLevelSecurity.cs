@@ -20,7 +20,7 @@ public partial class EnforceTenantRowLevelSecurity : Migration
         "isf_documents",
     ];
 
-protected override void Up(MigrationBuilder migrationBuilder)
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.RenameColumn(
             name: "TenantId",
@@ -40,7 +40,7 @@ protected override void Up(MigrationBuilder migrationBuilder)
             ALTER COLUMN tenant_id TYPE uuid
             USING CASE
                 WHEN tenant_id::text ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN tenant_id::text::uuid
-                ELSE '00000000-0000-0000-0000-000000000000'::uuid
+                ELSE repeat('0', 32)::uuid
             END;
         ALTER TABLE "isf_audit_logs" ALTER COLUMN tenant_id SET NOT NULL;
         """);
@@ -90,12 +90,12 @@ protected override void Up(MigrationBuilder migrationBuilder)
             name: "IX_audit_log_entries_tenant_id",
             table: "audit_log_entries",
             column: "tenant_id");
-            migrationBuilder.EnableStandaloneTenantIsolation("eisf", TenantTables);
-}
+        migrationBuilder.EnableStandaloneTenantIsolation("eisf", TenantTables);
+    }
 
-protected override void Down(MigrationBuilder migrationBuilder)
+    protected override void Down(MigrationBuilder migrationBuilder)
     {
-    migrationBuilder.DisableStandaloneTenantIsolation("eisf", TenantTables);
+        migrationBuilder.DisableStandaloneTenantIsolation("eisf", TenantTables);
 
         migrationBuilder.DropIndex(
             name: "IX_isf_documents_tenant_id",

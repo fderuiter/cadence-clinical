@@ -393,7 +393,7 @@ public sealed class StandaloneServiceScopeAuthorizationTests(StandaloneScopePost
                     subject_pseudonym = "SUBJ-EC-1",
                     study_id = "STUDY-EC-1",
                     site_id = "SITE-01",
-                    digest_sha256 = "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289",
+                    digest_sha256 = "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
                     signature_data = "SIG-PART11-ALPHA",
                     liveness_token = livenessToken,
                 },
@@ -594,7 +594,7 @@ public sealed class StandaloneScopePostgresFixture : IAsyncLifetime
         string appConn = new NpgsqlConnectionStringBuilder(adminConn)
         {
             Username = "cadence_app",
-            Password = "cadence_app",
+            Password = "cadence_app", // pragma: allowlist secret
         }.ConnectionString;
 
         await MigrateSchemaAsync<SafetyDbContext>(adminConn, SafetyDbContextFactory.Schema).ConfigureAwait(false);
@@ -660,6 +660,12 @@ public sealed class StandaloneScopePostgresFixture : IAsyncLifetime
                 .UseTestSceSigningKey()
                 .UseTestImagingDeidentificationKeys()
                 .UseSetting("ConnectionStrings:cadence", cadenceAppConnectionString)
-                .UseSetting("Database:MigrateOnStartup", "false");
+                .UseSetting("Database:MigrateOnStartup", "false")
+                .ConfigureServices(services =>
+                {
+                    services.PostConfigure<ProblemDetailsOptions>(options =>
+                        options.CustomizeProblemDetails = ctx =>
+                            ctx.ProblemDetails.Detail ??= ctx.Exception?.ToString());
+                });
         });
 }

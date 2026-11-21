@@ -454,7 +454,7 @@ public sealed class StandaloneTenantIsolationPostgresTests(ThrowawayPostgresData
         new NpgsqlConnectionStringBuilder(adminDbConnectionString)
         {
             Username = "cadence_app",
-            Password = "cadence_app",
+            Password = "cadence_app", // pragma: allowlist secret
         }.ConnectionString;
 
     private sealed class CadenceAppPaymentsHost(string cadenceAppConnectionString)

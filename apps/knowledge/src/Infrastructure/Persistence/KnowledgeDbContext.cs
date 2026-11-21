@@ -47,5 +47,15 @@ public sealed class KnowledgeDbContext(DbContextOptions<KnowledgeDbContext> opti
         modelBuilder.ApplyConfiguration(new ProtocolKnowledgeChunkConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
         modelBuilder.ConfigureStandaloneTenancy(this);
+
+        modelBuilder.Entity<KnowledgeCategory>()
+            .HasIndex(StandaloneTenantModelExtensions.TenantPropertyName, nameof(KnowledgeCategory.Name))
+            .IsUnique();
+        modelBuilder.Entity<KnowledgeCategory>()
+            .HasIndex(StandaloneTenantModelExtensions.TenantPropertyName, nameof(KnowledgeCategory.Slug))
+            .IsUnique();
+        modelBuilder.Entity<KnowledgeArticle>()
+            .HasIndex(StandaloneTenantModelExtensions.TenantPropertyName, nameof(KnowledgeArticle.Slug))
+            .IsUnique();
     }
 }

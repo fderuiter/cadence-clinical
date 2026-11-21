@@ -171,7 +171,7 @@ public sealed class EsourceReconciliationPostgresTests(InteropPostgresApiFactory
         string study = NewStudy();
         string id = (await SeedCandidatesAsync(study, 1)).Single();
         using var client = factory.CreateSignedClient(
-            TestSecurityContext.Identity($"cra-{Guid.NewGuid():N}", "cra") with { StudyIds = [study] });
+            TestSecurityContext.Identity($"cra-{Guid.NewGuid():N}", "cra") with { StudyIds = [study], SiteIds = ["SITE-01"] });
 
         var query = await client.PostAsJsonAsync($"{Base}/query",
             new { candidateId = id, queryExplanation = "EHR shows 128 mmHg, the eCRF 140 mmHg", discrepancyType = "VALUE_MISMATCH" }, Ct);
@@ -186,7 +186,7 @@ public sealed class EsourceReconciliationPostgresTests(InteropPostgresApiFactory
     }
 
     private static GatewayIdentity Coordinator(string study) =>
-        TestSecurityContext.Identity($"crc-{Guid.NewGuid():N}", "crc") with { StudyIds = [study] };
+        TestSecurityContext.Identity($"crc-{Guid.NewGuid():N}", "crc") with { StudyIds = [study], SiteIds = ["SITE-01"] };
 
     private static string NewStudy() => $"STUDY-ESR-{Guid.NewGuid():N}";
 

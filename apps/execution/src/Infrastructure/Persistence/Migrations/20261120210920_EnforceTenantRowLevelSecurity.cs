@@ -40,7 +40,7 @@ public partial class EnforceTenantRowLevelSecurity : Migration
         "synonym_rules",
     ];
 
-protected override void Up(MigrationBuilder migrationBuilder)
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.AddColumn<Guid>(
             name: "tenant_id",
@@ -341,12 +341,12 @@ protected override void Up(MigrationBuilder migrationBuilder)
             name: "IX_AuditLogEntries_tenant_id",
             table: "AuditLogEntries",
             column: "tenant_id");
-            migrationBuilder.EnableStandaloneTenantIsolation("edc", TenantTables);
-}
+        migrationBuilder.EnableStandaloneTenantIsolation("edc", TenantTables);
+    }
 
-protected override void Down(MigrationBuilder migrationBuilder)
+    protected override void Down(MigrationBuilder migrationBuilder)
     {
-    migrationBuilder.DisableStandaloneTenantIsolation("edc", TenantTables);
+        migrationBuilder.DisableStandaloneTenantIsolation("edc", TenantTables);
 
         migrationBuilder.DropIndex(
             name: "IX_synonym_rules_tenant_id",

@@ -477,8 +477,8 @@ const confirmAndApply = () => {
   width: 640px;
   max-width: 90vw;
   height: 100vh;
-  background-color: var(--surface, #ffffff);
-  border-left: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface);
+  border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   padding: 24px;
@@ -492,7 +492,7 @@ const confirmAndApply = () => {
   align-items: flex-start;
   margin-bottom: 20px;
 
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--semantic-color-border);
   padding-bottom: 16px;
 }
 
@@ -500,13 +500,13 @@ const confirmAndApply = () => {
   margin: 0 0 6px 0;
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--primary, #0f172a);
+  color: var(--primary);
 }
 
 .drawer-subtitle {
   margin: 0;
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   line-height: 1.4;
 }
 
@@ -515,13 +515,13 @@ const confirmAndApply = () => {
   border: none;
   font-size: 1.2rem;
   cursor: pointer;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   padding: 4px;
 }
 
 .progress-section {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 20px;
@@ -531,13 +531,13 @@ const confirmAndApply = () => {
   display: flex;
   justify-content: space-between;
   font-size: 0.85rem;
-  color: #334155;
+  color: var(--semantic-color-text-body);
   margin-bottom: 8px;
 }
 
 .progress-bar-bg {
   height: 8px;
-  background-color: #e2e8f0;
+  background-color: var(--semantic-color-surface-header);
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 12px;
@@ -545,27 +545,27 @@ const confirmAndApply = () => {
 
 .progress-bar-fill {
   height: 100%;
-  background-color: #d97706;
+  background-color: var(--semantic-color-warning-action);
   transition: width 0.3s ease;
 }
 
 .progress-bar-fill.complete {
-  background-color: #059669;
+  background-color: var(--semantic-color-success);
 }
 
 .alert-warning-inline {
-  background-color: #fffbeb;
-  border: 1px solid #fde68a;
-  color: #92400e;
+  background-color: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-border);
+  color: var(--semantic-color-warning-dark);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.8rem;
 }
 
 .alert-success-inline {
-  background-color: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  color: #065f46;
+  background-color: var(--semantic-color-success-bg-soft);
+  border: 1px solid var(--semantic-color-success-border);
+  color: var(--semantic-color-success-dark);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.8rem;
@@ -578,7 +578,7 @@ const confirmAndApply = () => {
 .input-search {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-size: 0.85rem;
 }
@@ -592,17 +592,17 @@ const confirmAndApply = () => {
 }
 
 .token-card {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 8px;
   padding: 16px;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
 
   transition: border-color 0.2s ease;
 }
 
 .token-card.resolved {
-  border-color: #059669;
-  background-color: #f0fdf4;
+  border-color: var(--semantic-color-success);
+  background-color: var(--semantic-color-success-bg-soft);
 }
 
 .token-header {
@@ -620,8 +620,8 @@ const confirmAndApply = () => {
 }
 
 .badge-node {
-  background-color: #e2e8f0;
-  color: #334155;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
   font-size: 0.75rem;
   padding: 2px 6px;
   border-radius: 4px;
@@ -629,18 +629,18 @@ const confirmAndApply = () => {
 
 .token-code {
   font-size: 0.9rem;
-  color: #0369a1;
+  color: var(--semantic-color-primary);
   font-family: monospace;
 }
 
 .token-name {
   font-size: 0.85rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 .badge-danger {
-  background-color: #fee2e2;
-  color: #991b1b;
+  background-color: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-text-dark);
   font-size: 0.75rem;
   padding: 2px 8px;
   border-radius: 4px;
@@ -648,8 +648,8 @@ const confirmAndApply = () => {
 }
 
 .badge-success {
-  background-color: #dcfce7;
-  color: #166534;
+  background-color: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
   font-size: 0.75rem;
   padding: 2px 8px;
   border-radius: 4px;
@@ -666,9 +666,9 @@ const confirmAndApply = () => {
   flex: 1;
   padding: 6px;
   font-size: 0.75rem;
-  border: 1px solid #cbd5e1;
-  background-color: #f8fafc;
-  color: #475569;
+  border: 1px solid var(--semantic-color-border-control);
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-secondary);
   border-radius: 4px;
   cursor: pointer;
 
@@ -676,23 +676,23 @@ const confirmAndApply = () => {
 }
 
 .tab-btn.active {
-  background-color: var(--primary, #0f172a);
-  color: #ffffff;
-  border-color: var(--primary, #0f172a);
+  background-color: var(--primary);
+  color: var(--semantic-color-text-inverse);
+  border-color: var(--primary);
 }
 
 .action-panel {
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   padding: 12px;
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--semantic-color-border);
 }
 
 .form-label {
   display: block;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--semantic-color-text-body);
   margin-bottom: 6px;
 }
 
@@ -704,7 +704,7 @@ const confirmAndApply = () => {
 .select-concept {
   flex: 1;
   padding: 6px 10px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 0.85rem;
 }
@@ -720,7 +720,7 @@ const confirmAndApply = () => {
 .input-alias-name {
   width: 100%;
   padding: 6px 10px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 0.85rem;
 }
@@ -728,15 +728,15 @@ const confirmAndApply = () => {
 .textarea-finding {
   width: 100%;
   padding: 8px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 0.85rem;
   margin-bottom: 8px;
 }
 
 .audit-section {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 20px;
@@ -746,7 +746,7 @@ const confirmAndApply = () => {
   margin: 0 0 12px 0;
   font-size: 0.9rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .audit-grid {
@@ -759,7 +759,7 @@ const confirmAndApply = () => {
 .input-change-reason {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 0.85rem;
 }
@@ -769,14 +769,14 @@ const confirmAndApply = () => {
   justify-content: space-between;
   align-items: center;
 
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--semantic-color-border);
   padding-top: 16px;
 }
 
 .btn-confirm-mappings {
-  background-color: #059669;
-  border-color: #059669;
-  color: #ffffff;
+  background-color: var(--semantic-color-success);
+  border-color: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
   padding: 10px 18px;
   font-size: 0.9rem;
   font-weight: 600;

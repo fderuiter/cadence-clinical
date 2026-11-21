@@ -182,9 +182,9 @@ public sealed class PaymentsStudySiteScopeTests(PaymentsPostgresApiFactory facto
         using (var finance = Client(TestSecurityContext.Identity("finance-1", "Grants Manager") with { StudyIds = [study.StudyId] }))
         {
             (await finance.PostAsync($"{Base}/invoices/{study.InvoiceA}/approve", null, Ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await finance.PostAsync($"{Base}/invoices/{study.InvoiceA}/erp-export", null, Ct)).StatusCode.Should().Be(HttpStatusCode.OK);
             (await finance.PostAsJsonAsync($"{Base}/invoices/{study.InvoiceA}/reconcile", new { payment_reference = "WIRE-1" }, Ct))
                 .StatusCode.Should().Be(HttpStatusCode.OK);
-            (await finance.PostAsync($"{Base}/invoices/{study.InvoiceA}/erp-export", null, Ct)).StatusCode.Should().Be(HttpStatusCode.OK);
             (await IdsAsync(finance, "/audit-logs")).Should().HaveCount(3);
         }
 

@@ -139,7 +139,7 @@ public sealed class DelegationSignOffAuthorityTests(DelegationSignOffAuthorityTe
             signer_name = "Someone Else",
             signer_role = "Someone Else's Role",
             meaning = "I approve these delegations",
-            password = "not-checked-by-this-service",
+            password = "not-checked-by-this-service", // pragma: allowlist secret
             reason_for_change = "PI delegation sign-off",
         },
     };

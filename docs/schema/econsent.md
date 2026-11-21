@@ -9,23 +9,23 @@ Generated from the EF Core model of `Cadence.Apps.Econsent.Infrastructure.Persis
 | [`econsent.InboxState`](#econsentinboxstate) | `InboxState` | 11 |
 | [`econsent.OutboxMessage`](#econsentoutboxmessage) | `OutboxMessage` | 21 |
 | [`econsent.OutboxState`](#econsentoutboxstate) | `OutboxState` | 6 |
-| [`econsent.audit_log_entries`](#econsentaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`econsent.biometric_liveness_verifications`](#econsentbiometric_liveness_verifications) | `BiometricLivenessVerification` | 12 |
-| [`econsent.comprehension_checks`](#econsentcomprehension_checks) | `ComprehensionCheck` | 9 |
-| [`econsent.comprehension_results`](#econsentcomprehension_results) | `ComprehensionResult` | 13 |
+| [`econsent.audit_log_entries`](#econsentaudit_log_entries) | `AuditLogEntry` | 12 |
+| [`econsent.biometric_liveness_verifications`](#econsentbiometric_liveness_verifications) | `BiometricLivenessVerification` | 13 |
+| [`econsent.comprehension_checks`](#econsentcomprehension_checks) | `ComprehensionCheck` | 10 |
+| [`econsent.comprehension_results`](#econsentcomprehension_results) | `ComprehensionResult` | 14 |
 | [`econsent.consent_audit_logs`](#econsentconsent_audit_logs) | `ConsentAuditLog` | 11 |
-| [`econsent.consent_clauses`](#econsentconsent_clauses) | `ConsentClause` | 9 |
-| [`econsent.consent_documents`](#econsentconsent_documents) | `ConsentDocument` | 9 |
-| [`econsent.consent_signatures`](#econsentconsent_signatures) | `ConsentSignature` | 15 |
-| [`econsent.consent_templates`](#econsentconsent_templates) | `ConsentTemplate` | 13 |
-| [`econsent.consent_translations`](#econsentconsent_translations) | `ConsentTranslation` | 13 |
-| [`econsent.consent_withdrawals`](#econsentconsent_withdrawals) | `ConsentWithdrawal` | 14 |
+| [`econsent.consent_clauses`](#econsentconsent_clauses) | `ConsentClause` | 10 |
+| [`econsent.consent_documents`](#econsentconsent_documents) | `ConsentDocument` | 10 |
+| [`econsent.consent_signatures`](#econsentconsent_signatures) | `ConsentSignature` | 16 |
+| [`econsent.consent_templates`](#econsentconsent_templates) | `ConsentTemplate` | 14 |
+| [`econsent.consent_translations`](#econsentconsent_translations) | `ConsentTranslation` | 14 |
+| [`econsent.consent_withdrawals`](#econsentconsent_withdrawals) | `ConsentWithdrawal` | 15 |
 | [`econsent.consumed_signature_tokens`](#econsentconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
-| [`econsent.etmf_archival_deliveries`](#econsentetmf_archival_deliveries) | `EtmfArchivalDelivery` | 18 |
-| [`econsent.granular_consent_options`](#econsentgranular_consent_options) | `GranularConsentOption` | 12 |
-| [`econsent.reconsent_requirements`](#econsentreconsent_requirements) | `ReconsentRequirement` | 15 |
-| [`econsent.subject_consent_option_selections`](#econsentsubject_consent_option_selections) | `SubjectConsentOptionSelection` | 8 |
-| [`econsent.subject_consents`](#econsentsubject_consents) | `SubjectConsent` | 15 |
+| [`econsent.etmf_archival_deliveries`](#econsentetmf_archival_deliveries) | `EtmfArchivalDelivery` | 19 |
+| [`econsent.granular_consent_options`](#econsentgranular_consent_options) | `GranularConsentOption` | 13 |
+| [`econsent.reconsent_requirements`](#econsentreconsent_requirements) | `ReconsentRequirement` | 16 |
+| [`econsent.subject_consent_option_selections`](#econsentsubject_consent_option_selections) | `SubjectConsentOptionSelection` | 9 |
+| [`econsent.subject_consents`](#econsentsubject_consents) | `SubjectConsent` | 16 |
 
 ## econsent.InboxState
 
@@ -124,10 +124,12 @@ Entity: `AuditLogEntry`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+- `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
 ## econsent.biometric_liveness_verifications
 
@@ -147,12 +149,14 @@ Entity: `BiometricLivenessVerification`
 | `Status` | `character varying(50)` | no |  |  |
 | `SubjectPseudonym` | `character varying(255)` | no |  |  |
 | `VerifiedAt` | `timestamp with time zone` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_biometric_liveness_verifications_ConsentId`: (`ConsentId`)
 - `IX_biometric_liveness_verifications_LivenessTokenHash`: (`LivenessTokenHash`)
 - `IX_biometric_liveness_verifications_SubjectPseudonym`: (`SubjectPseudonym`)
+- `IX_biometric_liveness_verifications_tenant_id`: (`tenant_id`)
 
 ## econsent.comprehension_checks
 
@@ -169,10 +173,12 @@ Entity: `ComprehensionCheck`
 | `TemplateId` | `character varying(255)` | no |  |  |
 | `ThresholdPolicyJson` | `jsonb` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_comprehension_checks_TemplateId`: (`TemplateId`)
+- `IX_comprehension_checks_tenant_id`: (`tenant_id`)
 
 ## econsent.comprehension_results
 
@@ -193,11 +199,13 @@ Entity: `ComprehensionResult`
 | `TemplateId` | `character varying(255)` | no |  |  |
 | `ThresholdPolicyJson` | `jsonb` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_comprehension_results_SubjectPseudonym`: (`SubjectPseudonym`)
 - `IX_comprehension_results_TemplateId`: (`TemplateId`)
+- `IX_comprehension_results_tenant_id`: (`tenant_id`)
 
 ## econsent.consent_audit_logs
 
@@ -214,14 +222,15 @@ Entity: `ConsentAuditLog`
 | `PreviousDigest` | `character varying(64)` | yes |  |  |
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `Sha256Digest` | `character varying(64)` | yes |  |  |
-| `TenantId` | `character varying(255)` | no |  |  |
 | `Timestamp` | `timestamp with time zone` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_consent_audit_logs_ActorId`: (`ActorId`)
 - `IX_consent_audit_logs_DocumentId`: (`DocumentId`)
 - `IX_consent_audit_logs_Timestamp`: (`Timestamp`)
+- `IX_consent_audit_logs_tenant_id`: (`tenant_id`)
 
 ## econsent.consent_clauses
 
@@ -238,11 +247,13 @@ Entity: `ConsentClause`
 | `Text` | `text` | no |  |  |
 | `Title` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_consent_clauses_ClauseId`: (`ClauseId`)
 - `IX_consent_clauses_StudyId`: (`StudyId`)
+- `IX_consent_clauses_tenant_id`: (`tenant_id`)
 
 ## econsent.consent_documents
 
@@ -259,11 +270,13 @@ Entity: `ConsentDocument`
 | `SiteId` | `character varying(255)` | no |  |  |
 | `StudyId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_consent_documents_SiteId`: (`SiteId`)
 - `IX_consent_documents_StudyId`: (`StudyId`)
+- `IX_consent_documents_tenant_id`: (`tenant_id`)
 
 ## econsent.consent_signatures
 
@@ -286,11 +299,13 @@ Entity: `ConsentSignature`
 | `SubjectPseudonym` | `character varying(255)` | no |  |  |
 | `TemplateId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_consent_signatures_SubjectPseudonym`: (`SubjectPseudonym`)
 - `IX_consent_signatures_TemplateId`: (`TemplateId`)
+- `IX_consent_signatures_tenant_id`: (`tenant_id`)
 
 ## econsent.consent_templates
 
@@ -311,11 +326,13 @@ Entity: `ConsentTemplate`
 | `TemplateName` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
 | `WorkflowStepsJson` | `jsonb` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_consent_templates_StudyId`: (`StudyId`)
 - `IX_consent_templates_TemplateId`: (`TemplateId`)
+- `IX_consent_templates_tenant_id`: (`tenant_id`)
 
 ## econsent.consent_translations
 
@@ -336,12 +353,14 @@ Entity: `ConsentTranslation`
 | `TranslatedTitle` | `character varying(255)` | no |  |  |
 | `TranslationId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_consent_translations_LanguageCode`: (`LanguageCode`)
 - `IX_consent_translations_SourceId`: (`SourceId`)
 - `IX_consent_translations_TranslationId`: (`TranslationId`)
+- `IX_consent_translations_tenant_id`: (`tenant_id`)
 
 ## econsent.consent_withdrawals
 
@@ -363,6 +382,7 @@ Entity: `ConsentWithdrawal`
 | `SubjectPseudonym` | `character varying(255)` | no |  |  |
 | `TemplateId` | `character varying(255)` | no |  |  |
 | `WithdrawalDate` | `timestamp with time zone` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -370,6 +390,7 @@ Indexes:
 - `IX_consent_withdrawals_StudyId`: (`StudyId`)
 - `IX_consent_withdrawals_SubjectPseudonym`: (`SubjectPseudonym`)
 - `IX_consent_withdrawals_TemplateId`: (`TemplateId`)
+- `IX_consent_withdrawals_tenant_id`: (`tenant_id`)
 
 ## econsent.consumed_signature_tokens
 
@@ -409,12 +430,14 @@ Entity: `EtmfArchivalDelivery`
 | `SubjectPseudonym` | `character varying(255)` | no |  |  |
 | `TemplateId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_etmf_archival_deliveries_CorrelationId`: unique (`CorrelationId`)
 - `IX_etmf_archival_deliveries_SubjectPseudonym`: (`SubjectPseudonym`)
 - `IX_etmf_archival_deliveries_TemplateId`: (`TemplateId`)
+- `IX_etmf_archival_deliveries_tenant_id`: (`tenant_id`)
 
 ## econsent.granular_consent_options
 
@@ -434,11 +457,13 @@ Entity: `GranularConsentOption`
 | `TemplateId` | `character varying(255)` | no |  |  |
 | `Title` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_granular_consent_options_OptionCode`: (`OptionCode`)
 - `IX_granular_consent_options_TemplateId`: (`TemplateId`)
+- `IX_granular_consent_options_tenant_id`: (`tenant_id`)
 
 ## econsent.reconsent_requirements
 
@@ -461,6 +486,7 @@ Entity: `ReconsentRequirement`
 | `SubjectPseudonym` | `character varying(255)` | no |  |  |
 | `SubstantiveChangesJson` | `jsonb` | no |  |  |
 | `TemplateId` | `character varying(255)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -468,6 +494,7 @@ Indexes:
 - `IX_reconsent_requirements_StudyId`: (`StudyId`)
 - `IX_reconsent_requirements_SubjectPseudonym`: (`SubjectPseudonym`)
 - `IX_reconsent_requirements_TemplateId`: (`TemplateId`)
+- `IX_reconsent_requirements_tenant_id`: (`tenant_id`)
 
 ## econsent.subject_consent_option_selections
 
@@ -483,12 +510,14 @@ Entity: `SubjectConsentOptionSelection`
 | `Selected` | `boolean` | no |  |  |
 | `SelectedAt` | `timestamp with time zone` | no |  |  |
 | `SubjectPseudonym` | `character varying(255)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_subject_consent_option_selections_ConsentId`: (`ConsentId`)
 - `IX_subject_consent_option_selections_OptionCode`: (`OptionCode`)
 - `IX_subject_consent_option_selections_SubjectPseudonym`: (`SubjectPseudonym`)
+- `IX_subject_consent_option_selections_tenant_id`: (`tenant_id`)
 
 ## econsent.subject_consents
 
@@ -511,6 +540,7 @@ Entity: `SubjectConsent`
 | `SubjectPseudonym` | `character varying(255)` | no |  |  |
 | `TemplateId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -518,3 +548,4 @@ Indexes:
 - `IX_subject_consents_StudyId`: (`StudyId`)
 - `IX_subject_consents_SubjectPseudonym`: (`SubjectPseudonym`)
 - `IX_subject_consents_TemplateId`: (`TemplateId`)
+- `IX_subject_consents_tenant_id`: (`tenant_id`)

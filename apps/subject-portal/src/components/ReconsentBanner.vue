@@ -44,7 +44,8 @@
       style="
         white-space: nowrap;
         background-color: var(--semantic-color-warning-action);
-        border-color: var(--semantic-color-warning-action-border);
+        border: 1px solid var(--semantic-color-warning-action-border);
+        color: var(--semantic-color-surface);
       "
       @click="openReconsentModal"
     >

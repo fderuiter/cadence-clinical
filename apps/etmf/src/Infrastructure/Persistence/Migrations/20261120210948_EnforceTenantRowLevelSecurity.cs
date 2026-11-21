@@ -23,7 +23,7 @@ public partial class EnforceTenantRowLevelSecurity : Migration
         "tmf_export_jobs",
     ];
 
-protected override void Up(MigrationBuilder migrationBuilder)
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.AddColumn<Guid>(
             name: "tenant_id",
@@ -120,12 +120,12 @@ protected override void Up(MigrationBuilder migrationBuilder)
             name: "IX_audit_log_entries_tenant_id",
             table: "audit_log_entries",
             column: "tenant_id");
-            migrationBuilder.EnableStandaloneTenantIsolation("etmf", TenantTables);
-}
+        migrationBuilder.EnableStandaloneTenantIsolation("etmf", TenantTables);
+    }
 
-protected override void Down(MigrationBuilder migrationBuilder)
+    protected override void Down(MigrationBuilder migrationBuilder)
     {
-    migrationBuilder.DisableStandaloneTenantIsolation("etmf", TenantTables);
+        migrationBuilder.DisableStandaloneTenantIsolation("etmf", TenantTables);
 
         migrationBuilder.DropIndex(
             name: "IX_tmf_export_jobs_tenant_id",

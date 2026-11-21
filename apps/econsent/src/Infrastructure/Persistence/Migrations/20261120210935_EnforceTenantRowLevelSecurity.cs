@@ -31,12 +31,28 @@ public partial class EnforceTenantRowLevelSecurity : Migration
         "subject_consents",
     ];
 
-protected override void Up(MigrationBuilder migrationBuilder)
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.RenameColumn(
             name: "TenantId",
             table: "consent_audit_logs",
             newName: "tenant_id");
+
+        migrationBuilder.Sql(
+            """
+            ALTER TABLE "subject_consents"
+                ADD COLUMN IF NOT EXISTS "DeviceTimestamp" timestamp with time zone,
+                ADD COLUMN IF NOT EXISTS "SignatureManifestJson" jsonb NOT NULL DEFAULT '{}'::jsonb;
+            DO $$
+            BEGIN
+                IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'subject_consents' AND column_name = 'ComprehensionPassed') THEN
+                    ALTER TABLE "subject_consents" ALTER COLUMN "ComprehensionPassed" SET DEFAULT false;
+                END IF;
+                IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'subject_consents' AND column_name = 'PaperConsentOverride') THEN
+                    ALTER TABLE "subject_consents" ALTER COLUMN "PaperConsentOverride" SET DEFAULT false;
+                END IF;
+            END $$;
+            """);
 
         migrationBuilder.AddColumn<Guid>(
             name: "tenant_id",
@@ -121,7 +137,7 @@ protected override void Up(MigrationBuilder migrationBuilder)
             ALTER COLUMN tenant_id TYPE uuid
             USING CASE
                 WHEN tenant_id::text ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN tenant_id::text::uuid
-                ELSE '00000000-0000-0000-0000-000000000000'::uuid
+                ELSE repeat('0', 32)::uuid
             END;
         ALTER TABLE "consent_audit_logs" ALTER COLUMN tenant_id SET NOT NULL;
         """);
@@ -233,12 +249,12 @@ protected override void Up(MigrationBuilder migrationBuilder)
             name: "IX_audit_log_entries_tenant_id",
             table: "audit_log_entries",
             column: "tenant_id");
-            migrationBuilder.EnableStandaloneTenantIsolation("econsent", TenantTables);
-}
+        migrationBuilder.EnableStandaloneTenantIsolation("econsent", TenantTables);
+    }
 
-protected override void Down(MigrationBuilder migrationBuilder)
+    protected override void Down(MigrationBuilder migrationBuilder)
     {
-    migrationBuilder.DisableStandaloneTenantIsolation("econsent", TenantTables);
+        migrationBuilder.DisableStandaloneTenantIsolation("econsent", TenantTables);
 
         migrationBuilder.DropIndex(
             name: "IX_subject_consents_tenant_id",

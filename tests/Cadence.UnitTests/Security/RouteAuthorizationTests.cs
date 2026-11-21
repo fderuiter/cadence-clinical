@@ -576,6 +576,13 @@ public sealed class RouteAuthorizationTests
                 """{"usdmJson":"{}","studyId":"STUDY-OTHER"}""",
                 TestSecurityContext.Identity("designer-study", "Study Designer") with { StudyIds = ["STUDY-ALLOWED"] },
                 null),
+            (
+                "tickets",
+                HttpMethods.Get,
+                "/api/v1/tickets?study_id=STUDY-OTHER&site_id=SITE-OTHER",
+                null,
+                TestSecurityContext.Identity("crc-tkt-study", "crc") with { StudyIds = ["STUDY-ALLOWED"], SiteIds = ["SITE-OTHER"] },
+                TestSecurityContext.Identity("crc-tkt-site", "crc") with { StudyIds = ["STUDY-OTHER"], SiteIds = ["SITE-ALLOWED"] }),
         };
 
         var failures = new List<string>();

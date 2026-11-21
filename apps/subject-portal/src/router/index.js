@@ -6,29 +6,35 @@ import {
   START_LOCATION,
   createMemoryHistory,
   createRouter,
+  createWebHashHistory,
   createWebHistory,
 } from "vue-router";
 
 import { showView } from "../features/navigation.js";
 import { state } from "../stores/state.js";
+import { isDemoBuild } from "../utils/demoMode.js";
 import UnavailableView from "../views/UnavailableView.vue";
 import { isScreenAvailable } from "./availability.js";
 import { routeForView, viewRoutes } from "./routes.js";
 
 // Vite serves and builds the portal under this base (vite.config.js).
-export const ROUTER_BASE = "/subject-portal/";
+export const ROUTER_BASE = import.meta.env?.BASE_URL || "/subject-portal/";
 
 // Memory history under Vitest or without a `window.location` (there is no
-// URL to follow there); browser history in the app.
+// URL to follow there); hash history in static demo builds; browser history in production/dev.
 const memoryHistory =
   import.meta.env?.MODE === "test" ||
   typeof window === "undefined" ||
   !window.location;
 
-export function createPortalHistory() {
-  return memoryHistory
-    ? createMemoryHistory(ROUTER_BASE)
-    : createWebHistory(ROUTER_BASE);
+export function createPortalHistory(
+  env = import.meta.env,
+  { memory = memoryHistory, base = env?.BASE_URL || ROUTER_BASE } = {}
+) {
+  if (memory) {
+    return createMemoryHistory(base);
+  }
+  return isDemoBuild(env) ? createWebHashHistory(base) : createWebHistory(base);
 }
 
 const unavailableRoute = {

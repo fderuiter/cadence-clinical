@@ -1,4 +1,5 @@
 import { ref, computed } from "vue";
+import { useToastStore } from "../stores/toasts.js";
 
 export function useSchemaIngestion(store) {
   const fileInputRef = ref(null);
@@ -9,6 +10,10 @@ export function useSchemaIngestion(store) {
   const rejectingItemId = ref(null);
   const rejectItemReason = ref("");
   const promoteChangeReason = ref("");
+
+  function notify(tone, title, message) {
+    useToastStore().push({ tone, title, message });
+  }
 
   const unreviewedCount = computed(() => {
     if (!store.candidateDraft || !store.candidateDraft.items) return 0;
@@ -33,9 +38,17 @@ export function useSchemaIngestion(store) {
         file,
         "Uploader triggers protocol ingestion scan."
       );
-      alert("Protocol Document ingested successfully. Candidate draft loaded.");
+      notify(
+        "success",
+        "Protocol ingested",
+        "Protocol Document ingested successfully. Candidate draft loaded."
+      );
     } catch (err) {
-      alert("Ingestion failed: " + err.message);
+      notify(
+        "error",
+        "Ingestion failed",
+        "Ingestion failed: " + (err?.message || String(err))
+      );
     }
   }
 
@@ -61,7 +74,11 @@ export function useSchemaIngestion(store) {
         "Accepted by clinical reviewer"
       );
     } catch (err) {
-      alert("Transition failed: " + err.message);
+      notify(
+        "error",
+        "Transition failed",
+        "Transition failed: " + (err?.message || String(err))
+      );
     }
   }
 
@@ -79,7 +96,11 @@ export function useSchemaIngestion(store) {
 
   async function saveEditItem(itemId) {
     if (!editItemReason.value.trim()) {
-      alert("Change reason justification is mandatory for edits!");
+      notify(
+        "error",
+        "Reason required",
+        "Change reason justification is mandatory for edits!"
+      );
       return;
     }
     const item = store.candidateDraft.items[itemId];
@@ -100,7 +121,11 @@ export function useSchemaIngestion(store) {
       editItemValue.value = "";
       editItemReason.value = "";
     } catch (err) {
-      alert("Transition failed: " + err.message);
+      notify(
+        "error",
+        "Transition failed",
+        "Transition failed: " + (err?.message || String(err))
+      );
     }
   }
 
@@ -116,7 +141,11 @@ export function useSchemaIngestion(store) {
 
   async function confirmRejectItem(itemId) {
     if (!rejectItemReason.value.trim()) {
-      alert("Change reason justification is mandatory for rejection!");
+      notify(
+        "error",
+        "Reason required",
+        "Change reason justification is mandatory for rejection!"
+      );
       return;
     }
     try {
@@ -129,13 +158,21 @@ export function useSchemaIngestion(store) {
       rejectingItemId.value = null;
       rejectItemReason.value = "";
     } catch (err) {
-      alert("Transition failed: " + err.message);
+      notify(
+        "error",
+        "Transition failed",
+        "Transition failed: " + (err?.message || String(err))
+      );
     }
   }
 
   async function promoteCandidate() {
     if (!promoteChangeReason.value.trim()) {
-      alert("Promotion change reason justification is mandatory!");
+      notify(
+        "error",
+        "Reason required",
+        "Promotion change reason justification is mandatory!"
+      );
       return;
     }
     try {
@@ -143,10 +180,18 @@ export function useSchemaIngestion(store) {
         store.candidateDraft.id,
         promoteChangeReason.value
       );
-      alert("Candidate promoted successfully into formal DRAFT version!");
+      notify(
+        "success",
+        "Candidate promoted",
+        "Candidate promoted successfully into formal DRAFT version!"
+      );
       promoteChangeReason.value = "";
     } catch (err) {
-      alert("Promotion failed: " + err.message);
+      notify(
+        "error",
+        "Promotion failed",
+        "Promotion failed: " + (err?.message || String(err))
+      );
     }
   }
 

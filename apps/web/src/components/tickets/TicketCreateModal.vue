@@ -252,7 +252,9 @@
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
 import { useFocusTrap } from "ui";
-import { allowUnbackedAction } from "../../utils/unbackedActions.js";
+import { ticketsApi } from "../../api/ticketsApi";
+import { describeApiError } from "../../utils/apiErrors.js";
+import { isDemoBuild } from "../../utils/demoMode.js";
 
 const props = defineProps({
   isOpen: {
@@ -279,14 +281,22 @@ const modalRef = ref(null);
 const loading = ref(false);
 const errorMessage = ref("");
 
+function defaultStudyForBuild() {
+  return isDemoBuild() ? "STUDY-ONC-202" : "";
+}
+
+function defaultSiteForBuild() {
+  return isDemoBuild() ? "SITE-101" : "";
+}
+
 const form = reactive({
   title: "",
   description: "",
   category: "PROTOCOL_DEVIATION",
   gxp_severity: "MINOR",
   priority: "MEDIUM",
-  study_id: props.defaultStudyId || "STUDY-ONC-202",
-  site_id: props.defaultSiteId || "SITE-101",
+  study_id: props.defaultStudyId || defaultStudyForBuild(),
+  site_id: props.defaultSiteId || defaultSiteForBuild(),
   subject_id: "",
   entity_type: "",
   entity_id: "",
@@ -300,8 +310,9 @@ function applyInitialData() {
   form.category = init.category || "PROTOCOL_DEVIATION";
   form.gxp_severity = init.gxp_severity || "MINOR";
   form.priority = init.priority || "MEDIUM";
-  form.study_id = init.study_id || props.defaultStudyId || "STUDY-ONC-202";
-  form.site_id = init.site_id || props.defaultSiteId || "SITE-101";
+  form.study_id =
+    init.study_id || props.defaultStudyId || defaultStudyForBuild();
+  form.site_id = init.site_id || props.defaultSiteId || defaultSiteForBuild();
   form.subject_id = init.subject_id || "";
   form.entity_type = init.entity_type || "";
   form.entity_id = init.entity_id || "";
@@ -343,31 +354,30 @@ const handleSubmit = async () => {
     errorMessage.value = "Please complete all required fields.";
     return;
   }
-  if (!allowUnbackedAction("Support ticket escalation")) {
-    errorMessage.value =
-      "Support ticket escalation isn't available yet. No Cadence service records tickets yet, so nothing was submitted and your entry is preserved.";
-    return;
-  }
   loading.value = true;
   errorMessage.value = "";
   try {
-    const payload = {
-      title: form.title,
-      description: form.description,
+    const reason = form.reason_for_change.trim();
+    const requestPayload = {
+      title: form.title.trim(),
+      description: form.description.trim(),
       category: form.category,
       gxp_severity: form.gxp_severity,
       priority: form.priority,
-      study_id: form.study_id || null,
-      site_id: form.site_id || null,
-      subject_id: form.subject_id || null,
+      study_id: form.study_id?.trim() || null,
+      site_id: form.site_id?.trim() || null,
+      subject_id: form.subject_id?.trim() || null,
       entity_type: form.entity_type || null,
-      entity_id: form.entity_id || null,
-      reason_for_change: form.reason_for_change,
+      entity_id: form.entity_id?.trim() || null,
+      source_route: props.initialData?.source_route || null,
+      persona: props.initialData?.persona || null,
     };
-    emit("created", payload);
+    const createdTicket = await ticketsApi.createTicket(requestPayload, reason);
+    emit("created", createdTicket);
     close();
   } catch (err) {
-    errorMessage.value = err.message || "Failed to create ticket.";
+    errorMessage.value =
+      describeApiError(err) || err?.message || "Failed to create ticket.";
   } finally {
     loading.value = false;
   }
@@ -401,7 +411,7 @@ const handleSubmit = async () => {
 }
 
 .text-danger {
-  color: #dc2626;
+  color: var(--semantic-color-error);
 }
 
 .form-group {
@@ -413,22 +423,22 @@ const handleSubmit = async () => {
 .form-label {
   font-size: 0.82rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 
 .form-control {
   padding: 8px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-size: 0.875rem;
-  color: #1e293b;
-  background: #ffffff;
+  color: var(--semantic-color-text-dark);
+  background: var(--semantic-color-surface);
   outline: none;
   transition: border-color 0.15s;
 }
 
 .form-control:focus {
-  border-color: #2563eb;
+  border-color: var(--semantic-color-interactive-primary);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
@@ -437,15 +447,15 @@ const handleSubmit = async () => {
   justify-content: flex-end;
   gap: 12px;
   padding: 16px 24px;
-  background: #f8fafc;
-  border-top: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface-muted);
+  border-top: 1px solid var(--semantic-color-border);
 }
 
 .spinner {
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid #ffffff;
+  border: 2px solid var(--semantic-color-surface);
   border-top-color: transparent;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;

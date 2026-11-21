@@ -20,7 +20,7 @@ public partial class EnforceTenantRowLevelSecurity : Migration
         "quality_root_cause_analyses",
     ];
 
-protected override void Up(MigrationBuilder migrationBuilder)
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.AddColumn<Guid>(
             name: "tenant_id",
@@ -81,12 +81,12 @@ protected override void Up(MigrationBuilder migrationBuilder)
             name: "IX_audit_log_entries_tenant_id",
             table: "audit_log_entries",
             column: "tenant_id");
-            migrationBuilder.EnableStandaloneTenantIsolation("quality", TenantTables);
-}
+        migrationBuilder.EnableStandaloneTenantIsolation("quality", TenantTables);
+    }
 
-protected override void Down(MigrationBuilder migrationBuilder)
+    protected override void Down(MigrationBuilder migrationBuilder)
     {
-    migrationBuilder.DisableStandaloneTenantIsolation("quality", TenantTables);
+        migrationBuilder.DisableStandaloneTenantIsolation("quality", TenantTables);
 
         migrationBuilder.DropIndex(
             name: "IX_quality_root_cause_analyses_tenant_id",

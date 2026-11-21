@@ -27,8 +27,21 @@ public partial class EnforceTenantRowLevelSecurity : Migration
         "protocol_knowledge_chunks",
     ];
 
-protected override void Up(MigrationBuilder migrationBuilder)
+    /// <inheritdoc />
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
+        migrationBuilder.DropIndex(
+            name: "IX_knowledge_categories_Name",
+            table: "knowledge_categories");
+
+        migrationBuilder.DropIndex(
+            name: "IX_knowledge_categories_Slug",
+            table: "knowledge_categories");
+
+        migrationBuilder.DropIndex(
+            name: "IX_knowledge_articles_Slug",
+            table: "knowledge_articles");
+
         migrationBuilder.AddColumn<Guid>(
             name: "tenant_id",
             table: "TrainingCurricula",
@@ -149,9 +162,27 @@ protected override void Up(MigrationBuilder migrationBuilder)
             column: "tenant_id");
 
         migrationBuilder.CreateIndex(
+            name: "IX_knowledge_categories_tenant_id_Name",
+            table: "knowledge_categories",
+            columns: ["tenant_id", "Name"],
+            unique: true);
+
+        migrationBuilder.CreateIndex(
+            name: "IX_knowledge_categories_tenant_id_Slug",
+            table: "knowledge_categories",
+            columns: ["tenant_id", "Slug"],
+            unique: true);
+
+        migrationBuilder.CreateIndex(
             name: "IX_knowledge_articles_tenant_id",
             table: "knowledge_articles",
             column: "tenant_id");
+
+        migrationBuilder.CreateIndex(
+            name: "IX_knowledge_articles_tenant_id_Slug",
+            table: "knowledge_articles",
+            columns: ["tenant_id", "Slug"],
+            unique: true);
 
         migrationBuilder.CreateIndex(
             name: "IX_knowledge_article_versions_tenant_id",
@@ -172,12 +203,14 @@ protected override void Up(MigrationBuilder migrationBuilder)
             name: "IX_audit_log_entries_tenant_id",
             table: "audit_log_entries",
             column: "tenant_id");
-            migrationBuilder.EnableStandaloneTenantIsolation("knowledge", TenantTables);
-}
 
-protected override void Down(MigrationBuilder migrationBuilder)
+        migrationBuilder.EnableStandaloneTenantIsolation("knowledge", TenantTables);
+    }
+
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
     {
-    migrationBuilder.DisableStandaloneTenantIsolation("knowledge", TenantTables);
+        migrationBuilder.DisableStandaloneTenantIsolation("knowledge", TenantTables);
 
         migrationBuilder.DropIndex(
             name: "IX_TrainingCurricula_tenant_id",
@@ -208,7 +241,19 @@ protected override void Down(MigrationBuilder migrationBuilder)
             table: "knowledge_categories");
 
         migrationBuilder.DropIndex(
+            name: "IX_knowledge_categories_tenant_id_Name",
+            table: "knowledge_categories");
+
+        migrationBuilder.DropIndex(
+            name: "IX_knowledge_categories_tenant_id_Slug",
+            table: "knowledge_categories");
+
+        migrationBuilder.DropIndex(
             name: "IX_knowledge_articles_tenant_id",
+            table: "knowledge_articles");
+
+        migrationBuilder.DropIndex(
+            name: "IX_knowledge_articles_tenant_id_Slug",
             table: "knowledge_articles");
 
         migrationBuilder.DropIndex(
@@ -274,5 +319,23 @@ protected override void Down(MigrationBuilder migrationBuilder)
         migrationBuilder.DropColumn(
             name: "tenant_id",
             table: "audit_log_entries");
+
+        migrationBuilder.CreateIndex(
+            name: "IX_knowledge_categories_Name",
+            table: "knowledge_categories",
+            column: "Name",
+            unique: true);
+
+        migrationBuilder.CreateIndex(
+            name: "IX_knowledge_categories_Slug",
+            table: "knowledge_categories",
+            column: "Slug",
+            unique: true);
+
+        migrationBuilder.CreateIndex(
+            name: "IX_knowledge_articles_Slug",
+            table: "knowledge_articles",
+            column: "Slug",
+            unique: true);
     }
 }

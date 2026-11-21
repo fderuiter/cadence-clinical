@@ -14,12 +14,24 @@
         <h3 style="font-weight: bold; margin: 0; color: var(--primary)">
           🗺️ Interactive Arm-Aware Gantt Pathway Visualizer
         </h3>
-        <p style="font-size: 0.85rem; color: #64748b; margin: 4px 0 0 0">
+        <p
+          style="
+            font-size: 0.85rem;
+            color: var(--semantic-color-text-secondary);
+            margin: 4px 0 0 0;
+          "
+        >
           Direct visual flow mapping of protocol phases, encounter sequences,
           crossover paths, and target timing windows.
         </p>
       </div>
-      <div style="font-size: 0.8rem; color: #64748b; font-style: italic">
+      <div
+        style="
+          font-size: 0.8rem;
+          color: var(--semantic-color-text-secondary);
+          font-style: italic;
+        "
+      >
         Click any visit node (circle) to configure target days and offsets
       </div>
     </div>
@@ -31,7 +43,7 @@
         :height="svgHeight"
         :viewBox="`0 0 ${timelineWidth} ${svgHeight}`"
         style="
-          background-color: #fafafa;
+          background-color: var(--semantic-color-surface-muted);
           border-radius: 8px;
           border: 1px solid var(--border);
           display: block;
@@ -48,7 +60,10 @@
             markerHeight="6"
             orient="auto-start-reverse"
           >
-            <path d="M 0 1 L 10 5 L 0 9 z" fill="#ec4899" />
+            <path
+              d="M 0 1 L 10 5 L 0 9 z"
+              fill="var(--semantic-color-pink-text)"
+            />
           </marker>
         </defs>
 
@@ -58,7 +73,7 @@
             :x="timelineWidth / 2"
             :y="svgHeight / 2"
             text-anchor="middle"
-            fill="#64748b"
+            fill="var(--semantic-color-text-secondary)"
             font-size="14px"
           >
             No active epoch phase timeline defined. Use the builder above to add
@@ -76,7 +91,7 @@
               text-anchor="middle"
               font-weight="bold"
               font-size="12px"
-              fill="#475569"
+              fill="var(--semantic-color-text-secondary)"
             >
               Phase {{ seq }}
             </text>
@@ -88,7 +103,7 @@
               y1="35"
               :x2="getColumnEnd(seq)"
               :y2="svgHeight - 15"
-              stroke="#cbd5e1"
+              stroke="var(--semantic-color-border-control)"
               stroke-width="1.5"
               stroke-dasharray="4,4"
             />
@@ -102,7 +117,7 @@
               :y1="getLaneYCenter(armIdx)"
               :x2="timelineWidth - 30"
               :y2="getLaneYCenter(armIdx)"
-              stroke="#e2e8f0"
+              stroke="var(--semantic-color-border)"
               stroke-width="6"
               stroke-linecap="round"
             />
@@ -114,8 +129,8 @@
               width="150"
               height="40"
               rx="6"
-              fill="#f1f5f9"
-              stroke="#cbd5e1"
+              fill="var(--semantic-color-text-inverse)"
+              stroke="var(--semantic-color-border-control)"
               stroke-width="1"
             />
             <text
@@ -123,7 +138,7 @@
               :y="getLaneYCenter(armIdx) + 4"
               font-weight="bold"
               font-size="11px"
-              fill="#1e293b"
+              fill="var(--semantic-color-text-dark)"
             >
               <tspan x="20" dy="0">{{ truncate(arm.arm_name, 22) }}</tspan>
             </text>
@@ -196,7 +211,7 @@
                       )
                     "
                     :y2="getLaneYCenter(armIdx) + 8"
-                    stroke="#94a3b8"
+                    stroke="var(--semantic-color-border-control)"
                     stroke-width="1.5"
                     stroke-dasharray="2,2"
                   />
@@ -214,8 +229,8 @@
                     "
                     :cy="getLaneYCenter(armIdx) + 8"
                     r="13"
-                    fill="#3b82f6"
-                    stroke="#ffffff"
+                    fill="var(--semantic-color-interactive-primary)"
+                    stroke="var(--semantic-color-surface)"
                     stroke-width="2.5"
                     style="
                       cursor: pointer;
@@ -237,7 +252,7 @@
                     text-anchor="middle"
                     font-size="9px"
                     font-weight="bold"
-                    fill="#ffffff"
+                    fill="var(--semantic-color-surface)"
                     style="pointer-events: none"
                   >
                     {{ visitIdx + 1 }}
@@ -256,7 +271,7 @@
                     text-anchor="middle"
                     font-size="10px"
                     font-weight="bold"
-                    fill="#1e293b"
+                    fill="var(--semantic-color-text-dark)"
                     style="pointer-events: none"
                   >
                     {{ truncate(visit.encounter_name, 14) }}
@@ -275,11 +290,14 @@
                     text-anchor="middle"
                     font-size="8.5px"
                     font-weight="600"
-                    fill="#475569"
+                    fill="var(--semantic-color-text-secondary)"
                     style="pointer-events: none"
                   >
                     Day {{ getPlannedDay(visit) }}
-                    <tspan fill="#64748b" font-weight="normal">
+                    <tspan
+                      fill="var(--semantic-color-text-secondary)"
+                      font-weight="normal"
+                    >
                       ({{ getOffsetString(visit) }})
                     </tspan>
                   </text>
@@ -301,7 +319,7 @@
             >
               <path
                 :d="calculateCrossoverPath(cross)"
-                stroke="#ec4899"
+                stroke="var(--semantic-color-pink-text)"
                 stroke-width="2.5"
                 stroke-dasharray="5,3"
                 fill="none"
@@ -314,8 +332,8 @@
                 width="110"
                 height="15"
                 rx="3"
-                fill="#fdf2f8"
-                stroke="#fbcfe8"
+                fill="var(--semantic-color-pink-bg)"
+                stroke="var(--semantic-color-pink-border)"
                 stroke-width="0.75"
               />
               <!-- Crossover Label Text -->
@@ -325,7 +343,7 @@
                 text-anchor="middle"
                 font-size="8px"
                 font-weight="bold"
-                fill="#db2777"
+                fill="var(--semantic-color-pink-text)"
               >
                 🔀 {{ truncate(cross.label || "Crossover", 18) }}
               </text>
@@ -379,7 +397,7 @@
             ⚙️ Edit Encounter Timing Property
           </h3>
           <button
-            style="background: none; border: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: #94a3b8; hover:color:#475569"
+            style="background: none; border: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--semantic-color-text-secondary); hover: color:var(--semantic-color-text-secondary)"
             aria-label="Close modal"
             @click="closeModal"
           >
@@ -390,19 +408,25 @@
         <div
           style="
             margin-bottom: 16px;
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
+            background-color: var(--semantic-color-surface-muted);
+            border: 1px solid var(--semantic-color-border);
             padding: 10px;
             border-radius: 6px;
           "
         >
-          <div style="font-weight: bold; font-size: 0.9rem; color: #1e293b">
+          <div
+            style="
+              font-weight: bold;
+              font-size: 0.9rem;
+              color: var(--semantic-color-text-dark);
+            "
+          >
             Encounter: {{ selectedVisit?.encounter_name }}
           </div>
           <div
             style="
               font-size: 0.75rem;
-              color: #64748b;
+              color: var(--semantic-color-text-secondary);
               font-family: monospace;
               margin-top: 2px;
             "
@@ -423,7 +447,7 @@
                 display: block;
                 margin-bottom: 4px;
                 font-size: 0.85rem;
-                color: #334155;
+                color: var(--semantic-color-text-body);
               "
             >
               Target Day Offset
@@ -454,7 +478,7 @@
                   display: block;
                   margin-bottom: 4px;
                   font-size: 0.85rem;
-                  color: #334155;
+                  color: var(--semantic-color-text-body);
                 "
               >
                 Min Offset (Days)
@@ -482,7 +506,7 @@
                   display: block;
                   margin-bottom: 4px;
                   font-size: 0.85rem;
-                  color: #334155;
+                  color: var(--semantic-color-text-body);
                 "
               >
                 Max Offset (Days)
@@ -513,7 +537,7 @@
                 display: block;
                 margin-bottom: 4px;
                 font-size: 0.85rem;
-                color: #334155;
+                color: var(--semantic-color-text-body);
               "
             >
               Anchor Reference Milestone
@@ -537,7 +561,7 @@
           <div
             class="form-group"
             style="
-              border-top: 1px dashed #cbd5e1;
+              border-top: 1px dashed var(--semantic-color-border-control);
               padding-top: 14px;
               margin-top: 4px;
             "
@@ -570,7 +594,7 @@
             <span
               style="
                 font-size: 0.75rem;
-                color: #64748b;
+                color: var(--semantic-color-text-secondary);
                 margin-top: 2px;
                 display: block;
               "
@@ -583,9 +607,9 @@
           <div
             v-if="validationError"
             style="
-              background-color: #fef2f2;
-              border: 1px solid #fca5a5;
-              color: #b91c1c;
+              background-color: var(--semantic-color-error-bg-soft);
+              border: 1px solid var(--semantic-color-error-border);
+              color: var(--semantic-color-error);
               padding: 10px;
               border-radius: 6px;
               font-size: 0.8rem;
@@ -851,27 +875,27 @@ function getEpochStyles(name = "") {
   const n = name.toLowerCase();
   if (n.includes("screening") || n.includes("scr")) {
     return {
-      fill: "#f0fdf4", // emerald/green-50
-      stroke: "#86efac", // emerald/green-300
-      text: "#166534", // emerald/green-800
+      fill: "var(--semantic-color-success-bg-soft)",
+      stroke: "var(--semantic-color-success-border)",
+      text: "var(--semantic-color-success-dark)",
     };
   } else if (n.includes("treatment") || n.includes("trt")) {
     return {
-      fill: "#f0f9ff", // sky-50
-      stroke: "#bae6fd", // sky-300
-      text: "#075985", // sky-800
+      fill: "var(--semantic-color-info-bg-soft)",
+      stroke: "var(--semantic-color-info-border-accent)",
+      text: "var(--semantic-color-primary-dark)",
     };
   } else if (n.includes("follow") || n.includes("flw") || n.includes("post")) {
     return {
-      fill: "#faf5ff", // purple-50
-      stroke: "#e9d5ff", // purple-300
-      text: "#6b21a8", // purple-800
+      fill: "var(--semantic-color-purple-bg)",
+      stroke: "var(--semantic-color-purple-border)",
+      text: "var(--semantic-color-purple-text)",
     };
   } else {
     return {
-      fill: "#fff7ed", // orange-50
-      stroke: "#fed7aa", // orange-300
-      text: "#9a3412", // orange-800
+      fill: "var(--semantic-color-orange-bg)",
+      stroke: "var(--semantic-color-orange-border)",
+      text: "var(--semantic-color-orange-text)",
     };
   }
 }

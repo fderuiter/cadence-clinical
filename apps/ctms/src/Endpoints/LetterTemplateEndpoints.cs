@@ -51,7 +51,7 @@ public static class LetterTemplateEndpoints
             .Produces<string>(StatusCodes.Status200OK, "text/plain")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission(RenderPermission).RequireCallerStudyAndSiteScope();
+            .RequirePermission(RenderPermission).RequireCallerStudyScope();
 
         group.MapPost("/letters/compile", CompileAndDispatchLetterAsync)
             .WithName("CompileSiteVisitLetterPdf")
@@ -86,8 +86,11 @@ public static class LetterTemplateEndpoints
             return UnknownTemplate(Catalog);
         }
 
-        if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
-            && ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId) is not null)
+        if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is { } principal
+            && (!ClinicalScopeGuard.CanAccessStudy(httpContext, request.StudyId)
+                || (!string.IsNullOrWhiteSpace(request.SiteId)
+                    && principal.AssignedSites.Count > 0
+                    && !ClinicalScopeGuard.CanAccessSite(httpContext, request.SiteId))))
         {
             return TypedResults.Problem(
                 title: "Access denied",

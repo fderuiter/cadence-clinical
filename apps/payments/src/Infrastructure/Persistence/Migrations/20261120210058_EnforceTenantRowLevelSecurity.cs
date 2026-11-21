@@ -32,7 +32,7 @@ public partial class EnforceTenantRowLevelSecurity : Migration
         "payments_split_payees",
     ];
 
-protected override void Up(MigrationBuilder migrationBuilder)
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.AddColumn<Guid>(
             name: "tenant_id",
@@ -257,12 +257,12 @@ protected override void Up(MigrationBuilder migrationBuilder)
             name: "IX_audit_log_entries_tenant_id",
             table: "audit_log_entries",
             column: "tenant_id");
-            migrationBuilder.EnableStandaloneTenantIsolation("payments", TenantTables);
-}
+        migrationBuilder.EnableStandaloneTenantIsolation("payments", TenantTables);
+    }
 
-protected override void Down(MigrationBuilder migrationBuilder)
+    protected override void Down(MigrationBuilder migrationBuilder)
     {
-    migrationBuilder.DisableStandaloneTenantIsolation("payments", TenantTables);
+        migrationBuilder.DisableStandaloneTenantIsolation("payments", TenantTables);
 
         migrationBuilder.DropIndex(
             name: "IX_payments_split_payees_tenant_id",

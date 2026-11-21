@@ -54,7 +54,7 @@ const title = computed(
   padding: 0 6px;
   border-radius: 999px;
   background: var(--semantic-color-ai);
-  color: #fff;
+  color: var(--semantic-color-surface);
   font-weight: 700;
   letter-spacing: 0.04em;
 }

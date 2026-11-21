@@ -34,7 +34,7 @@ public partial class EnforceTenantRowLevelSecurity : Migration
         "subject_notifications",
     ];
 
-protected override void Up(MigrationBuilder migrationBuilder)
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.AddColumn<Guid>(
             name: "tenant_id",
@@ -263,12 +263,12 @@ protected override void Up(MigrationBuilder migrationBuilder)
             name: "IX_audit_log_entries_tenant_id",
             table: "audit_log_entries",
             column: "tenant_id");
-            migrationBuilder.EnableStandaloneTenantIsolation("interop", TenantTables);
-}
+        migrationBuilder.EnableStandaloneTenantIsolation("interop", TenantTables);
+    }
 
-protected override void Down(MigrationBuilder migrationBuilder)
+    protected override void Down(MigrationBuilder migrationBuilder)
     {
-    migrationBuilder.DisableStandaloneTenantIsolation("interop", TenantTables);
+        migrationBuilder.DisableStandaloneTenantIsolation("interop", TenantTables);
 
         migrationBuilder.DropIndex(
             name: "IX_subject_notifications_tenant_id",

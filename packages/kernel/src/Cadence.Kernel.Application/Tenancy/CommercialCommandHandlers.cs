@@ -148,11 +148,6 @@ internal sealed class GrantProductEntitlementHandler : ICommandHandler<GrantProd
             return CommercialErrors.SubscriptionUnknown;
         }
 
-        if (await context.Work.ExistsAsync<ProductEntitlement>(command.ProductEntitlementId, cancellationToken).ConfigureAwait(false))
-        {
-            return KernelErrors.AlreadyExists;
-        }
-
         var existingFamily = await context.Work
             .ReadAllAsync<ProductEntitlement>(
                 e => e.TenantId == command.TenantId && e.Family == command.Family,
@@ -160,7 +155,30 @@ internal sealed class GrantProductEntitlementHandler : ICommandHandler<GrantProd
             .ConfigureAwait(false);
         if (existingFamily.Count > 0)
         {
-            return CommandResult<ProductEntitlementId>.Success(existingFamily[0].Id);
+            var existing = existingFamily[0];
+            if (existing.IsEnabled)
+            {
+                return CommandResult<ProductEntitlementId>.Success(existing.Id);
+            }
+
+            var tracked = await context.Work.FindAsync<ProductEntitlement>(existing.Id, cancellationToken).ConfigureAwait(false);
+            if (tracked is null)
+            {
+                return CommercialErrors.EntitlementRequired;
+            }
+
+            tracked.Enable(command.SubscriptionId, context.RecordedAt, context.Actor.Id, command.ReasonForChange);
+            context.Work.Raise(new ProductEntitlementGranted(
+                command.TenantId,
+                tracked.Id,
+                command.SubscriptionId,
+                command.Family));
+            return CommandResult<ProductEntitlementId>.Success(tracked.Id);
+        }
+
+        if (await context.Work.ExistsAsync<ProductEntitlement>(command.ProductEntitlementId, cancellationToken).ConfigureAwait(false))
+        {
+            return KernelErrors.AlreadyExists;
         }
 
         var entitlement = new ProductEntitlement(
@@ -181,6 +199,51 @@ internal sealed class GrantProductEntitlementHandler : ICommandHandler<GrantProd
     }
 }
 
+/// <summary>Handles <see cref="RevokeProductEntitlement"/>.</summary>
+internal sealed class RevokeProductEntitlementHandler : ICommandHandler<RevokeProductEntitlement, SubscriptionId>
+{
+    public async Task<CommandResult<SubscriptionId>> HandleAsync(
+        RevokeProductEntitlement command,
+        ICommandContext context,
+        CancellationToken cancellationToken)
+    {
+        if (command.SubscriptionId.IsEmpty)
+        {
+            return CommercialErrors.SubscriptionRequired;
+        }
+
+        if (await context.Work.ReadAsync<Subscription>(command.SubscriptionId, cancellationToken).ConfigureAwait(false) is not { } subscription
+            || subscription.TenantId != command.TenantId)
+        {
+            return CommercialErrors.SubscriptionUnknown;
+        }
+
+        var existingFamily = await context.Work
+            .ReadAllAsync<ProductEntitlement>(
+                e => e.TenantId == command.TenantId
+                    && e.SubscriptionId == command.SubscriptionId
+                    && e.Family == command.Family,
+                cancellationToken)
+            .ConfigureAwait(false);
+        if (existingFamily.Count == 0 || !existingFamily[0].IsEnabled)
+        {
+            return CommandResult<SubscriptionId>.Success(command.SubscriptionId);
+        }
+
+        if (await context.Work.FindAsync<ProductEntitlement>(existingFamily[0].Id, cancellationToken).ConfigureAwait(false) is { } tracked)
+        {
+            tracked.Disable(context.Actor.Id, command.ReasonForChange);
+            context.Work.Raise(new ProductEntitlementRevoked(
+                command.TenantId,
+                tracked.Id,
+                command.SubscriptionId,
+                command.Family));
+        }
+
+        return CommandResult<SubscriptionId>.Success(command.SubscriptionId);
+    }
+}
+
 internal static class CommercialServiceCollectionExtensions
 {
     public static IServiceCollection AddKernelCommercialHandlers(this IServiceCollection services)
@@ -189,6 +252,7 @@ internal static class CommercialServiceCollectionExtensions
         services.AddTransient<ICommandHandler<ExpireSubscription, SubscriptionId>, ExpireSubscriptionHandler>();
         services.AddTransient<ICommandHandler<ActivateSubscription, SubscriptionId>, ActivateSubscriptionHandler>();
         services.AddTransient<ICommandHandler<GrantProductEntitlement, ProductEntitlementId>, GrantProductEntitlementHandler>();
+        services.AddTransient<ICommandHandler<RevokeProductEntitlement, SubscriptionId>, RevokeProductEntitlementHandler>();
         return services;
     }
 }

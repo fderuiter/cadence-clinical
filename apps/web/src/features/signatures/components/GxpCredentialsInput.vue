@@ -159,13 +159,13 @@ label {
   font-weight: 500;
   margin-bottom: 4px;
   font-size: 13px;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 input {
   width: 100%;
   padding: 8px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 13px;
   background: white;
@@ -177,7 +177,7 @@ input:focus {
 }
 
 input:focus-visible {
-  outline: 3px solid var(--accent, #2563eb) !important;
+  outline: 3px solid var(--accent) !important;
   outline-offset: 2px !important;
 }
 

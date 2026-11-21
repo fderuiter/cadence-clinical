@@ -1,12 +1,14 @@
 import fs from "fs";
 import path from "path";
 
+import { BLOG_FEED_PATH, isDraftBlogPostFile } from "./blog.mjs";
 import rootDocsModule from "./rootDocs.cjs";
 
 const { STAGED_ROOT_DOCS } = rootDocsModule;
 
 const REPO_URL = "https://github.com/fderuiter/cadence-clinical";
 const BRANCH = "main";
+const GENERATED_STATIC_ENDPOINTS = new Set([BLOG_FEED_PATH]);
 
 const CONTROL_CHARS_RE = /[\u0000-\u001f]/g;
 const COMBINING_MARKS_RE = /[\u0300-\u036f]/g;
@@ -362,6 +364,14 @@ function resolveLinkTarget(href, pageDir, docsDir, repoRoot, currentFile = "") {
   }
 
   if (href.startsWith("/")) {
+    if (isCohostedSubpathLink(href)) {
+      return {
+        rewrittenHref: null,
+        portalTargetFile: null,
+        anchor: "",
+        samePage: false,
+      };
+    }
     const [, rawAnchor] = splitAnchor(href);
     return {
       rewrittenHref: null,
@@ -431,6 +441,23 @@ function resolveLinkTarget(href, pageDir, docsDir, repoRoot, currentFile = "") {
         samePage: false,
       };
     }
+    const mdCandidate =
+      exists && !isDir
+        ? absolute
+        : !exists && fs.existsSync(`${absolute}.md`)
+          ? `${absolute}.md`
+          : null;
+    if (mdCandidate && isDraftBlogPostFile(mdCandidate)) {
+      const draftRelToRepo = path
+        .relative(repoRoot, mdCandidate)
+        .replace(/\\/g, "/");
+      return {
+        rewrittenHref: `${REPO_URL}/blob/${BRANCH}/${draftRelToRepo}${anchor}`,
+        portalTargetFile: null,
+        anchor: "",
+        samePage: false,
+      };
+    }
 
     let portalTargetFile = null;
     if (isDir) {
@@ -486,6 +513,23 @@ export function splitAnchor(href) {
   return index === -1 ? [href, ""] : [href.slice(0, index), href.slice(index)];
 }
 
+export const COHOSTED_SUBPATH_PREFIXES = ["/demo/", "/subject-portal/"];
+
+export function isCohostedSubpathLink(
+  link,
+  prefixes = COHOSTED_SUBPATH_PREFIXES
+) {
+  if (!link || !link.startsWith("/")) return false;
+  const cleanPath = splitAnchor(link)[0].split("?")[0];
+  return prefixes.some((prefix) => {
+    const normalizedPrefix = prefix.endsWith("/") ? prefix : `${prefix}/`;
+    const withoutTrailing = normalizedPrefix.slice(0, -1);
+    return (
+      cleanPath === withoutTrailing || cleanPath.startsWith(normalizedPrefix)
+    );
+  });
+}
+
 function decodeAnchorFragment(anchor) {
   if (!anchor || !anchor.startsWith("#")) return "";
   const raw = anchor.slice(1).trim();
@@ -498,24 +542,36 @@ function decodeAnchorFragment(anchor) {
 }
 
 /**
- * Throws when a nav or sidebar entry links to a missing page or a missing heading anchor under `docs/`.
+ * Throws when a nav or sidebar entry links to a missing page or missing heading anchor under `docs/`,
+ * except for declared co-hosted subpath applications staged into the portal bundle.
  *
  * @param {{ nav?: object[], sidebar?: object[] }} themeConfig
  * @param {string} docsDir
+ * @param {{ cohostedSubpaths?: string[] }} [options]
  */
-export function assertThemeLinksExist(themeConfig, docsDir) {
+export function assertThemeLinksExist(themeConfig, docsDir, options = {}) {
+  const cohostedSubpaths =
+    options.cohostedSubpaths ?? COHOSTED_SUBPATH_PREFIXES;
   const missingPages = [];
   const missingAnchors = [];
 
   const visit = (items) => {
     for (const item of items ?? []) {
       const link = item.link;
-      if (link && link.startsWith("/")) {
+      if (
+        link &&
+        link.startsWith("/") &&
+        !isCohostedSubpathLink(link, cohostedSubpaths)
+      ) {
+        const [cleanLink, rawAnchor] = splitAnchor(link);
+        if (GENERATED_STATIC_ENDPOINTS.has(cleanLink)) {
+          visit(item.items);
+          continue;
+        }
         const filePath = resolveThemePagePath(docsDir, link);
         if (!filePath) {
           missingPages.push(link);
         } else {
-          const [, rawAnchor] = splitAnchor(link);
           const fragment = decodeAnchorFragment(rawAnchor);
           if (fragment) {
             const anchors = getFileAnchors(filePath);

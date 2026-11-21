@@ -372,6 +372,46 @@ watch(bulkAction, () => {
   );
 });
 
+watch(
+  () => [props.queries, props.canManage] as const,
+  ([nextQueries, canManage]) => {
+    const actions = availableBulkActions.value;
+    if (actions.length > 0 && !actions.includes(bulkAction.value)) {
+      bulkAction.value = actions[0];
+    }
+    const allowedIds = new Set(
+      nextQueries
+        .filter((q) => queryActions(q, canManage).includes(bulkAction.value))
+        .map((q) => q.query_id)
+    );
+    const hadSelected = selectedQueryIds.value.length > 0;
+    const retainedIds = selectedQueryIds.value.filter((id) =>
+      allowedIds.has(id)
+    );
+    if (retainedIds.length !== selectedQueryIds.value.length) {
+      selectedQueryIds.value = retainedIds;
+    }
+    if (hadSelected && retainedIds.length === 0) {
+      bulkReason.value = "";
+    }
+
+    if (pendingAction.value) {
+      const activeTarget = nextQueries.find(
+        (q) => q.query_id === pendingAction.value?.queryId
+      );
+      if (
+        !activeTarget ||
+        !queryActions(activeTarget, canManage).includes(
+          pendingAction.value.action
+        )
+      ) {
+        pendingAction.value = null;
+        actionText.value = "";
+      }
+    }
+  }
+);
+
 function selectAllEligible() {
   selectedQueryIds.value = eligibleQueries.value.map((q) => q.query_id);
 }
@@ -381,6 +421,7 @@ function defaultFormLocation(query: FormQueryResponse): RouteLocationRaw {
   if (props.studyCode) routeQuery.studyId = props.studyCode;
   const participantCode = query.subject_code || props.subjectCode;
   if (participantCode) routeQuery.subjectId = participantCode;
+  if (query.enrollment_id) routeQuery.enrollmentId = query.enrollment_id;
   routeQuery.formId = query.form_id;
   routeQuery.itemId = query.item_id;
   return { path: "/ecrf", query: routeQuery };
@@ -433,7 +474,7 @@ async function confirmBulk() {
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   font-size: 0.85rem;
 }
 .form-query-bulk-controls {
@@ -450,10 +491,10 @@ async function confirmBulk() {
   gap: 4px;
 }
 .form-query-bulk-result--ok {
-  color: #166534;
+  color: var(--semantic-color-success-dark);
 }
 .form-query-bulk-result--failed {
-  color: #991b1b;
+  color: var(--semantic-color-error-text-dark);
 }
 .form-query-list {
   display: flex;
@@ -481,29 +522,29 @@ async function confirmBulk() {
 .form-query-status {
   padding: 0 8px;
   border-radius: 999px;
-  background: var(--neutral-light, #f1f5f9);
+  background: var(--neutral-light);
   font-size: 0.75rem;
   font-weight: 600;
 }
 .form-query-status[data-status="open"] {
-  background: var(--warning-bg, #fffbeb);
-  color: var(--warning, #92400e);
+  background: var(--warning-bg);
+  color: var(--warning);
 }
 .form-query-context {
   font-weight: 600;
-  color: var(--primary, #0f172a);
+  color: var(--primary);
 }
 .form-query-target {
-  color: var(--neutral-dark, #475569);
+  color: var(--neutral-dark);
 }
 .form-query-link {
-  color: var(--accent, #2563eb);
+  color: var(--semantic-color-interactive-primary);
   text-decoration: underline;
 }
 .form-query-changed {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #1d4ed8;
+  color: var(--semantic-color-interactive-primary);
 }
 .form-query-messages {
   margin: 0;
@@ -516,7 +557,7 @@ async function confirmBulk() {
 }
 .form-query-form textarea {
   padding: 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
 }
 .form-query-buttons {

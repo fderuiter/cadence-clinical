@@ -6,14 +6,13 @@ using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Infrastructure.Standards;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 using Cadence.Templating;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
-
-using Cadence.Security.Rbac;
 
 namespace Cadence.Apps.Safety.Endpoints;
 

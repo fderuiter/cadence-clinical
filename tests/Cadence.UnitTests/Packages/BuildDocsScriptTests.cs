@@ -47,6 +47,12 @@ public sealed class BuildDocsScriptTests : IDisposable
         See [RTM](docs/SDLC/Requirements_Traceability_Matrix.md) and [License](LICENSE).
         """;
 
+    private const string InitialPortalHomeContent = """
+        # Cadence Portal
+
+        Launch [Staff Demo](/demo/) or [Participant Demo](/subject-portal/).
+        """;
+
     private readonly string _fixtureRoot = Path.Combine(Path.GetTempPath(), $"build-docs-tests-{Guid.NewGuid():N}");
 
     public BuildDocsScriptTests()
@@ -140,10 +146,12 @@ public sealed class BuildDocsScriptTests : IDisposable
 
         result.ExitCode.Should().Be(0, result.Output);
         ReadCliLog().Should().BeEmpty();
-        File.Exists(Path.Combine(_fixtureRoot, "docs", "index.md")).Should().BeTrue();
+        File.Exists(Path.Combine(_fixtureRoot, "docs", "README.md")).Should().BeTrue();
         File.Exists(Path.Combine(_fixtureRoot, "docs", "ARCHITECTURE.md")).Should().BeTrue();
         File.Exists(Path.Combine(_fixtureRoot, "docs", "AGENTS.md")).Should().BeTrue();
         File.Exists(Path.Combine(_fixtureRoot, "docs", "LICENSE.md")).Should().BeTrue();
+        File.ReadAllText(Path.Combine(_fixtureRoot, "docs", "index.md"))
+            .Should().Be(InitialPortalHomeContent);
         File.ReadAllText(Path.Combine(_fixtureRoot, "docs", "SDLC", "Requirements_Traceability_Matrix.md"))
             .Should().Be(InitialRtmContent);
         File.ReadAllText(Path.Combine(_fixtureRoot, "docs", "SDLC", "IQ_OQ_PQ_Execution_Report.md"))
@@ -237,7 +245,7 @@ public sealed class BuildDocsScriptTests : IDisposable
 
         string[] allEight =
         [
-            "index.md",
+            "README.md",
             "ARCHITECTURE.md",
             "AGENTS.md",
             "CONTEXT.md",
@@ -265,6 +273,9 @@ public sealed class BuildDocsScriptTests : IDisposable
         {
             File.Exists(Path.Combine(_fixtureRoot, "docs", staged)).Should().BeFalse($"temporary {staged} must be cleaned up after build");
         }
+
+        File.ReadAllText(Path.Combine(_fixtureRoot, "docs", "index.md"))
+            .Should().Be(InitialPortalHomeContent);
     }
 
     private void SetupFixtureRepository()
@@ -287,6 +298,7 @@ public sealed class BuildDocsScriptTests : IDisposable
         File.WriteAllText(Path.Combine(_fixtureRoot, "docs", "SDLC", "IQ_OQ_PQ_Execution_Report.md"), InitialIqContent);
         File.WriteAllText(Path.Combine(_fixtureRoot, "docs", "schema", "payments.md"), InitialSchemaContent);
         File.WriteAllText(Path.Combine(_fixtureRoot, "docs", "guide.md"), InitialGuideContent);
+        File.WriteAllText(Path.Combine(_fixtureRoot, "docs", "index.md"), InitialPortalHomeContent);
 
         File.WriteAllText(
             Path.Combine(_fixtureRoot, "scripts", "run-cli.js"),
@@ -321,7 +333,7 @@ public sealed class BuildDocsScriptTests : IDisposable
               const rtm = fs.readFileSync(path.join(root, "docs", "SDLC", "Requirements_Traceability_Matrix.md"), "utf8");
               const iq = fs.readFileSync(path.join(root, "docs", "SDLC", "IQ_OQ_PQ_Execution_Report.md"), "utf8");
               const schema = fs.readFileSync(path.join(root, "docs", "schema", "payments.md"), "utf8");
-              const staged = ["index.md", "ARCHITECTURE.md", "AGENTS.md", "LICENSE.md"]
+              const staged = ["README.md", "ARCHITECTURE.md", "AGENTS.md", "LICENSE.md"]
                 .every((f) => fs.existsSync(path.join(root, "docs", f)));
               fs.writeFileSync(
                 path.join(root, "vitepress-snapshot.txt"),
@@ -416,8 +428,10 @@ public sealed class BuildDocsScriptTests : IDisposable
             .Should().Be(InitialSchemaContent);
         File.ReadAllText(Path.Combine(_fixtureRoot, "docs", "guide.md"))
             .Should().Be(InitialGuideContent);
+        File.ReadAllText(Path.Combine(_fixtureRoot, "docs", "index.md"))
+            .Should().Be(InitialPortalHomeContent);
 
-        foreach (string staged in new[] { "index.md", "ARCHITECTURE.md", "AGENTS.md", "LICENSE.md" })
+        foreach (string staged in new[] { "README.md", "ARCHITECTURE.md", "AGENTS.md", "LICENSE.md" })
         {
             File.Exists(Path.Combine(_fixtureRoot, "docs", staged)).Should().BeFalse($"temporary {staged} must be cleaned up");
         }

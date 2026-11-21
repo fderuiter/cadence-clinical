@@ -43,4 +43,20 @@ public class ProductEntitlement : AggregateRoot<ProductEntitlementId>
         CreatedBy = createdBy;
         ReasonForChange = reasonForChange;
     }
+
+    public void Enable(SubscriptionId subscriptionId, DateTimeOffset grantedAt, string actorId, string reasonForChange)
+    {
+        SubscriptionId = subscriptionId;
+        IsEnabled = true;
+        GrantedAt = KernelTimestamps.ToStoredPrecision(grantedAt);
+        CreatedBy = actorId;
+        ReasonForChange = reasonForChange;
+    }
+
+    public void Disable(string actorId, string reasonForChange)
+    {
+        IsEnabled = false;
+        CreatedBy = actorId;
+        ReasonForChange = reasonForChange;
+    }
 }

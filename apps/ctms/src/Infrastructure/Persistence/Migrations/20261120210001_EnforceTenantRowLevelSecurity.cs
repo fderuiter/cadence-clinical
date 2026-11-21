@@ -34,7 +34,7 @@ public partial class EnforceTenantRowLevelSecurity : Migration
         "transactional_outbox",
     ];
 
-protected override void Up(MigrationBuilder migrationBuilder)
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.AddColumn<Guid>(
             name: "tenant_id",
@@ -287,12 +287,12 @@ protected override void Up(MigrationBuilder migrationBuilder)
             name: "IX_transactional_outbox_tenant_id",
             table: "transactional_outbox",
             column: "tenant_id");
-            migrationBuilder.EnableStandaloneTenantIsolation("ctms", TenantTables);
-}
+        migrationBuilder.EnableStandaloneTenantIsolation("ctms", TenantTables);
+    }
 
-protected override void Down(MigrationBuilder migrationBuilder)
+    protected override void Down(MigrationBuilder migrationBuilder)
     {
-    migrationBuilder.DisableStandaloneTenantIsolation("ctms", TenantTables);
+        migrationBuilder.DisableStandaloneTenantIsolation("ctms", TenantTables);
 
         migrationBuilder.DropTable(
             name: "transactional_outbox");

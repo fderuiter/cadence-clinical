@@ -20,7 +20,7 @@ public partial class EnforceTenantRowLevelSecurity : Migration
         "tickets",
     ];
 
-protected override void Up(MigrationBuilder migrationBuilder)
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.AddColumn<Guid>(
             name: "tenant_id",
@@ -61,11 +61,6 @@ protected override void Up(MigrationBuilder migrationBuilder)
             name: "IX_tickets_tenant_id",
             table: "tickets",
             column: "tenant_id");
-
-        migrationBuilder.AddCheckConstraint(
-            name: "ck_tickets_status",
-            table: "tickets",
-            sql: "\"Status\" IN ('OPEN', 'IN_PROGRESS', 'WAITING_ON_SITE', 'WAITING_ON_SPONSOR', 'PENDING_REGULATORY_REVIEW', 'RESOLVED', 'CLOSED', 'REOPENED', 'CANCELLED')");
 
         migrationBuilder.CreateIndex(
             name: "IX_ticket_comments_tenant_id",
@@ -86,19 +81,15 @@ protected override void Up(MigrationBuilder migrationBuilder)
             name: "IX_audit_log_entries_tenant_id",
             table: "audit_log_entries",
             column: "tenant_id");
-            migrationBuilder.EnableStandaloneTenantIsolation("tickets", TenantTables);
-}
+        migrationBuilder.EnableStandaloneTenantIsolation("tickets", TenantTables);
+    }
 
-protected override void Down(MigrationBuilder migrationBuilder)
+    protected override void Down(MigrationBuilder migrationBuilder)
     {
-    migrationBuilder.DisableStandaloneTenantIsolation("tickets", TenantTables);
+        migrationBuilder.DisableStandaloneTenantIsolation("tickets", TenantTables);
 
         migrationBuilder.DropIndex(
             name: "IX_tickets_tenant_id",
-            table: "tickets");
-
-        migrationBuilder.DropCheckConstraint(
-            name: "ck_tickets_status",
             table: "tickets");
 
         migrationBuilder.DropIndex(

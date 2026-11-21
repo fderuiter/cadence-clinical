@@ -24,7 +24,7 @@ public partial class EnforceTenantRowLevelSecurity : Migration
         "imaging_tumor_response_assessments",
     ];
 
-protected override void Up(MigrationBuilder migrationBuilder)
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.RenameColumn(
             name: "TenantId",
@@ -59,7 +59,7 @@ protected override void Up(MigrationBuilder migrationBuilder)
             ALTER COLUMN tenant_id TYPE uuid
             USING CASE
                 WHEN tenant_id::text ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN tenant_id::text::uuid
-                ELSE '00000000-0000-0000-0000-000000000000'::uuid
+                ELSE repeat('0', 32)::uuid
             END;
         ALTER TABLE "imaging_study_envelopes" ALTER COLUMN tenant_id SET NOT NULL;
         """);
@@ -105,7 +105,7 @@ protected override void Up(MigrationBuilder migrationBuilder)
             ALTER COLUMN tenant_id TYPE uuid
             USING CASE
                 WHEN tenant_id::text ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN tenant_id::text::uuid
-                ELSE '00000000-0000-0000-0000-000000000000'::uuid
+                ELSE repeat('0', 32)::uuid
             END;
         ALTER TABLE "imaging_adjudication_sessions" ALTER COLUMN tenant_id SET NOT NULL;
         """);
@@ -151,12 +151,12 @@ protected override void Up(MigrationBuilder migrationBuilder)
             name: "IX_audit_log_entries_tenant_id",
             table: "audit_log_entries",
             column: "tenant_id");
-            migrationBuilder.EnableStandaloneTenantIsolation("imaging", TenantTables);
-}
+        migrationBuilder.EnableStandaloneTenantIsolation("imaging", TenantTables);
+    }
 
-protected override void Down(MigrationBuilder migrationBuilder)
+    protected override void Down(MigrationBuilder migrationBuilder)
     {
-    migrationBuilder.DisableStandaloneTenantIsolation("imaging", TenantTables);
+        migrationBuilder.DisableStandaloneTenantIsolation("imaging", TenantTables);
 
         migrationBuilder.DropIndex(
             name: "IX_imaging_tumor_response_assessments_tenant_id",

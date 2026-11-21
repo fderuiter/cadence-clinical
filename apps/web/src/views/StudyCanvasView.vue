@@ -3,6 +3,7 @@
     id="study-canvas"
     class="canvas"
     :class="{ 'canvas-in-shell': inAppShell }"
+    :style="{ '--canvas-topbar-height': `${topbarHeight}px` }"
   >
     <a v-if="!inAppShell" class="skip-link" href="#canvas-workspace"
       >Skip to workspace</a
@@ -10,6 +11,7 @@
 
     <component
       :is="inAppShell ? 'div' : 'header'"
+      ref="topbarRef"
       class="topbar"
       :role="inAppShell ? 'region' : undefined"
       :aria-label="inAppShell ? 'Study context' : undefined"
@@ -143,7 +145,10 @@
         </nav>
       </div>
 
-      <div class="panes">
+      <div
+        class="panes"
+        :class="{ 'panes--inspector-collapsed': inspectorCollapsed }"
+      >
         <nav id="canvas-navigator" class="navigator" aria-label="Sections">
           <router-link
             id="nav-study-home"
@@ -368,6 +373,7 @@
         </component>
 
         <CanvasInspector
+          ref="inspectorRef"
           :study-code="studyCode"
           :participant="inspectedParticipant"
           :node-ref="inspectedNodeText"
@@ -394,6 +400,7 @@
           "
           :can-manage-participants="canChangeParticipants"
           :assist-prompt="askText"
+          @update:collapsed="inspectorCollapsed = $event"
         />
       </div>
     </template>
@@ -548,6 +555,20 @@ const { enabled: aiEnabled, setEnabled: setAiEnabled } = useAiAssistance();
 
 const paletteOpen = ref(false);
 const typedStudy = ref("");
+const inspectorCollapsed = ref(true);
+const inspectorRef = ref<InstanceType<typeof CanvasInspector> | null>(null);
+const topbarRef = ref<HTMLElement | null>(null);
+const topbarHeight = ref(45);
+let topbarResizeObserver: ResizeObserver | null = null;
+
+function syncTopbarHeight() {
+  const el = topbarRef.value;
+  if (!el || typeof el.getBoundingClientRect !== "function") return;
+  const measured = Math.round(el.getBoundingClientRect().height);
+  if (measured > 0) {
+    topbarHeight.value = measured;
+  }
+}
 
 const single = (value: unknown): string =>
   typeof value === "string" ? value : "";
@@ -789,6 +810,7 @@ function studyLocation(query: StudyQuery = {}, code = studyCode.value) {
 function selectParticipant(participant: SubjectSummary) {
   const node = tryNodeRef("participant", participant.id);
   if (!node) return;
+  inspectorRef.value?.expand();
   router.push(
     studyLocation({
       stage: "conduct",
@@ -1000,6 +1022,7 @@ async function onObservationLoaded(obs: KernelObservation) {
 
 function selectVersion(version: KernelProtocolVersion) {
   if (!version.ref) return;
+  inspectorRef.value?.expand();
   router.push(
     studyLocation({
       stage: "design",
@@ -1027,7 +1050,7 @@ function applyParticipantFilter(filter: { status: string; siteId: string }) {
 }
 
 function applyStudyQueryFilter(filter: StudyQueriesFilterState) {
-  router.push(
+  router.replace(
     studyLocation({
       stage: "data",
       section: "queries",
@@ -1048,6 +1071,7 @@ function drillToParticipants(status: string) {
 function goToPaletteTarget(target: PaletteTarget) {
   paletteOpen.value = false;
   if (target.ask) {
+    inspectorRef.value?.expand();
     // Ask keeps the view and its selection, and opens Assist with the question.
     router.push({
       name: "study",
@@ -1055,6 +1079,9 @@ function goToPaletteTarget(target: PaletteTarget) {
       query: { ...route.query, ask: target.ask },
     });
     return;
+  }
+  if (target.participant) {
+    inspectorRef.value?.expand();
   }
   const node = target.participant
     ? tryNodeRef("participant", target.participant.id)
@@ -1257,25 +1284,42 @@ onMounted(() => {
   if (!inAppShell) {
     document.addEventListener("keydown", onGlobalKeydown);
   }
+  syncTopbarHeight();
+  if (
+    typeof ResizeObserver !== "undefined" &&
+    topbarRef.value instanceof HTMLElement
+  ) {
+    topbarResizeObserver = new ResizeObserver(() => syncTopbarHeight());
+    topbarResizeObserver.observe(topbarRef.value);
+  }
 });
 onUnmounted(() => {
   window.removeEventListener("beforeunload", handleBeforeUnload);
   document.removeEventListener("keydown", onGlobalKeydown);
+  if (topbarResizeObserver) {
+    topbarResizeObserver.disconnect();
+    topbarResizeObserver = null;
+  }
 });
 </script>
 
 <style scoped>
 .canvas {
+  --canvas-sticky-offset: 0px;
+  --canvas-pane-top: calc(
+    var(--canvas-sticky-offset) + var(--canvas-topbar-height, 45px)
+  );
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: var(--semantic-color-surface-muted, #f8fafc);
+  background: var(--semantic-color-surface-muted);
   color: var(--primary);
   font-family: var(--font);
 }
 
 .canvas.canvas-in-shell {
-  min-height: calc(100vh - 57px);
+  --canvas-sticky-offset: var(--shell-header-height, 57px);
+  min-height: calc(100vh - var(--canvas-sticky-offset));
 }
 
 .skip-link {
@@ -1290,12 +1334,15 @@ onUnmounted(() => {
 }
 
 .topbar {
+  position: sticky;
+  top: var(--canvas-sticky-offset);
+  z-index: 20;
   display: flex;
   align-items: center;
   gap: 16px;
   padding: 8px 16px;
   border-bottom: 1px solid var(--border);
-  background: var(--semantic-color-surface, #fff);
+  background: var(--semantic-color-surface);
 }
 
 .zoom-path {
@@ -1349,9 +1396,9 @@ onUnmounted(() => {
 }
 
 .ai-toggle[aria-pressed="true"] {
-  border-color: var(--semantic-color-ai-border, #c4b5fd);
-  background: var(--semantic-color-ai-bg, #f5f3ff);
-  color: var(--semantic-color-ai, #6d28d9);
+  border-color: var(--semantic-color-ai-border);
+  background: var(--semantic-color-ai-bg);
+  color: var(--semantic-color-ai);
 }
 
 .sr-only {
@@ -1382,7 +1429,7 @@ onUnmounted(() => {
   gap: 8px 24px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
-  background: var(--semantic-color-surface, #fff);
+  background: var(--semantic-color-surface);
 }
 
 .study-header h1 {
@@ -1423,10 +1470,18 @@ onUnmounted(() => {
   min-height: 0;
 }
 
+.panes.panes--inspector-collapsed {
+  grid-template-columns: 14rem minmax(0, 1fr) 2.75rem;
+}
+
 .navigator {
+  position: sticky;
+  top: var(--canvas-pane-top);
+  align-self: start;
+  max-height: calc(100vh - var(--canvas-pane-top));
+  overflow-y: auto;
   padding: 12px;
-  border-right: 1px solid var(--border);
-  background: var(--semantic-color-surface, #fff);
+  background: var(--semantic-color-surface);
 }
 
 .nav-group-title {
@@ -1466,11 +1521,17 @@ onUnmounted(() => {
 .workspace {
   padding: 16px;
   min-width: 0;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
 }
 
 .canvas :deep(#canvas-inspector) {
-  border-left: 1px solid var(--border);
-  background: var(--semantic-color-surface, #fff);
+  position: sticky;
+  top: var(--canvas-pane-top);
+  align-self: start;
+  max-height: calc(100vh - var(--canvas-pane-top));
+  overflow-y: auto;
+  background: var(--semantic-color-surface);
 }
 
 .stage-overview h2 {
@@ -1514,17 +1575,29 @@ onUnmounted(() => {
 }
 
 @media (max-width: 960px) {
-  .panes {
+  .panes,
+  .panes.panes--inspector-collapsed {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .navigator {
-    border-right: 0;
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+    align-self: stretch;
     border-bottom: 1px solid var(--border);
   }
 
-  .canvas :deep(#canvas-inspector) {
+  .workspace {
     border-left: 0;
+    border-right: 0;
+  }
+
+  .canvas :deep(#canvas-inspector) {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+    align-self: stretch;
     border-top: 1px solid var(--border);
   }
 }
