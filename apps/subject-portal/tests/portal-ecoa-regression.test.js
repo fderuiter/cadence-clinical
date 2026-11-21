@@ -42,7 +42,7 @@ beforeEach(async () => {
 
             <!-- Offline Sync Status Panel -->
             <div class="card sync-queue-panel" id="sync-queue-panel" style="margin-top: 24px;">
-              <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 12px;">
+              <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--semantic-color-border); padding-bottom: 12px; margin-bottom: 12px;">
                 <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
                   <span>🔄</span> Offline Sync Queue
                 </h3>

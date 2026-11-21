@@ -97,7 +97,7 @@ export async function initializeApp() {
     await loadAssignedInstruments(userId);
     await loadCompliance(userId);
     await loadNotifications(userId);
-    await loadParticipantWallet().catch((err) => {
+    void loadParticipantWallet().catch((err) => {
       console.warn("[Wallet] Initial wallet hydration warning:", err?.message);
     });
   } else if (isDemoModeActive()) {
@@ -140,12 +140,24 @@ export async function initializeApp() {
     await checkPendingReconsent();
   }
 
-  // Graceful Service Worker Registration in production builds (skipped in dev and when startMswWorker already registered unified sw.js?msw=1)
+  // Graceful Service Worker Registration in production builds (skipped in dev, Playwright mock_token harnesses, and when startMswWorker already registered unified sw.js?msw=1)
+  const hasMockStorageSession = (() => {
+    try {
+      return Boolean(
+        sessionStorage.getItem("mock_token") ||
+        localStorage.getItem("mock_token")
+      );
+    } catch {
+      return false;
+    }
+  })();
+
   if (
     typeof navigator !== "undefined" &&
     "serviceWorker" in navigator &&
     import.meta.env.PROD &&
     !window.__MOCK_TEST_ENV__ &&
+    !hasMockStorageSession &&
     !shouldEnableMsw
   ) {
     const swBase = (import.meta.env.BASE_URL || "/subject-portal/").replace(

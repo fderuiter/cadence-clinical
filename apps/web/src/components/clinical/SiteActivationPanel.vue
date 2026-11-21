@@ -265,17 +265,17 @@ defineExpose({ checkStatus });
 }
 
 .status-complete {
-  color: #166534;
+  color: var(--semantic-color-success-dark);
 }
 
 .status-incomplete,
 .status-error {
-  color: #b91c1c;
+  color: var(--semantic-color-error);
 }
 
 .unavailable-note {
   margin: 0;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   font-size: 0.9rem;
 }
 </style>

@@ -1505,16 +1505,16 @@ async function acceptAllSuggestions() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #f0f9ff;
-  border: 1px solid #0284c7;
+  background-color: var(--semantic-color-info-bg-soft);
+  border: 1px solid var(--semantic-color-primary);
   border-radius: 8px;
   padding: 10px 16px;
   animation: fadeIn 0.2s ease;
 }
 
 .cluster-batch-bar {
-  background-color: #f0fdf4;
-  border-color: #16a34a;
+  background-color: var(--semantic-color-success-bg-soft);
+  border-color: var(--semantic-color-success);
 }
 
 .batch-summary {
@@ -1533,43 +1533,43 @@ async function acceptAllSuggestions() {
 }
 
 .btn-batch-approve {
-  background-color: #16a34a;
-  border-color: #16a34a;
+  background-color: var(--semantic-color-success);
+  border-color: var(--semantic-color-success);
   color: white;
 }
 
 .btn-batch-approve:hover {
-  background-color: #15803d;
+  background-color: var(--semantic-color-success);
 }
 
 .btn-batch-approve-single {
-  background-color: #16a34a;
-  border-color: #16a34a;
+  background-color: var(--semantic-color-success);
+  border-color: var(--semantic-color-success);
   font-weight: 600;
 }
 
 .confidence-high {
-  background-color: #dcfce7;
-  color: #15803d;
-  border: 1px solid #86efac;
+  background-color: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
+  border: 1px solid var(--semantic-color-success-border);
 }
 
 .confidence-medium {
-  background-color: #e0f2fe;
-  color: #0369a1;
-  border: 1px solid #7dd3fc;
+  background-color: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
+  border: 1px solid var(--semantic-color-divider-accent);
 }
 
 .confidence-low {
-  background-color: #fef3c7;
-  color: #b45309;
-  border: 1px solid #fde68a;
+  background-color: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning);
+  border: 1px solid var(--semantic-color-warning-border);
 }
 
 .instance-count-badge {
   font-size: 0.75rem;
-  background-color: #e0e7ff;
-  color: #3730a3;
+  background-color: var(--semantic-color-indigo-bg);
+  color: var(--semantic-color-indigo-text);
   font-weight: 600;
 }
 
@@ -1584,7 +1584,7 @@ async function acceptAllSuggestions() {
 }
 
 .cluster-instances-drawer-row {
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
 }
 
 .drawer-cell {

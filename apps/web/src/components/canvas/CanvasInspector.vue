@@ -142,7 +142,7 @@
           <p
             v-else-if="simulationError"
             class="inspector-empty"
-            style="color: var(--danger, #dc3545)"
+            style="color: var(--semantic-color-error)"
           >
             {{ simulationError }}
           </p>
@@ -183,13 +183,20 @@
                 </div>
                 <div
                   v-if="gap.recommendation"
-                  style="font-size: 0.75rem; color: #555; margin-top: 2px"
+                  style="
+                    font-size: 0.75rem;
+                    color: var(--semantic-color-text-secondary);
+                    margin-top: 2px;
+                  "
                 >
                   <em>Rec: {{ gap.recommendation }}</em>
                 </div>
               </div>
             </div>
-            <p v-else style="font-size: 0.85rem; color: #28a745">
+            <p
+              v-else
+              style="font-size: 0.85rem; color: var(--semantic-color-success)"
+            >
               ✓ No schedule matrix gaps detected.
             </p>
           </div>
@@ -553,7 +560,7 @@ watch(aiEnabled, (on) => {
 
 <style scoped>
 .reasoning-modal-s-1 {
-  background: var(--neutral-light, #f8f9fa);
+  background: var(--neutral-light);
   padding: 8px;
   border-radius: 4px;
   font-size: 0.8rem;
@@ -561,10 +568,10 @@ watch(aiEnabled, (on) => {
 }
 
 .reasoning-modal-s-2 {
-  border-left: 3px solid var(--warning, #ffc107);
+  border-left: 3px solid var(--warning);
   padding: 6px 8px;
   margin-bottom: 8px;
-  background: #fff8e1;
+  background: var(--semantic-color-warning-bg-soft);
 }
 
 .inspector {
@@ -607,7 +614,7 @@ watch(aiEnabled, (on) => {
 }
 
 .inspector-toggle:hover {
-  background: var(--neutral-light, #f1f5f9);
+  background: var(--neutral-light);
   color: var(--primary);
 }
 

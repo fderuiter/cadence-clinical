@@ -14,6 +14,7 @@
       <input
         :id="slotId"
         type="text"
+        class="clinical-input-control"
         :name="slotId"
         :value="modelValue"
         :aria-describedby="hasError ? errorId : undefined"

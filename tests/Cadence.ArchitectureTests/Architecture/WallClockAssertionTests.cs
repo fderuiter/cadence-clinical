@@ -59,9 +59,10 @@ public partial class WallClockAssertionTests
     [InlineData("expect(elapsedMs).toBeLessThanOrEqual(500);", 1)]
     [InlineData("expect(performance.now() - start).toBeLessThan(50);", 1)]
     [InlineData("expect(latency).toBeLessThan(20)", 1)]
-    [InlineData("expect(motionStyles.animationDurationSec).toBeLessThanOrEqual(0.001);", 0)]
     [InlineData("expect(result.length).toBeLessThan(3);", 0)]
     [InlineData("expect(queued.length).toBe(0);", 0)]
+    [InlineData("expect(motionStyles.animationDurationSec).toBeLessThanOrEqual(0.001);", 0)]
+    [InlineData("expect(motionStyles.transitionDurationSec).toBeLessThanOrEqual(0.001);", 0)]
     public void FrontendWallClockAssertions_FindsLatencyCeilings(string source, int expected)
     {
         FrontendWallClockAssertions(source).Should().HaveCount(expected);

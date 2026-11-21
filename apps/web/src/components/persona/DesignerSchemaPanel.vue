@@ -12,7 +12,9 @@
       <div class="card-title">
         Ultimate CRF Builder: Protocol Ingestion &amp; Review
       </div>
-      <p style="font-size: 0.85rem; color: #475569">
+      <p
+        style="font-size: 0.85rem; color: var(--semantic-color-text-secondary)"
+      >
         Upload a clinical protocol document (PDF/DOCX) to automatically generate
         candidate SoA visits and form fields with trace citations and confidence
         levels. Accept, edit, or reject each item before promoting reviewed
@@ -26,7 +28,7 @@
           border-radius: 8px;
           padding: 16px;
           text-align: center;
-          background-color: #f8fafc;
+          background-color: var(--semantic-color-surface-muted);
         "
       >
         <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
@@ -51,7 +53,11 @@
         </button>
         <div
           v-if="selectedFileName"
-          style="margin-top: 8px; font-size: 0.8rem; color: #475569"
+          style="
+            margin-top: 8px;
+            font-size: 0.8rem;
+            color: var(--semantic-color-text-secondary);
+          "
         >
           Selected:
           <strong class="selected-file-name">{{ selectedFileName }}</strong>
@@ -61,7 +67,11 @@
       <!-- Ingestion Error Display -->
       <div
         v-if="store.ingestionError"
-        style="color: #ef4444; font-size: 0.85rem; margin-top: 8px"
+        style="
+          color: var(--semantic-color-error);
+          font-size: 0.85rem;
+          margin-top: 8px;
+        "
       >
         Error: {{ store.ingestionError }}
       </div>
@@ -152,7 +162,7 @@
                   class="badge"
                   style="
                     background-color: rgb(226 232 240);
-                    color: #475569;
+                    color: var(--semantic-color-text-secondary);
                     font-size: 0.75rem;
                     text-transform: uppercase;
                     margin-right: 6px;
@@ -178,7 +188,10 @@
                   }})
                 </span>
                 <span
-                  style="font-size: 0.75rem; color: #64748b"
+                  style="
+                    font-size: 0.75rem;
+                    color: var(--semantic-color-text-secondary);
+                  "
                   title="Source Reference"
                   class="item-citation"
                 >
@@ -194,7 +207,7 @@
                 display: flex;
                 flex-direction: column;
                 gap: 8px;
-                background-color: #f8fafc;
+                background-color: var(--semantic-color-surface-muted);
                 padding: 8px;
                 border-radius: 6px;
               "
@@ -261,7 +274,7 @@
                 display: flex;
                 flex-direction: column;
                 gap: 8px;
-                background-color: #fef2f2;
+                background-color: var(--semantic-color-error-bg-soft);
                 padding: 8px;
                 border-radius: 6px;
               "
@@ -270,7 +283,11 @@
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label
-                  style="font-size: 0.75rem; color: #ef4444; font-weight: bold"
+                  style="
+                    font-size: 0.75rem;
+                    color: var(--semantic-color-error);
+                    font-weight: bold;
+                  "
                   >Provide Rejection Reason (Mandatory)</label
                 >
                 <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
@@ -295,7 +312,7 @@
                 </button>
                 <button
                   class="btn btn-primary btn-sm confirm-reject-btn"
-                  style="background-color: #ef4444"
+                  style="background-color: var(--semantic-color-error)"
                   @click="$emit('confirm-reject-item', item.id)"
                 >
                   Confirm Reject
@@ -313,7 +330,7 @@
                 font-size: 0.8rem;
               "
             >
-              <div style="color: #64748b">
+              <div style="color: var(--semantic-color-text-secondary)">
                 Status:
                 <span
                   :class="['badge', getStatusClass(item.review_status)]"
@@ -354,8 +371,8 @@
                   style="
                     padding: 2px 8px;
                     font-size: 0.75rem;
-                    background-color: #fecaca;
-                    color: #991b1b;
+                    background-color: var(--semantic-color-error-border-soft);
+                    color: var(--semantic-color-error-text-dark);
                   "
                   @click="$emit('start-reject-item', item.id)"
                 >
@@ -405,7 +422,10 @@
             "
           >
             <span
-              style="font-size: 0.8rem; color: #64748b"
+              style="
+                font-size: 0.8rem;
+                color: var(--semantic-color-text-secondary);
+              "
               class="remaining-reviews-text"
             >
               {{
@@ -432,11 +452,11 @@
         <div
           v-else
           style="
-            background-color: #f0fdf4;
-            border: 1px solid #bbf7d0;
+            background-color: var(--semantic-color-success-bg-soft);
+            border: 1px solid var(--semantic-color-success-border-soft);
             border-radius: 8px;
             padding: 12px;
-            color: #166534;
+            color: var(--semantic-color-success-dark);
             font-size: 0.85rem;
             text-align: center;
           "

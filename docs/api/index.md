@@ -16,10 +16,10 @@ Each page lists the operations a .NET service serves. The specs come from the se
 | [imaging](imaging.md) | 11 |
 | [interop](interop.md) | 36 |
 | [kernel](kernel.md) | 52 |
-| [knowledge](knowledge.md) | 9 |
+| [knowledge](knowledge.md) | 13 |
 | [notifications](notifications.md) | 3 |
 | [org](org.md) | 2 |
 | [payments](payments.md) | 38 |
 | [quality](quality.md) | 2 |
 | [safety](safety.md) | 13 |
-| [tickets](tickets.md) | 2 |
+| [tickets](tickets.md) | 5 |
