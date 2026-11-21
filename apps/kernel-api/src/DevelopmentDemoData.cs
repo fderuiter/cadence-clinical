@@ -54,7 +54,7 @@ internal static class DevelopmentDemoData
         ("DEMO_INVESTIGATOR", "Site investigator", ["collection.sign", "execution.query.answer"]),
         ("DEMO_MONITOR", "Clinical research associate", ["validation_finding.investigate", "validation_finding.classify", "validation_finding.explain", "observation.verify", "assertion.retract", "collection.record_unasked", "execution.query.raise", "execution.query.manage"]),
         ("DEMO_DATA_MANAGER", "Data manager", ["validation_run.record", "validation_finding.accept", "validation_finding.reopen", "observation.lock", "observation.verify", "assertion.retract", "collection.record_unasked", "execution.query.raise", "execution.query.manage"]),
-        ("DEMO_DESIGNER", "Study designer", ["protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.amend"]),
+        ("DEMO_DESIGNER", "Study designer", ["organization.register", "study.register", "concept.define", "protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.amend"]),
         ("DEMO_SAFETY", "Safety reviewer", ["validation_finding.investigate", "validation_finding.classify"]),
         ("DEMO_AUDITOR", "Auditor", ["validation_finding.investigate"]),
     ];
@@ -151,7 +151,20 @@ internal static class DevelopmentDemoData
 
         foreach (var (username, subject, role, site) in Users)
         {
-            var scope = site is null ? AuthorityScope.Study(study) : AuthorityScope.StudySite(studySites[site]);
+            AuthorityScope scope;
+            if (site is not null)
+            {
+                scope = AuthorityScope.StudySite(studySites[site]);
+            }
+            else if (string.Equals(role, "DEMO_DESIGNER", StringComparison.Ordinal))
+            {
+                scope = AuthorityScope.Tenant();
+            }
+            else
+            {
+                scope = AuthorityScope.Study(study);
+            }
+
             await seeder.SendAsync(
                 new IssueGrant(tenant, ids.Grant(username), Actor.Person(subject), null, roles[role], scope, Epoch, null, false, Key($"grant:{username}"), Reason),
                 cancellationToken).ConfigureAwait(false);
