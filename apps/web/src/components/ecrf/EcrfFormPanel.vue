@@ -215,6 +215,15 @@
         </ul>
       </div>
 
+      <ScopeLockControls
+        :study-ref="`study:${form.study_id}`"
+        :scope-ref="`collection_instance:${form.form_id}`"
+        scope-label="form"
+        :direct-locks="directFormLocks"
+        id-prefix="ecrf-lock"
+        @changed="reloadAfterLockChange"
+      />
+
       <div
         v-if="canVerifySource && unverifiedItems.length > 0"
         class="ecrf-bulk-sdv"
@@ -974,6 +983,9 @@ import {
 } from "../../composables/useEcrfForm";
 import { isLiveQuery, useFormQueries } from "../../composables/useFormQueries";
 import { useAuthStore } from "../../stores/auth.js";
+import ScopeLockControls, {
+  type DirectScopeLockItem,
+} from "../canvas/ScopeLockControls.vue";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 import FormQueryList from "./FormQueryList.vue";
@@ -1479,6 +1491,25 @@ async function confirmRaise() {
       await reload();
     }
   }
+}
+
+const directFormLocks = computed<DirectScopeLockItem[]>(() => {
+  const current = form.value;
+  if (!current) return [];
+  const targetScope = `collection_instance:${current.form_id}`;
+  return current.locks
+    .filter((held) => held.scope === targetScope)
+    .map((held) => ({
+      lockRef: held.lock_id.startsWith("assertion:")
+        ? held.lock_id
+        : `assertion:${held.lock_id}`,
+      kind: held.kind,
+    }));
+});
+
+async function reloadAfterLockChange() {
+  await reload();
+  await queries.reload();
 }
 
 /** The value moved on since the form was read: read the form and its queries again. */
