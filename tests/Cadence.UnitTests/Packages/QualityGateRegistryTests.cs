@@ -295,6 +295,27 @@ public sealed class QualityGateRegistryTests : IDisposable
             Git("commit", "-q", "-am", "grow the baseline");
             return Context();
         },
+        ["branch-freshness"] = () =>
+        {
+            Write("README.md", "# Cadence\n");
+            CommitOnMainThenBranch();
+            Git("checkout", "-q", "main");
+            Write("README.md", "# Cadence advanced on main\n");
+            Git("commit", "-q", "-am", "advance main");
+            Git("update-ref", "refs/remotes/origin/main", "HEAD");
+            Git("checkout", "-q", "feature");
+            return Context();
+        },
+        ["architecture-tests"] = () =>
+        {
+            WriteBrokenTestProject("tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj");
+            return Context();
+        },
+        ["unit-tests"] = () =>
+        {
+            WriteBrokenTestProject("tests/Cadence.UnitTests/Cadence.UnitTests.csproj");
+            return Context();
+        },
     };
 
     [Theory]
@@ -313,7 +334,7 @@ public sealed class QualityGateRegistryTests : IDisposable
     [Fact]
     public void EveryGate_HasAFailingFixture()
     {
-        QualityGates.All.Should().HaveCount(36);
+        QualityGates.All.Should().HaveCount(39);
         Fixtures().Keys.Should().BeEquivalentTo(QualityGates.All.Select(g => g.Name));
         FailsClosedOnly.Keys.Should().BeSubsetOf(QualityGates.All.Select(g => g.Name));
     }
@@ -408,6 +429,36 @@ public sealed class QualityGateRegistryTests : IDisposable
         gate.Run(context).Should().BeTrue("duplication gate fails only when a duplicate involves a C# file, even when pre-commit passes staged files");
     }
 
+    [Fact]
+    public void DemoManifestGate_InPreCommitMode_SkipsUnrelatedFiles_AndRunsWhenSeedOrFixtureFilesStaged()
+    {
+        var gate = QualityGates.Find("demo-manifest")!;
+        gate.TakesFiles.Should().BeTrue();
+        gate.PreCommit.Should().Be(PreCommitMode.Quick);
+
+        gate.Run(Context(files: ["apps/web/src/App.vue", "docs/guide.md"], preCommit: true))
+            .Should().BeTrue("pre-commit hook skips demo-manifest when staged files do not touch demo seed or fixture inputs");
+
+        gate.Run(Context(files: ["packages/demo-fixtures/demo-seed.json"], preCommit: true))
+            .Should().BeFalse("pre-commit hook runs demo-manifest when demo-seed.json is staged and fixture inputs are missing or drifted");
+    }
+
+    [Fact]
+    public void BranchFreshnessAndTestSuiteGates_SkipPreCommit_AndBranchFreshnessPassesWhenOriginMainIsAncestor()
+    {
+        QualityGates.Find("branch-freshness")!.PreCommit.Should().Be(PreCommitMode.Skipped);
+        QualityGates.Find("architecture-tests")!.PreCommit.Should().Be(PreCommitMode.Skipped);
+        QualityGates.Find("unit-tests")!.PreCommit.Should().Be(PreCommitMode.Skipped);
+
+        Write("README.md", "# Cadence\n");
+        CommitOnMainThenBranch();
+        Write("README.md", "# Cadence feature work\n");
+        Git("commit", "-q", "-am", "feature commit");
+
+        QualityGates.Find("branch-freshness")!.Run(Context())
+            .Should().BeTrue("feature branch descending from origin/main satisfies branch-freshness");
+    }
+
     private GateContext Context(string[]? files = null, bool preCommit = false) => new(_root, files, preCommit);
 
     private static string Region(string body) => $"{GateDocs.BeginMarker}\n\n{body.TrimEnd('\n')}\n\n{GateDocs.EndMarker}\n";
@@ -421,6 +472,13 @@ public sealed class QualityGateRegistryTests : IDisposable
             "\nMicrosoft Visual Studio Solution File, Format Version 12.00\n" +
             "Project(\"{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}\") = \"Fixture\", \"Fixture.csproj\", \"{6C0A2C5B-6A43-4D5B-9C59-2B0D0C1E7A11}\"\n" +
             "EndProject\n");
+    }
+
+    private void WriteBrokenTestProject(string relativeCsprojPath)
+    {
+        string projectDir = Path.GetDirectoryName(relativeCsprojPath)!.Replace('\\', '/');
+        Write(relativeCsprojPath, "<Project Sdk=\"Microsoft.NET.Sdk\">\n  <PropertyGroup>\n    <TargetFramework>net10.0</TargetFramework>\n    <IsTestProject>true</IsTestProject>\n  </PropertyGroup>\n</Project>\n");
+        Write($"{projectDir}/Broken.cs", "namespace BrokenFixture;\n\npublic static class Broken\n{\n    public static int Fail( => 1;\n}\n");
     }
 
     private void CommitOnMainThenBranch()

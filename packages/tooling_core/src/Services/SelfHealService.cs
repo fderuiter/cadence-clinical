@@ -22,6 +22,9 @@ public static class SelfHealService
         ok &= OpenApiSyncService.SyncOpenApiSpec(validate: false, repoRoot) == 0;
         ok &= ApiDocsGeneratorService.GenerateApiDocs(validate: false, repoRoot) == 0;
 
+        Console.WriteLine("\n  4. Regenerating Canonical Demo Manifest...");
+        ok &= DemoManifestGeneratorService.GenerateDemoManifest(validateOnly: false, repoRoot) == 0;
+
         Console.WriteLine(ok ? "\nSelf-Healing Pipeline Complete." : "\n[ERROR] Self-Healing Pipeline finished with failures (see above).");
         return ok ? 0 : 1;
     }

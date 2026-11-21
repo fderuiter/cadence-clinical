@@ -329,7 +329,9 @@ public static partial class DeidComplianceService
             || digits.Length == 0 || !digits.All(char.IsAsciiDigit)
             || val.Contains('.', StringComparison.Ordinal)
             || val.Contains("0000000000", StringComparison.Ordinal)
-            || DecimalNumberRegex().Matches(lineContent).Any(m => m.Value.Replace(".", string.Empty, StringComparison.Ordinal).Contains(val, StringComparison.Ordinal));
+            || DecimalNumberRegex().Matches(lineContent).Any(m => m.Value.Replace(".", string.Empty, StringComparison.Ordinal).Contains(val, StringComparison.Ordinal))
+            || (path.EndsWith("demo-seed.json", StringComparison.Ordinal) &&
+                UuidRegex().Matches(lineContent).Any(m => m.Value.Contains(val, StringComparison.OrdinalIgnoreCase)));
     }
 
     private static (int Line, int Column) LineAndColumn(string content, int offset)
@@ -400,4 +402,7 @@ public static partial class DeidComplianceService
 
     [GeneratedRegex(@"\d+\.\d+")]
     private static partial Regex DecimalNumberRegex();
+
+    [GeneratedRegex(@"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", RegexOptions.CultureInvariant)]
+    private static partial Regex UuidRegex();
 }

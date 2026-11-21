@@ -187,7 +187,7 @@ jobs:
         run: dotnet build Cadence.sln
 
       - name: Run Cadence quality sentinels
-        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities
+        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude architecture-tests --exclude unit-tests
 
       - name: Run architecture tests
         run: dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build
