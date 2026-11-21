@@ -51,8 +51,12 @@
     <h4 id="ai-assist-proposals-title">
       {{ nodeRef ? "Proposals about this" : "Proposals in this study" }}
     </h4>
+    <div v-if="error" id="ai-assist-status" class="assist-note" role="alert">
+      <p class="assist-note">Proposals couldn't be loaded right now.</p>
+      <SupportDetails :detail="error" />
+    </div>
     <p
-      v-if="statusLine"
+      v-else-if="statusLine"
       id="ai-assist-status"
       class="assist-note"
       role="status"
@@ -92,6 +96,7 @@ import { isAgentProposal, proposalSources } from "../../ai/proposals";
 import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import { parseNodeRef } from "../../canvas/nodeRef";
 import NodeRefChip from "../canvas/NodeRefChip.vue";
+import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
 
 /**

@@ -418,6 +418,25 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
       );
     });
 
+    it("shows plain clinical guidance with collapsible support details when Assist proposals fail to load", async () => {
+      await selectParticipant();
+      vi.mocked(kernelApi.listProposals).mockRejectedValueOnce(
+        new Error("Kernel gateway timeout")
+      );
+
+      await wrapper.find("#verb-assist").trigger("click");
+      await flushPromises();
+
+      const status = wrapper.find("#ai-assist-status");
+      expect(status.attributes("role")).toBe("alert");
+      expect(status.text()).toContain(
+        "Proposals couldn't be loaded right now."
+      );
+      expect(status.text()).not.toContain("The kernel");
+      expect(status.find("details").text()).toContain("Kernel gateway timeout");
+      await expect(wrapper.find("#ai-assist").element).toBeAccessible();
+    });
+
     it("turns a sentence in the palette into a question for Assist on the selection", async () => {
       await selectParticipant();
 
