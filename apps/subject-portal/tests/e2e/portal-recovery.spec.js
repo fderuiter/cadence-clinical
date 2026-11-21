@@ -45,6 +45,9 @@ const auditChecks = {
 };
 
 async function completeInitialPinSetupIfOpen(page, pin = "246810") {
+  await page
+    .locator("#app .skip-link")
+    .waitFor({ state: "attached", timeout: 10000 });
   const pinSetupModal = page.locator("#portal-pin-setup-modal");
   const pinUnlockModal = page.locator("#portal-pin-unlock-modal");
   await Promise.race([
@@ -227,6 +230,8 @@ async function setupAuthenticatedPortalRoutes(page, options = {}) {
 
 test.describe
   .serial("Subject Portal ePRO Sync, Draft, PIN & Support Recovery Suite", () => {
+  test.use({ serviceWorkers: "block" });
+
   test.afterAll(() => {
     const checkList = Object.values(auditChecks);
     const passedCount = checkList.filter((c) => c.passed).length;
