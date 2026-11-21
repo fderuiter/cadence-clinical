@@ -36,9 +36,11 @@ describe("Screen availability", () => {
     expect([...AVAILABLE_SCREENS].sort()).toEqual([
       "ctms",
       "ecrf",
+      "etmf",
       "observation",
       "ssu",
       "study",
+      "training",
     ]);
     expect(isScreenAvailable("login")).toBe(true);
     expect(isScreenAvailable("unavailable")).toBe(true);
@@ -103,17 +105,18 @@ describe("Screen availability", () => {
 
   it("explains a hidden screen with product-family entitlement, pre-release roadmap status, and study workspace recovery", async () => {
     signInAsSuperAdmin();
-    await router.push("/etmf");
+    await router.push("/quality");
 
     const wrapper = mount(UnavailableView, { global: { plugins: [router] } });
 
     expect(router.currentRoute.value.path).toBe("/unavailable");
     expect(wrapper.find("h2").text()).toBe(
-      "eTMF Document Vault isn't available yet"
+      "Quality & RBQM Cockpit isn't available yet"
     );
+    expect(screenMetadata("quality").family).toBe("Assure");
     expect(screenMetadata("etmf").family).toBe("Orbit");
     expect(wrapper.find("#unavailable-entitlement-card").text()).toContain(
-      "Orbit"
+      "Assure"
     );
     expect(wrapper.find("#unavailable-roadmap-card").text()).toContain(
       "Roadmap Status"

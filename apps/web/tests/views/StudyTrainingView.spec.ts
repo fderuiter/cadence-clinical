@@ -1,0 +1,75 @@
+import { flushPromises, mount } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { trainingApi } from "../../src/api/training";
+import { useAuthStore } from "../../src/stores/auth";
+import StudyTrainingView from "../../src/views/StudyTrainingView.vue";
+import { signInAs } from "../helpers/signIn.js";
+
+describe("StudyTrainingView.vue", () => {
+  const mockCurriculum = {
+    id: "curr-2026-v2",
+    study_id: "CAD-101",
+    protocol_version: "2.0",
+    title: "CAD-101 Amendment 2 Curriculum",
+    description: "Updated inclusion criteria.",
+    is_active: true,
+    created_at: "2026-10-01T12:00:00Z",
+  };
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    signInAs(useAuthStore(), ["Data Manager"], { username: "sponsor_dm" });
+    vi.spyOn(trainingApi, "listCurricula").mockResolvedValue([mockCurriculum]);
+    vi.spyOn(trainingApi, "getCurriculum").mockResolvedValue(mockCurriculum);
+    vi.spyOn(trainingApi, "listAssignments").mockResolvedValue([]);
+    vi.spyOn(trainingApi, "listDelegations").mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("loads curricula with protocol_version (not protocol_version_id) and renders live Knowledge training tabs", async () => {
+    const wrapper = mount(StudyTrainingView, {
+      props: { studyId: "CAD-101" },
+    });
+    await flushPromises();
+
+    const protocolFilter = wrapper.find("#training-protocol-filter");
+    expect(protocolFilter.exists()).toBe(true);
+    await protocolFilter.setValue("2.0");
+    await protocolFilter.trigger("change");
+    await flushPromises();
+
+    expect(trainingApi.listCurricula).toHaveBeenCalledWith({
+      study_id: "CAD-101",
+      protocol_version: "2.0",
+    });
+    for (const [query] of vi.mocked(trainingApi.listCurricula).mock.calls) {
+      expect(query).not.toHaveProperty("protocol_version_id");
+    }
+
+    expect(wrapper.text()).toContain("CAD-101 Amendment 2 Curriculum");
+    expect(wrapper.find("#tab-my-training").exists()).toBe(false);
+  });
+
+  it("gates curriculum assignment to Sponsor Data Manager / System Administrator roles", async () => {
+    signInAs(useAuthStore(), ["CRA"], { username: "cra_user" });
+    const wrapper = mount(StudyTrainingView, {
+      props: { studyId: "CAD-101" },
+    });
+    await flushPromises();
+
+    const batchTab = wrapper
+      .findAll(".tab-btn")
+      .find((btn) => btn.text().includes("Batch Assignments"));
+    expect(batchTab).toBeDefined();
+    await batchTab!.trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find("#training-assign-role-note").text()).toContain(
+      "training_curriculum:assign"
+    );
+  });
+});

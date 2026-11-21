@@ -13,7 +13,7 @@
 
 | Setting                     | Values                                                     | Effect                                                                                                                                                                 |
 | --------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AppHost:Profile`           | `full` (default), `core`                                   | `core` runs the gateway, the kernel API host, execution and the web app. `full` adds the other 15 services, MinIO and the subject portal.                              |
+| `AppHost:Profile`           | `full` (default), `core`                                   | `core` runs the gateway, the kernel API host, execution, etmf, ctms, knowledge and the web app. `full` adds the other 12 services, MinIO and the subject portal.     |
 | `ConnectionStrings:cadence` | an Npgsql connection string                                | Use this existing database instead of starting the PostgreSQL container. The services apply their migrations to it.                                                    |
 | `AppHost:OidcAuthority`     | a Keycloak realm URL, `http(s)://host:port/realms/<realm>` | Use this issuer for the gateway and the web app instead of starting the Keycloak container. The realm needs the `cadence-web` client from `docker/cadence-realm.json`. |
 
@@ -36,7 +36,7 @@ routes answer as the service being down.
   origin), `CADENCE_GATEWAY_URL` (where its `/api` proxy forwards, #5451) and the `VITE_KEYCLOAK_*` settings. The dev realm's `cadence-web` client allows its redirect URI,
   `http://localhost:5174/subject-portal/*`.
 - Projects, each on the host port docker compose publishes it on, so the gateway's Development defaults and the
-  web dev server's `/api` proxy to `http://localhost:8000` work for both (`core` runs 8000, 8002 and 8018). Each
+  web dev server's `/api` proxy to `http://localhost:8000` work for both (`core` runs 8000, 8002, 8003, 8007, 8015 and 8018). Each
   service's port, address variable, database need and profile come from the service topology manifest
   ([`packages/topology`](../../packages/topology/README.md)); a new service still needs its `AddProject` line:
 

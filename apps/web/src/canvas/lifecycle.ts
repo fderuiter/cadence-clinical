@@ -10,7 +10,12 @@ export type StageId =
 export type SectionId =
   | "protocol-versions"
   | "site-activation"
+  | "documents"
+  | "greenlight"
+  | "training"
   | "participants"
+  | "milestones"
+  | "monitoring"
   | "queries"
   | "locks"
   | "exports";
@@ -55,6 +60,24 @@ export const STAGES: readonly Stage[] = [
         description:
           "A site's activation documents and activating the site once they are complete",
       },
+      {
+        id: "documents",
+        label: "Documents",
+        description:
+          "Study and site eTMF artifacts, intelligence staging, and clinical QC approval",
+      },
+      {
+        id: "greenlight",
+        label: "Greenlight gates",
+        description:
+          "6-facet site startup readiness evaluation and greenlight certification",
+      },
+      {
+        id: "training",
+        label: "Training",
+        description:
+          "Protocol curricula, personnel training assignments, and site delegation logs",
+      },
     ],
   },
   {
@@ -66,6 +89,18 @@ export const STAGES: readonly Stage[] = [
         id: "participants",
         label: "Participants",
         description: "The study's participants in enrollment order",
+      },
+      {
+        id: "milestones",
+        label: "Milestones",
+        description:
+          "Planned and completed site operational milestones across the study",
+      },
+      {
+        id: "monitoring",
+        label: "Monitoring",
+        description:
+          "CRA monitoring visits, findings, compiled visit letters, and supervisory sign-off",
       },
     ],
   },

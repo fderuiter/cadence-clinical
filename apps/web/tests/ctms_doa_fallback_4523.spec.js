@@ -3,6 +3,8 @@ import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import CtmsView from "../src/views/CtmsView.vue";
 import { apiClient, ApiError } from "../src/api/apiClient";
+import { ctmsApi } from "../src/api/ctmsApi";
+import { executionApi } from "../src/api/executionApi";
 import { useToastStore } from "../src/stores/toasts";
 
 /**
@@ -14,15 +16,21 @@ describe("CtmsView DoA log without fabricated delegation records (#4523)", () =>
   let doaResponse;
 
   beforeEach(() => {
-    // These CTMS tabs run only in a demo build; other builds show site activation alone (ctms_site_activation.spec.js).
     vi.stubEnv("VITE_DEMO_MODE", "true");
     pinia = createPinia();
     setActivePinia(pinia);
     doaResponse = () => Promise.resolve({ delegated_staff: [] });
-    vi.spyOn(apiClient, "get").mockImplementation((url) => {
-      if (url.includes("/doa/sites/")) return doaResponse();
-      return Promise.resolve([]);
+    vi.spyOn(executionApi, "getSiteComplianceStatus").mockResolvedValue({
+      study_id: "STUDY-USDM-001",
+      site_id: "SITE-001",
+      milestone: "SITE_ACTIVATION",
+      is_complete: true,
+      missing_documents: [],
     });
+    vi.spyOn(ctmsApi, "listSiteMilestones").mockResolvedValue([]);
+    vi.spyOn(ctmsApi, "listMonitoringVisits").mockResolvedValue([]);
+    vi.spyOn(ctmsApi, "getSiteDoaLog").mockImplementation(() => doaResponse());
+    vi.spyOn(apiClient, "get").mockResolvedValue([]);
     vi.spyOn(apiClient, "post").mockResolvedValue({});
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});

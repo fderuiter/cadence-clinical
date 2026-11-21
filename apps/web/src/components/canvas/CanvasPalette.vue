@@ -137,7 +137,7 @@ const active = ref(0);
 
 // Execution accepts any non-blank study code up to 255 characters, compared exactly.
 const MAX_STUDY_CODE = 255;
-const MAX_RESULTS = 20;
+const MAX_RESULTS = 30;
 const MAX_KERNEL_HITS = 5;
 const MIN_SEARCH_LENGTH = 2;
 const SEARCH_DELAY_MS = 250;

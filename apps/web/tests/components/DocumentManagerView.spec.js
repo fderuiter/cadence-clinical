@@ -1,13 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { mount } from "@vue/test-utils";
+import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import DocumentManagerView from "../../src/views/DocumentManagerView.vue";
+import { etmfService } from "../../src/api/etmf";
+import { useAuthStore } from "../../src/stores/auth";
 import { useEtmfStore } from "../../src/stores/etmf";
+import { useToastStore } from "../../src/stores/toasts";
 import TmfBinderTree from "../../src/components/etmf/TmfBinderTree.vue";
 import DocumentGrid from "../../src/components/etmf/DocumentGrid.vue";
 import PdfPreviewModal from "../../src/components/etmf/PdfPreviewModal.vue";
+import { signInAs } from "../helpers/signIn.js";
 
-// Mock etmfService so no real network requests are made
 vi.mock("../../src/api/etmf", () => ({
   etmfService: {
     getDocuments: vi.fn(() =>
@@ -15,6 +18,7 @@ vi.mock("../../src/api/etmf", () => ({
         {
           id: "DOC-100",
           study_id: "STUDY-USDM-001",
+          site_id: "SITE-101",
           zone: 1,
           section: "01.01",
           artifact_code: "01.01.01",
@@ -24,16 +28,29 @@ vi.mock("../../src/api/etmf", () => ({
           created_at: "2026-08-01T12:00:00Z",
           created_by: "fderuiter",
           version_index: 1,
-          status: "DRAFT",
+          status: "TECHNICAL_QC",
           reason_for_change: "Initial version",
         },
       ])
     ),
-    ingestDocument: vi.fn(() =>
+    getQcQueue: vi.fn(() => Promise.resolve([])),
+    classifyIntelligence: vi.fn(() =>
       Promise.resolve({
-        status: "success",
-        document_id: "DOC-101",
-        version_index: 1,
+        confidence_tier: "HIGH",
+        primary_classification: {
+          zone: 5,
+          section: "05.02",
+          artifact_code: "05.02.02",
+          artifact_type: "FDA Form 1572",
+          confidence: 0.96,
+        },
+      })
+    ),
+    stageQcDocument: vi.fn(),
+    submitQcReview: vi.fn(() =>
+      Promise.resolve({
+        id: "DOC-100",
+        status: "APPROVED",
       })
     ),
   },
@@ -45,6 +62,7 @@ describe("DocumentManagerView.vue Component Integration Tests", () => {
   beforeEach(() => {
     pinia = createPinia();
     setActivePinia(pinia);
+    signInAs(useAuthStore(), ["CRA"], { username: "cra_reviewer" });
     vi.clearAllMocks();
   });
 
@@ -62,11 +80,9 @@ describe("DocumentManagerView.vue Component Integration Tests", () => {
     expect(wrapper.find(".document-manager-layout").exists()).toBe(true);
     expect(wrapper.find(".sidebar-binder-tree").exists()).toBe(true);
 
-    // Explicitly await the store seeding / update cycle
     await store.fetchBinderTree();
     await wrapper.vm.$nextTick();
 
-    // Check that Zones are rendered inside the tree
     expect(wrapper.text()).toContain("Zone 1:");
     expect(wrapper.text()).toContain("Trial Management");
     expect(wrapper.text()).toContain("Zone 5:");
@@ -83,15 +99,12 @@ describe("DocumentManagerView.vue Component Integration Tests", () => {
       },
     });
 
-    // Seed/mock the tree layout to ensure children are expanded
     await store.fetchBinderTree();
     await wrapper.vm.$nextTick();
 
-    // Simulate finding the artifact node component/element and selecting it
     const tmfTree = wrapper.findComponent(TmfBinderTree);
     expect(tmfTree.exists()).toBe(true);
 
-    // Emit select-artifact directly from TmfBinderTree VM
     await tmfTree.vm.$emit("select-artifact", "01.01.01");
 
     expect(fetchDocsSpy).toHaveBeenCalledWith("01.01.01");
@@ -100,7 +113,6 @@ describe("DocumentManagerView.vue Component Integration Tests", () => {
   it("opens secure PDF Preview modal when document row is clicked in grid", async () => {
     const store = useEtmfStore(pinia);
 
-    // Pre-populate some document metadata state
     store.documentsList = [
       {
         id: "DOC-999",
@@ -130,32 +142,86 @@ describe("DocumentManagerView.vue Component Integration Tests", () => {
       },
     });
 
-    // Explicitly await the store seeding / update cycle
     await store.fetchBinderTree();
     await wrapper.vm.$nextTick();
 
-    // Check that document exists in grid
     expect(wrapper.find(".filename").text()).toBe("icf_v1.0_signed.pdf");
     expect(wrapper.find(".status-badge").text()).toBe("APPROVED");
-
-    // Check modal does not exist yet
     expect(wrapper.findComponent(PdfPreviewModal).exists()).toBe(false);
 
-    // Click preview button inside DocumentGrid component VM
     const grid = wrapper.findComponent(DocumentGrid);
     await grid.vm.$emit("preview", store.documentsList[0]);
 
-    // Modal should now be opened
     const modal = wrapper.findComponent(PdfPreviewModal);
     expect(modal.exists()).toBe(true);
-
-    // Verify secure watermark overlay contains correct user name and classification
     expect(modal.text()).toContain("Frans de Ruiter");
     expect(modal.text()).toContain("FINAL APPROVED");
     expect(modal.text()).toContain("Informed Consent Form");
 
-    // Close modal
     await modal.find(".close-modal-btn").trigger("click");
     expect(wrapper.findComponent(PdfPreviewModal).exists()).toBe(false);
+  });
+
+  it("persists AI classification acceptance via submitQcReview and never synthesizes APPROVED on HTTP failure", async () => {
+    const store = useEtmfStore(pinia);
+    const wrapper = mount(DocumentManagerView, {
+      props: { studyId: "STUDY-USDM-001" },
+      global: { plugins: [pinia] },
+    });
+    await store.fetchDocuments("01.01.01");
+    await flushPromises();
+
+    const grid = wrapper.findComponent(DocumentGrid);
+    await grid.vm.$emit("inspect", store.documentsList[0]);
+    await flushPromises();
+
+    vi.mocked(etmfService.submitQcReview).mockRejectedValueOnce(
+      new Error("QC review backend failure (HTTP 500)")
+    );
+    await wrapper.find("#btn-accept-ai-classification").trigger("click");
+    await flushPromises();
+
+    expect(etmfService.submitQcReview).toHaveBeenCalledWith(
+      "DOC-100",
+      expect.objectContaining({
+        decision: "ACCEPT",
+      })
+    );
+    expect(store.documentsList[0].status).toBe("TECHNICAL_QC");
+    expect(wrapper.vm.inspectedDoc.status).toBe("TECHNICAL_QC");
+    expect(useToastStore().toasts.some((t) => t.tone === "error")).toBe(true);
+
+    // Subsequent 200 OK updates status from backend response
+    vi.mocked(etmfService.getDocuments).mockResolvedValueOnce([
+      {
+        ...store.documentsList[0],
+        status: "APPROVED",
+      },
+    ]);
+    await wrapper.find("#btn-accept-ai-classification").trigger("click");
+    await flushPromises();
+    expect(store.documentsList[0].status).toBe("APPROVED");
+    expect(wrapper.vm.inspectedDoc.status).toBe("APPROVED");
+  });
+
+  it("explains clinical QC review role requirement when signed in as CRC", async () => {
+    signInAs(useAuthStore(), ["CRC"], { username: "site_crc" });
+    const store = useEtmfStore(pinia);
+    const wrapper = mount(DocumentManagerView, {
+      global: { plugins: [pinia] },
+    });
+    await store.fetchDocuments("01.01.01");
+    await flushPromises();
+
+    const grid = wrapper.findComponent(DocumentGrid);
+    await grid.vm.$emit("inspect", store.documentsList[0]);
+    await flushPromises();
+
+    expect(wrapper.find("#etmf-qc-role-note").text()).toContain(
+      "etmf_document:transition_clinical_qc"
+    );
+    expect(
+      wrapper.find("#btn-accept-ai-classification").attributes("disabled")
+    ).toBeDefined();
   });
 });

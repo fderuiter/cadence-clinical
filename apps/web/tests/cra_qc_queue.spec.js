@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { mount } from "@vue/test-utils";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import CraQcQueue from "../src/components/etmf/CraQcQueue.vue";
+import { etmfService } from "../src/api/etmf";
 import { useEtmfStore } from "../src/stores/etmf.js";
 
 describe("CraQcQueue.vue", () => {
@@ -10,14 +11,20 @@ describe("CraQcQueue.vue", () => {
   beforeEach(() => {
     pinia = createPinia();
     setActivePinia(pinia);
+    vi.spyOn(etmfService, "getQcQueue").mockResolvedValue([]);
   });
 
-  it("renders empty state when no items in QC queue", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("renders empty state when no items in QC queue", async () => {
     const wrapper = mount(CraQcQueue, {
       global: {
         plugins: [pinia],
       },
     });
+    await flushPromises();
 
     expect(wrapper.text()).toContain("CRA Quality Control Review Queue");
     expect(wrapper.text()).toContain(
@@ -26,8 +33,7 @@ describe("CraQcQueue.vue", () => {
   });
 
   it("displays staged items in queue table", async () => {
-    const store = useEtmfStore();
-    store.qcQueue = [
+    const stagedItems = [
       {
         document_id: "DOC-STAGED-101",
         study_id: "STUDY-USDM-001",
@@ -48,12 +54,14 @@ describe("CraQcQueue.vue", () => {
         },
       },
     ];
+    vi.mocked(etmfService.getQcQueue).mockResolvedValue(stagedItems);
 
     const wrapper = mount(CraQcQueue, {
       global: {
         plugins: [pinia],
       },
     });
+    await flushPromises();
 
     expect(wrapper.text()).toContain("Investigator_CV.pdf");
     expect(wrapper.text()).toContain("05.02.03");
@@ -63,7 +71,7 @@ describe("CraQcQueue.vue", () => {
 
   it("executes batch accept for selected items with Part 11 reason", async () => {
     const store = useEtmfStore();
-    store.qcQueue = [
+    const stagedItems = [
       {
         document_id: "DOC-STAGED-101",
         study_id: "STUDY-USDM-001",
@@ -81,7 +89,7 @@ describe("CraQcQueue.vue", () => {
         },
       },
     ];
-
+    vi.mocked(etmfService.getQcQueue).mockResolvedValue(stagedItems);
     vi.spyOn(store, "batchAcceptClassifications").mockResolvedValue([
       { success: true },
     ]);
@@ -91,8 +99,8 @@ describe("CraQcQueue.vue", () => {
         plugins: [pinia],
       },
     });
+    await flushPromises();
 
-    // Select item
     const checkbox = wrapper.find('tbody input[type="checkbox"]');
     await checkbox.setValue(true);
 
