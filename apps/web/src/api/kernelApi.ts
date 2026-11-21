@@ -1,5 +1,5 @@
-import { encodeChangeReason } from "./changeReason";
 import { getBearerToken } from "./authorization.js";
+import { encodeChangeReason } from "./changeReason";
 import {
   ApiError,
   createOpenApiClient,
@@ -57,6 +57,14 @@ export type KernelAssertionState =
   Schemas["Kernel_KernelAssertionStateResponse"];
 export type KernelSimulationResult = Schemas["Kernel_SimulationResult"];
 export type KernelMatrixGapFinding = Schemas["Kernel_MatrixGapFinding"];
+export type KernelLock = Schemas["Kernel_KernelLockResponse"];
+export type KernelStudyLocks = Schemas["Kernel_KernelStudyLocksResponse"];
+export type KernelLockKind = Schemas["Kernel_LockKind"];
+export type KernelLockMeaning = "Approved" | "Responsibility";
+export type StudyExportFormat = "csv" | "odm_xml" | "dataset_json";
+export type StudyExportLockFilter =
+  "all" | "locked_only" | "frozen_or_locked" | "unlocked_only";
+export type CasebookExportFormat = "json" | "odm_xml" | "html";
 export type KernelStudySummary = Schemas["Kernel_KernelStudySummaryResponse"];
 export type KernelOrganizationSummary =
   Schemas["Kernel_KernelOrganizationSummaryResponse"];
@@ -103,10 +111,165 @@ export interface KernelProtocolImportRequest {
 }
 
 export const ASSERTION_LOCKED = "K.Assertion.Locked";
+export const ASSERTION_ALREADY_LOCKED = "K.Assertion.AlreadyLocked";
 export const ASSERTION_REVISION_STALE = "K.Assertion.RevisionStale";
 export const ASSERTION_ALREADY_RETRACTED = "K.Assertion.AlreadyRetracted";
 export const KERNEL_AUTHORIZATION_DENIED = "K.Authorization.Denied";
 export const KERNEL_SUBSCRIPTION_EXPIRED = "K.Subscription.Expired";
+
+/** Gateway step-up target URL for `POST /api/v1/kernel/locks`. */
+export const LOCK_APPLY_ACTION = "/api/v1/kernel/locks";
+export const LOCK_APPLY_SEMANTIC_ACTION = "kernel.lock.apply";
+export const LOCK_RELEASE_SEMANTIC_ACTION = "kernel.lock.release";
+
+/** Gateway step-up target URL for `POST /api/v1/kernel/locks/{lockRef}/release`. */
+export function lockReleaseAction(lockRef: string): string {
+  const at = lockRef.indexOf("@");
+  const clean = at < 0 ? lockRef : lockRef.slice(0, at);
+  return `/api/v1/kernel/locks/${clean}/release`;
+}
+
+export interface KernelApplyLock {
+  studyRef: string;
+  scopeRef: string;
+  kind: KernelLockKind;
+  meaning?: KernelLockMeaning;
+  lockId?: string | null;
+  attestationId?: string | null;
+  sigToken: string;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelReleaseLock {
+  lockRef: string;
+  studyRef: string;
+  meaning?: KernelLockMeaning;
+  assertionId?: string | null;
+  attestationId?: string | null;
+  sigToken: string;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelStudyLocksQuery {
+  activeOnly?: boolean;
+  asOf?: string;
+  validAt?: string;
+  knownAt?: string;
+}
+
+export interface KernelStudyExportQuery {
+  studyRef: string;
+  format?: StudyExportFormat;
+  lockFilter?: StudyExportLockFilter;
+  asOf?: string;
+  validAt?: string;
+  knownAt?: string;
+}
+
+export interface KernelCasebookExportQuery {
+  enrollmentRef: string;
+  format?: CasebookExportFormat;
+  asOf?: string;
+  validAt?: string;
+  knownAt?: string;
+}
+
+export interface KernelStreamedArtifact {
+  blob: Blob;
+  filename: string;
+  contentType: string;
+  contentSha256: string | null;
+}
+
+/** Actionable user-facing explanation when a lock apply or release call fails. */
+export function describeLockError(error: unknown): string {
+  const code = assertionErrorCode(error);
+  const status = (error as { status?: number | null } | null)?.status ?? null;
+  if (code === ASSERTION_ALREADY_LOCKED || status === 409) {
+    return "That lock state already changed; reload and inspect the current locks.";
+  }
+  if (code === ASSERTION_LOCKED || status === 423) {
+    return "A higher or peer lock blocks this change until that lock is released.";
+  }
+  if (code === KERNEL_AUTHORIZATION_DENIED || status === 403) {
+    return "You are not authorised or your step-up signature token could not be verified.";
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
+function parseDispositionFilename(
+  disposition: string | null,
+  fallback: string
+): string {
+  if (!disposition) return fallback;
+  const match = disposition.match(/filename="?([^";]+)"?/i);
+  return match?.[1]?.trim() || fallback;
+}
+
+async function streamKernelDownload(
+  pathAndQuery: string,
+  fallbackFilename: string
+): Promise<KernelStreamedArtifact> {
+  const base = getBaseUrl().replace(/\/+$/, "");
+  const headers = new Headers();
+  const token = await getBearerToken();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  const response = await globalThis.fetch(`${base}${pathAndQuery}`, {
+    method: "GET",
+    headers,
+  });
+  if (!response.ok) {
+    let errData: unknown;
+    try {
+      errData = await response.json();
+    } catch {
+      errData = null;
+    }
+    const detail =
+      (errData as Record<string, unknown> | null)?.detail ||
+      (errData as Record<string, unknown> | null)?.message ||
+      `Request failed with status ${response.status}`;
+    throw new ApiError(
+      typeof detail === "string" ? detail : JSON.stringify(detail),
+      response.status,
+      response.statusText,
+      errData
+    );
+  }
+  const blob = await response.blob();
+  const contentType =
+    response.headers.get("content-type") ||
+    blob.type ||
+    "application/octet-stream";
+  const filename = parseDispositionFilename(
+    response.headers.get("content-disposition"),
+    fallbackFilename
+  );
+  const contentSha256 = response.headers.get("x-content-sha256");
+  return { blob, filename, contentType, contentSha256 };
+}
+
+/** Triggers a browser file download from an in-memory streamed Blob. */
+export function triggerBrowserDownload(blob: Blob, filename: string): void {
+  if (
+    typeof document === "undefined" ||
+    typeof URL.createObjectURL !== "function"
+  ) {
+    return;
+  }
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 
 /** Source data verification of one observation's current revision (`VerifyObservation`). */
 export interface KernelObservationVerification {
@@ -786,6 +949,140 @@ export const kernelApi = {
         },
         body: { tier },
       })
+    );
+  },
+
+  /** Lists active and historical Frozen and Locked assertions in a study, masked per caller visibility and blinding (GET /api/v1/kernel/studies/{studyRef}/locks). */
+  listStudyLocks(
+    studyRef: string,
+    query: KernelStudyLocksQuery = {}
+  ): Promise<KernelStudyLocks> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/studies/{studyRef}/locks", {
+        params: {
+          path: { studyRef: unversioned(studyRef) },
+          query: {
+            active_only: query.activeOnly,
+            as_of: query.asOf,
+            valid_at: query.validAt,
+            known_at: query.knownAt,
+          },
+        },
+      })
+    );
+  },
+
+  /** Applies a signed Frozen or Locked assertion to a study, site, enrollment, form, or observation (POST /api/v1/kernel/locks). */
+  applyLock({
+    studyRef,
+    scopeRef,
+    kind,
+    meaning = "Approved",
+    lockId,
+    attestationId,
+    sigToken,
+    reason,
+    idempotencyKey,
+  }: KernelApplyLock): Promise<KernelLock> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/locks", {
+        body: {
+          study_ref: unversioned(studyRef),
+          scope_ref: unversioned(scopeRef),
+          kind,
+          meaning,
+          ...(lockId ? { lock_id: lockId } : {}),
+          ...(attestationId ? { attestation_id: attestationId } : {}),
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+          "X-Sig-Token": sigToken,
+        },
+      })
+    );
+  },
+
+  /** Releases an active Frozen or Locked assertion with step-up re-authentication and reason (POST /api/v1/kernel/locks/{lockRef}/release). */
+  releaseLock({
+    lockRef,
+    studyRef,
+    meaning = "Responsibility",
+    assertionId,
+    attestationId,
+    sigToken,
+    reason,
+    idempotencyKey,
+  }: KernelReleaseLock): Promise<KernelLock> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/locks/{lockRef}/release", {
+        params: { path: { lockRef: unversioned(lockRef) } },
+        body: {
+          study_ref: unversioned(studyRef),
+          meaning,
+          ...(assertionId ? { assertion_id: assertionId } : {}),
+          ...(attestationId ? { attestation_id: attestationId } : {}),
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+          "X-Sig-Token": sigToken,
+        },
+      })
+    );
+  },
+
+  /** Streams a study clinical snapshot in CSV, CDISC ODM v1.3.2 XML, or CDISC Dataset-JSON at optional bitemporal `as_of` (GET /api/v1/kernel/studies/{studyRef}/exports). */
+  streamStudyExport({
+    studyRef,
+    format = "csv",
+    lockFilter = "locked_only",
+    asOf,
+    validAt,
+    knownAt,
+  }: KernelStudyExportQuery): Promise<KernelStreamedArtifact> {
+    const cleanRef = unversioned(studyRef);
+    const params = new URLSearchParams({
+      format,
+      lock_filter: lockFilter,
+    });
+    if (asOf) params.set("as_of", asOf);
+    if (validAt) params.set("valid_at", validAt);
+    if (knownAt) params.set("known_at", knownAt);
+    const ext =
+      format === "odm_xml"
+        ? "odm.xml"
+        : format === "dataset_json"
+          ? "dataset.json"
+          : "csv";
+    return streamKernelDownload(
+      `/api/v1/kernel/studies/${encodeURIComponent(cleanRef)}/exports?${params.toString()}`,
+      `study-export.${ext}`
+    );
+  },
+
+  /** Streams a participant casebook in JSON, CDISC ODM v1.3.2 XML, or printable HTML with `X-Content-Sha256` integrity digest (GET /api/v1/kernel/enrollments/{enrollmentRef}/casebook). */
+  streamEnrollmentCasebook({
+    enrollmentRef,
+    format = "json",
+    asOf,
+    validAt,
+    knownAt,
+  }: KernelCasebookExportQuery): Promise<KernelStreamedArtifact> {
+    const cleanRef = unversioned(enrollmentRef);
+    const params = new URLSearchParams({ format });
+    if (asOf) params.set("as_of", asOf);
+    if (validAt) params.set("valid_at", validAt);
+    if (knownAt) params.set("known_at", knownAt);
+    const ext =
+      format === "odm_xml"
+        ? "casebook.odm.xml"
+        : format === "html"
+          ? "casebook.html"
+          : "casebook.json";
+    return streamKernelDownload(
+      `/api/v1/kernel/enrollments/${encodeURIComponent(cleanRef)}/casebook?${params.toString()}`,
+      `participant.${ext}`
     );
   },
 };

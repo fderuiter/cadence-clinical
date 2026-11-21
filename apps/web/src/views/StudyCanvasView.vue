@@ -116,7 +116,7 @@
           id="btn-canvas-logout"
           type="button"
           class="btn btn-secondary"
-          @click="authStore.logout()"
+          @click="requestCanvasSignOut"
         >
           Sign out
         </button>
@@ -204,6 +204,7 @@
             v-else-if="openObservationRef"
             :key="openObservationRef"
             embedded
+            :study-code="studyCode"
             :observation-ref="openObservationRef"
             :return-to="observationReturnLocation"
             :return-label="observationReturnLabel"
@@ -336,6 +337,18 @@
             :participant="queryParticipantFilter"
             :changed="queryChangedFilter"
             @filter="applyStudyQueryFilter"
+          />
+
+          <LocksSection
+            v-else-if="section?.id === 'locks'"
+            :key="`locks-${studyCode}`"
+            :study-code="studyCode"
+          />
+
+          <ExportsSection
+            v-else-if="section?.id === 'exports'"
+            :key="`exports-${studyCode}`"
+            :study-code="studyCode"
           />
 
           <section
@@ -741,6 +754,14 @@
       @close="paletteOpen = false"
       @go="goToPaletteTarget"
     />
+
+    <SignOutConfirmModal
+      v-if="!inAppShell"
+      id="canvas-signout-confirm-modal"
+      v-model="isCanvasSignOutConfirmOpen"
+      @confirm="confirmCanvasSignOut"
+      @cancel="cancelCanvasSignOut"
+    />
   </div>
 </template>
 
@@ -793,11 +814,15 @@ import {
   canVerifySource,
 } from "../canvas/authority";
 import type { PaletteTarget } from "../canvas/palette";
+import { SignOutConfirmModal, useSignOutGuard } from "ui";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import CanvasFormWorkspace from "../components/canvas/CanvasFormWorkspace.vue";
 import CanvasInspector from "../components/canvas/CanvasInspector.vue";
 import CanvasPalette from "../components/canvas/CanvasPalette.vue";
+import ExportsSection from "../components/canvas/ExportsSection.vue";
+import LocksSection from "../components/canvas/LocksSection.vue";
 import ParticipantRecord from "../components/canvas/ParticipantRecord.vue";
 import ParticipantsSection from "../components/canvas/ParticipantsSection.vue";
 import ProtocolVersionsSection from "../components/canvas/ProtocolVersionsSection.vue";
@@ -1557,6 +1582,18 @@ function onFormLoaded(form: EcrfForm) {
   }
 }
 
+const {
+  isConfirmOpen: isCanvasSignOutConfirmOpen,
+  requestSignOut: requestCanvasSignOut,
+  confirmSignOut: confirmCanvasSignOut,
+  cancelSignOut: cancelCanvasSignOut,
+} = useSignOutGuard({
+  hasExternalDrafts: () => hasUserScopedDrafts(),
+  onConfirmSignOut: async () => {
+    await authStore.logout();
+  },
+});
+
 function onFormClosed() {
   formWorkspaceDirty.value = false;
   loadedForm.value = null;
@@ -1823,8 +1860,12 @@ function leavesActiveForm(to: RouteLocationNormalized): boolean {
   return Boolean(currentFormId && nextFormId !== currentFormId);
 }
 
+function shouldSuppressUnsavedGuard(): boolean {
+  return Boolean(authStore.sessionExpired || authStore.isLoggingOut);
+}
+
 function handleBeforeUnload(event: BeforeUnloadEvent) {
-  if (formWorkspaceDirty.value) {
+  if (formWorkspaceDirty.value && !shouldSuppressUnsavedGuard()) {
     event.preventDefault();
     event.returnValue = "";
     return "";
@@ -1838,7 +1879,11 @@ function confirmDiscardUnsavedForm(): boolean {
 
 if (typeof onBeforeRouteLeave === "function") {
   onBeforeRouteLeave(() => {
-    if (formWorkspaceDirty.value && !confirmDiscardUnsavedForm()) {
+    if (
+      formWorkspaceDirty.value &&
+      !shouldSuppressUnsavedGuard() &&
+      !confirmDiscardUnsavedForm()
+    ) {
       return false;
     }
   });

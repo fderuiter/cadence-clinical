@@ -8,7 +8,12 @@ export type StageId =
   "design" | "start" | "conduct" | "data" | "analyze" | "submit";
 
 export type SectionId =
-  "protocol-versions" | "site-activation" | "participants" | "queries";
+  | "protocol-versions"
+  | "site-activation"
+  | "participants"
+  | "queries"
+  | "locks"
+  | "exports";
 
 export interface Section {
   id: SectionId;
@@ -75,6 +80,12 @@ export const STAGES: readonly Stage[] = [
         label: "Queries",
         description: "Data queries across visible enrollments in this study",
       },
+      {
+        id: "locks",
+        label: "Locks",
+        description:
+          "Frozen and locked scopes across the study, with signed apply and release",
+      },
     ],
   },
   {
@@ -87,7 +98,14 @@ export const STAGES: readonly Stage[] = [
     id: "submit",
     label: "Submit",
     scope: "Datasets, Define-XML, reviewer guides, package",
-    sections: [],
+    sections: [
+      {
+        id: "exports",
+        label: "Exports",
+        description:
+          "Streaming CSV, CDISC ODM v1.3.2 XML, and Dataset-JSON snapshots at a lock or timestamp",
+      },
+    ],
   },
 ];
 
